@@ -92,6 +92,9 @@ struct AgentIslandState {
   bool model_available;
   bool model_byok_active;
   char model_label[96];
+  /* Short name of the key's provider ("Codex"), drawn in place of "Custom AI"
+   * once a key is in use; empty draws "Custom AI". */
+  char model_key_label[64];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

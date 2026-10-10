@@ -42,6 +42,7 @@
 #include <climits>
 
 #include "RNA_define.hh"
+#include "RNA_enum_types.hh"
 
 #include "rna_internal.hh"
 
@@ -244,6 +245,18 @@ static void rna_Window_mixar_content_rect_in(wmWindow *win, wmWindow *host, int 
   }
 }
 
+/* A props dialog centered in its window instead of under the cursor, with no
+ * title row. Blender centres a props dialog only when it carries a message;
+ * an empty one adds no lines. Used where the cursor sits under an
+ * always-on-top floating window that would cover a cursor-anchored dialog. */
+static int rna_WindowManager_mixar_invoke_props_dialog_centered(bContext *C,
+                                                                wmOperator *op,
+                                                                const int width)
+{
+  return int(WM_operator_props_dialog_popup(
+      C, op, width, std::string(), std::nullopt, false, std::string(), false));
+}
+
 static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
 {
   if (!Mixar_window_live_client_rect(win, r_rect)) {
@@ -420,6 +433,22 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
   }
   StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (srna_wm != nullptr) {
+    {
+      FunctionRNA *func = RNA_def_function(srna_wm,
+                                           "mixar_invoke_props_dialog_centered",
+                                           "rna_WindowManager_mixar_invoke_props_dialog_centered");
+      RNA_def_function_flag(func, FUNC_NO_SELF | FUNC_USE_CONTEXT);
+      RNA_def_function_ui_description(
+          func,
+          "Operator props dialog centred in the window, without a title row (Mixar)");
+      PropertyRNA *parm = RNA_def_pointer(func, "operator", "Operator", "", "Operator to call");
+      RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+      RNA_def_int(func, "width", 300, 0, INT_MAX, "", "Width of the popup", 0, INT_MAX);
+      parm = RNA_def_enum_flag(
+          func, "result", rna_enum_operator_return_items, OPERATOR_FINISHED, "result", "");
+      RNA_def_function_return(func, parm);
+    }
+
     prop = RNA_def_property(srna_wm, "mixar_qa_ui_dump", PROP_STRING, PROP_NONE);
     RNA_def_property_string_funcs(prop,
                                   "rna_WindowManager_mixar_qa_ui_dump_get",

@@ -13,6 +13,15 @@ than keeping its own copy.
 from typing import Tuple
 
 from . import model_suggestions
+from ..constants import CODEX_PROVIDER_ID, LOCAL_PROVIDER_ID, OPENROUTER_PROVIDER_ID
+
+# Client-side providers whose dropdown labels are descriptive ("Codex
+# (ChatGPT sub)"); the island toggle names them in one short word.
+_TOGGLE_LABELS = {
+    CODEX_PROVIDER_ID: "Codex",
+    LOCAL_PROVIDER_ID: "Local",
+    OPENROUTER_PROVIDER_ID: "OpenRouter",
+}
 
 
 def lookup_provider_label(provider_id: str) -> str:
@@ -21,6 +30,14 @@ def lookup_provider_label(provider_id: str) -> str:
         if pid == provider_id:
             return plabel
     return provider_id
+
+
+def toggle_provider_label(provider_id: str) -> str:
+    """The island toggle's name for the key's provider: a short word for the
+    client-side options, the catalog label otherwise (raw id as fallback)."""
+    if not provider_id:
+        return ""
+    return _TOGGLE_LABELS.get(provider_id) or lookup_provider_label(provider_id)
 
 
 def lookup_model_label(provider_id: str, model_id: str) -> str:

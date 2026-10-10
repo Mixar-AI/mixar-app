@@ -1565,20 +1565,11 @@ msgstr "Tidak dapat menyetel ulang model"
 msgid "Removing your key…"
 msgstr "Menghapus kunci Anda…"
 
-msgid "Validating with provider…"
-msgstr "Memvalidasi dengan penyedia…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Pengaturan Penyedia AI"
-
-msgid "Active"
-msgstr "Aktif"
-
-msgid "Not configured"
-msgstr "Belum dikonfigurasi"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Jalankan agen Mixar di penyedia Anda sendiri — kredit Mixar tidak dikenakan selama aktif."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Konfigurasi Saat Ini"
@@ -1601,47 +1592,14 @@ msgstr "Model khusus teks — obrolan berfungsi; tugas 3D berjalan tanpa umpan b
 msgid "Remove API Key…"
 msgstr "Hapus Kunci API…"
 
-msgid "Provider Setup"
-msgstr "Penyiapan Penyedia"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Disimpan terenkripsi, hanya digunakan untuk permintaan agen Mixar — hanya pratinjau tersamar yang ditampilkan setelah disimpan."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Pilih model yang mendukung pemanggilan tool / fungsi — agen memerlukannya."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Muat dari ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…atau tempel secara manual"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter ditempel"
-
-msgid "Empty — paste your auth.json"
-msgstr "Kosong — tempel auth.json Anda"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Jalankan  codex login  di terminal Anda, lalu muat atau tempel seluruh"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "isi ~/.codex/auth.json (tombol tempel membaca papan klip Anda)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Menggunakan langganan ChatGPT Anda — kredit Mixar tidak dikenakan."
-
 msgid "Couldn't apply your changes"
 msgstr "Tidak dapat menerapkan perubahan Anda"
 
-msgid "Remove your API key?"
-msgstr "Hapus kunci API Anda?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agen akan kembali menggunakan penyedia bawaan Mixar."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Kredit Mixar akan dikenakan untuk permintaan agen berikutnya."
@@ -1652,17 +1610,11 @@ msgstr "Agen Mixar kini berjalan di penyedia Anda — kredit Mixar tidak dikenak
 msgid "API key removed"
 msgstr "Kunci API dihapus"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agen kembali menggunakan penyedia bawaan Mixar."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Kredit Mixar kembali dikenakan untuk permintaan agen."
-
-msgid "Try Again"
-msgstr "Coba Lagi"
-
-msgid "Save & Activate"
-msgstr "Simpan & Aktifkan"
 
 msgid "Keep My Key"
 msgstr "Pertahankan Kunci Saya"
@@ -1730,8 +1682,17 @@ msgstr "Pindai Ulang Aplikasi Lokal"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Memindai ulang komputer ini untuk mencari aplikasi AI lokal yang berjalan"
 
+msgid "AI Provider Settings"
+msgstr "Pengaturan Penyedia AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Menggunakan kunci API Anda sendiri untuk agen Mixar. Selama aktif, kredit Mixar tidak dikenakan untuk permintaan agen."
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Memvalidasi dengan penyedia dan menyimpan kunci API Anda"
@@ -1747,6 +1708,9 @@ msgstr "Pilih model Codex dan muat bundel auth.json Anda."
 
 msgid "Save failed."
 msgstr "Gagal menyimpan."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Muat dari ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Membaca ~/.codex/auth.json dari mesin ini ke dalam kolom"
@@ -1793,6 +1757,84 @@ msgstr "Menghapus kunci API yang tersimpan di sisi server"
 msgid "Remove failed."
 msgstr "Gagal menghapus."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "Memvalidasi dengan penyedia…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "Disimpan terenkripsi, hanya digunakan untuk permintaan agen Mixar — hanya pratinjau tersamar yang ditampilkan setelah disimpan."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "Pilih model yang mendukung pemanggilan tool / fungsi — agen memerlukannya."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…atau tempel secara manual"
+
+msgid "{count} characters pasted"
+msgstr "{count} karakter ditempel"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "Coba Lagi"
+
+msgid "Save & Activate"
+msgstr "Simpan & Aktifkan"
+
 msgid "Refresh BYOK State"
 msgstr "Segarkan Status BYOK"
 
@@ -1804,6 +1846,9 @@ msgstr "Segarkan Katalog Model"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Memvalidasi ulang katalog penyedia+model dari backend"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Penyedia Model Agen"
@@ -1831,6 +1876,12 @@ msgstr "Model Agen Digantikan oleh BYOK"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "Bernilai benar selama kunci API Anda sendiri dikonfigurasi — kunci tersebut diutamakan di atas pilihan model terhosting, sehingga pemilih dinonaktifkan"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "Model Agen Memenuhi Syarat"
@@ -2236,6 +2287,9 @@ msgstr "Antrean pulau Agen tidak tersedia"
 
 msgid "Show every job"
 msgstr "Menampilkan setiap tugas"
+
+msgid "Active"
+msgstr "Aktif"
 
 msgid "Show pending or running jobs"
 msgstr "Menampilkan tugas yang tertunda atau berjalan"
@@ -6298,9 +6352,6 @@ msgstr "Info Jaring 3D"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Seleksi semua bagian dari satu karakter — di-rig sebagai satu kerangka"
-
-msgid "Settings"
-msgstr "Pengaturan"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Mendeteksi tipe kerangka secara otomatis"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Tingkatkan"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Komentar umpan balik kosong"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Tambahkan Lapis Cat di panel Lapis untuk mulai mengecat"
 
@@ -24465,6 +24528,9 @@ msgstr "Menangkap"
 
 msgid "NEW"
 msgstr "BARU"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Tanyakan apa saja kepada Mixie..."
@@ -24820,11 +24886,17 @@ msgstr "Mode otomatis aktif: agen memutuskan sendiri pilihan terbuka dan tidak p
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Mode otomatis: agen memutuskan sendiri pilihan terbuka alih-alih bertanya kepada Anda, dan mencantumkan keputusannya di ringkasan"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Kunci API milik Anda sedang digunakan, dan kunci tersebut menentukan modelnya. Buka menu ini dan pilih \"Ubah atau hapus kunci API saya\" untuk memilih model yang di-hosting lagi"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "Memilih model yang digunakan agen"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "Gelembung Agen"

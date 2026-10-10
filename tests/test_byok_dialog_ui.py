@@ -91,10 +91,23 @@ class FakeLayout:
 
     def operator(self, op, text="", icon='NONE'):
         self._log.append(f"op:{op}")
-        return SimpleNamespace()
+        log = self._log
+
+        class _Props(SimpleNamespace):
+            def __setattr__(self, key, value):
+                log.append(f"pick:{key}:{value}:{text}")
+                super().__setattr__(key, value)
+
+        return _Props()
 
     def separator(self, factor=1.0):
         pass
+
+    def prop_enum(self, data, prop, value, text="", icon='NONE'):
+        self._log.append(f"enum:{prop}:{value}:{text}")
+
+    def grid_flow(self, **_kwargs):
+        return self._sub()
 
     # -- Mixar card API (conditionally present) --
     def __getattr__(self, name):
@@ -105,6 +118,7 @@ class FakeLayout:
             'mixar_dropdown',
             'mixar_input',
             'template_popup_confirm',
+            'mixar_cinema_row',
         ):
             if not self.__dict__['_card_api']:
                 raise AttributeError(name)
@@ -116,6 +130,9 @@ class FakeLayout:
 
     def _impl_mixar_card_button(self, kind='CARD', active_default=False):
         self._log.append(f"card_button:{kind}:{active_default}")
+
+    def _impl_mixar_cinema_row(self, kind='OPTION'):
+        self._log.append(f"cinema_row:{kind}")
 
     def _impl_mixar_section(self):
         self._log.append("section")
@@ -181,11 +198,11 @@ def test_every_state_marks_exactly_one_active_default_button():
 
 
 def test_footer_actions_per_state():
-    # IDLE with an active config: Cancel + Save, and Remove lives in the
-    # config card (not the footer) — three distinct, unambiguous actions.
+    # IDLE with an active config: the header close button, Save, and
+    # Remove beside the key in use — three distinct, unambiguous actions.
     log = _draw('IDLE', card_api=True, byok_is_active=True,
                 byok_current_provider='anthropic', byok_current_model='m')
-    assert "popup_confirm:Cancel" in log
+    assert f"popup_confirm:{byok_dialog_ui.CLOSE_GLYPH}" in log
     assert f"op:{byok_dialog_ui.OP_SAVE}" in log
     assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
     assert "card_button:ACCENT:True" in log
@@ -434,3 +451,69 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+# ---------------------------------------------------------------------------
+# Two-column provider layout
+# ---------------------------------------------------------------------------
+
+
+def _with_catalog(monkeypatch):
+    monkeypatch.setattr(model_suggestions, "get_provider_items", lambda: [
+        ('anthropic', "Anthropic", ""), ('openai', "OpenAI", ""),
+        ('openrouter', "OpenRouter", ""), ('codex', "Codex (ChatGPT sub)", ""),
+        ('local', "Local (this computer)", ""),
+    ])
+    monkeypatch.setattr(model_suggestions, "get_model_items", lambda provider: [
+        ('claude-fable-5-1', "Claude Fable 5.1", ""),
+        ('claude-sonnet-5-5', "Claude Sonnet 5.5", ""),
+    ])
+
+
+def test_providers_are_rows_and_local_is_the_footer_button(monkeypatch):
+    _with_catalog(monkeypatch)
+    log = _draw('IDLE', card_api=True, byok_form_provider='anthropic',
+                byok_form_model='claude-fable-5-1')
+    rows = [e for e in log if e.startswith("pick:provider:")]
+    assert rows == [
+        "pick:provider:anthropic:ANTHROPIC",
+        "pick:provider:openai:OPENAI",
+        "pick:provider:openrouter:OPENROUTER",
+        "pick:provider:codex:CODEX (CHATGPT SUB)",
+        "pick:provider:local:LOCAL MODEL",
+    ]
+    # Exactly one provider and one model wear the graded active pill.
+    assert log.count("cinema_row:ACTIVE") == 2
+
+
+def test_every_supported_model_is_a_chip_and_the_key_names_it(monkeypatch):
+    _with_catalog(monkeypatch)
+    log = _draw('IDLE', card_api=True, byok_form_provider='anthropic',
+                byok_form_model='claude-sonnet-5-5')
+    assert "card_label:SECTION:ALL SUPPORTED ANTHROPIC MODELS" in log
+    assert "pick:model:claude-fable-5-1:Claude Fable 5.1" in log
+    assert "pick:model:claude-sonnet-5-5:Claude Sonnet 5.5" in log
+    assert "card_label:SECTION:Enter API key for Claude Sonnet 5.5 here." in log
+    assert "input:byok_form_api_key" in log
+
+
+def test_busy_states_have_no_close_button():
+    for state in ('SAVING', 'REMOVING'):
+        log = _draw(state, card_api=True, byok_is_active=True)
+        assert f"popup_confirm:{byok_dialog_ui.CLOSE_GLYPH}" not in log
+
+
+def test_use_mixie_mode_opens_on_the_remove_confirmation():
+    source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+              / "byok_ops.py").read_text(encoding="utf-8")
+    assert "('USE_MIXIE'" in source
+    assert "if self.mode == 'USE_MIXIE' and wm.byok_is_active:" in source
+
+
+def test_the_island_mixie_half_has_its_own_operator():
+    """Two adjacent unlabelled `open_dialog` buttons traded their properties
+    across block rebuilds; the Mixie half must be a different operator."""
+    island = (ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
+              / "space_agent_bubble.cc").read_text(encoding="utf-8")
+    assert '"mixar_byok.use_mixie"' in island
+    assert '"USE_MIXIE"' not in island

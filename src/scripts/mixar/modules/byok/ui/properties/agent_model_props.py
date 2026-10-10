@@ -36,6 +36,7 @@ _WM_ATTRS = (
     'mixar_agent_model_thinking',
     'mixar_agent_model_byok_active',
     'mixar_agent_model_eligible',
+    'mixar_agent_key_label',
 )
 
 
@@ -72,6 +73,15 @@ def register():
             "over the hosted model pick, so the picker is disabled"
         ),
         default=False,
+    )
+    # The island toggle's right half names the key's provider ("Codex",
+    # "Anthropic") once one is in use; empty draws "Custom AI". Written by
+    # `credential_state.apply_to_wm()`; C++ only reads it.
+    WM.mixar_agent_key_label = StringProperty(
+        name="Agent Key Provider Label",
+        description="Short name of the provider whose API key the agent uses",
+        default="",
+        options={'SKIP_SAVE'},
     )
     WM.mixar_agent_model_eligible = BoolProperty(
         name="Agent Model Eligible",

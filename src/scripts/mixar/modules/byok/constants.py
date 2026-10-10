@@ -100,3 +100,6 @@ LOCAL_MODE_ITEMS = (
      "Point Mixar at an OpenAI-compatible server you already run "
      "(Ollama, LM Studio, llama.cpp, ...)"),
 )
+
+# AI Provider Settings dialog width: two columns (providers | models + key).
+PROVIDER_DIALOG_WIDTH = 860

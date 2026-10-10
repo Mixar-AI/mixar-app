@@ -419,6 +419,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   r_state->model_available = false;
   r_state->model_byok_active = false;
   r_state->model_label[0] = '\0';
+  r_state->model_key_label[0] = '\0';
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     PropertyRNA *label = RNA_struct_find_property(&wm_ptr, "mixar_agent_model_label");
@@ -427,6 +428,12 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
       read_string_prop(
           &wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
       r_state->model_byok_active = read_bool_prop(&wm_ptr, "mixar_agent_model_byok_active");
+      if (r_state->model_byok_active) {
+        read_string_prop(&wm_ptr,
+                         "mixar_agent_key_label",
+                         r_state->model_key_label,
+                         sizeof(r_state->model_key_label));
+      }
     }
   }
 

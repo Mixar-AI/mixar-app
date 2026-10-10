@@ -1565,20 +1565,11 @@ msgstr "無法重設模型"
 msgid "Removing your key…"
 msgstr "正在移除你的金鑰…"
 
-msgid "Validating with provider…"
-msgstr "正在向供應商驗證…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI 供應商設定"
-
-msgid "Active"
-msgstr "作用中"
-
-msgid "Not configured"
-msgstr "未設定"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "在你自己的供應商上執行 Mixar 智慧代理——啟用期間不會扣除 Mixar 點數。"
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "目前設定"
@@ -1601,47 +1592,14 @@ msgstr "純文字模型——聊天可正常運作；3D 任務將在沒有視覺
 msgid "Remove API Key…"
 msgstr "移除 API 金鑰…"
 
-msgid "Provider Setup"
-msgstr "供應商設定"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "加密儲存，僅用於 Mixar 智慧代理要求——儲存後只會顯示遮蔽的預覽。"
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "請選擇支援工具 / 函式呼叫的模型——智慧代理需要此功能。"
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "從 ~/.codex/auth.json 載入"
-
-msgid "…or paste it manually"
-msgstr "…或手動貼上"
-
-msgid "{count} characters pasted"
-msgstr "已貼上 {count} 個字元"
-
-msgid "Empty — paste your auth.json"
-msgstr "空白——請貼上你的 auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "在終端機中執行  codex login  ，然後載入或貼上完整的"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json 內容（貼上按鈕會讀取你的剪貼簿）。"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
-
 msgid "Couldn't apply your changes"
 msgstr "無法套用你的變更"
 
-msgid "Remove your API key?"
-msgstr "要移除你的 API 金鑰嗎？"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "智慧代理將再次使用 Mixar 的預設供應商。"
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "之後的智慧代理要求將扣除 Mixar 點數。"
@@ -1652,17 +1610,11 @@ msgstr "Mixar 智慧代理現在於你的供應商上執行——不會扣除 Mi
 msgid "API key removed"
 msgstr "已移除 API 金鑰"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "智慧代理已改回使用 Mixar 的預設供應商。"
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "智慧代理要求將再次扣除 Mixar 點數。"
-
-msgid "Try Again"
-msgstr "再試一次"
-
-msgid "Save & Activate"
-msgstr "儲存並啟用"
 
 msgid "Keep My Key"
 msgstr "保留我的金鑰"
@@ -1730,8 +1682,17 @@ msgstr "重新掃描本機應用程式"
 msgid "Rescan this computer for running local AI apps"
 msgstr "重新掃描此電腦上執行中的本機 AI 應用程式"
 
+msgid "AI Provider Settings"
+msgstr "AI 供應商設定"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "為 Mixar 智慧代理使用你自己的 API 金鑰。啟用期間，智慧代理要求不會扣除 Mixar 點數。"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "向供應商驗證並儲存你的 API 金鑰"
@@ -1747,6 +1708,9 @@ msgstr "請選擇 Codex 模型並載入你的 auth.json 檔案。"
 
 msgid "Save failed."
 msgstr "儲存失敗。"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "從 ~/.codex/auth.json 載入"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
@@ -1793,6 +1757,84 @@ msgstr "在伺服器端刪除已儲存的 API 金鑰"
 msgid "Remove failed."
 msgstr "移除失敗。"
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "正在向供應商驗證…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "加密儲存，僅用於 Mixar 智慧代理要求——儲存後只會顯示遮蔽的預覽。"
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "請選擇支援工具 / 函式呼叫的模型——智慧代理需要此功能。"
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…或手動貼上"
+
+msgid "{count} characters pasted"
+msgstr "已貼上 {count} 個字元"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "再試一次"
+
+msgid "Save & Activate"
+msgstr "儲存並啟用"
+
 msgid "Refresh BYOK State"
 msgstr "重新整理 BYOK 狀態"
 
@@ -1804,6 +1846,9 @@ msgstr "重新整理模型目錄"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "從後端重新驗證供應商與模型目錄"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "智慧代理模型供應商"
@@ -1831,6 +1876,12 @@ msgstr "智慧代理模型被 BYOK 凌駕"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "設定了你自己的 API 金鑰時為真——它優先於託管模型選擇，因此選擇器會停用"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "智慧代理模型可用"
@@ -2236,6 +2287,9 @@ msgstr "無法使用智慧代理島佇列"
 
 msgid "Show every job"
 msgstr "顯示所有任務"
+
+msgid "Active"
+msgstr "作用中"
 
 msgid "Show pending or running jobs"
 msgstr "顯示待處理或執行中的任務"
@@ -6298,9 +6352,6 @@ msgstr "網格資訊"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "選取同一角色的所有部件——將綁定為單一骨架"
-
-msgid "Settings"
-msgstr "設定"
 
 msgid "Auto-detects the skeleton type"
 msgstr "自動偵測骨架類型"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "升級"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "回饋意見是空的"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "請在「層」面板中加入繪製層以開始繪製"
 
@@ -24465,6 +24528,9 @@ msgstr "捕捉中"
 
 msgid "NEW"
 msgstr "新"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "向 Mixie 提出任何問題..."
@@ -24820,11 +24886,17 @@ msgstr "自動模式已開啟：智慧代理會自行決定待定的選擇，不
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "自動模式：智慧代理會自行決定待定的選擇而不詢問你，並在摘要中列出其決定"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "目前正在使用你自己的 API 金鑰，並由它決定模型。開啟此選單並選擇「變更或移除我的 API 金鑰」即可再次選擇託管模型"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "選擇智慧代理所使用的模型"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "智慧代理氣泡"

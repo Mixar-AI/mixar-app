@@ -1565,20 +1565,11 @@ msgstr "Model nelze obnovit"
 msgid "Removing your key…"
 msgstr "Odstraňování vašeho klíče…"
 
-msgid "Validating with provider…"
-msgstr "Ověřování u poskytovatele…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Nastavení poskytovatele AI"
-
-msgid "Active"
-msgstr "Aktivní"
-
-msgid "Not configured"
-msgstr "Nenastaveno"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Spouštějte agenta Mixar u vlastního poskytovatele — dokud je tato možnost aktivní, kredity Mixar se neúčtují."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Aktuální konfigurace"
@@ -1601,47 +1592,14 @@ msgstr "Pouze textový model — chat funguje; 3D úkoly běží bez vizuální 
 msgid "Remove API Key…"
 msgstr "Odstranit klíč API…"
 
-msgid "Provider Setup"
-msgstr "Nastavení poskytovatele"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Ukládá se šifrovaně a používá se pouze pro požadavky agenta Mixar — po uložení se zobrazí jen maskovaný náhled."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Zvolte model, který podporuje volání nástrojů / funkcí — agent to potřebuje."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Libovolný identifikátor z openrouter.ai/models, např. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Načíst z ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…nebo jej vložte ručně"
-
-msgid "{count} characters pasted"
-msgstr "Vložené znaky: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Prázdné — vložte svůj auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Spusťte  codex login  v terminálu, poté načtěte nebo vložte celý"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "obsah ~/.codex/auth.json (tlačítko vložení čte vaši schránku)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Využívá vaše předplatné ChatGPT — kredity Mixar se neúčtují."
-
 msgid "Couldn't apply your changes"
 msgstr "Změny nelze použít"
 
-msgid "Remove your API key?"
-msgstr "Odstranit váš klíč API?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent bude opět používat výchozího poskytovatele Mixaru."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Za budoucí požadavky agenta budou účtovány kredity Mixar."
@@ -1652,17 +1610,11 @@ msgstr "Agent Mixar nyní běží u vašeho poskytovatele — kredity Mixar se n
 msgid "API key removed"
 msgstr "Klíč API odstraněn"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent se vrátil k výchozímu poskytovateli Mixaru."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Za požadavky agenta se opět účtují kredity Mixar."
-
-msgid "Try Again"
-msgstr "Zkusit znovu"
-
-msgid "Save & Activate"
-msgstr "Uložit a aktivovat"
 
 msgid "Keep My Key"
 msgstr "Ponechat můj klíč"
@@ -1730,8 +1682,17 @@ msgstr "Znovu vyhledat lokální aplikace"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Znovu prohledá tento počítač a hledá spuštěné lokální aplikace AI"
 
+msgid "AI Provider Settings"
+msgstr "Nastavení poskytovatele AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Použije vlastní klíč API pro agenta Mixar. Dokud je aktivní, za požadavky agenta se neúčtují kredity Mixar."
+
+msgid "Settings"
+msgstr "Nastavení"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Ověří klíč API u poskytovatele a uloží jej"
@@ -1747,6 +1708,9 @@ msgstr "Zvolte model Codex a načtěte svůj soubor auth.json."
 
 msgid "Save failed."
 msgstr "Uložení selhalo."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Načíst z ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Načte ~/.codex/auth.json z tohoto počítače do pole"
@@ -1793,6 +1757,84 @@ msgstr "Smaže uložený klíč API na serveru"
 msgid "Remove failed."
 msgstr "Odstranění selhalo."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "Ověřování u poskytovatele…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "Ukládá se šifrovaně a používá se pouze pro požadavky agenta Mixar — po uložení se zobrazí jen maskovaný náhled."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Libovolný identifikátor z openrouter.ai/models, např. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "Zvolte model, který podporuje volání nástrojů / funkcí — agent to potřebuje."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…nebo jej vložte ručně"
+
+msgid "{count} characters pasted"
+msgstr "Vložené znaky: {count}"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "Zkusit znovu"
+
+msgid "Save & Activate"
+msgstr "Uložit a aktivovat"
+
 msgid "Refresh BYOK State"
 msgstr "Obnovit stav BYOK"
 
@@ -1804,6 +1846,9 @@ msgstr "Obnovit katalog modelů"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Znovu ověří katalog poskytovatelů a modelů z backendu"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Poskytovatel modelu agenta"
@@ -1831,6 +1876,12 @@ msgstr "Model agenta přepsán BYOK"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "Platí, dokud je nastaven váš vlastní klíč API — má přednost před výběrem hostovaného modelu, proto je výběr zakázán"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "Model agenta je způsobilý"
@@ -2236,6 +2287,9 @@ msgstr "Fronta v ostrově agenta není dostupná"
 
 msgid "Show every job"
 msgstr "Zobrazí všechny úlohy"
+
+msgid "Active"
+msgstr "Aktivní"
 
 msgid "Show pending or running jobs"
 msgstr "Zobrazí čekající nebo probíhající úlohy"
@@ -6298,9 +6352,6 @@ msgstr "Informace o síti"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Vyberte všechny části jedné postavy — budou riggovány jako jedna kostra"
-
-msgid "Settings"
-msgstr "Nastavení"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Automaticky rozpozná typ kostry"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Navýšit tarif"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Komentář ke zpětné vazbě je prázdný"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Chcete-li začít malovat, přidejte v panelu Vrstvy vrstvu malby"
 
@@ -24465,6 +24528,9 @@ msgstr "Chytá"
 
 msgid "NEW"
 msgstr "NOVÉ"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Zeptejte se Mixie na cokoli..."
@@ -24820,11 +24886,17 @@ msgstr "Automatický režim je zapnutý: agent o otevřených volbách rozhoduje
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automatický režim: agent o otevřených volbách rozhoduje sám, místo aby se vás ptal, a svá rozhodnutí uvede v shrnutí"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Používá se váš vlastní klíč API, který určuje model. Chcete-li znovu zvolit hostovaný model, otevřete tuto nabídku a vyberte „Změnit nebo odstranit můj klíč API“"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "Zvolí, na kterém modelu agent běží"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "Bublina agenta"

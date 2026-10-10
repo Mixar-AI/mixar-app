@@ -133,6 +133,13 @@ def apply_to_wm(wm=None) -> None:
             # Properties not registered yet (UI auto-discovery is batched) —
             # the dict keeps the value and a later apply_to_wm picks it up.
             return
+    from . import catalog_labels
+    label = (catalog_labels.toggle_provider_label(current["byok_current_provider"])
+             if current["byok_is_active"] else "")
+    try:
+        target.mixar_agent_key_label = label
+    except Exception:  # registered in a later auto-discovery batch
+        pass
 
 
 

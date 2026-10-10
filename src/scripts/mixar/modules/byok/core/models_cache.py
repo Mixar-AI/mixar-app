@@ -252,5 +252,12 @@ def _redraw() -> None:
         from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
 
         trigger_ui_redraw()
+        # An open settings dialog lists the catalog's providers and models;
+        # a popup only re-runs draw() when its own region is refreshed.
+        from ..ui.operators import byok_dialog_refresh
+        byok_dialog_refresh.refresh()
+        # The toggle's provider name is a catalog label; re-mirror it.
+        from . import credential_state
+        credential_state.apply_to_wm()
     except Exception as exc:
         logger.debug("Agent models catalog redraw failed: %s", exc)

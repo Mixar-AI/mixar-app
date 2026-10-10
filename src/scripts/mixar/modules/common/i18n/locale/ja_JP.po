@@ -1565,20 +1565,11 @@ msgstr "モデルをリセットできませんでした"
 msgid "Removing your key…"
 msgstr "キーを削除中…"
 
-msgid "Validating with provider…"
-msgstr "プロバイダーで検証中…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AIプロバイダー設定"
-
-msgid "Active"
-msgstr "アクティブ"
-
-msgid "Not configured"
-msgstr "未設定"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixarエージェントを自分のプロバイダーで実行します — 有効な間はMixarクレジットは消費されません。"
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "現在の構成"
@@ -1601,47 +1592,14 @@ msgstr "テキスト専用モデル — チャットは使えますが、3Dタ�
 msgid "Remove API Key…"
 msgstr "APIキーを削除…"
 
-msgid "Provider Setup"
-msgstr "プロバイダーの設定"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "暗号化して保存され、Mixarエージェントのリクエストにのみ使用されます — 保存後はマスクされたプレビューのみ表示されます。"
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ツール/関数呼び出しに対応したモデルを選択してください — エージェントに必要です。"
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-opus-4.8）。"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json から読み込む"
-
-msgid "…or paste it manually"
-msgstr "…または手動で貼り付け"
-
-msgid "{count} characters pasted"
-msgstr "{count}文字を貼り付けました"
-
-msgid "Empty — paste your auth.json"
-msgstr "空です — auth.json を貼り付けてください"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ターミナルで  codex login  を実行し、読み込みまたは貼り付けで"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json の内容全体を入力してください（貼り付けボタンはクリップボードを読み取ります）。"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPTサブスクリプションを使用します — Mixarクレジットは消費されません。"
-
 msgid "Couldn't apply your changes"
 msgstr "変更を適用できませんでした"
 
-msgid "Remove your API key?"
-msgstr "APIキーを削除しますか？"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "エージェントは再びMixarのデフォルトプロバイダーを使用します。"
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "今後のエージェントリクエストにはMixarクレジットが消費されます。"
@@ -1652,17 +1610,11 @@ msgstr "Mixarエージェントはあなたのプロバイダーで実行され�
 msgid "API key removed"
 msgstr "APIキーを削除しました"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "エージェントはMixarのデフォルトプロバイダーに戻りました。"
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "エージェントリクエストには再びMixarクレジットが消費されます。"
-
-msgid "Try Again"
-msgstr "再試行"
-
-msgid "Save & Activate"
-msgstr "保存して有効化"
 
 msgid "Keep My Key"
 msgstr "キーを保持"
@@ -1730,8 +1682,17 @@ msgstr "ローカルアプリを再スキャン"
 msgid "Rescan this computer for running local AI apps"
 msgstr "このコンピューターで実行中のローカルAIアプリを再スキャンします"
 
+msgid "AI Provider Settings"
+msgstr "AIプロバイダー設定"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixarエージェントに自分のAPIキーを使用します。有効な間、エージェントリクエストにMixarクレジットは消費されません。"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "プロバイダーで検証してAPIキーを保存します"
@@ -1747,6 +1708,9 @@ msgstr "Codexモデルを選択し、auth.json バンドルを読み込んでく
 
 msgid "Save failed."
 msgstr "保存に失敗しました。"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json から読み込む"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "このマシンの ~/.codex/auth.json をフィールドに読み込みます"
@@ -1793,6 +1757,84 @@ msgstr "保存されたAPIキーをサーバー側で削除します"
 msgid "Remove failed."
 msgstr "削除に失敗しました。"
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "プロバイダーで検証中…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "暗号化して保存され、Mixarエージェントのリクエストにのみ使用されます — 保存後はマスクされたプレビューのみ表示されます。"
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-opus-4.8）。"
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "ツール/関数呼び出しに対応したモデルを選択してください — エージェントに必要です。"
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…または手動で貼り付け"
+
+msgid "{count} characters pasted"
+msgstr "{count}文字を貼り付けました"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "再試行"
+
+msgid "Save & Activate"
+msgstr "保存して有効化"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK状態を更新"
 
@@ -1804,6 +1846,9 @@ msgstr "モデルカタログを更新"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "プロバイダーとモデルのカタログをバックエンドから再検証します"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "エージェントモデルのプロバイダー"
@@ -1831,6 +1876,12 @@ msgstr "BYOKによるエージェントモデルの上書き"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "自分のAPIキーが設定されている間はTrue — ホスト型モデルの選択より優先されるため、ピッカーは無効になります"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "エージェントモデル利用可"
@@ -2236,6 +2287,9 @@ msgstr "エージェントアイランドのキューを利用できません"
 
 msgid "Show every job"
 msgstr "すべてのジョブを表示"
+
+msgid "Active"
+msgstr "アクティブ"
 
 msgid "Show pending or running jobs"
 msgstr "保留中または実行中のジョブを表示"
@@ -6298,9 +6352,6 @@ msgstr "メッシュ情報"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "1体のキャラクターのすべてのパーツを選択してください — 単一のスケルトンとしてリグ付けされます"
-
-msgid "Settings"
-msgstr "設定"
 
 msgid "Auto-detects the skeleton type"
 msgstr "スケルトンの種類を自動検出します"
@@ -19627,6 +19678,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "アップグレード"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "フィードバックのコメントが空です"
 
@@ -24401,6 +24461,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "ペイントを開始するには、レイヤーパネルでペイントレイヤーを追加してください"
 
@@ -24469,6 +24532,9 @@ msgstr "キャッチ中"
 
 msgid "NEW"
 msgstr "新着"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Mixieに何でも聞いてください..."
@@ -24824,11 +24890,17 @@ msgstr "自動モードがオンです：エージェントは未決定の選択
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "自動モード：エージェントはあなたに質問する代わりに未決定の選択肢を自分で決め、その決定をまとめに記載します"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "独自のAPIキーが使用されており、モデルはそのキーで決まります。ホスト型モデルを再び選ぶには、このメニューを開いて「自分のAPIキーを変更または削除」を選択してください"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "エージェントが使用するモデルを選択します"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "エージェントバブル"

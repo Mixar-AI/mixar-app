@@ -154,22 +154,53 @@ def check_dialog(qa):
         raise ScenarioFail('Provider settings was clipped into the island window')
 
 
+def key_half(qa):
+    """The island toggle's API key half: the rightmost settings button."""
+    halves = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
+    if not halves:
+        raise ScenarioFail('Island Mixie | Custom AI toggle missing')
+    return max(halves, key=lambda w: w['rect'][0])
+
+
+def click_key_half(qa):
+    half = key_half(qa)
+    qa.cmd('click_xy', x=half['center'][0], y=half['center'][1], window=half['window'])
+
+
 def open_picker(qa, area_type, active):
     if area_type == 'AGENT_BUBBLE':
         qa.eval('result=str(bpy.ops.mixar.agent_bubble_show_window())')
-    qa.click(but_type='Pulldown', area_type=area_type, region_type='TOOLS')
+    if active:
+        # A key in use: API key opens the shared dialog, Mixie offers the
+        # switch back, and the hosted menu is not offered over the key.
+        key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type=area_type)['widgets']
+        mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type=area_type)['widgets']
+        if len(key) != 1 or len(mixie) != 1 or qa.find(
+                but_type='Pulldown', area_type=area_type, region_type='TOOLS')['widgets']:
+            raise ScenarioFail(f'{area_type} toggle does not show the key in use: {key} {mixie}')
+        return
+    # The settings dialog pills the island while it is up and restores it on
+    # close; let that land. The first native click after the island comes
+    # back can commit composer focus instead (agent_model_chip_label_e2e):
+    # retry once, only when the menu demonstrably stayed shut.
+    qa.wait("not __import__('mixar.modules.byok.ui.operators.byok_dialog_host', "
+            "fromlist=['x'])._island_minimised", timeout=5)
+    for _ in range(2):
+        qa.click(but_type='Pulldown', area_type=area_type, region_type='TOOLS')
+        time.sleep(.5)
+        if qa.find(op='MIXAR_OT_agent_model_set', popup=True)['widgets']:
+            break
     qa.wait("bool(drv.find(op='MIXAR_OT_agent_model_set', popup=True))", timeout=5)
     models = qa.find(op='MIXAR_OT_agent_model_set', popup=True)['widgets']
-    if len(models) != 2 or any(w['enabled'] == active for w in models):
-        raise ScenarioFail(f'{area_type} model state does not match BYOK={active}: {models}')
+    if len(models) != 2 or any(not w['enabled'] for w in models):
+        raise ScenarioFail(f'{area_type} hosted models unavailable with no key: {models}')
     settings = qa.find(**SETTINGS)['widgets']
     if len(settings) != 1 or not settings[0]['enabled']:
         raise ScenarioFail(f'{area_type} shared settings route unavailable')
 
 
 def save(qa, model, name):
-    qa.step(name + '_model', qa.cmd, 'choose',
-            widget={'prop': 'byok_form_model', 'popup': True}, item=model)
+    qa.step(name + '_model', qa.click, op='MIXAR_BYOK_OT_pick', text=model, popup=True)
     qa.step(name + '_key', qa.cmd, 'set_text',
             widget={'prop': 'byok_form_api_key', 'popup': True},
             text='qa-synthetic-key', enter=False)
@@ -208,10 +239,10 @@ def run(qa):
         snaps.append(open_profile(qa, 'initial'))
         save(qa, 'QA Model One', 'profile_save')
         qa.step('bubble_reflects_profile_save', open_picker, qa, 'AGENT_BUBBLE', True)
-        qa.step('island_shared_dialog', qa.click, **SETTINGS)
+        qa.step('island_shared_dialog', click_key_half, qa)
         check_dialog(qa)
         qa.wait(f"{WM}.byok_current_model == 'qa-one' and {WM}.byok_form_model == 'qa-one'", timeout=5)
-        snaps.append(snap(qa, 'island_sees_profile_save', {'prop': 'byok_form_model', 'popup': True}))
+        snaps.append(snap(qa, 'island_sees_profile_save', {'op': 'MIXAR_BYOK_OT_pick', 'text': 'QA Model One', 'popup': True}))
         remove(qa, 'island_remove')
         snaps.append(open_profile(qa, 'after_island_remove'))
         qa.wait(f"not {WM}.byok_is_active", timeout=5)
@@ -224,7 +255,7 @@ def run(qa):
         save(qa, 'QA Model Two', 'bubble_save')
         snaps.append(open_profile(qa, 'after_bubble_save'))
         qa.wait(f"{WM}.byok_current_model == 'qa-two' and {WM}.byok_form_model == 'qa-two'", timeout=5)
-        snaps.append(snap(qa, 'profile_sees_bubble_save', {'prop': 'byok_form_model', 'popup': True}))
+        snaps.append(snap(qa, 'profile_sees_bubble_save', {'op': 'MIXAR_BYOK_OT_pick', 'text': 'QA Model Two', 'popup': True}))
         remove(qa, 'profile_remove')
         qa.step('bubble_reflects_profile_remove', open_picker, qa, 'AGENT_BUBBLE', False)
         snaps.append(snap(qa, 'agent_bubble_restored', SETTINGS))

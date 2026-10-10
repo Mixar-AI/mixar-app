@@ -357,6 +357,7 @@ void agent_ui_layout_build(const int window_w,
   r_layout->chip_auto = f.box(scribble_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
   r_layout->chip_model = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
   r_layout->model_form = AgentModelChipForm::Full;
+  r_layout->model_split_x = BLI_rctf_cent_x(&r_layout->chip_model);
   r_layout->chip_reading = f.box(scribble_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(scribble_x, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   /* Generate keeps the artboard's right inset against whatever card width
@@ -387,6 +388,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   in.voice_status = state.voice_status;
   in.model_available = state.model_available;
   in.model_label = state.model_label;
+  in.model_key_label = state.model_key_label;
   in.translate = [](const char *msgid) -> const char * { return IFACE_(msgid); };
   const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
                                  AGENT_CHIP_ICON_GAP * u,
@@ -418,6 +420,13 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   place(layout.chip_voice, fit.width[AGENT_CHIP_SLOT_VOICE]);
   place(layout.chip_auto, fit.width[AGENT_CHIP_SLOT_AUTO]);
   place(layout.chip_model, fit.width[AGENT_CHIP_SLOT_MODEL]);
+  /* Where the toggle's Mixie half ends and its API key half begins — shared
+   * by the painter and the two native buttons. */
+  layout.model_split_x = layout.chip_model.xmin + metrics.icon_gap * 0.25f +
+                         agent_model_toggle_mixie_w(
+                             metrics,
+                             [&](const char *label) { return ui::mixar_text_width(label, size); },
+                             in.translate);
   place(layout.chip_reading, fit.width[AGENT_CHIP_SLOT_READING]);
   place(layout.chip_clear, fit.width[AGENT_CHIP_SLOT_CLEAR]);
 }

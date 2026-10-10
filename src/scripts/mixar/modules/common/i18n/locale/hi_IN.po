@@ -1565,20 +1565,11 @@ msgstr "मॉडल रीसेट नहीं किया जा सका"
 msgid "Removing your key…"
 msgstr "आपकी कुंजी हटाई जा रही है…"
 
-msgid "Validating with provider…"
-msgstr "प्रदाता से सत्यापन हो रहा है…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI प्रदाता सेटिंग्स"
-
-msgid "Active"
-msgstr "सक्रिय"
-
-msgid "Not configured"
-msgstr "कॉन्फ़िगर नहीं"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixar एजेंट को अपने प्रदाता पर चलाएँ — सक्रिय रहने के दौरान Mixar क्रेडिट नहीं काटे जाते।"
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "वर्तमान कॉन्फ़िगरेशन"
@@ -1601,47 +1592,14 @@ msgstr "केवल-पाठ मॉडल — चैट काम करता
 msgid "Remove API Key…"
 msgstr "API कुंजी हटाएँ…"
 
-msgid "Provider Setup"
-msgstr "प्रदाता सेटअप"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "एन्क्रिप्ट करके संग्रहीत, केवल Mixar एजेंट अनुरोधों के लिए उपयोग — सहेजने के बाद केवल छिपा हुआ पूर्वावलोकन दिखाया जाता है।"
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ऐसा मॉडल चुनें जो टूल / फ़ंक्शन कॉलिंग का समर्थन करता हो — एजेंट को इसकी आवश्यकता है।"
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json से लोड करें"
-
-msgid "…or paste it manually"
-msgstr "…या इसे मैन्युअल रूप से चिपकाएँ"
-
-msgid "{count} characters pasted"
-msgstr "{count} वर्ण चिपकाए गए"
-
-msgid "Empty — paste your auth.json"
-msgstr "खाली — अपना auth.json चिपकाएँ"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "अपने टर्मिनल में  codex login  चलाएँ, फिर ~/.codex/auth.json की"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "पूरी सामग्री लोड करें या चिपकाएँ (चिपकाएँ बटन आपका क्लिपबोर्ड पढ़ता है)।"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "आपकी ChatGPT सदस्यता का उपयोग करता है — Mixar क्रेडिट नहीं काटे जाते।"
-
 msgid "Couldn't apply your changes"
 msgstr "आपके परिवर्तन लागू नहीं किए जा सके"
 
-msgid "Remove your API key?"
-msgstr "अपनी API कुंजी हटाएँ?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता का उपयोग करेगा।"
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "आगे के एजेंट अनुरोधों के लिए Mixar क्रेडिट काटे जाएँगे।"
@@ -1652,17 +1610,11 @@ msgstr "Mixar एजेंट अब आपके प्रदाता पर �
 msgid "API key removed"
 msgstr "API कुंजी हटाई गई"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता पर है।"
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "एजेंट अनुरोधों के लिए फिर से Mixar क्रेडिट काटे जाते हैं।"
-
-msgid "Try Again"
-msgstr "पुनः प्रयास करें"
-
-msgid "Save & Activate"
-msgstr "सहेजें और सक्रिय करें"
 
 msgid "Keep My Key"
 msgstr "मेरी कुंजी रखें"
@@ -1730,8 +1682,17 @@ msgstr "स्थानीय ऐप फिर से स्कैन करे�
 msgid "Rescan this computer for running local AI apps"
 msgstr "चल रहे स्थानीय AI ऐप के लिए इस कंप्यूटर को फिर से स्कैन करता है"
 
+msgid "AI Provider Settings"
+msgstr "AI प्रदाता सेटिंग्स"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar एजेंट के लिए आपकी अपनी API कुंजी का उपयोग करता है। सक्रिय रहने के दौरान एजेंट अनुरोधों के लिए Mixar क्रेडिट नहीं काटे जाते।"
+
+msgid "Settings"
+msgstr "सेटिंग्स"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "प्रदाता से सत्यापन करके आपकी API कुंजी सहेजता है"
@@ -1747,6 +1708,9 @@ msgstr "एक Codex मॉडल चुनें और अपना auth.json 
 
 msgid "Save failed."
 msgstr "सहेजना विफल रहा।"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json से लोड करें"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "इस मशीन से ~/.codex/auth.json को फ़ील्ड में पढ़ता है"
@@ -1793,6 +1757,84 @@ msgstr "सर्वर पर संग्रहीत API कुंजी म�
 msgid "Remove failed."
 msgstr "हटाना विफल रहा।"
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "प्रदाता से सत्यापन हो रहा है…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "एन्क्रिप्ट करके संग्रहीत, केवल Mixar एजेंट अनुरोधों के लिए उपयोग — सहेजने के बाद केवल छिपा हुआ पूर्वावलोकन दिखाया जाता है।"
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "ऐसा मॉडल चुनें जो टूल / फ़ंक्शन कॉलिंग का समर्थन करता हो — एजेंट को इसकी आवश्यकता है।"
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…या इसे मैन्युअल रूप से चिपकाएँ"
+
+msgid "{count} characters pasted"
+msgstr "{count} वर्ण चिपकाए गए"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "पुनः प्रयास करें"
+
+msgid "Save & Activate"
+msgstr "सहेजें और सक्रिय करें"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK स्थिति ताज़ा करें"
 
@@ -1804,6 +1846,9 @@ msgstr "मॉडल कैटलॉग ताज़ा करें"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "बैकएंड से प्रदाता+मॉडल कैटलॉग का पुनः सत्यापन करता है"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "एजेंट मॉडल प्रदाता"
@@ -1831,6 +1876,12 @@ msgstr "एजेंट मॉडल BYOK द्वारा ओवरराइ�
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "जब तक आपकी अपनी API कुंजी कॉन्फ़िगर है तब तक सत्य — वह होस्ट किए गए मॉडल चयन पर प्राथमिकता लेती है, इसलिए पिकर अक्षम रहता है"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "एजेंट मॉडल पात्र"
@@ -2236,6 +2287,9 @@ msgstr "एजेंट आइलैंड की कतार उपलब्�
 
 msgid "Show every job"
 msgstr "हर जॉब दिखाता है"
+
+msgid "Active"
+msgstr "सक्रिय"
 
 msgid "Show pending or running jobs"
 msgstr "लंबित या चल रहे जॉब दिखाता है"
@@ -6298,9 +6352,6 @@ msgstr "जाल जानकारी"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "एक पात्र के सभी भाग चुनें — एक ही कंकाल के रूप में रिग होंगे"
-
-msgid "Settings"
-msgstr "सेटिंग्स"
 
 msgid "Auto-detects the skeleton type"
 msgstr "कंकाल प्रकार स्वतः पहचानता है"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "अपग्रेड करें"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "प्रतिक्रिया टिप्पणी खाली है"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "रंगलेप शुरू करने के लिए परतें पैनल में एक रंगलेप परत जोड़ें"
 
@@ -24465,6 +24528,9 @@ msgstr "पकड़ रहा है"
 
 msgid "NEW"
 msgstr "नया"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie से कुछ भी पूछें..."
@@ -24820,11 +24886,17 @@ msgstr "स्वचालित रूप चालू है: एजेंट 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "स्वचालित रूप: एजेंट आपसे पूछने के बजाय खुले विकल्प स्वयं तय करता है, और अपने निर्णय सारांश में सूचीबद्ध करता है"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "आपकी अपनी API कुंजी उपयोग में है, और वही मॉडल तय करती है। फिर से होस्ट किया गया मॉडल चुनने के लिए यह मेनू खोलें और \"मेरी API कुंजी बदलें या हटाएँ\" चुनें"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "चुनें कि एजेंट किस मॉडल पर चलता है"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "एजेंट बबल"

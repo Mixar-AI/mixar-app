@@ -27,9 +27,10 @@ def test_card_dialogs_use_named_640_width():
     assert CARD_DIALOG_WIDTH == 640
     assert "CARD_DIALOG_WIDTH = 640" in constants
     assert "width=CARD_DIALOG_WIDTH" in gallery
-    assert "width=CARD_DIALOG_WIDTH" in byok
     assert "width=640" not in gallery
-    assert "width=640" not in byok
+    # The provider dialog is two columns: its own named width, not the card's.
+    assert "PROVIDER_DIALOG_WIDTH)" in byok
+    assert "CARD_DIALOG_WIDTH" not in byok
     # Single-consumer frames stay local.
     assert "width=460" in settings
     assert "CARD_DIALOG_WIDTH" not in settings

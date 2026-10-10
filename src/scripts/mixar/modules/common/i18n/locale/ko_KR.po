@@ -1565,20 +1565,11 @@ msgstr "모델을 초기화할 수 없습니다"
 msgid "Removing your key…"
 msgstr "키 제거 중…"
 
-msgid "Validating with provider…"
-msgstr "제공업체에서 검증 중…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI 제공업체 설정"
-
-msgid "Active"
-msgstr "활성"
-
-msgid "Not configured"
-msgstr "구성되지 않음"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "내 제공업체로 Mixar 에이전트를 실행합니다 — 활성화된 동안에는 Mixar 크레딧이 차감되지 않습니다."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "현재 구성"
@@ -1601,47 +1592,14 @@ msgstr "텍스트 전용 모델 — 채팅은 작동하지만 3D 작업은 시�
 msgid "Remove API Key…"
 msgstr "API 키 제거…"
 
-msgid "Provider Setup"
-msgstr "제공업체 설정"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "암호화되어 저장되며 Mixar 에이전트 요청에만 사용됩니다 — 저장 후에는 마스킹된 미리보기만 표시됩니다."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "도구/함수 호출을 지원하는 모델을 선택하세요 — 에이전트에 필요합니다."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models의 모든 슬러그를 사용할 수 있습니다. 예: anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json에서 로드"
-
-msgid "…or paste it manually"
-msgstr "…또는 직접 붙여 넣기"
-
-msgid "{count} characters pasted"
-msgstr "{count}자 붙여 넣음"
-
-msgid "Empty — paste your auth.json"
-msgstr "비어 있음 — auth.json을 붙여 넣으세요"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "터미널에서  codex login  명령을 실행한 다음 ~/.codex/auth.json의"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "전체 내용을 로드하거나 붙여 넣으세요 (붙여 넣기 버튼은 클립보드를 읽습니다)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPT 구독을 사용합니다 — Mixar 크레딧이 차감되지 않습니다."
-
 msgid "Couldn't apply your changes"
 msgstr "변경 사항을 적용할 수 없습니다"
 
-msgid "Remove your API key?"
-msgstr "API 키를 제거하시겠습니까?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "에이전트가 다시 Mixar의 기본 제공업체를 사용합니다."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "이후 에이전트 요청에는 Mixar 크레딧이 차감됩니다."
@@ -1652,17 +1610,11 @@ msgstr "이제 Mixar 에이전트가 내 제공업체로 실행됩니다 — Mix
 msgid "API key removed"
 msgstr "API 키가 제거되었습니다"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "에이전트가 Mixar의 기본 제공업체로 돌아왔습니다."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "에이전트 요청에 다시 Mixar 크레딧이 차감됩니다."
-
-msgid "Try Again"
-msgstr "다시 시도"
-
-msgid "Save & Activate"
-msgstr "저장 및 활성화"
 
 msgid "Keep My Key"
 msgstr "내 키 유지"
@@ -1730,8 +1682,17 @@ msgstr "로컬 앱 다시 스캔"
 msgid "Rescan this computer for running local AI apps"
 msgstr "이 컴퓨터에서 실행 중인 로컬 AI 앱을 다시 스캔합니다"
 
+msgid "AI Provider Settings"
+msgstr "AI 제공업체 설정"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar 에이전트에 내 API 키를 사용합니다. 활성화된 동안에는 에이전트 요청에 Mixar 크레딧이 차감되지 않습니다."
+
+msgid "Settings"
+msgstr "설정"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "제공업체에서 검증한 후 API 키를 저장합니다"
@@ -1747,6 +1708,9 @@ msgstr "Codex 모델을 선택하고 auth.json 번들을 로드하세요."
 
 msgid "Save failed."
 msgstr "저장에 실패했습니다."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json에서 로드"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "이 컴퓨터의 ~/.codex/auth.json을 필드로 읽어 옵니다"
@@ -1793,6 +1757,84 @@ msgstr "서버에 저장된 API 키를 삭제합니다"
 msgid "Remove failed."
 msgstr "제거에 실패했습니다."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "제공업체에서 검증 중…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "암호화되어 저장되며 Mixar 에이전트 요청에만 사용됩니다 — 저장 후에는 마스킹된 미리보기만 표시됩니다."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models의 모든 슬러그를 사용할 수 있습니다. 예: anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "도구/함수 호출을 지원하는 모델을 선택하세요 — 에이전트에 필요합니다."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…또는 직접 붙여 넣기"
+
+msgid "{count} characters pasted"
+msgstr "{count}자 붙여 넣음"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "다시 시도"
+
+msgid "Save & Activate"
+msgstr "저장 및 활성화"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK 상태 새로고침"
 
@@ -1804,6 +1846,9 @@ msgstr "모델 카탈로그 새로고침"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "백엔드에서 제공업체+모델 카탈로그를 다시 검증합니다"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "에이전트 모델 제공업체"
@@ -1831,6 +1876,12 @@ msgstr "BYOK로 에이전트 모델 대체됨"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "내 API 키가 구성된 동안 참입니다 — 호스팅 모델 선택보다 우선하므로 선택기가 비활성화됩니다"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "에이전트 모델 사용 가능"
@@ -2236,6 +2287,9 @@ msgstr "에이전트 아일랜드 대기열을 사용할 수 없습니다"
 
 msgid "Show every job"
 msgstr "모든 작업을 표시합니다"
+
+msgid "Active"
+msgstr "활성"
 
 msgid "Show pending or running jobs"
 msgstr "대기 중이거나 실행 중인 작업을 표시합니다"
@@ -6298,9 +6352,6 @@ msgstr "메시 정보"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "한 캐릭터의 모든 파트를 선택하세요 — 하나의 스켈레톤으로 리깅됩니다"
-
-msgid "Settings"
-msgstr "설정"
 
 msgid "Auto-detects the skeleton type"
 msgstr "스켈레톤 유형을 자동으로 감지합니다"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "업그레이드"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "피드백 코멘트가 비어 있습니다"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "칠하기를 시작하려면 레이어 패널에서 페인트 레이어를 추가하세요"
 
@@ -24465,6 +24528,9 @@ msgstr "잡는 중"
 
 msgid "NEW"
 msgstr "신규"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie에게 무엇이든 물어보세요..."
@@ -24820,11 +24886,17 @@ msgstr "자동 모드가 켜져 있습니다: 에이전트가 미정인 선택 �
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 직접 결정하며, 결정 사항을 요약에 나열합니다"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "사용자 본인의 API 키가 사용 중이며 모델은 해당 키가 결정합니다. 호스팅 모델을 다시 선택하려면 이 메뉴를 열고 \"내 API 키 변경 또는 제거\"를 선택하세요"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "에이전트가 실행될 모델을 선택합니다"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"

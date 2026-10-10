@@ -46,6 +46,8 @@ def _redraw_mixie_chat_areas():
                     region.tag_redraw()
     except Exception as e:
         logger.debug("BYOK area redraw failed: %s", e)
+    from . import byok_dialog_refresh
+    byok_dialog_refresh.refresh()
 
 
 def _clear_cached_state(wm=None):

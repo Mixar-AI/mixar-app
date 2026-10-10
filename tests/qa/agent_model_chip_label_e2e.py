@@ -7,11 +7,13 @@ QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4811 \
   QA_SCENARIO_OUT=/tmp/chip-label python3 tests/qa/agent_model_chip_label_e2e.py
 Run in an isolated QA app. Inspect the saved PNGs as well as the state verdict.
 
-Proves, against the real C++ chip and the real native menu:
-  1. a hosted pick WITH a thinking level draws `<model> · <Level>` on the chip;
-  2. a user key flips the chip to `model_menu.BYOK_CHIP_TEXT`, even when the
+Proves, against the real C++ Mixie | Custom AI toggle and the real native menu:
+  1. a hosted pick WITH a thinking level composes `<model> · <Level>` into the
+     mirror, and the Mixie half opens the hosted menu showing that pick;
+  2. a user key flips the mirror to `model_menu.BYOK_CHIP_TEXT`, even when the
      credential state lands AFTER the preference mirror (the re-mirror path);
-  3. the open menu's NOTE row names the key's provider and model.
+  3. with a key in use API key opens AI Provider settings, Mixie offers the
+     switch back, and the hosted menu is no longer offered from the island.
 Only the preference service and the credential mirror are synthetic (memory
 only — `credential_state` never touches the keychain, and the fixture restores
 the account's real mirror on exit). No PUT/DELETE reaches the backend.
@@ -30,7 +32,6 @@ PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE'}
 MODEL = {'op': 'MIXAR_OT_agent_model_set', 'popup': True}
 KEY_ROW = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
 CHIP_WITH_LEVEL = 'QA Model · High'
-NOTE_TEXT = 'Your key: QA Key Provider · QA Key Model'
 SETUP = """
 import bpy, os
 from types import SimpleNamespace
@@ -189,17 +190,15 @@ def run(qa):
                 "bpy.context.window_manager.mixar_agent_model_label == 'Custom' and "
                 "bpy.context.window_manager.mixar_agent_model_byok_active",
                 timeout=5)
-        snaps.append(qa.step('chip_byok_capture', capture_island, qa, 'chip_byok'))
-
-        # 3. The open menu names the key's provider and model.
-        qa.step('open_byok', open_picker, qa)
-        note = qa.find(text=NOTE_TEXT, popup=True)['widgets']
-        assert len(note) == 1 and not note[0]['enabled'], note
-        assert all(not r['enabled'] for r in qa.find(**MODEL)['widgets'])
-        assert qa.find(**KEY_ROW)['widgets'][0]['enabled']
-        assert 'remove' in qa.find(**KEY_ROW)['widgets'][0]['text'].lower()
-        snaps.append(qa.step('byok_menu_capture', capture, qa, 'byok_menu', KEY_ROW))
-        close_menus(qa)
+        # 3. With a key in use API key opens AI Provider settings and Mixie
+        #    offers the switch back; the hosted menu is out of reach.
+        key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
+        mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type='AGENT_BUBBLE')['widgets']
+        assert len(key) == 1 and len(mixie) == 1, (key, mixie)
+        assert not qa.find(**PICKER)['widgets'], 'hosted menu still offered over a user key'
+        snaps.append(qa.step('chip_byok_capture', capture, qa, 'chip_byok',
+                             {'op': 'MIXAR_BYOK_OT_open_dialog', 'area_type': 'AGENT_BUBBLE'},
+                             400))
         return {'snaps': snaps, 'real_backend_mutations': 0}
     finally:
         close_menus(qa)

@@ -1565,20 +1565,11 @@ msgstr "לדומה תא לחתאל היה ןתינ אל"
 msgid "Removing your key…"
 msgstr "…חתפמה תא ריסמ"
 
-msgid "Validating with provider…"
-msgstr "…קפסה לומ תמאמ"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI קפס תורדגה"
-
-msgid "Active"
-msgstr "ליעפ"
-
-msgid "Not configured"
-msgstr "רדגומ אל"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr ".ליעפ הז דוע לכ םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה לצא Mixar ןכוס תצרה"
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "תיחכונה הרוצתה"
@@ -1601,47 +1592,14 @@ msgstr ".יתוזח בושמ ילב תוצר דממ-תלת תומישמ ;דבו�
 msgid "Remove API Key…"
 msgstr "…API חתפמ תרסה"
 
-msgid "Provider Setup"
-msgstr "קפס תרדגה"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא — Mixar ןכוס תושקבל קר שמשמו ,ןפצומ ןסחואמ"
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירקב ךמותש לדומ רוחבל שי"
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ךותמ הניעט"
-
-msgid "…or paste it manually"
-msgstr "תינדי הקבדה וא…"
-
-msgid "{count} characters pasted"
-msgstr "םיוות {count} וקבדוה"
-
-msgid "Empty — paste your auth.json"
-msgstr "auth.json תא קיבדהל שי — קיר"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "תא קיבדהל וא ןועטל זאו ,ףוסמב  codex login  ץירהל שי"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(םיריזגה חול תא ארוק הקבדהה רותפכ) codex/auth.json./~ לש אלמה ןכותה"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
-
 msgid "Couldn't apply your changes"
 msgstr "םייונישה תא ליחהל היה ןתינ אל"
 
-msgid "Remove your API key?"
-msgstr "?API-ה חתפמ תא ריסהל"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr ".Mixar לש לדחמה תרירב קפסב בוש שמתשי ןכוסה"
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr ".תוידיתע ןכוס תושקב רובע וביוחי Mixar לש םיטידרק"
@@ -1652,17 +1610,11 @@ msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה �
 msgid "API key removed"
 msgstr "רסוה API-ה חתפמ"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr ".Mixar לש לדחמה תרירב קפסל רזח ןכוסה"
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr ".ןכוס תושקב רובע בוש םיביוחמ Mixar לש םיטידרק"
-
-msgid "Try Again"
-msgstr "ףסונ ןויסינ"
-
-msgid "Save & Activate"
-msgstr "הלעפהו הרימש"
 
 msgid "Keep My Key"
 msgstr "ילש חתפמה תרימש"
@@ -1730,8 +1682,17 @@ msgstr "םיימוקמ םימושיי לש שדחמ הקירס"
 msgid "Rescan this computer for running local AI apps"
 msgstr "םילעופ םיימוקמ AI ימושיי רותיאל הז בשחמ לש שדחמ הקירס"
 
+msgid "AI Provider Settings"
+msgstr "AI קפס תורדגה"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr ".ןכוס תושקב רובע םיביוחמ םניא Mixar לש םיטידרק ,ליעפ הז דוע לכ .Mixar ןכוס רובע ךלשמ API חתפמב שומיש"
+
+msgid "Settings"
+msgstr "תורדגה"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "API-ה חתפמ תרימשו קפסה לומ תומיא"
@@ -1747,6 +1708,9 @@ msgstr ".auth.json תליבח תא ןועטלו Codex לדומ רוחבל שי"
 
 msgid "Save failed."
 msgstr ".הלשכנ הרימשה"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "codex/auth.json./~ ךותמ הניעט"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "הדשה לא הז בשחממ codex/auth.json./~ תאירק"
@@ -1793,6 +1757,84 @@ msgstr "תרשה דצב רומשה API-ה חתפמ תקיחמ"
 msgid "Remove failed."
 msgstr ".הלשכנ הרסהה"
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "…קפסה לומ תמאמ"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא — Mixar ןכוס תושקבל קר שמשמו ,ןפצומ ןסחואמ"
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירקב ךמותש לדומ רוחבל שי"
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "תינדי הקבדה וא…"
+
+msgid "{count} characters pasted"
+msgstr "םיוות {count} וקבדוה"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "ףסונ ןויסינ"
+
+msgid "Save & Activate"
+msgstr "הלעפהו הרימש"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK בצמ ןונער"
 
@@ -1804,6 +1846,9 @@ msgstr "םילדומה גולטק ןונער"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "תרשהמ לדומהו קפסה גולטק לש שדחמ תומיא"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "ןכוסה לדומ קפס"
@@ -1831,6 +1876,12 @@ msgstr "BYOK ידי לע ףקענ ןכוסה לדומ"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "תבשומ ררובה ןכלו ,חראתמה לדומה תריחב לע רבוג אוה — רדגומ ךלשמ API חתפמ דוע לכ ןוכנ"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "יאכז ןכוסה לדומ"
@@ -2236,6 +2287,9 @@ msgstr "ןימז וניא ןכוסה יא רות"
 
 msgid "Show every job"
 msgstr "המישמ לכ תגצה"
+
+msgid "Active"
+msgstr "ליעפ"
 
 msgid "Show pending or running jobs"
 msgstr "תולעופ וא תוניתממ תומישמ תגצה"
@@ -6298,9 +6352,6 @@ msgstr "הרוצה לע עדימ"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "דיחי דלשכ גיר — תחא תומד לש םיקלחה לכ תריחב"
-
-msgid "Settings"
-msgstr "תורדגה"
 
 msgid "Auto-detects the skeleton type"
 msgstr "דלשה גוס תא תיטמוטוא ההזמ"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "גורדש"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "הקיר בושמה תרעה"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "רייצל ליחתהל ידכ תובכשה חולב רויצ תבכש ףיסוהל שי"
 
@@ -24465,6 +24528,9 @@ msgstr "טלוק"
 
 msgid "NEW"
 msgstr "שדח"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "...רבד לכ Mixie תא ולאש"
@@ -24820,11 +24886,17 @@ msgstr "בוש לואשל ול רשפאל ידכ הציחל .לאוש אל םל�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תוחותפ תוריחב לע ומצעב טילחמ ןכוסה :יטמוטוא בצמ"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "חראתמ לדומ בוש רוחבל ידכ \"ילש API-ה חתפמ לש הרסה וא יוניש\" ורחבו הז טירפת וחתפ .לדומה תא עבוק אוהו ,שומישב םכלש API-ה חתפמ"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "ןכוסה ץר וילעש לדומה תריחב"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "ןכוסה תעוב"

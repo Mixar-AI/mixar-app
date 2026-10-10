@@ -1565,20 +1565,11 @@ msgstr "Modela ni bilo mogoče ponastaviti"
 msgid "Removing your key…"
 msgstr "Odstranjevanje vašega ključa…"
 
-msgid "Validating with provider…"
-msgstr "Preverjanje pri ponudniku…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Nastavitve ponudnika AI"
-
-msgid "Active"
-msgstr "Aktivno"
-
-msgid "Not configured"
-msgstr "Ni nastavljeno"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Zažene agenta Mixar pri vašem ponudniku — krediti Mixar se med aktivnostjo ne zaračunajo."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Trenutna nastavitev"
@@ -1601,47 +1592,14 @@ msgstr "Model samo za besedilo — klepet deluje; opravila 3D tečejo brez vidne
 msgid "Remove API Key…"
 msgstr "Odstrani ključ API…"
 
-msgid "Provider Setup"
-msgstr "Nastavitev ponudnika"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Shranjeno šifrirano, uporabljeno le za zahteve agenta Mixar — po shranjevanju je prikazan le zamaskiran predogled."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Izberite model, ki podpira klicanje orodij / funkcij — agent ga potrebuje."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Naloži iz ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…ali prilepite ročno"
-
-msgid "{count} characters pasted"
-msgstr "Prilepljeni znaki: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Prazno — prilepite svoj auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "V terminalu zaženite  codex login , nato naložite ali prilepite celotno"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "vsebino ~/.codex/auth.json (gumb za lepljenje prebere vaše odložišče)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Uporablja vašo naročnino ChatGPT — krediti Mixar se ne zaračunajo."
-
 msgid "Couldn't apply your changes"
 msgstr "Vaših sprememb ni bilo mogoče uveljaviti"
 
-msgid "Remove your API key?"
-msgstr "Odstranim vaš ključ API?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent bo znova uporabljal privzetega ponudnika Mixar."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Za prihodnje zahteve agenta se bodo zaračunali krediti Mixar."
@@ -1652,17 +1610,11 @@ msgstr "Agent Mixar zdaj teče pri vašem ponudniku — krediti Mixar se ne zara
 msgid "API key removed"
 msgstr "Ključ API je odstranjen"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent je znova pri privzetem ponudniku Mixar."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Za zahteve agenta se znova zaračunajo krediti Mixar."
-
-msgid "Try Again"
-msgstr "Poskusi znova"
-
-msgid "Save & Activate"
-msgstr "Shrani in aktiviraj"
 
 msgid "Keep My Key"
 msgstr "Obdrži moj ključ"
@@ -1730,8 +1682,17 @@ msgstr "Znova preišči krajevne aplikacije"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Znova preišče ta računalnik za zagnanimi krajevnimi aplikacijami AI"
 
+msgid "AI Provider Settings"
+msgstr "Nastavitve ponudnika AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Uporabite lasten ključ API za agenta Mixar. Dokler je aktiven, se za zahteve agenta krediti Mixar ne zaračunajo."
+
+msgid "Settings"
+msgstr "Nastavitve"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Preveri pri ponudniku in shrani vaš ključ API"
@@ -1747,6 +1708,9 @@ msgstr "Izberite model Codex in naložite sveženj auth.json."
 
 msgid "Save failed."
 msgstr "Shranjevanje ni uspelo."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Naloži iz ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Prebere ~/.codex/auth.json s tega računalnika v polje"
@@ -1793,6 +1757,84 @@ msgstr "Izbriše shranjeni ključ API na strežniku"
 msgid "Remove failed."
 msgstr "Odstranitev ni uspela."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "Preverjanje pri ponudniku…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "Shranjeno šifrirano, uporabljeno le za zahteve agenta Mixar — po shranjevanju je prikazan le zamaskiran predogled."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "Izberite model, ki podpira klicanje orodij / funkcij — agent ga potrebuje."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…ali prilepite ročno"
+
+msgid "{count} characters pasted"
+msgstr "Prilepljeni znaki: {count}"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "Poskusi znova"
+
+msgid "Save & Activate"
+msgstr "Shrani in aktiviraj"
+
 msgid "Refresh BYOK State"
 msgstr "Osveži stanje BYOK"
 
@@ -1804,6 +1846,9 @@ msgstr "Osveži katalog modelov"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Znova preveri katalog ponudnikov in modelov iz zaledja"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Ponudnik modela agenta"
@@ -1831,6 +1876,12 @@ msgstr "Model agenta preglašen z BYOK"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "Drži, dokler je nastavljen vaš ključ API — ima prednost pred izbiro gostovanega modela, zato je izbirnik onemogočen"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "Model agenta je upravičen"
@@ -2236,6 +2287,9 @@ msgstr "Čakalna vrsta otoka agenta ni na voljo"
 
 msgid "Show every job"
 msgstr "Pokaži vsako opravilo"
+
+msgid "Active"
+msgstr "Aktivno"
 
 msgid "Show pending or running jobs"
 msgstr "Pokaži čakajoča ali tekoča opravila"
@@ -6298,9 +6352,6 @@ msgstr "Podatki o mreži"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Izberite vse dele enega lika — okosteni kot eno okostje"
-
-msgid "Settings"
-msgstr "Nastavitve"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Samodejno zazna vrsto okostja"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Nadgradi"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Komentar povratnih informacij je prazen"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Za začetek slikanja na plošči Plasti dodajte plast slikanja"
 
@@ -24465,6 +24528,9 @@ msgstr "Dohitevanje"
 
 msgid "NEW"
 msgstr "NOVO"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Vprašajte Mixie karkoli ..."
@@ -24820,11 +24886,17 @@ msgstr "Samodejni način je vklopljen: agent odprte izbire odloči sam in nikoli
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Samodejni način: agent odprte izbire odloči sam, namesto da vas vpraša, in odločitve navede v povzetku"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "V uporabi je vaš ključ API in ta določa model. Odprite ta meni in izberite »Spremeni ali odstrani moj ključ API«, da znova izberete gostovani model"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "Izberite, na katerem modelu teče agent"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "Mehurček agenta"

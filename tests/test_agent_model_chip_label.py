@@ -284,3 +284,11 @@ def test_the_optimistic_local_write_composes_too():
     }, wm)
 
     assert wm.mixar_agent_model_label == "Claude Sonnet 4.6 · Medium High"
+
+
+def test_the_island_toggle_names_the_keys_provider_in_one_short_word():
+    from mixar.modules.byok.core import catalog_labels
+    assert catalog_labels.toggle_provider_label('codex') == 'Codex'
+    assert catalog_labels.toggle_provider_label('openrouter') == 'OpenRouter'
+    assert catalog_labels.toggle_provider_label('local') == 'Local'
+    assert catalog_labels.toggle_provider_label('') == ''

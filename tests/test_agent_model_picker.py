@@ -388,7 +388,7 @@ def test_the_dialog_opens_in_the_main_window_not_the_island():
     one and `temp_override(screen=...)` raises "Overriding context with an
     active temporary screen isn't supported", which silently opened nothing."""
     from pathlib import Path
-    src = Path("src/scripts/mixar/modules/byok/ui/operators/byok_ops.py").read_text()
+    src = Path("src/scripts/mixar/modules/byok/ui/operators/byok_dialog_host.py").read_text()
     assert "_dialog_host_window(context)" in src
     assert "context.temp_override(window=host)" in src
     assert "temp_override(window=host, screen=" not in src

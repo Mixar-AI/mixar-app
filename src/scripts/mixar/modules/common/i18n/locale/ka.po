@@ -1565,20 +1565,11 @@ msgstr "მოდელის პირველსახის დაბრუ�
 msgid "Removing your key…"
 msgstr "თქვენი გასაღები იცილება…"
 
-msgid "Validating with provider…"
-msgstr "შემოწმება პროვაიდერთან…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI პროვაიდერის ანაწყობები"
-
-msgid "Active"
-msgstr "აქტიური"
-
-msgid "Not configured"
-msgstr "არ არის კონფიგურირებული"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "გაუშვით Mixar-ის აგენტი საკუთარ პროვაიდერზე — სანამ ეს აქტიურია, Mixar-ის კრედიტები არ იხარჯება."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "მიმდინარე კონფიგურაცია"
@@ -1601,47 +1592,14 @@ msgstr "მხოლოდ ტექსტის მოდელი — ჩა�
 msgid "Remove API Key…"
 msgstr "API გასაღების მოცილება…"
 
-msgid "Provider Setup"
-msgstr "პროვაიდერის მომზადება"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "ინახება დაშიფრულად და გამოიყენება მხოლოდ Mixar-ის აგენტის მოთხოვნებისთვის — შენახვის შემდეგ მხოლოდ შენიღბული გადახედვა ჩანს."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "აირჩიეთ მოდელი, რომელსაც ხელსაწყოს / ფუნქციის გამოძახება შეუძლია — აგენტს ეს სჭირდება."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "ნებისმიერი სლაგი openrouter.ai/models-დან, მაგ. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "ჩატვირთვა ~/.codex/auth.json-დან"
-
-msgid "…or paste it manually"
-msgstr "…ან ჩასვით ხელით"
-
-msgid "{count} characters pasted"
-msgstr "ჩასმულია {count} სიმბოლო"
-
-msgid "Empty — paste your auth.json"
-msgstr "ცარიელია — ჩასვით თქვენი auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ტერმინალში გაუშვით codex login, შემდეგ ჩატვირთეთ ან ჩასვით სრული ფაილი"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-ის შიგთავსი (ჩასმის ღილაკი გაცვლის ბუფერს კითხულობს)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "იყენებს თქვენს ChatGPT-ის გამოწერას — Mixar-ის კრედიტები არ იხარჯება."
-
 msgid "Couldn't apply your changes"
 msgstr "ცვლილებების გამოყენება ვერ მოხერხდა"
 
-msgid "Remove your API key?"
-msgstr "მოიცილოთ თქვენი API გასაღები?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "აგენტი კვლავ Mixar-ის ნაგულისხმებ პროვაიდერს გამოიყენებს."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "მომავალი აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები დაიხარჯება."
@@ -1652,17 +1610,11 @@ msgstr "Mixar-ის აგენტი ახლა თქვენს პრ�
 msgid "API key removed"
 msgstr "API გასაღები მოცილებულია"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "აგენტი კვლავ Mixar-ის ნაგულისხმებ პროვაიდერზეა."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები კვლავ იხარჯება."
-
-msgid "Try Again"
-msgstr "ხელახლა ცდა"
-
-msgid "Save & Activate"
-msgstr "შენახვა და გააქტიურება"
 
 msgid "Keep My Key"
 msgstr "ჩემი გასაღების შენარჩუნება"
@@ -1730,8 +1682,17 @@ msgstr "ლოკალური აპების ხელახალი ს
 msgid "Rescan this computer for running local AI apps"
 msgstr "ხელახლა ასკანირებს ამ კომპიუტერს გაშვებული ლოკალური AI აპების საპოვნელად"
 
+msgid "AI Provider Settings"
+msgstr "AI პროვაიდერის ანაწყობები"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "გამოიყენეთ საკუთარი API გასაღები Mixar-ის აგენტისთვის. სანამ ეს აქტიურია, აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები არ იხარჯება."
+
+msgid "Settings"
+msgstr "ანაწყობები"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "ამოწმებს პროვაიდერთან და ინახავს თქვენს API გასაღებს"
@@ -1747,6 +1708,9 @@ msgstr "აირჩიეთ Codex-ის მოდელი და ჩატ�
 
 msgid "Save failed."
 msgstr "შენახვა ჩავარდა."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "ჩატვირთვა ~/.codex/auth.json-დან"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "კითხულობს ~/.codex/auth.json-ს ამ მანქანიდან ველში"
@@ -1793,6 +1757,84 @@ msgstr "შლის შენახულ API გასაღებს სე�
 msgid "Remove failed."
 msgstr "მოცილება ჩავარდა."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "შემოწმება პროვაიდერთან…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "ინახება დაშიფრულად და გამოიყენება მხოლოდ Mixar-ის აგენტის მოთხოვნებისთვის — შენახვის შემდეგ მხოლოდ შენიღბული გადახედვა ჩანს."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "ნებისმიერი სლაგი openrouter.ai/models-დან, მაგ. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "აირჩიეთ მოდელი, რომელსაც ხელსაწყოს / ფუნქციის გამოძახება შეუძლია — აგენტს ეს სჭირდება."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…ან ჩასვით ხელით"
+
+msgid "{count} characters pasted"
+msgstr "ჩასმულია {count} სიმბოლო"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "ხელახლა ცდა"
+
+msgid "Save & Activate"
+msgstr "შენახვა და გააქტიურება"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK მდგომარეობის განახლება"
 
@@ -1804,6 +1846,9 @@ msgstr "მოდელების კატალოგის განახ�
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ხელახლა ამოწმებს პროვაიდერისა და მოდელის კატალოგს სერვერიდან"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "აგენტის მოდელის პროვაიდერი"
@@ -1831,6 +1876,12 @@ msgstr "აგენტის მოდელი შეცვლილია BYO
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "ჭეშმარიტია, სანამ თქვენი საკუთარი API გასაღები კონფიგურირებულია — ის უპირატესია განთავსებული მოდელის არჩევანზე, ამიტომ ამრჩევი გათიშულია"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "აგენტის მოდელი დასაშვებია"
@@ -2236,6 +2287,9 @@ msgstr "აგენტის კუნძულის რიგი მიუწ
 
 msgid "Show every job"
 msgstr "ყველა დავალების ჩვენება"
+
+msgid "Active"
+msgstr "აქტიური"
 
 msgid "Show pending or running jobs"
 msgstr "მომლოდინე ან მიმდინარე დავალებების ჩვენება"
@@ -6298,9 +6352,6 @@ msgstr "მეშის ინფორმაცია"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "მონიშნეთ ერთი პერსონაჟის ყველა ნაწილი — ერთ ჩონჩხად იდება რიგი"
-
-msgid "Settings"
-msgstr "ანაწყობები"
 
 msgid "Auto-detects the skeleton type"
 msgstr "ავტომატურად ამოიცნობს ჩონჩხის ტიპს"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "ამაღლება"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "უკუკავშირის კომენტარი ცარიელია"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "ხატვის დასაწყებად შრეების პანელში დაამატეთ ხატვის შრე"
 
@@ -24465,6 +24528,9 @@ msgstr "ეწევა"
 
 msgid "NEW"
 msgstr "ახალი"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "ჰკითხეთ Mixie-ს რაც გნებავთ..."
@@ -24820,11 +24886,17 @@ msgstr "ავტომატური რეჟიმი ჩართული�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ავტომატური რეჟიმი: აგენტი ღია არჩევანებს თავად წყვეტს, თქვენი კითხვის ნაცვლად, და გადაწყვეტილებებს შეჯამებაში ჩამოთვლის"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "გამოიყენება თქვენი საკუთარი API გასაღები და ის განსაზღვრავს მოდელს. გახსენით ეს მენიუ და აირჩიეთ „ჩემი API გასაღების შეცვლა ან მოცილება“, რომ კვლავ აირჩიოთ ჰოსტირებული მოდელი"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "აირჩიეთ, რომელ მოდელზე მუშაობს აგენტი"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "აგენტის ბუშტი"

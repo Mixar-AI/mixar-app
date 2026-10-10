@@ -89,8 +89,8 @@ struct AgentIslandState;
  * dropped entirely — before Upload is allowed below its icon-only floor.
  */
 enum class AgentModelChipForm {
-  Full = 0, /* Icon + model label + chevron. */
-  Label,    /* Icon + model label. */
+  Full = 0, /* The Mixie | Custom AI toggle. */
+  Label,    /* Same toggle (the ladder keeps three rungs). */
   Icon,     /* Icon alone. */
 };
 
@@ -149,11 +149,13 @@ struct AgentIslandLayout {
   /* Auto mode switch, right of Voice (closes the gap with it when Voice is
    * absent). Always drawn: the flag is a plain scene property. */
   rctf chip_auto;
-  /* Hosted model pick, right of Auto. Empty when the Python half has not
+  /* Mixie | Custom AI toggle, right of Auto. Empty when the Python half has not
    * registered its WindowManager mirror yet, or when the row is too narrow
    * to carry it without eating Upload Reference. */
   rctf chip_model;
   AgentModelChipForm model_form;
+  /* The toggle's seam: Mixie left of it, API key right of it. */
+  float model_split_x;
   /* Form each chip was fitted at (#agent_chip_fit): 0 is the full label; a
    * higher index sheds text down to the chip's icon. Painters read this. */
   int chip_form[AGENT_CHIP_SLOT_COUNT];

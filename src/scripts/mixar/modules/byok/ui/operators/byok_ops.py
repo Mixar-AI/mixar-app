@@ -27,12 +27,13 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
+from bpy.props import EnumProperty
 from mixar.modules.common.i18n import n_
 
+from ...constants import PROVIDER_DIALOG_WIDTH
 from ...core import byok_client, credential_state, model_suggestions, models_cache
 from ...core import preference_state
-from . import byok_dialog_ui
+from . import byok_dialog_host, byok_dialog_refresh, byok_dialog_ui
 from .byok_state_ops import (
     _apply_cached_state,
     _clear_cached_state,
@@ -63,31 +64,6 @@ def _wipe_form_secrets(wm):
 # Dialog entry point
 # ---------------------------------------------------------------------------
 
-def _dialog_host_window(context):
-    """The main window the dialog should open over, or None to stay put.
-
-    An Agent Bubble window (island or pill) is a small always-on-top overlay:
-    a props dialog opened there is clipped to its height. Prefer the window
-    with the most areas that is NOT a bubble — the primary workspace window.
-    """
-    try:
-        from mixar.modules.agent_bubble.core.bubble_lifecycle import (
-            is_agent_bubble_window,
-        )
-    except Exception:  # noqa: BLE001 — stripped builds: stay in place
-        return None
-    try:
-        if not is_agent_bubble_window(context.window):
-            return None
-        candidates = [w for w in context.window_manager.windows
-                      if not is_agent_bubble_window(w) and w.screen.areas]
-    except Exception:  # noqa: BLE001
-        return None
-    if not candidates:
-        return None
-    return max(candidates, key=lambda w: len(w.screen.areas))
-
-
 # True while the props dialog is on screen. Re-invoking would stack another
 # dialog (and reset the form state under the one already open), so invoke()
 # refuses while set; execute()/cancel() clear it when the dialog closes.
@@ -103,6 +79,15 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         "While active, Mixar credits are not charged for agent requests."
     )
 
+    # USE_MIXIE is the island toggle's "Mixie" side while a key is active:
+    # a key is active exactly while it is stored, so going back to Mixie
+    # opens straight on the remove confirmation.
+    mode: EnumProperty(
+        items=(('SETTINGS', "Settings", ""), ('USE_MIXIE', "Use Mixie", "")),
+        default='SETTINGS',
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+
     def invoke(self, context, event):
         global _dialog_open
         if _dialog_open:
@@ -112,6 +97,8 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         wm.byok_dialog_state = 'IDLE'
         wm.byok_last_error = ''
         _wipe_form_secrets(wm)  # never prefill credential material
+        if self.mode == 'USE_MIXIE' and wm.byok_is_active:
+            wm.byok_dialog_state = 'CONFIRM_REMOVE'
         # If we already have an active config, prefill provider/model so
         # the user sees what's currently saved and can edit from there.
         # Provider assignment can fail if the cache hasn't been populated
@@ -153,23 +140,13 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             byok_local_ops.prepare_dialog(wm)
         except Exception as e:
             logger.debug("Local provider dialog prep failed: %s", e)
-        # invoke_props_dialog (not invoke_popup) so the dialog redraws
-        # continuously — state flips from SAVING → IDLE / ERROR during
-        # the async save must be visible without user interaction.
-        #
-        # Both the profile and chat picker open this shared dialog. A popup
-        # block in the Agent Bubble's ~460px window would be clipped over the
-        # composer, so host it in the main window instead.
-        # Override the WINDOW only: the bubble's screen is a temporary one and
-        # `temp_override(screen=...)` refuses it outright ("Overriding context
-        # with an active temporary screen isn't supported").
-        host = _dialog_host_window(context)
+        # A props dialog (not invoke_popup) so the dialog redraws through
+        # SAVING → IDLE / ERROR without user interaction. byok_dialog_host
+        # hosts it in the main window, centred, with the always-on-top
+        # island minimised while it is up (restored on close).
         _dialog_open = True
         try:
-            if host is not None and host != context.window:
-                with context.temp_override(window=host):
-                    return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
-            return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
+            return byok_dialog_host.open_dialog(context, self, PROVIDER_DIALOG_WIDTH)
         except Exception:
             _dialog_open = False
             raise
@@ -177,6 +154,8 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
     def execute(self, context):
         global _dialog_open
         _dialog_open = False
+        byok_dialog_refresh.forget()
+        byok_dialog_host.dialog_closed()
         # No-op: Save / Remove are their own operators, invoked from draw().
         _wipe_form_secrets(context.window_manager)
         return {'FINISHED'}
@@ -185,9 +164,12 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         """Esc/click-away must not leave JWTs or API keys in RNA memory."""
         global _dialog_open
         _dialog_open = False
+        byok_dialog_refresh.forget()
+        byok_dialog_host.dialog_closed()
         _wipe_form_secrets(context.window_manager)
 
     def draw(self, context):
+        byok_dialog_refresh.remember(getattr(context, "region_popup", None))
         # All rendering lives in byok_dialog_ui (500-line rule): the
         # card-styled states AND the single-primary-action footer whose
         # active-default button suppresses the native OK/Cancel row.

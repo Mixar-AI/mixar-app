@@ -1565,20 +1565,11 @@ msgstr "மாதிரியை மீட்டமைக்க முடிய�
 msgid "Removing your key…"
 msgstr "உங்கள் விசையை அகற்றுகிறது…"
 
-msgid "Validating with provider…"
-msgstr "வழங்குநரிடம் சரிபார்க்கிறது…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI வழங்குநர் அமைப்புகள்"
-
-msgid "Active"
-msgstr "செயலில்"
-
-msgid "Not configured"
-msgstr "அமைக்கப்படவில்லை"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "உங்கள் சொந்த வழங்குநரில் Mixar முகவரை இயக்குங்கள் — இயக்கத்தில் இருக்கும்போது Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "நடப்பு அமைவு"
@@ -1601,47 +1592,14 @@ msgstr "உரை மட்டும் மாதிரி — அரட்ட�
 msgid "Remove API Key…"
 msgstr "API விசையை அகற்று…"
 
-msgid "Provider Setup"
-msgstr "வழங்குநர் அமைப்பு"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-இலிருந்து ஏற்று"
-
-msgid "…or paste it manually"
-msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
-
-msgid "{count} characters pasted"
-msgstr "ஒட்டிய எழுத்துகள்: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "காலி — உங்கள் auth.json-ஐ ஒட்டுங்கள்"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "உங்கள் முனையத்தில்  codex login  இயக்கி, முழுவதையும் ஏற்றுங்கள் அல்லது ஒட்டுங்கள்"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (ஒட்டு பொத்தான் உங்கள் இடைநிலைப் பலகையைப் படிக்கும்)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
-
 msgid "Couldn't apply your changes"
 msgstr "உங்கள் மாற்றங்களைப் பயன்படுத்த முடியவில்லை"
 
-msgid "Remove your API key?"
-msgstr "உங்கள் API விசையை அகற்றவா?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "முகவர் மீண்டும் Mixar-இன் இயல்புநிலை வழங்குநரைப் பயன்படுத்தும்."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "வரும் முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படும்."
@@ -1652,17 +1610,11 @@ msgstr "Mixar முகவர் இப்போது உங்கள் வழ
 msgid "API key removed"
 msgstr "API விசை அகற்றப்பட்டது"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "முகவர் மீண்டும் Mixar-இன் இயல்புநிலை வழங்குநரில் உள்ளது."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் மீண்டும் வசூலிக்கப்படும்."
-
-msgid "Try Again"
-msgstr "மீண்டும் முயல்"
-
-msgid "Save & Activate"
-msgstr "சேமித்து இயக்கு"
 
 msgid "Keep My Key"
 msgstr "என் விசையை வை"
@@ -1730,8 +1682,17 @@ msgstr "உள்ளகப் பயன்பாடுகளை மீண்ட�
 msgid "Rescan this computer for running local AI apps"
 msgstr "இயங்கும் உள்ளக AI பயன்பாடுகளுக்காக இந்தக் கணினியை மீண்டும் வருடுகிறது"
 
+msgid "AI Provider Settings"
+msgstr "AI வழங்குநர் அமைப்புகள்"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar முகவருக்கு உங்கள் சொந்த API விசையைப் பயன்படுத்துங்கள். இயக்கத்தில் இருக்கும்போது முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+
+msgid "Settings"
+msgstr "அமைப்புகள்"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "வழங்குநரிடம் சரிபார்த்து உங்கள் API விசையைச் சேமிக்கிறது"
@@ -1747,6 +1708,9 @@ msgstr "ஒரு Codex மாதிரியைத் தேர்ந்தெ�
 
 msgid "Save failed."
 msgstr "சேமிப்பு தோல்வி."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json-இலிருந்து ஏற்று"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "இந்த இயந்திரத்திலிருந்து ~/.codex/auth.json-ஐ புலத்துக்குள் படிக்கிறது"
@@ -1793,6 +1757,84 @@ msgstr "சேமித்த API விசையைச் சேவையகப
 msgid "Remove failed."
 msgstr "அகற்றுதல் தோல்வி."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "வழங்குநரிடம் சரிபார்க்கிறது…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
+
+msgid "{count} characters pasted"
+msgstr "ஒட்டிய எழுத்துகள்: {count}"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "மீண்டும் முயல்"
+
+msgid "Save & Activate"
+msgstr "சேமித்து இயக்கு"
+
 msgid "Refresh BYOK State"
 msgstr "BYOK நிலையைப் புதுப்பி"
 
@@ -1804,6 +1846,9 @@ msgstr "மாதிரி அட்டவணையைப் புதுப்�
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "பின்தளத்திலிருந்து வழங்குநர்+மாதிரி அட்டவணையை மீண்டும் சரிபார்க்கிறது"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "முகவர் மாதிரி வழங்குநர்"
@@ -1831,6 +1876,12 @@ msgstr "BYOK முகவர் மாதிரியை மீறுகிற�
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "உங்கள் சொந்த API விசை அமைக்கப்பட்டிருக்கும்போது உண்மை — அது புரவலன் மாதிரித் தேர்வை விட முன்னுரிமை பெறும், அதனால் தேர்வி முடக்கப்படும்"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "முகவர் மாதிரி தகுதி"
@@ -2236,6 +2287,9 @@ msgstr "முகவர் தீவு வரிசை கிடைக்கவ
 
 msgid "Show every job"
 msgstr "ஒவ்வொரு பணியையும் காட்டு"
+
+msgid "Active"
+msgstr "செயலில்"
 
 msgid "Show pending or running jobs"
 msgstr "நிலுவை அல்லது இயங்கும் பணிகளைக் காட்டுகிறது"
@@ -6298,9 +6352,6 @@ msgstr "கண்ணித் தகவல்"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "ஒரு பாத்திரத்தின் அனைத்துப் பகுதிகளையும் தேர்ந்தெடுங்கள் — ஒரே எலும்புக்கூறாக ரிக் செய்யப்படும்"
-
-msgid "Settings"
-msgstr "அமைப்புகள்"
 
 msgid "Auto-detects the skeleton type"
 msgstr "எலும்புக்கூறு வகையைத் தானாகக் கண்டறியும்"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "மேம்படுத்து"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "பின்னூட்டக் கருத்து காலியாக உள்ளது"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "வண்ணம் தீட்டத் தொடங்க அடுக்குகள் பேனலில் ஒரு வண்ணப்பூச்சு அடுக்கைச் சேர்க்கவும்"
 
@@ -24465,6 +24528,9 @@ msgstr "பிடிக்கிறது"
 
 msgid "NEW"
 msgstr "புதியது"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie-இடம் எதையும் கேளுங்கள்..."
@@ -24820,11 +24886,17 @@ msgstr "தானி பயன்முறை இயக்கத்தில் 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "தானி பயன்முறை: திறந்த தேர்வுகளை உங்களிடம் கேட்பதற்குப் பதிலாக முகவரே முடிவு செய்து, அந்த முடிவுகளைச் சுருக்கத்தில் பட்டியலிடும்"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "உங்கள் சொந்த API விசை பயன்பாட்டில் உள்ளது, மாதிரியை அது முடிவு செய்கிறது. வழங்கும் மாதிரியை மீண்டும் தேர்ந்தெடுக்க இந்தப் பட்டியைத் திறந்து \"என் API விசையை மாற்று அல்லது அகற்று\" என்பதைத் தேர்ந்தெடுக்கவும்"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "முகவர் எந்த மாதிரியில் இயங்கும் என்பதைத் தேர்ந்தெடு"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"

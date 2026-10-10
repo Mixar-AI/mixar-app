@@ -411,53 +411,69 @@ void agent_ui_draw_chip_row(ARegion *region,
     }
   }
 
-  /* Model, right of Auto: which hosted model the agent runs on. The label is
-   * the Python half's WindowManager mirror — this only reads it. An empty
-   * mirror reads "Mixie" so the control is discoverable before a pick
-   * has been made. While a BYOK key overrides the hosted pick the chip is
-   * inert, and says so by dimming its ink (the native button carries the
-   * explanation as its disabled hint).
+  /* Mixie | Custom AI, right of Auto: who answers the agent. The left half is
+   * Mixie (Mixar's hosted models), the right half the user's own key. The
+   * thumb rides `feedback.selected` from the Mixie half to the API key half
+   * while a key is in use, so a change slides on the shared Zen timing; the
+   * active word is full ink, the other dimmed. The state is the Python
+   * half's WindowManager mirror — this only reads it.
    *
-   * The row is width-budgeted, so the chip may have been stepped down to
-   * label-only or icon-only, or dropped entirely — see
-   * agent_ui_layout_fit_controls. An empty rect means dropped. */
+   * The row is width-budgeted, so the toggle may have been stepped down to
+   * a lone icon, or dropped entirely — see agent_ui_layout_fit_controls. An
+   * empty rect means dropped. */
   if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
     MIXAR_THEME_LOAD(text_dim, TextSecondary);
-    const float *ink = state->model_byok_active ? text_dim : text;
-    float model_fill[4];
-    agent_ui_motion_color(
-        chip,
-        chip,
-        agent_ui_motion_sample(region, AgentIslandControl::Model, layout->chip_model),
-        model_fill);
-    fill_round(&layout->chip_model, radius, model_fill);
+    /* Neutral gray thumb (the design), the same token as Auto's idle track. */
+    MIXAR_THEME_LOAD(thumb_fill, Border);
+    const AgentIslandFeedback feedback = agent_ui_motion_sample(
+        region, AgentIslandControl::Model, layout->chip_model, state->model_byok_active);
+    float track_fill[4];
+    agent_ui_motion_color(chip, chip, feedback, track_fill);
+    fill_round(&layout->chip_model, radius, track_fill);
 
     const float cy = BLI_rctf_cent_y(&layout->chip_model);
-    const char *model_label = state->model_label[0] ? state->model_label : "Mixie";
     if (layout->model_form == AgentModelChipForm::Icon) {
       const float ccx = BLI_rctf_cent_x(&layout->chip_model);
       const rctf glyph{ccx - icon_edge * 0.5f,
                        ccx + icon_edge * 0.5f,
                        cy - icon_edge * 0.5f,
                        cy + icon_edge * 0.5f};
-      agent_ui_icon_draw(AGENT_ICON_STAR, &glyph, ink, model_fill);
+      agent_ui_icon_draw(AGENT_ICON_STAR, &glyph, text, track_fill);
     }
     else {
-      /* Same centred icon+label group every other chip uses; the chevron,
-       * when it survives the budget, is carved off the right first. */
-      rctf body = layout->chip_model;
-      if (layout->model_form == AgentModelChipForm::Full) {
-        body.xmax -= icon_edge * 0.7f + icon_gap;
-      }
-      chip_content(body, AGENT_ICON_STAR, model_label, size, icon_edge, icon_gap, ink, model_fill);
-      if (layout->model_form == AgentModelChipForm::Full) {
-        rctf chevron = layout->chip_model;
-        chevron.xmax -= pad;
-        chevron.xmin = chevron.xmax - icon_edge * 0.7f;
-        chevron.ymin = cy - icon_edge * 0.35f;
-        chevron.ymax = cy + icon_edge * 0.35f;
-        agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chevron, ink, model_fill);
-      }
+      const float inset = AGENT_SEG_THUMB_INSET * u;
+      const rctf &r = layout->chip_model;
+      const float split = layout->model_split_x;
+      const rctf mixie{r.xmin + inset, split, r.ymin + inset, r.ymax - inset};
+      const rctf key{split, r.xmax - inset, r.ymin + inset, r.ymax - inset};
+      const float t = feedback.selected;
+      const rctf thumb{mixie.xmin + (key.xmin - mixie.xmin) * t,
+                       mixie.xmax + (key.xmax - mixie.xmax) * t,
+                       mixie.ymin,
+                       mixie.ymax};
+      fill_round(&thumb, std::max(0.0f, radius - inset), thumb_fill);
+
+      /* Literal msgids so the i18n extractor sees them; they must match
+       * AGENT_MODEL_TOGGLE_MIXIE / _KEY, which size the segments. Mixie
+       * carries a chevron (it opens a menu), centred with its word as one
+       * group; the key half names the key's provider once one is in use. */
+      float mixie_ink[4], key_ink[4];
+      agent_ui_motion_color(text, text_dim, {0.0f, 0.0f, t}, mixie_ink);
+      agent_ui_motion_color(text_dim, text, {0.0f, 0.0f, t}, key_ink);
+      const char *mixie_word = IFACE_("Mixie");
+      const float chevron_w = icon_edge * AGENT_MODEL_TOGGLE_CHEVRON;
+      const float chevron_gap = AGENT_CHIP_ICON_GAP * u * 0.5f;
+      const float group_w = ui::mixar_text_width(mixie_word, size) + chevron_gap + chevron_w;
+      const float group_x = BLI_rctf_cent_x(&mixie) - group_w * 0.5f;
+      label_left(mixie_word, group_x, cy, size, mixie_ink);
+      const rctf chevron{group_x + group_w - chevron_w,
+                         group_x + group_w,
+                         cy - chevron_w * 0.5f,
+                         cy + chevron_w * 0.5f};
+      agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chevron, mixie_ink, track_fill);
+      const char *key_word = state->model_key_label[0] ? state->model_key_label :
+                                                         IFACE_("Custom AI");
+      label_centre(key_word, BLI_rctf_cent_x(&key), cy, size, key_ink);
     }
   }
 

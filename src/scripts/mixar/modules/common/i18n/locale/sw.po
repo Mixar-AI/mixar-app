@@ -1565,20 +1565,11 @@ msgstr "Haikuweza kuweka upya modeli"
 msgid "Removing your key…"
 msgstr "Inaondoa ufunguo wako…"
 
-msgid "Validating with provider…"
-msgstr "Inathibitisha na mtoa huduma…"
+msgid "AI Provider settings"
+msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Mipangilio ya mtoa huduma wa AI"
-
-msgid "Active"
-msgstr "Inayotumika"
-
-msgid "Not configured"
-msgstr "Haijawekwa"
-
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Endesha wakala wa Mixar kwa mtoa huduma wako — krediti za Mixar hazitozwi ikiwa inatumika."
+msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Usanidi wa sasa"
@@ -1601,47 +1592,14 @@ msgstr "Modeli ya maandishi pekee — soga hufanya kazi; majukumu ya 3D huendesh
 msgid "Remove API Key…"
 msgstr "Ondoa ufunguo wa API…"
 
-msgid "Provider Setup"
-msgstr "Usanidi wa mtoa huduma"
-
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Huhifadhiwa ikiwa imesimbwa, hutumika kwa maombi ya wakala wa Mixar pekee — hakiki iliyofichwa pekee huonyeshwa baada ya kuhifadhi."
-
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Leta kutoka ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…au ibandike kwa mkono"
-
-msgid "{count} characters pasted"
-msgstr "Herufi zilizobandikwa: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Tupu — bandika auth.json yako"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Endesha  codex login  kwenye terminali yako, kisha leta au bandika yote"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "maudhui ya ~/.codex/auth.json (kitufe cha kubandika husoma ubao wako wa kunakili)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Hutumia usajili wako wa ChatGPT — krediti za Mixar hazitozwi."
-
 msgid "Couldn't apply your changes"
 msgstr "Haikuweza kutumia mabadiliko yako"
 
-msgid "Remove your API key?"
-msgstr "Ondoa ufunguo wako wa API?"
+msgid "Switch back to Mixie?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Wakala atatumia tena mtoa huduma chaguomsingi wa Mixar."
+msgid "This removes your saved API key; the agent runs on Mixie again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Krediti za Mixar zitatozwa kwa maombi yajayo ya wakala."
@@ -1652,17 +1610,11 @@ msgstr "Wakala wa Mixar sasa anaendeshwa kwa mtoa huduma wako — krediti za Mix
 msgid "API key removed"
 msgstr "Ufunguo wa API umeondolewa"
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Wakala amerudi kwa mtoa huduma chaguomsingi wa Mixar."
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Krediti za Mixar zinatozwa tena kwa maombi ya wakala."
-
-msgid "Try Again"
-msgstr "Jaribu tena"
-
-msgid "Save & Activate"
-msgstr "Hifadhi na uwashe"
 
 msgid "Keep My Key"
 msgstr "Weka ufunguo wangu"
@@ -1730,8 +1682,17 @@ msgstr "Changanua tena programu za ndani"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Changanua tena kompyuta hii kutafuta programu za AI za ndani zinazoendeshwa"
 
+msgid "AI Provider Settings"
+msgstr "Mipangilio ya mtoa huduma wa AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti za Mixar hazitozwi kwa maombi ya wakala."
+
+msgid "Settings"
+msgstr "Mipangilio"
+
+msgid "Use Mixie"
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Thibitisha na mtoa huduma na uhifadhi ufunguo wako wa API"
@@ -1747,6 +1708,9 @@ msgstr "Chagua modeli ya Codex na ulete fungu lako la auth.json."
 
 msgid "Save failed."
 msgstr "Kuhifadhi kumeshindwa."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Leta kutoka ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Soma ~/.codex/auth.json kutoka mashine hii hadi kwenye uga"
@@ -1793,6 +1757,84 @@ msgstr "Futa ufunguo wa API uliohifadhiwa upande wa seva"
 msgid "Remove failed."
 msgstr "Kuondoa kumeshindwa."
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Validating with provider…"
+msgstr "Inathibitisha na mtoa huduma…"
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
+msgstr "Huhifadhiwa ikiwa imesimbwa, hutumika kwa maombi ya wakala wa Mixar pekee — hakiki iliyofichwa pekee huonyeshwa baada ya kuhifadhi."
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that supports tool / function calling — the agent needs it."
+msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "…or paste it manually"
+msgstr "…au ibandike kwa mkono"
+
+msgid "{count} characters pasted"
+msgstr "Herufi zilizobandikwa: {count}"
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Try Again"
+msgstr "Jaribu tena"
+
+msgid "Save & Activate"
+msgstr "Hifadhi na uwashe"
+
 msgid "Refresh BYOK State"
 msgstr "Onyesha upya hali ya BYOK"
 
@@ -1804,6 +1846,9 @@ msgstr "Onyesha upya katalogi ya modeli"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Thibitisha tena katalogi ya mtoa huduma na modeli kutoka seva ya nyuma"
+
+msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Mtoa huduma wa modeli ya wakala"
@@ -1831,6 +1876,12 @@ msgstr "Modeli ya wakala imebatilishwa na BYOK"
 
 msgid "True while your own API key is configured — it takes precedence over the hosted model pick, so the picker is disabled"
 msgstr "Kweli wakati ufunguo wako wa API umewekwa — unatangulia chaguo la modeli iliyohifadhiwa mtandaoni, hivyo kichagua kimezimwa"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
 
 msgid "Agent Model Eligible"
 msgstr "Modeli ya wakala inastahili"
@@ -2236,6 +2287,9 @@ msgstr "Foleni ya kisiwa cha wakala haipatikani"
 
 msgid "Show every job"
 msgstr "Onyesha kila kazi"
+
+msgid "Active"
+msgstr "Inayotumika"
 
 msgid "Show pending or running jobs"
 msgstr "Onyesha kazi zinazosubiri au zinazoendeshwa"
@@ -6298,9 +6352,6 @@ msgstr "Maelezo ya matundu"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Chagua sehemu zote za mhusika mmoja — huwekwa rigi kama mifupa moja"
-
-msgid "Settings"
-msgstr "Mipangilio"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Hutambua aina ya mifupa kiotomatiki"
@@ -19623,6 +19674,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Boresha"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Maoni hayana maandishi"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Ongeza tabaka la upakaji katika jopo la Tabaka ili kuanza kupaka"
 
@@ -24465,6 +24528,9 @@ msgstr "Inanasa"
 
 msgid "NEW"
 msgstr "MPYA"
+
+msgid "Custom AI"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Muulize Mixie chochote..."
@@ -24820,11 +24886,17 @@ msgstr "Modi otomatiki imewashwa: wakala huamua chaguzi wazi mwenyewe na hauuliz
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Modi otomatiki: wakala huamua chaguzi wazi mwenyewe badala ya kuuliza, na huorodhesha maamuzi yake katika muhtasari"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Ufunguo wako wa API unatumika, na unaamua modeli. Fungua menyu hii na uchague \"Badilisha au ondoa ufunguo wangu wa API\" ili kuchagua modeli iliyohifadhiwa tena"
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
 
-msgid "Choose which model the agent runs on"
-msgstr "Chagua modeli ambayo wakala hutumia"
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
 
 msgid "Agent Bubble"
 msgstr "Kiputo cha wakala"

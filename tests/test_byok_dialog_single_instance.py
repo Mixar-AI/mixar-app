@@ -23,10 +23,17 @@ def _method(name):
 
 def test_invoke_guards_and_sets_flag():
     src = _method("invoke")
-    assert src.index("if _dialog_open") < src.index("invoke_props_dialog")
+    assert src.index("if _dialog_open") < src.index("byok_dialog_host.open_dialog")
     assert "_dialog_open = True" in src
 
 
 def test_execute_and_cancel_clear_flag():
     assert "_dialog_open = False" in _method("execute")
     assert "_dialog_open = False" in _method("cancel")
+
+
+def test_close_paths_give_the_island_back():
+    """The dialog minimises an open island while it is up (the island is an
+    always-on-top window and would cover it); both close paths owe a restore."""
+    assert "byok_dialog_host.dialog_closed()" in _method("execute")
+    assert "byok_dialog_host.dialog_closed()" in _method("cancel")

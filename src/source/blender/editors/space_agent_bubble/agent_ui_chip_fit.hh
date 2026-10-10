@@ -70,6 +70,9 @@ struct AgentChipRowInputs {
   const char *voice_status = "";
   bool model_available = false;
   const char *model_label = "";
+  /* The toggle's right-hand word as drawn: the key's provider, or empty for
+   * "Custom AI". */
+  const char *model_key_label = "";
   /** Fixed chip words and the voice status are measured as drawn: the island
    *  passes its UI translation; null (the harness) measures the English.
    *  The model label and the reading's intent arrive already as drawn. */
@@ -86,6 +89,54 @@ struct AgentChipMetrics {
   float wave_w;    /* Voice's live ECG trace. */
   float text_size; /* Chip label font size, for the reading floor. */
 };
+
+/** The provider toggle's segment words: Mixie (hosted) and the user's key. */
+inline constexpr const char *AGENT_MODEL_TOGGLE_MIXIE = "Mixie";
+inline constexpr const char *AGENT_MODEL_TOGGLE_KEY = "Custom AI";
+
+/** The chevron after "Mixie" (it opens a menu), as a share of the chip
+ *  icon box — large enough to read as "this opens something". */
+inline constexpr float AGENT_MODEL_TOGGLE_CHEVRON = 0.95f;
+
+/** The chevron after "Mixie": glyph plus its gap. */
+inline float agent_model_toggle_chevron(const AgentChipMetrics &m)
+{
+  return m.icon * AGENT_MODEL_TOGGLE_CHEVRON + m.icon_gap * 0.5f;
+}
+
+/** The Mixie segment: word, chevron and the chip's side padding. */
+template<typename TextWidthFn>
+inline float agent_model_toggle_mixie_w(const AgentChipMetrics &m,
+                                        const TextWidthFn &text_width,
+                                        const char *(*translate)(const char *))
+{
+  const char *word = translate ? translate(AGENT_MODEL_TOGGLE_MIXIE) : AGENT_MODEL_TOGGLE_MIXIE;
+  return text_width(word) + agent_model_toggle_chevron(m) + 2.0f * m.pad_x;
+}
+
+/** The key segment: the provider's name once a key is in use, else "Custom AI". */
+template<typename TextWidthFn>
+inline float agent_model_toggle_key_w(const char *key_label,
+                                      const AgentChipMetrics &m,
+                                      const TextWidthFn &text_width,
+                                      const char *(*translate)(const char *))
+{
+  const char *word = (key_label && key_label[0]) ? key_label :
+                     translate                   ? translate(AGENT_MODEL_TOGGLE_KEY) :
+                                                   AGENT_MODEL_TOGGLE_KEY;
+  return text_width(word) + 2.0f * m.pad_x;
+}
+
+/** The whole toggle: both segments plus the thumb inset on each side. */
+template<typename TextWidthFn>
+inline float agent_model_toggle_width(const char *key_label,
+                                      const AgentChipMetrics &m,
+                                      const TextWidthFn &text_width,
+                                      const char *(*translate)(const char *))
+{
+  return agent_model_toggle_mixie_w(m, text_width, translate) +
+         agent_model_toggle_key_w(key_label, m, text_width, translate) + m.icon_gap * 0.5f;
+}
 
 /**
  * Measure every form of every shown chip with \a text_width (label -> px).
@@ -133,11 +184,10 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
   r_chips[AGENT_CHIP_SLOT_AUTO] = {{width("Auto", m.switch_w) + m.pad_x, m.switch_w + 2.0f * m.pad_x},
                                    2};
   if (in.model_available) {
-    /* Full (chevron) -> Label -> Icon, at Upload's own floor. */
-    const char *label = in.model_label[0] ? in.model_label : "Mixie";
-    const float chevron = m.icon * 0.7f + m.icon_gap;
-    r_chips[AGENT_CHIP_SLOT_MODEL] = {
-        {as_drawn(label, m.icon) + chevron, as_drawn(label, m.icon), icon_only}, 3};
+    /* The Mixie | Custom AI toggle (Full and Label are the same toggle), then
+     * the icon alone at Upload's own floor. */
+    const float toggle = agent_model_toggle_width(in.model_key_label, m, text_width, in.translate);
+    r_chips[AGENT_CHIP_SLOT_MODEL] = {{toggle, toggle, icon_only}, 3};
   }
   if (in.scribble_armed || in.mark_count) {
     /* The reading label elides down to about two glyphs beside its chevron. */

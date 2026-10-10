@@ -55,6 +55,9 @@ OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
 OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
 OP_CODEX_PASTE = "mixar_byok.codex_paste"
 
+# Header close button (U+2715): dismisses through the cancel path.
+CLOSE_GLYPH = "\u2715"
+
 
 # ---------------------------------------------------------------------------
 # Primitives (profile-card painters, with stock fallbacks)
@@ -220,35 +223,29 @@ def draw_dialog(layout, wm):
         _footer_done(layout)
         return
 
-    # IDLE / SAVING / ERROR — the form states.
-    if wm.byok_is_active and state != 'ERROR':
-        _draw_current_config(col, wm, with_remove=(state == 'IDLE'))
-        col.separator(factor=0.6)
-    _draw_form(col, wm, disabled=(state == 'SAVING'))
-    if state == 'ERROR' and wm.byok_last_error:
-        _draw_error(col, wm)
-
-    if state == 'SAVING':
-        _footer_busy(layout, n_("Validating with provider…"))
-    else:
-        _footer_save(layout, state)
+    # IDLE / SAVING / ERROR — the two-column provider form.
+    from . import byok_provider_settings_ui
+    byok_provider_settings_ui.draw_form(col, layout, wm, state)
 
 
 def _draw_header(col, wm, state):
     row = col.row()
     heading = row.row()
     heading.scale_y = HEADER_SCALE_Y
-    card_label(heading, n_("AI Provider Settings"), 'HEADING')
-
-    pill = row.row()
-    pill.scale_y = HEADER_SCALE_Y
-    active = wm.byok_is_active and state != 'REMOVED'
-    card_label(pill, n_("Active") if active else n_("Not configured"), 'PILL')
+    card_label(heading, n_("AI Provider settings"), 'HEADING')
+    if state not in ('SAVING', 'REMOVING'):
+        # The close button: a cancel-path dismiss, so Esc and this both
+        # wipe transient secrets. Busy states keep the dialog until the
+        # request lands.
+        close = row.row()
+        close.alignment = 'RIGHT'
+        close.scale_x = 1.4
+        close.scale_y = HEADER_SCALE_Y
+        dismiss_button(close, CLOSE_GLYPH, 'DANGER')
 
     card_label(
         col,
-        n_("Run the Mixar agent on your own provider — Mixar credits are "
-           "not charged while active."),
+        n_("Use Mixar with your own provider — you won't be charged Mixar credits."),
         'MUTED',
     )
     card_divider(col)
@@ -293,94 +290,6 @@ def _value_row(col, label, value):
     row.label(text=value)
 
 
-def _draw_form(col, wm, disabled):
-    box = section(col)
-    bcol = box.column()
-    section_title(bcol, n_("Provider Setup"))
-
-    body = bcol.column()
-    body.enabled = not disabled
-    body.separator(factor=0.45)
-
-    field_label(body, n_("Provider"))
-    field_dropdown(body, wm, 'byok_form_provider')
-    body.separator(factor=0.45)
-
-    if model_suggestions.is_openrouter(wm.byok_form_provider):
-        _draw_openrouter_fields(body, wm)
-    elif model_suggestions.is_codex(wm.byok_form_provider):
-        _draw_codex_fields(body, wm)
-    elif model_suggestions.is_local(wm.byok_form_provider):
-        from . import byok_local_ops
-        byok_local_ops.draw_local_fields(body, wm)
-    else:
-        _draw_cloud_fields(body, wm)
-
-
-def _draw_cloud_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
-    field_input(body, wm, 'byok_form_api_key')
-    body.separator(factor=0.5)
-    card_label(
-        body,
-        n_("Stored encrypted, used only for Mixar agent requests — only a "
-           "masked preview is shown after saving."),
-        'MUTED',
-    )
-
-
-def _draw_openrouter_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_input(body, wm, 'byok_form_openrouter_model')
-    body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
-    field_input(body, wm, 'byok_form_api_key')
-    body.separator(factor=0.5)
-    card_label(
-        body,
-        n_("Pick a model that supports tool / function calling — the agent needs it."),
-        'DANGER',
-    )
-    card_label(
-        body,
-        n_("Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."),
-        'MUTED',
-    )
-
-
-def _draw_codex_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
-
-    load_row = body.row()
-    load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
-    body.separator(factor=0.35)
-
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
-
-    n = len(wm.byok_form_codex_bundle or "")
-    card_label(
-        body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
-        'MUTED',
-    )
-    body.separator(factor=0.5)
-    for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
-        n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
-    ):
-        card_label(body, line, 'MUTED')
-
-
 def _draw_error(col, wm):
     col.separator(factor=0.55)
     box = section(col)
@@ -395,9 +304,9 @@ def _draw_error(col, wm):
 def _draw_remove_warning(col):
     box = section(col)
     bcol = box.column()
-    card_label(bcol, n_("Remove your API key?"), 'DANGER')
+    card_label(bcol, n_("Switch back to Mixie?"), 'DANGER')
     bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent will use Mixar's default provider again."), 'MUTED')
+    card_label(bcol, n_("This removes your saved API key; the agent runs on Mixie again."), 'MUTED')
     card_label(bcol, n_("Mixar credits will be charged for future agent requests."), 'MUTED')
 
 
@@ -421,22 +330,13 @@ def _draw_removed_body(col):
     bcol = box.column()
     section_title(bcol, n_("API key removed"))
     bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent is back on Mixar's default provider."), 'MUTED')
+    card_label(bcol, n_("The agent is back on Mixie, Mixar's hosted models."), 'MUTED')
     card_label(bcol, n_("Mixar credits are charged for agent requests again."), 'MUTED')
 
 
 # ---------------------------------------------------------------------------
 # Footers — every state renders exactly one primary (active-default) action
 # ---------------------------------------------------------------------------
-
-def _footer_save(layout, state):
-    layout.separator(factor=0.9)
-    row = layout.row(align=True)
-    row.scale_y = ACTION_SCALE_Y
-    dismiss_button(row, n_("Cancel"), 'GHOST')
-    label = n_("Try Again") if state == 'ERROR' else n_("Save & Activate")
-    op_button(row, OP_SAVE, label, 'ACCENT', default=True)
-
 
 def _footer_busy(layout, text):
     layout.separator(factor=0.9)
