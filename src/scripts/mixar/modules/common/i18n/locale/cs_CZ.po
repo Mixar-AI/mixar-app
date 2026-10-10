@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akce"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Stahování {percent}%"
 
-msgid "Upgrade"
-msgstr "Navýšit tarif"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "Zbývá {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Předplatné"
@@ -2930,23 +2933,29 @@ msgstr "Název tarifu"
 msgid "Display name of the current plan"
 msgstr "Zobrazovaný název aktuálního tarifu"
 
-msgid "Remaining"
-msgstr "Zbývá"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Procento přídělu kreditů cyklu, které je stále k dispozici"
-
 msgid "Credits Remaining"
 msgstr "Zbývající kredity"
 
-msgid "Credits left in the current cycle"
-msgstr "Kredity zbývající v aktuálním cyklu"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Kredity celkem"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Příděl kreditů pro aktuální cyklus"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Lze dobít"
@@ -5030,6 +5039,18 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
 msgid "Connect AI Apps (MCP)"
 msgstr ""
 
@@ -5048,19 +5069,10 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "MCP enabled"
-msgstr ""
-
-msgid "Disable"
-msgstr ""
-
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Enable MCP"
 msgstr ""
 
 msgid "Let AI apps control Mixar's interface"
@@ -5084,7 +5096,10 @@ msgstr ""
 msgid "Setup Guide"
 msgstr ""
 
-msgid "Allow local AI clients to use your Mixar account and scenes"
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
 msgstr ""
 
 msgid "MCP preference applies until Mixar closes; saving failed"
@@ -5093,7 +5108,10 @@ msgstr ""
 msgid "MCP is waiting for the desktop connection"
 msgstr ""
 
-msgid "MCP disabled"
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
 msgstr ""
 
 msgid "Let AI Apps Control Mixar's Interface"
@@ -19599,8 +19617,11 @@ msgstr "Nepodařilo se odeslat zprávu"
 msgid "You're out of credits"
 msgstr "Došly vám kredity"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Vyčerpali jste měsíční limit kreditů. Chcete-li s Mixie dál tvořit, upgradujte svůj tarif."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Navýšit tarif"
 
 msgid "Feedback comment is empty"
 msgstr "Komentář ke zpětné vazbě je prázdný"
@@ -24337,10 +24358,16 @@ msgstr "Vítejte!"
 msgid "%s Plan"
 msgstr "Plán %s"
 
-msgid "Checking usage…"
-msgstr "Kontrola využití…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "Kredity: %s"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24351,15 +24378,6 @@ msgstr "Zobrazit plány"
 
 msgid "couldn't refresh"
 msgstr "nelze obnovit"
-
-msgid "%s of %s left"
-msgstr "zbývá %s z %s"
-
-msgid "%s credits"
-msgstr "Kredity: %s"
-
-msgid "no credits"
-msgstr "žádné kredity"
 
 msgid "Docs"
 msgstr "Dokumentace"

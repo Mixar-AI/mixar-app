@@ -21,16 +21,17 @@ it, written on the main thread by ``core/poller._apply_snapshot``.
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, FloatProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, IntProperty, StringProperty
 
 #: Every property this module attaches, for a clean unregister.
 _PROP_NAMES = (
     "mixar_usage_ready",
     "mixar_usage_has_subscription",
     "mixar_usage_plan_name",
-    "mixar_usage_remaining_pct",
     "mixar_usage_credits_remaining",
-    "mixar_usage_credits_total",
+    "mixar_usage_monthly_remaining",
+    "mixar_usage_bonus_remaining",
+    "mixar_usage_has_allowance",
     "mixar_usage_can_top_up",
     "mixar_usage_stale",
     "mixar_account_name",
@@ -56,24 +57,28 @@ def register() -> None:
         default="",
         maxlen=64,
     )
-    wm.mixar_usage_remaining_pct = FloatProperty(
-        name="Remaining",
-        description="Percentage of the cycle credit allocation still available",
-        default=0.0,
-        min=0.0,
-        max=100.0,
-    )
     wm.mixar_usage_credits_remaining = IntProperty(
         name="Credits Remaining",
-        description="Credits left in the current cycle",
+        description="Total credits available (monthly allowance plus bonus credits)",
         default=0,
         min=0,
     )
-    wm.mixar_usage_credits_total = IntProperty(
-        name="Credits Total",
-        description="Credit allocation for the current cycle",
+    wm.mixar_usage_monthly_remaining = IntProperty(
+        name="Monthly Credits Remaining",
+        description="Credits left in the plan's monthly allowance",
         default=0,
         min=0,
+    )
+    wm.mixar_usage_bonus_remaining = IntProperty(
+        name="Bonus Credits Remaining",
+        description="Top-up, referral and sign-up bonus credits left",
+        default=0,
+        min=0,
+    )
+    wm.mixar_usage_has_allowance = BoolProperty(
+        name="Has Allowance",
+        description="Whether a monthly plan allowance backs part of the balance",
+        default=False,
     )
     wm.mixar_usage_can_top_up = BoolProperty(
         name="Can Top Up",

@@ -14,6 +14,11 @@ MAX_BODY = 8 * 1024 * 1024
 LOCAL_PREFIXES = ("mixar_ui_", "mixar_scene", "mixar_project")
 REBINDS = {"mixar_scene_new", "mixar_scene_switch", "mixar_project_open"}
 REPORTS_BINDING = {"mixar_ui_context", "mixar_scenes", *REBINDS}
+#: The switch in Mixar's Connect AI Apps (MCP) dialog is off: its relay stops and
+#: its launcher manifest says so. "Mixar is not open" sent users (and their AI
+#: app) looking for a closed app while Mixar sat open on the same screen.
+DISABLED = ("MCP is turned off in Mixar. Ask the user to open Mixar's profile menu, "
+            "choose Connect AI Apps (MCP) and turn on \"Allow AI apps to use Mixar\", then try again")
 
 
 def request(record, method, path, payload=None, headers=None, timeout=10):
@@ -112,10 +117,15 @@ class Connector:
             if len(candidates) > 1 and not self.instance:
                 candidates = [found for found in [usable(candidates)] if found] or candidates
             if len(candidates) != 1:
+                from .installation import disabled, start_app, start_in_progress
+                if not candidates and disabled():
+                    # Both the unbound and the bound case: the bound app's relay
+                    # vanishing with the switch off is the user turning MCP off
+                    # mid-session, not Mixar closing or starting.
+                    raise RuntimeError(DISABLED)
                 if not candidates and not self.instance:
                     # Say the same thing on every attempt: Mixar is either being
                     # started (by this connection or another AI app) or it is not open.
-                    from .installation import start_app, start_in_progress
                     first = start and not self.started
                     self.started = self.started or start
                     if not ((first and start_app()) or start_in_progress()):
@@ -136,12 +146,15 @@ class Connector:
     def readiness(self):
         """Whether the backend's tools can be listed now: ready, signed_out,
         starting (an app launching, restoring its sign-in or not answering yet), absent (none open and
-        none could be started), choose (several usable apps) or closed (the
-        bound app closed and its scene is open nowhere)."""
+        none could be started), disabled (the user turned MCP off in Mixar),
+        choose (several usable apps) or closed (the bound app closed and its
+        scene is open nowhere)."""
         try:
             _, health = self.attach()
         except RuntimeError as exc:
             text = str(exc)
+            if text == DISABLED:
+                return "disabled", text
             if text.startswith("Several"):
                 return "choose", text
             if "was closed" in text:

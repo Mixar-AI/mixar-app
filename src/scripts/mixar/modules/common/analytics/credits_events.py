@@ -13,7 +13,7 @@ from .capture import capture
 from .constants import EVENT_CREDITS_BANNER_ACTION, EVENT_CREDITS_BANNER_SHOWN
 
 BANNER_TRIGGERS = frozenset({"push", "http_402", "chat", "job", "mask_tool", "manual"})
-BANNER_ACTIONS = frozenset({"upgrade", "refer", "creator", "dismiss"})
+BANNER_ACTIONS = frozenset({"upgrade", "refer", "creator", "byok", "mcp", "dismiss"})
 
 
 def capture_credits_banner_shown(trigger: str, *, context=None) -> None:
