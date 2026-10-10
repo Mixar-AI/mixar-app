@@ -50,6 +50,27 @@ _CLASS_TEXT = {
     "cancelled": ("Cancelled", ""),
 }
 
+#: ``credits`` for an account with no plan (a new signup gets no trial): the
+#: feature costs credits, so the ask is a subscription, not an upgrade.
+_SUBSCRIBE_TEXT = ("Subscription needed", "Get a subscription or buy credits, then try again.")
+SUBSCRIBE_MESSAGE = "This generation uses credits — get a subscription to continue"
+
+
+def _needs_subscription() -> bool:
+    try:
+        from mixar.modules.common.usage.core.state import needs_subscription
+
+        return needs_subscription()
+    except Exception:  # noqa: BLE001 — copy only
+        return False
+
+
+def _class_text(cls: str):
+    if cls == "credits" and _needs_subscription():
+        return _SUBSCRIBE_TEXT
+    return _CLASS_TEXT.get(cls or "unknown", _CLASS_TEXT["unknown"])
+
+
 #: Classes only the backend assigns: its terminal FAIL always refunds
 #: (job_queue failure routing). Client-side classes are excluded on purpose —
 #: a client poll timeout cancels a dispatched job, which is NOT refunded.
@@ -168,6 +189,8 @@ def apply_client_failure(job, error, *, stage: str = "submit", message: str = ""
     generic = classify_error(error)
     if message:
         job.user_message = message
+    elif job.error_class == "credits" and _needs_subscription():
+        job.user_message = SUBSCRIBE_MESSAGE
     elif job.error_class in ("credits", "auth"):
         job.user_message = generic
     elif detail:
@@ -180,14 +203,14 @@ def failure_headline(job) -> str:
     """Short status word for a failed row ("Blocked by content policy")."""
     cls = getattr(job, "error_class", "") or ""
     if cls in _CLASS_TEXT:
-        return _CLASS_TEXT[cls][0]
+        return _class_text(cls)[0]
     return "Failed"
 
 
 def failure_hint(job) -> str:
     """What the user can do next (and whether the credits came back)."""
     cls = getattr(job, "error_class", "") or ""
-    hint = _CLASS_TEXT.get(cls or "unknown", _CLASS_TEXT["unknown"])[1]
+    hint = _class_text(cls)[1]
     # Only a class the backend stamped proves the backend failed it.
     if cls in _REFUNDED_CLASSES and hint:
         hint += " Credits for this generation were refunded."

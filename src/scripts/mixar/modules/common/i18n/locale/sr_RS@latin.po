@@ -3048,7 +3048,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akcija"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -3682,13 +3682,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Preuzimanje {percent}%"
 
-# derived
-msgid "Upgrade"
-msgstr "Unapredi"
+msgid "{count} credit"
+msgstr ""
 
-# derived
-msgid "{percent}% left"
-msgstr "{percent}% preostalo"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 # derived
 msgid "Subscription"
@@ -3758,28 +3759,29 @@ msgid "Display name of the current plan"
 msgstr "Prikazano ime tekućeg plana"
 
 # derived
-msgid "Remaining"
-msgstr "Preostalo"
-
-# derived
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Procenat dodele kredita u ciklusu koji je još dostupan"
-
-# derived
 msgid "Credits Remaining"
 msgstr "Preostali krediti"
 
-# derived
-msgid "Credits left in the current cycle"
-msgstr "Krediti preostali u tekućem ciklusu"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-# derived
-msgid "Credits Total"
-msgstr "Ukupno kredita"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-# derived
-msgid "Credit allocation for the current cycle"
-msgstr "Dodela kredita za tekući ciklus"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 # derived
 msgid "Can Top Up"
@@ -6415,6 +6417,18 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
 msgid "Connect AI Apps (MCP)"
 msgstr ""
 
@@ -6433,19 +6447,10 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "MCP enabled"
-msgstr ""
-
-msgid "Disable"
-msgstr ""
-
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Enable MCP"
 msgstr ""
 
 msgid "Let AI apps control Mixar's interface"
@@ -6469,7 +6474,10 @@ msgstr ""
 msgid "Setup Guide"
 msgstr ""
 
-msgid "Allow local AI clients to use your Mixar account and scenes"
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
 msgstr ""
 
 msgid "MCP preference applies until Mixar closes; saving failed"
@@ -6478,7 +6486,10 @@ msgstr ""
 msgid "MCP is waiting for the desktop connection"
 msgstr ""
 
-msgid "MCP disabled"
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
 msgstr ""
 
 msgid "Let AI Apps Control Mixar's Interface"
@@ -25344,9 +25355,12 @@ msgstr "Nije uspelo slanje poruke"
 msgid "You're out of credits"
 msgstr "Potrošili ste kredite"
 
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
 # derived
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Iskoristili ste mesečnu kvotu kredita. Nadogradite plan da nastavite da stvarate uz Mixie."
+msgid "Upgrade"
+msgstr "Unapredi"
 
 # derived
 msgid "Feedback comment is empty"
@@ -31345,11 +31359,17 @@ msgstr "Dobro došli !"
 msgid "%s Plan"
 msgstr "Plan %s"
 
-# derived
-msgid "Checking usage…"
-msgstr "Provera korišćenja…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+# derived
+msgid "%s credits"
+msgstr "krediti: %s"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 # derived
@@ -31363,18 +31383,6 @@ msgstr "Pogledaj planove"
 # derived
 msgid "couldn't refresh"
 msgstr "osvežavanje nije uspelo"
-
-# derived
-msgid "%s of %s left"
-msgstr "preostalo %s od %s"
-
-# derived
-msgid "%s credits"
-msgstr "krediti: %s"
-
-# derived
-msgid "no credits"
-msgstr "nema kredita"
 
 # derived
 msgid "Docs"

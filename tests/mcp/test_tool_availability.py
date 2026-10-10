@@ -10,6 +10,7 @@ never send the agent after a wrong cause ("backend too old") or into workarounds
 """
 
 import asyncio
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -88,6 +89,63 @@ def test_only_a_tool_call_opens_a_closed_mixar(desktop, monkeypatch):
     assert started == [1] and client.readiness()[0] == "starting"
 
 
+def _manifest(tmp_path, monkeypatch, enabled):
+    """The launcher manifest Mixar keeps current with its MCP switch."""
+    import mixar.modules.mcp_bridge.core.installation as installation
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "mcp"))
+    installation.directory().mkdir(parents=True)
+    (installation.directory() / "installation.json").write_text(json.dumps(
+        {"version": 1, "python": "p", "script": "s", "executable": "x", "enabled": enabled}))
+    return installation
+
+
+def test_mcp_switched_off_in_mixar_is_named_not_mistaken_for_a_closed_mixar(desktop, tmp_path, monkeypatch):
+    """2026-10-05: a user pressed Disable in the Connect dialog while fixing a
+    connection; Mixar's relay stopped, the launcher said "Mixar is not open, and
+    no installed Mixar could be started", and the user reported MCP as broken
+    while Mixar sat open. The manifest says it is the switch, and nothing is
+    launched (a second Mixar would be switched off too)."""
+    installation = _manifest(tmp_path, monkeypatch, enabled=False)
+    started = []
+    monkeypatch.setattr(installation, "start_app", lambda: started.append(1) or True)
+    client = connector.Connector()
+    assert client.readiness() == ("disabled", connector.DISABLED)
+    with pytest.raises(RuntimeError, match="turned off in Mixar") as refusal:
+        client.call("scene_overview", {}, "call-1")
+    assert "Connect AI Apps" in str(refusal.value) and not started
+    assert client.readiness()[0] == "disabled"  # The same answer on every attempt.
+
+
+def test_the_bound_mixar_switching_mcp_off_mid_session_says_so(desktop, tmp_path, monkeypatch):
+    desktop[:] = [app("only")]
+    client = connector.Connector()
+    assert client.readiness()[0] == "ready"
+    desktop[:] = []  # The relay stopped with the switch; the app is still open.
+    _manifest(tmp_path, monkeypatch, enabled=False)
+    assert client.readiness()[0] == "disabled"
+
+
+def test_a_manifest_that_allows_mcp_leaves_a_closed_mixar_absent(desktop, tmp_path, monkeypatch):
+    installation = _manifest(tmp_path, monkeypatch, enabled=True)
+    monkeypatch.setattr(installation, "start_app", lambda: False)
+    monkeypatch.setattr(installation, "start_in_progress", lambda: False)
+    assert connector.Connector().readiness()[0] == "absent"
+    assert installation.disabled() is False
+    (installation.directory() / "installation.json").write_text("{not json")
+    assert installation.disabled() is False
+    (installation.directory() / "installation.json").unlink()
+    assert installation.disabled() is False
+
+
+def test_provisioning_with_the_switch_off_is_what_the_launcher_reads(tmp_path, monkeypatch):
+    import mixar.modules.mcp_bridge.core.installation as installation
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "mcp"))
+    installation.provision(tmp_path / "python", tmp_path / "mcp.py", tmp_path / "Mixar", enabled=False)
+    assert installation.disabled() is True
+    installation.provision(tmp_path / "python", tmp_path / "mcp.py", tmp_path / "Mixar", enabled=True)
+    assert installation.disabled() is False
+
+
 # ------------------------------------------- every tool listed at once
 
 class Fake:
@@ -134,7 +192,7 @@ def test_a_ready_mixar_lists_live_tools_and_saves_them_for_later(monkeypatch):
     assert tool_snapshot.load() == [BACKEND_TOOL]
 
 
-@pytest.mark.parametrize("state", ["signed_out", "starting", "absent", "choose", "closed"])
+@pytest.mark.parametrize("state", ["signed_out", "starting", "absent", "disabled", "choose", "closed"])
 def test_every_tool_is_listed_at_once_while_mixar_is_not_ready(state):
     tool_snapshot.save([dict(BACKEND_TOOL)])
     fake = Fake([state])

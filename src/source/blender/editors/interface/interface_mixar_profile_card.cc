@@ -61,17 +61,6 @@ constexpr const char *MIXAR_URL_BUG = "https://www.mixar.app/bug-report";
 constexpr const char *MIXAR_TARGET_BUY_CREDITS = "buy-credits";
 constexpr const char *MIXAR_TARGET_PRICING = "pricing";
 
-/* Whether the card prints the raw credit figures ("4,300 of 5,000 left")
- * beside the CTA. Off for now — the percentage carries the meaning and
- * the pair reads as noise next to it, particularly where a carried-over
- * balance exceeds the cycle allocation.
- *
- * A flag rather than a deletion: the formatting, the thousands separator
- * and the balance-above-allocation branch are all still correct and
- * worth keeping intact for whenever the line comes back. The stale
- * notice shares this slot and is NOT gated by it. */
-constexpr bool CARD_SHOW_CREDIT_FIGURES = false;
-
 /* Element heights, in UI units, applied with `scale_y_set()`.
  *
  * **Not** `ui_units_y_set()**: that forces the enclosing *layout item's*
@@ -87,7 +76,7 @@ constexpr bool CARD_SHOW_CREDIT_FIGURES = false;
  * action as a lozenge. At #ROW_ACTION the same radius is roughly a
  * quarter of the height and reads as the intended rounded rect. */
 constexpr float ROW_HEADING = mixar_chrome::card_row_heading;
-constexpr float ROW_USAGE_BAR = 1.5f;
+constexpr float ROW_CREDIT_BALANCE = mixar_chrome::card_row_heading;
 constexpr float ROW_CTA = mixar_chrome::card_row_cta;
 constexpr float ROW_ACTION = mixar_chrome::card_row_action;
 constexpr float ROW_LOGOUT = mixar_chrome::card_row_cta;
@@ -151,9 +140,10 @@ struct AccountInfo {
   bool has_subscription = false;
   bool can_top_up = false;
   bool stale = false;
-  float remaining_pct = 0.0f;
+  bool has_allowance = false;
   int credits_remaining = 0;
-  int credits_total = 0;
+  int monthly_remaining = 0;
+  int bonus_remaining = 0;
 };
 
 /** Read a string property, leaving \a dst empty when it is absent. */
@@ -176,12 +166,6 @@ bool read_bool(PointerRNA *ptr, const char *name)
 {
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
   return prop != nullptr && RNA_property_boolean_get(ptr, prop);
-}
-
-float read_float(PointerRNA *ptr, const char *name)
-{
-  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
-  return prop != nullptr ? RNA_property_float_get(ptr, prop) : 0.0f;
 }
 
 int read_int(PointerRNA *ptr, const char *name)
@@ -208,9 +192,10 @@ AccountInfo read_account(bContext *C)
     info.has_subscription = read_bool(&wm_ptr, "mixar_usage_has_subscription");
     info.can_top_up = read_bool(&wm_ptr, "mixar_usage_can_top_up");
     info.stale = read_bool(&wm_ptr, "mixar_usage_stale");
-    info.remaining_pct = read_float(&wm_ptr, "mixar_usage_remaining_pct");
+    info.has_allowance = read_bool(&wm_ptr, "mixar_usage_has_allowance");
     info.credits_remaining = read_int(&wm_ptr, "mixar_usage_credits_remaining");
-    info.credits_total = read_int(&wm_ptr, "mixar_usage_credits_total");
+    info.monthly_remaining = read_int(&wm_ptr, "mixar_usage_monthly_remaining");
+    info.bonus_remaining = read_int(&wm_ptr, "mixar_usage_bonus_remaining");
     read_string(&wm_ptr, "mixar_account_name", info.name, sizeof(info.name));
     read_string(&wm_ptr, "mixar_usage_plan_name", info.plan_name, sizeof(info.plan_name));
   }
@@ -303,31 +288,50 @@ void add_header(Layout *layout, const AccountInfo &info)
   }
 }
 
+/**
+ * The credit balance as a number — "6,800 credits" — with its monthly /
+ * bonus split underneath when both make it up.
+ *
+ * No percentage and no bar: the web dashboard prints the same figures from
+ * the same backend buckets, and a meter needs a denominator the two
+ * surfaces used to pick differently. Mirrors `state.format_balance_label`
+ * and `state.format_breakdown_label`.
+ */
 void add_usage(Layout *layout, const AccountInfo &info)
 {
   if (!info.usage_ready) {
-    /* Nothing fetched yet — say so instead of drawing an empty bar that
-     * reads as "no credits". */
-    layout->label(IFACE_("Checking usage…"), ICON_NONE);
+    /* Nothing fetched yet — say so instead of printing "0 credits". */
+    layout->label(IFACE_("Checking credits…"), ICON_NONE);
     mark_last(layout, MixarCardElement::Muted);
     return;
   }
 
-  layout->label(IFACE_("Usage Remaining"), ICON_NONE);
+  layout->label(IFACE_("Credits"), ICON_NONE);
   mark_last(layout, MixarCardElement::SectionLabel);
 
-  if (info.has_subscription) {
-    const float factor = std::clamp(info.remaining_pct / 100.0f, 0.0f, 1.0f);
+  char count[32];
+  format_credits(info.credits_remaining, count, sizeof(count));
+  char balance[64];
+  if (info.credits_remaining == 1) {
+    SNPRINTF(balance, IFACE_("%s credit"), count);
+  }
+  else {
+    SNPRINTF(balance, IFACE_("%s credits"), count);
+  }
+  Layout &balance_row = layout->row(false);
+  balance_row.scale_y_set(ROW_CREDIT_BALANCE);
+  balance_row.label(balance, ICON_NONE);
+  mark_last(&balance_row,
+            MixarCardElement::CreditBalance,
+            info.credits_remaining <= 0 ? 1.0f : 0.0f);
 
-    char pct[16];
-    /* Floor, so a nearly-exhausted cycle never rounds up into a
-     * reassuring number. Mirrors `state.format_remaining_label`. */
-    SNPRINTF(pct, "%d%%", int(info.remaining_pct));
-
-    Layout &bar_row = layout->row(false);
-    bar_row.scale_y_set(ROW_USAGE_BAR);
-    bar_row.label(pct, ICON_NONE);
-    mark_last(&bar_row, MixarCardElement::UsageBar, factor);
+  if (info.has_allowance && info.bonus_remaining > 0) {
+    char monthly[32], bonus[32], breakdown[96];
+    format_credits(info.monthly_remaining, monthly, sizeof(monthly));
+    format_credits(info.bonus_remaining, bonus, sizeof(bonus));
+    SNPRINTF(breakdown, IFACE_("%s monthly · %s bonus"), monthly, bonus);
+    layout->label(breakdown, ICON_NONE);
+    mark_last(layout, MixarCardElement::Muted);
   }
 
   Layout &foot = layout->row(false);
@@ -357,42 +361,13 @@ void add_usage(Layout *layout, const AccountInfo &info)
   }
   mark_last(&cta, MixarCardElement::AccentButton);
 
-  /* The stale notice still has to reach the user — it is the card's only
-   * signal that the figures above it are old — so only the credit
-   * figures are suppressed, and the row is skipped entirely when that
-   * leaves nothing to say. */
-  const bool show_credits = CARD_SHOW_CREDIT_FIGURES;
-  if (!info.stale && !show_credits) {
+  /* The card's only signal that the figures above it are old. */
+  if (!info.stale) {
     return;
   }
-
   Layout &meta = foot.row(false);
   meta.alignment_set(blender::ui::LayoutAlign::Right);
-
-  char meta_text[96];
-  if (info.stale) {
-    BLI_strncpy(meta_text, IFACE_("couldn't refresh"), sizeof(meta_text));
-  }
-  else if (info.has_subscription && info.credits_total > 0) {
-    /* The balance can exceed the cycle allocation — topped-up credits and
-     * shared team pools both carry over. Both figures are shown as-is and
-     * the meter reads 100%: the backend clamps `usage_pct` to 0 in that
-     * case, which is the correct reading (nothing of the allowance is
-     * spent), so the bar must be full rather than over-full. */
-    char left[32], total[32];
-    format_credits(info.credits_remaining, left, sizeof(left));
-    format_credits(info.credits_total, total, sizeof(total));
-    SNPRINTF(meta_text, IFACE_("%s of %s left"), left, total);
-  }
-  else if (info.credits_remaining > 0) {
-    char left[32];
-    format_credits(info.credits_remaining, left, sizeof(left));
-    SNPRINTF(meta_text, IFACE_("%s credits"), left);
-  }
-  else {
-    BLI_strncpy(meta_text, IFACE_("no credits"), sizeof(meta_text));
-  }
-  meta.label(meta_text, ICON_NONE);
+  meta.label(IFACE_("couldn't refresh"), ICON_NONE);
   mark_last(&meta, MixarCardElement::MetaRight);
 }
 
