@@ -176,6 +176,19 @@ def test_unwritable_discovery_record_leaves_no_listener(tmp_path, monkeypatch):
     assert credential.discovery_directory() == tmp_path
 
 
+def test_discovery_folder_is_not_shared_with_mcp(monkeypatch):
+    # The hub takes every *.json in the folder as a record; the MCP launcher's
+    # installation.json / tools.json there would be read as one instead.
+    monkeypatch.delenv("MIXAR_CONNECTOR_DISCOVERY_DIR", raising=False)
+    monkeypatch.delenv("MIXAR_MCP_DISCOVERY_DIR", raising=False)
+    from mixar.modules.connector.core import credential
+    from mixar.modules.mcp_bridge.core import discovery, installation
+
+    folder = credential.discovery_directory()
+    assert folder == Path.home() / ".mixar" / "hub"
+    assert folder not in {installation.directory(), discovery.discovery_directory()}
+
+
 def test_sidecar_never_sends_a_cors_header():
     source = SIDECAR_SOURCE.read_text(encoding="utf-8")
     assert 'send_header("Access-Control' not in source
