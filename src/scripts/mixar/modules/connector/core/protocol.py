@@ -6,11 +6,33 @@
 
 from __future__ import annotations
 
+import hmac
 import json
 from typing import Any
 from urllib.parse import urlparse
 
 ALLOWED_FORMATS = {"usd", "fbx", "glb"}
+#: Largest JSON body the sidecar reads; every route carries a small spec.
+MAX_BODY = 1024 * 1024
+
+
+def request_rejection(headers: Any, port: int, token: str) -> tuple[int, str] | None:
+    """Why a request may not be served, as ``(status, message)``, or ``None``.
+
+    Browsers send ``Origin`` on every cross-site request, so its presence means
+    a web page, never the hub. The ``Host`` check defeats DNS rebinding (a
+    hostname an attacker points at 127.0.0.1 arrives with that hostname), and
+    the bearer token keeps every other local process out: the sidecar is bound
+    to loopback, but loopback is shared by every user process on the machine.
+    """
+    if headers.get("Origin") or headers.get("Host") != "127.0.0.1:%d" % port:
+        return 403, "Only the local Mixar hub may connect"
+    supplied = headers.get("Authorization") or ""
+    # Bytes, not str: compare_digest raises on a non-ASCII header value.
+    expected = ("Bearer " + token).encode("utf-8")
+    if not token or not hmac.compare_digest(supplied.encode("utf-8", "replace"), expected):
+        return 401, "Local connector credential rejected; restart the hub"
+    return None
 
 
 def parse_export_body(raw: bytes | str) -> dict[str, Any]:
@@ -41,9 +63,9 @@ def parse_export_body(raw: bytes | str) -> dict[str, Any]:
 
 def sidecar_routes() -> dict[str, tuple[str, ...]]:
     return {
-        "GET": ("/health", "/scene", "/moodboard", "/viewport.jpg"),
+        "GET": ("/health", "/scene", "/moodboard", "/moodboard/{index}/preview",
+                "/viewport.png", "/viewport.jpg"),
         "POST": ("/export", "/prompt", "/heartbeat"),
-        "OPTIONS": ("*",),
     }
 
 

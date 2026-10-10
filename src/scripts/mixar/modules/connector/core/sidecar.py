@@ -2,24 +2,33 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Loopback HTTP sidecar so the hub can drive Mixar without going through bpy UI."""
+"""Loopback HTTP sidecar so the hub can drive Mixar without going through bpy UI.
+
+Every route is served only to the local hub: a request must carry the
+per-launch bearer token from the discovery record (``credential.py``), must
+not carry a browser ``Origin`` and must address ``127.0.0.1:<port>`` by name.
+No CORS header is ever sent, so a web page cannot read a response even where
+its browser lets it reach loopback.
+"""
 
 from __future__ import annotations
 
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from mixar.config.logging_config import get_logger
 
 from .constants import DEFAULT_SIDECAR_PORT
-from .protocol import parse_export_body
+from .credential import new_token, publish, unpublish
+from .protocol import MAX_BODY, parse_export_body, request_rejection
 
 logger = get_logger(__name__)
 
-_server: ThreadingHTTPServer | None = None
+_server: _SidecarServer | None = None
 _thread: threading.Thread | None = None
 _port = DEFAULT_SIDECAR_PORT
 
@@ -155,43 +164,80 @@ def _viewport() -> bytes:
     return _run_on_main(scene_snapshot.capture_viewport_png)
 
 
+class _SidecarServer(ThreadingHTTPServer):
+    daemon_threads = True
+    block_on_close = False
+
+    def __init__(self, port: int):
+        self.token = new_token()
+        self.record: Path | None = None
+        super().__init__(("127.0.0.1", port), _Handler)
+
+
 class _Handler(BaseHTTPRequestHandler):
+    server_version = "MixarConnector"
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(10)
+
     def log_message(self, format, *args):
+        # The request line only: never headers, which carry the credential.
         logger.debug("connector sidecar: " + format, *args)
 
-    def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Authorization,Content-Type")
+    def _authorized(self) -> bool:
+        rejection = request_rejection(self.headers, self.server.server_port, self.server.token)
+        if rejection is None:
+            return True
+        status, message = rejection
+        self._json(status, {"ok": False, "error": message})
+        return False
 
     def do_OPTIONS(self):
+        # A CORS preflight lands here; it is refused like any other request
+        # and, with no Access-Control-* header in the reply, the browser
+        # never sends the real one.
+        if not self._authorized():
+            return
         self.send_response(204)
-        self._cors()
+        self.send_header("Allow", "GET, POST, OPTIONS")
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
 
     def _json(self, status: int, payload: dict[str, Any]):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
-        self._cors()
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
     def _bytes(self, status: int, payload: bytes, content_type: str):
         self.send_response(status)
-        self._cors()
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(payload)
 
     def _read_json(self) -> dict[str, Any]:
+        if self.headers.get("Transfer-Encoding"):
+            raise ValueError("Chunked requests are not supported")
         length = int(self.headers.get("Content-Length") or 0)
+        if not 0 <= length <= MAX_BODY:
+            raise ValueError("Invalid request size")
+        if length and self.headers.get_content_type() != "application/json":
+            raise ValueError("Expected application/json")
         raw = self.rfile.read(length) if length else b"{}"
-        return json.loads(raw.decode("utf-8") or "{}")
+        payload = json.loads(raw.decode("utf-8") or "{}")
+        if not isinstance(payload, dict):
+            raise ValueError("Request body must be a JSON object")
+        return payload
 
     def do_GET(self):
+        if not self._authorized():
+            return
         path = urlparse(self.path).path
         try:
             if path == "/health":
@@ -211,6 +257,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._json(500, {"ok": False, "error": str(exc)})
 
     def do_POST(self):
+        if not self._authorized():
+            return
         path = urlparse(self.path).path
         try:
             payload = self._read_json()
@@ -229,25 +277,43 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def start_sidecar(port: int = DEFAULT_SIDECAR_PORT) -> int:
+    """Bind the sidecar and publish its credential; returns the bound port.
+
+    The credential is minted per launch and reaches the hub only through the
+    private discovery record, so a hub that cannot read that record cannot
+    talk to this sidecar either. A record that cannot be written closes the
+    socket again: an unreachable sidecar is the safe failure.
+    """
     global _server, _thread, _port
     if _server is not None:
         return _port
-    _port = port
-    _server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
-    _thread = threading.Thread(target=_server.serve_forever, name="mixar-connector-sidecar", daemon=True)
+    server = _SidecarServer(port)
+    try:
+        server.record = publish(server.server_port, server.token)
+    except OSError:
+        server.server_close()
+        raise
+    _server = server
+    _port = server.server_port
+    _thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.1},
+        name="mixar-connector-sidecar", daemon=True)
     _thread.start()
-    logger.info("Mixar connector sidecar listening on http://127.0.0.1:%s", port)
-    return port
+    logger.info("Mixar connector sidecar listening on http://127.0.0.1:%s", _port)
+    return _port
 
 
 def stop_sidecar() -> None:
     global _server, _thread
     if _server is None:
         return
-    _server.shutdown()
-    _server.server_close()
-    _server = None
-    _thread = None
+    server, _server, _thread = _server, None, None
+    try:
+        unpublish(server.record)
+    finally:
+        # shutdown waits for the accept loop only, never a main-thread job.
+        server.shutdown()
+        server.server_close()
     logger.info("Mixar connector sidecar stopped")
 
 

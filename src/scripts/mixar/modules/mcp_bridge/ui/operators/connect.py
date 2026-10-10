@@ -51,6 +51,28 @@ def _enable(op):
     _save_tools_now()
 
 
+def _draw_switch(layout):
+    """The MCP switch drawn as the checkbox it is, with what AI apps see right now.
+
+    It used to be an "MCP enabled" tick beside a "Disable" button: a user who
+    opened this dialog to fix a connection pressed the only button in the row,
+    switched MCP off, and nothing on either side said so (their AI app kept
+    reporting Mixar as not connected while Mixar sat open).
+    """
+    on = runtime.enabled()
+    row = layout.row()
+    row.alignment = 'LEFT'
+    row.operator("mixar.set_mcp_enabled", text="Allow AI apps to use Mixar (MCP)",
+                 icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT', emboss=False).enabled = not on
+    if not on:
+        layout.label(text="MCP is off: AI apps report Mixar as not connected until you turn it on.",
+                     icon='ERROR')
+    elif runtime.is_running():
+        layout.label(text="MCP is on: AI apps can connect to this Mixar.", icon='CHECKMARK')
+    else:
+        layout.label(text="MCP is on, waiting for Mixar's server connection.", icon='TIME')
+
+
 def _snippet_lines(text):
     for line in text.splitlines():
         indent = len(line) - len(line.lstrip())
@@ -78,18 +100,11 @@ class MIXAR_OT_mcp_setup(Operator):
             layout.operator("mixie_chat.login", text="Sign In")
             if runtime.enabled():
                 # Turning MCP off never needs an account (the session may have expired).
-                row = layout.row()
-                row.label(text="MCP enabled", icon='CHECKMARK')
-                row.operator("mixar.set_mcp_enabled", text="Disable").enabled = False
+                _draw_switch(layout)
             return
         layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
         layout.label(text="Your AI app can start Mixar when needed.")
-        row = layout.row()
-        if runtime.enabled():
-            row.label(text="MCP enabled", icon='CHECKMARK')
-            row.operator("mixar.set_mcp_enabled", text="Disable").enabled = False
-        else:
-            row.operator("mixar.set_mcp_enabled", text="Enable MCP").enabled = True
+        _draw_switch(layout)
         on = runtime.ui_control_enabled()
         row = layout.row()
         row.alignment = 'LEFT'
@@ -123,8 +138,9 @@ class MIXAR_OT_mcp_setup(Operator):
 
 class MIXAR_OT_set_mcp_enabled(Operator):
     bl_idname = "mixar.set_mcp_enabled"
-    bl_label = "Enable MCP"
-    bl_description = "Allow local AI clients to use your Mixar account and scenes"
+    bl_label = "Allow AI Apps to Use Mixar (MCP)"
+    bl_description = ("Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. "
+                      "While this is off, connected AI apps report Mixar as not connected")
     enabled: BoolProperty(default=True)
 
     def execute(self, context):
@@ -140,9 +156,9 @@ class MIXAR_OT_set_mcp_enabled(Operator):
         elif self.enabled and not runtime.is_running():
             self.report({'WARNING'}, "MCP is waiting for the desktop connection")
         elif self.enabled:
-            self.report({'INFO'}, "MCP enabled")
+            self.report({'INFO'}, "MCP is on: AI apps can connect to Mixar")
         else:
-            self.report({'INFO'}, "MCP disabled")
+            self.report({'INFO'}, "MCP is off: AI apps report Mixar as not connected until you turn it on")
         return {'FINISHED'}
 
 
