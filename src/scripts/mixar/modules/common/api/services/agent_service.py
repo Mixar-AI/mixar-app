@@ -22,6 +22,10 @@ from ..constants import APIModule
 from ..response import APIResponse
 from .base_service import BaseService
 
+# A BYOK save whose key stays on this computer is validated through the app's
+# agent connection (the backend's relayed probe waits up to 60 s).
+DEVICE_KEY_SAVE_TIMEOUT = 90.0
+
 
 class AgentService(BaseService):
     """Endpoints under /api/v1/agent (settings only)."""
@@ -58,6 +62,9 @@ class AgentService(BaseService):
         api_key: Optional[str],
         base_url: Optional[str] = None,
         supports_vision: Optional[bool] = None,
+        key_location: Optional[str] = None,
+        key_preview: Optional[str] = None,
+        instance_id: Optional[str] = None,
     ) -> APIResponse:
         """PUT /agent/byok — upsert BYOK config across all agent roles.
 
@@ -71,6 +78,11 @@ class AgentService(BaseService):
         ``base_url`` / ``supports_vision`` are sent only when provided (the
         "local" provider registering its relay target) — omitting them keeps the
         payload byte-identical for older backends.
+
+        ``key_location="device"`` keeps the key on this computer: ``api_key``
+        is never sent, ``key_preview`` is the masked label to show and
+        ``instance_id`` is this app's agent connection, through which the
+        backend validates the key (byok/core/cloud_relay.py adds it).
         """
         payload = {"provider": provider, "model": model}
         if api_key is not None:
@@ -79,6 +91,15 @@ class AgentService(BaseService):
             payload["base_url"] = base_url
         if supports_vision is not None:
             payload["supports_vision"] = bool(supports_vision)
+        if key_location is not None:
+            payload["key_location"] = key_location
+        if key_preview is not None:
+            payload["key_preview"] = key_preview
+        if instance_id is not None:
+            payload["instance_id"] = instance_id
+        if key_location == "device":
+            # Validation runs through this app's connection (relayed probe).
+            return self.put("byok", json=payload, timeout=DEVICE_KEY_SAVE_TIMEOUT)
         return self.put("byok", json=payload)
 
     def delete_credentials_all(self) -> APIResponse:

@@ -38,6 +38,7 @@ _FIELDS = (
     "byok_current_model",
     "byok_current_supports_vision",
     "byok_key_preview",
+    "byok_key_on_device",
 )
 
 _DEFAULTS: Dict[str, Any] = {
@@ -48,6 +49,9 @@ _DEFAULTS: Dict[str, Any] = {
     # false "text-only" note.
     "byok_current_supports_vision": True,
     "byok_key_preview": "",
+    # The saved key lives only in this computer's keychain (key_location
+    # "device"). False for older configs whose key the server still holds.
+    "byok_key_on_device": False,
 }
 
 _lock = threading.Lock()
@@ -157,6 +161,7 @@ def _parse(data) -> Dict[str, Any]:
         parsed["byok_current_model"] = first.get("model", "") or ""
         parsed["byok_current_supports_vision"] = bool(first.get("supports_vision", True))
         parsed["byok_key_preview"] = first.get("key_preview", "") or ""
+        parsed["byok_key_on_device"] = first.get("key_location") == "device"
     return parsed
 
 

@@ -251,6 +251,16 @@ def test_every_save_submit_binds_the_epoch_capturing_callback():
         if isinstance(v, ast.Call) and isinstance(v.func, ast.Name)
         and v.func.id == "_save_callback"
     ]
-    # execute (cloud), _execute_openrouter, _execute_codex, _execute_local.
-    assert len(save_submits) == 4
+    # _execute_local passes it by keyword; the cloud, OpenRouter and Codex
+    # paths all go through _start_device_save, which passes it positionally.
+    assert len(save_submits) == 1
+    device_submits = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute) and node.func.attr == "save"
+        and any(isinstance(a, ast.Call) and isinstance(a.func, ast.Name)
+                and a.func.id == "_save_callback" for a in node.args)
+    ]
+    assert len(device_submits) == 1
+    assert source.count("_start_device_save(") == 4  # def + three callers
     assert "credential_state.current_epoch()" in source

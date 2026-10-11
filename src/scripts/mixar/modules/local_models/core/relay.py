@@ -315,7 +315,15 @@ def handle_llm_request(params: dict, respond: Callable[[dict], None]) -> None:
     ``params``: ``{"method": "POST", "url": str, "headers": dict,
     "body": str|bytes}``. Calls ``respond`` exactly once (see module
     docstring for both result shapes). Blocking — run on a worker thread.
+
+    A request naming a ``credential`` (a BYOK key kept on this computer) is
+    handed to ``byok/core/cloud_relay.py``, which adds the key — for a local
+    server it strips ``credential`` and comes back here with the token set.
     """
+    if isinstance(params, dict) and params.get("credential"):
+        from mixar.modules.byok.core.cloud_relay import handle_credential_request
+        handle_credential_request(params, respond)
+        return
     denial, pinned_url, host_header = _validate(params)
     if denial is not None:
         logger.warning("%s relay refused: %s", LOG_PREFIX,

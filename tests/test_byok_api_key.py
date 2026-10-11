@@ -56,7 +56,7 @@ def test_byok_api_key_property_allows_long_provider_keys():
     assert BYOK_API_KEY_MAX_LENGTH == 256
 
 
-def test_byok_save_passes_long_api_key_without_truncation(monkeypatch):
+def test_byok_save_passes_long_api_key_without_truncation(monkeypatch, byok_device_keys):
     saved = {}
     long_key = "sk-proj-" + ("a" * 180) + "_tail"
     wm = SimpleNamespace(
@@ -86,8 +86,11 @@ def test_byok_save_passes_long_api_key_without_truncation(monkeypatch):
     assert result == {"FINISHED"}
     assert saved["provider"] == "openai"
     assert saved["model"] == "gpt-5"
-    assert saved["api_key"] == long_key
-    assert len(saved["api_key"]) == len(long_key)
+    # The key stays in the keychain, untruncated; the backend never gets it.
+    assert saved["api_key"] is None
+    assert saved["key_location"] == "device"
+    assert byok_device_keys == {"BYOK-acct-openai": long_key}
+    assert long_key not in repr(saved)
 
 
 def test_native_password_field_buffer_matches_byok_key_limit():

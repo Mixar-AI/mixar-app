@@ -32,7 +32,7 @@ from mixar.modules.common.ui.constants import (
     CARD_ROW_HEADING,
 )
 
-from mixar.modules.common.i18n import iface_, n_, rpt_
+from mixar.modules.common.i18n import n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
 
@@ -52,8 +52,6 @@ OP_SAVE = "mixar_byok.save"
 OP_REQUEST_REMOVE = "mixar_byok.request_remove"
 OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
 OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
-OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
-OP_CODEX_PASTE = "mixar_byok.codex_paste"
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +266,15 @@ def _draw_current_config(col, wm, with_remove):
         _value_row(bcol, n_("Account"), wm.byok_key_preview or n_("ChatGPT subscription"))
     else:
         _value_row(bcol, n_("API Key"), wm.byok_key_preview or n_("Stored securely"))
+    if getattr(wm, 'byok_key_on_device', False):
+        card_label(bcol, n_("Kept on this computer only."), 'MUTED')
+    elif not model_suggestions.is_local(wm.byok_current_provider):
+        # Saved by an older Mixar: the server still holds this key.
+        card_label(
+            bcol,
+            n_("Stored on Mixar's servers — save it again to keep it on this computer only."),
+            'DANGER',
+        )
 
     if not wm.byok_current_supports_vision:
         bcol.separator(factor=0.3)
@@ -324,12 +331,16 @@ def _draw_cloud_fields(body, wm):
     field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
     body.separator(factor=0.5)
-    card_label(
-        body,
-        n_("Stored encrypted, used only for Mixar agent requests — only a "
-           "masked preview is shown after saving."),
-        'MUTED',
-    )
+    draw_on_device_note(body)
+
+
+def draw_on_device_note(body):
+    """Where a key goes when saved (core/key_vault.py, core/cloud_relay.py)."""
+    for line in (
+        n_("Your key stays on this computer, in your system keychain."),
+        n_("Mixar's servers never receive it — this app adds it to each request."),
+    ):
+        card_label(body, line, 'MUTED')
 
 
 def _draw_openrouter_fields(body, wm):
@@ -339,6 +350,7 @@ def _draw_openrouter_fields(body, wm):
     field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
     body.separator(factor=0.5)
+    draw_on_device_note(body)
     card_label(
         body,
         n_("Pick a model that supports tool / function calling — the agent needs it."),
@@ -354,28 +366,10 @@ def _draw_openrouter_fields(body, wm):
 def _draw_codex_fields(body, wm):
     field_label(body, n_("Model"))
     field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
-
-    load_row = body.row()
-    load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
-    body.separator(factor=0.35)
-
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
-
-    n = len(wm.byok_form_codex_bundle or "")
-    card_label(
-        body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
-        'MUTED',
-    )
     body.separator(factor=0.5)
     for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
+        n_("Uses the Codex CLI login on this computer — run  codex login  first."),
+        n_("It is read here for each request; nothing is uploaded or copied."),
         n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
     ):
         card_label(body, line, 'MUTED')

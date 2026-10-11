@@ -100,3 +100,42 @@ LOCAL_MODE_ITEMS = (
      "Point Mixar at an OpenAI-compatible server you already run "
      "(Ollama, LM Studio, llama.cpp, ...)"),
 )
+
+# ---------------------------------------------------------------------------
+# Keys kept on this computer (core/key_vault.py + core/cloud_relay.py)
+# ---------------------------------------------------------------------------
+
+# provider -> (host, path prefix): the ONLY places the app will send a stored
+# key. Must equal the backend's device_key_relay.PROVIDER_TARGETS; the app
+# enforces it independently so a compromised backend cannot redirect a key.
+CLOUD_RELAY_TARGETS = {
+    "anthropic": ("api.anthropic.com", "/v1/"),
+    "openai": ("api.openai.com", "/v1/"),
+    "gemini": ("generativelanguage.googleapis.com", "/v1beta/"),
+    "fugu": ("api.sakana.ai", "/v1/"),
+    "kimi": ("api.moonshot.ai", "/v1/"),
+    "openrouter": ("openrouter.ai", "/api/v1/"),
+    "codex": ("chatgpt.com", "/backend-api/codex/"),
+}
+
+# One relayed provider call. Streamed responses come back whole, so this
+# bounds a full generation (the backend waits 600 s).
+CLOUD_RELAY_TIMEOUT_S = 590.0
+CLOUD_RELAY_MAX_REQUEST_BYTES = 8 * 1024 * 1024
+CLOUD_RELAY_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+
+# Request headers the app never forwards: credentials (it sets its own) and
+# hop-by-hop headers. Anything else the provider SDK set passes through.
+CLOUD_RELAY_STRIPPED_REQUEST_HEADERS = frozenset({
+    "authorization", "x-api-key", "x-goog-api-key", "chatgpt-account-id",
+    "cookie", "host", "content-length", "connection", "keep-alive",
+    "proxy-authorization", "forwarded", "accept-encoding",
+    "transfer-encoding", "te", "upgrade",
+})
+CLOUD_RELAY_ALLOWED_RESPONSE_HEADERS = frozenset({
+    "content-type", "openai-processing-ms", "request-id", "retry-after",
+    "x-request-id",
+})
+
+# Handshake capability: this app can add a device-held key to a relayed call.
+DEVICE_KEY_CAPABILITY = "byok_device_keys"

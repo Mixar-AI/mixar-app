@@ -122,11 +122,14 @@ def test_save_rejects_stale_model_from_another_provider(monkeypatch):
     model_suggestions.clear()
 
 
-def test_codex_save_uses_openai_catalog_models(monkeypatch):
+def test_codex_save_uses_openai_catalog_models(monkeypatch, byok_device_keys):
     """Codex has no catalog group of its own: its model dropdown reuses the
     "openai" models. A stale/sentinel selection is rejected before the
-    network; a real openai catalog model is sent with the pasted auth.json
-    bundle as the key."""
+    network; a real openai catalog model is saved with no key at all — the
+    Codex CLI login is read on this computer for each call."""
+    from mixar.modules.byok.core import codex_cli_login
+
+    monkeypatch.setattr(codex_cli_login, "read", lambda: ("access", "acct"))
     model_suggestions.populate(
         providers=[("openai", "OpenAI", "From catalog")],
         models={"openai": [("gpt-5.5", "GPT-5.5", "GPT-5.5")]},
@@ -146,7 +149,6 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
             byok_last_error="",
             byok_form_provider="codex",
             byok_form_model=model,
-            byok_form_codex_bundle='{"tokens": {}}',
         )
 
     stale = _wm("NONE")
@@ -161,14 +163,16 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
     assert ok.byok_dialog_state == "SAVING"
     assert sent[0]["provider"] == "codex"
     assert sent[0]["model"] == "gpt-5.5"
-    assert sent[0]["api_key"] == '{"tokens": {}}'
+    assert sent[0]["api_key"] is None
+    assert sent[0]["key_location"] == "device"
+    assert byok_device_keys == {}
     model_suggestions.clear()
 
 
 def test_dialog_cancel_wipes_live_secret_fields():
     wm = SimpleNamespace(
         byok_form_api_key="provider-secret",
-        byok_form_codex_bundle="jwt-bundle",
+        byok_form_local_custom_key="local-secret",
     )
 
     byok_ops.MIXAR_BYOK_OT_open_dialog().cancel(
@@ -176,7 +180,7 @@ def test_dialog_cancel_wipes_live_secret_fields():
     )
 
     assert wm.byok_form_api_key == ""
-    assert wm.byok_form_codex_bundle == ""
+    assert wm.byok_form_local_custom_key == ""
 
 
 def test_secret_properties_are_not_saved_in_blend_files(monkeypatch):
@@ -198,4 +202,4 @@ def test_secret_properties_are_not_saved_in_blend_files(monkeypatch):
 
     by_name = {item.get("name"): item for item in string_properties}
     assert by_name["API Key"]["options"] == {'SKIP_SAVE'}
-    assert by_name["Codex auth.json"]["options"] == {'SKIP_SAVE'}
+    assert "Codex auth.json" not in by_name  # no Codex secret field any more

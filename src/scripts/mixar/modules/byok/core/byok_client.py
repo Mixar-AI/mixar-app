@@ -168,17 +168,24 @@ def save_credentials(
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
     base_url: Optional[str] = None,
     supports_vision: Optional[bool] = None,
+    key_location: Optional[str] = None,
+    key_preview: Optional[str] = None,
+    instance_id: Optional[str] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+    """PUT /agent/byok — upsert BYOK config. ≤ 15 s (a key kept on this
+    computer is validated through the app connection: up to a minute).
 
     ``base_url`` / ``supports_vision`` are forwarded only when provided
-    (the "local" provider's relay-target registration).
+    (the "local" provider's relay-target registration); ``key_location`` /
+    ``key_preview`` / ``instance_id`` only for a key kept on this computer.
     """
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
                 provider=provider, model=model, api_key=api_key,
                 base_url=base_url, supports_vision=supports_vision,
+                key_location=key_location, key_preview=key_preview,
+                instance_id=instance_id,
             )
             success, data, err = _translate(response)
         except Exception as e:

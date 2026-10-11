@@ -254,7 +254,7 @@ def test_dialog_states_cover_the_full_flow():
     )
 
 
-def test_save_success_lands_on_saved_recap(monkeypatch):
+def test_save_success_lands_on_saved_recap(monkeypatch, byok_device_keys):
     wm = _wm('IDLE', byok_form_provider='openai', byok_form_model='gpt-5',
              byok_form_api_key='sk-secret')
     context = SimpleNamespace(window_manager=wm)
@@ -282,7 +282,7 @@ def test_save_success_lands_on_saved_recap(monkeypatch):
     assert wm.byok_form_api_key == ''  # secret wiped after landing
 
 
-def test_save_failure_lands_on_error(monkeypatch):
+def test_save_failure_lands_on_error(monkeypatch, byok_device_keys):
     wm = _wm('IDLE', byok_form_provider='openai', byok_form_model='gpt-5',
              byok_form_api_key='sk-secret')
     context = SimpleNamespace(window_manager=wm)

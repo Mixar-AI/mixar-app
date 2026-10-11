@@ -180,6 +180,11 @@ def _draw_custom(body, wm) -> None:
            "LM Studio, llama.cpp…"),
         'MUTED',
     )
+    byok_dialog_ui.card_label(
+        body,
+        n_("An API key, if you enter one, stays in this computer's keychain."),
+        'MUTED',
+    )
 
 
 # ---------------------------------------------------------------------------

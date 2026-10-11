@@ -169,7 +169,8 @@ def test_save_managed_requires_healthy_matching_server(monkeypatch):
     assert "Start the local model" in err
 
 
-def test_save_managed_registers_token_base_and_vision(monkeypatch):
+def test_save_managed_registers_base_and_vision_keeping_the_token(
+        monkeypatch, byok_device_keys):
     monkeypatch.setattr(server_supervisor, "is_healthy", lambda: True)
     monkeypatch.setattr(server_supervisor, "current", lambda: {
         "model_id": "qwen3.5-4b", "port": 11500, "pid": 1, "state": "ready",
@@ -202,7 +203,10 @@ def test_save_managed_registers_token_base_and_vision(monkeypatch):
     assert (started, err) == (True, None)
     assert saved["provider"] == "local"
     assert saved["model"] == "qwen3.5-4b"
-    assert saved["api_key"] == "manifest-token"
+    # The managed server's token stays here; the relay adds it per request.
+    assert saved["api_key"] is None
+    assert saved["key_location"] == "device"
+    assert "manifest-token" not in repr(saved)
     assert saved["base_url"] == "http://127.0.0.1:11500"
     assert saved["supports_vision"] is True  # qwen3.5-4b is a vision model
     assert registered == {

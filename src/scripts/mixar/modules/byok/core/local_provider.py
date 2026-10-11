@@ -13,11 +13,11 @@ Owns the data behind the Local branch of the AI Provider dialog:
   known Ollama/LM Studio/oMLX/llama.cpp ports, marshalled to the main
   thread — never probed from a draw);
 - the two save paths: managed (requires the supervised server healthy,
-  registers base_url + manifest api-token with the backend) and custom
+  registers base_url with the backend; the api-token stays on this computer) and custom
   (worker-thread reachability ping of ``<base>/v1/models`` first).
 
 Both saves go through the ordinary ``PUT /agent/byok``
-(`byok_client.save_credentials`) with the extended ``base_url`` /
+(`device_save.save` → `byok_client.save_credentials`) with the extended ``base_url`` /
 ``supports_vision`` fields, and on success snapshot the registration into
 the local_models manifest + refresh the relay's approved bases.
 """
@@ -189,8 +189,8 @@ def apply_detected_selection(wm, identifier: str) -> None:
 
 def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     """Managed save: the supervised server must be healthy and serving the
-    selected model. Registers ``http://127.0.0.1:<port>`` + the manifest
-    api-token with the backend. Returns (started, ui_error)."""
+    selected model. Registers ``http://127.0.0.1:<port>`` with the backend
+    (the manifest api-token stays here). Returns (started, ui_error)."""
     from mixar.modules.local_models.core import manifest, server_supervisor
 
     model_id = wm.byok_form_local_model
@@ -215,15 +215,15 @@ def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                 logger.warning("Local registration snapshot failed: %s", exc)
         on_done(success, data, err)
 
-    from . import byok_client
-    byok_client.save_credentials(
-        provider=LOCAL_PROVIDER_ID,
-        model=model_id,
-        api_key=manifest.get_api_token(),
-        base_url=base_url,
-        supports_vision=supports_vision,
-        on_done=_wrapped,
+    # The managed server's token stays on this computer: the relay adds it
+    # from the manifest (byok/core/cloud_relay.py), so nothing is stored.
+    from . import device_save
+    error = device_save.save(
+        LOCAL_PROVIDER_ID, model_id, "", _wrapped,
+        base_url=base_url, supports_vision=supports_vision,
     )
+    if error:
+        return False, error
     return True, None
 
 
@@ -234,8 +234,8 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
 
     base_url = (wm.byok_form_local_custom_base or "").strip().rstrip("/")
     model = (wm.byok_form_local_custom_model or "").strip()
-    # Many local servers need no key. The backend's local provider accepts a
-    # keyless credential (api_key null) — omit the field entirely when blank.
+    # Many local servers need no key. A bearer token, when given, is kept in
+    # the keychain and added by the relay — never sent to the backend.
     api_key = (wm.byok_form_local_custom_key or "").strip() or None
     if not base_url or not model:
         return False, n_("Base URL and model name are required.")
@@ -264,15 +264,14 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                     logger.warning("Local registration snapshot failed: %s", exc)
             on_done(success, data, save_err)
 
-        from . import byok_client
-        byok_client.save_credentials(
-            provider=LOCAL_PROVIDER_ID,
-            model=model,
-            api_key=api_key,
-            base_url=base_url,
-            supports_vision=False,
-            on_done=_wrapped,
+        # An optional bearer token stays in this computer's keychain.
+        from . import device_save
+        error = device_save.save(
+            LOCAL_PROVIDER_ID, model, api_key or "", _wrapped,
+            base_url=base_url, supports_vision=False,
         )
+        if error:
+            on_done(False, None, error)
 
     threading.Thread(
         target=_thread, daemon=True, name="MixarLocalCustomPing"

@@ -21,8 +21,6 @@ lands on an explicit SAVED / REMOVED recap with one Done button, so
 "did it save?" is never a question.
 """
 
-import os
-
 import bpy
 from bpy.types import Operator
 
@@ -50,7 +48,6 @@ def _wipe_form_secrets(wm):
     """Remove transient API/token material from the live WindowManager."""
     for attr in (
         'byok_form_api_key',
-        'byok_form_codex_bundle',
         'byok_form_local_custom_key',
     ):
         try:
@@ -238,21 +235,11 @@ class MIXAR_BYOK_OT_save(Operator):
             wm.byok_last_error = n_("Choose a model for this provider and enter an API key.")
             return {'CANCELLED'}
 
-        wm.byok_dialog_state = 'SAVING'
-        wm.byok_last_error = ''
-        _redraw_mixie_chat_areas()
-
-        byok_client.save_credentials(
-            provider=provider,
-            model=model,
-            api_key=api_key,
-            on_done=_save_callback(),
-        )
-        return {'FINISHED'}
+        return _start_device_save(wm, provider, model, api_key)
 
     def _execute_openrouter(self, wm):
-        """OpenRouter save: no client-side ping — the backend can reach
-        OpenRouter directly, so it validates the key + model slug on Save."""
+        """OpenRouter save: the backend validates the key + model slug on
+        Save, through this app (the key stays in the keychain)."""
         model = wm.byok_form_openrouter_model.strip()
         api_key = wm.byok_form_api_key.strip()
         if not model or not api_key:
@@ -260,17 +247,7 @@ class MIXAR_BYOK_OT_save(Operator):
             wm.byok_last_error = n_("Model slug and API key are required.")
             return {'CANCELLED'}
 
-        wm.byok_dialog_state = 'SAVING'
-        wm.byok_last_error = ''
-        _redraw_mixie_chat_areas()
-
-        byok_client.save_credentials(
-            provider='openrouter',
-            model=model,
-            api_key=api_key,
-            on_done=_save_callback(),
-        )
-        return {'FINISHED'}
+        return _start_device_save(wm, 'openrouter', model, api_key)
 
     def _execute_local(self, wm):
         """Local save: managed requires the supervised server healthy;
@@ -283,27 +260,31 @@ class MIXAR_BYOK_OT_save(Operator):
         return result
 
     def _execute_codex(self, wm):
-        """Codex save: send the pasted auth.json bundle as the credential. The
-        backend refreshes the token (validating it) and stores the bundle.
-        The model is the shared catalog dropdown, fed by the "openai" group."""
+        """Codex save: the Codex CLI login on this computer is used in place
+        (core/codex_cli_login.py) — nothing is uploaded or stored. The model is
+        the shared catalog dropdown, fed by the "openai" group."""
         model = wm.byok_form_model
-        bundle = wm.byok_form_codex_bundle.strip()
-        if not model_suggestions.is_valid_model('codex', model) or not bundle:
+        if not model_suggestions.is_valid_model('codex', model):
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = n_("Choose a Codex model and load your auth.json bundle.")
+            wm.byok_last_error = n_("Choose a Codex model.")
             return {'CANCELLED'}
+        return _start_device_save(wm, 'codex', model, "")
 
-        wm.byok_dialog_state = 'SAVING'
-        wm.byok_last_error = ''
-        _redraw_mixie_chat_areas()
 
-        byok_client.save_credentials(
-            provider='codex',
-            model=model,
-            api_key=bundle,
-            on_done=_save_callback(),
-        )
-        return {'FINISHED'}
+def _start_device_save(wm, provider, model, key):
+    """Keep the key on this computer and save the config (core/device_save)."""
+    from ...core import device_save
+
+    # SAVING first: the save callback may land before save() returns.
+    wm.byok_dialog_state = 'SAVING'
+    wm.byok_last_error = ''
+    error = device_save.save(provider, model, key, _save_callback())
+    if error:
+        wm.byok_dialog_state = 'ERROR'
+        wm.byok_last_error = error
+        return {'CANCELLED'}
+    _redraw_mixie_chat_areas()
+    return {'FINISHED'}
 
 
 def _deregister_local_if_switched_away(active_provider):
@@ -367,76 +348,6 @@ def _on_save_done(success: bool, data, err, epoch=None):
 
 
 # ---------------------------------------------------------------------------
-# Codex — paste auth.json from clipboard
-# ---------------------------------------------------------------------------
-
-class MIXAR_BYOK_OT_codex_load_file(Operator):
-    """Read ~/.codex/auth.json from this machine into the field"""
-    bl_idname = "mixar_byok.codex_load_file"
-    bl_label = "Load from ~/.codex/auth.json"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        wm = context.window_manager
-        path = os.path.expanduser(os.path.join("~", ".codex", "auth.json"))
-        if not os.path.exists(path):
-            self.report({'WARNING'}, "~/.codex/auth.json not found — run `codex login` first")
-            return {'CANCELLED'}
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Codex auth.json read failed: %s", e)
-            self.report({'ERROR'}, "Could not read ~/.codex/auth.json")
-            return {'CANCELLED'}
-        if not content:
-            self.report({'WARNING'}, "~/.codex/auth.json is empty")
-            return {'CANCELLED'}
-        wm.byok_form_codex_bundle = content
-        if len(wm.byok_form_codex_bundle) < len(content):
-            # StringProperty maxlen truncates silently — a clipped bundle is
-            # invalid JSON and the save fails with an error the user can't
-            # connect to truncation.
-            self.report(
-                {'ERROR'},
-                "auth.json is too large for this field and was truncated — "
-                "it will not save correctly",
-            )
-            _wipe_form_secrets(wm)
-            return {'CANCELLED'}
-        _redraw_mixie_chat_areas()
-        self.report({'INFO'}, "Loaded auth.json")
-        return {'FINISHED'}
-
-
-class MIXAR_BYOK_OT_codex_paste(Operator):
-    """Paste your ~/.codex/auth.json from the clipboard into the field"""
-    bl_idname = "mixar_byok.codex_paste"
-    bl_label = "Paste auth.json"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        wm = context.window_manager
-        # Read the clipboard directly — this preserves the multi-line JSON that
-        # a single-line prop field can't accept via a manual paste.
-        clip = (wm.clipboard or "").strip()
-        if not clip:
-            self.report({'WARNING'}, "Clipboard is empty")
-            return {'CANCELLED'}
-        wm.byok_form_codex_bundle = clip
-        if len(wm.byok_form_codex_bundle) < len(clip):
-            self.report(
-                {'ERROR'},
-                "Pasted auth.json is too large for this field and was "
-                "truncated — it will not save correctly",
-            )
-            _wipe_form_secrets(wm)
-            return {'CANCELLED'}
-        _redraw_mixie_chat_areas()
-        return {'FINISHED'}
-
-
-# ---------------------------------------------------------------------------
 # Remove (two-click confirm)
 # ---------------------------------------------------------------------------
 
@@ -463,7 +374,7 @@ class MIXAR_BYOK_OT_cancel_remove(Operator):
 
 
 class MIXAR_BYOK_OT_confirm_remove(Operator):
-    """Delete the stored API key server-side"""
+    """Remove your API key from Mixar and from this computer's keychain"""
     bl_idname = "mixar_byok.confirm_remove"
     bl_label = "Confirm Remove"
     bl_options = {'INTERNAL'}
@@ -483,6 +394,9 @@ def _on_delete_done(success: bool, removed_count: int, err):
     try:
         wm = bpy.context.window_manager
         if success:
+            # The keys lived only on this computer: remove them too.
+            from ...core import key_vault
+            key_vault.delete_all_except(None)
             _clear_cached_state(wm)
             _wipe_form_secrets(wm)
             preference_state.refresh()
@@ -509,8 +423,6 @@ def _on_delete_done(success: bool, removed_count: int, err):
 classes = (
     MIXAR_BYOK_OT_open_dialog,
     MIXAR_BYOK_OT_save,
-    MIXAR_BYOK_OT_codex_load_file,
-    MIXAR_BYOK_OT_codex_paste,
     MIXAR_BYOK_OT_request_remove,
     MIXAR_BYOK_OT_cancel_remove,
     MIXAR_BYOK_OT_confirm_remove,

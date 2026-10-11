@@ -116,7 +116,6 @@ def wipe_transient_secrets(wm) -> None:
         return
     for attr in (
         'byok_form_api_key',
-        'byok_form_codex_bundle',
         'byok_form_local_custom_key',
     ):
         try:
@@ -130,7 +129,6 @@ _WM_ATTRS = (
     'byok_form_model',
     'byok_form_api_key',
     'byok_form_openrouter_model',
-    'byok_form_codex_bundle',
     'byok_form_local_mode',
     'byok_form_local_model',
     'byok_form_local_detected',
@@ -142,6 +140,7 @@ _WM_ATTRS = (
     'byok_current_model',
     'byok_current_supports_vision',
     'byok_key_preview',
+    'byok_key_on_device',
     'byok_dialog_state',
     'byok_last_error',
 )
@@ -169,8 +168,8 @@ def register():
     WM.byok_form_api_key = StringProperty(
         name="API Key",
         description=(
-            "Your API key is stored encrypted and used only for Mixar agent requests. "
-            "After saving, only a masked preview is shown."
+            "Your API key stays in this computer's keychain and is added to each "
+            "agent request by this app. Mixar's servers never receive it."
         ),
         maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
@@ -186,19 +185,9 @@ def register():
         default=OPENROUTER_DEFAULT_MODEL,
     )
 
-    # --- Codex form field (shown when provider == 'codex') ---
-    # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
-    # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
-    # count confirm it landed). The model uses the shared catalog-backed
-    # byok_form_model dropdown (served from the "openai" catalog group).
-    WM.byok_form_codex_bundle = StringProperty(
-        name="Codex auth.json",
-        description="Contents of ~/.codex/auth.json (run `codex login` first)",
-        maxlen=16384,
-        default='',
-        subtype='PASSWORD',
-        options={'SKIP_SAVE'},
-    )
+    # Codex has no form secret: the Codex CLI login on this computer is used
+    # in place (core/codex_cli_login.py). Its model uses the shared
+    # catalog-backed byok_form_model dropdown (the "openai" catalog group).
 
     # --- Local (this computer) form fields (shown when provider == 'local') ---
     WM.byok_form_local_mode = EnumProperty(
@@ -251,6 +240,8 @@ def register():
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
     WM.byok_key_preview = StringProperty(default='')
+    # True when the saved key lives only in this computer's keychain.
+    WM.byok_key_on_device = BoolProperty(default=False)
 
     # --- Dialog state machine ---
     WM.byok_dialog_state = EnumProperty(

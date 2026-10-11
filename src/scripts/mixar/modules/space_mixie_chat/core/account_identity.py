@@ -20,6 +20,12 @@ def get_email(_scene, _stored_value, _is_set):
     return _email
 
 
+def account_email() -> str:
+    """The signed-in account's email ("" when signed out). Thread-safe read;
+    used to keep per-account secrets apart (byok/core/key_vault.py)."""
+    return _email
+
+
 def set_email(_scene, value, _stored_value, _is_set):
     global _email
     _email = value

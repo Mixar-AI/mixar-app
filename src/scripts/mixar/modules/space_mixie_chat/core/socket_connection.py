@@ -291,6 +291,9 @@ class SocketConnection:
                 "inspection_preview_v1",
                 "notifications",
                 "local_llm",
+                # llm.request may name a BYOK credential: the key stays in the
+                # OS keychain and the app adds it (byok/core/cloud_relay.py).
+                "byok_device_keys",
                 # Client answers blender.liveness on the WS thread; the
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
