@@ -243,6 +243,25 @@ def test_all_provider_branches_render_in_both_modes():
             _draw('IDLE', card_api, byok_form_provider=provider, **extra)
 
 
+def test_custom_branch_offers_the_vision_choice():
+    """A custom model's capabilities are unknown to us, so the form asks.
+
+    The auto checkbox is what triggers the probe on save; the manual one is
+    the user's override and is greyed out while detection is in charge.
+    """
+    for card_api in (True, False):
+        log = _draw('IDLE', card_api, byok_form_provider='local',
+                    byok_form_local_mode='CUSTOM')
+        assert "prop:byok_form_local_custom_vision_auto" in log
+        assert "prop:byok_form_local_custom_vision" in log
+
+    # The managed branch knows its model from the catalog — nothing to ask.
+    log = _draw('IDLE', True, byok_form_provider='local',
+                byok_form_local_mode='MANAGED')
+    assert "prop:byok_form_local_custom_vision" not in log
+    assert "prop:byok_form_local_custom_vision_auto" not in log
+
+
 # ---------------------------------------------------------------------------
 # State machine
 # ---------------------------------------------------------------------------

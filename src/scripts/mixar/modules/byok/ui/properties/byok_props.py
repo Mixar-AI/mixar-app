@@ -137,6 +137,8 @@ _WM_ATTRS = (
     'byok_form_local_custom_base',
     'byok_form_local_custom_model',
     'byok_form_local_custom_key',
+    'byok_form_local_custom_vision',
+    'byok_form_local_custom_vision_auto',
     'byok_is_active',
     'byok_current_provider',
     'byok_current_model',
@@ -235,6 +237,29 @@ def register():
         maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
         subtype='PASSWORD',
+        options={'SKIP_SAVE'},
+    )
+    # Image support of a user-run model cannot be read from any catalog
+    # (third-party servers are not ours to describe), so saving probes the
+    # server for it. ``…_vision_auto`` picks between that answer and the
+    # user's own call; the probe result is written back into ``…_vision``
+    # so the checkbox shows what was actually stored.
+    WM.byok_form_local_custom_vision_auto = BoolProperty(
+        name="Detect image support automatically",
+        description=(
+            "Send one tiny test image to the server when saving and use its "
+            "answer. Turn this off to decide yourself"
+        ),
+        default=True,
+        options={'SKIP_SAVE'},
+    )
+    WM.byok_form_local_custom_vision = BoolProperty(
+        name="Accepts images (vision)",
+        description=(
+            "Mixar only sends screenshots of your 3D scene when this is on. "
+            "Leave it off for a text-only model"
+        ),
+        default=False,
         options={'SKIP_SAVE'},
     )
 

@@ -166,6 +166,8 @@ def _clear_byok_state_on_logout(wm):
         ('byok_form_local_custom_base', ''),
         ('byok_form_local_custom_model', ''),
         ('byok_form_local_custom_key', ''),
+        ('byok_form_local_custom_vision', False),
+        ('byok_form_local_custom_vision_auto', True),
         ('byok_dialog_state', 'IDLE'),
         ('byok_last_error', ''),
     ):

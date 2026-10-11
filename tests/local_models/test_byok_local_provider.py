@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "src" / "scripts"
 if str(SCRIPTS) not in sys.path:
@@ -28,6 +30,7 @@ from mixar.modules.byok.ui.operators import byok_local_ops, byok_ops
 from mixar.modules.common.api.response import APIResponse
 from mixar.modules.common.api.services.agent_service import AgentService
 from mixar.modules.local_models.core import (
+    detect,
     manifest,
     orchestrator,
     server_supervisor,
@@ -306,3 +309,191 @@ def test_is_managed_registration():
         "supports_vision": False,
     }) is False
     assert orchestrator.is_managed_registration(None) is False
+
+
+# ---------------------------------------------------------------------------
+# Custom save path: the vision probe decides what gets stored
+#
+# A custom base is not in the managed catalog, so detect.probe_vision asks
+# the server itself. Three rules matter: the probe runs only when the user
+# left the choice automatic, its answer lands in both the credential and the
+# manifest snapshot, and an inconclusive answer stays text-only.
+# ---------------------------------------------------------------------------
+
+
+def _custom_wm(**extra):
+    wm = SimpleNamespace(
+        byok_form_local_custom_base="http://127.0.0.1:8181",
+        byok_form_local_custom_model="qwen3.5-9b",
+        byok_form_local_custom_key="",
+        byok_form_local_custom_vision=False,
+        byok_form_local_custom_vision_auto=True,
+    )
+    for key, value in extra.items():
+        setattr(wm, key, value)
+    return wm
+
+
+def _save_custom(monkeypatch, probe_result, **wm_extra):
+    """Run a custom save inline; returns (saved, registered, finished, wm)."""
+    monkeypatch.setattr(local_provider.threading, "Thread", InlineThread)
+    monkeypatch.setattr(
+        local_provider, "_schedule_on_main",
+        lambda callback, *args: callback(*args),
+    )
+    monkeypatch.setattr(local_provider, "_ping_models_endpoint", lambda _base: None)
+    monkeypatch.setattr(orchestrator, "refresh_approved_bases", lambda: None)
+
+    probe_calls = []
+
+    def fake_probe(base_url, model, api_key=None):
+        probe_calls.append((base_url, model, api_key))
+        if isinstance(probe_result, Exception):
+            raise probe_result
+        return probe_result
+
+    monkeypatch.setattr(detect, "probe_vision", fake_probe)
+
+    saved, registered, finished = {}, {}, {}
+
+    def fake_save_credentials(**kwargs):
+        saved.update(kwargs)
+        kwargs["on_done"](True, {"byok_active": True}, None)
+
+    monkeypatch.setattr(byok_client, "save_credentials", fake_save_credentials)
+    monkeypatch.setattr(
+        manifest, "set_registered",
+        lambda base, model, vision: registered.update(
+            base=base, model=model, vision=vision),
+    )
+
+    wm = _custom_wm(**wm_extra)
+    started, err = local_provider.save_custom_async(
+        wm, on_done=lambda ok, data, e: finished.update(ok=ok, err=e),
+    )
+    assert (started, err) == (True, None)
+    return saved, registered, finished, probe_calls
+
+
+def test_custom_save_stores_probe_yes(monkeypatch):
+    saved, registered, finished, probe_calls = _save_custom(monkeypatch, True)
+    assert saved["supports_vision"] is True
+    assert saved["base_url"] == "http://127.0.0.1:8181"
+    assert saved["model"] == "qwen3.5-9b"
+    assert saved["api_key"] is None  # blank key stays absent, not ""
+    assert registered == {
+        "base": "http://127.0.0.1:8181", "model": "qwen3.5-9b", "vision": True,
+    }
+    assert finished["ok"] is True
+    assert probe_calls == [("http://127.0.0.1:8181", "qwen3.5-9b", None)]
+
+
+def test_custom_save_stores_probe_no(monkeypatch):
+    saved, registered, _finished, _calls = _save_custom(monkeypatch, False)
+    assert saved["supports_vision"] is False
+    assert registered["vision"] is False
+
+
+def test_custom_save_without_an_answer_stays_text_only(monkeypatch):
+    """Unknown must never become True — the safe direction is text-only."""
+    saved, registered, finished, _calls = _save_custom(monkeypatch, None)
+    assert saved["supports_vision"] is False
+    assert registered["vision"] is False
+    assert finished["ok"] is True  # an undecided probe never fails a save
+
+
+def test_custom_save_treats_a_crashing_probe_as_unknown(monkeypatch):
+    saved, _registered, finished, _calls = _save_custom(
+        monkeypatch, RuntimeError("probe blew up"))
+    assert saved["supports_vision"] is False
+    assert finished["ok"] is True
+
+
+def test_custom_save_probe_forwards_the_api_key(monkeypatch):
+    _saved, _registered, _finished, calls = _save_custom(
+        monkeypatch, True, byok_form_local_custom_key="secret")
+    assert calls == [("http://127.0.0.1:8181", "qwen3.5-9b", "secret")]
+
+
+@pytest.mark.parametrize("checked,expected", [(True, True), (False, False)])
+def test_custom_save_manual_checkbox_overrides_the_probe(monkeypatch, checked, expected):
+    """Manual wins both ways — and then the server is never asked."""
+    saved, registered, _finished, calls = _save_custom(
+        monkeypatch, not expected,
+        byok_form_local_custom_vision=checked,
+        byok_form_local_custom_vision_auto=False,
+    )
+    assert saved["supports_vision"] is expected
+    assert registered["vision"] is expected
+    assert calls == []
+
+
+def test_custom_save_skips_the_probe_when_the_server_is_unreachable(monkeypatch):
+    monkeypatch.setattr(local_provider.threading, "Thread", InlineThread)
+    monkeypatch.setattr(
+        local_provider, "_schedule_on_main",
+        lambda callback, *args: callback(*args),
+    )
+    monkeypatch.setattr(
+        local_provider, "_ping_models_endpoint",
+        lambda _base: "Could not reach the local server.",
+    )
+
+    def explode(*_args, **_kwargs):
+        raise AssertionError("must not probe an unreachable server")
+
+    monkeypatch.setattr(detect, "probe_vision", explode)
+    monkeypatch.setattr(
+        byok_client, "save_credentials",
+        lambda **kwargs: pytest.fail("must not store credentials"),
+    )
+
+    finished = {}
+    started, err = local_provider.save_custom_async(
+        _custom_wm(), on_done=lambda ok, data, e: finished.update(ok=ok, err=e))
+    assert (started, err) == (True, None)
+    assert finished["ok"] is False
+    assert "reach" in finished["err"]
+
+
+def test_dialog_prefill_mirrors_the_stored_vision_flag(monkeypatch):
+    """Opening the dialog shows what is actually stored, then re-detects.
+
+    The checkbox is a mirror of the credential, not an edit of it: auto is
+    reset so the next save asks the server again rather than trusting a
+    choice made in a previous session.
+    """
+    monkeypatch.setattr(local_provider, "refresh_model_items", lambda: None)
+    monkeypatch.setattr(local_provider, "refresh_detected_async", lambda: None)
+
+    def prefill(reg):
+        monkeypatch.setattr(manifest, "get_registered", lambda: reg)
+        wm = SimpleNamespace(byok_form_local_mode="MANAGED",
+                             byok_form_local_model="NONE")
+        byok_local_ops.prepare_dialog(wm)
+        return wm
+
+    stored = prefill({
+        "base_url": "http://127.0.0.1:8181",
+        "model_id": "Qwen2.5-VL-7B-Instruct",  # not a catalog model id
+        "supports_vision": True,
+    })
+    assert stored.byok_form_local_mode == "CUSTOM"
+    assert stored.byok_form_local_custom_base == "http://127.0.0.1:8181"
+    assert stored.byok_form_local_custom_model == "Qwen2.5-VL-7B-Instruct"
+    assert stored.byok_form_local_custom_vision is True
+    assert stored.byok_form_local_custom_vision_auto is True
+
+    text_only = prefill({
+        "base_url": "http://127.0.0.1:8181",
+        "model_id": "Qwen2.5-VL-7B-Instruct",
+        "supports_vision": False,
+    })
+    assert text_only.byok_form_local_custom_vision is False
+
+    managed = prefill({
+        "base_url": "http://127.0.0.1:11500", "model_id": "qwen3.5-4b",
+        "supports_vision": True,
+    })
+    assert managed.byok_form_local_mode == "MANAGED"
+    assert not hasattr(managed, "byok_form_local_custom_vision")

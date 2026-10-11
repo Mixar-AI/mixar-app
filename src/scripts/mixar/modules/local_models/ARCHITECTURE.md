@@ -159,6 +159,19 @@ Ollama (11434), LM Studio (1234), oMLX (8000) and stock llama.cpp (8080)
 at 127.0.0.1, returning kind/base_url/model-ids for responders.
 Blocking and failure-silent; callers run it on a worker thread.
 
+`detect.probe_vision()` answers the other question — may we send images to
+*this model*? A custom base (Strata, a hand-run llama.cpp build) is not in
+the managed catalog, so nothing else declares its capabilities. It POSTs a
+real 1×1 PNG data URL to `/v1/chat/completions`: `2xx` → True, a 4xx whose
+body names image/vision/mmproj/projector → False, anything else (auth wall,
+5xx, timeout, missing endpoint) → inconclusive. Fallbacks then read
+metadata the server already publishes (`/v1/models/<id>` modalities,
+llama.cpp `/props`, Ollama `/api/show`); a vision-looking model name may
+only ever turn an inconclusive into True. **Unknown never becomes False**:
+an inconclusive probe keeps the conservative text-only default, and the
+BYOK dialog's "Accepts images" checkbox overrides the probe either way.
+Blocking (a cold server loads the model); run on a worker thread.
+
 ## Threading rules (house style)
 
 - Background threads never touch `bpy`; `paths.initialize()` pre-resolves
