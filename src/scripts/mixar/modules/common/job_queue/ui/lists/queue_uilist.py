@@ -40,8 +40,6 @@ _FAILED_STATE_VALUES = {
 
 _TERMINAL_STATE_VALUES = _DONE_STATE_VALUES | _FAILED_STATE_VALUES
 
-_BUG_REPORT_URL = "https://www.mixar.app/bug-report"
-
 # Centralized queue layout tokens. Generation names remain backend-owned;
 # these values only control the native Blender presentation.
 _QUEUE_PRIMARY_SCALE_Y = 1.05
@@ -225,10 +223,9 @@ class MIXIE_UL_unified_queue(UIList):
             )
             op.feature_key = item.feature_key
             op.job_id = item.job_id
-            op = actions.operator(
-                "wm.url_open", text="", icon='URL', emboss=False,
+            actions.operator(
+                "mixie_chat.report_bug", text="", icon='URL', emboss=False,
             )
-            op.url = _BUG_REPORT_URL
 
         # Trailing gap + hairline become the inter-item demarcation.
         # Blender's ``template_list`` collapses trailing

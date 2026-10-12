@@ -17,8 +17,9 @@ Contents (all under ``~/.mixar`` unless noted):
 - ``app.json``: versions, platform, the open file's basename and the UTC time,
   so a client log line can be aligned with a backend trace.
 
-No scene geometry, images or chat transcripts. Log lines are free text and can
-name files or objects; the user picks where the zip goes and whether to send it.
+No scene geometry, images or chat transcripts. Every text file passes through
+``mixar.config.log_redact.redact_text`` (tokens, API keys, signed-URL query
+values). Log lines are free text and can still name files or objects.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 
+from mixar.config.log_redact import redact_text
 from mixar.config.logging_config import get_logger, log_dir
 
 from .checkpoint_store import checkpoints_root
@@ -138,7 +140,8 @@ def build_support_bundle(destination: str, *, logs: str | None = None,
                 if os.path.getsize(path) > MAX_FILE_BYTES:
                     manifest["skipped"].append(arc)
                     continue
-                zf.write(path, arc)
+                with open(path, encoding="utf-8", errors="replace") as source:
+                    zf.writestr(arc, redact_text(source.read()))
                 manifest["files"].append(arc)
             except OSError:
                 manifest["skipped"].append(arc)

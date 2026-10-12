@@ -98,9 +98,7 @@ class MIXAR_PT_profile(Panel):
         layout.operator(
             "wm.url_open", text="Documentation", icon='HELP',
         ).url = "https://www.mixar.app/docs"
-        layout.operator(
-            "wm.url_open", text="Report a Bug", icon='URL',
-        ).url = "https://www.mixar.app/bug-report"
+        layout.operator("mixie_chat.report_bug", text="Report a Bug", icon='URL')
 
         layout.separator()
 

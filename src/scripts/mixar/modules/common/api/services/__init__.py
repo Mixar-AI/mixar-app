@@ -24,6 +24,7 @@ from .subscription_service import SubscriptionService, get_subscription_service
 from .prompt_refine_service import PromptRefineService, get_prompt_refine_service
 from .referral_service import ReferralService, get_referral_service
 from .notifications_service import NotificationsService, get_notifications_service
+from .contact_service import ContactService, get_contact_service
 
 __all__ = [
     # Base
@@ -73,4 +74,7 @@ __all__ = [
     # Notifications (task-completion sound catalog)
     "NotificationsService",
     "get_notifications_service",
+    # Bug reports (diagnostics bundle for Help > Report a Bug)
+    "ContactService",
+    "get_contact_service",
 ]

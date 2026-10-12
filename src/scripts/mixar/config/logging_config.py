@@ -72,8 +72,9 @@ _file_floors = {}
 # to ONE rotating file under ``~/.mixar/logs/`` with UTC timestamps: WARNING
 # and above from every module, plus the ``[SCENES]`` ledger at INFO
 # (``common/scenes_log.py`` opts in with ``file_floor=logging.INFO``). The
-# console keeps its configured level, so nothing new is printed. The file stays
-# on the machine; the user decides whether to send it (support bundle).
+# console keeps its configured level, so nothing new is printed. Every line is
+# redacted on write (``log_redact``). The file stays on the machine until the
+# user sends it (Help > Report a Bug or Save Support Bundle).
 #
 # A background process (the headless sandbox child) writes its own file: two
 # processes rotating one file fails on Windows, where an open file cannot be
@@ -93,13 +94,22 @@ _file_handler_failed = False
 
 class _UtcFormatter(logging.Formatter):
     """ISO-8601 UTC with milliseconds, so a client line and a backend line
-    can share one timeline without knowing the machine's time zone."""
+    can share one timeline without knowing the machine's time zone. Output
+    (tracebacks included) is redacted, so the file never holds a raw secret."""
 
     converter = time.gmtime
 
     def formatTime(self, record, datefmt=None):  # noqa: N802 - logging API
         base = time.strftime("%Y-%m-%dT%H:%M:%S", self.converter(record.created))
         return f"{base}.{int(record.msecs):03d}Z"
+
+    def format(self, record):
+        text = super().format(record)
+        try:
+            from .log_redact import redact_text
+            return redact_text(text)
+        except Exception:
+            return text
 
 
 def log_dir() -> str:

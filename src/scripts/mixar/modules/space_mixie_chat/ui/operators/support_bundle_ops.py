@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Help -> Save Support Bundle.
+"""Help -> Report a Bug and Help -> Save Support Bundle.
 
-Zips the client log files, the ``[SCENES]`` dossiers, the turn-checkpoint
-indexes and the scene table (``core/support_bundle.py``) to a path the user
-picks, for attaching to a bug report. The Help menu entry is
-``ui/menus/support_bundle_menu.py``.
+Report a Bug uploads the support bundle and opens the website's bug-report
+form with it attached (``core/bug_report.py``); every Report a Bug entry point
+(Help menu, profile menu, a failed queue job) runs this operator. Save Support
+Bundle writes the same zip (``core/support_bundle.py``) to a path the user
+picks, for offline or emailed reports. Menu entries:
+``ui/menus/support_bundle_menu.py`` and ``startup/bl_ui/space_topbar.py``.
 """
 
 import time
@@ -54,4 +56,21 @@ class MIXIE_CHAT_OT_save_support_bundle(Operator, ExportHelper):
         return {'FINISHED'}
 
 
-classes = (MIXIE_CHAT_OT_save_support_bundle,)
+class MIXIE_CHAT_OT_report_bug(Operator):
+    """Open the bug report form with this app's diagnostics attached (logs,
+    scene list, app version). You can remove them on the form"""
+
+    bl_idname = "mixie_chat.report_bug"
+    bl_label = "Report a Bug"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        from ...core.bug_report import start_bug_report
+
+        slog("support.report", getattr(context, "scene", None))
+        if start_bug_report():
+            self.report({'INFO'}, "Preparing your bug report...")
+        return {'FINISHED'}
+
+
+classes = (MIXIE_CHAT_OT_save_support_bundle, MIXIE_CHAT_OT_report_bug)

@@ -71,3 +71,16 @@ def test_the_help_menu_entry_targets_the_operator():
     assert "TOPBAR_MT_help.append" in menu and "TOPBAR_MT_help.remove" in menu
     assert 'bl_idname = "mixie_chat.save_support_bundle"' in ops
     assert '"mixie_chat.save_support_bundle"' in menu
+
+
+def test_bundled_text_is_redacted_even_if_the_log_predates_the_filter(tmp_path):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "mixar-client.log").write_text(
+        "WARNING x: GET https://b.s3.amazonaws.com/a.glb?X-Amz-Signature=deadbeef42 failed\n")
+    out = tmp_path / "b.zip"
+    support_bundle.build_support_bundle(
+        str(out), logs=str(logs), dossier="", checkpoints="", scenes=[], info={})
+    with zipfile.ZipFile(out) as zf:
+        text = zf.read("logs/mixar-client.log").decode("utf-8")
+    assert "deadbeef42" not in text and "[REDACTED]" in text
