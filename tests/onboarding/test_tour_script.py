@@ -251,5 +251,7 @@ def test_overlay_helpers_build_the_expected_overlays():
 
 def test_controls_and_exit_copy():
     assert config.CONTROL_SKIP == "Next"
+    assert config.CONTROL_BACK == "Back"
+    assert config.CONTROL_EXIT == "Skip tour"
     assert config.EXIT_CONFIRM_QUIT == "Leave"
     assert config.EXIT_CONFIRM_BODY == "Two minutes now saves an hour of hunting later."

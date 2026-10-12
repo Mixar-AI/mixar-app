@@ -468,7 +468,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             card_ui.draw_card(
                 self._card_layout, self._texture, min(1.0, ms / total),
                 self.runner.user_paused and not self.exit_confirm and not self._gated,
-                getattr(self.clock, "rate", 1.0),
                 alpha=self.card_motion.alpha, ui_scale=self._ui_scale,
                 gate_seconds_left=self.runner.gate_seconds_left(),
                 hover=self.hover, caption=beat.label,
