@@ -81,7 +81,7 @@ class MIXAR_PT_profile(Panel):
             settings = layout.row()
             settings.operator_context = 'INVOKE_DEFAULT'
             settings.operator(
-                "mixar_byok.open_dialog", text="AI Provider Settings",
+                "mixar_byok.open_dialog", text="AI for Mixar Chat",
                 icon='KEY_HLT' if context.window_manager.byok_is_active else 'PREFERENCES',
             )
 

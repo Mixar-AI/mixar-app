@@ -409,7 +409,7 @@ void add_actions(Layout *layout)
   Layout &settings = grid.row(true);
   settings.scale_y_set(ROW_ACTION);
   settings.operator_context_set(wm::OpCallContext::InvokeDefault);
-  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", N_("AI Provider Settings"),
+  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", N_("AI for Mixar Chat"),
              MixarCardIcon::Sliders, MixarCardElement::CardButton);
 
   Layout &connect = grid.row(true);

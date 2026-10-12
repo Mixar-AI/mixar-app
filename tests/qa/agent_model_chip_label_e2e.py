@@ -30,7 +30,7 @@ PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE'}
 MODEL = {'op': 'MIXAR_OT_agent_model_set', 'popup': True}
 KEY_ROW = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
 CHIP_WITH_LEVEL = 'QA Model · High'
-NOTE_TEXT = 'Your key: QA Key Provider · QA Key Model'
+NOTE_TEXT = 'Your AI: QA Key Provider · QA Key Model'
 SETUP = """
 import bpy, os
 from types import SimpleNamespace

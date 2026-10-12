@@ -1490,17 +1490,17 @@ msgstr "Kunne ikke nå den lokale tjeneren. Sjekk at den kjører, og at basis-UR
 msgid "No models available — contact support"
 msgstr "Ingen modeller tilgjengelig — kontakt brukerstøtte"
 
-msgid "Your API key controls the model"
-msgstr "API-nøkkelen din styrer modellen"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Tilpasset"
 
-msgid "Use my own API key…"
-msgstr "Bruk min egen API-nøkkel…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Endre eller fjern API-nøkkelen min…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Tenking"
@@ -1508,8 +1508,8 @@ msgstr "Tenking"
 msgid "Thinking: {level}"
 msgstr "Tenking: {level}"
 
-msgid "Your key: {name}"
-msgstr "Nøkkelen din: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Lagrer agentmodell… Vent før du sender eller bytter modell."
@@ -1526,8 +1526,8 @@ msgstr "Resonneringsinnsats for modellen som er valgt nå."
 msgid "No thinking levels for this model"
 msgstr "Ingen tenkenivåer for denne modellen"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Din egen API-nøkkel er i bruk — velg «Endre eller fjern API-nøkkelen min» i denne menyen for å velge en vertsmodell"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Angi agentmodell"
@@ -1562,32 +1562,44 @@ msgstr "Kunne ikke bytte modell"
 msgid "Could not reset model"
 msgstr "Kunne ikke tilbakestille modellen"
 
-msgid "Removing your key…"
-msgstr "Fjerner nøkkelen din…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Validerer med leverandøren…"
 
-msgid "AI Provider Settings"
-msgstr "Innstillinger for KI-leverandør"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Gjeldende"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Ikke konfigurert"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Kjør Mixar-agenten på din egen leverandør — Mixar-kreditter belastes ikke mens dette er aktivt."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Gjeldende konfigurasjon"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Konto"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-abonnement"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API-nøkkel"
@@ -1598,14 +1610,26 @@ msgstr "Lagret sikkert"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Ren tekstmodell — chat virker. 3D-oppgaver kjører uten visuell tilbakemelding."
 
-msgid "Remove API Key…"
-msgstr "Fjern API-nøkkel…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Oppsett av leverandør"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Lagret kryptert, brukes bare til Mixar-agentforespørsler — bare en maskert forhåndsvisning vises etter lagring."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Velg en modell som støtter verktøy- / funksjonskall — agenten trenger det."
@@ -1613,47 +1637,53 @@ msgstr "Velg en modell som støtter verktøy- / funksjonskall — agenten trenge
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "En hvilken som helst slug fra openrouter.ai/models, f.eks. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Last inn fra ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…eller lim den inn manuelt"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} tegn limt inn"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Tom — lim inn auth.json"
+msgid "Paste auth.json"
+msgstr "Lim inn auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Kjør  codex login  i terminalen, og last deretter inn eller lim inn hele"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "innholdet i ~/.codex/auth.json (lim inn-knappen leser utklippstavlen)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Bruker ChatGPT-abonnementet ditt — Mixar-kreditter belastes ikke."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Kunne ikke bruke endringene dine"
 
-msgid "Remove your API key?"
-msgstr "Fjerne API-nøkkelen din?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agenten bruker Mixars standardleverandør igjen."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Mixar-kreditter belastes for fremtidige agentforespørsler."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar-agenten kjører nå på leverandøren din — Mixar-kreditter belastes ikke."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API-nøkkel fjernet"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agenten er tilbake på Mixars standardleverandør."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Mixar-kreditter belastes for agentforespørsler igjen."
@@ -1664,11 +1694,11 @@ msgstr "Prøv igjen"
 msgid "Save & Activate"
 msgstr "Lagre og aktiver"
 
-msgid "Keep My Key"
-msgstr "Behold nøkkelen min"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Fjern API-nøkkel"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Pakker ut det lokale KI-kjøremiljøet…"
@@ -1730,8 +1760,8 @@ msgstr "Skann lokale apper på nytt"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Skann denne datamaskinen på nytt etter kjørende lokale KI-apper"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Bruk din egen API-nøkkel for Mixar-agenten. Mens den er aktiv, belastes ikke Mixar-kreditter for agentforespørsler."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Valider med leverandøren og lagre API-nøkkelen din"
@@ -1747,6 +1777,9 @@ msgstr "Velg en Codex-modell og last inn auth.json-pakken din."
 
 msgid "Save failed."
 msgstr "Lagring mislyktes."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Last inn fra ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Les ~/.codex/auth.json fra denne maskinen inn i feltet"
@@ -1765,9 +1798,6 @@ msgstr "auth.json er for stor for dette feltet og ble avkortet — den lagres ik
 
 msgid "Loaded auth.json"
 msgstr "Lastet inn auth.json"
-
-msgid "Paste auth.json"
-msgstr "Lim inn auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Lim inn ~/.codex/auth.json fra utklippstavlen i feltet"
@@ -2236,6 +2266,9 @@ msgstr "Køen på agentøya er utilgjengelig"
 
 msgid "Show every job"
 msgstr "Vis alle jobber"
+
+msgid "Active"
+msgstr "Gjeldende"
 
 msgid "Show pending or running jobs"
 msgstr "Vis ventende eller kjørende jobber"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Kopier"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Oppgrader"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Tilbakemeldingskommentaren er tom"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Legg til et malingslag i lagpanelet for å begynne å male"
 
@@ -24820,8 +24877,8 @@ msgstr "Automodus er på: agenten avgjør åpne valg selv og spør aldri. Klikk 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automodus: agenten avgjør åpne valg selv i stedet for å spørre deg, og lister beslutningene i sammendraget"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Din egen API-nøkkel er i bruk, og den bestemmer modellen. Åpne denne menyen og velg «Endre eller fjern API-nøkkelen min» for å velge en vertsbasert modell igjen"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Velg hvilken modell agenten kjører på"

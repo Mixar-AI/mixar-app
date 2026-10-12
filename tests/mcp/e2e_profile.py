@@ -50,7 +50,7 @@ def profile_layout(qa, output):
         for factor in (1.0, 1.5):
             qa.eval(f"bpy.context.preferences.view.ui_scale={saved * factor}\nresult=True")
             qa.click(**PROFILE)
-            names = ("Dashboard", "Refer a Friend", "AI Provider Settings", LABEL, "Docs")
+            names = ("Dashboard", "Refer a Friend", "AI for Mixar Chat", LABEL, "Docs")
             rows = {name: qa.find(text=name, popup=True)["widgets"][0]["rect"] for name in names}
             top, right, settings, connect, bottom = (rows[name] for name in names)
             # The same painter inset surrounds each button; equal layout gaps

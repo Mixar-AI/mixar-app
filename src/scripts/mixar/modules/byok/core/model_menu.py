@@ -41,9 +41,9 @@ EMPTY_SENTINEL_TEXT = n_("No models available — contact support")
 #: resolves BYOK ahead of any stored platform pick, so the pick is inert until
 #: the key is removed — saying so beats a menu of silently dead rows. This is
 #: the fallback wording; once the credential state names the provider and
-#: model, `byok_note_text()` says which one ("Your key: <Provider> · <Model>").
-BYOK_NOTE_TEXT = n_("Your API key controls the model")
-BYOK_NOTE_PREFIX = "Your key: "
+#: model, `byok_note_text()` says which one ("Your AI: <Provider> · <Model>").
+BYOK_NOTE_TEXT = n_("Your AI provider controls the model")
+BYOK_NOTE_PREFIX = "Your AI: "
 
 #: What the island chip reads while a user key overrides the hosted pick
 #: (product decision: "Custom"; the no-pick chip stays "Mixie"). One constant
@@ -58,8 +58,8 @@ RESET_TEXT = "Mixie"
 #: The chat's route to the dialog also offered in the profile menu. Keep it
 #: enabled while BYOK is active so users can clear the key overriding their
 #: hosted pick, including when the model catalog is empty.
-BYOK_SETUP_TEXT = n_("Use my own API key…")
-BYOK_MANAGE_TEXT = n_("Change or remove my API key…")
+BYOK_SETUP_TEXT = n_("AI for Mixar Chat…")
+BYOK_MANAGE_TEXT = n_("Change or Remove My AI Provider…")
 
 @dataclass(frozen=True)
 class MenuRow:
@@ -122,12 +122,12 @@ def byok_note_text(provider_label: str = "", model_label: str = "") -> str:
     """The menu's BYOK note, naming the key's provider and model when known.
 
     Both unknown (the credential fetch has not landed) falls back to the
-    generic wording rather than drawing "Your key: " over nothing.
+    generic wording rather than drawing "Your AI: " over nothing.
     """
     parts = [part.strip() for part in (provider_label, model_label) if (part or "").strip()]
     if not parts:
         return BYOK_NOTE_TEXT
-    return iface_("Your key: {name}").format(name=CHIP_SEPARATOR.join(parts))
+    return iface_("Your AI: {name}").format(name=CHIP_SEPARATOR.join(parts))
 
 
 def build_rows(

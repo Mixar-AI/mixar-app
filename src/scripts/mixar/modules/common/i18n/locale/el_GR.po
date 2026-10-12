@@ -1490,17 +1490,17 @@ msgstr "Δεν ήταν δυνατή η επικοινωνία με τον το�
 msgid "No models available — contact support"
 msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
 
-msgid "Your API key controls the model"
-msgstr "Το κλειδί API σας ελέγχει το μοντέλο"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Προσαρμοσμένο"
 
-msgid "Use my own API key…"
-msgstr "Χρήση δικού μου κλειδιού API…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Αλλαγή ή αφαίρεση του κλειδιού API μου…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Σκέψη"
@@ -1508,8 +1508,8 @@ msgstr "Σκέψη"
 msgid "Thinking: {level}"
 msgstr "Σκέψη: {level}"
 
-msgid "Your key: {name}"
-msgstr "Το κλειδί σας: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Αποθήκευση μοντέλου πράκτορα… Περιμένετε πριν στείλετε ή αλλάξετε μοντέλα."
@@ -1526,8 +1526,8 @@ msgstr "Προσπάθεια συλλογισμού για το μοντέλο �
 msgid "No thinking levels for this model"
 msgstr "Δεν υπάρχουν επίπεδα σκέψης για αυτό το μοντέλο"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Χρησιμοποιείται το δικό σας κλειδί API — επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API μου» σε αυτό το μενού για να διαλέξετε φιλοξενούμενο μοντέλο"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Ορισμός μοντέλου πράκτορα"
@@ -1562,32 +1562,44 @@ msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
 msgid "Could not reset model"
 msgstr "Δεν ήταν δυνατή η επαναφορά μοντέλου"
 
-msgid "Removing your key…"
-msgstr "Αφαίρεση του κλειδιού σας…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Επικύρωση με τον πάροχο…"
 
-msgid "AI Provider Settings"
-msgstr "Ρυθμίσεις παρόχου ΤΝ"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Ενεργό"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Δεν έχει ρυθμιστεί"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Εκτελέστε τον πράκτορα Mixar στον δικό σας πάροχο — οι πιστώσεις Mixar δεν χρεώνονται όσο είναι ενεργό."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Τρέχουσα ρύθμιση"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Λογαριασμός"
 
 msgid "ChatGPT subscription"
 msgstr "Συνδρομή ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "Κλειδί API"
@@ -1598,14 +1610,26 @@ msgstr "Αποθηκευμένο με ασφάλεια"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λειτουργεί· οι εργασίες 3D εκτελούνται χωρίς οπτική ανατροφοδότηση."
 
-msgid "Remove API Key…"
-msgstr "Αφαίρεση κλειδιού API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Ρύθμιση παρόχου"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar — μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση εργαλείων / συναρτήσεων — ο πράκτορας το χρειάζεται."
@@ -1613,47 +1637,53 @@ msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Φόρτωση από το ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ή επικολλήστε το χειροκίνητα"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Επικολλήθηκαν χαρακτήρες: {count}"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Κενό — επικολλήστε το auth.json σας"
+msgid "Paste auth.json"
+msgstr "Επικόλληση auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Εκτελέστε  codex login  στο τερματικό και μετά φορτώστε ή επικολλήστε ολόκληρο το"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "περιεχόμενο του ~/.codex/auth.json (το κουμπί επικόλλησης διαβάζει το πρόχειρο)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Χρησιμοποιεί τη συνδρομή ChatGPT σας — οι πιστώσεις Mixar δεν χρεώνονται."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Δεν ήταν δυνατή η εφαρμογή των αλλαγών σας"
 
-msgid "Remove your API key?"
-msgstr "Αφαίρεση του κλειδιού API σας;"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Ο πράκτορας θα χρησιμοποιήσει ξανά τον προεπιλεγμένο πάροχο του Mixar."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Οι πιστώσεις Mixar θα χρεώνονται για μελλοντικά αιτήματα του πράκτορα."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Ο πράκτορας Mixar εκτελείται πλέον στον πάροχό σας — οι πιστώσεις Mixar δεν χρεώνονται."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Το κλειδί API αφαιρέθηκε"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Ο πράκτορας επέστρεψε στον προεπιλεγμένο πάροχο του Mixar."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Οι πιστώσεις Mixar χρεώνονται ξανά για αιτήματα του πράκτορα."
@@ -1664,11 +1694,11 @@ msgstr "Δοκιμή ξανά"
 msgid "Save & Activate"
 msgstr "Αποθήκευση και ενεργοποίηση"
 
-msgid "Keep My Key"
-msgstr "Διατήρηση του κλειδιού μου"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Αφαίρεση κλειδιού API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Αποσυμπίεση του τοπικού περιβάλλοντος ΤΝ…"
@@ -1730,8 +1760,8 @@ msgstr "Επανασάρωση τοπικών εφαρμογών"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Ξανασαρώνει αυτόν τον υπολογιστή για τοπικές εφαρμογές ΤΝ που εκτελούνται"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Χρησιμοποιήστε το δικό σας κλειδί API για τον πράκτορα Mixar. Όσο είναι ενεργό, οι πιστώσεις Mixar δεν χρεώνονται για αιτήματα του πράκτορα."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Επικυρώνει με τον πάροχο και αποθηκεύει το κλειδί API σας"
@@ -1747,6 +1777,9 @@ msgstr "Επιλέξτε ένα μοντέλο Codex και φορτώστε τ�
 
 msgid "Save failed."
 msgstr "Η αποθήκευση απέτυχε."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Φόρτωση από το ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Διαβάζει το ~/.codex/auth.json από αυτό το μηχάνημα στο πεδίο"
@@ -1765,9 +1798,6 @@ msgstr "Το auth.json είναι πολύ μεγάλο για αυτό το π�
 
 msgid "Loaded auth.json"
 msgstr "Φορτώθηκε το auth.json"
-
-msgid "Paste auth.json"
-msgstr "Επικόλληση auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Επικολλά το ~/.codex/auth.json από το πρόχειρο στο πεδίο"
@@ -2236,6 +2266,9 @@ msgstr "Η ουρά της νησίδας πράκτορα δεν είναι δ�
 
 msgid "Show every job"
 msgstr "Εμφάνιση κάθε εργασίας"
+
+msgid "Active"
+msgstr "Ενεργό"
 
 msgid "Show pending or running jobs"
 msgstr "Εμφάνιση εργασιών σε εκκρεμότητα ή σε εκτέλεση"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Αντιγραφή"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Αναβάθμιση"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Το σχόλιο αξιολόγησης είναι κενό."
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Προσθέστε ένα στρώμα ζωγραφικής στο ταμπλό Στρωμάτων για να ξεκινήσετε τη ζωγραφική"
 
@@ -24820,8 +24877,8 @@ msgstr "Η αυτόματη κατάσταση είναι ενεργή: ο πρ�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασίζει μόνος του τις ανοιχτές επιλογές αντί να σας ρωτά και καταγράφει τις αποφάσεις του στη σύνοψη"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Χρησιμοποιείται το δικό σας κλειδί API και αυτό καθορίζει το μοντέλο. Ανοίξτε αυτό το μενού και επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API» για να ξαναεπιλέξετε φιλοξενούμενο μοντέλο"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Επιλέξτε σε ποιο μοντέλο εκτελείται ο πράκτορας"

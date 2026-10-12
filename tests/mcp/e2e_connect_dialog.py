@@ -80,6 +80,7 @@ def main():
     checkbox = widgets(op="MIXAR_OT_set_mcp_ui_control")
     check("interface_checkbox_needs_mcp", checkbox and checkbox[0].get("enabled") is False, checkbox)
 
+    qa.click(prop="show_manual", popup=True)
     qa.click(text="Copy MCP Config", op="MIXAR_OT_copy_mcp_setup", popup=True)
     time.sleep(0.6)
     copied = qa.eval("import json\nfrom mixar.modules.mcp_bridge.core import runtime\n"

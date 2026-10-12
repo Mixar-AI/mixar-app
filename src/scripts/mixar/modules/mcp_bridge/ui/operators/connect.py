@@ -84,56 +84,66 @@ class MIXAR_OT_mcp_setup(Operator):
     bl_idname = "mixar.connect_ai"
     bl_label = "Connect AI Apps (MCP)"
     bl_description = "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+    show_manual: BoolProperty(name="Manual setup / advanced", default=False, options={'SKIP_SAVE'})
     app: EnumProperty(name="App", items=APP_ITEMS, default='CLAUDE_CODE', translation_context=PRODUCT_NAMES)
 
     def execute(self, context):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=560)
+        self.show_manual = False
+        return context.window_manager.invoke_props_dialog(self, width=640)
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Let your AI assistant use Mixar scenes and controls.")
+        layout.label(text="MCP connects your AI app to Mixar scenes and tools.")
+        layout.label(text="For AI inside Mixar chat, use AI for Mixar Chat instead.")
         if not _signed_in(context):
             layout.label(text="Sign in to Mixar to connect AI apps.", icon='INFO')
             layout.operator("mixie_chat.login", text="Sign In")
             if runtime.enabled():
-                # Turning MCP off never needs an account (the session may have expired).
                 _draw_switch(layout)
             return
-        layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
-        layout.label(text="Your AI app can start Mixar when needed.")
-        _draw_switch(layout)
-        on = runtime.ui_control_enabled()
-        row = layout.row()
-        row.alignment = 'LEFT'
-        row.enabled = runtime.enabled()
-        row.operator("mixar.set_mcp_ui_control", text="Let AI apps control Mixar's interface",
-                     icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT', emboss=False).enabled = not on
         layout.separator()
+        layout.label(text="1. Choose the app where you want to chat")
         layout.prop(self, "app")
-        how = next(how for key, _name, how in app_configs.APPS if key == self.app)
-        layout.label(text=iface_(how), translate=False)
-        box = layout.box().column(align=True)
-        for line in _snippet_lines(render(self.app, *stable_launch())):
-            box.label(text=line, translate=False)
-        row = layout.row()
+        layout.label(text="Your app bills chat. Mixar credits pay only for AI generation.")
+        layout.separator()
+        layout.label(text="2. Connect Mixar to that app")
+        _draw_switch(layout)
         name = app_configs.label(self.app)
         if self.app in app_configs.ADDABLE:
-            # Never drawn as busy: a popup redraws only on input, so a "busy"
-            # button outlived the add and swallowed the next click. The operator
-            # refuses a duplicate while one runs, and a toast reports the result.
-            row.operator("mixar.mcp_add_to_app", text=iface_("Add to {app}").format(app=name),
-                         translate=False, icon='ADD').app = self.app
-        row.operator("mixar.copy_mcp_setup", text="Copy", icon='COPYDOWN').client = self.app
-        if app_configs.config_path(self.app) is not None:
-            row.operator("mixar.mcp_open_app_config", text="Open Config File", icon='FILE_FOLDER').app = self.app
-        layout.label(text="Then restart the app's MCP connection.")
+            layout.operator("mixar.mcp_add_to_app", text=iface_("Add Mixar to {app}").format(app=name),
+                            translate=False, icon='ADD').app = self.app
+        else:
+            how = next(how for key, _name, how in app_configs.APPS if key == self.app)
+            for line in textwrap.wrap(iface_(how), SNIPPET_COLUMNS):
+                layout.label(text=line, translate=False)
+            layout.operator("mixar.copy_mcp_setup", text="Copy Setup for This App",
+                            icon='COPYDOWN').client = self.app
         layout.separator()
+        layout.label(text="3. In your AI app, reconnect and ask: Describe my Mixar scene.")
         row = layout.row()
-        row.operator("mixar.copy_mcp_setup", text="Copy MCP Config", icon='COPYDOWN').client = 'JSON'
-        row.operator("wm.url_open", text="Setup Guide", icon='HELP').url = SETUP_GUIDE_URL
+        row.enabled = runtime.enabled()
+        on = runtime.ui_control_enabled()
+        row.operator("mixar.set_mcp_ui_control", text="Also allow clicking and typing (optional)",
+                     icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT', emboss=False).enabled = not on
+        layout.separator()
+        layout.prop(self, "show_manual")
+        if self.show_manual:
+            how = next(how for key, _name, how in app_configs.APPS if key == self.app)
+            for line in textwrap.wrap(iface_(how), SNIPPET_COLUMNS):
+                layout.label(text=line, translate=False)
+            box = layout.box().column(align=True)
+            for line in _snippet_lines(render(self.app, *stable_launch())):
+                box.label(text=line, translate=False)
+            row = layout.row()
+            row.operator("mixar.copy_mcp_setup", text="Copy", icon='COPYDOWN').client = self.app
+            if app_configs.config_path(self.app) is not None:
+                row.operator("mixar.mcp_open_app_config", text="Open Config File",
+                             icon='FILE_FOLDER').app = self.app
+            layout.operator("mixar.copy_mcp_setup", text="Copy MCP Config", icon='COPYDOWN').client = 'JSON'
+        layout.operator("wm.url_open", text="Setup Guide", icon='HELP').url = SETUP_GUIDE_URL
 
 
 class MIXAR_OT_set_mcp_enabled(Operator):

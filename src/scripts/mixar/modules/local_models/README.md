@@ -45,7 +45,7 @@ local_models/
 
 ## How the user reaches it
 
-The **BYOK dialog** (profile menu → AI Provider Settings) offers a
+The **BYOK dialog** (profile menu → AI for Mixar Chat) offers a
 "Local (this computer)" provider (`modules/byok`): managed mode picks a
 curated model (RAM-fit + downloaded state in the dropdown), Download →
 Start → Save; custom mode points Mixar at a server the user already runs

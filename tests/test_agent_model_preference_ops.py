@@ -280,7 +280,7 @@ def test_the_picker_refuses_to_write_while_byok_is_active(captured_save):
 
     assert op.execute(_context()) == {'CANCELLED'}
     assert captured_save == []
-    assert op.reported and "API key" in op.reported[0][1]
+    assert op.reported and "AI provider" in op.reported[0][1]
 
 
 def test_reset_clears_the_mirror_and_calls_delete(monkeypatch):

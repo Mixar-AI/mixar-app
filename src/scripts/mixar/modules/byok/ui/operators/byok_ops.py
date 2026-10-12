@@ -97,9 +97,9 @@ _dialog_open = False
 class MIXAR_BYOK_OT_open_dialog(Operator):
     """Configure your own API provider and key for the Mixar agent"""
     bl_idname = "mixar_byok.open_dialog"
-    bl_label = "AI Provider Settings"
+    bl_label = "AI for Mixar Chat"
     bl_description = (
-        "Use your own API key for the Mixar agent. "
+        "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. "
         "While active, Mixar credits are not charged for agent requests."
     )
 

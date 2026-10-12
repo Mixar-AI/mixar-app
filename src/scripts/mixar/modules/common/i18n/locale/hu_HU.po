@@ -1490,17 +1490,17 @@ msgstr "Nem érhető el a lokális szerver. Ellenőrizze, hogy fut-e, és helyes
 msgid "No models available — contact support"
 msgstr "Nem érhetők el modellek – forduljon az ügyfélszolgálathoz"
 
-msgid "Your API key controls the model"
-msgstr "A modellt az Ön API-kulcsa határozza meg"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Egyéni"
 
-msgid "Use my own API key…"
-msgstr "Saját API-kulcs használata…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Saját API-kulcs módosítása vagy eltávolítása…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Gondolkodás"
@@ -1508,8 +1508,8 @@ msgstr "Gondolkodás"
 msgid "Thinking: {level}"
 msgstr "Gondolkodás: {level}"
 
-msgid "Your key: {name}"
-msgstr "Saját kulcs: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Ügynökmodell mentése… Várjon, mielőtt üzenetet küld vagy modellt vált."
@@ -1526,8 +1526,8 @@ msgstr "Az éppen kiválasztott modell gondolkodási ráfordítása."
 msgid "No thinking levels for this model"
 msgstr "Ehhez a modellhez nincsenek gondolkodási szintek"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "A saját API-kulcsa van használatban – hosztolt modell választásához válassza ebben a menüben a „Saját API-kulcs módosítása vagy eltávolítása” lehetőséget"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Ügynökmodell beállítása"
@@ -1562,32 +1562,44 @@ msgstr "Nem sikerült modellt váltani"
 msgid "Could not reset model"
 msgstr "Nem sikerült alaphelyzetbe állítani a modellt"
 
-msgid "Removing your key…"
-msgstr "A kulcs eltávolítása…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Ellenőrzés a szolgáltatónál…"
 
-msgid "AI Provider Settings"
-msgstr "MI-szolgáltató beállításai"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Aktív"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Nincs beállítva"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "A Mixar ügynök futtatása saját szolgáltatón – amíg aktív, nem kerül Mixar-kredit felszámításra."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Jelenlegi konfiguráció"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Fiók"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-előfizetés"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API-kulcs"
@@ -1598,14 +1610,26 @@ msgstr "Biztonságosan tárolva"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Csak szöveges modell – a csevegés működik; a 3D-feladatok vizuális visszajelzés nélkül futnak."
 
-msgid "Remove API Key…"
-msgstr "API-kulcs eltávolítása…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Szolgáltató beállítása"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Titkosítva tárolva, csak a Mixar ügynök kéréseihez használva – mentés után csak maszkolt előnézet látható."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Válasszon eszköz-/függvényhívást támogató modellt – az ügynöknek szüksége van rá."
@@ -1613,47 +1637,53 @@ msgstr "Válasszon eszköz-/függvényhívást támogató modellt – az ügynö
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bármely azonosító az openrouter.ai/models oldalról, pl. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Betöltés innen: ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…vagy illessze be kézzel"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} karakter beillesztve"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Üres – illessze be az auth.json fájlját"
+msgid "Paste auth.json"
+msgstr "auth.json beillesztése"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Futtassa a  codex login  parancsot a terminálban, majd töltse be vagy illessze be a"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json teljes tartalmát (a beillesztés gomb a vágólapról olvas)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Nem sikerült alkalmazni a módosításokat"
 
-msgid "Remove your API key?"
-msgstr "Eltávolítja az API-kulcsát?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Az ügynök ismét a Mixar alapértelmezett szolgáltatóját fogja használni."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "A jövőbeli ügynökkérésekért Mixar-kreditek kerülnek felszámításra."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "A Mixar ügynök mostantól az Ön szolgáltatóján fut – nem kerül Mixar-kredit felszámításra."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API-kulcs eltávolítva"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Az ügynök ismét a Mixar alapértelmezett szolgáltatóját használja."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Az ügynökkérésekért ismét Mixar-kreditek kerülnek felszámításra."
@@ -1664,11 +1694,11 @@ msgstr "Újrapróbálás"
 msgid "Save & Activate"
 msgstr "Mentés és aktiválás"
 
-msgid "Keep My Key"
-msgstr "Kulcs megtartása"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "API-kulcs eltávolítása"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "A lokális MI-futtatókörnyezet kicsomagolása…"
@@ -1730,8 +1760,8 @@ msgstr "Lokális alkalmazások újrakeresése"
 msgid "Rescan this computer for running local AI apps"
 msgstr "A számítógép újbóli átvizsgálása futó lokális MI-alkalmazások után"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Saját API-kulcs használata a Mixar ügynökhöz. Amíg aktív, az ügynökkérésekért nem kerül Mixar-kredit felszámításra."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Az API-kulcs ellenőrzése a szolgáltatónál és mentése"
@@ -1747,6 +1777,9 @@ msgstr "Válasszon egy Codex-modellt, és töltse be az auth.json csomagját."
 
 msgid "Save failed."
 msgstr "A mentés sikertelen."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Betöltés innen: ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "A ~/.codex/auth.json beolvasása erről a gépről a mezőbe"
@@ -1765,9 +1798,6 @@ msgstr "Az auth.json túl nagy ehhez a mezőhöz, ezért csonkolva lett – nem 
 
 msgid "Loaded auth.json"
 msgstr "auth.json betöltve"
-
-msgid "Paste auth.json"
-msgstr "auth.json beillesztése"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "A ~/.codex/auth.json beillesztése a vágólapról a mezőbe"
@@ -2236,6 +2266,9 @@ msgstr "Az Ügynökbuborék várólistája nem érhető el"
 
 msgid "Show every job"
 msgstr "Minden feladat megjelenítése"
+
+msgid "Active"
+msgstr "Aktív"
 
 msgid "Show pending or running jobs"
 msgstr "A függő vagy futó feladatok megjelenítése"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Másolás"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Csomagváltás"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Adjon hozzá egy festőréteget a Rétegek panelen a festés megkezdéséhez"
 
@@ -24820,8 +24877,8 @@ msgstr "Az automata mód be van kapcsolva: az ügynök maga dönt a nyitott vál
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automata mód: az ügynök maga dönt a nyitott választásokról, ahelyett hogy Önt megkérdezné, és a döntéseit az összegzésben felsorolja"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Az Ön saját API-kulcsa van használatban, és az dönt a modellről. Nyissa meg ezt a menüt, és válassza a „Saját API-kulcs módosítása vagy eltávolítása” elemet, hogy újra üzemeltetett modellt választhasson"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Válassza ki, melyik modellen fusson az ügynök"

@@ -1490,17 +1490,17 @@ msgstr "Không thể kết nối đến máy chủ cục bộ. Hãy kiểm tra m
 msgid "No models available — contact support"
 msgstr "Không có mô hình khả dụng — hãy liên hệ bộ phận hỗ trợ"
 
-msgid "Your API key controls the model"
-msgstr "Khóa API của bạn quyết định mô hình"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Tùy Chỉnh"
 
-msgid "Use my own API key…"
-msgstr "Dùng khóa API của tôi…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Đổi hoặc xóa khóa API của tôi…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Suy Nghĩ"
@@ -1508,8 +1508,8 @@ msgstr "Suy Nghĩ"
 msgid "Thinking: {level}"
 msgstr "Suy nghĩ: {level}"
 
-msgid "Your key: {name}"
-msgstr "Khóa của bạn: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Đang lưu mô hình tác nhân… Vui lòng chờ trước khi gửi hoặc đổi mô hình."
@@ -1526,8 +1526,8 @@ msgstr "Mức độ suy luận cho mô hình đang được chọn."
 msgid "No thinking levels for this model"
 msgstr "Mô hình này không có mức độ suy nghĩ"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Khóa API riêng của bạn đang được dùng — chọn \"Đổi hoặc xóa khóa API của tôi\" trong trình đơn này để chọn mô hình trên máy chủ"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Đặt Mô Hình Tác Nhân"
@@ -1562,32 +1562,44 @@ msgstr "Không thể đổi mô hình"
 msgid "Could not reset model"
 msgstr "Không thể hoàn lại mô hình"
 
-msgid "Removing your key…"
-msgstr "Đang xóa khóa của bạn…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Đang xác thực với nhà cung cấp…"
 
-msgid "AI Provider Settings"
-msgstr "Sắp Đặt Nhà Cung Cấp AI"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Đang Hoạt Động"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Chưa cấu hình"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Chạy tác nhân Mixar trên nhà cung cấp của riêng bạn — không trừ tín dụng Mixar khi đang bật."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Cấu Hình Hiện Tại"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Tài Khoản"
 
 msgid "ChatGPT subscription"
 msgstr "Gói đăng ký ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "Khóa API"
@@ -1598,14 +1610,26 @@ msgstr "Được lưu an toàn"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Mô hình chỉ văn bản — trò chuyện hoạt động; nhiệm vụ 3D chạy mà không có phản hồi hình ảnh."
 
-msgid "Remove API Key…"
-msgstr "Xóa Khóa API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Thiết Lập Nhà Cung Cấp"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Được lưu dạng mã hóa, chỉ dùng cho các yêu cầu tác nhân Mixar — sau khi lưu chỉ hiển thị bản xem trước đã che."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Chọn mô hình hỗ trợ gọi công cụ / hàm — tác nhân cần tính năng này."
@@ -1613,47 +1637,53 @@ msgstr "Chọn mô hình hỗ trợ gọi công cụ / hàm — tác nhân cần
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Nạp từ ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…hoặc dán thủ công"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Đã dán {count} ký tự"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Trống — hãy dán auth.json của bạn"
+msgid "Paste auth.json"
+msgstr "Dán auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Chạy  codex login  trong terminal, sau đó nạp hoặc dán toàn bộ"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "nội dung của ~/.codex/auth.json (nút dán đọc từ bảng nhớ tạm của bạn)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Dùng gói đăng ký ChatGPT của bạn — không trừ tín dụng Mixar."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Không thể áp dụng thay đổi của bạn"
 
-msgid "Remove your API key?"
-msgstr "Xóa khóa API của bạn?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Tác nhân sẽ dùng lại nhà cung cấp mặc định của Mixar."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Tín dụng Mixar sẽ bị trừ cho các yêu cầu tác nhân sau này."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Tác nhân Mixar hiện chạy trên nhà cung cấp của bạn — không trừ tín dụng Mixar."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Đã xóa khóa API"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Tác nhân đã trở lại nhà cung cấp mặc định của Mixar."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Tín dụng Mixar lại bị trừ cho các yêu cầu tác nhân."
@@ -1664,11 +1694,11 @@ msgstr "Thử Lại"
 msgid "Save & Activate"
 msgstr "Lưu & Kích Hoạt"
 
-msgid "Keep My Key"
-msgstr "Giữ Khóa của Tôi"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Xóa Khóa API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Đang giải nén môi trường chạy AI cục bộ…"
@@ -1730,8 +1760,8 @@ msgstr "Quét Lại Ứng Dụng Cục Bộ"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Quét lại máy tính này để tìm các ứng dụng AI cục bộ đang chạy"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Dùng khóa API riêng của bạn cho tác nhân Mixar. Khi đang bật, tín dụng Mixar không bị trừ cho các yêu cầu tác nhân."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Xác thực với nhà cung cấp và lưu khóa API của bạn"
@@ -1747,6 +1777,9 @@ msgstr "Chọn một mô hình Codex và nạp gói auth.json của bạn."
 
 msgid "Save failed."
 msgstr "Lưu thất bại."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Nạp từ ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Đọc ~/.codex/auth.json từ máy này vào trường"
@@ -1765,9 +1798,6 @@ msgstr "auth.json quá lớn cho trường này và đã bị cắt bớt — s�
 
 msgid "Loaded auth.json"
 msgstr "Đã nạp auth.json"
-
-msgid "Paste auth.json"
-msgstr "Dán auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Dán ~/.codex/auth.json của bạn từ bảng nhớ tạm vào trường"
@@ -2236,6 +2266,9 @@ msgstr "Hàng Đợi của Đảo Tác Nhân không khả dụng"
 
 msgid "Show every job"
 msgstr "Hiển thị mọi tác vụ"
+
+msgid "Active"
+msgstr "Đang Hoạt Động"
 
 msgid "Show pending or running jobs"
 msgstr "Hiển thị các tác vụ đang chờ hoặc đang chạy"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Sao Chép"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Nâng Cấp"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Nhận xét phản hồi đang trống"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Thêm một Tầng Lớp Sơn trong bảng Tầng Lớp để bắt đầu sơn"
 
@@ -24820,8 +24877,8 @@ msgstr "Chế độ tự động đang bật: tác nhân tự quyết định c�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Chế độ tự động: tác nhân tự quyết định các lựa chọn còn mở thay vì hỏi bạn, và liệt kê các quyết định trong phần tóm tắt"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Đang dùng khóa API của riêng bạn, và khóa này quyết định mô hình. Mở trình đơn này và chọn \"Thay đổi hoặc xóa khóa API của tôi\" để chọn lại một mô hình được lưu trữ trên máy chủ"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Chọn mô hình mà tác nhân sử dụng"

@@ -733,8 +733,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         bw,
         bh,
         state->model_byok_active ?
-            TIP_("Your own API key is in use, and it decides the model. Open this menu "
-                 "and pick \"Change or remove my API key\" to choose a hosted model again") :
+            TIP_("Your own AI provider is in use, and it decides the model. Open this menu "
+                 "and pick \"Change or Remove My AI Provider\" to choose a hosted model again") :
             TIP_("Choose which model the agent runs on"));
   }
 

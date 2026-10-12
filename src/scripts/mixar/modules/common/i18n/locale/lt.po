@@ -1490,17 +1490,17 @@ msgstr "Vietinio serverio pasiekti nepavyko. Patikrinkite, ar jis veikia ir ar b
 msgid "No models available — contact support"
 msgstr "Nėra pasiekiamų modelių — susisiekite su pagalba"
 
-msgid "Your API key controls the model"
-msgstr "Modelį valdo jūsų API raktas"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Pasirinktinis/-ė"
 
-msgid "Use my own API key…"
-msgstr "Naudoti savo API raktą…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Keisti arba pašalinti mano API raktą…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Mąstymas"
@@ -1508,8 +1508,8 @@ msgstr "Mąstymas"
 msgid "Thinking: {level}"
 msgstr "Mąstymas: {level}"
 
-msgid "Your key: {name}"
-msgstr "Jūsų raktas: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Išsaugomas agento modelis… Prieš siųsdami arba keisdami modelius, palaukite."
@@ -1526,8 +1526,8 @@ msgstr "Pasirinkto modelio samprotavimo pastangos."
 msgid "No thinking levels for this model"
 msgstr "Šis modelis neturi mąstymo lygių"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Naudojamas jūsų API raktas — šiame meniu pasirinkite „Keisti arba pašalinti mano API raktą“, kad pasirinktumėte talpinamą modelį"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Nustatyti agento modelį"
@@ -1562,32 +1562,44 @@ msgstr "Modelio pakeisti nepavyko"
 msgid "Could not reset model"
 msgstr "Modelio atkurti nepavyko"
 
-msgid "Removing your key…"
-msgstr "Šalinamas jūsų raktas…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Tikrinama pas teikėją…"
 
-msgid "AI Provider Settings"
-msgstr "DI teikėjo nustatymai"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Aktyvus"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Nesukonfigūruota"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Paleiskite Mixar agentą savo teikėju — kol tai įjungta, Mixar kreditai neskaičiuojami."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Dabartinė konfigūracija"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Paskyra"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT prenumerata"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API raktas"
@@ -1598,14 +1610,26 @@ msgstr "Saugoma saugiai"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Tik tekstinis modelis — pokalbiai veikia; 3D užduotys vykdomos be vaizdinio grįžtamojo ryšio."
 
-msgid "Remove API Key…"
-msgstr "Pašalinti API raktą…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Teikėjo sąranka"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Saugoma šifruotai, naudojama tik Mixar agento užklausoms — išsaugojus rodoma tik užmaskuota peržiūra."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Pasirinkite modelį, kuris palaiko įrankių / funkcijų iškvietimą — agentui to reikia."
@@ -1613,47 +1637,53 @@ msgstr "Pasirinkite modelį, kuris palaiko įrankių / funkcijų iškvietimą �
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bet kuris identifikatorius iš openrouter.ai/models, pvz. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Įkelti iš ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…arba įklijuokite rankiniu būdu"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Įklijuota simbolių: {count}"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Tuščia — įklijuokite auth.json"
+msgid "Paste auth.json"
+msgstr "Įklijuoti auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Terminale paleiskite  codex login , tada įkelkite arba įklijuokite visą"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "failo ~/.codex/auth.json turinį (įklijavimo mygtukas skaito iškarpinę)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Naudoja jūsų ChatGPT prenumeratą — Mixar kreditai neskaičiuojami."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Nepavyko pritaikyti jūsų pakeitimų"
 
-msgid "Remove your API key?"
-msgstr "Pašalinti API raktą?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agentas vėl naudos numatytąjį Mixar teikėją."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Už būsimas agento užklausas bus skaičiuojami Mixar kreditai."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agentas dabar veikia jūsų teikėju — Mixar kreditai neskaičiuojami."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API raktas pašalintas"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agentas vėl naudoja numatytąjį Mixar teikėją."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Už agento užklausas vėl skaičiuojami Mixar kreditai."
@@ -1664,11 +1694,11 @@ msgstr "Bandyti dar kartą"
 msgid "Save & Activate"
 msgstr "Išsaugoti ir įjungti"
 
-msgid "Keep My Key"
-msgstr "Palikti mano raktą"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Pašalinti API raktą"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Išpakuojama vietinė DI vykdymo aplinka…"
@@ -1730,8 +1760,8 @@ msgstr "Nuskaityti vietines programas iš naujo"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Iš naujo nuskaito šį kompiuterį, ieškodamas veikiančių vietinių DI programų"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Naudokite savo API raktą Mixar agentui. Kol tai įjungta, už agento užklausas Mixar kreditai neskaičiuojami."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Patikrina pas teikėją ir išsaugo jūsų API raktą"
@@ -1747,6 +1777,9 @@ msgstr "Pasirinkite Codex modelį ir įkelkite auth.json rinkinį."
 
 msgid "Save failed."
 msgstr "Išsaugoti nepavyko."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Įkelti iš ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Į lauką įskaito ~/.codex/auth.json iš šio kompiuterio"
@@ -1765,9 +1798,6 @@ msgstr "auth.json per didelis šiam laukui ir buvo sutrumpintas — jis nebus i�
 
 msgid "Loaded auth.json"
 msgstr "auth.json įkeltas"
-
-msgid "Paste auth.json"
-msgstr "Įklijuoti auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Į lauką įklijuoja jūsų ~/.codex/auth.json iš iškarpinės"
@@ -2236,6 +2266,9 @@ msgstr "Agento salelės eilė nepasiekiama"
 
 msgid "Show every job"
 msgstr "Rodyti visas užduotis"
+
+msgid "Active"
+msgstr "Aktyvus"
 
 msgid "Show pending or running jobs"
 msgstr "Rodyti laukiančias arba vykdomas užduotis"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Kopijuoti"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Pagerinti"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Atsiliepimo komentaras tuščias"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Kad pradėtumėte piešti, Sluoksnių skydelyje pridėkite piešimo sluoksnį"
 
@@ -24820,8 +24877,8 @@ msgstr "Automatinė veiksena įjungta: agentas atvirus pasirinkimus sprendžia p
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automatinė veiksena: agentas atvirus pasirinkimus sprendžia pats, užuot klausęs jūsų, ir sprendimus surašo santraukoje"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Naudojamas jūsų API raktas, ir jis parenka modelį. Atidarykite šį meniu ir pasirinkite „Keisti arba pašalinti mano API raktą“, kad vėl rinktumėtės prieglobos modelį"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Pasirinkite, kuriuo modeliu veikia agentas"

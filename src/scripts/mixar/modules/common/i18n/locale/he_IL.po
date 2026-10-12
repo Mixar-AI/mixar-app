@@ -1490,17 +1490,17 @@ msgstr ".הנוכנ תיסיסבה URL-ה תבותכשו לעופ אוהש קו�
 msgid "No models available — contact support"
 msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
 
-msgid "Your API key controls the model"
-msgstr "לדומב טלוש API-ה חתפמ"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "תישיא םאתומ"
 
-msgid "Use my own API key…"
-msgstr "…ילשמ API חתפמב שומיש"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "…ילש API-ה חתפמ לש הרסה וא יוניש"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "הבישח"
@@ -1508,8 +1508,8 @@ msgstr "הבישח"
 msgid "Thinking: {level}"
 msgstr "{level} :הבישח"
 
-msgid "Your key: {name}"
-msgstr "{name} :ךלש חתפמה"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr ".םילדומ תפלחה וא החילש ינפל ןיתמהל אנ …ןכוסה לדומ תא רמוש"
@@ -1526,8 +1526,8 @@ msgstr ".עגרכ רחבנש לדומה לש הקסהה ץמאמ"
 msgid "No thinking levels for this model"
 msgstr "הז לדומל הבישח תומר ןיא"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "חראתמ לדומ רוחבל ידכ הז טירפתב \"ילש API-ה חתפמ לש הרסה וא יוניש\" רוחבל שי — שומישב ךלש API-ה חתפמ"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "ןכוסה לדומ תרדגה"
@@ -1562,32 +1562,44 @@ msgstr "לדומה תא תונשל היה ןתינ אל"
 msgid "Could not reset model"
 msgstr "לדומה תא לחתאל היה ןתינ אל"
 
-msgid "Removing your key…"
-msgstr "…חתפמה תא ריסמ"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "…קפסה לומ תמאמ"
 
-msgid "AI Provider Settings"
-msgstr "AI קפס תורדגה"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "ליעפ"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "רדגומ אל"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr ".ליעפ הז דוע לכ םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה לצא Mixar ןכוס תצרה"
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "תיחכונה הרוצתה"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "ןובשח"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT יונמ"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API חתפמ"
@@ -1598,14 +1610,26 @@ msgstr "חטבואמ ןפואב ןסחואמ"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr ".יתוזח בושמ ילב תוצר דממ-תלת תומישמ ;דבוע טא'צה — דבלב טסקט לדומ"
 
-msgid "Remove API Key…"
-msgstr "…API חתפמ תרסה"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "קפס תרדגה"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא — Mixar ןכוס תושקבל קר שמשמו ,ןפצומ ןסחואמ"
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירקב ךמותש לדומ רוחבל שי"
@@ -1613,47 +1637,53 @@ msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירק
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ךותמ הניעט"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "תינדי הקבדה וא…"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "םיוות {count} וקבדוה"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "auth.json תא קיבדהל שי — קיר"
+msgid "Paste auth.json"
+msgstr "auth.json תקבדה"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "תא קיבדהל וא ןועטל זאו ,ףוסמב  codex login  ץירהל שי"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(םיריזגה חול תא ארוק הקבדהה רותפכ) codex/auth.json./~ לש אלמה ןכותה"
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "םייונישה תא ליחהל היה ןתינ אל"
 
-msgid "Remove your API key?"
-msgstr "?API-ה חתפמ תא ריסהל"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr ".Mixar לש לדחמה תרירב קפסב בוש שמתשי ןכוסה"
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr ".תוידיתע ןכוס תושקב רובע וביוחי Mixar לש םיטידרק"
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה לצא תעכ לעופ Mixar ןכוס"
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "רסוה API-ה חתפמ"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr ".Mixar לש לדחמה תרירב קפסל רזח ןכוסה"
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr ".ןכוס תושקב רובע בוש םיביוחמ Mixar לש םיטידרק"
@@ -1664,11 +1694,11 @@ msgstr "ףסונ ןויסינ"
 msgid "Save & Activate"
 msgstr "הלעפהו הרימש"
 
-msgid "Keep My Key"
-msgstr "ילש חתפמה תרימש"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "API חתפמ תרסה"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "…AI-ה לש תימוקמה הצירה תביבס תא קרופ"
@@ -1730,8 +1760,8 @@ msgstr "םיימוקמ םימושיי לש שדחמ הקירס"
 msgid "Rescan this computer for running local AI apps"
 msgstr "םילעופ םיימוקמ AI ימושיי רותיאל הז בשחמ לש שדחמ הקירס"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr ".ןכוס תושקב רובע םיביוחמ םניא Mixar לש םיטידרק ,ליעפ הז דוע לכ .Mixar ןכוס רובע ךלשמ API חתפמב שומיש"
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "API-ה חתפמ תרימשו קפסה לומ תומיא"
@@ -1747,6 +1777,9 @@ msgstr ".auth.json תליבח תא ןועטלו Codex לדומ רוחבל שי"
 
 msgid "Save failed."
 msgstr ".הלשכנ הרימשה"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "codex/auth.json./~ ךותמ הניעט"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "הדשה לא הז בשחממ codex/auth.json./~ תאירק"
@@ -1765,9 +1798,6 @@ msgstr "auth.json יוארכ רמשיי אל אוה — ץצוקו הז הדשל
 
 msgid "Loaded auth.json"
 msgstr "auth.json ןעטנ"
-
-msgid "Paste auth.json"
-msgstr "auth.json תקבדה"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "הדשה לא םיריזגה חולמ codex/auth.json./~ תקבדה"
@@ -2236,6 +2266,9 @@ msgstr "ןימז וניא ןכוסה יא רות"
 
 msgid "Show every job"
 msgstr "המישמ לכ תגצה"
+
+msgid "Active"
+msgstr "ליעפ"
 
 msgid "Show pending or running jobs"
 msgstr "תולעופ וא תוניתממ תומישמ תגצה"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "הקתעה"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "גורדש"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "הקיר בושמה תרעה"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "רייצל ליחתהל ידכ תובכשה חולב רויצ תבכש ףיסוהל שי"
 
@@ -24820,8 +24877,8 @@ msgstr "בוש לואשל ול רשפאל ידכ הציחל .לאוש אל םל�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תוחותפ תוריחב לע ומצעב טילחמ ןכוסה :יטמוטוא בצמ"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "חראתמ לדומ בוש רוחבל ידכ \"ילש API-ה חתפמ לש הרסה וא יוניש\" ורחבו הז טירפת וחתפ .לדומה תא עבוק אוהו ,שומישב םכלש API-ה חתפמ"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "ןכוסה ץר וילעש לדומה תריחב"

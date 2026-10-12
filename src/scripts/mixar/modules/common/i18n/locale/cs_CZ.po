@@ -1490,17 +1490,17 @@ msgstr "Lokální server není dostupný. Zkontrolujte, zda běží a zda je zá
 msgid "No models available — contact support"
 msgstr "Nejsou k dispozici žádné modely — kontaktujte podporu"
 
-msgid "Your API key controls the model"
-msgstr "Model určuje váš klíč API"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Vlastní"
 
-msgid "Use my own API key…"
-msgstr "Použít vlastní klíč API…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Změnit nebo odstranit můj klíč API…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Přemýšlení"
@@ -1508,8 +1508,8 @@ msgstr "Přemýšlení"
 msgid "Thinking: {level}"
 msgstr "Přemýšlení: {level}"
 
-msgid "Your key: {name}"
-msgstr "Váš klíč: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Ukládání modelu agenta… Před odesláním nebo změnou modelu prosím počkejte."
@@ -1526,8 +1526,8 @@ msgstr "Úsilí uvažování pro aktuálně zvolený model."
 msgid "No thinking levels for this model"
 msgstr "Tento model nemá úrovně přemýšlení"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Používá se váš vlastní klíč API — pro výběr hostovaného modelu zvolte v této nabídce „Změnit nebo odstranit můj klíč API“"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Nastavit model agenta"
@@ -1562,32 +1562,44 @@ msgstr "Model nelze změnit"
 msgid "Could not reset model"
 msgstr "Model nelze obnovit"
 
-msgid "Removing your key…"
-msgstr "Odstraňování vašeho klíče…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Ověřování u poskytovatele…"
 
-msgid "AI Provider Settings"
-msgstr "Nastavení poskytovatele AI"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Aktivní"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Nenastaveno"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Spouštějte agenta Mixar u vlastního poskytovatele — dokud je tato možnost aktivní, kredity Mixar se neúčtují."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Aktuální konfigurace"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Účet"
 
 msgid "ChatGPT subscription"
 msgstr "Předplatné ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "Klíč API"
@@ -1598,14 +1610,26 @@ msgstr "Bezpečně uloženo"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Pouze textový model — chat funguje; 3D úkoly běží bez vizuální zpětné vazby."
 
-msgid "Remove API Key…"
-msgstr "Odstranit klíč API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Nastavení poskytovatele"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Ukládá se šifrovaně a používá se pouze pro požadavky agenta Mixar — po uložení se zobrazí jen maskovaný náhled."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Zvolte model, který podporuje volání nástrojů / funkcí — agent to potřebuje."
@@ -1613,47 +1637,53 @@ msgstr "Zvolte model, který podporuje volání nástrojů / funkcí — agent t
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Libovolný identifikátor z openrouter.ai/models, např. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Načíst z ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…nebo jej vložte ručně"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Vložené znaky: {count}"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Prázdné — vložte svůj auth.json"
+msgid "Paste auth.json"
+msgstr "Vložit auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Spusťte  codex login  v terminálu, poté načtěte nebo vložte celý"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "obsah ~/.codex/auth.json (tlačítko vložení čte vaši schránku)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Využívá vaše předplatné ChatGPT — kredity Mixar se neúčtují."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Změny nelze použít"
 
-msgid "Remove your API key?"
-msgstr "Odstranit váš klíč API?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent bude opět používat výchozího poskytovatele Mixaru."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Za budoucí požadavky agenta budou účtovány kredity Mixar."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Agent Mixar nyní běží u vašeho poskytovatele — kredity Mixar se neúčtují."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Klíč API odstraněn"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent se vrátil k výchozímu poskytovateli Mixaru."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Za požadavky agenta se opět účtují kredity Mixar."
@@ -1664,11 +1694,11 @@ msgstr "Zkusit znovu"
 msgid "Save & Activate"
 msgstr "Uložit a aktivovat"
 
-msgid "Keep My Key"
-msgstr "Ponechat můj klíč"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Odstranit klíč API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Rozbalování lokálního prostředí AI…"
@@ -1730,8 +1760,8 @@ msgstr "Znovu vyhledat lokální aplikace"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Znovu prohledá tento počítač a hledá spuštěné lokální aplikace AI"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Použije vlastní klíč API pro agenta Mixar. Dokud je aktivní, za požadavky agenta se neúčtují kredity Mixar."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Ověří klíč API u poskytovatele a uloží jej"
@@ -1747,6 +1777,9 @@ msgstr "Zvolte model Codex a načtěte svůj soubor auth.json."
 
 msgid "Save failed."
 msgstr "Uložení selhalo."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Načíst z ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Načte ~/.codex/auth.json z tohoto počítače do pole"
@@ -1765,9 +1798,6 @@ msgstr "auth.json je pro toto pole příliš velký a byl zkrácen — neuloží
 
 msgid "Loaded auth.json"
 msgstr "auth.json načten"
-
-msgid "Paste auth.json"
-msgstr "Vložit auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Vloží váš ~/.codex/auth.json ze schránky do pole"
@@ -2236,6 +2266,9 @@ msgstr "Fronta v ostrově agenta není dostupná"
 
 msgid "Show every job"
 msgstr "Zobrazí všechny úlohy"
+
+msgid "Active"
+msgstr "Aktivní"
 
 msgid "Show pending or running jobs"
 msgstr "Zobrazí čekající nebo probíhající úlohy"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Kopírovat"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Navýšit tarif"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Komentář ke zpětné vazbě je prázdný"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Chcete-li začít malovat, přidejte v panelu Vrstvy vrstvu malby"
 
@@ -24820,8 +24877,8 @@ msgstr "Automatický režim je zapnutý: agent o otevřených volbách rozhoduje
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automatický režim: agent o otevřených volbách rozhoduje sám, místo aby se vás ptal, a svá rozhodnutí uvede v shrnutí"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Používá se váš vlastní klíč API, který určuje model. Chcete-li znovu zvolit hostovaný model, otevřete tuto nabídku a vyberte „Změnit nebo odstranit můj klíč API“"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Zvolí, na kterém modelu agent běží"

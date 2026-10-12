@@ -207,7 +207,7 @@ def draw_dialog(layout, wm):
 
     if state == 'REMOVING':
         _draw_current_config(col, wm, with_remove=False)
-        _footer_busy(layout, n_("Removing your key…"))
+        _footer_busy(layout, n_("Switching to Mixar AI…"))
         return
 
     if state == 'SAVED':
@@ -238,26 +238,27 @@ def _draw_header(col, wm, state):
     row = col.row()
     heading = row.row()
     heading.scale_y = HEADER_SCALE_Y
-    card_label(heading, n_("AI Provider Settings"), 'HEADING')
+    card_label(heading, n_("AI for Mixar Chat"), 'HEADING')
 
     pill = row.row()
     pill.scale_y = HEADER_SCALE_Y
     active = wm.byok_is_active and state != 'REMOVED'
-    card_label(pill, n_("Active") if active else n_("Not configured"), 'PILL')
+    card_label(pill, n_("Custom AI") if active else n_("Mixar AI (default)"), 'PILL')
 
     card_label(
         col,
-        n_("Run the Mixar agent on your own provider — Mixar credits are "
-           "not charged while active."),
+        n_("Choose what powers the chat inside Mixar. Setup is optional."),
         'MUTED',
     )
+    card_label(col, n_("API key: use a provider account. Codex: use your ChatGPT sign-in."))
+    card_label(col, n_("To chat in an external AI app, use Connect AI Apps (MCP)."))
     card_divider(col)
 
 
 def _draw_current_config(col, wm, with_remove):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, n_("Current Configuration"))
+    section_title(bcol, n_("Currently used by Mixar chat"))
     bcol.separator(factor=0.4)
 
     provider_label = lookup_provider_label(wm.byok_current_provider)
@@ -266,6 +267,8 @@ def _draw_current_config(col, wm, with_remove):
     _value_row(bcol, n_("Model"), model_label)
     if model_suggestions.is_codex(wm.byok_current_provider):
         _value_row(bcol, n_("Account"), wm.byok_key_preview or n_("ChatGPT subscription"))
+    elif model_suggestions.is_local(wm.byok_current_provider):
+        _value_row(bcol, n_("Runs on"), n_("This computer"))
     else:
         _value_row(bcol, n_("API Key"), wm.byok_key_preview or n_("Stored securely"))
 
@@ -283,7 +286,7 @@ def _draw_current_config(col, wm, with_remove):
         bcol.separator(factor=0.55)
         rrow = bcol.row()
         rrow.scale_y = 1.4
-        op_button(rrow, OP_REQUEST_REMOVE, n_("Remove API Key…"), 'DANGER')
+        op_button(rrow, OP_REQUEST_REMOVE, n_("Use Mixar AI Instead…"), 'DANGER')
 
 
 def _value_row(col, label, value):
@@ -296,13 +299,13 @@ def _value_row(col, label, value):
 def _draw_form(col, wm, disabled):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, n_("Provider Setup"))
+    section_title(bcol, n_("Set up your own AI"))
 
     body = bcol.column()
     body.enabled = not disabled
     body.separator(factor=0.45)
 
-    field_label(body, n_("Provider"))
+    field_label(body, n_("1. Choose a provider, Codex, or Local"))
     field_dropdown(body, wm, 'byok_form_provider')
     body.separator(factor=0.45)
 
@@ -318,26 +321,27 @@ def _draw_form(col, wm, disabled):
 
 
 def _draw_cloud_fields(body, wm):
-    field_label(body, n_("Model"))
+    field_label(body, n_("2. Choose a model"))
     field_dropdown(body, wm, 'byok_form_model')
     body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
+    field_label(body, n_("3. Paste an API key from your provider"))
     field_input(body, wm, 'byok_form_api_key')
+    card_label(body, n_("Create the key in your provider’s API dashboard, then save below."))
     body.separator(factor=0.5)
     card_label(
         body,
-        n_("Stored encrypted, used only for Mixar agent requests — only a "
-           "masked preview is shown after saving."),
+        n_("Your provider bills model usage. AI generation still uses Mixar credits."),
         'MUTED',
     )
 
 
 def _draw_openrouter_fields(body, wm):
-    field_label(body, n_("Model"))
+    field_label(body, n_("2. Choose a model"))
     field_input(body, wm, 'byok_form_openrouter_model')
     body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
+    field_label(body, n_("3. Paste an API key from your provider"))
     field_input(body, wm, 'byok_form_api_key')
+    card_label(body, n_("Create the key in your provider’s API dashboard, then save below."))
     body.separator(factor=0.5)
     card_label(
         body,
@@ -352,33 +356,22 @@ def _draw_openrouter_fields(body, wm):
 
 
 def _draw_codex_fields(body, wm):
-    field_label(body, n_("Model"))
+    field_label(body, n_("2. Choose a model"))
     field_dropdown(body, wm, 'byok_form_model')
     body.separator(factor=0.45)
 
-    load_row = body.row()
-    load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
-    body.separator(factor=0.35)
-
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
-
-    n = len(wm.byok_form_codex_bundle or "")
-    card_label(
-        body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
-        'MUTED',
-    )
-    body.separator(factor=0.5)
-    for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
-        n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
-    ):
-        card_label(body, line, 'MUTED')
+    field_label(body, n_("3. Load your Codex sign-in"))
+    card_label(body, n_("First, install Codex CLI and run: codex login"))
+    row = body.row(align=True)
+    row.scale_y = 1.4
+    op_button(row, OP_CODEX_LOAD_FILE, n_("Load Codex Sign-in"), 'CARD')
+    op_button(row, OP_CODEX_PASTE, n_("Paste auth.json"), 'GHOST')
+    loaded = bool(wm.byok_form_codex_bundle)
+    card_label(body, n_("Sign-in loaded — ready to save") if loaded
+               else n_("No sign-in loaded yet"), 'MUTED')
+    card_label(body, n_("Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."))
+    card_label(body, n_("Saving sends this credential to Mixar’s backend for agent requests."))
+    card_label(body, n_("ChatGPT plan limits apply. AI generation still uses Mixar credits."))
 
 
 def _draw_error(col, wm):
@@ -395,9 +388,9 @@ def _draw_error(col, wm):
 def _draw_remove_warning(col):
     box = section(col)
     bcol = box.column()
-    card_label(bcol, n_("Remove your API key?"), 'DANGER')
+    card_label(bcol, n_("Switch back to Mixar AI?"), 'DANGER')
     bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent will use Mixar's default provider again."), 'MUTED')
+    card_label(bcol, n_("Your saved credential is removed; chat uses Mixar AI again."), 'MUTED')
     card_label(bcol, n_("Mixar credits will be charged for future agent requests."), 'MUTED')
 
 
@@ -408,8 +401,7 @@ def _draw_saved_body(col, wm):
     bcol.separator(factor=0.25)
     card_label(
         bcol,
-        n_("The Mixar agent now runs on your provider — Mixar credits are "
-           "not charged."),
+        n_("Your next Mixar chat message will use this provider."),
         'MUTED',
     )
     col.separator(factor=0.6)
@@ -419,9 +411,9 @@ def _draw_saved_body(col, wm):
 def _draw_removed_body(col):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, n_("API key removed"))
+    section_title(bcol, n_("Mixar AI restored"))
     bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent is back on Mixar's default provider."), 'MUTED')
+    card_label(bcol, n_("Chat uses your Mixar model choice again."), 'MUTED')
     card_label(bcol, n_("Mixar credits are charged for agent requests again."), 'MUTED')
 
 
@@ -455,8 +447,8 @@ def _footer_confirm_remove(layout):
     row = layout.row(align=True)
     row.scale_y = ACTION_SCALE_Y
     # Keeping the key is the safe default — Return backs out.
-    op_button(row, OP_CANCEL_REMOVE, n_("Keep My Key"), 'CARD', default=True)
-    op_button(row, OP_CONFIRM_REMOVE, n_("Remove API Key"), 'DANGER')
+    op_button(row, OP_CANCEL_REMOVE, n_("Keep My Provider"), 'CARD', default=True)
+    op_button(row, OP_CONFIRM_REMOVE, n_("Use Mixar AI"), 'DANGER')
 
 
 def _footer_done(layout):

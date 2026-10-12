@@ -1490,17 +1490,17 @@ msgstr "ไม่สามารถเชื่อมต่อเซิร์ฟ
 msgid "No models available — contact support"
 msgstr "ไม่มีโมเดลให้ใช้ — โปรดติดต่อฝ่ายสนับสนุน"
 
-msgid "Your API key controls the model"
-msgstr "คีย์ API ของคุณเป็นตัวกำหนดโมเดล"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "กำหนดเอง"
 
-msgid "Use my own API key…"
-msgstr "ใช้คีย์ API ของฉันเอง…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "เปลี่ยนหรือลบคีย์ API ของฉัน…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "การคิด"
@@ -1508,8 +1508,8 @@ msgstr "การคิด"
 msgid "Thinking: {level}"
 msgstr "การคิด: {level}"
 
-msgid "Your key: {name}"
-msgstr "คีย์ของคุณ: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "กำลังบันทึกโมเดลเอเจนต์… โปรดรอก่อนส่งข้อความหรือเปลี่ยนโมเดล"
@@ -1526,8 +1526,8 @@ msgstr "ระดับการใช้เหตุผลของโมเด
 msgid "No thinking levels for this model"
 msgstr "โมเดลนี้ไม่มีระดับการคิด"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "กำลังใช้คีย์ API ของคุณเอง — เลือก \"เปลี่ยนหรือลบคีย์ API ของฉัน\" ในเมนูนี้เพื่อเลือกโมเดลที่โฮสต์ไว้"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "ตั้งโมเดลเอเจนต์"
@@ -1562,32 +1562,44 @@ msgstr "ไม่สามารถเปลี่ยนโมเดลได้
 msgid "Could not reset model"
 msgstr "ไม่สามารถรีเซ็ตโมเดลได้"
 
-msgid "Removing your key…"
-msgstr "กำลังลบคีย์ของคุณ…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "กำลังตรวจสอบกับผู้ให้บริการ…"
 
-msgid "AI Provider Settings"
-msgstr "การตั้งค่าผู้ให้บริการ AI"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "กัมมันต์"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "ยังไม่ได้กำหนดค่า"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "รันเอเจนต์ Mixar บนผู้ให้บริการของคุณเอง — ไม่มีการหักเครดิต Mixar ขณะที่เปิดใช้งาน"
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "การกำหนดค่าปัจจุบัน"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "บัญชี"
 
 msgid "ChatGPT subscription"
 msgstr "การสมัครใช้งาน ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "คีย์ API"
@@ -1598,14 +1610,26 @@ msgstr "จัดเก็บอย่างปลอดภัย"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "โมเดลข้อความอย่างเดียว — แชตได้ตามปกติ แต่งาน 3D จะทำงานโดยไม่มีการตอบกลับด้วยภาพ"
 
-msgid "Remove API Key…"
-msgstr "ลบคีย์ API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "การตั้งค่าผู้ให้บริการ"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "จัดเก็บแบบเข้ารหัส ใช้สำหรับคำขอของเอเจนต์ Mixar เท่านั้น — หลังบันทึกจะแสดงเฉพาะตัวอย่างที่ปิดบังไว้"
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "เลือกโมเดลที่รองรับการเรียกใช้เครื่องมือ / ฟังก์ชัน — เอเจนต์จำเป็นต้องใช้"
@@ -1613,47 +1637,53 @@ msgstr "เลือกโมเดลที่รองรับการเร
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "slug ใดก็ได้จาก openrouter.ai/models เช่น anthropic/claude-opus-4.8"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "โหลดจาก ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…หรือวางด้วยตนเอง"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "วางแล้ว {count} อักขระ"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "ว่างเปล่า — วาง auth.json ของคุณ"
+msgid "Paste auth.json"
+msgstr "วาง auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "รัน  codex login  ในเทอร์มินัลของคุณ แล้วโหลดหรือวาง"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "เนื้อหาทั้งหมดของ ~/.codex/auth.json (ปุ่มวางจะอ่านจากคลิปบอร์ดของคุณ)"
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ใช้การสมัครใช้งาน ChatGPT ของคุณ — ไม่มีการหักเครดิต Mixar"
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "ไม่สามารถนำการเปลี่ยนแปลงของคุณไปใช้ได้"
 
-msgid "Remove your API key?"
-msgstr "ลบคีย์ API ของคุณหรือไม่?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "เอเจนต์จะกลับไปใช้ผู้ให้บริการเริ่มต้นของ Mixar"
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "คำขอของเอเจนต์หลังจากนี้จะมีการหักเครดิต Mixar"
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "ขณะนี้เอเจนต์ Mixar ทำงานบนผู้ให้บริการของคุณ — ไม่มีการหักเครดิต Mixar"
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "ลบคีย์ API แล้ว"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "เอเจนต์กลับมาใช้ผู้ให้บริการเริ่มต้นของ Mixar แล้ว"
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "คำขอของเอเจนต์จะมีการหักเครดิต Mixar อีกครั้ง"
@@ -1664,11 +1694,11 @@ msgstr "ลองอีกครั้ง"
 msgid "Save & Activate"
 msgstr "บันทึกและเปิดใช้งาน"
 
-msgid "Keep My Key"
-msgstr "เก็บคีย์ของฉันไว้"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "ลบคีย์ API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "กำลังแตกไฟล์รันไทม์ AI ในเครื่อง…"
@@ -1730,8 +1760,8 @@ msgstr "สแกนแอปในเครื่องใหม่"
 msgid "Rescan this computer for running local AI apps"
 msgstr "สแกนคอมพิวเตอร์เครื่องนี้ใหม่เพื่อหาแอป AI ในเครื่องที่กำลังทำงาน"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "ใช้คีย์ API ของคุณเองสำหรับเอเจนต์ Mixar ขณะเปิดใช้งาน จะไม่มีการหักเครดิต Mixar สำหรับคำขอของเอเจนต์"
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "ตรวจสอบกับผู้ให้บริการและบันทึกคีย์ API ของคุณ"
@@ -1747,6 +1777,9 @@ msgstr "เลือกโมเดล Codex และโหลดชุด auth
 
 msgid "Save failed."
 msgstr "บันทึกไม่สำเร็จ"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "โหลดจาก ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "อ่าน ~/.codex/auth.json จากเครื่องนี้ลงในช่อง"
@@ -1765,9 +1798,6 @@ msgstr "auth.json มีขนาดใหญ่เกินไปสำหร�
 
 msgid "Loaded auth.json"
 msgstr "โหลด auth.json แล้ว"
-
-msgid "Paste auth.json"
-msgstr "วาง auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "วาง ~/.codex/auth.json ของคุณจากคลิปบอร์ดลงในช่อง"
@@ -2236,6 +2266,9 @@ msgstr "คิวของไอแลนด์เอเจนต์ใช้ง
 
 msgid "Show every job"
 msgstr "แสดงงานทั้งหมด"
+
+msgid "Active"
+msgstr "กัมมันต์"
 
 msgid "Show pending or running jobs"
 msgstr "แสดงงานที่รอดำเนินการหรือกำลังทำงาน"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "คัดลอก"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "อัปเกรด"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "ความคิดเห็นว่างเปล่า"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "โปรดเพิ่มชั้นภาพระบายสีในแผงชั้นเพื่อเริ่มระบายสี"
 
@@ -24820,8 +24877,8 @@ msgstr "โหมดอัตโนมัติเปิดอยู่: เอ�
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "โหมดอัตโนมัติ: เอเจนต์ตัดสินใจตัวเลือกที่ยังเปิดอยู่เองแทนการถามคุณ และแสดงรายการการตัดสินใจไว้ในสรุป"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "กำลังใช้คีย์ API ของคุณเอง ซึ่งเป็นตัวกำหนดโมเดล เปิดเมนูนี้แล้วเลือก \"เปลี่ยนหรือลบคีย์ API ของฉัน\" เพื่อเลือกโมเดลที่โฮสต์ไว้อีกครั้ง"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "เลือกโมเดลที่เอเจนต์ใช้ทำงาน"

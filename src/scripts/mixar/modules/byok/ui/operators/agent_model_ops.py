@@ -28,7 +28,7 @@ from ...core import preference_client, preference_state
 logger = get_logger(__name__)
 
 _BYOK_BLOCKED_MSG = n_(
-    "Your own API key is in use — pick \"Change or remove my API key\" in this "
+    "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this "
     "menu to choose a hosted model"
 )
 

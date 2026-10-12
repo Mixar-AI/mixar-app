@@ -1490,17 +1490,17 @@ msgstr "Haikuweza kufikia seva ya ndani. Angalia kuwa inaendeshwa na URL ya msin
 msgid "No models available — contact support"
 msgstr "Hakuna modeli zinazopatikana — wasiliana na usaidizi"
 
-msgid "Your API key controls the model"
-msgstr "Ufunguo wako wa API unadhibiti modeli"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Desturi"
 
-msgid "Use my own API key…"
-msgstr "Tumia ufunguo wangu wa API…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Badilisha au ondoa ufunguo wangu wa API…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Ufikiri"
@@ -1508,8 +1508,8 @@ msgstr "Ufikiri"
 msgid "Thinking: {level}"
 msgstr "Ufikiri: {level}"
 
-msgid "Your key: {name}"
-msgstr "Ufunguo wako: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Inahifadhi modeli ya wakala… Tafadhali subiri kabla ya kutuma au kubadilisha modeli."
@@ -1526,8 +1526,8 @@ msgstr "Juhudi ya ufikiri ya modeli iliyochaguliwa sasa."
 msgid "No thinking levels for this model"
 msgstr "Hakuna viwango vya ufikiri vya modeli hii"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Ufunguo wako wa API unatumika — chagua \"Badilisha au ondoa ufunguo wangu wa API\" katika menyu hii ili kuchagua modeli iliyohifadhiwa mtandaoni"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Weka modeli ya wakala"
@@ -1562,32 +1562,44 @@ msgstr "Haikuweza kubadilisha modeli"
 msgid "Could not reset model"
 msgstr "Haikuweza kuweka upya modeli"
 
-msgid "Removing your key…"
-msgstr "Inaondoa ufunguo wako…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Inathibitisha na mtoa huduma…"
 
-msgid "AI Provider Settings"
-msgstr "Mipangilio ya mtoa huduma wa AI"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Inayotumika"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Haijawekwa"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Endesha wakala wa Mixar kwa mtoa huduma wako — krediti za Mixar hazitozwi ikiwa inatumika."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Usanidi wa sasa"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Akaunti"
 
 msgid "ChatGPT subscription"
 msgstr "Usajili wa ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "Ufunguo wa API"
@@ -1598,14 +1610,26 @@ msgstr "Imehifadhiwa kwa usalama"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Modeli ya maandishi pekee — soga hufanya kazi; majukumu ya 3D huendeshwa bila maoni ya kuona."
 
-msgid "Remove API Key…"
-msgstr "Ondoa ufunguo wa API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Usanidi wa mtoa huduma"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Huhifadhiwa ikiwa imesimbwa, hutumika kwa maombi ya wakala wa Mixar pekee — hakiki iliyofichwa pekee huonyeshwa baada ya kuhifadhi."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
@@ -1613,47 +1637,53 @@ msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Leta kutoka ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…au ibandike kwa mkono"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Herufi zilizobandikwa: {count}"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Tupu — bandika auth.json yako"
+msgid "Paste auth.json"
+msgstr "Bandika auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Endesha  codex login  kwenye terminali yako, kisha leta au bandika yote"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "maudhui ya ~/.codex/auth.json (kitufe cha kubandika husoma ubao wako wa kunakili)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Hutumia usajili wako wa ChatGPT — krediti za Mixar hazitozwi."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Haikuweza kutumia mabadiliko yako"
 
-msgid "Remove your API key?"
-msgstr "Ondoa ufunguo wako wa API?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Wakala atatumia tena mtoa huduma chaguomsingi wa Mixar."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Krediti za Mixar zitatozwa kwa maombi yajayo ya wakala."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Wakala wa Mixar sasa anaendeshwa kwa mtoa huduma wako — krediti za Mixar hazitozwi."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Ufunguo wa API umeondolewa"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Wakala amerudi kwa mtoa huduma chaguomsingi wa Mixar."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Krediti za Mixar zinatozwa tena kwa maombi ya wakala."
@@ -1664,11 +1694,11 @@ msgstr "Jaribu tena"
 msgid "Save & Activate"
 msgstr "Hifadhi na uwashe"
 
-msgid "Keep My Key"
-msgstr "Weka ufunguo wangu"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Ondoa ufunguo wa API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Inafungua kifurushi cha mazingira ya uendeshaji ya AI ya ndani…"
@@ -1730,8 +1760,8 @@ msgstr "Changanua tena programu za ndani"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Changanua tena kompyuta hii kutafuta programu za AI za ndani zinazoendeshwa"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti za Mixar hazitozwi kwa maombi ya wakala."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Thibitisha na mtoa huduma na uhifadhi ufunguo wako wa API"
@@ -1747,6 +1777,9 @@ msgstr "Chagua modeli ya Codex na ulete fungu lako la auth.json."
 
 msgid "Save failed."
 msgstr "Kuhifadhi kumeshindwa."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Leta kutoka ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Soma ~/.codex/auth.json kutoka mashine hii hadi kwenye uga"
@@ -1765,9 +1798,6 @@ msgstr "auth.json ni kubwa mno kwa uga huu na imekatwa — haitahifadhiwa ipasav
 
 msgid "Loaded auth.json"
 msgstr "Imeletwa auth.json"
-
-msgid "Paste auth.json"
-msgstr "Bandika auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Bandika ~/.codex/auth.json yako kutoka ubao wa kunakili hadi kwenye uga"
@@ -2236,6 +2266,9 @@ msgstr "Foleni ya kisiwa cha wakala haipatikani"
 
 msgid "Show every job"
 msgstr "Onyesha kila kazi"
+
+msgid "Active"
+msgstr "Inayotumika"
 
 msgid "Show pending or running jobs"
 msgstr "Onyesha kazi zinazosubiri au zinazoendeshwa"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Nakala"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Boresha"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Maoni hayana maandishi"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Ongeza tabaka la upakaji katika jopo la Tabaka ili kuanza kupaka"
 
@@ -24820,8 +24877,8 @@ msgstr "Modi otomatiki imewashwa: wakala huamua chaguzi wazi mwenyewe na hauuliz
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Modi otomatiki: wakala huamua chaguzi wazi mwenyewe badala ya kuuliza, na huorodhesha maamuzi yake katika muhtasari"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Ufunguo wako wa API unatumika, na unaamua modeli. Fungua menyu hii na uchague \"Badilisha au ondoa ufunguo wangu wa API\" ili kuchagua modeli iliyohifadhiwa tena"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Chagua modeli ambayo wakala hutumia"

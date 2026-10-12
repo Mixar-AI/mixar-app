@@ -1490,17 +1490,17 @@ msgstr "Ezin izan da zerbitzari lokalera heldu. Egiaztatu martxan dagoela eta oi
 msgid "No models available — contact support"
 msgstr "Ez dago eredurik erabilgarri — jarri harremanetan laguntzarekin"
 
-msgid "Your API key controls the model"
-msgstr "Zure API gakoak kontrolatzen du eredua"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Pertsonalizatua"
 
-msgid "Use my own API key…"
-msgstr "Erabili nire API gakoa…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Aldatu edo kendu nire API gakoa…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Pentsamendua"
@@ -1508,8 +1508,8 @@ msgstr "Pentsamendua"
 msgid "Thinking: {level}"
 msgstr "Pentsamendua: {level}"
 
-msgid "Your key: {name}"
-msgstr "Zure gakoa: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Agente-eredua gordetzen… Itxaron bidali edo ereduak aldatu aurretik."
@@ -1526,8 +1526,8 @@ msgstr "Unean hautatutako ereduaren arrazonamendu-ahalegina."
 msgid "No thinking levels for this model"
 msgstr "Eredu honek ez du pentsamendu-mailarik"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Zure API gakoa erabiltzen ari da — aukeratu \"Aldatu edo kendu nire API gakoa\" menu honetan ostatatutako eredu bat hautatzeko"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Ezarri agente-eredua"
@@ -1562,32 +1562,44 @@ msgstr "Ezin izan da eredua aldatu"
 msgid "Could not reset model"
 msgstr "Ezin izan da eredua berrezarri"
 
-msgid "Removing your key…"
-msgstr "Zure gakoa kentzen…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Hornitzailearekin balioztatzen…"
 
-msgid "AI Provider Settings"
-msgstr "AA hornitzailearen ezarpenak"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Aktibo"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Konfiguratu gabe"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Exekutatu Mixar agentea zure hornitzailean — Mixar kredituak ez dira kobratzen aktibo dagoen bitartean."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Uneko konfigurazioa"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Kontua"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT harpidetza"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API gakoa"
@@ -1598,14 +1610,26 @@ msgstr "Modu seguruan gordeta"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Testu-soileko eredua — txatak funtzionatzen du; 3D zereginek ikusizko erreakziorik gabe exekutatzen dute."
 
-msgid "Remove API Key…"
-msgstr "Kendu API gakoa…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Hornitzailearen konfigurazioa"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Zifratuta gordetzen da, Mixar agentearen eskaeretarako soilik erabiltzen da — gordetakoan aurrebista maskaratu bat soilik erakusten da."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Aukeratu tresna- edo funtzio-deiak onartzen dituen eredu bat — agenteak behar du."
@@ -1613,47 +1637,53 @@ msgstr "Aukeratu tresna- edo funtzio-deiak onartzen dituen eredu bat — agentea
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models-eko edozein slug, adibidez anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Kargatu ~/.codex/auth.json fitxategitik"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…edo itsatsi eskuz"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} karaktere itsatsi dira"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Hutsa — itsatsi zure auth.json"
+msgid "Paste auth.json"
+msgstr "Itsatsi auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Exekutatu  codex login  terminalean, eta kargatu edo itsatsi osorik"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json fitxategiaren edukia (itsasteko botoiak arbela irakurtzen du)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Zure ChatGPT harpidetza erabiltzen du — Mixar kredituak ez dira kobratzen."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Ezin izan dira aldaketak aplikatu"
 
-msgid "Remove your API key?"
-msgstr "API gakoa kendu?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agenteak Mixar-en hornitzaile lehenetsia erabiliko du berriro."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Mixar kredituak kobratuko dira etorkizuneko agente-eskaerengatik."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agentea orain zure hornitzailean exekutatzen da — Mixar kredituak ez dira kobratzen."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API gakoa kenduta"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agentea Mixar-en hornitzaile lehenetsira itzuli da."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Mixar kredituak berriro kobratzen dira agente-eskaerengatik."
@@ -1664,11 +1694,11 @@ msgstr "Saiatu berriro"
 msgid "Save & Activate"
 msgstr "Gorde eta aktibatu"
 
-msgid "Keep My Key"
-msgstr "Mantendu nire gakoa"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Kendu API gakoa"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "AA exekuzio-ingurune lokala despaketatzen…"
@@ -1730,8 +1760,8 @@ msgstr "Bireskaneatu aplikazio lokalak"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Bireskaneatu ordenagailu hau martxan dauden AA aplikazio lokalak bilatzeko"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Erabili zure API gakoa Mixar agenterako. Aktibo dagoen bitartean, Mixar kredituak ez dira kobratzen agente-eskaerengatik."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Balioztatu hornitzailearekin eta gorde API gakoa"
@@ -1747,6 +1777,9 @@ msgstr "Aukeratu Codex eredu bat eta kargatu auth.json paketea."
 
 msgid "Save failed."
 msgstr "Gordetzeak huts egin du."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Kargatu ~/.codex/auth.json fitxategitik"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Irakurri makina honetako ~/.codex/auth.json fitxategia eremuan"
@@ -1765,9 +1798,6 @@ msgstr "auth.json handiegia da eremu honetarako eta moztu egin da — ez da beha
 
 msgid "Loaded auth.json"
 msgstr "auth.json kargatu da"
-
-msgid "Paste auth.json"
-msgstr "Itsatsi auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Itsatsi arbeleko ~/.codex/auth.json eremuan"
@@ -2236,6 +2266,9 @@ msgstr "Agentearen uhartearen Ilara ez dago erabilgarri"
 
 msgid "Show every job"
 msgstr "Erakutsi lan guztiak"
+
+msgid "Active"
+msgstr "Aktibo"
 
 msgid "Show pending or running jobs"
 msgstr "Erakutsi zain edo exekutatzen dauden lanak"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Kopiatu"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Igo plana"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Iritzi-iruzkina hutsik dago"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Gehitu pintura-geruza bat Geruzak panelean margotzen hasteko"
 
@@ -24820,8 +24877,8 @@ msgstr "Modu automatikoa piztuta dago: agenteak berak erabakitzen ditu aukera ir
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Modu automatikoa: agenteak berak erabakitzen ditu aukera irekiak zuri galdetu beharrean, eta erabakiak laburpenean zerrendatzen ditu"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Zure API gakoa erabiltzen ari da, eta hark erabakitzen du eredua. Ireki menu hau eta aukeratu «Aldatu edo kendu nire API gakoa» ostatatutako eredu bat berriro hautatzeko"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Aukeratu zein eredutan exekutatzen den agentea"

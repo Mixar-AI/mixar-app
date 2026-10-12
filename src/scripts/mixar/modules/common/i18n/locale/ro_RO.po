@@ -1490,17 +1490,17 @@ msgstr "Serverul local nu a putut fi contactat. Verificați că rulează și că
 msgid "No models available — contact support"
 msgstr "Niciun model disponibil — contactați asistența"
 
-msgid "Your API key controls the model"
-msgstr "Cheia dvs. API controlează modelul"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "Personalizat"
 
-msgid "Use my own API key…"
-msgstr "Folosesc propria cheie API…"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "Schimbă sau elimină cheia mea API…"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Gândire"
@@ -1508,8 +1508,8 @@ msgstr "Gândire"
 msgid "Thinking: {level}"
 msgstr "Gândire: {level}"
 
-msgid "Your key: {name}"
-msgstr "Cheia dvs.: {name}"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Se salvează modelul agentului… Așteptați înainte de a trimite sau de a schimba modelele."
@@ -1526,8 +1526,8 @@ msgstr "Efortul de raționament pentru modelul ales acum."
 msgid "No thinking levels for this model"
 msgstr "Niciun nivel de gândire pentru acest model"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Este folosită propria cheie API — alegeți „Schimbă sau elimină cheia mea API” din acest meniu ca să selectați un model găzduit"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "Setare model agent"
@@ -1562,32 +1562,44 @@ msgstr "Modelul nu a putut fi schimbat"
 msgid "Could not reset model"
 msgstr "Modelul nu a putut fi resetat"
 
-msgid "Removing your key…"
-msgstr "Se elimină cheia dvs.…"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Se validează la furnizor…"
 
-msgid "AI Provider Settings"
-msgstr "Setări furnizor AI"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "Activ"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Neconfigurat"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Rulați agentul Mixar pe propriul furnizor — creditele Mixar nu se consumă cât este activ."
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Configurație curentă"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "Cont"
 
 msgid "ChatGPT subscription"
 msgstr "Abonament ChatGPT"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "Cheie API"
@@ -1598,14 +1610,26 @@ msgstr "Stocată în siguranță"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model doar text — chatul funcționează; sarcinile 3D rulează fără feedback vizual."
 
-msgid "Remove API Key…"
-msgstr "Eliminare cheie API…"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Configurare furnizor"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Stocată criptat, folosită doar pentru cererile agentului Mixar — după salvare se arată doar o previzualizare mascată."
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Alegeți un model care acceptă apeluri de instrumente sau funcții — agentul are nevoie de ele."
@@ -1613,47 +1637,53 @@ msgstr "Alegeți un model care acceptă apeluri de instrumente sau funcții — 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Orice slug de pe openrouter.ai/models, de ex. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Încărcare din ~/.codex/auth.json"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…sau lipiți-l manual"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Caractere lipite: {count}"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Gol — lipiți auth.json"
+msgid "Paste auth.json"
+msgstr "Lipire auth.json"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Rulați  codex login  în terminal, apoi încărcați sau lipiți tot conținutul"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "Conținutul lui ~/.codex/auth.json (butonul de lipire citește clipboardul)."
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Folosește abonamentul dvs. ChatGPT — creditele Mixar nu se consumă."
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "Modificările nu au putut fi aplicate"
 
-msgid "Remove your API key?"
-msgstr "Eliminați cheia API?"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agentul va folosi din nou furnizorul implicit Mixar."
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Creditele Mixar vor fi consumate pentru cererile viitoare ale agentului."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Agentul Mixar rulează acum pe furnizorul dvs. — creditele Mixar nu se consumă."
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Cheie API eliminată"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agentul a revenit la furnizorul implicit Mixar."
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr "Creditele Mixar se consumă din nou pentru cererile agentului."
@@ -1664,11 +1694,11 @@ msgstr "Încercați din nou"
 msgid "Save & Activate"
 msgstr "Salvare și activare"
 
-msgid "Keep My Key"
-msgstr "Păstrează cheia"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "Eliminare cheie API"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Se despachetează runtime-ul AI local…"
@@ -1730,8 +1760,8 @@ msgstr "Rescanare aplicații locale"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Rescanează acest calculator după aplicații AI locale care rulează"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr "Folosiți propria cheie API pentru agentul Mixar. Cât este activă, creditele Mixar nu se consumă pentru cererile agentului."
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "Validează la furnizor și salvează cheia API"
@@ -1747,6 +1777,9 @@ msgstr "Alegeți un model Codex și încărcați pachetul auth.json."
 
 msgid "Save failed."
 msgstr "Salvarea a eșuat."
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "Încărcare din ~/.codex/auth.json"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "Citește ~/.codex/auth.json de pe acest calculator în câmp"
@@ -1765,9 +1798,6 @@ msgstr "auth.json este prea mare pentru acest câmp și a fost trunchiat — nu 
 
 msgid "Loaded auth.json"
 msgstr "auth.json încărcat"
-
-msgid "Paste auth.json"
-msgstr "Lipire auth.json"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "Lipește ~/.codex/auth.json din clipboard în câmp"
@@ -2236,6 +2266,9 @@ msgstr "Coada insulei agentului este indisponibilă"
 
 msgid "Show every job"
 msgstr "Afișează fiecare sarcină"
+
+msgid "Active"
+msgstr "Activ"
 
 msgid "Show pending or running jobs"
 msgstr "Afișează sarcinile în așteptare sau în execuție"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "Copiere"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Plan superior"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Comentariul de feedback este gol"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Adăugați un strat de pictură în panoul Straturi pentru a începe să pictați"
 
@@ -24820,8 +24877,8 @@ msgstr "Modul automat este pornit: agentul decide singur alegerile deschise și 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Mod automat: agentul decide singur alegerile deschise în loc să vă întrebe și își listează deciziile în rezumat"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Cheia dvs. API este în uz și ea decide modelul. Deschideți acest meniu și alegeți „Schimbare sau eliminare cheie API” pentru a alege din nou un model găzduit"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "Alegeți modelul pe care rulează agentul"

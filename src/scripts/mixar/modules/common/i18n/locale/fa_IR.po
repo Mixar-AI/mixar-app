@@ -1490,17 +1490,17 @@ msgstr ".ﺪﺷﺎﺑ ﺖﺳﺭﺩ ﻪﯾﺎﭘ URL ﻭ ﺪﺷﺎﺑ ﺍﺮﺟ�
 msgid "No models available — contact support"
 msgstr "ﺪﯾﺮﯿﮕﺑ ﺱﺎﻤﺗ ﯽﻧﺎﺒﯿﺘﺸﭘ ﺎﺑ — ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯽﻟﺪﻣ"
 
-msgid "Your API key controls the model"
-msgstr "ﺪﻨﮐ‌ﯽﻣ ﻦﯿﯿﻌﺗ ﺍﺭ ﻝﺪﻣ ﺎﻤﺷ API ﺪﯿﻠﮐ"
+msgid "Your AI provider controls the model"
+msgstr ""
 
 msgid "Custom"
 msgstr "ﯽﺷﺭﺎﻔﺳ"
 
-msgid "Use my own API key…"
-msgstr "…ﺩﻮﺷ ﻩﺩﺎﻔﺘﺳﺍ ﻡﺩﻮﺧ API ﺪﯿﻠﮐ ﺯﺍ"
+msgid "AI for Mixar Chat…"
+msgstr ""
 
-msgid "Change or remove my API key…"
-msgstr "…ﺩﻮﺷ ﻑﺬﺣ ﺎﯾ ﺪﻨﮐ ﺮﯿﯿﻐﺗ ﻦﻣ API ﺪﯿﻠﮐ"
+msgid "Change or Remove My AI Provider…"
+msgstr ""
 
 msgid "Thinking"
 msgstr "ﺮﮑﻔﺗ"
@@ -1508,8 +1508,8 @@ msgstr "ﺮﮑﻔﺗ"
 msgid "Thinking: {level}"
 msgstr "{level} :ﺮﮑﻔﺗ"
 
-msgid "Your key: {name}"
-msgstr "{name} :ﺎﻤﺷ ﺪﯿﻠﮐ"
+msgid "Your AI: {name}"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr ".ﺪﯿﻨﮐ ﺮﺒﺻ ﻝﺪﻣ ﺮﯿﯿﻐﺗ ﺎﯾ ﻝﺎﺳﺭﺍ ﺯﺍ ﺶﯿﭘ ﺎًﻔﻄﻟ …ﻞﻣﺎﻋ ﻝﺪﻣ ﻩﺮﯿﺧﺫ ﻝﺎﺣ ﺭﺩ"
@@ -1526,8 +1526,8 @@ msgstr ".ﺖﺳﺍ ﻩﺪﺷ ﻩﺪﯾﺰﮔﺮﺑ ﻥﻮﻨﮐﺍ ﻪﮐ ﯽﻟ
 msgid "No thinking levels for this model"
 msgstr "ﺩﺭﺍﺪﻧ ﺮﮑﻔﺗ ﺢﻄﺳ ﻝﺪﻣ ﻦﯾﺍ"
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "ﺪﯿﻨﯾﺰﮔﺮﺑ ﺍﺭ «ﺩﻮﺷ ﻑﺬﺣ ﺎﯾ ﺪﻨﮐ ﺮﯿﯿﻐﺗ ﻦﻣ API ﺪﯿﻠﮐ» ﻮﻨﻣ ﻦﯾﺍ ﺭﺩ ،ﻩﺪﺷ‌ﯽﻧﺎﺑﺰﯿﻣ ﻝﺪﻣ ﮏﯾ ﺏﺎﺨﺘﻧﺍ ﯼﺍﺮﺑ — ﺖﺳﺍ ﻩﺩﺎﻔﺘﺳﺍ ﻝﺎﺣ ﺭﺩ ﻥﺎﺗﺩﻮﺧ API ﺪﯿﻠﮐ"
+msgid "Your own AI provider is in use — pick \"Change or Remove My AI Provider\" in this menu to choose a hosted model"
+msgstr ""
 
 msgid "Set Agent Model"
 msgstr "ﻞﻣﺎﻋ ﻝﺪﻣ ﻢﯿﻈﻨﺗ"
@@ -1562,32 +1562,44 @@ msgstr "ﺪﺸﻧ ﻦﮑﻤﻣ ﻝﺪﻣ ﺮﯿﯿﻐﺗ"
 msgid "Could not reset model"
 msgstr "ﺪﺸﻧ ﻦﮑﻤﻣ ﻝﺪﻣ ﯽﻧﺎﺸﻧﺯﺎﺑ"
 
-msgid "Removing your key…"
-msgstr "…ﺎﻤﺷ ﺪﯿﻠﮐ ﻑﺬﺣ ﻝﺎﺣ ﺭﺩ"
+msgid "Switching to Mixar AI…"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "…ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﺎﺑ ﯽﺠﻨﺳﺭﺎﺒﺘﻋﺍ ﻝﺎﺣ ﺭﺩ"
 
-msgid "AI Provider Settings"
-msgstr "ﯽﻋﻮﻨﺼﻣ ﺵﻮﻫ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﺕﺎﻤﯿﻈﻨﺗ"
+msgid "AI for Mixar Chat"
+msgstr ""
 
-msgid "Active"
-msgstr "ﻝﺎﻌﻓ"
+msgid "Custom AI"
+msgstr ""
 
-msgid "Not configured"
-msgstr "ﻩﺪﺸﻧ ﻢﯿﻈﻨﺗ"
+msgid "Mixar AI (default)"
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr ".ﺩﻮﺷ‌ﯽﻤﻧ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ ﺎﺗ — ﺩﻮﺷ‌ﯽﻣ ﺍﺮﺟﺍ ﻥﺎﺗﺩﻮﺧ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﯼﻭﺭ Mixar ﻞﻣﺎﻋ"
+msgid "Choose what powers the chat inside Mixar. Setup is optional."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "ﯽﻠﻌﻓ ﯼﺪﻨﺑﺮﮑﯿﭘ"
+msgid "API key: use a provider account. Codex: use your ChatGPT sign-in."
+msgstr ""
+
+msgid "To chat in an external AI app, use Connect AI Apps (MCP)."
+msgstr ""
+
+msgid "Currently used by Mixar chat"
+msgstr ""
 
 msgid "Account"
 msgstr "ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT ﮎﺍﺮﺘﺷﺍ"
+
+msgid "Runs on"
+msgstr ""
+
+msgid "This computer"
+msgstr ""
 
 msgid "API Key"
 msgstr "API ﺪﯿﻠﮐ"
@@ -1598,14 +1610,26 @@ msgstr "ﻩﺪﺷ ﻩﺮﯿﺧﺫ ﻦﻣﺍ ﺕﺭﻮﺻ‌ﻪﺑ"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr ".ﺪﻧﻮﺷ‌ﯽﻣ ﺍﺮﺟﺍ ﯼﺮﯾﻮﺼﺗ ﺩﺭﻮﺧﺯﺎﺑ ﻥﻭﺪﺑ ﯼﺪﻌﺑ‌ﻪﺳ ﯼﺎﻫﺭﺎﮐ ؛ﺪﻨﮐ‌ﯽﻣ ﺭﺎﮐ ﻮﮕﺘﻔﮔ — ﯽﻨﺘﻣ ﻂﻘﻓ ﻝﺪﻣ"
 
-msgid "Remove API Key…"
-msgstr "…API ﺪﯿﻠﮐ ﻑﺬﺣ"
+msgid "Use Mixar AI Instead…"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﯼﺯﺍﺪﻧﺍ‌ﻩﺍﺭ"
+msgid "Set up your own AI"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".ﺩﻮﺷ‌ﯽﻣ ﻩﺩﺍﺩ ﻥﺎﺸﻧ ﻩﺪﺷ‌ﻩﺪﯿﺷﻮﭘ ﺶﯾﺎﻤﻨﺸﯿﭘ ﮏﯾ ﻂﻘﻓ ﻩﺮﯿﺧﺫ ﺯﺍ ﺲﭘ — ﺩﻭﺭ‌ﯽﻣ ﺭﺎﮐ ﻪﺑ Mixar ﻞﻣﺎﻋ ﯼﺎﻫ‌ﺖﺳﺍﻮﺧﺭﺩ ﯼﺍﺮﺑ ﻂﻘﻓ ﻭ ﺩﻮﺷ‌ﯽﻣ ﻩﺮﯿﺧﺫ ﻩﺪﺷ‌ﯼﺭﺎﮕﻧﺰﻣﺭ"
+msgid "1. Choose a provider, Codex, or Local"
+msgstr ""
+
+msgid "2. Choose a model"
+msgstr ""
+
+msgid "3. Paste an API key from your provider"
+msgstr ""
+
+msgid "Create the key in your provider’s API dashboard, then save below."
+msgstr ""
+
+msgid "Your provider bills model usage. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr ".ﺩﺭﺍﺩ ﺯﺎﯿﻧ ﻥﺁ ﻪﺑ ﻞﻣﺎﻋ — ﺪﻨﮐ ﯽﻧﺎﺒﯿﺘﺸﭘ ﻊﺑﺎﺗ / ﺭﺍﺰﺑﺍ ﯽﻧﺍﻮﺧﺍﺮﻓ ﺯﺍ ﻪﮐ ﺪﯿﻨﯾﺰﮔﺮﺑ ﺍﺭ ﯽﻟﺪﻣ"
@@ -1613,47 +1637,53 @@ msgstr ".ﺩﺭﺍﺩ ﺯﺎﯿﻧ ﻥﺁ ﻪﺑ ﻞﻣﺎﻋ — ﺪﻨﮐ ﯽ�
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr ".anthropic/claude-opus-4.8 ﻼً﻿ﺜﻣ ،openrouter.ai/models ﺯﺍ ﮏﻣﺎﻧ ﺮﻫ"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ﺯﺍ ﯼﺭﺍﺬﮔﺭﺎﺑ"
+msgid "3. Load your Codex sign-in"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "ﺪﯿﻧﺎﺒﺴﭽﺑ ﯽﺘﺳﺩ ﺍﺭ ﻥﺁ ﺎﯾ…"
+msgid "First, install Codex CLI and run: codex login"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} ﺪﺷ ﻩﺪﻧﺎﺒﺴﭼ ﻪﺴﯾﻮﻧ"
+msgid "Load Codex Sign-in"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "ﺪﯿﻧﺎﺒﺴﭽﺑ ﺍﺭ ﺩﻮﺧ auth.json — ﯽﻟﺎﺧ"
+msgid "Paste auth.json"
+msgstr "auth.json ﻥﺪﻧﺎﺒﺴﭼ"
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ﺪﯿﻧﺎﺒﺴﭽﺑ ﺎﯾ ﯼﺭﺍﺬﮔﺭﺎﺑ ﺍﺭ ﻞﻣﺎﮐ ﻦﺘﻣ ﺲﭙﺳ ،ﺪﯿﻨﮐ ﺍﺮﺟﺍ ﺍﺭ  codex login  ﺩﻮﺧ ﻪﻧﺎﯾﺎﭘ ﺭﺩ"
+msgid "Sign-in loaded — ready to save"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(ﺪﻧﺍﻮﺧ‌ﯽﻣ ﺍﺭ ﺩﺭﻮﺑ‌ﭗﯿﻠﮐ ،ﻥﺪﻧﺎﺒﺴﭼ ﻪﻤﮐﺩ) codex/auth.json./~ ﯼﺍﻮﺘﺤﻣ"
+msgid "No sign-in loaded yet"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".ﺩﻮﺷ‌ﯽﻤﻧ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ — ﺪﻨﮐ‌ﯽﻣ ﻩﺩﺎﻔﺘﺳﺍ ﺎﻤﺷ ChatGPT ﮎﺍﺮﺘﺷﺍ ﺯﺍ"
+msgid "Loads ~/.codex/auth.json; Paste reads the full file from your clipboard."
+msgstr ""
+
+msgid "Saving sends this credential to Mixar’s backend for agent requests."
+msgstr ""
+
+msgid "ChatGPT plan limits apply. AI generation still uses Mixar credits."
+msgstr ""
 
 msgid "Couldn't apply your changes"
 msgstr "ﺪﺸﻧ ﻝﺎﻤﻋﺍ ﺎﻤﺷ ﯼﺎﻫﺮﯿﯿﻐﺗ"
 
-msgid "Remove your API key?"
-msgstr "؟ﺩﻮﺷ ﻑﺬﺣ ﺎﻤﺷ API ﺪﯿﻠﮐ"
+msgid "Switch back to Mixar AI?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr ".ﺩﺮﮐ ﺪﻫﺍﻮﺧ ﻩﺩﺎﻔﺘﺳﺍ Mixar ﺽﺮﻓ‌ﺶﯿﭘ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﺯﺍ ﻩﺭﺎﺑﻭﺩ ﻞﻣﺎﻋ"
+msgid "Your saved credential is removed; chat uses Mixar AI again."
+msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
 msgstr ".ﺪﺷ ﺪﻫﺍﻮﺧ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ ،ﻞﻣﺎﻋ ﯼﺪﻌﺑ ﯼﺎﻫ‌ﺖﺳﺍﻮﺧﺭﺩ ﯼﺍﺮﺑ"
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr ".ﺩﻮﺷ‌ﯽﻤﻧ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ — ﺩﻮﺷ‌ﯽﻣ ﺍﺮﺟﺍ ﺎﻤﺷ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﯼﻭﺭ ﻥﻮﻨﮐﺍ Mixar ﻞﻣﺎﻋ"
+msgid "Your next Mixar chat message will use this provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "ﺪﺷ ﻑﺬﺣ API ﺪﯿﻠﮐ"
+msgid "Mixar AI restored"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr ".ﺖﺳﺍ ﻪﺘﺸﮔﺮﺑ Mixar ﺽﺮﻓ‌ﺶﯿﭘ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﻪﺑ ﻞﻣﺎﻋ"
+msgid "Chat uses your Mixar model choice again."
+msgstr ""
 
 msgid "Mixar credits are charged for agent requests again."
 msgstr ".ﺩﻮﺷ‌ﯽﻣ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ ﻩﺭﺎﺑﻭﺩ ﻞﻣﺎﻋ ﯼﺎﻫ‌ﺖﺳﺍﻮﺧﺭﺩ ﯼﺍﺮﺑ"
@@ -1664,11 +1694,11 @@ msgstr "ﻩﺭﺎﺑﻭﺩ ﺵﻼ﻿ﺗ"
 msgid "Save & Activate"
 msgstr "ﯼﺯﺎﺳ‌ﻝﺎﻌﻓ ﻭ ﻩﺮﯿﺧﺫ"
 
-msgid "Keep My Key"
-msgstr "ﻦﻣ ﺪﯿﻠﮐ ﻦﺘﺷﺍﺩ ﻪﮕﻧ"
+msgid "Keep My Provider"
+msgstr ""
 
-msgid "Remove API Key"
-msgstr "API ﺪﯿﻠﮐ ﻑﺬﺣ"
+msgid "Use Mixar AI"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "…ﯽﻠﺤﻣ ﯽﻋﻮﻨﺼﻣ ﺵﻮﻫ ﯼﺍﺮﺟﺍ ﻂﯿﺤﻣ ﺝﺍﺮﺨﺘﺳﺍ ﻝﺎﺣ ﺭﺩ"
@@ -1730,8 +1760,8 @@ msgstr "ﯽﻠﺤﻣ ﯼﺎﻫ‌ﻪﻣﺎﻧﺮﺑ ﻩﺭﺎﺑﻭﺩ ﺶﯾﻮ
 msgid "Rescan this computer for running local AI apps"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﺶﯾﻮﭘ ﻩﺭﺎﺑﻭﺩ ﺍﺮﺟﺍ ﻝﺎﺣ ﺭﺩ ﯽﻠﺤﻣ ﯽﻋﻮﻨﺼﻣ ﺵﻮﻫ ﯼﺎﻫ‌ﻪﻣﺎﻧﺮﺑ ﯼﺍﺮﺑ ﺍﺭ ﻪﻧﺎﯾﺍﺭ ﻦﯾﺍ"
 
-msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
-msgstr ".ﺩﻮﺷ‌ﯽﻤﻧ ﺮﺴﮐ Mixar ﺭﺎﺒﺘﻋﺍ ﻞﻣﺎﻋ ﯼﺎﻫ‌ﺖﺳﺍﻮﺧﺭﺩ ﯼﺍﺮﺑ ،ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ ﺎﺗ .ﺪﯿﻨﮐ ﻩﺩﺎﻔﺘﺳﺍ Mixar ﻞﻣﺎﻋ ﯼﺍﺮﺑ ﺩﻮﺧ API ﺪﯿﻠﮐ ﺯﺍ"
+msgid "Choose an API key, Codex sign-in, or local model for the chat inside Mixar. While active, Mixar credits are not charged for agent requests."
+msgstr ""
 
 msgid "Validate with the provider and save your API key"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻩﺮﯿﺧﺫ ﺍﺭ ﺎﻤﺷ API ﺪﯿﻠﮐ ﻭ ﺪﻨﮐ‌ﯽﻣ ﯽﺠﻨﺳﺭﺎﺒﺘﻋﺍ ﻩﺪﻨﻫﺩ‌ﻪﺋﺍﺭﺍ ﺎﺑ"
@@ -1747,6 +1777,9 @@ msgstr ".ﺪﯿﻨﮐ ﯼﺭﺍﺬﮔﺭﺎﺑ ﺍﺭ ﺩﻮﺧ auth.json ﻪﺘ
 
 msgid "Save failed."
 msgstr ".ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻩﺮﯿﺧﺫ"
+
+msgid "Load from ~/.codex/auth.json"
+msgstr "codex/auth.json./~ ﺯﺍ ﯼﺭﺍﺬﮔﺭﺎﺑ"
 
 msgid "Read ~/.codex/auth.json from this machine into the field"
 msgstr "~/.codex/auth.json ﺪﻧﺍﻮﺧ‌ﯽﻣ ﺪﻠﯿﻓ ﺭﺩ ﻩﺎﮕﺘﺳﺩ ﻦﯾﺍ ﺯﺍ ﺍﺭ"
@@ -1765,9 +1798,6 @@ msgstr "auth.json ﺪﺷ ﺪﻫﺍﻮﺨﻧ ﻩﺮﯿﺧﺫ ﺖﺳﺭﺩ — ﺪ
 
 msgid "Loaded auth.json"
 msgstr "auth.json ﺪﺷ ﯼﺭﺍﺬﮔﺭﺎﺑ"
-
-msgid "Paste auth.json"
-msgstr "auth.json ﻥﺪﻧﺎﺒﺴﭼ"
 
 msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
 msgstr "~/.codex/auth.json ﺪﻧﺎﺒﺴﭼ‌ﯽﻣ ﺪﻠﯿﻓ ﺭﺩ ﺩﺭﻮﺑ‌ﭗﯿﻠﮐ ﺯﺍ ﺍﺭ ﺎﻤﺷ"
@@ -2236,6 +2266,9 @@ msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﻞﻣﺎﻋ ﻩﺮﯾﺰﺟ ﻒﺻ"
 
 msgid "Show every job"
 msgstr "ﺪﻫﺩ‌ﯽﻣ ﻥﺎﺸﻧ ﺍﺭ ﺎﻫﺭﺎﮐ ﻪﻤﻫ"
+
+msgid "Active"
+msgstr "ﻝﺎﻌﻓ"
 
 msgid "Show pending or running jobs"
 msgstr "ﺪﻫﺩ‌ﯽﻣ ﻥﺎﺸﻧ ﺍﺭ ﺍﺮﺟﺍ ﻝﺎﺣ ﺭﺩ ﺎﯾ ﺭﺎﻈﺘﻧﺍ ﺭﺩ ﯼﺎﻫﺭﺎﮐ"
@@ -5057,10 +5090,16 @@ msgstr ""
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
+msgid "Manual setup / advanced"
+msgstr ""
+
 msgid "App"
 msgstr ""
 
-msgid "Let your AI assistant use Mixar scenes and controls."
+msgid "MCP connects your AI app to Mixar scenes and tools."
+msgstr ""
+
+msgid "For AI inside Mixar chat, use AI for Mixar Chat instead."
 msgstr ""
 
 msgid "Sign in to Mixar to connect AI apps."
@@ -5069,25 +5108,31 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "1. Choose the app where you want to chat"
 msgstr ""
 
-msgid "Your AI app can start Mixar when needed."
+msgid "Your app bills chat. Mixar credits pay only for AI generation."
 msgstr ""
 
-msgid "Let AI apps control Mixar's interface"
+msgid "2. Connect Mixar to that app"
 msgstr ""
 
-msgid "Add to {app}"
+msgid "Add Mixar to {app}"
+msgstr ""
+
+msgid "Copy Setup for This App"
+msgstr ""
+
+msgid "3. In your AI app, reconnect and ask: Describe my Mixar scene."
+msgstr ""
+
+msgid "Also allow clicking and typing (optional)"
 msgstr ""
 
 msgid "Copy"
 msgstr "ﯽﭙﮐ"
 
 msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
 msgstr ""
 
 msgid "Copy MCP Config"
@@ -19623,6 +19668,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "ﺎﻘﺗﺭﺍ"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "ﺖﺳﺍ ﯽﻟﺎﺧ ﺩﺭﻮﺧﺯﺎﺑ ﺮﻈﻧ"
 
@@ -24397,6 +24451,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "ﺪﯿﻨﮐ ﻪﻓﺎﺿﺍ ﺎﻫ‌ﻪﯾﻻ﻿ ﻞﻨﭘ ﺭﺩ ﯽﺷﺎﻘﻧ ﻪﯾﻻ﻿ ﮏﯾ ﯽﺷﺎﻘﻧ ﻉﻭﺮﺷ ﯼﺍﺮﺑ"
 
@@ -24820,8 +24877,8 @@ msgstr "ﺪﺳﺮﭙﺑ ﻩﺭﺎﺑﻭﺩ ﺎﺗ ﺪﯿﻨﮐ ﮏﯿﻠﮐ .ﺪ
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﺳﺮﻬﻓ ﻪﺻﻼ﻿ﺧ ﺭﺩ ﺍﺭ ﺎﻫ‌ﻢﯿﻤﺼﺗ ﻭ ﺩﺮﯿﮔ‌ﯽﻣ ﻢﯿﻤﺼﺗ ﺵﺩﻮﺧ ﺍﺭ ﺯﺎﺑ ﯼﺎﻫ‌ﻪﻨﯾﺰﮔ ﺎﻤﺷ ﺯﺍ ﻥﺪﯿﺳﺮﭘ ﯼﺎﺟ‌ﻪﺑ ﻞﻣﺎﻋ :ﺭﺎﮐﺩﻮﺧ ﺖﻟﺎﺣ"
 
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "ﺪﯿﻨﮐ ﺏﺎﺨﺘﻧﺍ ﻩﺪﺷ‌ﯽﻧﺎﺑﺰﯿﻣ ﻝﺪﻣ ﮏﯾ ﻩﺭﺎﺑﻭﺩ ﺎﺗ ﺪﯿﻨﯾﺰﮔﺮﺑ ﺍﺭ «ﻦﻣ API ﺪﯿﻠﮐ ﻑﺬﺣ ﺎﯾ ﺮﯿﯿﻐﺗ» ﻭ ﺪﯿﻨﮐ ﺯﺎﺑ ﺍﺭ ﻮﻨﻣ ﻦﯾﺍ .ﺪﻨﮐ‌ﯽﻣ ﻦﯿﯿﻌﺗ ﻥﺁ ﺍﺭ ﻝﺪﻣ ﻭ ﺖﺳﺍ ﻩﺩﺎﻔﺘﺳﺍ ﻝﺎﺣ ﺭﺩ ﻥﺎﺗﺩﻮﺧ API ﺪﯿﻠﮐ"
+msgid "Your own AI provider is in use, and it decides the model. Open this menu and pick \"Change or Remove My AI Provider\" to choose a hosted model again"
+msgstr ""
 
 msgid "Choose which model the agent runs on"
 msgstr "ﺩﻮﺷ ﺍﺮﺟﺍ ﻝﺪﻣ ﻡﺍﺪﮐ ﯼﻭﺭ ﻞﻣﺎﻋ ﺪﻨﮐ‌ﯽﻣ ﺏﺎﺨﺘﻧﺍ"

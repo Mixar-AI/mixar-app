@@ -116,13 +116,13 @@ def test_the_byok_indicator_is_one_short_constant():
 def test_the_note_names_provider_and_model_when_both_are_known():
     assert (
         model_menu.byok_note_text("OpenRouter", "Claude Sonnet 4.6")
-        == "Your key: OpenRouter · Claude Sonnet 4.6"
+        == "Your AI: OpenRouter · Claude Sonnet 4.6"
     )
 
 
 def test_the_note_names_whichever_half_is_known():
-    assert model_menu.byok_note_text("OpenRouter", "") == "Your key: OpenRouter"
-    assert model_menu.byok_note_text("", "gpt-6") == "Your key: gpt-6"
+    assert model_menu.byok_note_text("OpenRouter", "") == "Your AI: OpenRouter"
+    assert model_menu.byok_note_text("", "gpt-6") == "Your AI: gpt-6"
 
 
 def test_the_note_falls_back_to_the_generic_wording_when_nothing_is_known():
@@ -143,7 +143,7 @@ def test_the_byok_note_row_carries_the_named_key():
     )
 
     assert rows[0].kind == "NOTE"
-    assert rows[0].label == "Your key: OpenRouter · Claude Sonnet 4.6"
+    assert rows[0].label == "Your AI: OpenRouter · Claude Sonnet 4.6"
     assert rows[0].enabled is False
     # Every other rule is untouched: hosted rows greyed, the key row live.
     assert all(row.enabled is False for row in rows if row.kind != "BYOK")

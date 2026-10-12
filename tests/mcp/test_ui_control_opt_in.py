@@ -71,7 +71,7 @@ def test_signin_restored_after_a_load_is_reported_as_temporary(monkeypatch):
 
 def test_the_dialog_has_the_opt_in_checkbox():
     dialog = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
-    assert '"mixar.set_mcp_ui_control"' in dialog and "Let AI apps control Mixar's interface" in dialog
+    assert '"mixar.set_mcp_ui_control"' in dialog and "Also allow clicking and typing (optional)" in dialog
 
 
 def test_a_vanished_scene_points_the_agent_to_rebinding(monkeypatch):
@@ -219,12 +219,12 @@ def test_the_mcp_switch_is_a_labelled_checkbox_with_its_state_spelled_out(monkey
     layout = _Layout(log)
     signed_in = SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=True,
                                                                mixie_chat_session_expired=False))
-    _dialog_draw(connect)(SimpleNamespace(layout=layout, app="CLAUDE_CODE"), signed_in)
+    _dialog_draw(connect)(SimpleNamespace(layout=layout, app="CLAUDE_CODE", show_manual=False), signed_in)
     [(icon, props)] = _switches(layout)
     assert icon == ("CHECKBOX_HLT" if enabled else "CHECKBOX_DEHLT") and props.enabled is (not enabled)
     assert not any(entry[0] == "operator" and entry[2] in ("Disable", "Enable MCP") for entry in log)
     labels = [text for kind, text in ((e[0], e[1]) for e in log) if kind == "label"]
-    status = labels[labels.index("Your AI app can start Mixar when needed.") + 1]
+    status = next(text for text in labels if text.startswith(("MCP is off:", "MCP is on:", "MCP is on,")))
     if not enabled:
         assert status.startswith("MCP is off:") and "not connected" in status
     elif running:

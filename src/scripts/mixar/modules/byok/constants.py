@@ -77,7 +77,7 @@ OPENROUTER_DEFAULT_MODEL = "anthropic/claude-opus-4.8"
 CODEX_PROVIDER_ID = 'codex'
 CODEX_PROVIDER_ITEM = (
     CODEX_PROVIDER_ID,
-    "Codex (ChatGPT sub)",
+    "Codex (ChatGPT sign-in)",
     "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
 )
 
