@@ -86,4 +86,5 @@ def test_file_logging_can_be_switched_off(monkeypatch):
 
 def test_the_suite_never_writes_to_the_real_home_folder():
     import os
-    assert os.environ.get("MIXAR_CLIENT_LOG_DIR") == "0"
+    real = os.path.join(os.path.expanduser("~"), ".mixar", "logs")
+    assert os.path.normpath(logging_config.log_dir() or "-") != os.path.normpath(real)

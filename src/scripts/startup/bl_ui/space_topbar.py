@@ -604,8 +604,13 @@ class TOPBAR_MT_help(Menu):
 
         layout.operator("wm.url_open", text="Tutorials", icon='FILE_MOVIE').url = "https://www.youtube.com/@Mixar3D"
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://www.mixar.app/docs"
-        # Attaches the app's diagnostics (space_mixie_chat/core/bug_report.py).
-        layout.operator("mixie_chat.report_bug", text="Report a Bug", icon='URL')
+        # Attaches the app's diagnostics (space_mixie_chat/core/bug_report.py);
+        # the plain link stays reachable while Mixar's operators register or if
+        # they failed to load, which is when a report matters most.
+        if hasattr(bpy.types, "MIXIE_CHAT_OT_report_bug"):
+            layout.operator("mixie_chat.report_bug", text="Report a Bug", icon='URL')
+        else:
+            layout.operator("wm.url_open", text="Report a Bug", icon='URL').url = "https://www.mixar.app/bug-report"
         layout.separator()
         # The onboarding tour opens this menu with the row highlighted while
         # it talks about the program (WindowManager ID property it sets).

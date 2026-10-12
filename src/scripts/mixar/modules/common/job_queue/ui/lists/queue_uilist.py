@@ -6,6 +6,7 @@
 
 import time
 
+import bpy
 from bpy.types import UIList
 
 from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
@@ -39,6 +40,9 @@ _FAILED_STATE_VALUES = {
 }
 
 _TERMINAL_STATE_VALUES = _DONE_STATE_VALUES | _FAILED_STATE_VALUES
+
+# Fallback while mixie_chat.report_bug is not registered.
+_BUG_REPORT_URL = "https://www.mixar.app/bug-report"
 
 # Centralized queue layout tokens. Generation names remain backend-owned;
 # these values only control the native Blender presentation.
@@ -223,9 +227,16 @@ class MIXIE_UL_unified_queue(UIList):
             )
             op.feature_key = item.feature_key
             op.job_id = item.job_id
-            actions.operator(
-                "mixie_chat.report_bug", text="", icon='URL', emboss=False,
-            )
+            # Diagnostics operator when registered, else the plain form link,
+            # so this row never depends on the chat module having loaded.
+            if hasattr(bpy.types, "MIXIE_CHAT_OT_report_bug"):
+                actions.operator(
+                    "mixie_chat.report_bug", text="", icon='URL', emboss=False,
+                )
+            else:
+                actions.operator(
+                    "wm.url_open", text="", icon='URL', emboss=False,
+                ).url = _BUG_REPORT_URL
 
         # Trailing gap + hairline become the inter-item demarcation.
         # Blender's ``template_list`` collapses trailing

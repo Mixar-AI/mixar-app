@@ -102,13 +102,41 @@ def test_the_temp_bundle_is_removed_before_the_upload(flow, monkeypatch, tmp_pat
     assert made and not os.path.exists(made[0][1])
 
 
-def test_every_report_a_bug_entry_point_runs_the_operator():
-    sites = [
-        "src/scripts/startup/bl_ui/space_topbar.py",
-        "src/scripts/mixar/modules/space_mixie_chat/ui/topbar.py",
-        "src/scripts/mixar/modules/common/job_queue/ui/lists/queue_uilist.py",
-    ]
-    for site in sites:
+def test_every_report_a_bug_entry_point_uses_the_guarded_operator():
+    """The operator when registered, the plain link otherwise: the entry must
+    work while operators register and when the chat module failed to load."""
+    topbar = (ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/topbar.py").read_text(
+        encoding="utf-8")
+    assert "draw_report_bug_entry(" in topbar and "mixar.app/bug-report" not in topbar
+    # Drawn outside the chat module: an inline guard, no import from it.
+    for site in ("src/scripts/startup/bl_ui/space_topbar.py",
+                 "src/scripts/mixar/modules/common/job_queue/ui/lists/queue_uilist.py"):
         text = (ROOT / site).read_text(encoding="utf-8")
-        assert '"mixie_chat.report_bug"' in text, site
-        assert "mixar.app/bug-report" not in text, site
+        assert 'hasattr(bpy.types, "MIXIE_CHAT_OT_report_bug")' in text, site
+        assert '"mixie_chat.report_bug"' in text and "mixar.app/bug-report" in text, site
+        assert "import space_mixie_chat" not in text and "space_mixie_chat." not in text, site
+
+
+def test_the_entry_falls_back_to_the_link_when_the_operator_is_missing(monkeypatch):
+    import bpy
+
+    calls = []
+
+    class Layout:
+        def operator(self, op, **kwargs):
+            calls.append(op)
+            return SimpleNamespace()
+
+    monkeypatch.setattr(bpy, "types", SimpleNamespace(), raising=False)
+    bug_report.draw_report_bug_entry(Layout(), text="Report a Bug")
+    monkeypatch.setattr(bpy, "types", SimpleNamespace(MIXIE_CHAT_OT_report_bug=object()),
+                        raising=False)
+    bug_report.draw_report_bug_entry(Layout(), text="Report a Bug")
+    assert calls == ["wm.url_open", "mixie_chat.report_bug"]
+
+
+def test_an_oversized_bundle_is_not_uploaded(flow, monkeypatch):
+    monkeypatch.setattr(bug_report, "_signed_in", lambda: True)
+    monkeypatch.setattr(bug_report, "MAX_UPLOAD_BYTES", 4)
+    assert bug_report.start_bug_report() is False
+    assert flow.uploads == [] and flow.opened == [("", 0)]

@@ -34,8 +34,23 @@ from mixar.modules.common.i18n import n_
 logger = get_logger(__name__)
 
 BUG_REPORT_PATH = "/bug-report"
+#: The form without diagnostics: the fallback while the operator is not
+#: registered (startup batches, or a module that failed to load).
+FALLBACK_URL = "https://www.mixar.app/bug-report"
 SOURCE_DESKTOP = "desktop"
+#: The backend refuses a bundle above this (413); skip the upload instead.
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 _NOTICE_ID = "mixar_bug_report_diagnostics"
+
+
+def draw_report_bug_entry(layout, *, text: str, emboss: bool = True) -> None:
+    """A Report a Bug button: the diagnostics operator when it is registered,
+    else a plain link to the form, so the entry never goes dead."""
+    import bpy
+    if hasattr(bpy.types, "MIXIE_CHAT_OT_report_bug"):
+        layout.operator("mixie_chat.report_bug", text=text, icon='URL', emboss=emboss)
+    else:
+        layout.operator("wm.url_open", text=text, icon='URL', emboss=emboss).url = FALLBACK_URL
 
 
 def os_label() -> str:
@@ -166,6 +181,14 @@ def start_bug_report() -> bool:
         return False
     finally:
         _remove(path)
+
+    if len(payload) > MAX_UPLOAD_BYTES:
+        logger.warning("bug report bundle too large to upload (%d bytes)", len(payload))
+        _notify(n_("Diagnostics were not attached"),
+                n_("They are too large to upload. Use Help > Save Support Bundle "
+                   "and email the file."))
+        _open_form()
+        return False
 
     def on_success(response):
         report_id = report_id_from(response)
