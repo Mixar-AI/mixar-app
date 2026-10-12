@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Attach and remove chat context folders.
+"""Attach and remove chat context folders and context files.
 
-``mixie_chat.attach`` is the composer's paperclip: a descriptive chooser offering an
-image / 3D file (the existing picker) or a folder. Folder rows then show as
-compact rows in the island's reference column, each with its own remove button.
+``mixie_chat.attach`` is the composer's paperclip: a descriptive chooser offering
+files (the existing picker — images and models keep their pill / import
+behaviour, every other file becomes a context-file chip) or a folder. Folder
+and file rows then show as compact rows in the island's reference column, each
+with its own remove button.
 """
 
 import bpy
@@ -16,6 +18,7 @@ from bpy.types import Operator
 from mixar.modules.common.i18n import rpt_
 
 from ...core.attach import attach_folder, detach_folder
+from ...core.files import detach_file
 
 
 def _redraw() -> None:
@@ -32,7 +35,7 @@ def _redraw() -> None:
 
 
 class MIXIE_CHAT_OT_attach(Operator):
-    """Attach a reference image, a 3D file, or a folder the agent can use as context"""
+    """Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"""
     bl_idname = "mixie_chat.attach"
     bl_label = "Attach"
     bl_options = {'INTERNAL'}
@@ -79,6 +82,25 @@ class MIXIE_CHAT_OT_add_context_folder(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_remove_context_file(Operator):
+    """Detach this file; the agent can no longer read it"""
+    bl_idname = "mixie_chat.remove_context_file"
+    bl_label = "Remove File"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    file_id: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene is not None and len(getattr(context.scene, "mixie_context_files", ())) > 0
+
+    def execute(self, context):
+        if not detach_file(context.scene, self.file_id):
+            return {'CANCELLED'}
+        _redraw()
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_remove_context_folder(Operator):
     """Detach this folder; the agent can no longer read it"""
     bl_idname = "mixie_chat.remove_context_folder"
@@ -102,4 +124,5 @@ classes = (
     MIXIE_CHAT_OT_attach,
     MIXIE_CHAT_OT_add_context_folder,
     MIXIE_CHAT_OT_remove_context_folder,
+    MIXIE_CHAT_OT_remove_context_file,
 )

@@ -52,6 +52,7 @@ from .chat_sync_deselect import (
     deselect_moodboard_image_by_name,
     deselect_moodboard_image_for_attachment,
 )
+from .chat_sync_videos import attach_selected_videos, selected_video_names
 from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
@@ -108,9 +109,9 @@ def _collect_selected_image_names(scene) -> list[str]:
     names: set[str] = set()
     for mb_img in images_attr:
         img = mb_img.image
-        # Chat attachments are still-image-only today. Keep videos selected on
-        # the board for the future Seedance path without flattening a movie to
-        # a misleading single-frame chat attachment.
+        # Chat PILLS are still-image-only. A selected video is attached as a
+        # context file instead (chat_sync_videos.attach_selected_videos), never
+        # flattened to a misleading single-frame chat attachment.
         if img is None or is_video_item(mb_img):
             continue
         if mb_img.selected:
@@ -145,7 +146,9 @@ def _compute_selection_signature(scene) -> tuple:
     """Desired attachment state for this scene, including moodboard-origin count.
 
     The count detects drift when send/clear empties ``pending_attachments``
-    while the board selection has not changed.
+    while the board selection has not changed. Selected VIDEO names ride as a
+    third element so selecting a clip (which adds no pill) still wakes the
+    reconcile that attaches it as a context file.
     """
     names = tuple(_collect_selected_image_names(scene))
 
@@ -156,7 +159,7 @@ def _compute_selection_signature(scene) -> tuple:
             if getattr(att, "is_moodboard", False):
                 mb_att_count += 1
 
-    return (mb_att_count, names)
+    return (mb_att_count, names, selected_video_names(scene))
 
 
 # ----------------------------------------------------------------- #
@@ -289,6 +292,9 @@ def _poll_tick():
             signature[1],
             animate=previous is not None and previous[1] != signature[1],
         )
+        # Videos: attach-on-select as context files; deselect never detaches.
+        if attach_selected_videos(scene):
+            _redraw_chat_areas()
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)
 

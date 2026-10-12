@@ -126,6 +126,9 @@ class JSONRPCMethod:
     LLM_REQUEST = "llm.request"
     # Server -> Client (requests - capability-scoped local add-on workspace)
     ADDON_PROJECT_PREFIX = "addon_project."
+    # Server -> Client (request - a Moodboard video as sampled frames; name
+    # resolved on the main thread, decoded off-thread, reply deferred)
+    MOODBOARD_VIEW_VIDEO = "moodboard.view_video"
     # Server -> Client (requests - harness v3 execution protocol: activate /
     # bind_task / status / commit / revoke; handled on the main thread by
     # mixar.modules.common.agent_execution.handlers, replies deferred)
@@ -407,15 +410,17 @@ MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
 # Movie containers the moodboard accepts. The agent chat has no video content
-# part on the wire (agent.chat carries image_url data URLs only), so these are
-# refused with a specific message instead of the generic "Unsupported format".
+# part on the wire (agent.chat carries image_url data URLs only): a video is
+# never an image PILL. The picker and the drop route one to a context-file chip
+# instead (context_folder.core.files); this message is what a restored legacy
+# video pill and the encoder still show.
 VIDEO_FILE_FORMATS = {
     '.avi', '.avs', '.divx', '.dv', '.flc', '.flv', '.gif', '.m2t', '.m2ts',
     '.m2v', '.m4v', '.mkv', '.mov', '.movie', '.mp4', '.mpeg', '.mpg', '.mpg2',
     '.mts', '.mv', '.mxf', '.ogg', '.ogv', '.r3d', '.ts', '.vob', '.webm',
     '.wmv', '.xvid',
 }
-VIDEO_ATTACHMENT_REJECTED = n_("Videos require Video mode. Remove the video to send to Agent.")
+VIDEO_ATTACHMENT_REJECTED = n_("Attach the video as a file: videos become context the agent can watch")
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 

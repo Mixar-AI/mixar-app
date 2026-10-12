@@ -73,6 +73,19 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
       }
       RNA_END;
     }
+    /* Single context files (videos, documents, …) are chips too; `path` is the
+     * file id and `kind` picks the glyph. They reach the agent as one synthetic
+     * "Attached files" folder (context_folder/core/files.py). */
+    if (RNA_struct_find_property(&scene_ptr, "mixie_context_files")) {
+      RNA_BEGIN (&scene_ptr, item, "mixie_context_files") {
+        items.push_back({RNA_string_get(&item, "file_id"),
+                         RNA_string_get(&item, "name"),
+                         "CONTEXT_FILE",
+                         /*sketch*/ false,
+                         RNA_string_get(&item, "kind")});
+      }
+      RNA_END;
+    }
     return items;
   }
 

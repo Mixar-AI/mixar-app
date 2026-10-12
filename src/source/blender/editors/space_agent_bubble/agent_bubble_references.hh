@@ -24,6 +24,8 @@ constexpr const char *AGENT_REFERENCE_SCROLL = "mixar_reference_scroll";
 struct AgentReference {
   std::string path, name, source;
   bool sketch = false;
+  /** Context files only: the `file_kind` (video, image, model, …) that picks the glyph. */
+  std::string kind;
 };
 /** Read the active pane's inputs without copying them into the chat draft. */
 std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowManager *wm);

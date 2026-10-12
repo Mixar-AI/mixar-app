@@ -18,6 +18,7 @@ from pathlib import Path
 
 from ..constants import INDEX_TTL_S, KINDS, MAX_DEPTH, MAX_INDEXED_FILES
 from .errors import ContextFolderError
+from .file_set import is_file_set
 from .paths import file_kind, ignored_part
 
 
@@ -87,7 +88,23 @@ def _walk(root: Path) -> FolderIndex:
     return index
 
 
+def _index_set(root) -> FolderIndex:
+    """A file set is its members, nothing more: no walk, no cache, never truncated."""
+    index = FolderIndex(built_at=time.monotonic())
+    for name, path in root.files.items():
+        try:
+            stat = os.stat(path)
+        except OSError:
+            continue
+        index.files.append({"path": name, "kind": file_kind(name), "size": int(stat.st_size),
+                            "mtime": float(stat.st_mtime)})
+        index.total_bytes += int(stat.st_size)
+    return index
+
+
 def index_folder(root, *, fresh: bool = False) -> FolderIndex:
+    if is_file_set(root):
+        return _index_set(root)
     root = Path(root).resolve(strict=True)
     key = str(root)
     now = time.monotonic()
