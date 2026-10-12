@@ -2948,7 +2948,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "ファイル"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3140,31 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8956,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "同期に失敗しました: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count}本の動画をスキップしました: エージェントは静止画のみ受け付けます。クリップにはムードボードの動画生成を使用してください"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count}本の動画をスキップしました: エージェントは静止画のみ受け付けます。クリップにはムードボードの動画生成を使用してください"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "ムードボード画像が選択されていません"
@@ -9219,9 +9258,6 @@ msgstr "ディレクトリ"
 
 msgid "Directory of the selected file(s)"
 msgstr "選択したファイルのディレクトリ"
-
-msgid "Files"
-msgstr "ファイル"
 
 msgid "Failed to load media: {filepath}"
 msgstr "メディアの読み込みに失敗しました: {filepath}"
@@ -18787,7 +18823,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19540,8 +19576,8 @@ msgstr "修正中..."
 msgid "Awaiting Input..."
 msgstr "入力待ち..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "動画には動画モードが必要です。エージェントに送信するには動画を削除してください。"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ユーザー ID"
@@ -19626,6 +19662,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "アップグレード"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "フィードバックのコメントが空です"
@@ -20732,11 +20777,14 @@ msgstr "削除するアーカイブ済みセッション"
 msgid "Chat removed from history"
 msgstr "チャットを履歴から削除しました"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} を追加できません: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "添付ファイルの上限（{count}）に達しました"
@@ -20744,14 +20792,14 @@ msgstr "添付ファイルの上限（{count}）に達しました"
 msgid "Skipped {name}: {error}"
 msgstr "{name} をスキップしました: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} を追加できません: {error}"
-
 msgid "These references are already attached"
 msgstr "これらの参照はすでに添付されています"
 
 msgid "Added {count} image(s)"
 msgstr "{count} 枚の画像を追加しました"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend から追加"
@@ -20768,6 +20816,9 @@ msgstr "{size} - データあり"
 msgid "{size} - No data"
 msgstr "{size} - データなし"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Blend ファイルから画像を選択します"
 
@@ -20776,6 +20827,12 @@ msgstr "画像はすでに追加されています"
 
 msgid "Image not found in blend file"
 msgstr "Blend ファイルに画像が見つかりません"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "画像はすでに添付されています"
@@ -24401,6 +24458,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "ペイントを開始するには、レイヤーパネルでペイントレイヤーを追加してください"
 
@@ -24416,6 +24476,12 @@ msgstr "実行中のターンを停止します"
 msgid "Folder context"
 msgstr ""
 
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "スケッチを拡大表示します。チャットで指示を追加してから送信してください"
 
@@ -24424,6 +24490,9 @@ msgstr "参照を削除します"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "このスケッチとキュー内の描画を破棄します"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24794,7 +24863,7 @@ msgstr "ルール — エージェントのプロジェクトルールとグロ�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
