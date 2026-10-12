@@ -22,15 +22,20 @@ class MIXIE_CHAT_PT_login(Panel):
 
     @classmethod
     def poll(cls, context):
-        """Only show when not logged in"""
+        """Only show when not signed in to an account (a guest is not)"""
         wm = context.window_manager
-        return not wm.mixie_chat_is_logged_in
+        return not wm.mixie_chat_is_logged_in or getattr(wm, 'mixie_chat_is_guest', False)
 
     def draw(self, context):
         layout = self.layout
         wm = context.window_manager
 
         col = layout.column(align=True)
+
+        if getattr(wm, 'mixie_chat_is_guest', False):
+            col.label(text="You're using Mixar as a guest.", icon='INFO')
+            col.label(text="Sign in for Mixar models and generation.")
+            col.separator()
 
         # Session expired message
         if getattr(wm, 'mixie_chat_session_expired', False):
