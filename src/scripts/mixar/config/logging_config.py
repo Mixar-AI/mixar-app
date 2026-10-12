@@ -15,8 +15,10 @@ Default: "INFO" if not specified or config unavailable.
 
 import json
 import logging
+import logging.handlers
 import os
 import sys
+import time
 
 
 class ColoredFormatter(logging.Formatter):
@@ -58,6 +60,114 @@ class ColoredFormatter(logging.Formatter):
 
 # Global logger registry to avoid duplicate handlers
 _loggers = {}
+# Per-logger lowest level written to the log file (see get_logger).
+_file_floors = {}
+
+# ---------------------------------------------------------------------------
+# Client log file
+# ---------------------------------------------------------------------------
+#
+# The console is hidden on Windows and held at ERROR in Prod, so without a file
+# a user's report leaves no client-side record. Every Mixar logger also writes
+# to ONE rotating file under ``~/.mixar/logs/`` with UTC timestamps: WARNING
+# and above from every module, plus the ``[SCENES]`` ledger at INFO
+# (``common/scenes_log.py`` opts in with ``file_floor=logging.INFO``). The
+# console keeps its configured level, so nothing new is printed. The file stays
+# on the machine; the user decides whether to send it (support bundle).
+#
+# A background process (the headless sandbox child) writes its own file: two
+# processes rotating one file fails on Windows, where an open file cannot be
+# renamed. ``MIXAR_CLIENT_LOG_DIR`` overrides the folder; ``0`` / ``off``
+# disables file logging (the test suite does).
+
+LOG_FILENAME = "mixar-client.log"
+BACKGROUND_LOG_FILENAME = "mixar-sandbox.log"
+LOG_MAX_BYTES = 5 * 1024 * 1024
+LOG_BACKUP_COUNT = 3
+#: The level every logger lets through to the file, whatever the console level.
+FILE_FLOOR = logging.WARNING
+
+_file_handler = None
+_file_handler_failed = False
+
+
+class _UtcFormatter(logging.Formatter):
+    """ISO-8601 UTC with milliseconds, so a client line and a backend line
+    can share one timeline without knowing the machine's time zone."""
+
+    converter = time.gmtime
+
+    def formatTime(self, record, datefmt=None):  # noqa: N802 - logging API
+        base = time.strftime("%Y-%m-%dT%H:%M:%S", self.converter(record.created))
+        return f"{base}.{int(record.msecs):03d}Z"
+
+
+def log_dir() -> str:
+    """Folder of the client log file, or ``""`` when file logging is off."""
+    override = os.environ.get("MIXAR_CLIENT_LOG_DIR")
+    if override is not None:
+        return "" if override.strip().lower() in ("", "0", "off") else override
+    return os.path.join(os.path.expanduser("~"), ".mixar", "logs")
+
+
+def _is_background() -> bool:
+    try:
+        import bpy
+        return bpy.app.background is True
+    except Exception:
+        return False
+
+
+def log_file_path() -> str:
+    folder = log_dir()
+    if not folder:
+        return ""
+    name = BACKGROUND_LOG_FILENAME if _is_background() else LOG_FILENAME
+    return os.path.join(folder, name)
+
+
+def get_file_handler():
+    """The shared rotating file handler, created once; ``None`` when file
+    logging is disabled or the folder cannot be written. Never raises."""
+    global _file_handler, _file_handler_failed
+    if _file_handler is not None or _file_handler_failed:
+        return _file_handler
+    path = log_file_path()
+    if not path:
+        _file_handler_failed = True
+        return None
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        handler = logging.handlers.RotatingFileHandler(
+            path, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT,
+            encoding="utf-8", delay=True,
+        )
+        # Each logger's own level (its file floor) decides what reaches it.
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(
+            _UtcFormatter(fmt="%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        _file_handler = handler
+    except Exception:
+        _file_handler_failed = True
+        _file_handler = None
+    return _file_handler
+
+
+def reset_file_handler() -> None:
+    """Detach and close the shared handler (tests, or a changed
+    ``MIXAR_CLIENT_LOG_DIR``); the next ``get_logger`` re-creates it."""
+    global _file_handler, _file_handler_failed
+    if _file_handler is not None:
+        for logger in _loggers.values():
+            if _file_handler in logger.handlers:
+                logger.removeHandler(_file_handler)
+        try:
+            _file_handler.close()
+        except Exception:
+            pass
+    _file_handler = None
+    _file_handler_failed = False
+
 
 # Cached log level from config (resolved lazily)
 _config_log_level = None
@@ -101,15 +211,18 @@ def _get_config_log_level() -> int:
     return _config_log_level
 
 
-def get_logger(name: str = None, level: int = None) -> logging.Logger:
+def get_logger(name: str = None, level: int = None,
+               file_floor: int = FILE_FLOOR) -> logging.Logger:
     """
     Get or create a logger with the specified name.
 
     Args:
         name: The name of the logger. If None, returns the root Mixar logger.
               For module loggers, use __name__ from the calling module.
-        level: The logging level. If None, reads from config/mixar.json
-               ("log_level" key), defaulting to INFO.
+        level: The CONSOLE logging level. If None, reads from
+               config/mixar.json ("log_level" key), defaulting to INFO.
+        file_floor: The lowest level this logger writes to the client log
+               file (default WARNING). The ``[SCENES]`` ledger passes INFO.
 
     Returns:
         A configured logger instance.
@@ -132,7 +245,10 @@ def get_logger(name: str = None, level: int = None) -> logging.Logger:
 
     # Create new logger
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    # The logger admits what either sink wants; the console handler below keeps
+    # the configured level, so console output is unchanged.
+    _file_floors[name] = file_floor
+    logger.setLevel(min(level, file_floor))
 
     # Prevent propagation to avoid duplicate logs
     logger.propagate = False
@@ -151,6 +267,10 @@ def get_logger(name: str = None, level: int = None) -> logging.Logger:
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
+    file_handler = get_file_handler()
+    if file_handler is not None and file_handler not in logger.handlers:
+        logger.addHandler(file_handler)
+
     # Register logger
     _loggers[name] = logger
 
@@ -166,15 +286,16 @@ def set_log_level(level: int, logger_name: str = None):
         logger_name: The name of the logger to configure. If None, updates all.
     """
     if logger_name:
-        if logger_name in _loggers:
-            _loggers[logger_name].setLevel(level)
-            for handler in _loggers[logger_name].handlers:
-                handler.setLevel(level)
+        names = [logger_name] if logger_name in _loggers else []
     else:
-        # Update all registered loggers
-        for logger in _loggers.values():
-            logger.setLevel(level)
-            for handler in logger.handlers:
+        names = list(_loggers)
+    for name in names:
+        logger = _loggers[name]
+        # The log file keeps each logger's own floor: a quieter console never
+        # silences it, and a louder one is undone when the console goes quiet.
+        logger.setLevel(min(level, _file_floors.get(name, FILE_FLOOR)))
+        for handler in logger.handlers:
+            if handler is not _file_handler:
                 handler.setLevel(level)
 
 

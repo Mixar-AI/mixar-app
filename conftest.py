@@ -4,8 +4,13 @@
 
 """Root-level pytest conftest: pre-stub bpy and related Blender modules so
 that tests can be run outside of Blender without import errors."""
+import os
 import sys
 from unittest.mock import MagicMock
+
+# Keep test runs out of the developer's real ~/.mixar/logs (logging_config's
+# client log file); tests that cover the file point it at a tmp dir.
+os.environ.setdefault("MIXAR_CLIENT_LOG_DIR", "0")
 
 
 def _install_bpy_stubs():

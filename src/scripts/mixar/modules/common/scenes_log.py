@@ -17,19 +17,25 @@ Events: ``route.pin`` / ``route.restore`` / ``route.reject``, ``tab.new``,
 ``sweep.lane``, ``commit.target``, ``gen.deliver``, ``undo.banner``,
 ``poll.start`` / ``poll.stop``.
 
+Every line also reaches the client log file (``config/logging_config.py``,
+``~/.mixar/logs/mixar-client.log``) at INFO, even in Prod where the console is
+held at ERROR.
+
 Never raises.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any
 
 from mixar.config.logging_config import get_logger
 
-logger = get_logger(__name__)
+# INFO floor: the ledger reaches the client log file whatever the console level.
+logger = get_logger(__name__, file_floor=logging.INFO)
 
 TAG = "[SCENES]"
 _DOSSIER_FILE = "events.jsonl"
