@@ -125,8 +125,8 @@ def test_save_rejects_stale_model_from_another_provider(monkeypatch):
 def test_codex_save_uses_openai_catalog_models(monkeypatch):
     """Codex has no catalog group of its own: its model dropdown reuses the
     "openai" models. A stale/sentinel selection is rejected before the
-    network; a real openai catalog model is sent with the pasted auth.json
-    bundle as the key."""
+    network; a real openai catalog model is sent with the loaded Codex CLI
+    sign-in tokens as the key."""
     model_suggestions.populate(
         providers=[("openai", "OpenAI", "From catalog")],
         models={"openai": [("gpt-5.5", "GPT-5.5", "GPT-5.5")]},
@@ -146,7 +146,7 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
             byok_last_error="",
             byok_form_provider="codex",
             byok_form_model=model,
-            byok_form_codex_bundle='{"tokens": {}}',
+            byok_form_codex_bundle='{"refresh_token":"rt"}',
         )
 
     stale = _wm("NONE")
@@ -161,7 +161,7 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
     assert ok.byok_dialog_state == "SAVING"
     assert sent[0]["provider"] == "codex"
     assert sent[0]["model"] == "gpt-5.5"
-    assert sent[0]["api_key"] == '{"tokens": {}}'
+    assert sent[0]["api_key"] == '{"refresh_token":"rt"}'
     model_suggestions.clear()
 
 
@@ -198,4 +198,4 @@ def test_secret_properties_are_not_saved_in_blend_files(monkeypatch):
 
     by_name = {item.get("name"): item for item in string_properties}
     assert by_name["API Key"]["options"] == {'SKIP_SAVE'}
-    assert by_name["Codex auth.json"]["options"] == {'SKIP_SAVE'}
+    assert by_name["Codex CLI login"]["options"] == {'SKIP_SAVE'}

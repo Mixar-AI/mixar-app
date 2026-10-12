@@ -70,15 +70,16 @@ OPENROUTER_PROVIDER_ITEM = (
 OPENROUTER_DEFAULT_MODEL = "anthropic/claude-opus-4.8"
 
 # "Codex (ChatGPT)" — a client-side-only provider option (not in the backend
-# catalog). Selecting it swaps the credential field to a paste field for the
-# ~/.codex/auth.json bundle; the user routes the agent through their ChatGPT
+# catalog). Selecting it swaps the credential field for "Use my Codex CLI
+# login", which reads only the sign-in tokens of ~/.codex/auth.json
+# (core/codex_cli_login.py); the user routes the agent through their ChatGPT
 # subscription instead of an API key. The model dropdown reuses the backend
 # catalog's "openai" group (see model_suggestions._MODEL_SOURCE_PROVIDER).
 CODEX_PROVIDER_ID = 'codex'
 CODEX_PROVIDER_ITEM = (
     CODEX_PROVIDER_ID,
     "Codex (ChatGPT sub)",
-    "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
+    "Use your ChatGPT/Codex subscription — uses your Codex CLI login after `codex login`",
 )
 
 # "Local (this computer)" — a client-side-only provider option: the agent's

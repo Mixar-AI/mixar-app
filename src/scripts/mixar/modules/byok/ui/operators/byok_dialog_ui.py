@@ -32,7 +32,7 @@ from mixar.modules.common.ui.constants import (
     CARD_ROW_HEADING,
 )
 
-from mixar.modules.common.i18n import iface_, n_, rpt_
+from mixar.modules.common.i18n import n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
 
@@ -52,8 +52,7 @@ OP_SAVE = "mixar_byok.save"
 OP_REQUEST_REMOVE = "mixar_byok.request_remove"
 OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
 OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
-OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
-OP_CODEX_PASTE = "mixar_byok.codex_paste"
+OP_CODEX_USE_CLI = "mixar_byok.codex_use_cli"
 
 
 # ---------------------------------------------------------------------------
@@ -358,24 +357,18 @@ def _draw_codex_fields(body, wm):
 
     load_row = body.row()
     load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
+    op_button(load_row, OP_CODEX_USE_CLI, n_("Use my Codex CLI login"), 'CARD')
     body.separator(factor=0.35)
-
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
-
-    n = len(wm.byok_form_codex_bundle or "")
     card_label(
         body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
+        n_("Codex CLI login loaded — only its sign-in tokens will be sent.")
+        if wm.byok_form_codex_bundle else n_("Not loaded yet."),
         'MUTED',
     )
     body.separator(factor=0.5)
     for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
+        n_("Run  codex login  in your terminal first. Mixar reads only the"),
+        n_("sign-in tokens — never your whole auth.json or API key."),
         n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
     ):
         card_label(body, line, 'MUTED')

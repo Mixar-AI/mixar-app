@@ -187,13 +187,14 @@ def register():
     )
 
     # --- Codex form field (shown when provider == 'codex') ---
-    # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
-    # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
-    # count confirm it landed). The model uses the shared catalog-backed
-    # byok_form_model dropdown (served from the "openai" catalog group).
+    # Holds ONLY the Codex CLI login's refresh/access token + account id
+    # (core/codex_cli_login.py), never the whole auth.json; filled by the
+    # "Use my Codex CLI login" button, never drawn. PASSWORD + SKIP_SAVE keep
+    # the tokens out of the UI and .blend files. The model uses the shared
+    # catalog-backed byok_form_model dropdown (the "openai" catalog group).
     WM.byok_form_codex_bundle = StringProperty(
-        name="Codex auth.json",
-        description="Contents of ~/.codex/auth.json (run `codex login` first)",
+        name="Codex CLI login",
+        description="Sign-in tokens from the Codex CLI login on this computer",
         maxlen=16384,
         default='',
         subtype='PASSWORD',
