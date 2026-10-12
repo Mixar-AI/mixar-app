@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Asili"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Kishale cha Snap"
 
 msgid "Snap 2D cursor"
 msgstr "Nata mshale wa 2D"
-
-msgid "Origin"
-msgstr "Asili"
 
 msgid "Mirror selected UVs"
 msgstr "Kioo cha UV zilizochaguliwa"

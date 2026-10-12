@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "จุดกำเนิด"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "สแนปเคอร์เซอร์"
 
 msgid "Snap 2D cursor"
 msgstr "สแนปเคอร์เซอร์ 2D"
-
-msgid "Origin"
-msgstr "จุดกำเนิด"
 
 msgid "Mirror selected UVs"
 msgstr "สะท้อน UV ที่เลือก"

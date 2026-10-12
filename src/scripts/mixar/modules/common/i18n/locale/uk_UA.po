@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Опорна точка"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Підхоп курсора"
 
 msgid "Snap 2D cursor"
 msgstr "Приліплює 2D-курсор"
-
-msgid "Origin"
-msgstr "Опорна точка"
 
 msgid "Mirror selected UVs"
 msgstr "Віддзеркалює вибрані UV"

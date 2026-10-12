@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Jatorria"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Atxiki kurtsorea"
 
 msgid "Snap 2D cursor"
 msgstr "Atxiki 2D kurtsorea"
-
-msgid "Origin"
-msgstr "Jatorria"
 
 msgid "Mirror selected UVs"
 msgstr "Ispilatu hautatutako UVak"

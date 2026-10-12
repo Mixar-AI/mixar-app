@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "தோற்றம்"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "ச்னாப் கர்சர்"
 
 msgid "Snap 2D cursor"
 msgstr "2D கர்சரை ஸ்னாப் செய்"
-
-msgid "Origin"
-msgstr "தோற்றம்"
 
 msgid "Mirror selected UVs"
 msgstr "தேர்ந்தெடுத்த UV-களைக் கண்ணாடி செய்"

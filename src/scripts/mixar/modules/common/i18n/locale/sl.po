@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Izhodišče"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Pritrdi kazalec"
 
 msgid "Snap 2D cursor"
 msgstr "Prijemi 2D-kazalec"
-
-msgid "Origin"
-msgstr "Izhodišče"
 
 msgid "Mirror selected UVs"
 msgstr "Zrcali izbrane UV"

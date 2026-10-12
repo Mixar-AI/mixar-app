@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "नाभि / धुरी"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "प्रसंकेतक स्नैप करें"
 
 msgid "Snap 2D cursor"
 msgstr "2D प्रसंकेतक स्नैप करता है"
-
-msgid "Origin"
-msgstr "नाभि / धुरी"
 
 msgid "Mirror selected UVs"
 msgstr "चयनित UV का दर्पण प्रतिबिंब बनाता है"

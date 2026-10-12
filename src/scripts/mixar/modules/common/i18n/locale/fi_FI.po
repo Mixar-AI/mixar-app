@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Origo"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Tartuta kursori"
 
 msgid "Snap 2D cursor"
 msgstr "Tartuta 2D-kursori"
-
-msgid "Origin"
-msgstr "Origo"
 
 msgid "Mirror selected UVs"
 msgstr "Peilaa valitut UV:t"

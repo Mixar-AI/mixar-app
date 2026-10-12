@@ -3149,6 +3149,12 @@ msgstr ""
 msgid "File kind (video, document, text…) that picks the chip glyph"
 msgstr ""
 
+msgid "Origin"
+msgstr "Tọa Độ Gốc"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
@@ -23676,9 +23682,6 @@ msgstr "Bắt Dính Con Trỏ"
 
 msgid "Snap 2D cursor"
 msgstr "Bắt dính con trỏ 2D"
-
-msgid "Origin"
-msgstr "Tọa Độ Gốc"
 
 msgid "Mirror selected UVs"
 msgstr "Phản chiếu đối xứng các UV đã chọn"
