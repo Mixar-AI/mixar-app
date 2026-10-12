@@ -1562,40 +1562,34 @@ msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
 msgid "Could not reset model"
 msgstr "Δεν ήταν δυνατή η επαναφορά μοντέλου"
 
-msgid "Removing your key…"
-msgstr "Αφαίρεση του κλειδιού σας…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Τρέχουσα ρύθμιση"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Λογαριασμός"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Συνδρομή ChatGPT"
 
-msgid "API Key"
-msgstr "Κλειδί API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Αποθηκευμένο με ασφάλεια"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λειτουργεί· οι εργασίες 3D εκτελούνται χωρίς οπτική ανατροφοδότηση."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Αφαίρεση κλειδιού API…"
-
-msgid "Couldn't apply your changes"
-msgstr "Δεν ήταν δυνατή η εφαρμογή των αλλαγών σας"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Οι πιστώσεις Mixar θα χρεώνονται για μελλοντικά αιτήματα του πράκτορα."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Ο πράκτορας Mixar εκτελείται πλέον στον πάροχό σας — οι πιστώσεις Mixar δεν χρεώνονται."
-
-msgid "API key removed"
-msgstr "Το κλειδί API αφαιρέθηκε"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Οι πιστώσεις Mixar χρεώνονται ξανά για αιτήματα του πράκτορα."
+msgid "Removing your key…"
+msgstr "Αφαίρεση του κλειδιού σας…"
 
 msgid "Keep My Key"
 msgstr "Διατήρηση του κλειδιού μου"
 
 msgid "Remove API Key"
 msgstr "Αφαίρεση κλειδιού API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Οι πιστώσεις Mixar χρεώνονται ξανά για αιτήματα του πράκτορα."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Αποσυμπίεση του τοπικού περιβάλλοντος ΤΝ…"
@@ -1643,8 +1643,8 @@ msgstr "Λήφθηκε — δεν εκτελείται"
 msgid "Not downloaded"
 msgstr "Δεν έχει ληφθεί"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Εκτελείται εξ ολοκλήρου σε αυτόν τον υπολογιστή — οι προτροπές σας δεν φεύγουν από αυτόν, εκτός μέσω της ενορχήστρωσης πράκτορα του Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Ακύρωση λήψης"
@@ -1670,8 +1670,8 @@ msgstr "Βασικό URL"
 msgid "API Key (optional)"
 msgstr "Κλειδί API (προαιρετικό)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Οποιοσδήποτε διακομιστής συμβατός με OpenAI σε αυτόν τον υπολογιστή — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Δεν ήταν δυνατή η αποθήκευση του τοπικού παρόχου."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Επικύρωση με τον πάροχο…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar — μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση εργαλείων / συναρτήσεων — ο πράκτορας το χρειάζεται."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ή επικολλήστε το χειροκίνητα"
-
-msgid "{count} characters pasted"
-msgstr "Επικολλήθηκαν χαρακτήρες: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Αφαίρεση κλειδιού API…"
+
+msgid "Validating with provider…"
+msgstr "Επικύρωση με τον πάροχο…"
 
 msgid "Try Again"
 msgstr "Δοκιμή ξανά"
 
 msgid "Save & Activate"
 msgstr "Αποθήκευση και ενεργοποίηση"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Ανανέωση κατάστασης BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Πάροχος LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Μοντέλο για χρήση με τον επιλεγμένο πάροχο"
+
+msgid "API Key"
+msgstr "Κλειδί API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Το κλειδί API σας αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar. Μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
@@ -27034,6 +27040,66 @@ msgstr "Κουμπί δράσης με απόχρωση κινδύνου"
 msgid "Borderless quiet action button"
 msgstr "Ήσυχο κουμπί δράσης χωρίς περίγραμμα"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Τσιπ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Αριστερό ρυθμιστικό κατάστασης"
 
@@ -27198,9 +27264,6 @@ msgstr "Σύμβολο"
 
 msgid "Header glyph"
 msgstr "Σύμβολο κεφαλίδας"
-
-msgid "Chip"
-msgstr "Τσιπ"
 
 msgid "Chip track"
 msgstr "Ράγα τσιπ"

@@ -1562,40 +1562,34 @@ msgstr "Амодель аԥсахра алымшеит"
 msgid "Could not reset model"
 msgstr "Амодель аиҭашьақәыргылара алымшеит"
 
-msgid "Removing your key…"
-msgstr "Шәцаԥха ақәгара иаҿу…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Ари аконфигурациа"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Аккаунт"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT аподписка"
 
-msgid "API Key"
-msgstr "API Ацаԥха"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Ишәарҭаны иеиқәырхоуп"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Аҳәоу мацара амодель — ачат иаусуеит; 3D азаданиақәа авизуалтә азгәаҭарада иҿыцуеит."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API Ацаԥха ақәгара…"
-
-msgid "Couldn't apply your changes"
-msgstr "Шәԥсахрақәа раларҵара алымшеит"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Анаҩстәи агент азыҳәарақәа рзы Mixar акредитқәа ирзихуеит."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar агент уажәы шәпровайдер аҿы иаусуеит — Mixar акредитқәа ирзихуам."
-
-msgid "API key removed"
-msgstr "API ацаԥха иқәган"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Агент азыҳәарақәа рзы Mixar акредитқәа еиҭа ирзихуеит."
+msgid "Removing your key…"
+msgstr "Шәцаԥха ақәгара иаҿу…"
 
 msgid "Keep My Key"
 msgstr "Сара сыцаԥха сыманы"
 
 msgid "Remove API Key"
 msgstr "API Ацаԥха ақәгара"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Агент азыҳәарақәа рзы Mixar акредитқәа еиҭа ирзихуеит."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Ҷыдала AI апрограмма аиҵыхра…"
@@ -1643,8 +1643,8 @@ msgstr "Иҭыган — иҿыцуам"
 msgid "Not downloaded"
 msgstr "Иҭыгам"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Зегьы ари акомпиутер аҿы иаусуеит — шәпромптқәа Mixar агент аоркестрациада иҭыҵуам."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Аҭыгара аҟәыхра"
@@ -1670,8 +1670,8 @@ msgstr "Абазартә URL"
 msgid "API Key (optional)"
 msgstr "API Ацаԥха (иаҭахым)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Ари акомпиутер аҿы OpenAI еиқәыршәоу асервер закәызаалак — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Ҷыдала апровайдер аиқәырхара алымшеит."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Апровайдер ала агәаҭара иаҿу…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Ишифртәны иеиқәырхоуп, Mixar агент азыҳәарақәа рзы мацара ихархәоит — аиқәырхара ашьҭахь иҵәаху аԥхьаԥшра мацара иаарԥшуп."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models аҟынтәи ахьӡ-код закәызаалак, иаҳҳәап anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Аинструмент / афункциа ааԥхьара зыднакыло амодель алх — агент иаҭахуп."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…мамзаргьы анапыла шәҭарҭәа"
-
-msgid "{count} characters pasted"
-msgstr "Иҭарҭәан анбанқәа: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "API Ацаԥха ақәгара…"
+
+msgid "Validating with provider…"
+msgstr "Апровайдер ала агәаҭара иаҿу…"
 
 msgid "Try Again"
 msgstr "Еиҭа шәыԥышәа"
 
 msgid "Save & Activate"
 msgstr "Аиқәырхара & аҿактәра"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK аҭагылазаашьа аиҭарҿыцра"
@@ -1894,6 +1897,9 @@ msgstr "LLM апровайдер"
 
 msgid "Model to use with the selected provider"
 msgstr "Иалху апровайдер ала ихархәатәу амодель"
+
+msgid "API Key"
+msgstr "API Ацаԥха"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "ШәAPI ацаԥха ишифртәны иеиқәырхоуп, Mixar агент азыҳәарақәа рзы мацара ихархәоит. Аиқәырхара ашьҭахь иҵәаху аԥхьаԥшра мацара иаарԥшуп."
@@ -27034,6 +27040,66 @@ msgstr "Ашәарҭа аԥштәы змоу аус акнопка"
 msgid "Borderless quiet action button"
 msgstr "Аҳәаада иҵәу аус акнопка"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Ачип"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Аиҿкаашьа Аслаидер Армарахь"
 
@@ -27198,9 +27264,6 @@ msgstr "Асимвол"
 
 msgid "Header glyph"
 msgstr "Ахы асимвол"
-
-msgid "Chip"
-msgstr "Ачип"
 
 msgid "Chip track"
 msgstr "Ачип амҩа"

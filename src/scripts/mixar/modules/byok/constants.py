@@ -101,5 +101,6 @@ LOCAL_MODE_ITEMS = (
      "(Ollama, LM Studio, llama.cpp, ...)"),
 )
 
-# AI Provider Settings dialog width: two columns (providers | models + key).
-PROVIDER_DIALOG_WIDTH = 860
+# AI Provider Settings dialog width in UI px: the designer's artboard is a 2x
+# export 1502 px wide (see ui/operators/byok_sheet.py for the geometry).
+PROVIDER_DIALOG_WIDTH = 751

@@ -16,9 +16,6 @@ GALLERY = (
     ROOT / "src/scripts/mixar/modules/common/ui/panels/ui_gallery_panel.py"
 )
 CONSTANTS = ROOT / "src/scripts/mixar/modules/common/ui/constants.py"
-BYOK = (
-    ROOT / "src/scripts/mixar/modules/byok/ui/operators/byok_dialog_ui.py"
-)
 DRAW = INTERFACE / "interface_mixar_profile_card_draw.cc"
 CARD = INTERFACE / "interface_mixar_profile_card.cc"
 PAINT = INTERFACE / "interface_mixar_card_paint.hh"
@@ -33,7 +30,6 @@ def test_card_labels_use_named_chrome_recipes():
     paint = PAINT.read_text(encoding="utf-8")
     gallery = GALLERY.read_text(encoding="utf-8")
     constants = CONSTANTS.read_text(encoding="utf-8")
-    byok = BYOK.read_text(encoding="utf-8")
     assert "inline constexpr float card_heading_scale = 1.45f;" in chrome
     assert "inline constexpr int card_heading_weight = 700;" in chrome
     assert "inline constexpr float card_pill_radius = 0.35f;" in chrome
@@ -52,8 +48,6 @@ def test_card_labels_use_named_chrome_recipes():
     assert "MIXAR_CARD_PILL_SCALE" in paint
     assert "MIXAR_CARD_PILL_PAD" in paint
     assert "MIXAR_CARD_PILL_HEIGHT" in paint
-    assert "CARD_ROW_HEADING" in byok
-    assert "CARD_ROW_DIVIDER" in byok
     preview = gallery[gallery.index("def _draw_card_labels_preview") :]
     preview = preview[: preview.index("\ndef ", 1)]
     assert 'kind="HEADING"' in preview

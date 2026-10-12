@@ -12,7 +12,8 @@ where a cursor-anchored dialog would open. So the dialog:
 
 - opens in the main window (a popup inside the small island window would be
   clipped over the composer);
-- opens centred, not under the cursor (``mixar_invoke_props_dialog_centered``;
+- opens centred, not under the cursor, as the designer's sheet — no
+  padding, the framed backdrop (``mixar_invoke_props_dialog_centered(sheet=True)``;
   stock ``invoke_props_dialog`` on a build without it);
 - minimises an open island to its pill for as long as it is up, and restores
   it once the dialog closes, so the result (the toggle) is visible again.
@@ -89,7 +90,11 @@ def open_dialog(context, operator, width):
 
     def invoke():
         if hasattr(wm, 'mixar_invoke_props_dialog_centered'):
-            return wm.mixar_invoke_props_dialog_centered(operator, width=width)
+            try:
+                # The sheet: no padding, the framed backdrop, dividers.
+                return wm.mixar_invoke_props_dialog_centered(operator, width=width, sheet=True)
+            except TypeError:  # a build whose RNA predates the sheet flag
+                return wm.mixar_invoke_props_dialog_centered(operator, width=width)
         return wm.invoke_props_dialog(operator, width=width, title="")
 
     # Override the WINDOW only: the bubble's screen is a temporary one and

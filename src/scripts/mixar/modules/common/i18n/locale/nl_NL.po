@@ -1562,40 +1562,34 @@ msgstr "Kon het model niet wijzigen"
 msgid "Could not reset model"
 msgstr "Kon het model niet resetten"
 
-msgid "Removing your key…"
-msgstr "Uw sleutel wordt verwijderd…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Huidige configuratie"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Account"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-abonnement"
 
-msgid "API Key"
-msgstr "API-sleutel"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Veilig opgeslagen"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model alleen voor tekst — chatten werkt; 3D-taken lopen zonder visuele feedback."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API-sleutel verwijderen…"
-
-msgid "Couldn't apply your changes"
-msgstr "Kon uw wijzigingen niet toepassen"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Voor toekomstige agentverzoeken worden Mixar-credits in rekening gebracht."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "De Mixar-agent draait nu bij uw provider — er worden geen Mixar-credits in rekening gebracht."
-
-msgid "API key removed"
-msgstr "API-sleutel verwijderd"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Voor agentverzoeken worden weer Mixar-credits in rekening gebracht."
+msgid "Removing your key…"
+msgstr "Uw sleutel wordt verwijderd…"
 
 msgid "Keep My Key"
 msgstr "Mijn sleutel behouden"
 
 msgid "Remove API Key"
 msgstr "API-sleutel verwijderen"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Voor agentverzoeken worden weer Mixar-credits in rekening gebracht."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Lokale AI-runtime uitpakken…"
@@ -1643,8 +1643,8 @@ msgstr "Gedownload — niet actief"
 msgid "Not downloaded"
 msgstr "Niet gedownload"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Draait volledig op deze computer — uw prompts verlaten deze alleen via de agentorkestratie van Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Download annuleren"
@@ -1670,8 +1670,8 @@ msgstr "Basis-URL"
 msgid "API Key (optional)"
 msgstr "API-sleutel (optioneel)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Elke OpenAI-compatibele server op deze computer — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Kon de lokale provider niet opslaan."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Valideren bij provider…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Versleuteld opgeslagen, alleen gebruikt voor verzoeken van de Mixar-agent — na het opslaan wordt alleen een gemaskeerde weergave getoond."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Elke slug van openrouter.ai/models, bijv. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Kies een model dat tool- / functieaanroepen ondersteunt — de agent heeft dit nodig."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…of plak het handmatig"
-
-msgid "{count} characters pasted"
-msgstr "{count} tekens geplakt"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "API-sleutel verwijderen…"
+
+msgid "Validating with provider…"
+msgstr "Valideren bij provider…"
 
 msgid "Try Again"
 msgstr "Opnieuw proberen"
 
 msgid "Save & Activate"
 msgstr "Opslaan en activeren"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK-status verversen"
@@ -1894,6 +1897,9 @@ msgstr "LLM-provider"
 
 msgid "Model to use with the selected provider"
 msgstr "Model om te gebruiken met de geselecteerde provider"
+
+msgid "API Key"
+msgstr "API-sleutel"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Uw API-sleutel wordt versleuteld opgeslagen en alleen gebruikt voor verzoeken van de Mixar-agent. Na het opslaan wordt alleen een gemaskeerde weergave getoond."
@@ -27034,6 +27040,66 @@ msgstr "Actieknop in gevarenkleur"
 msgid "Borderless quiet action button"
 msgstr "Rustige actieknop zonder rand"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chip"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Modusschuif links"
 
@@ -27198,9 +27264,6 @@ msgstr "Symbool"
 
 msgid "Header glyph"
 msgstr "Symbool in kopbalk"
-
-msgid "Chip"
-msgstr "Chip"
 
 msgid "Chip track"
 msgstr "Chipspoor"

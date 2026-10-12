@@ -1562,40 +1562,34 @@ msgstr "Моделът не може да бъде сменен"
 msgid "Could not reset model"
 msgstr "Моделът не може да бъде нулиран"
 
-msgid "Removing your key…"
-msgstr "Премахване на ключа ви…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Текуща конфигурация"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Акаунт"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Абонамент за ChatGPT"
 
-msgid "API Key"
-msgstr "API ключ"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Съхранен защитено"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Модел само за текст — чатът работи; 3D задачите се изпълняват без визуална обратна връзка."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Премахни API ключ…"
-
-msgid "Couldn't apply your changes"
-msgstr "Промените ви не можаха да бъдат приложени"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "За бъдещи заявки към агента ще се таксуват кредити на Mixar."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Агентът на Mixar вече работи през вашия доставчик — кредити на Mixar не се таксуват."
-
-msgid "API key removed"
-msgstr "API ключът е премахнат"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Заявките към агента отново се таксуват с кредити на Mixar."
+msgid "Removing your key…"
+msgstr "Премахване на ключа ви…"
 
 msgid "Keep My Key"
 msgstr "Запази ключа ми"
 
 msgid "Remove API Key"
 msgstr "Премахни API ключ"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Заявките към агента отново се таксуват с кредити на Mixar."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Разопаковане на локалната среда за ИИ…"
@@ -1643,8 +1643,8 @@ msgstr "Изтеглен — не работи"
 msgid "Not downloaded"
 msgstr "Не е изтеглен"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Работи изцяло на този компютър — промптовете ви не го напускат, освен през оркестрацията на агента на Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Отказ на изтеглянето"
@@ -1670,8 +1670,8 @@ msgstr "Базов URL"
 msgid "API Key (optional)"
 msgstr "API ключ (незадължителен)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Всеки сървър на този компютър, съвместим с OpenAI — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Локалният доставчик не може да бъде запазен."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Проверка при доставчика…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Съхранява се шифрован и се използва само за заявки към агента на Mixar — след запазване се показва само маскиран преглед."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Всеки slug от openrouter.ai/models, напр. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Изберете модел с извикване на инструменти / функции — агентът се нуждае от това."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…или го поставете ръчно"
-
-msgid "{count} characters pasted"
-msgstr "Поставени знаци: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Премахни API ключ…"
+
+msgid "Validating with provider…"
+msgstr "Проверка при доставчика…"
 
 msgid "Try Again"
 msgstr "Опитайте отново"
 
 msgid "Save & Activate"
 msgstr "Запази и активирай"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Опресни състоянието на BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Доставчик на LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Модел за използване с избрания доставчик"
+
+msgid "API Key"
+msgstr "API ключ"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Вашият API ключ се съхранява шифрован и се използва само за заявки към агента на Mixar. След запазване се показва само маскиран преглед."
@@ -27034,6 +27040,66 @@ msgstr "Бутон за действие с нюанс на опасност"
 msgid "Borderless quiet action button"
 msgstr "Тих бутон за действие без граница"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Чип"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Лява половина на плъзгача за режим"
 
@@ -27198,9 +27264,6 @@ msgstr "Глиф"
 
 msgid "Header glyph"
 msgstr "Глиф на заглавката"
-
-msgid "Chip"
-msgstr "Чип"
 
 msgid "Chip track"
 msgstr "Писта на чипа"

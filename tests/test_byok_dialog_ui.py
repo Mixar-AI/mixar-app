@@ -2,13 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""AI Provider Settings dialog — card design + one-action contract.
+"""AI Provider Settings dialog — the sheet + one-action contract.
 
 Two layers of pinning:
 
 - Functional: `draw_dialog` runs against a fake uiLayout, once with the
-  Mixar card API present and once without (old-C++ fallback). Every
-  dialog state must render crash-free in both modes, and in card mode
+  Mixar sheet/card API present and once without (old-C++ fallback). Every
+  dialog state must render crash-free in both modes, and in sheet mode
   every state must mark exactly ONE button as the active default — the
   flag that suppresses the props dialog's automatic OK/Cancel row (the
   old redundant Save + OK pair) and gives Return a single meaning.
@@ -35,13 +35,16 @@ install_bpy_mock()
 
 from mixar.modules.byok.constants import DIALOG_STATE_ITEMS
 from mixar.modules.byok.core import model_suggestions
-from mixar.modules.byok.ui.operators import byok_dialog_ui, byok_ops
+from mixar.modules.byok.ui.operators import byok_dialog_ui, byok_ops, byok_sheet
 
 INTERFACE_DIR = ROOT / "src" / "source" / "blender" / "editors" / "interface"
 RNA_UI_API = ROOT / "src" / "source" / "blender" / "makesrna" / "intern" / "rna_ui_api.cc"
 WM_OPERATORS = (
     ROOT / "src" / "source" / "blender" / "windowmanager" / "intern" / "wm_operators.cc"
 )
+RNA_WM_MIXAR = ROOT / "src" / "source" / "blender" / "makesrna" / "intern" / "rna_wm_mixar.cc"
+SHEET_CC = INTERFACE_DIR / "interface_mixar_sheet.cc"
+SHEET_HH = INTERFACE_DIR / "interface_mixar_sheet.hh"
 
 ALL_STATES = tuple(item[0] for item in DIALOG_STATE_ITEMS)
 
@@ -62,6 +65,8 @@ class FakeLayout:
         self.alert = False
         self.alignment = 'EXPAND'
         self.scale_y = 1.0
+        self.ui_units_x = 0.0
+        self.ui_units_y = 0.0
         self.use_property_split = False
         self.use_property_decorate = False
 
@@ -83,7 +88,7 @@ class FakeLayout:
         return self._sub()
 
     # -- items --
-    def label(self, text="", icon='NONE'):
+    def label(self, text="", icon='NONE', translate=True):
         self._log.append(f"label:{text}")
 
     def prop(self, data, prop, text="", expand=False):
@@ -119,6 +124,10 @@ class FakeLayout:
             'mixar_input',
             'template_popup_confirm',
             'mixar_cinema_row',
+            'mixar_sheet_frame',
+            'mixar_sheet',
+            'mixar_sheet_label',
+            'mixar_sheet_text_width',
         ):
             if not self.__dict__['_card_api']:
                 raise AttributeError(name)
@@ -146,6 +155,19 @@ class FakeLayout:
 
     def _impl_template_popup_confirm(self, operator, text="", cancel_text=""):
         self._log.append(f"popup_confirm:{cancel_text}")
+
+    def _impl_mixar_sheet_frame(self, header=182.0, sidebar=442.0):
+        self._log.append(f"sheet_frame:{header}:{sidebar}")
+
+    def _impl_mixar_sheet(self, kind='CHIP', lit=False, extra=0.0):
+        self._log.append(f"sheet:{kind}:{lit}")
+
+    def _impl_mixar_sheet_label(self, text="", kind='BODY', lit=False, extra=0.0,
+                                translate=True):
+        self._log.append(f"sheet_label:{kind}:{text}")
+
+    def _impl_mixar_sheet_text_width(self, kind='CHIP', text=""):
+        return 7.0 * len(text)
 
 
 def _wm(state='IDLE', **extra):
@@ -379,28 +401,48 @@ def test_rna_defines_the_card_reuse_functions():
     assert '"active_default"' in source
 
 
-def test_rna_kind_items_cover_every_kind_python_uses():
+def _sheet_kind_items():
     rna = RNA_UI_API.read_text(encoding="utf-8")
-    label_items = re.search(
-        r"mixar_card_label_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
-    button_items = re.search(
-        r"mixar_card_button_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
+    items = re.search(r"mixar_sheet_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
+    return dict((name, int(value)) for value, name in re.findall(r"\{(\d+),\s*\"([A-Z_]+)\"", items))
 
-    byok_dir = SCRIPTS / "mixar" / "modules" / "byok"
-    python = "\n".join(
-        p.read_text(encoding="utf-8") for p in byok_dir.rglob("*.py")
-    )
-    # No trailing \): multi-line calls end with a comma before the paren.
-    label_kinds = set(re.findall(r"card_label\([^)]*?'([A-Z_]+)'", python))
-    button_kinds = set(
-        re.findall(r"(?:op_button|style_last_button|dismiss_button)\("
-                   r"[^)]*?'([A-Z_]+)'", python))
-    assert label_kinds, "no card_label kinds found — regex went stale"
-    assert button_kinds, "no button kinds found — regex went stale"
-    for kind in label_kinds:
-        assert f'"{kind}"' in label_items, f"label kind {kind} missing from RNA items"
-    for kind in button_kinds:
-        assert f'"{kind}"' in button_items, f"button kind {kind} missing from RNA items"
+
+def test_a_long_provider_name_widens_its_pill_but_stops_short_of_the_divider():
+    layout = FakeLayout([], card_api=True)
+    S = byok_sheet
+    # The artboard's pill: 66..379, so a short name keeps the 63 dp margin.
+    assert S.row_right(layout, "OPENAI") == S.ROW_RIGHT
+    # A name that needs more keeps 28 dp of pill on both sides…
+    long_name = "CODEX (CHATGPT SUBS)"   # 20 chars at the fake's 14 dp = 280 dp
+    expected = S.SIDEBAR - S.LEFT_INSET - (280 + 2 * S.ROW_TEXT_X)
+    assert S.ROW_MIN_RIGHT < expected < S.ROW_RIGHT
+    assert S.row_right(layout, long_name) == expected
+    # …until the pill would touch the divider; then the painter ellipsises.
+    assert S.row_right(layout, "X" * 80) == S.ROW_MIN_RIGHT
+
+
+def test_rna_sheet_kinds_cover_every_kind_python_uses():
+    """Every kind the Python sheet kit names is an RNA item, and every RNA
+    value has a case in the painter's switch — a missing case would draw the
+    element as a stock widget."""
+    items = _sheet_kind_items()
+    assert items, "no sheet kinds found — regex went stale"
+    used = {
+        byok_sheet.TITLE, byok_sheet.CLOSE_KIND, byok_sheet.CAPTION,
+        byok_sheet.PROVIDER_ROW, byok_sheet.FOOTER_ROW, byok_sheet.CHIP,
+        byok_sheet.PROMPT, byok_sheet.NOTE, byok_sheet.BODY, byok_sheet.DANGER_TEXT,
+        byok_sheet.PRIMARY, byok_sheet.SECONDARY, byok_sheet.DANGER_BUTTON,
+        byok_sheet.INPUT, byok_sheet.DROPDOWN,
+    }
+    missing = used - set(items)
+    assert not missing, f"sheet kinds missing from RNA items: {missing}"
+    switch = re.search(r"MixarCardElement UI_mixar_sheet_element_from_kind\(.*?\n\}",
+                       SHEET_CC.read_text(encoding="utf-8"), re.S).group(0)
+    for name, value in items.items():
+        assert f"case {value}:" in switch, f"{name} ({value}) has no painter case"
+    # The active-default flag rides on the card-button restyle.
+    for kind in byok_sheet._FLAG_KIND.values():
+        assert f'"{kind}"' in RNA_UI_API.read_text(encoding="utf-8")
 
 
 def test_rna_switches_map_every_declared_item():
@@ -482,19 +524,75 @@ def test_providers_are_rows_and_local_is_the_footer_button(monkeypatch):
         "pick:provider:codex:CODEX (CHATGPT SUB)",
         "pick:provider:local:LOCAL MODEL",
     ]
-    # Exactly one provider and one model wear the graded active pill.
-    assert log.count("cinema_row:ACTIVE") == 2
+    # Exactly one provider row, the foot (not Local) and one model chip are lit.
+    assert log.count("sheet:PROVIDER_ROW:True") == 1
+    assert log.count("sheet:FOOTER_ROW:False") == 1
+    assert log.count("sheet:CHIP:True") == 1
+    assert "sheet_frame:182:442" in log
 
 
 def test_every_supported_model_is_a_chip_and_the_key_names_it(monkeypatch):
     _with_catalog(monkeypatch)
     log = _draw('IDLE', card_api=True, byok_form_provider='anthropic',
                 byok_form_model='claude-sonnet-5-5')
-    assert "card_label:SECTION:ALL SUPPORTED ANTHROPIC MODELS" in log
+    mark = byok_sheet.MARK
+    assert f"sheet_label:CAPTION:ALL SUPPORTED {mark}ANTHROPIC{mark} MODELS" in log
     assert "pick:model:claude-fable-5-1:Claude Fable 5.1" in log
     assert "pick:model:claude-sonnet-5-5:Claude Sonnet 5.5" in log
-    assert "card_label:SECTION:Enter API key for Claude Sonnet 5.5 here." in log
-    assert "input:byok_form_api_key" in log
+    assert "sheet_label:PROMPT:Enter API key for Claude Sonnet 5.5 here." in log
+    assert "prop:byok_form_api_key" in log
+    # Save & Activate docks inside the key field: the field runs under it.
+    assert "sheet:INPUT:False" in log
+    assert "sheet:PRIMARY:False" in log
+
+
+def test_the_sheet_keeps_the_artboard_s_height_until_it_needs_more():
+    """Both columns end on the same line: the key field sits at the foot of
+    the right column and the Local Model foot hugs the card's corner."""
+    S = byok_sheet
+    geo = S.Geometry(n_rows=7, chips_need=S.chips_height(2) + S.GAP, bottom=S.key_block_height())
+    assert geo.height == S.HEIGHT
+    assert geo.left_body + S.FOOTER == geo.right
+    assert geo.fixed_top + geo.area + geo.bottom == geo.right
+    assert geo.area == 436  # chips start at y=334, the prompt block at 770
+
+    tall = S.Geometry(n_rows=14, chips_need=0, bottom=S.key_block_height())
+    assert tall.height > S.HEIGHT
+    assert tall.left_body + S.FOOTER == tall.right
+
+    wide = S.Geometry(n_rows=7, chips_need=S.chips_height(9), bottom=S.key_block_height())
+    assert wide.area >= S.chips_height(9)
+    assert wide.left_body + S.FOOTER == wide.right
+
+
+def test_chips_wrap_like_the_artboard_s_butted_pills():
+    layout = FakeLayout([], card_api=True)
+    rows = byok_sheet.chip_rows(layout, [("a", "x" * 20), ("b", "y" * 20), ("c", "z" * 20)],
+                                avail_dp=2 * (7.0 * 20 * 2 + 2 * byok_sheet.CHIP_PAD) + 1)
+    assert [len(r) for r in rows] == [2, 1]
+    assert rows[0][0][2] == 7.0 * 20 * 2 + 2 * byok_sheet.CHIP_PAD
+
+
+def test_the_dialog_opens_as_a_padding_free_sheet():
+    """`mixar_invoke_props_dialog_centered(sheet=True)` must reach a dialog
+    creator that drops its padding and spacer rows and flags the block, or
+    the painted frame would sit 7 px inside the layout's edges."""
+    host = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+            / "byok_dialog_host.py").read_text(encoding="utf-8")
+    assert "sheet=True" in host
+    rna = RNA_WM_MIXAR.read_text(encoding="utf-8")
+    assert '"sheet"' in rna and "WM_mixar_operator_props_dialog_sheet" in rna
+    wm = WM_OPERATORS.read_text(encoding="utf-8")
+    assert "data->mixar_sheet = true;" in wm
+    assert "data->mixar_sheet ? 0 :" in wm
+    assert "block_flag_enable(block, ui::BLOCK_MIXAR_SHEET)" in wm
+    header = SHEET_HH.read_text(encoding="utf-8")
+    # The Python kit and the painter share the artboard.
+    for name, value in (("frame_radius", 16.0), ("row_h", 59.0), ("chip_h", 49.0),
+                        ("input_h", 81.0), ("footer_h", 76.0), ("chip_pad", 19.0)):
+        assert f"inline constexpr float {name} = {value}f;" in header
+    assert byok_sheet.ROW_H == 59 and byok_sheet.CHIP_H == 49 and byok_sheet.INPUT_H == 81
+    assert byok_sheet.FOOTER == 76 and byok_sheet.CHIP_PAD == 19
 
 
 def test_busy_states_have_no_close_button():

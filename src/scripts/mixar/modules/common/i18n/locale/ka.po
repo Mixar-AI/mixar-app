@@ -1562,40 +1562,34 @@ msgstr "მოდელის შეცვლა ვერ მოხერხდ
 msgid "Could not reset model"
 msgstr "მოდელის პირველსახის დაბრუნება ვერ მოხერხდა"
 
-msgid "Removing your key…"
-msgstr "თქვენი გასაღები იცილება…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "მიმდინარე კონფიგურაცია"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "ანგარიში"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-ის გამოწერა"
 
-msgid "API Key"
-msgstr "API გასაღები"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "დაცულად შენახული"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "მხოლოდ ტექსტის მოდელი — ჩატი მუშაობს; 3D დავალებები ვიზუალური უკუკავშირის გარეშე სრულდება."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API გასაღების მოცილება…"
-
-msgid "Couldn't apply your changes"
-msgstr "ცვლილებების გამოყენება ვერ მოხერხდა"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "მომავალი აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები დაიხარჯება."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar-ის აგენტი ახლა თქვენს პროვაიდერზე მუშაობს — Mixar-ის კრედიტები არ იხარჯება."
-
-msgid "API key removed"
-msgstr "API გასაღები მოცილებულია"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები კვლავ იხარჯება."
+msgid "Removing your key…"
+msgstr "თქვენი გასაღები იცილება…"
 
 msgid "Keep My Key"
 msgstr "ჩემი გასაღების შენარჩუნება"
 
 msgid "Remove API Key"
 msgstr "API გასაღების მოცილება"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "აგენტის მოთხოვნებისთვის Mixar-ის კრედიტები კვლავ იხარჯება."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "ლოკალური AI გარემოს გაშლა…"
@@ -1643,8 +1643,8 @@ msgstr "ჩამოტვირთულია — არ მუშაობს
 msgid "Not downloaded"
 msgstr "არ არის ჩამოტვირთული"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "მთლიანად ამ კომპიუტერზე მუშაობს — თქვენი პრომპტები მას არ ტოვებს, გარდა Mixar-ის აგენტის ორკესტრაციისა."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "ჩამოტვირთვის გაუქმება"
@@ -1670,8 +1670,8 @@ msgstr "საბაზისო URL"
 msgid "API Key (optional)"
 msgstr "API გასაღები (არასავალდებულო)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "ნებისმიერი OpenAI-სთან თავსებადი სერვერი ამ კომპიუტერზე — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "ლოკალური პროვაიდერის შენახვა ვერ მოხერხდა."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "შემოწმება პროვაიდერთან…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "ინახება დაშიფრულად და გამოიყენება მხოლოდ Mixar-ის აგენტის მოთხოვნებისთვის — შენახვის შემდეგ მხოლოდ შენიღბული გადახედვა ჩანს."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "ნებისმიერი სლაგი openrouter.ai/models-დან, მაგ. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "აირჩიეთ მოდელი, რომელსაც ხელსაწყოს / ფუნქციის გამოძახება შეუძლია — აგენტს ეს სჭირდება."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ან ჩასვით ხელით"
-
-msgid "{count} characters pasted"
-msgstr "ჩასმულია {count} სიმბოლო"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "API გასაღების მოცილება…"
+
+msgid "Validating with provider…"
+msgstr "შემოწმება პროვაიდერთან…"
 
 msgid "Try Again"
 msgstr "ხელახლა ცდა"
 
 msgid "Save & Activate"
 msgstr "შენახვა და გააქტიურება"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK მდგომარეობის განახლება"
@@ -1894,6 +1897,9 @@ msgstr "LLM პროვაიდერი"
 
 msgid "Model to use with the selected provider"
 msgstr "მოდელი, რომელიც მონიშნულ პროვაიდერთან გამოიყენება"
+
+msgid "API Key"
+msgstr "API გასაღები"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "თქვენი API გასაღები ინახება დაშიფრულად და გამოიყენება მხოლოდ Mixar-ის აგენტის მოთხოვნებისთვის. შენახვის შემდეგ მხოლოდ შენიღბული გადახედვა ჩანს."
@@ -27034,6 +27040,66 @@ msgstr "საფრთხის ელფერის ქმედების 
 msgid "Borderless quiet action button"
 msgstr "უკონტურო მშვიდი ქმედების ღილაკი"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "ჩიპი"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "რეჟიმის სლაიდერი მარცხნივ"
 
@@ -27198,9 +27264,6 @@ msgstr "გლიფი"
 
 msgid "Header glyph"
 msgstr "კოლონტიტულის გლიფი"
-
-msgid "Chip"
-msgstr "ჩიპი"
 
 msgid "Chip track"
 msgstr "ჩიპის ტრეკი"

@@ -15,9 +15,20 @@
 
 namespace blender {
 
+struct bContext;
+struct wmOperator;
 struct wmWindow;
 struct wmWindowManager;
 struct wmEvent;
+
+/**
+ * `WM_operator_props_dialog_popup` for the AI Provider settings sheet: the
+ * dialog opens centred with no title row, no padding and no spacer rows, and
+ * its block carries `BLOCK_MIXAR_SHEET` so the interface paints the framed
+ * card behind the operator's layout. Returns the `wmOperatorStatus` as an int
+ * (always RUNNING_MODAL; the dialog owns the operator from here).
+ */
+int WM_mixar_operator_props_dialog_sheet(bContext *C, wmOperator *op, int width);
 
 /* Main-thread-only production input. Never enables global QA simulation. */
 void Mixar_ui_control_enable(wmWindowManager *wm, bool enabled);

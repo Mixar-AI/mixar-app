@@ -1562,40 +1562,34 @@ msgstr "Haikuweza kubadilisha modeli"
 msgid "Could not reset model"
 msgstr "Haikuweza kuweka upya modeli"
 
-msgid "Removing your key…"
-msgstr "Inaondoa ufunguo wako…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Usanidi wa sasa"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Akaunti"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Usajili wa ChatGPT"
 
-msgid "API Key"
-msgstr "Ufunguo wa API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Imehifadhiwa kwa usalama"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Modeli ya maandishi pekee — soga hufanya kazi; majukumu ya 3D huendeshwa bila maoni ya kuona."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Ondoa ufunguo wa API…"
-
-msgid "Couldn't apply your changes"
-msgstr "Haikuweza kutumia mabadiliko yako"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Krediti za Mixar zitatozwa kwa maombi yajayo ya wakala."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Wakala wa Mixar sasa anaendeshwa kwa mtoa huduma wako — krediti za Mixar hazitozwi."
-
-msgid "API key removed"
-msgstr "Ufunguo wa API umeondolewa"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Krediti za Mixar zinatozwa tena kwa maombi ya wakala."
+msgid "Removing your key…"
+msgstr "Inaondoa ufunguo wako…"
 
 msgid "Keep My Key"
 msgstr "Weka ufunguo wangu"
 
 msgid "Remove API Key"
 msgstr "Ondoa ufunguo wa API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Krediti za Mixar zinatozwa tena kwa maombi ya wakala."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Inafungua kifurushi cha mazingira ya uendeshaji ya AI ya ndani…"
@@ -1643,8 +1643,8 @@ msgstr "Imepakuliwa — haijaendeshwa"
 msgid "Not downloaded"
 msgstr "Haijapakuliwa"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Huendeshwa yote kwenye kompyuta hii — maagizo yako hayatoki humo isipokuwa kupitia upangaji wa wakala wa Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Ghairi upakuaji"
@@ -1670,8 +1670,8 @@ msgstr "URL ya msingi"
 msgid "API Key (optional)"
 msgstr "Ufunguo wa API (si lazima)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Seva yoyote inayoendana na OpenAI kwenye kompyuta hii — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Haikuweza kuhifadhi mtoa huduma wa ndani."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Inathibitisha na mtoa huduma…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Huhifadhiwa ikiwa imesimbwa, hutumika kwa maombi ya wakala wa Mixar pekee — hakiki iliyofichwa pekee huonyeshwa baada ya kuhifadhi."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…au ibandike kwa mkono"
-
-msgid "{count} characters pasted"
-msgstr "Herufi zilizobandikwa: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Ondoa ufunguo wa API…"
+
+msgid "Validating with provider…"
+msgstr "Inathibitisha na mtoa huduma…"
 
 msgid "Try Again"
 msgstr "Jaribu tena"
 
 msgid "Save & Activate"
 msgstr "Hifadhi na uwashe"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Onyesha upya hali ya BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Mtoa huduma wa LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Modeli ya kutumia na mtoa huduma aliyechaguliwa"
+
+msgid "API Key"
+msgstr "Ufunguo wa API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Ufunguo wako wa API huhifadhiwa ukiwa umesimbwa na hutumika kwa maombi ya wakala wa Mixar pekee. Baada ya kuhifadhi, hakiki iliyofichwa pekee huonyeshwa."
@@ -27034,6 +27040,66 @@ msgstr "Kitufe cha kitendo chenye rangi ya hatari"
 msgid "Borderless quiet action button"
 msgstr "Kitufe cha kitendo tulivu bila mpaka"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chipu"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Kitelezi cha modi, kushoto"
 
@@ -27198,9 +27264,6 @@ msgstr "Glyph"
 
 msgid "Header glyph"
 msgstr "Glyph ya kichwa"
-
-msgid "Chip"
-msgstr "Chipu"
 
 msgid "Chip track"
 msgstr "Njia ya chipu"

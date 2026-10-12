@@ -1562,40 +1562,34 @@ msgstr "Tidak dapat mengganti model"
 msgid "Could not reset model"
 msgstr "Tidak dapat menyetel ulang model"
 
-msgid "Removing your key…"
-msgstr "Menghapus kunci Anda…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Konfigurasi Saat Ini"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Akun"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Langganan ChatGPT"
 
-msgid "API Key"
-msgstr "Kunci API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Disimpan dengan aman"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model khusus teks — obrolan berfungsi; tugas 3D berjalan tanpa umpan balik visual."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Hapus Kunci API…"
-
-msgid "Couldn't apply your changes"
-msgstr "Tidak dapat menerapkan perubahan Anda"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Kredit Mixar akan dikenakan untuk permintaan agen berikutnya."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Agen Mixar kini berjalan di penyedia Anda — kredit Mixar tidak dikenakan."
-
-msgid "API key removed"
-msgstr "Kunci API dihapus"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Kredit Mixar kembali dikenakan untuk permintaan agen."
+msgid "Removing your key…"
+msgstr "Menghapus kunci Anda…"
 
 msgid "Keep My Key"
 msgstr "Pertahankan Kunci Saya"
 
 msgid "Remove API Key"
 msgstr "Hapus Kunci API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Kredit Mixar kembali dikenakan untuk permintaan agen."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Mengekstrak runtime AI lokal…"
@@ -1643,8 +1643,8 @@ msgstr "Terunduh — tidak berjalan"
 msgid "Not downloaded"
 msgstr "Belum diunduh"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Berjalan sepenuhnya di komputer ini — prompt Anda tidak pernah keluar darinya kecuali melalui orkestrasi agen Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Batalkan Unduhan"
@@ -1670,8 +1670,8 @@ msgstr "URL Dasar"
 msgid "API Key (optional)"
 msgstr "Kunci API (opsional)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Server apa pun yang kompatibel dengan OpenAI di komputer ini — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Tidak dapat menyimpan penyedia lokal."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Memvalidasi dengan penyedia…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Disimpan terenkripsi, hanya digunakan untuk permintaan agen Mixar — hanya pratinjau tersamar yang ditampilkan setelah disimpan."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Pilih model yang mendukung pemanggilan tool / fungsi — agen memerlukannya."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…atau tempel secara manual"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter ditempel"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Hapus Kunci API…"
+
+msgid "Validating with provider…"
+msgstr "Memvalidasi dengan penyedia…"
 
 msgid "Try Again"
 msgstr "Coba Lagi"
 
 msgid "Save & Activate"
 msgstr "Simpan & Aktifkan"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Segarkan Status BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Penyedia LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Model yang digunakan dengan penyedia terpilih"
+
+msgid "API Key"
+msgstr "Kunci API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Kunci API Anda disimpan terenkripsi dan hanya digunakan untuk permintaan agen Mixar. Setelah disimpan, hanya pratinjau tersamar yang ditampilkan."
@@ -27034,6 +27040,66 @@ msgstr "Tombol aksi berwarna bahaya"
 msgid "Borderless quiet action button"
 msgstr "Tombol aksi senyap tanpa garis tepi"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chip"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Penggeser Mode Kiri"
 
@@ -27198,9 +27264,6 @@ msgstr "Glif"
 
 msgid "Header glyph"
 msgstr "Glif kepala"
-
-msgid "Chip"
-msgstr "Chip"
 
 msgid "Chip track"
 msgstr "Jalur chip"

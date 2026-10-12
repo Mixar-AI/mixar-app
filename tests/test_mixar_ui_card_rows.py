@@ -16,9 +16,6 @@ GALLERY = (
     ROOT / "src/scripts/mixar/modules/common/ui/panels/ui_gallery_panel.py"
 )
 CONSTANTS = ROOT / "src/scripts/mixar/modules/common/ui/constants.py"
-BYOK = (
-    ROOT / "src/scripts/mixar/modules/byok/ui/operators/byok_dialog_ui.py"
-)
 CARD = INTERFACE / "interface_mixar_profile_card.cc"
 
 
@@ -33,7 +30,6 @@ def test_card_rows_use_named_chrome_recipes():
     card = CARD.read_text(encoding="utf-8")
     gallery = GALLERY.read_text(encoding="utf-8")
     constants = CONSTANTS.read_text(encoding="utf-8")
-    byok = BYOK.read_text(encoding="utf-8")
     assert "inline constexpr float card_row_field = 1.45f;" in chrome
     assert "inline constexpr float card_row_cta = 1.7f;" in chrome
     assert "inline constexpr float card_row_action = 1.9f;" in chrome
@@ -47,9 +43,6 @@ def test_card_rows_use_named_chrome_recipes():
     assert "mixar_chrome::card_row_cta" in card
     assert "mixar_chrome::card_row_action" in card
     assert "ROW_CREDIT_BALANCE = mixar_chrome::card_row_heading" in card
-    assert "CARD_ROW_FIELD" in byok
-    assert "CARD_ROW_CTA" in byok
-    assert "ACTION_SCALE_Y = CARD_ROW_CTA" in byok
     preview = gallery[gallery.index("def _draw_card_rows_preview") :]
     preview = preview[: preview.index("\ndef ", 1)]
     assert "CARD_ROW_FIELD" in preview

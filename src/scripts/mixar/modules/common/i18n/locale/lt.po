@@ -1562,40 +1562,34 @@ msgstr "Modelio pakeisti nepavyko"
 msgid "Could not reset model"
 msgstr "Modelio atkurti nepavyko"
 
-msgid "Removing your key…"
-msgstr "Šalinamas jūsų raktas…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Dabartinė konfigūracija"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Paskyra"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT prenumerata"
 
-msgid "API Key"
-msgstr "API raktas"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Saugoma saugiai"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Tik tekstinis modelis — pokalbiai veikia; 3D užduotys vykdomos be vaizdinio grįžtamojo ryšio."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Pašalinti API raktą…"
-
-msgid "Couldn't apply your changes"
-msgstr "Nepavyko pritaikyti jūsų pakeitimų"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Už būsimas agento užklausas bus skaičiuojami Mixar kreditai."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agentas dabar veikia jūsų teikėju — Mixar kreditai neskaičiuojami."
-
-msgid "API key removed"
-msgstr "API raktas pašalintas"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Už agento užklausas vėl skaičiuojami Mixar kreditai."
+msgid "Removing your key…"
+msgstr "Šalinamas jūsų raktas…"
 
 msgid "Keep My Key"
 msgstr "Palikti mano raktą"
 
 msgid "Remove API Key"
 msgstr "Pašalinti API raktą"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Už agento užklausas vėl skaičiuojami Mixar kreditai."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Išpakuojama vietinė DI vykdymo aplinka…"
@@ -1643,8 +1643,8 @@ msgstr "Atsisiųsta — neveikia"
 msgid "Not downloaded"
 msgstr "Neatsisiųsta"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Veikia tik šiame kompiuteryje — jūsų raginimai jo nepalieka, išskyrus Mixar agento orkestravimą."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Atšaukti atsisiuntimą"
@@ -1670,8 +1670,8 @@ msgstr "Bazinis URL"
 msgid "API Key (optional)"
 msgstr "API raktas (neprivaloma)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bet kuris su OpenAI suderinamas serveris šiame kompiuteryje — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Vietinio teikėjo išsaugoti nepavyko."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Tikrinama pas teikėją…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Saugoma šifruotai, naudojama tik Mixar agento užklausoms — išsaugojus rodoma tik užmaskuota peržiūra."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bet kuris identifikatorius iš openrouter.ai/models, pvz. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Pasirinkite modelį, kuris palaiko įrankių / funkcijų iškvietimą — agentui to reikia."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…arba įklijuokite rankiniu būdu"
-
-msgid "{count} characters pasted"
-msgstr "Įklijuota simbolių: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Pašalinti API raktą…"
+
+msgid "Validating with provider…"
+msgstr "Tikrinama pas teikėją…"
 
 msgid "Try Again"
 msgstr "Bandyti dar kartą"
 
 msgid "Save & Activate"
 msgstr "Išsaugoti ir įjungti"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Atnaujinti BYOK būseną"
@@ -1894,6 +1897,9 @@ msgstr "LLM teikėjas"
 
 msgid "Model to use with the selected provider"
 msgstr "Modelis, naudojamas su pasirinktu teikėju"
+
+msgid "API Key"
+msgstr "API raktas"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Jūsų API raktas saugomas šifruotas ir naudojamas tik Mixar agento užklausoms. Išsaugojus rodoma tik užmaskuota peržiūra."
@@ -27034,6 +27040,66 @@ msgstr "Pavojaus atspalvio veiksmo mygtukas"
 msgid "Borderless quiet action button"
 msgstr "Tylus veiksmo mygtukas be kraštinės"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Lustas"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Veiksenos slankiklis kairėje"
 
@@ -27198,9 +27264,6 @@ msgstr "Glifas"
 
 msgid "Header glyph"
 msgstr "Antraštės glifas"
-
-msgid "Chip"
-msgstr "Lustas"
 
 msgid "Chip track"
 msgstr "Lusto takelis"

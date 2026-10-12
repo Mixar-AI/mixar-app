@@ -1562,40 +1562,34 @@ msgstr "Model nije bilo moguće promijeniti"
 msgid "Could not reset model"
 msgstr "Model nije bilo moguće poništiti"
 
-msgid "Removing your key…"
-msgstr "Uklanjanje vašeg ključa…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Trenutačna konfiguracija"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Račun"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Pretplata na ChatGPT"
 
-msgid "API Key"
-msgstr "API ključ"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Sigurno pohranjeno"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model samo za tekst — razgovor radi; 3D zadaci idu bez vizualne povratne informacije."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Ukloni API ključ…"
-
-msgid "Couldn't apply your changes"
-msgstr "Promjene nije bilo moguće primijeniti"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Mixar krediti trošit će se za buduće zahtjeve agenta."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agent sada radi na vašem pružatelju — Mixar krediti se ne troše."
-
-msgid "API key removed"
-msgstr "API ključ uklonjen"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Mixar krediti opet se troše za zahtjeve agenta."
+msgid "Removing your key…"
+msgstr "Uklanjanje vašeg ključa…"
 
 msgid "Keep My Key"
 msgstr "Zadrži moj ključ"
 
 msgid "Remove API Key"
 msgstr "Ukloni API ključ"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Mixar krediti opet se troše za zahtjeve agenta."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Raspakiravanje lokalnog AI izvedbenog okruženja…"
@@ -1643,8 +1643,8 @@ msgstr "Preuzeto — nije pokrenuto"
 msgid "Not downloaded"
 msgstr "Nije preuzeto"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Radi u cijelosti na ovom računalu — vaši upiti ne napuštaju ga osim kroz orkestraciju Mixar agenta."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Odustani od preuzimanja"
@@ -1670,8 +1670,8 @@ msgstr "Osnovni URL"
 msgid "API Key (optional)"
 msgstr "API ključ (neobavezno)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bilo koji poslužitelj kompatibilan s OpenAI na ovom računalu — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Lokalnog pružatelja nije bilo moguće spremiti."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Provjera kod pružatelja…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Pohranjeno šifrirano, upotrebljava se samo za zahtjeve Mixar agenta — nakon spremanja prikazuje se samo maskirani pretpregled."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bilo koji slug s openrouter.ai/models, npr. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Odaberite model koji podržava pozivanje alata / funkcija — agentu je to potrebno."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ili ga zalijepite ručno"
-
-msgid "{count} characters pasted"
-msgstr "Zalijepljeno znakova: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Ukloni API ključ…"
+
+msgid "Validating with provider…"
+msgstr "Provjera kod pružatelja…"
 
 msgid "Try Again"
 msgstr "Pokušaj ponovno"
 
 msgid "Save & Activate"
 msgstr "Spremi i aktiviraj"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Osvježi BYOK stanje"
@@ -1894,6 +1897,9 @@ msgstr "LLM pružatelj"
 
 msgid "Model to use with the selected provider"
 msgstr "Model za upotrebu s odabranim pružateljem"
+
+msgid "API Key"
+msgstr "API ključ"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Vaš API ključ pohranjen je šifrirano i upotrebljava se samo za zahtjeve Mixar agenta. Nakon spremanja prikazuje se samo maskirani pretpregled."
@@ -27034,6 +27040,66 @@ msgstr "Gumb radnje u boji opasnosti"
 msgid "Borderless quiet action button"
 msgstr "Tihi gumb radnje bez ruba"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Značka"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Lijeva strana klizača načina"
 
@@ -27198,9 +27264,6 @@ msgstr "Glif"
 
 msgid "Header glyph"
 msgstr "Glif zaglavlja"
-
-msgid "Chip"
-msgstr "Značka"
 
 msgid "Chip track"
 msgstr "Staza značke"

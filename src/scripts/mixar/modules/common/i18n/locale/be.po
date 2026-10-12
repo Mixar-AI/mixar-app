@@ -1562,40 +1562,34 @@ msgstr "Не ўдалося змяніць мадэль"
 msgid "Could not reset model"
 msgstr "Не ўдалося скінуць мадэль"
 
-msgid "Removing your key…"
-msgstr "Выдаленне вашага ключа…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Бягучая канфігурацыя"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Уліковы запіс"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Падпіска ChatGPT"
 
-msgid "API Key"
-msgstr "Ключ API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Захоўваецца бяспечна"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Толькі тэкставая мадэль — чат працуе; задачы 3D выконваюцца без візуальнай зваротнай сувязі."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Выдаліць ключ API…"
-
-msgid "Couldn't apply your changes"
-msgstr "Не ўдалося ўжыць вашы змены"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "За будучыя запыты агента будуць спісвацца крэдыты Mixar."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Агент Mixar цяпер працуе праз вашага пастаўшчыка — крэдыты Mixar не спісваюцца."
-
-msgid "API key removed"
-msgstr "Ключ API выдалены"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "За запыты агента зноў спісваюцца крэдыты Mixar."
+msgid "Removing your key…"
+msgstr "Выдаленне вашага ключа…"
 
 msgid "Keep My Key"
 msgstr "Пакінуць мой ключ"
 
 msgid "Remove API Key"
 msgstr "Выдаліць ключ API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "За запыты агента зноў спісваюцца крэдыты Mixar."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Распакоўванне лакальнага асяроддзя ШІ…"
@@ -1643,8 +1643,8 @@ msgstr "Спампавана — не запушчана"
 msgid "Not downloaded"
 msgstr "Не спампавана"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Працуе цалкам на гэтым камп'ютары — вашы промпты не пакідаюць яго, акрамя аркестрацыі агента Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Скасаваць спампоўванне"
@@ -1670,8 +1670,8 @@ msgstr "Базавы URL"
 msgid "API Key (optional)"
 msgstr "Ключ API (неабавязкова)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Любы сумяшчальны з OpenAI сервер на гэтым камп'ютары — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Не ўдалося захаваць лакальнага пастаўшчыка."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Праверка ў пастаўшчыка…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Захоўваецца зашыфраваным і выкарыстоўваецца толькі для запытаў агента Mixar — пасля захавання паказваецца толькі замаскіраваны перадпрагляд."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Любы slug з openrouter.ai/models, напрыклад anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Выберыце мадэль з падтрымкай выкліку інструментаў / функцый — агенту гэта патрэбна."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…або ўстаўце ўручную"
-
-msgid "{count} characters pasted"
-msgstr "Устаўлена знакаў: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Выдаліць ключ API…"
+
+msgid "Validating with provider…"
+msgstr "Праверка ў пастаўшчыка…"
 
 msgid "Try Again"
 msgstr "Паспрабаваць яшчэ"
 
 msgid "Save & Activate"
 msgstr "Захаваць і актываваць"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Абнавіць стан BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Пастаўшчык LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Мадэль для выбранага пастаўшчыка"
+
+msgid "API Key"
+msgstr "Ключ API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Ваш ключ API захоўваецца зашыфраваным і выкарыстоўваецца толькі для запытаў агента Mixar. Пасля захавання паказваецца толькі замаскіраваны перадпрагляд."
@@ -27034,6 +27040,66 @@ msgstr "Кнопка дзеяння адцення небяспекі"
 msgid "Borderless quiet action button"
 msgstr "Ціхая кнопка дзеяння без мяжы"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Чып"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Левая частка паўзунка рэжыму"
 
@@ -27198,9 +27264,6 @@ msgstr "Гліф"
 
 msgid "Header glyph"
 msgstr "Гліф загалоўка"
-
-msgid "Chip"
-msgstr "Чып"
 
 msgid "Chip track"
 msgstr "Дарожка чыпа"

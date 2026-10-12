@@ -1562,40 +1562,34 @@ msgstr "Model değiştirilemedi"
 msgid "Could not reset model"
 msgstr "Model sıfırlanamadı"
 
-msgid "Removing your key…"
-msgstr "Anahtarınız kaldırılıyor…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Geçerli Yapılandırma"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Hesap"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT aboneliği"
 
-msgid "API Key"
-msgstr "API Anahtarı"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Güvenli şekilde saklanıyor"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Yalnızca metin modeli — sohbet çalışır; 3B görevler görsel geri bildirim olmadan çalışır."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API Anahtarını Kaldır…"
-
-msgid "Couldn't apply your changes"
-msgstr "Değişiklikleriniz uygulanamadı"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Sonraki ajan istekleri için Mixar kredisi harcanacak."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar ajanı artık sizin sağlayıcınızda çalışıyor — Mixar kredisi harcanmaz."
-
-msgid "API key removed"
-msgstr "API anahtarı kaldırıldı"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Ajan istekleri için yeniden Mixar kredisi harcanıyor."
+msgid "Removing your key…"
+msgstr "Anahtarınız kaldırılıyor…"
 
 msgid "Keep My Key"
 msgstr "Anahtarımı Koru"
 
 msgid "Remove API Key"
 msgstr "API Anahtarını Kaldır"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Ajan istekleri için yeniden Mixar kredisi harcanıyor."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Yerel YZ çalışma ortamı açılıyor…"
@@ -1643,8 +1643,8 @@ msgstr "İndirildi — çalışmıyor"
 msgid "Not downloaded"
 msgstr "İndirilmedi"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Tamamen bu bilgisayarda çalışır — istemleriniz, Mixar'ın ajan orkestrasyonu dışında bu bilgisayardan asla çıkmaz."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "İndirmeyi İptal Et"
@@ -1670,8 +1670,8 @@ msgstr "Temel URL"
 msgid "API Key (optional)"
 msgstr "API Anahtarı (isteğe bağlı)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bu bilgisayardaki herhangi bir OpenAI uyumlu sunucu — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Yerel sağlayıcı kaydedilemedi."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Sağlayıcıyla doğrulanıyor…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Şifrelenmiş olarak saklanır, yalnızca Mixar ajan istekleri için kullanılır — kaydettikten sonra yalnızca maskelenmiş bir önizleme gösterilir."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models adresindeki herhangi bir kısa ad, örn. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Araç / işlev çağırmayı destekleyen bir model seçin — ajan buna ihtiyaç duyar."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…veya elle yapıştırın"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter yapıştırıldı"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "API Anahtarını Kaldır…"
+
+msgid "Validating with provider…"
+msgstr "Sağlayıcıyla doğrulanıyor…"
 
 msgid "Try Again"
 msgstr "Tekrar Dene"
 
 msgid "Save & Activate"
 msgstr "Kaydet ve Etkinleştir"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK Durumunu Yenile"
@@ -1894,6 +1897,9 @@ msgstr "LLM sağlayıcısı"
 
 msgid "Model to use with the selected provider"
 msgstr "Seçili sağlayıcıyla kullanılacak model"
+
+msgid "API Key"
+msgstr "API Anahtarı"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "API anahtarınız şifrelenmiş olarak saklanır ve yalnızca Mixar ajan istekleri için kullanılır. Kaydettikten sonra yalnızca maskelenmiş bir önizleme gösterilir."
@@ -27034,6 +27040,66 @@ msgstr "Tehlike renkli eylem düğmesi"
 msgid "Borderless quiet action button"
 msgstr "Kenarlıksız sade eylem düğmesi"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Çip"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Kip Kaydırıcısı Sol"
 
@@ -27198,9 +27264,6 @@ msgstr "Glif"
 
 msgid "Header glyph"
 msgstr "Üstbilgi glifi"
-
-msgid "Chip"
-msgstr "Çip"
 
 msgid "Chip track"
 msgstr "Çip izi"

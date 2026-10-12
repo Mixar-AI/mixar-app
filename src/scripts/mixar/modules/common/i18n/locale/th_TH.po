@@ -1562,40 +1562,34 @@ msgstr "ไม่สามารถเปลี่ยนโมเดลได้
 msgid "Could not reset model"
 msgstr "ไม่สามารถรีเซ็ตโมเดลได้"
 
-msgid "Removing your key…"
-msgstr "กำลังลบคีย์ของคุณ…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "การกำหนดค่าปัจจุบัน"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "บัญชี"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "การสมัครใช้งาน ChatGPT"
 
-msgid "API Key"
-msgstr "คีย์ API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "จัดเก็บอย่างปลอดภัย"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "โมเดลข้อความอย่างเดียว — แชตได้ตามปกติ แต่งาน 3D จะทำงานโดยไม่มีการตอบกลับด้วยภาพ"
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "ลบคีย์ API…"
-
-msgid "Couldn't apply your changes"
-msgstr "ไม่สามารถนำการเปลี่ยนแปลงของคุณไปใช้ได้"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "คำขอของเอเจนต์หลังจากนี้จะมีการหักเครดิต Mixar"
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "ขณะนี้เอเจนต์ Mixar ทำงานบนผู้ให้บริการของคุณ — ไม่มีการหักเครดิต Mixar"
-
-msgid "API key removed"
-msgstr "ลบคีย์ API แล้ว"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "คำขอของเอเจนต์จะมีการหักเครดิต Mixar อีกครั้ง"
+msgid "Removing your key…"
+msgstr "กำลังลบคีย์ของคุณ…"
 
 msgid "Keep My Key"
 msgstr "เก็บคีย์ของฉันไว้"
 
 msgid "Remove API Key"
 msgstr "ลบคีย์ API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "คำขอของเอเจนต์จะมีการหักเครดิต Mixar อีกครั้ง"
 
 msgid "Unpacking the local AI runtime…"
 msgstr "กำลังแตกไฟล์รันไทม์ AI ในเครื่อง…"
@@ -1643,8 +1643,8 @@ msgstr "ดาวน์โหลดแล้ว — ไม่ได้ทำง�
 msgid "Not downloaded"
 msgstr "ยังไม่ได้ดาวน์โหลด"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "ทำงานบนคอมพิวเตอร์เครื่องนี้ทั้งหมด — พรอมต์ของคุณจะไม่ออกจากเครื่อง ยกเว้นผ่านการประสานงานเอเจนต์ของ Mixar"
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "ยกเลิกการดาวน์โหลด"
@@ -1670,8 +1670,8 @@ msgstr "URL หลัก"
 msgid "API Key (optional)"
 msgstr "คีย์ API (ไม่บังคับ)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "เซิร์ฟเวอร์ใดก็ได้ที่รองรับ OpenAI บนคอมพิวเตอร์เครื่องนี้ — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "ไม่สามารถบันทึกผู้ให้บริการในเครื่องได้"
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "กำลังตรวจสอบกับผู้ให้บริการ…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "จัดเก็บแบบเข้ารหัส ใช้สำหรับคำขอของเอเจนต์ Mixar เท่านั้น — หลังบันทึกจะแสดงเฉพาะตัวอย่างที่ปิดบังไว้"
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "slug ใดก็ได้จาก openrouter.ai/models เช่น anthropic/claude-opus-4.8"
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "เลือกโมเดลที่รองรับการเรียกใช้เครื่องมือ / ฟังก์ชัน — เอเจนต์จำเป็นต้องใช้"
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…หรือวางด้วยตนเอง"
-
-msgid "{count} characters pasted"
-msgstr "วางแล้ว {count} อักขระ"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "ลบคีย์ API…"
+
+msgid "Validating with provider…"
+msgstr "กำลังตรวจสอบกับผู้ให้บริการ…"
 
 msgid "Try Again"
 msgstr "ลองอีกครั้ง"
 
 msgid "Save & Activate"
 msgstr "บันทึกและเปิดใช้งาน"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "รีเฟรชสถานะ BYOK"
@@ -1894,6 +1897,9 @@ msgstr "ผู้ให้บริการ LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "โมเดลที่จะใช้กับผู้ให้บริการที่เลือก"
+
+msgid "API Key"
+msgstr "คีย์ API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "คีย์ API ของคุณถูกจัดเก็บแบบเข้ารหัสและใช้สำหรับคำขอของเอเจนต์ Mixar เท่านั้น หลังบันทึกจะแสดงเฉพาะตัวอย่างที่ปิดบังไว้"
@@ -27034,6 +27040,66 @@ msgstr "ปุ่มการกระทำโทนอันตราย"
 msgid "Borderless quiet action button"
 msgstr "ปุ่มการกระทำเงียบไร้ขอบ"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "ชิป"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "แถบเลื่อนโหมดซ้าย"
 
@@ -27198,9 +27264,6 @@ msgstr "สัญลักษณ์"
 
 msgid "Header glyph"
 msgstr "สัญลักษณ์หัวเรื่อง"
-
-msgid "Chip"
-msgstr "ชิป"
 
 msgid "Chip track"
 msgstr "รางชิป"

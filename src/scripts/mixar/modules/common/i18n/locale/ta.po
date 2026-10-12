@@ -1562,40 +1562,34 @@ msgstr "மாதிரியை மாற்ற முடியவில்ல�
 msgid "Could not reset model"
 msgstr "மாதிரியை மீட்டமைக்க முடியவில்லை"
 
-msgid "Removing your key…"
-msgstr "உங்கள் விசையை அகற்றுகிறது…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "நடப்பு அமைவு"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "கணக்கு"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT சந்தா"
 
-msgid "API Key"
-msgstr "API விசை"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "பாதுகாப்பாகச் சேமிக்கப்பட்டது"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "உரை மட்டும் மாதிரி — அரட்டை வேலை செய்யும்; 3D பணிகள் காட்சிப் பின்னூட்டம் இல்லாமல் இயங்கும்."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API விசையை அகற்று…"
-
-msgid "Couldn't apply your changes"
-msgstr "உங்கள் மாற்றங்களைப் பயன்படுத்த முடியவில்லை"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "வரும் முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படும்."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar முகவர் இப்போது உங்கள் வழங்குநரில் இயங்குகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
-
-msgid "API key removed"
-msgstr "API விசை அகற்றப்பட்டது"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் மீண்டும் வசூலிக்கப்படும்."
+msgid "Removing your key…"
+msgstr "உங்கள் விசையை அகற்றுகிறது…"
 
 msgid "Keep My Key"
 msgstr "என் விசையை வை"
 
 msgid "Remove API Key"
 msgstr "API விசையை அகற்று"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் மீண்டும் வசூலிக்கப்படும்."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "உள்ளக AI இயக்க நேரத்தை விரித்துக் கொள்கிறது…"
@@ -1643,8 +1643,8 @@ msgstr "பதிவிறக்கப்பட்டது — இயங்க�
 msgid "Not downloaded"
 msgstr "பதிவிறக்கப்படவில்லை"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "முழுவதும் இந்தக் கணினியிலேயே இயங்கும் — Mixar-இன் முகவர் ஒருங்கிணைப்பு வழியாகத் தவிர உங்கள் ப்ராம்ப்ட்கள் இதை விட்டு வெளியேறாது."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "பதிவிறக்கம் ரத்துசெய்"
@@ -1670,8 +1670,8 @@ msgstr "அடிப்படை URL"
 msgid "API Key (optional)"
 msgstr "API விசை (விருப்பம்)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "இந்தக் கணினியில் உள்ள ஏதேனும் OpenAI-இணக்கச் சேவையகம் — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "உள்ளக வழங்குநரைச் சேமிக்க முடியவில்லை."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "வழங்குநரிடம் சரிபார்க்கிறது…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
-
-msgid "{count} characters pasted"
-msgstr "ஒட்டிய எழுத்துகள்: {count}"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "API விசையை அகற்று…"
+
+msgid "Validating with provider…"
+msgstr "வழங்குநரிடம் சரிபார்க்கிறது…"
 
 msgid "Try Again"
 msgstr "மீண்டும் முயல்"
 
 msgid "Save & Activate"
 msgstr "சேமித்து இயக்கு"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK நிலையைப் புதுப்பி"
@@ -1894,6 +1897,9 @@ msgstr "LLM வழங்குநர்"
 
 msgid "Model to use with the selected provider"
 msgstr "தேர்ந்தெடுத்த வழங்குநருடன் பயன்படுத்த வேண்டிய மாதிரி"
+
+msgid "API Key"
+msgstr "API விசை"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "உங்கள் API விசை மறைகுறியாக்கிச் சேமிக்கப்பட்டு Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும். சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
@@ -27034,6 +27040,66 @@ msgstr "அபாயச் சாயல் செயல் பொத்தான
 msgid "Borderless quiet action button"
 msgstr "எல்லையற்ற அமைதியான செயல் பொத்தான்"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "சிப்"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "பயன்முறை சறுக்கி இடது"
 
@@ -27198,9 +27264,6 @@ msgstr "குறியுரு"
 
 msgid "Header glyph"
 msgstr "தலைப்புக் குறியுரு"
-
-msgid "Chip"
-msgstr "சிப்"
 
 msgid "Chip track"
 msgstr "சிப் தடம்"

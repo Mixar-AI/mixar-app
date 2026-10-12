@@ -1562,40 +1562,34 @@ msgstr "Không thể đổi mô hình"
 msgid "Could not reset model"
 msgstr "Không thể hoàn lại mô hình"
 
-msgid "Removing your key…"
-msgstr "Đang xóa khóa của bạn…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Cấu Hình Hiện Tại"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Tài Khoản"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Gói đăng ký ChatGPT"
 
-msgid "API Key"
-msgstr "Khóa API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Được lưu an toàn"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Mô hình chỉ văn bản — trò chuyện hoạt động; nhiệm vụ 3D chạy mà không có phản hồi hình ảnh."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Xóa Khóa API…"
-
-msgid "Couldn't apply your changes"
-msgstr "Không thể áp dụng thay đổi của bạn"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Tín dụng Mixar sẽ bị trừ cho các yêu cầu tác nhân sau này."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Tác nhân Mixar hiện chạy trên nhà cung cấp của bạn — không trừ tín dụng Mixar."
-
-msgid "API key removed"
-msgstr "Đã xóa khóa API"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Tín dụng Mixar lại bị trừ cho các yêu cầu tác nhân."
+msgid "Removing your key…"
+msgstr "Đang xóa khóa của bạn…"
 
 msgid "Keep My Key"
 msgstr "Giữ Khóa của Tôi"
 
 msgid "Remove API Key"
 msgstr "Xóa Khóa API"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Tín dụng Mixar lại bị trừ cho các yêu cầu tác nhân."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Đang giải nén môi trường chạy AI cục bộ…"
@@ -1643,8 +1643,8 @@ msgstr "Đã tải xuống — chưa chạy"
 msgid "Not downloaded"
 msgstr "Chưa tải xuống"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Chạy hoàn toàn trên máy tính này — lời nhắc của bạn không bao giờ rời khỏi máy trừ khi qua cơ chế điều phối tác nhân của Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Hủy Tải Xuống"
@@ -1670,8 +1670,8 @@ msgstr "URL Cơ Sở"
 msgid "API Key (optional)"
 msgstr "Khóa API (tùy chọn)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bất kỳ máy chủ tương thích OpenAI nào trên máy tính này — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Không thể lưu nhà cung cấp cục bộ."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Đang xác thực với nhà cung cấp…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Được lưu dạng mã hóa, chỉ dùng cho các yêu cầu tác nhân Mixar — sau khi lưu chỉ hiển thị bản xem trước đã che."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Chọn mô hình hỗ trợ gọi công cụ / hàm — tác nhân cần tính năng này."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…hoặc dán thủ công"
-
-msgid "{count} characters pasted"
-msgstr "Đã dán {count} ký tự"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Xóa Khóa API…"
+
+msgid "Validating with provider…"
+msgstr "Đang xác thực với nhà cung cấp…"
 
 msgid "Try Again"
 msgstr "Thử Lại"
 
 msgid "Save & Activate"
 msgstr "Lưu & Kích Hoạt"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Làm Tươi Trạng Thái BYOK"
@@ -1894,6 +1897,9 @@ msgstr "Nhà cung cấp LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Mô hình dùng với nhà cung cấp đã chọn"
+
+msgid "API Key"
+msgstr "Khóa API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Khóa API của bạn được lưu dạng mã hóa và chỉ dùng cho các yêu cầu tác nhân Mixar. Sau khi lưu, chỉ hiển thị bản xem trước đã che."
@@ -27034,6 +27040,66 @@ msgstr "Nút hành động tô màu nguy hiểm"
 msgid "Borderless quiet action button"
 msgstr "Nút hành động kín đáo không viền"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Thẻ Nhỏ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Thanh Trượt Chế Độ Trái"
 
@@ -27198,9 +27264,6 @@ msgstr "Ký Hiệu"
 
 msgid "Header glyph"
 msgstr "Ký hiệu tiêu đề"
-
-msgid "Chip"
-msgstr "Thẻ Nhỏ"
 
 msgid "Chip track"
 msgstr "Rãnh thẻ nhỏ"

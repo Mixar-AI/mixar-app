@@ -251,8 +251,13 @@ static void rna_Window_mixar_content_rect_in(wmWindow *win, wmWindow *host, int 
  * always-on-top floating window that would cover a cursor-anchored dialog. */
 static int rna_WindowManager_mixar_invoke_props_dialog_centered(bContext *C,
                                                                 wmOperator *op,
-                                                                const int width)
+                                                                const int width,
+                                                                const bool sheet)
 {
+  if (sheet) {
+    /* The AI Provider settings sheet: no padding, framed backdrop. */
+    return WM_mixar_operator_props_dialog_sheet(C, op, width);
+  }
   return int(WM_operator_props_dialog_popup(
       C, op, width, std::string(), std::nullopt, false, std::string(), false));
 }
@@ -444,6 +449,12 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
       PropertyRNA *parm = RNA_def_pointer(func, "operator", "Operator", "", "Operator to call");
       RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
       RNA_def_int(func, "width", 300, 0, INT_MAX, "", "Width of the popup", 0, INT_MAX);
+      RNA_def_boolean(func,
+                      "sheet",
+                      false,
+                      "Sheet",
+                      "Open as the AI Provider settings sheet: no padding, framed backdrop "
+                      "(the operator's draw() calls layout.mixar_sheet_frame)");
       parm = RNA_def_enum_flag(
           func, "result", rna_enum_operator_return_items, OPERATOR_FINISHED, "result", "");
       RNA_def_function_return(func, parm);

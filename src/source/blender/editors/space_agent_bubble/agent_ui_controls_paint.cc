@@ -422,13 +422,15 @@ void agent_ui_draw_chip_row(ARegion *region,
    * a lone icon, or dropped entirely — see agent_ui_layout_fit_controls. An
    * empty rect means dropped. */
   if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
-    MIXAR_THEME_LOAD(text_dim, TextSecondary);
-    /* Neutral gray thumb (the design), the same token as Auto's idle track. */
-    MIXAR_THEME_LOAD(thumb_fill, Border);
+    /* The toggle's own palette, from the designer's toggle.svg: a #262626
+     * track, a #5F5F5F thumb and #999999 for the word not in use. */
+    const float track_col[4] = {0x26 / 255.0f, 0x26 / 255.0f, 0x26 / 255.0f, 1.0f};
+    const float thumb_fill[4] = {0x5F / 255.0f, 0x5F / 255.0f, 0x5F / 255.0f, 1.0f};
+    const float text_dim[4] = {0x99 / 255.0f, 0x99 / 255.0f, 0x99 / 255.0f, text[3]};
     const AgentIslandFeedback feedback = agent_ui_motion_sample(
         region, AgentIslandControl::Model, layout->chip_model, state->model_byok_active);
     float track_fill[4];
-    agent_ui_motion_color(chip, chip, feedback, track_fill);
+    agent_ui_motion_color(track_col, track_col, feedback, track_fill);
     fill_round(&layout->chip_model, radius, track_fill);
 
     const float cy = BLI_rctf_cent_y(&layout->chip_model);

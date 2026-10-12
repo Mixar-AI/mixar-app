@@ -1562,40 +1562,34 @@ msgstr "Kunne ikke skifte model"
 msgid "Could not reset model"
 msgstr "Kunne ikke nulstille modellen"
 
-msgid "Removing your key…"
-msgstr "Fjerner din nøgle…"
-
 msgid "AI Provider settings"
 msgstr ""
 
-msgid "Use Mixar with your own provider — you won't be charged Mixar credits."
+msgid "Use Mixar with your own provider - You won't be charged on Mixar credits."
 msgstr ""
 
-msgid "Current Configuration"
-msgstr "Aktuel konfiguration"
+msgid "Provider: {provider}"
+msgstr ""
 
-msgid "Account"
-msgstr "Konto"
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-abonnement"
 
-msgid "API Key"
-msgstr "API-nøgle"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Gemt sikkert"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model kun med tekst — chat virker. 3D-opgaver kører uden visuel feedback."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Fjern API-nøgle…"
-
-msgid "Couldn't apply your changes"
-msgstr "Kunne ikke anvende dine ændringer"
-
-msgid "Switch back to Mixie?"
+msgid "SWITCH BACK TO MIXIE?"
 msgstr ""
 
 msgid "This removes your saved API key; the agent runs on Mixie again."
@@ -1604,23 +1598,29 @@ msgstr ""
 msgid "Mixar credits will be charged for future agent requests."
 msgstr "Mixar-kreditter opkræves for fremtidige agentanmodninger."
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar-agenten kører nu hos din udbyder — Mixar-kreditter opkræves ikke."
-
-msgid "API key removed"
-msgstr "API-nøgle fjernet"
-
-msgid "The agent is back on Mixie, Mixar's hosted models."
-msgstr ""
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Mixar-kreditter opkræves igen for agentanmodninger."
+msgid "Removing your key…"
+msgstr "Fjerner din nøgle…"
 
 msgid "Keep My Key"
 msgstr "Behold min nøgle"
 
 msgid "Remove API Key"
 msgstr "Fjern API-nøgle"
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "The Mixar agent now runs on your provider - Mixar credits are not charged."
+msgstr ""
+
+msgid "The agent is back on Mixie, Mixar's hosted models."
+msgstr ""
+
+msgid "Mixar credits are charged for agent requests again."
+msgstr "Mixar-kreditter opkræves igen for agentanmodninger."
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Pakker den lokale AI-kørsel ud…"
@@ -1643,8 +1643,8 @@ msgstr "Downloadet — kører ikke"
 msgid "Not downloaded"
 msgstr "Ikke downloadet"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Kører helt på denne computer — dine prompts forlader den kun via Mixars agentorkestrering."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Annuller download"
@@ -1670,8 +1670,8 @@ msgstr "Basis-URL"
 msgid "API Key (optional)"
 msgstr "API-nøgle (valgfri)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "En vilkårlig OpenAI-kompatibel server på denne computer — Ollama, LM Studio, llama.cpp…"
+msgid "Any OpenAI-compatible server on this computer - Ollama, LM Studio, llama.cpp…"
+msgstr ""
 
 msgid "Could not save the local provider."
 msgstr "Kunne ikke gemme den lokale udbyder."
@@ -1769,13 +1769,7 @@ msgstr ""
 msgid "Set up a key for this provider"
 msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Validerer hos udbyderen…"
-
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
-msgid "key stored securely"
+msgid "Stored encrypted, used only for Mixar agent requests - only a masked preview is shown after saving."
 msgstr ""
 
 msgid "PROVIDERS"
@@ -1784,56 +1778,65 @@ msgstr ""
 msgid "LOCAL MODEL"
 msgstr ""
 
-msgid "LOCAL MODEL ON THIS COMPUTER"
-msgstr ""
-
-msgid "MODELS"
-msgstr ""
-
 msgid "Pick a provider on the left to see its models."
 msgstr ""
 
-msgid "ALL SUPPORTED {provider} MODELS"
+msgid "Enter your OpenRouter API key here."
 msgstr ""
 
 msgid "Enter API key for {model} here."
 msgstr ""
 
-msgid "No models available for this provider yet."
+msgid "LOCAL MODEL ON THIS COMPUTER"
 msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Gemt krypteret, bruges kun til Mixar-agentanmodninger — kun en maskeret forhåndsvisning vises efter gemning."
-
 msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Et vilkårligt slug fra openrouter.ai/models, f.eks. anthropic/claude-opus-4.8."
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Vælg en model, der understøtter værktøjs- og funktionskald — agenten har brug for det."
-
-msgid "Enter your OpenRouter API key here."
+msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "Connect your ChatGPT subscription."
+msgid "In use: {provider} · {model} · {key}"
 msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…eller indsæt det manuelt"
-
-msgid "{count} characters pasted"
-msgstr "{count} tegn indsat"
-
-msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgid "key stored securely"
 msgstr ""
+
+msgid "Remove API Key…"
+msgstr "Fjern API-nøgle…"
+
+msgid "Validating with provider…"
+msgstr "Validerer hos udbyderen…"
 
 msgid "Try Again"
 msgstr "Prøv igen"
 
 msgid "Save & Activate"
 msgstr "Gem og aktivér"
+
+msgid "Connect your ChatGPT subscription."
+msgstr ""
+
+msgid "{count} characters loaded - Save & Activate sends them to Mixar."
+msgstr ""
+
+msgid "Run  codex login  in a terminal, then load or paste ~/.codex/auth.json."
+msgstr ""
+
+msgid "Paste from clipboard"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Opdatér BYOK-tilstand"
@@ -1894,6 +1897,9 @@ msgstr "LLM-udbyder"
 
 msgid "Model to use with the selected provider"
 msgstr "Model, der skal bruges med den valgte udbyder"
+
+msgid "API Key"
+msgstr "API-nøgle"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Din API-nøgle gemmes krypteret og bruges kun til Mixar-agentanmodninger. Efter gemning vises kun en maskeret forhåndsvisning."
@@ -27034,6 +27040,66 @@ msgstr "Farefarvet handlingsknap"
 msgid "Borderless quiet action button"
 msgstr "Stille handlingsknap uden kant"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chip"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Tilstandsskyder venstre"
 
@@ -27198,9 +27264,6 @@ msgstr "Glyf"
 
 msgid "Header glyph"
 msgstr "Headerglyf"
-
-msgid "Chip"
-msgstr "Chip"
 
 msgid "Chip track"
 msgstr "Chipspor"

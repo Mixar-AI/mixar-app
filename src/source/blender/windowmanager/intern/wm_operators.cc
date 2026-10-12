@@ -104,6 +104,7 @@
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_keymap.hh"
 #include "WM_types.hh"
 
@@ -1479,6 +1480,10 @@ struct wmOpPopUp {
   bool cancel_default;
   bool mouse_move_quit;
   bool include_properties;
+  /* Mixar: the AI Provider settings sheet. The block gets BLOCK_MIXAR_SHEET
+   * and no padding or spacer rows, so the operator's layout IS the card and
+   * the sheet backdrop can place its dividers from the layout's own edges. */
+  bool mixar_sheet = false;
 };
 
 /* Only invoked by OK button in popups created with #wm_block_dialog_create(). */
@@ -1540,6 +1545,9 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
   }
 
   block_flag_enable(block, ui::BLOCK_KEEP_OPEN | ui::BLOCK_NUMSELECT | ui::BLOCK_POPUP);
+  if (data->mixar_sheet) {
+    block_flag_enable(block, ui::BLOCK_MIXAR_SHEET);
+  }
 
   ui::fontstyle_set(&style->widget);
   /* Width based on the text lengths. */
@@ -1610,11 +1618,15 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
   }
 
   if (data->include_properties) {
-    layout.separator(0.5f);
+    if (!data->mixar_sheet) {
+      layout.separator(0.5f);
+    }
     uiTemplateOperatorPropertyButs(C, &layout, op, ui::BUT_LABEL_ALIGN_SPLIT_COLUMN, 0);
   }
 
-  layout.separator(small ? 0.1f : 1.8f);
+  if (!data->mixar_sheet) {
+    layout.separator(small ? 0.1f : 1.8f);
+  }
 
   /* Clear so the OK button is left alone. */
   block_func_set(block, nullptr, nullptr, nullptr);
@@ -1677,7 +1689,7 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
     button_flag_enable((data->cancel_default) ? cancel_but : confirm_but, ui::BUT_ACTIVE_DEFAULT);
   }
 
-  const int padding = (small ? 7 : 14) * UI_SCALE_FAC;
+  const int padding = data->mixar_sheet ? 0 : int((small ? 7 : 14) * UI_SCALE_FAC);
 
   if (data->position == WM_POPUP_POSITION_MOUSE) {
     const float button_center_x = windows_layout ? -0.4f : -0.90f;
@@ -1917,6 +1929,33 @@ wmOperatorStatus WM_operator_props_dialog_popup(bContext *C,
       C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
 
   return OPERATOR_RUNNING_MODAL;
+}
+
+int WM_mixar_operator_props_dialog_sheet(bContext *C, wmOperator *op, const int width)
+{
+  /* `WM_operator_props_dialog_popup` with an empty message (centred, no title
+   * row, no lines) and the sheet contract: no padding, no spacer rows, the
+   * block flagged for the sheet backdrop. */
+  wmOpPopUp *data = MEM_new<wmOpPopUp>(__func__);
+  data->op = op;
+  data->width = int(float(width) * UI_SCALE_FAC * ui::style_get()->widget.points /
+                    UI_DEFAULT_TEXT_POINTS);
+  data->free_op = true;
+  data->title = std::string();
+  data->confirm_text = IFACE_("OK");
+  data->message = std::string();
+  data->icon = ui::AlertIcon::None;
+  data->size = WM_POPUP_SIZE_SMALL;
+  data->position = WM_POPUP_POSITION_CENTER;
+  data->cancel_default = false;
+  data->mouse_move_quit = false;
+  data->include_properties = true;
+  data->mixar_sheet = true;
+
+  popup_block_ex(
+      C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
+
+  return int(OPERATOR_RUNNING_MODAL);
 }
 
 wmOperatorStatus WM_operator_redo_popup(bContext *C, wmOperator *op)
