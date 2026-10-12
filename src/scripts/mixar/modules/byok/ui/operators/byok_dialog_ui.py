@@ -265,6 +265,7 @@ def _draw_current_config(col, wm, with_remove):
     _value_row(bcol, n_("Model"), model_label)
     if model_suggestions.is_codex(wm.byok_current_provider):
         _value_row(bcol, n_("Account"), wm.byok_key_preview or n_("ChatGPT subscription"))
+        _value_row(bcol, n_("Security"), n_("Sign-in tokens only, stored encrypted"))
     else:
         _value_row(bcol, n_("API Key"), wm.byok_key_preview or n_("Stored securely"))
 
@@ -367,11 +368,31 @@ def _draw_codex_fields(body, wm):
     )
     body.separator(factor=0.5)
     for line in (
-        n_("Run  codex login  in your terminal first. Mixar reads only the"),
-        n_("sign-in tokens — never your whole auth.json or API key."),
+        n_("Run  codex login  in your terminal first."),
         n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
     ):
         card_label(body, line, 'MUTED')
+    body.separator(factor=0.5)
+    _draw_codex_security_note(body)
+
+
+# What actually happens to the Codex login (core/codex_cli_login.py and the
+# backend's KMS-encrypted credential store). Every line must stay true.
+CODEX_SECURITY_LINES = (
+    n_("Only 3 sign-in tokens are sent — never your auth.json, email or API key."),
+    n_("They travel over an encrypted HTTPS connection."),
+    n_("Stored encrypted (AWS KMS), used only for your agent requests."),
+    n_("Never shown again — remove them here at any time."),
+)
+
+
+def _draw_codex_security_note(body):
+    box = section(body)
+    col = box.column()
+    section_title(col, n_("Your ChatGPT sign-in stays protected"))
+    col.separator(factor=0.25)
+    for line in CODEX_SECURITY_LINES:
+        card_label(col, line, 'MUTED')
 
 
 def _draw_error(col, wm):

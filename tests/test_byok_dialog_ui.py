@@ -434,3 +434,18 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+def test_codex_form_affirms_how_the_sign_in_is_protected():
+    """Users see, before saving, exactly what is sent and how it is kept."""
+    for card_api in (True, False):
+        log = " ".join(_draw('IDLE', card_api, byok_form_provider='codex'))
+        assert "Your ChatGPT sign-in stays protected" in log
+        for line in byok_dialog_ui.CODEX_SECURITY_LINES:
+            assert line in log
+
+
+def test_saved_codex_config_shows_its_security():
+    log = " ".join(_draw('SAVED', True, byok_is_active=True,
+                         byok_current_provider='codex', byok_current_model='gpt-5.5'))
+    assert "Sign-in tokens only, stored encrypted" in log
