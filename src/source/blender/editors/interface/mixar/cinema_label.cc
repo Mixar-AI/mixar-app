@@ -136,6 +136,12 @@ static int draw_tinted_text(const int font,
   }
   GPU_texture_update(texture, GPU_DATA_UBYTE, pixels.data());
   GPU_texture_filter_mode(texture, false);
+  /* The preceding SVG icon can flush BLF's batch and leave blending disabled.
+   * Finish any queued glyphs before binding our texture, then explicitly use
+   * its coverage alpha so transparent texels never paint a solid rectangle. */
+  const GPUBlend old_blend = GPU_blend_get();
+  BLF_batch_draw_flush();
+  GPU_blend(GPU_BLEND_ALPHA);
   GPU_texture_bind(texture, 0);
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
@@ -154,6 +160,7 @@ static int draw_tinted_text(const int font,
   immUnbindProgram();
   GPU_texture_unbind(texture);
   GPU_texture_free(texture);
+  GPU_blend(old_blend);
   return w - 2;
 }
 
