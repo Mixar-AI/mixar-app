@@ -1490,6 +1490,9 @@ msgstr "Δεν ήταν δυνατή η επικοινωνία με τον το�
 msgid "No models available — contact support"
 msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "Το κλειδί API σας ελέγχει το μοντέλο"
 
@@ -2036,6 +2039,9 @@ msgstr "Έτοιμες παραγωγές: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Οι πιστώσεις σας εξαντλήθηκαν — αναβαθμίστε το πρόγραμμά σας για να συνεχίσετε"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Απαιτείται έλεγχος ταυτότητας — συνδεθείτε"
 
@@ -2125,6 +2131,9 @@ msgstr "Εισαγωγή αποτελέσματος παραγωγής"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Ακυρώθηκε (η παραγωγή μπορεί ακόμη να ολοκληρωθεί στον διακομιστή)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Αποτυχία επεξεργασίας της απόκρισης διακομιστή"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Αναβάθμιση"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Το σχόλιο αξιολόγησης είναι κενό."
 
@@ -19730,6 +19748,30 @@ msgstr "Το '{name}' δεν υπάρχει πλέον στο αρχείο πό�
 
 msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Σκέψη..."
@@ -20046,6 +20088,12 @@ msgstr "Σύνδεση"
 msgid "Login panel for Mixie Chat"
 msgstr "Ταμπλό σύνδεσης για τη συνομιλία Mixie."
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Η συνεδρία έληξε."
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "Αποσύνδεση"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "Έχει συνδεθεί"
 
 msgid "Whether user is currently logged in"
 msgstr "Αν ο χρήστης είναι συνδεδεμένος αυτή τη στιγμή."
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Σύνδεση σε εξέλιξη"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

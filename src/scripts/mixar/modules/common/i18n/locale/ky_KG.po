@@ -1490,6 +1490,9 @@ msgstr "Жергиликтүү серверге жетүү мүмкүн болг
 msgid "No models available — contact support"
 msgstr "Жеткиликтүү модель жок — колдоо кызматына кайрылыңыз"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "Моделди сиздин API ачкычыңыз башкарат"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} генерация даяр"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Кредиттериңиз түгөндү — улантуу үчүн тарифиңизди жогорулатыңыз"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Аутентификация талап кылынат — кириңиз"
 
@@ -2125,6 +2131,9 @@ msgstr "Генерацияланган натыйжаны импорттоо"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Жокко чыгарылды (генерация серверде дагы эле бүтүшү мүмкүн)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Сервердин жообун иштетүү ишке ашкан жок"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Жогорулатуу"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Пикир комментарийи бош"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' ресурс файлында мындан ары жок."
 
 msgid "Could not add the asset to the scene."
 msgstr "Ресурс сахнага кошулган жок."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Ойлонууда..."
@@ -20046,6 +20088,12 @@ msgstr "Кирүү"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie маегине кирүү панели"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Сеанс бүттү"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "Чыгуу"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "Кирген"
 
 msgid "Whether user is currently logged in"
 msgstr "Колдонуучу азыр киргенин көрсөтөт"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Кирүүдө"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

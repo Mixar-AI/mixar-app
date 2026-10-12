@@ -1490,6 +1490,9 @@ msgstr "로컬 서버에 연결할 수 없습니다. 서버가 실행 중이고 
 msgid "No models available — contact support"
 msgstr "사용 가능한 모델이 없습니다 — 지원팀에 문의하세요"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "API 키에 따라 모델이 결정됩니다"
 
@@ -2036,6 +2039,9 @@ msgstr "생성 {count}개 완료"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "크레딧이 모두 소진되었습니다 — 계속하려면 요금제를 업그레이드하세요"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "인증이 필요합니다 — 로그인하세요"
 
@@ -2125,6 +2131,9 @@ msgstr "생성 결과 가져오기"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "취소됨 (서버에서 생성이 계속 완료될 수 있음)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "서버 응답을 처리하지 못했습니다"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "업그레이드"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "피드백 코멘트가 비어 있습니다"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}'이(가) 더 이상 에셋 파일에 없습니다."
 
 msgid "Could not add the asset to the scene."
 msgstr "에셋을 씬에 추가할 수 없습니다."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "생각 중..."
@@ -20046,6 +20088,12 @@ msgstr "로그인"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie 채팅 로그인 패널"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "세션이 만료됨"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "로그아웃"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "로그인됨"
 
 msgid "Whether user is currently logged in"
 msgstr "사용자가 현재 로그인되어 있는지 여부"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "로그인 중"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

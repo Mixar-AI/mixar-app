@@ -1490,6 +1490,9 @@ msgstr "۔ﮯﮨ ﺖﺳﺭﺩ URL ﯼﺩﺎﯿﻨﺑ ﺭﻭﺍ ﮯﮨ ﺎﮨﺭ 
 msgid "No models available — contact support"
 msgstr "ﮟﯾﺮﮐ ﮧﻄﺑﺍﺭ ﮯﺳ ﺖﻧﻭﺎﻌﻣ — ﮟﯿﮩﻧ ﺏﺎﯿﺘﺳﺩ ﻝﮈﺎﻣ ﯽﺋﻮﮐ"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "ﮯﮨ ﯽﺗﺮﮐ ﻝﻭﺮﭩﻨﮐ ﻝﮈﺎﻣ ﺪﯿﻠﮐ API ﯽﮐ ﭖﺁ"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} :ﺕﺎﻘﯿﻠﺨﺗ ﺭﺎﯿﺗ"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "ﮟﯾﺮﮐ ﮉﯾﺮﮔ ﭖﺍ ﻥﻼ﻿ﭘ ﺎﻨﭘﺍ ﮯﯿﻟ ﮯﮐ ﮯﻨﮭﮐﺭ ﯼﺭﺎﺟ — ﮯﺌﮔ ﻮﮨ ﻢﺘﺧ ﺲﭨﮉﯾﺮﮐ ﮯﮐ ﭖﺁ"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "ﮟﯾﺮﮐ ﻥﺍ ﻦﺋﺎﺳ ﻡﺮﮐ ﮦﺍﺮﺑ — ﺭﺎﮐﺭﺩ ﻖﯾﺪﺼﺗ"
 
@@ -2125,6 +2131,9 @@ msgstr "ﮟﯾﺮﮐ ﺪﻣﺁﺭﺩ ﮧﺠﯿﺘﻧ ﮦﺩﺮﮐ ﺍﺪﯿﭘ"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "(ﮯﮨ ﯽﺘﮑﺳ ﻮﮨ ﻞﻤﮑﻣ ﺮﭘ ﺭﻭﺮﺳ ﻖﯿﻠﺨﺗ) ﺥﻮﺴﻨﻣ"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "ﺎﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﺲﯿﺳﺍﺮﭘ ﺏﺍﻮﺟ ﺎﮐ ﺭﻭﺮﺳ"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "ﮉﯾﺮﮔ ﭖﺍ"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "ﮯﮨ ﯽﻟﺎﺧ ﮦﺮﺼﺒﺗ ﺎﮐ ﺕﺍﺮﺛﺎﺗ"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' ۔ﮟﯿﮩﻧ ﮟﯿﻣ ﻞﺋﺎﻓ ﮧﺛﺎﺛﺍ ﺏﺍ"
 
 msgid "Could not add the asset to the scene."
 msgstr "۔ﺎﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻞﻣﺎﺷ ﮟﯿﻣ ﺮﻈﻨﻣ ﮧﺛﺎﺛﺍ"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "...ﮯﮨ ﺎﮨﺭ ﭺﻮﺳ"
@@ -20046,6 +20088,12 @@ msgstr "ﻥﺍ ﻦﺋﺎﺳ"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ﻞﻨﯿﭘ ﻥﺍ ﻦﺋﺎﺳ ﮯﯿﻟ ﮯﮐ ﭧﯿﭼ"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "ﻢﺘﺧ ﻦﺸﯿﺳ"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "ﭦﺅﺁ ﻦﺋﺎﺳ"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "ﮯﮨ ﻥﺍ ﻦﺋﺎﺳ"
 
 msgid "Whether user is currently logged in"
 msgstr "ﮯﮨ ﻥﺍ ﻦﺋﺎﺳ ﺖﻗﻭ ﺱﺍ ﻑﺭﺎﺻ ﺎﯿﮐ"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ﮯﮨ ﺎﮨﺭ ﻮﮨ ﻥﺍ ﻦﺋﺎﺳ"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

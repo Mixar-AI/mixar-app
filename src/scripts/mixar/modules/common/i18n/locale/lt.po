@@ -1490,6 +1490,9 @@ msgstr "Vietinio serverio pasiekti nepavyko. Patikrinkite, ar jis veikia ir ar b
 msgid "No models available — contact support"
 msgstr "Nėra pasiekiamų modelių — susisiekite su pagalba"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "Modelį valdo jūsų API raktas"
 
@@ -2036,6 +2039,9 @@ msgstr "Paruoštų generavimų: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Jums nebeliko kreditų — pagerinkite planą, kad tęstumėte"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Reikia autentifikuoti — prisijunkite"
 
@@ -2125,6 +2131,9 @@ msgstr "Importuoti sugeneruotą rezultatą"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Atšaukta (generavimas serveryje vis dar gali baigtis)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Nepavyko apdoroti serverio atsakymo"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Pagerinti"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Atsiliepimo komentaras tuščias"
 
@@ -19730,6 +19748,30 @@ msgstr "„{name}“ ištekliaus faile nebėra."
 
 msgid "Could not add the asset to the scene."
 msgstr "Nepavyko pridėti ištekliaus į sceną."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Mąstoma..."
@@ -20046,6 +20088,12 @@ msgstr "Prisijungti"
 msgid "Login panel for Mixie Chat"
 msgstr "„Mixie“ pokalbio prisijungimo skydas"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Seansas baigėsi"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "Atsijungti"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "Ar prisijungta"
 
 msgid "Whether user is currently logged in"
 msgstr "Ar naudotojas šiuo metu prisijungęs"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Ar jungiamasi"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

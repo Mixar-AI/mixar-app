@@ -1490,6 +1490,9 @@ msgstr "ലോക്കൽ സെർവറിലെത്താനായില�
 msgid "No models available — contact support"
 msgstr "മോഡലുകൾ ലഭ്യമല്ല — പിന്തുണയുമായി ബന്ധപ്പെടുക"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "നിങ്ങളുടെ API കീ മോഡലിനെ നിയന്ത്രിക്കുന്നു"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} ജനറേഷനുകൾ തയ്യാർ"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "നിങ്ങളുടെ ക്രെഡിറ്റുകൾ തീർന്നു — തുടരാൻ പ്ലാൻ അപ്ഗ്രേഡ് ചെയ്യുക"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "ആധികാരികത ആവശ്യമാണ് — ദയവായി സൈൻ ഇൻ ചെയ്യുക"
 
@@ -2125,6 +2131,9 @@ msgstr "ജനറേറ്റ് ചെയ്ത ഫലം ഇമ്പോർട
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "റദ്ദാക്കി (ജനറേഷൻ സെർവറിൽ പൂർത്തിയായേക്കാം)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "സെർവർ പ്രതികരണം പ്രോസസ് ചെയ്യാനായില്ല"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "അപ്ഗ്രേഡ് ചെയ്യുക"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "ഫീഡ്ബാക്ക് കുറിപ്പ് ശൂന്യമാണ്"
 
@@ -19730,6 +19748,30 @@ msgstr "‘{name}’ ഇനി അസറ്റ് ഫയലിലില്ല."
 
 msgid "Could not add the asset to the scene."
 msgstr "അസറ്റ് സീനിലേക്ക് ചേർക്കാനായില്ല."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "ചിന്തിക്കുന്നു..."
@@ -20046,6 +20088,12 @@ msgstr "ലോഗിൻ"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ചാറ്റിനുള്ള ലോഗിൻ പാനൽ"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "സെഷൻ കാലഹരണപ്പെട്ടു"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "ലോഗിൻ ചെയ്തിട്ടുണ്ട്"
 
 msgid "Whether user is currently logged in"
 msgstr "ഉപയോക്താവ് ഇപ്പോൾ ലോഗിൻ ചെയ്തിട്ടുണ്ടോ"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ലോഗിൻ ചെയ്യുന്നു"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

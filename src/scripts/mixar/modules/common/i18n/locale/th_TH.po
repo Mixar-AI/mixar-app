@@ -1490,6 +1490,9 @@ msgstr "ไม่สามารถเชื่อมต่อเซิร์ฟ
 msgid "No models available — contact support"
 msgstr "ไม่มีโมเดลให้ใช้ — โปรดติดต่อฝ่ายสนับสนุน"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "คีย์ API ของคุณเป็นตัวกำหนดโมเดล"
 
@@ -2036,6 +2039,9 @@ msgstr "สร้างเสร็จแล้ว {count} รายการ"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "เครดิตของคุณหมดแล้ว — อัปเกรดแพ็กเกจเพื่อใช้งานต่อ"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "ต้องยืนยันตัวตน — โปรดลงชื่อเข้าใช้"
 
@@ -2125,6 +2131,9 @@ msgstr "นำเข้าผลลัพธ์ที่สร้าง"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "ยกเลิกแล้ว (การสร้างอาจยังเสร็จสิ้นบนเซิร์ฟเวอร์)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "ประมวลผลการตอบกลับของเซิร์ฟเวอร์ไม่สำเร็จ"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "อัปเกรด"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "ความคิดเห็นว่างเปล่า"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' ไม่อยู่ในไฟล์สินทรัพย
 
 msgid "Could not add the asset to the scene."
 msgstr "ไม่สามารถเพิ่มสินทรัพย์ลงในฉากได้"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "กำลังคิด..."
@@ -20046,6 +20088,12 @@ msgstr "เข้าสู่ระบบ"
 msgid "Login panel for Mixie Chat"
 msgstr "แผงเข้าสู่ระบบสำหรับ Mixie Chat"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "เซสชันหมดอายุ"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "ออกจากระบบ"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "เข้าสู่ระบบแล้ว"
 
 msgid "Whether user is currently logged in"
 msgstr "ผู้ใช้เข้าสู่ระบบอยู่หรือไม่"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "กำลังเข้าสู่ระบบ"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

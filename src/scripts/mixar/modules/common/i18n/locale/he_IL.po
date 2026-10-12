@@ -1490,6 +1490,9 @@ msgstr ".הנוכנ תיסיסבה URL-ה תבותכשו לעופ אוהש קו�
 msgid "No models available — contact support"
 msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "לדומב טלוש API-ה חתפמ"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} תונכומ תוריצי"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "ךישמהל ידכ לולסמה תא גרדשל שי — ולזא םיטידרקה"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "רבחתהל אנ — תומיא שרדנ"
 
@@ -2125,6 +2131,9 @@ msgstr "הרצונש האצות אוביי"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "(תרשב םייתסהל ןיידע היושע הריציה) לטוב"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "לשכנ תרשה תבושת דוביע"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "גורדש"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "הקיר בושמה תרעה"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' סכנה ץבוקב וניא רבכ."
 
 msgid "Could not add the asset to the scene."
 msgstr ".הנצסל סכנה תא ףיסוהל ןתינ אל"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "...בשוח"
@@ -20046,6 +20088,12 @@ msgstr "תורבחתה"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie טא'צל תורבחתה חול"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "גפ הלעפהה ףקות"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "תוקתנתה"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "רבוחמ"
 
 msgid "Whether user is currently logged in"
 msgstr "תעכ רבוחמ שמתשמה םאה"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "תורבחתה ךילהתב"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

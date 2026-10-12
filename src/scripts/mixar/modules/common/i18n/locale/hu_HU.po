@@ -1490,6 +1490,9 @@ msgstr "Nem érhető el a lokális szerver. Ellenőrizze, hogy fut-e, és helyes
 msgid "No models available — contact support"
 msgstr "Nem érhetők el modellek – forduljon az ügyfélszolgálathoz"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "A modellt az Ön API-kulcsa határozza meg"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} generálás kész"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Elfogyott a kreditje — a folytatáshoz váltson magasabb csomagra"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Hitelesítés szükséges — kérjük, jelentkezzen be"
 
@@ -2125,6 +2131,9 @@ msgstr "Generált eredmény importálása"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Megszakítva (a generálás a kiszolgálón még befejeződhet)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "A kiszolgáló válaszának feldolgozása sikertelen"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Csomagváltás"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
 
@@ -19730,6 +19748,30 @@ msgstr "A(z) „{name}” már nincs az asset fájljában."
 
 msgid "Could not add the asset to the scene."
 msgstr "Az asset nem adható a jelenethez."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Gondolkodik..."
@@ -20046,6 +20088,12 @@ msgstr "Bejelentkezés"
 msgid "Login panel for Mixie Chat"
 msgstr "Bejelentkezési panel a Mixie csevegéshez"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "A munkamenet lejárt"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "Kijelentkezés"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "Bejelentkezve"
 
 msgid "Whether user is currently logged in"
 msgstr "A felhasználó be van-e jelentkezve"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Bejelentkezés folyamatban"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

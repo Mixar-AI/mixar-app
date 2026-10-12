@@ -1490,6 +1490,9 @@ msgstr "Não foi possível contactar o servidor local. Verifique se está em exe
 msgid "No models available — contact support"
 msgstr "Nenhum modelo disponível — contacte o suporte"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "A sua chave de API controla o modelo"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} gerações prontas"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Ficou sem créditos — melhore o seu plano para continuar"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Autenticação necessária — inicie sessão"
 
@@ -2125,6 +2131,9 @@ msgstr "Importar resultado gerado"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Cancelado (a geração ainda pode ser concluída no servidor)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Falha ao processar a resposta do servidor"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "Melhorar plano"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "O comentário de feedback está vazio"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' já não está no ficheiro do recurso."
 
 msgid "Could not add the asset to the scene."
 msgstr "Não foi possível adicionar o recurso à cena."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "A pensar..."
@@ -20046,6 +20088,12 @@ msgstr "Iniciar sessão"
 msgid "Login panel for Mixie Chat"
 msgstr "Painel de início de sessão do Mixie Chat"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Sessão expirada"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "Terminar sessão"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "Sessão iniciada"
 
 msgid "Whether user is currently logged in"
 msgstr "Indica se o utilizador tem sessão iniciada"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "A iniciar sessão"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

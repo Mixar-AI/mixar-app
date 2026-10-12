@@ -1490,6 +1490,9 @@ msgstr "无法连接本地服务器。请检查其是否正在运行，以及基
 msgid "No models available — contact support"
 msgstr "无可用模型——请联系支持团队"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "模型由您的 API 密钥决定"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} 个生成任务已完成"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "积分已用完——请升级套餐以继续"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "需要身份验证——请登录"
 
@@ -2125,6 +2131,9 @@ msgstr "导入生成结果"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "已取消（生成仍可能在服务器上完成）"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "无法处理服务器响应"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "升级"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "反馈内容为空"
 
@@ -19730,6 +19748,30 @@ msgstr "“{name}”已不在资产文件中。"
 
 msgid "Could not add the asset to the scene."
 msgstr "无法将资产添加到场景。"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "思考中..."
@@ -20046,6 +20088,12 @@ msgstr "登录"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie 对话的登录面板"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "会话已过期"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "退出登录"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "已登录"
 
 msgid "Whether user is currently logged in"
 msgstr "用户当前是否已登录"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "正在登录"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"

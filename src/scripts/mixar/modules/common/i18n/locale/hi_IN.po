@@ -1490,6 +1490,9 @@ msgstr "स्थानीय सर्वर तक नहीं पहुँ�
 msgid "No models available — contact support"
 msgstr "कोई मॉडल उपलब्ध नहीं — सहायता से संपर्क करें"
 
+msgid "Sign in to use Mixar models"
+msgstr ""
+
 msgid "Your API key controls the model"
 msgstr "मॉडल आपकी API कुंजी से नियंत्रित होता है"
 
@@ -2036,6 +2039,9 @@ msgstr "{count} जनरेशन तैयार"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "आपके क्रेडिट समाप्त हो गए हैं — जारी रखने के लिए अपना प्लान अपग्रेड करें"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "प्रमाणीकरण आवश्यक — कृपया साइन इन करें"
 
@@ -2125,6 +2131,9 @@ msgstr "उत्पन्न परिणाम आयात करें"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "रद्द (जनरेशन सर्वर पर फिर भी पूरा हो सकता है)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "सर्वर प्रतिक्रिया संसाधित करने में विफल"
@@ -19623,6 +19632,15 @@ msgstr ""
 msgid "Upgrade"
 msgstr "अपग्रेड करें"
 
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "प्रतिक्रिया टिप्पणी खाली है"
 
@@ -19730,6 +19748,30 @@ msgstr "'{name}' अब एसेट संचिका में नहीं �
 
 msgid "Could not add the asset to the scene."
 msgstr "एसेट को दृश्य में नहीं जोड़ा जा सका।"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "सोच रहा है..."
@@ -20046,6 +20088,12 @@ msgstr "लॉगिन"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie चैट के लिए लॉगिन पैनल"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "सत्र समाप्त हो गया"
 
@@ -20097,6 +20145,9 @@ msgid "Logout"
 msgstr "लॉगआउट"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21660,6 +21711,12 @@ msgstr "लॉग इन है"
 
 msgid "Whether user is currently logged in"
 msgstr "प्रयोक्ता वर्तमान में लॉग इन है या नहीं"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "लॉग इन हो रहा है"
@@ -24395,6 +24452,9 @@ msgid "Show the out-of-credits banner over the whole window"
 msgstr ""
 
 msgid "Banner art to draw"
+msgstr ""
+
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
 msgstr ""
 
 msgid "Add a Paint Layer in the Layers panel to start painting"
