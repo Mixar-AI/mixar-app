@@ -128,6 +128,9 @@ def summarize_gltf(doc: dict, result: dict) -> None:
     result["animations"] = [str(a.get("name", "")) for a in doc.get("animations") or []]
     extensions = doc.get("extensionsUsed") or []
     result["draco"] = "KHR_draco_mesh_compression" in extensions
+    punctual = ((doc.get("extensions") or {}).get("KHR_lights_punctual") or {}).get("lights") or []
+    result["lights"] = len(punctual)
+    result["cameras"] = len(doc.get("cameras") or [])
     result["up_axis"] = "+Y"
     scenes = doc.get("scenes") or []
     result["scenes"] = len(scenes)
@@ -336,5 +339,9 @@ def _compare(result: dict, expected: dict, fmt: str) -> None:
             issues.append(f"{images_expected} texture(s) were expected but the file has none.")
         elif fmt == "glb" and result.get("images_embedded") is False:
             issues.append("Textures are referenced by path instead of embedded in the GLB.")
+    for kind in ("lights", "cameras"):
+        want = expected.get(kind)
+        if want and result.get(kind) is not None and int(result[kind]) < int(want):
+            issues.append(f"The file holds {result[kind]} {kind[:-1]}(s); {want} were expected.")
     if expected.get("compression", "none") == "none" and result.get("draco"):
         issues.append("Draco compression is on but the export asked for none.")
