@@ -25,6 +25,7 @@ from ....auth.core.auth import (
     open_dashboard_with_handoff,
     refresh_access_token,
 )
+from ....auth.core import guest
 from ....auth.core.auth_hooks import (
     invalidate_agent_settings,
     invalidate_generation_caches,
@@ -211,6 +212,60 @@ def _clear_referral_state(wm):
         logger.debug("Failed clearing referral state: %s", e)
 
 
+def _apply_identity(wm, scene, user_info: dict) -> bool:
+    """Mirror a ``/me`` payload onto the session; True for a guest.
+
+    One place for every login apply path: the account props, the greeting
+    name and the guest flag (``wm.mixie_chat_is_guest`` + the auth module's
+    marker) always change together.
+    """
+    data = user_info["data"]
+    email = data.get("email", "")
+    is_guest = bool(data.get("is_guest", False))
+    if scene is not None:
+        scene.mixie_chat_user_id = email
+        scene.mixie_chat_credits = data.get("credits", 0)
+    if hasattr(wm, 'mixie_chat_is_guest'):
+        wm.mixie_chat_is_guest = is_guest
+    guest.mark(is_guest, email)
+    _apply_account_name(user_info)
+    # The account lane is a global-area header: nothing else repaints it
+    # when the session flips between guest and account.
+    from ....common.updates.core.toasts import tag_topbar_redraw
+    tag_topbar_redraw()
+    return is_guest
+
+
+def _apply_account_hooks(user_info: dict, is_guest: bool) -> None:
+    """The post-login fetches. Routes a guest cannot call (the generation
+    catalog, sounds, telemetry) are skipped rather than answered 403; the
+    agent settings are a guest's own (its key, the catalog, its pick)."""
+    if not is_guest:
+        refresh_generation_caches()
+        maybe_show_onboarding(user_info["data"].get("email", ""))
+    _auto_connect_websocket()
+    refresh_agent_settings()
+
+
+def _leave_guest_session(new_email: str) -> None:
+    """Switch the live session from the guest to the account that claimed it.
+
+    The guest socket is closed cleanly (a dropped socket holds the instance id
+    for up to 60 s and the account's reconnect would see 4009), its cached
+    agent settings dropped, and its chat archive re-filed under the account.
+    Main thread, before the account's identity is applied.
+    """
+    global _auto_connect_scheduled
+    from ...core import chat_history, get_connection_manager
+    get_connection_manager().disconnect()
+    _auto_connect_scheduled = False
+    invalidate_agent_settings()
+    try:
+        chat_history.reassign_owner(guest.email(), new_email)
+    except Exception as e:  # noqa: BLE001 — history is best-effort
+        logger.debug("Guest chat history reassign failed: %s", e)
+
+
 def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
     """Schedule main-thread bpy property updates after successful auth.
 
@@ -226,17 +281,12 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             if hasattr(wm, 'mixie_chat_session_expired'):
                 wm.mixie_chat_session_expired = False
             wm.mixie_chat_login_error = ""
-            email = user_info["data"].get("email", "")
-            scene.mixie_chat_user_id = email
-            scene.mixie_chat_credits = user_info["data"].get("credits", 0)
-            _apply_account_name(user_info)
+            is_guest = _apply_identity(wm, scene, user_info)
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
-            _capture_session_started("startup_token", refreshed=refreshed)
-            refresh_generation_caches()
-            maybe_show_onboarding(email)
-            _auto_connect_websocket()
-            refresh_agent_settings()
+            if not is_guest:
+                _capture_session_started("startup_token", refreshed=refreshed)
+            _apply_account_hooks(user_info, is_guest)
         except Exception as e:
             logger.warning("Auth state apply failed: %s", e)
         finally:
@@ -244,6 +294,33 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
         return None  # Don't repeat
 
     bpy.app.timers.register(_apply, first_interval=0.0)
+
+
+def _stay_signed_out() -> None:
+    """Guest fallback after a sign-out: nothing to do but release the latch."""
+    global _auth_check_started
+    _auth_check_started = False
+
+
+def _enter_guest_session(fallback) -> None:
+    """Daemon thread: start a fresh guest session, else run ``fallback``.
+
+    ``fallback`` is the caller's signed-out behaviour — the browser sign-in
+    at startup, nothing after a sign-out — for a backend whose guest kill
+    switch is off or that cannot be reached.
+    """
+    global _auth_check_started
+    result = guest.create_guest_session()
+    if result.get("success"):
+        user_info = get_user_info()
+        if user_info and user_info.get("status") == "success":
+            _schedule_apply_login(user_info, refreshed=False)
+            return
+        logger.warning("Guest session issued but /me failed; keeping its tokens")
+        _auth_check_started = False
+        return
+    logger.info("No guest session (%s); signed-out behaviour", result.get("message"))
+    fallback()
 
 
 def _auth_check_background() -> None:
@@ -254,7 +331,12 @@ def _auth_check_background() -> None:
     """
     global _auth_check_started
     user_info = get_user_info()
-    if user_info and user_info.get("status") == "success":
+    if user_info is None:
+        # No stored pair: a guest session, or the browser sign-in when the
+        # backend does not issue guests.
+        _enter_guest_session(fallback=_reauthenticate)
+        return
+    if user_info.get("status") == "success":
         _schedule_apply_login(user_info, refreshed=False)
         return
 
@@ -307,10 +389,20 @@ def _auth_check_background() -> None:
         _auth_check_started = False
         return
 
-    # A definitive 401/403 (or a missing token) requires reauthentication.
+    # A definitive 401/403 requires reauthentication.
     logger.info("Token refresh was definitively rejected, clearing credentials")
     clear_credentials()
+    if guest.stored_pair_is_guest():
+        # A guest pair that died (idle sweep, kill-switch flip) is replaced
+        # by a fresh guest; only an account gets the "session expired" flow.
+        _enter_guest_session(fallback=_reauthenticate)
+        return
+    _reauthenticate()
 
+
+def _reauthenticate() -> None:
+    """Daemon thread: the signed-out flow — mark the session expired and run
+    the browser sign-in (the pair is already gone)."""
     def _mark_expired():
         wm = getattr(bpy.context, 'window_manager', None)
         if wm:
@@ -318,13 +410,16 @@ def _auth_check_background() -> None:
                 wm.mixie_chat_session_expired = True
             if hasattr(wm, 'mixie_chat_login_error'):
                 wm.mixie_chat_login_error = ""
+            if hasattr(wm, 'mixie_chat_is_guest'):
+                wm.mixie_chat_is_guest = False
+        guest.mark(False)
         return None
 
     bpy.app.timers.register(_mark_expired, first_interval=0.0)
 
     # Run SSO on this same background thread (it blocks waiting for browser)
     try:
-        result = sso_login()
+        result = guest.sign_in(sso_login)
     except Exception as e:
         logger.error("Auto SSO login failed: %s", e)
         result = {"success": False, "message": str(e)}
@@ -354,17 +449,10 @@ def _auth_check_background() -> None:
                 _clear_referral_state(wm)
 
                 if user_info and user_info.get("status") == "success":
-                    email = user_info["data"].get("email", "")
-                    scene = bpy.context.scene
-                    if scene is not None:
-                        scene.mixie_chat_user_id = email
-                        scene.mixie_chat_credits = user_info["data"].get("credits", 0)
-                    _apply_account_name(user_info)
-
-                    refresh_generation_caches()
-                    maybe_show_onboarding(email)
-                    _auto_connect_websocket()
-                    refresh_agent_settings()
+                    if result.get("switched_from_guest"):
+                        _leave_guest_session(user_info["data"].get("email", ""))
+                    is_guest = _apply_identity(wm, bpy.context.scene, user_info)
+                    _apply_account_hooks(user_info, is_guest)
                     logger.info("Auto SSO re-login completed successfully")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
@@ -496,7 +584,8 @@ class MIXIE_CHAT_OT_login(Operator):
         # Run SSO on a background thread (blocks waiting for browser callback)
         def _sso_thread():
             try:
-                result = sso_login()
+                # Claims the guest this sign-in replaces (guest.sign_in).
+                result = guest.sign_in(sso_login)
                 logger.info("SSO login returned: success=%s", result.get("success"))
             except Exception as e:
                 logger.error("SSO login failed with exception: %s", e)
@@ -521,17 +610,10 @@ class MIXIE_CHAT_OT_login(Operator):
                         _clear_referral_state(live_wm)
 
                         if user_info and user_info.get("status") == "success":
-                            email = user_info["data"].get("email", "")
-                            scene = bpy.context.scene
-                            if scene is not None:
-                                scene.mixie_chat_user_id = email
-                                scene.mixie_chat_credits = user_info["data"].get("credits", 0)
-                            _apply_account_name(user_info)
-
-                            refresh_generation_caches()
-                            maybe_show_onboarding(email)
-                            _auto_connect_websocket()
-                            refresh_agent_settings()
+                            if result.get("switched_from_guest"):
+                                _leave_guest_session(user_info["data"].get("email", ""))
+                            is_guest = _apply_identity(live_wm, bpy.context.scene, user_info)
+                            _apply_account_hooks(user_info, is_guest)
                             logger.info("SSO login completed — user is logged in")
                     else:
                         msg = result.get("message", rpt_("Login failed"))
@@ -611,8 +693,19 @@ class MIXIE_CHAT_OT_logout(Operator):
         # when the next user logs in.
         _clear_byok_state_on_logout(wm)
         _clear_referral_state(wm)
+        if hasattr(wm, 'mixie_chat_is_guest'):
+            wm.mixie_chat_is_guest = False
+        guest.mark(False)
 
         self.report({'INFO'}, "Logged out successfully")
+
+        # A fresh guest takes the signed-out seat (never the old guest's
+        # pair); without one the app simply stays signed out.
+        _auth_check_started = True
+        threading.Thread(
+            target=_enter_guest_session, args=(_stay_signed_out,),
+            daemon=True, name="MixarGuestSession",
+        ).start()
         return {'FINISHED'}
 
 

@@ -566,11 +566,28 @@ def _replace_token_pair_locked(new_access_token, new_refresh_token):
     return True, None
 
 
+# The refresh token the last explicit login replaced. Captured under the
+# refresh fence so a rotation can never slip between "login stored" and
+# "guest claimed" (guest.sign_in): it is the guest's proof of possession.
+_replaced_refresh_token = ""
+
+
+def take_replaced_refresh_token():
+    """Return (and forget) the refresh token the last login replaced."""
+    global _replaced_refresh_token
+    with _refresh_lock:
+        token, _replaced_refresh_token = _replaced_refresh_token, ""
+        return token
+
+
 def store_login_token_pair(access_token, refresh_token):
     """Atomically fence an explicit login pair against refresh operations."""
+    global _replaced_refresh_token
     with _refresh_lock:
+        _, previous_refresh_token = _credentials_snapshot()
         stored, error = _replace_token_pair_locked(access_token, refresh_token)
         if stored:
+            _replaced_refresh_token = previous_refresh_token
             # Login establishes a new credential lineage. A stale durable
             # attempt is harmless if deletion fails (digest mismatch prevents
             # replay), but report it so safe-storage health remains visible.
@@ -754,6 +771,9 @@ def get_user_info():
             # the profile card falls back to the email's local part.
             response_data["data"]["name"] = user_data.get("name") or ""
             response_data["data"]["credits"] = user_data.get("credits", 0)
+            # A guest account (no sign-in yet); the UI shows "Guest", not the
+            # placeholder email, and every paid route answers 403.
+            response_data["data"]["is_guest"] = bool(user_data.get("is_guest", False))
             return response_data
         else:
             logger.warning(f"Error getting user info: {response.status_code}")

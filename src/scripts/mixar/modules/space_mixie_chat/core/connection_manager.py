@@ -290,7 +290,9 @@ class ConnectionManager:
                 # header, so the PUT and the header can never disagree.
                 version = get_runtime_version()
                 token = get_access_token()
-                if token and version:
+                # A guest has no account record to stamp (the route is 403).
+                from ...auth.core.guest import is_guest
+                if token and version and not is_guest():
                     report_client_version(
                         base_url, token, version, device_id=get_device_id()
                     )
