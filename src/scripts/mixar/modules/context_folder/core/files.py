@@ -33,20 +33,16 @@ def attached_files(scene) -> list:
     return [(item.file_id, item.name, item.kind) for item in items if getattr(item, "file_id", "")]
 
 
-def file_set_id(scene) -> str:
-    """The synthetic folder id, non-empty only while the scene has files."""
-    if not attached_files(scene):
-        return ""
-    return str(getattr(scene, "mixie_context_files_id", "") or "")
-
-
 def publish_set(scene) -> str:
     """Publish the scene's current members to the registry; returns the set
-    id, or "" when no file is attached (nothing is published then)."""
-    set_id = file_set_id(scene)
+    id, or "" when no file is attached. A scene that once had files keeps its
+    id, so its now-EMPTY membership is published too: the registry must never
+    keep serving a detached file under a set id a session still holds."""
+    set_id = str(getattr(scene, "mixie_context_files_id", "") or "")
+    members = attached_files(scene)
     if set_id:
-        get_registry().publish_file_set(set_id, [(name, file_id) for file_id, name, _ in attached_files(scene)])
-    return set_id
+        get_registry().publish_file_set(set_id, [(name, file_id) for file_id, name, _ in members])
+    return set_id if members else ""
 
 
 def unique_file_name(name: str, used) -> str:
@@ -93,9 +89,11 @@ def attach_file(scene, filepath: str, *, origin: str = "picker") -> dict:
 
 
 def detach_file(scene, file_id: str) -> bool:
-    """Remove the file from this scene's chat. The set id (and so the
-    session's grant) is unchanged; only the membership the registry serves
-    shrinks, so a running agent's next read of that name is ``not_found``."""
+    """Remove the file from this scene's chat. The membership the registry
+    serves shrinks at once — to nothing when the last file goes — so a running
+    agent's next read of that name is ``not_found``. The set id and the
+    session's grant stay for the life of the scene; an empty set exposes
+    nothing."""
     files = scene.mixie_context_files
     for index, item in enumerate(files):
         if item.file_id == file_id:

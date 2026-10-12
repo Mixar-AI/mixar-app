@@ -242,6 +242,27 @@ def test_detach_removes_the_member_from_the_next_manifest_and_reads(attached):
     assert _call(constants.RPC_READ, set_id, path="notes.txt")["success"]
 
 
+def test_detaching_the_last_file_leaves_nothing_readable(attached, registry, workdir):
+    scene, set_id = attached
+    for item in list(scene.mixie_context_files):
+        assert files.detach_file(scene, item.file_id)
+    assert scene.mixie_context_files_id == set_id  # the id outlives its members
+    # The empty membership is published too: a stale set must never keep
+    # serving a detached file, whatever grant a session still holds.
+    assert indexer.index_folder(registry.resolve(set_id)).files == []
+    for method, params in ((constants.RPC_READ, {"path": "notes.txt"}),
+                           (constants.RPC_VIEW_VIDEO, {"path": "clip.mp4"}),
+                           (constants.RPC_VIEW_IMAGE, {"path": "still.png"})):
+        assert _call(method, set_id, **params)["error"]["code"] == "not_found", method
+    assert _call(constants.RPC_LIST, set_id)["files"] == []
+    assert len(manifest.build_folder_context(scene)["folders"]) == 0
+    # A later attach publishes the new membership under the SAME id.
+    _attach(scene, workdir / "notes.txt")
+    attach.folder_context_for_send(scene, "session-1")
+    assert _call(constants.RPC_READ, set_id, path="notes.txt")["success"]
+    assert _call(constants.RPC_READ, set_id, path="clip.mp4")["error"]["code"] == "not_found"
+
+
 # ── wiring (source level) ────────────────────────────────────────────────
 
 def test_the_island_draws_file_chips_and_every_entry_routes_files():

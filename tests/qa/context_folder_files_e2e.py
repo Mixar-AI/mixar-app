@@ -115,6 +115,25 @@ def run():
         return {'before': before, 'after': before - 1}
     record('10 the chip × detaches the file', remove_chip)
 
+    def detach_last_revokes():
+        # PR #1827 review: detaching the LAST file must leave nothing readable.
+        reply = qa.eval(
+            "from mixar.modules.context_folder.core import files, rpc\n"
+            f"s={SCENE}\nsid=s.mixie_session_id or 'qa-context-files-session'\n"
+            "set_id=s.mixie_context_files_id\n"
+            "names=[i.name for i in s.mixie_context_files]\n"
+            "for fid in [i.file_id for i in s.mixie_context_files]: files.detach_file(s, fid)\n"
+            "r=[rpc.dispatch('context_folder.read',{'session_id':sid,'folder_id':set_id,'path':n})['error']['code'] for n in names]\n"
+            "l=rpc.dispatch('context_folder.list',{'session_id':sid,'folder_id':set_id})\n"
+            "result={'names':names,'codes':r,'list':l.get('error',{}).get('code'),'listed':len(l.get('files',[])),'left':len(s.mixie_context_files)}")
+        assert reply['left'] == 0 and reply['names'], reply
+        # The empty membership is published at once: nothing is readable.
+        assert all(c == 'not_found' for c in reply['codes']), reply
+        assert reply['list'] is None and reply['listed'] == 0, reply
+        qa.wait("not drv.find(surface='reference_file')", timeout=5)
+        return reply
+    record('11 detaching the last file leaves nothing readable', detach_last_revokes)
+
     qa.snap(str(out / 'app-after.png'))
     failed = [r for r in rows if r['status'] != 'PASS']
     print(f"{len(rows) - len(failed)}/{len(rows)} passed; screenshots in {out}")
