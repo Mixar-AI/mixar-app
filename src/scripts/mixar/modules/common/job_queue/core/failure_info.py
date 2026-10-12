@@ -40,7 +40,7 @@ _CLASS_TEXT = {
     "platform_config": ("Service misconfigured", "This is on our side and the team has been notified."),
     "unknown": ("Failed", "Try again. If it keeps failing, copy the details and send them to support."),
     "credits": ("Out of credits", "Add credits or upgrade your plan, then try again."),
-    "auth": ("Sign-in required", "Sign in again, then retry."),
+    "auth": ("Sign-in required", "Sign in, then retry."),
     "permission": ("Not allowed", "Your plan or account cannot use this generation."),
     "network": ("Connection problem", "Check your internet connection and try again."),
     "timeout": ("Timed out", "The generation took too long. Try again."),
@@ -145,6 +145,7 @@ def _exception_class(error) -> str:
         AuthorizationError,
         ConnectionError as APIConnectionError,
         InsufficientCreditsError,
+        LoginRequiredError,
         RateLimitError,
         ServerError,
         TimeoutError as APITimeoutError,
@@ -153,7 +154,9 @@ def _exception_class(error) -> str:
 
     if isinstance(error, InsufficientCreditsError):
         return "credits"
-    if isinstance(error, AuthenticationError):
+    # A guest's job fails terminally as "Sign-in required" — the token is
+    # valid, so the queue must never pause it on the auth watcher.
+    if isinstance(error, (AuthenticationError, LoginRequiredError)):
         return "auth"
     if isinstance(error, AuthorizationError):
         detail = str(getattr(error, "message", "") or "").lower()
