@@ -52,7 +52,7 @@ from .chat_sync_deselect import (
     deselect_moodboard_image_by_name,
     deselect_moodboard_image_for_attachment,
 )
-from .chat_sync_videos import attach_selected_videos, selected_video_names
+from .chat_sync_videos import selected_video_names, sync_selected_videos
 from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
@@ -110,7 +110,7 @@ def _collect_selected_image_names(scene) -> list[str]:
     for mb_img in images_attr:
         img = mb_img.image
         # Chat PILLS are still-image-only. A selected video is attached as a
-        # context file instead (chat_sync_videos.attach_selected_videos), never
+        # context file instead (chat_sync_videos.sync_selected_videos), never
         # flattened to a misleading single-frame chat attachment.
         if img is None or is_video_item(mb_img):
             continue
@@ -292,8 +292,9 @@ def _poll_tick():
             signature[1],
             animate=previous is not None and previous[1] != signature[1],
         )
-        # Videos: attach-on-select as context files; deselect never detaches.
-        if attach_selected_videos(scene):
+        # Videos: context-file chips that follow the board selection like the
+        # pills do (attach on select, board-owned chips detach on deselect).
+        if any(sync_selected_videos(scene)):
             _redraw_chat_areas()
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)

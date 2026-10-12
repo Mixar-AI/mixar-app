@@ -2,11 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Selected moodboard videos attach as context FILES (never pills) and are
-never detached by deselection (``moodboard/core/chat_sync_videos.py``)."""
+"""Selected moodboard videos attach as context FILES (never pills) and follow
+the board selection like image pills: a board-owned chip goes when its tile is
+deselected, a picker chip for the same file never does
+(``moodboard/core/chat_sync_videos.py``)."""
 
-import sys
 from types import SimpleNamespace
+
+import pytest
 
 
 def _modules():
@@ -21,6 +24,28 @@ def _modules():
 def _item(name, path, *, selected=True, movie=True, frame_id=""):
     image = SimpleNamespace(name=name, source="MOVIE" if movie else "FILE", filepath=path)
     return SimpleNamespace(image=image, selected=selected, frame_id=frame_id)
+
+
+class _Rows(list):
+    """Fake ``Scene.mixie_context_files`` collection."""
+
+    def add(self):
+        item = SimpleNamespace(file_id="", name="", kind="", origin="")
+        self.append(item)
+        return item
+
+    def remove(self, index):
+        del self[index]
+
+
+@pytest.fixture
+def registry(tmp_path):
+    from mixar.modules.context_folder.core.registry import FolderRegistry, set_registry_for_tests
+
+    registry = FolderRegistry(tmp_path / "registry" / "context_folders.json")
+    set_registry_for_tests(registry)
+    yield registry
+    set_registry_for_tests(None)
 
 
 def test_selected_videos_include_frame_members_and_skip_stills_and_idle_clips(tmp_path):
@@ -40,30 +65,58 @@ def test_selected_videos_include_frame_members_and_skip_stills_and_idle_clips(tm
     assert chat_sync._compute_selection_signature(scene)[2] == ("clip", "framed")
 
 
-def test_attach_selected_videos_is_idempotent_and_never_detaches(tmp_path, monkeypatch):
+def test_video_chips_follow_the_board_selection_and_spare_picker_chips(tmp_path, registry):
+    from mixar.modules.context_folder.core.files import attach_file
+
     _, chat_sync_videos = _modules()
-    for name in ("clip.mp4", "framed.mp4"):
+    for name in ("clip.mp4", "framed.mp4", "mine.mp4"):
         (tmp_path / name).write_bytes(b"x")
-    calls = []
+    items = [_item("clip", str(tmp_path / "clip.mp4")),
+             _item("framed", str(tmp_path / "framed.mp4")),
+             _item("gone", str(tmp_path / "gone.mp4")),
+             _item("mine", str(tmp_path / "mine.mp4"), selected=False)]
+    scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id="",
+                            mixie_moodboard_images=items, mixie_moodboard_frames=[])
+    # A chip the user attached through the picker for a board video.
+    assert attach_file(scene, str(tmp_path / "mine.mp4"))["success"]
 
-    def attach_file(scene, path, *, origin):
-        calls.append((path, origin))
-        return {"success": True, "already": len(calls) > 2, "name": "x", "kind": "video", "file_id": path}
+    # Select → chip, idempotent; a missing movie is skipped.
+    assert chat_sync_videos.sync_selected_videos(scene) == (2, 0)
+    assert [(row.name, row.origin) for row in scene.mixie_context_files] == [
+        ("mine.mp4", "picker"), ("clip.mp4", "moodboard"), ("framed.mp4", "moodboard")]
+    assert chat_sync_videos.sync_selected_videos(scene) == (0, 0)
 
-    monkeypatch.setitem(sys.modules, "mixar.modules.context_folder.core.files",
-                        SimpleNamespace(attach_file=attach_file))
-    scene = SimpleNamespace(
-        mixie_context_files=[],
-        mixie_moodboard_images=[_item("clip", str(tmp_path / "clip.mp4")),
-                                _item("framed", str(tmp_path / "framed.mp4")),
-                                _item("gone", str(tmp_path / "gone.mp4"))],
-        mixie_moodboard_frames=[],
-    )
-    assert chat_sync_videos.attach_selected_videos(scene) == 2
-    assert [origin for _, origin in calls] == ["moodboard", "moodboard"]  # a missing file is skipped
-    assert chat_sync_videos.attach_selected_videos(scene) == 0  # already attached: nothing new
-    # Deselecting is not a removal path: the hook only ever attaches.
-    for item in scene.mixie_moodboard_images:
-        item.selected = False
-    assert chat_sync_videos.attach_selected_videos(scene) == 0 and len(calls) == 4
-    assert chat_sync_videos.attach_selected_videos(SimpleNamespace()) == 0  # no context_files prop: no-op
+    # Deselect → the board-owned chip is gone; the picker chip survives even
+    # when ITS tile is selected then deselected (a re-attach keeps the origin).
+    items[0].selected = False
+    items[3].selected = True
+    assert chat_sync_videos.sync_selected_videos(scene) == (0, 1)
+    items[3].selected = False
+    assert chat_sync_videos.sync_selected_videos(scene) == (0, 0)
+    assert [(row.name, row.origin) for row in scene.mixie_context_files] == [
+        ("mine.mp4", "picker"), ("framed.mp4", "moodboard")]
+    # The registry no longer serves the detached clip under the scene's set.
+    members = {name for name, _ in registry.resolve(scene.mixie_context_files_id).members}
+    assert members == {"mine.mp4", "framed.mp4"}
+
+    assert chat_sync_videos.sync_selected_videos(SimpleNamespace()) == (0, 0)  # no prop: no-op
+
+
+def test_a_refused_attach_is_logged_not_raised(tmp_path, registry, monkeypatch, caplog):
+    import logging
+
+    from mixar.modules.context_folder import constants
+
+    _, chat_sync_videos = _modules()
+    for name in ("a.mp4", "b.mp4"):
+        (tmp_path / name).write_bytes(b"x")
+    monkeypatch.setattr(constants, "MAX_CONTEXT_FILES", 1)
+    monkeypatch.setattr("mixar.modules.context_folder.core.files.MAX_CONTEXT_FILES", 1)
+    scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id="",
+                            mixie_moodboard_images=[_item("a", str(tmp_path / "a.mp4")),
+                                                    _item("b", str(tmp_path / "b.mp4"))],
+                            mixie_moodboard_frames=[])
+    with caplog.at_level(logging.INFO, logger=chat_sync_videos._logger.name):
+        assert chat_sync_videos.sync_selected_videos(scene) == (1, 0)
+    assert len(scene.mixie_context_files) == 1
+    assert any("not attached as context" in record.getMessage() for record in caplog.records)

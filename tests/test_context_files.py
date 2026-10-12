@@ -282,4 +282,4 @@ def test_the_island_draws_file_chips_and_every_entry_routes_files():
     picker = (ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/operators/image_ops.py").read_text()
     assert 'filter_glob: StringProperty(default=""' in picker and "attach_file(scene, filepath)" in picker
     sync = (ROOT / "src/scripts/mixar/modules/moodboard/core/chat_sync.py").read_text()
-    assert "attach_selected_videos(scene)" in sync
+    assert "sync_selected_videos(scene)" in sync

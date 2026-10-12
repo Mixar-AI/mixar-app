@@ -80,12 +80,13 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
                 _reconcile_attachments,
                 _collect_selected_image_names,
             )
-            from mixar.modules.moodboard.core.chat_sync_videos import attach_selected_videos
+            from mixar.modules.moodboard.core.chat_sync_videos import sync_selected_videos
             selected = _collect_selected_image_names(scene)
             force_resync(scene)
             _reconcile_attachments(scene, selected, animate=True)
-            # Selected videos become context files (the chat has no video pill).
-            attached_videos = attach_selected_videos(scene)
+            # Selected videos become context files (the chat has no video pill);
+            # board-owned chips of deselected videos go.
+            attached_videos, _detached = sync_selected_videos(scene)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, rpt_("Sync failed: {error}").format(error=e))
             return {'CANCELLED'}

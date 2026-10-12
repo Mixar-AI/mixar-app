@@ -190,7 +190,7 @@ def test_moodboard_attach_reports_videos_attached_as_context():
     body = src.read_text()
     assert 'count_selected_videos' not in body and 'Skipped' not in body
     execute = body[body.index('class MIXIE_OT_moodboard_send_to_chat'):]
-    assert 'attach_selected_videos(scene)' in execute
+    assert 'sync_selected_videos(scene)' in execute
     assert 'Attached {count} video as context' in execute
     assert 'Attached {count} videos as context' in execute
 

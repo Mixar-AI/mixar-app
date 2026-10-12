@@ -43,6 +43,12 @@ class MixieContextFile(PropertyGroup):
         default="",
         options={'HIDDEN'},
     )
+    origin: StringProperty(
+        name="Origin",
+        description="Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection",
+        default="",
+        options={'HIDDEN'},
+    )
     # ``name`` is the unique basename: the chip label and the agent's path.
 
 

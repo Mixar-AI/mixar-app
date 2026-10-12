@@ -83,6 +83,7 @@ def attach_file(scene, filepath: str, *, origin: str = "picker") -> dict:
     item.file_id = file_id
     item.name = unique_file_name(path.name, {existing.name for existing in files if existing is not item})
     item.kind = file_kind(path.name)
+    item.origin = origin  # a re-attach keeps the first origin: a picker chip never turns board-owned
     publish_set(scene)
     _logger.debug("context file attached from %s: %s (%s)", origin, item.name, item.kind)
     return {"success": True, "file_id": file_id, "name": item.name, "kind": item.kind, "already": False}

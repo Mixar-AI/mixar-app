@@ -6,21 +6,26 @@
 
 The agent chat has no video content part on the wire, so a selected movie
 tile cannot be mirrored into ``pending_attachments`` like a still. Instead the
-same poll tick that reconciles stills attaches every currently selected video
-as a context file (``context_folder.core.files.attach_file``, idempotent), so
-the agent can sample its frames through ``context_folder.view_video``.
-
-Deselecting NEVER detaches: a context file outlives the turn by design — the
-agent may still be reading it after the user moves on to select something
-else — so the chip's × is the only removal path.
+same poll tick that reconciles stills mirrors the board's video selection onto
+the context-file chips: every currently selected video is attached
+(``context_folder.core.files.attach_file``, idempotent) so the agent can
+sample its frames through ``context_folder.view_video``, and a chip THIS hook
+created (``origin == "moodboard"``) is detached once its tile is deselected —
+the same follow-the-selection rule the image pills obey. Chips from the
+picker, an OS drop or From Blend (any other ``origin``) are never auto-removed.
 """
 
 from __future__ import annotations
+
+import os
 
 from mixar.config.logging_config import get_logger
 from .media_utils import describe_moodboard_media, is_video_item
 
 _logger = get_logger(__name__)
+
+#: ``MixieContextFile.origin`` of a chip the board selection owns.
+MOODBOARD_ORIGIN = "moodboard"
 
 
 def selected_video_items(scene) -> list:
@@ -47,27 +52,63 @@ def selected_video_names(scene) -> tuple:
     return tuple(sorted(item.image.name for item in selected_video_items(scene)))
 
 
-def attach_selected_videos(scene) -> int:
-    """Attach each selected video's file as a context file; returns how many
-    were NEW (an already attached clip counts for nothing). Never raises."""
-    attached = 0
+def _stale_moodboard_chips(scene, selected_paths: set, registry) -> list:
+    """File ids of board-owned chips whose movie is no longer selected,
+    compared by resolved path. A chip this machine cannot resolve is left
+    alone: the hook cannot tell what it stood for."""
+    stale = []
+    for item in scene.mixie_context_files:
+        if getattr(item, "origin", "") != MOODBOARD_ORIGIN:
+            continue
+        try:
+            path = os.path.realpath(str(registry.resolve_file(item.file_id)))
+        except Exception:  # noqa: BLE001 — file_unknown / file_unavailable
+            continue
+        if path not in selected_paths:
+            stale.append(item.file_id)
+    return stale
+
+
+def sync_selected_videos(scene) -> tuple[int, int]:
+    """Mirror the board's video selection onto the context-file chips.
+
+    Returns ``(attached, detached)``: how many chips are NEW (an already
+    attached clip counts for nothing) and how many board-owned chips went
+    because their tile was deselected. A refused attach (the cap, a hidden
+    name, a registry write failure) is logged, not toasted — parity with the
+    still sync, which is silent at its cap. Never raises."""
     if not hasattr(scene, "mixie_context_files"):
-        return 0
+        return 0, 0
     try:
-        from mixar.modules.context_folder.core.files import attach_file
+        from mixar.modules.context_folder.core.files import attach_file, detach_file
+        from mixar.modules.context_folder.core.registry import get_registry
     except Exception as exc:  # noqa: BLE001 — the module may be absent in a stripped build
         _logger.debug("context files unavailable: %s", exc)
-        return 0
+        return 0, 0
+    attached, selected_paths = 0, set()
     for item in selected_video_items(scene):
         try:
             described = describe_moodboard_media(item)
             filepath = described["resolved_filepath"]
             if not filepath or not described.get("source_available"):
                 continue  # a moved/deleted movie: nothing to attach
-            result = attach_file(scene, filepath, origin="moodboard")
+            selected_paths.add(os.path.realpath(filepath))
+            result = attach_file(scene, filepath, origin=MOODBOARD_ORIGIN)
         except Exception as exc:  # noqa: BLE001 — one bad clip never stops the sync
             _logger.debug("moodboard video attach failed: %s", exc, exc_info=True)
             continue
-        if result.get("success") and not result.get("already"):
+        if not result.get("success"):
+            _logger.info("moodboard video not attached as context: %s %s",
+                         result.get("error"), result.get("error_args") or "")
+        elif not result.get("already"):
             attached += 1
-    return attached
+    detached = 0
+    try:
+        stale = _stale_moodboard_chips(scene, selected_paths, get_registry())
+    except Exception as exc:  # noqa: BLE001
+        _logger.debug("moodboard video detach scan failed: %s", exc, exc_info=True)
+        stale = []
+    for file_id in stale:
+        if detach_file(scene, file_id):
+            detached += 1
+    return attached, detached
