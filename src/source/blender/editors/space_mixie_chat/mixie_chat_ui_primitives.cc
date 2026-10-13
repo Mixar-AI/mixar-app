@@ -208,22 +208,25 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
   chat_ui_draw_rounded_rect(rect, radius, fill_color);
 }
 
-/* The glass counterpart of #chat_ui_draw_rounded_rect: the same bed geometry,
- * but tinted by the MIXAR_GLASS_CHAT token row. `alpha` fades the whole pane —
- * `bg_color`'s RGB is deliberately not read, so a call site cannot pick its own
- * tint. The message area is drawn through the View2D matrix (see
- * mixie_chat_render_messages), so the painter's specular streak — the one layer
- * it clips with a region-px scissor — cannot be placed from here and is off;
- * the bed, gloss, refraction wash and rim all draw through that matrix fine. */
-void chat_ui_draw_glass_pane(const rctf *rect, const float radius, const float alpha)
+/* The glass counterpart of #chat_ui_draw_rounded_rect: the same bed geometry
+ * with the MIXAR_GLASS_CHAT material over it. The bed is `color` — the theme's
+ * User Bubble — so Preferences > Themes > Chat recolours the user's message;
+ * the glass adds only its light and rim (`draw_tint = false`), and
+ * `color[3]` fades the whole pane. The message area is drawn through the View2D
+ * matrix (see mixie_chat_render_messages), so the painter's specular streak —
+ * the one layer it clips with a region-px scissor — cannot be placed from here
+ * and is off; the gloss, refraction wash and rim draw through that matrix fine. */
+void chat_ui_draw_glass_pane(const rctf *rect, const float radius, const float color[4])
 {
+  chat_ui_draw_rounded_rect(rect, radius, color);
   rcti pane;
   BLI_rcti_rctf_copy(&pane, rect);
   ui::MixarGlassStyle style;
   style.role = ui::MIXAR_GLASS_CHAT;
   style.radius = radius;
-  style.alpha = alpha;
+  style.alpha = color[3];
   style.draw_specular = false;
+  style.draw_tint = false;
   ui::mixar_glass_draw(pane, style);
 }
 
