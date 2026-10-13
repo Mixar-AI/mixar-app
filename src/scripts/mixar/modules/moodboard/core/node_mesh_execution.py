@@ -4,6 +4,7 @@
 """Mesh continuations share source validation, export and queue submission."""
 
 import base64
+from contextlib import contextmanager
 
 import bpy
 
@@ -140,6 +141,35 @@ def _attach_pbr_reference_images(scene, node, payload, operator):
     ).decode()
 
 
+@contextmanager
+def _viewport_selection_restored(view_layer):
+    """Restore the user's selection and active object after an export.
+
+    Exporting needs the source objects selected, but a Moodboard node run must
+    not leave the viewport selection changed behind the user's back. Objects
+    that went away meanwhile are skipped rather than failing the restore.
+    """
+    selected = [obj for obj in view_layer.objects if obj.select_get()]
+    active = view_layer.objects.active
+    try:
+        yield
+    finally:
+        for obj in view_layer.objects:
+            try:
+                obj.select_set(False)
+            except (ReferenceError, RuntimeError):
+                pass
+        for obj in selected:
+            try:
+                obj.select_set(True)
+            except (ReferenceError, RuntimeError):
+                pass
+        try:
+            view_layer.objects.active = active
+        except (AttributeError, ReferenceError, RuntimeError):
+            pass
+
+
 def _run_mesh_feature(context, node, operator):
     """Run a mesh -> mesh continuation (PBR / Retopology / Segment / Auto Rig).
 
@@ -165,23 +195,25 @@ def _run_mesh_feature(context, node, operator):
     if not model:
         raise ValueError(rpt_("No enabled model is available for this feature"))
 
-    # Export the exact source objects, not whatever the user last clicked.
+    # Export the exact source objects, not whatever the user last clicked, and
+    # hand the user's own selection back afterwards.
     view_layer = context.view_layer
-    try:
-        for obj in view_layer.objects:
-            obj.select_set(False)
-        for obj in objects:
-            if obj.name in view_layer.objects:
-                obj.select_set(True)
-        view_layer.objects.active = meshes[0]
-    except (AttributeError, RuntimeError) as exc:
-        logger.warning("[NodeGraph] source mesh selection failed: %s", exc)
-        raise ValueError(
-            rpt_('The source mesh cannot be selected. Make it selectable in the '
-                 'Outliner or choose another mesh on its Moodboard node.')
-        ) from exc
+    with _viewport_selection_restored(view_layer):
+        try:
+            for obj in view_layer.objects:
+                obj.select_set(False)
+            for obj in objects:
+                if obj.name in view_layer.objects:
+                    obj.select_set(True)
+            view_layer.objects.active = meshes[0]
+        except (AttributeError, RuntimeError) as exc:
+            logger.warning("[NodeGraph] source mesh selection failed: %s", exc)
+            raise ValueError(
+                rpt_('The source mesh cannot be selected. Make it selectable in the '
+                     'Outliner or choose another mesh on its Moodboard node.')
+            ) from exc
 
-    file_bytes, filename = export_selected_mesh(context, "GLB")
+        file_bytes, filename = export_selected_mesh(context, "GLB")
     payload = {
         "file_bytes_b64": base64.b64encode(file_bytes).decode(),
         "file_filename": filename,
