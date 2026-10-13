@@ -1505,9 +1505,6 @@ msgstr "לדומב טלוש API-ה חתפמ"
 msgid "Custom"
 msgstr "תישיא םאתומ"
 
-msgid "Use my own API key…"
-msgstr "…ילשמ API חתפמב שומיש"
-
 msgid "Change or remove my API key…"
 msgstr "…ילש API-ה חתפמ לש הרסה וא יוניש"
 

@@ -1505,9 +1505,6 @@ msgstr "Uw API-sleutel bepaalt het model"
 msgid "Custom"
 msgstr "Aangepast"
 
-msgid "Use my own API key…"
-msgstr "Mijn eigen API-sleutel gebruiken…"
-
 msgid "Change or remove my API key…"
 msgstr "Mijn API-sleutel wijzigen of verwijderen…"
 

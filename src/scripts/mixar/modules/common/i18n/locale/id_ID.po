@@ -1505,9 +1505,6 @@ msgstr "Kunci API Anda menentukan model"
 msgid "Custom"
 msgstr "Kustom"
 
-msgid "Use my own API key…"
-msgstr "Gunakan kunci API saya sendiri…"
-
 msgid "Change or remove my API key…"
 msgstr "Ubah atau hapus kunci API saya…"
 

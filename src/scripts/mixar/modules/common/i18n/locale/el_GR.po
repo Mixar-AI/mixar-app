@@ -1505,9 +1505,6 @@ msgstr "Το κλειδί API σας ελέγχει το μοντέλο"
 msgid "Custom"
 msgstr "Προσαρμοσμένο"
 
-msgid "Use my own API key…"
-msgstr "Χρήση δικού μου κλειδιού API…"
-
 msgid "Change or remove my API key…"
 msgstr "Αλλαγή ή αφαίρεση του κλειδιού API μου…"
 

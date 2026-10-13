@@ -1505,9 +1505,6 @@ msgstr "Model jest określany przez własny klucz API"
 msgid "Custom"
 msgstr "Własny"
 
-msgid "Use my own API key…"
-msgstr "Użyj mojego klucza API…"
-
 msgid "Change or remove my API key…"
 msgstr "Zmień lub usuń mój klucz API…"
 

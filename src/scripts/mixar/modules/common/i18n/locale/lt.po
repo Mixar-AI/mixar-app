@@ -1505,9 +1505,6 @@ msgstr "Modelį valdo jūsų API raktas"
 msgid "Custom"
 msgstr "Pasirinktinis/-ė"
 
-msgid "Use my own API key…"
-msgstr "Naudoti savo API raktą…"
-
 msgid "Change or remove my API key…"
 msgstr "Keisti arba pašalinti mano API raktą…"
 

@@ -1505,9 +1505,6 @@ msgstr "Модель визначає ваш API-ключ"
 msgid "Custom"
 msgstr "Нетипове"
 
-msgid "Use my own API key…"
-msgstr "Використати власний API-ключ…"
-
 msgid "Change or remove my API key…"
 msgstr "Змінити або видалити мій API-ключ…"
 

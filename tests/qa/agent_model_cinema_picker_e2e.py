@@ -88,9 +88,13 @@ def open_picker(qa):
     qa.click(**PICKER)
     # The first native click after opening a fresh island can commit its
     # composer focus. Retry once only when the popup demonstrably stayed shut.
-    if not qa.find(op='MIXAR_BYOK_OT_open_dialog', popup=True)['widgets']:
+    # A row only this menu has: its Mixie reset row, or with an empty catalog
+    # the saved key's row (with no key saved the menu has no API-key row).
+    opened = ("bool(drv.find(op='MIXAR_OT_agent_model_reset', popup=True) or "
+              "drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))")
+    if not qa.eval(f"result={opened}"):
         qa.click(**PICKER)
-    qa.wait("bool(drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))", timeout=5)
+    qa.wait(opened, timeout=5)
 
 
 def capture(qa, name, target):

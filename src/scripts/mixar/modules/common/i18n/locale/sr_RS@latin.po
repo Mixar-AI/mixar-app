@@ -1929,10 +1929,6 @@ msgid "Custom"
 msgstr "Prilagođeno"
 
 # derived
-msgid "Use my own API key…"
-msgstr "Koristi moj API ključ…"
-
-# derived
 msgid "Change or remove my API key…"
 msgstr "Promeni ili ukloni moj API ključ…"
 

@@ -1505,9 +1505,6 @@ msgstr "നിങ്ങളുടെ API കീ മോഡലിനെ നിയ�
 msgid "Custom"
 msgstr "ഇഷ്ടാനുസൃതം"
 
-msgid "Use my own API key…"
-msgstr "എന്റെ സ്വന്തം API കീ ഉപയോഗിക്കുക…"
-
 msgid "Change or remove my API key…"
 msgstr "എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക…"
 

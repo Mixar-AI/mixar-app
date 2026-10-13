@@ -1505,9 +1505,6 @@ msgstr "API 키에 따라 모델이 결정됩니다"
 msgid "Custom"
 msgstr "커스텀"
 
-msgid "Use my own API key…"
-msgstr "내 API 키 사용…"
-
 msgid "Change or remove my API key…"
 msgstr "내 API 키 변경 또는 제거…"
 

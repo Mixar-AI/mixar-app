@@ -1505,9 +1505,6 @@ msgstr "Vaš API ključ određuje model"
 msgid "Custom"
 msgstr "Prilagođeno"
 
-msgid "Use my own API key…"
-msgstr "Upotrijebi vlastiti API ključ…"
-
 msgid "Change or remove my API key…"
 msgstr "Promijeni ili ukloni moj API ključ…"
 

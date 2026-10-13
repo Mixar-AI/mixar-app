@@ -1505,9 +1505,6 @@ msgstr "API-avaimenne määrää mallin"
 msgid "Custom"
 msgstr "Mukautettu"
 
-msgid "Use my own API key…"
-msgstr "Käytä omaa API-avainta…"
-
 msgid "Change or remove my API key…"
 msgstr "Vaihda tai poista API-avain…"
 

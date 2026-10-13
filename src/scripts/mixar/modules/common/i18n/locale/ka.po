@@ -1505,9 +1505,6 @@ msgstr "თქვენი API გასაღები მართავს �
 msgid "Custom"
 msgstr "მორგებული"
 
-msgid "Use my own API key…"
-msgstr "საკუთარი API გასაღების გამოყენება…"
-
 msgid "Change or remove my API key…"
 msgstr "ჩემი API გასაღების შეცვლა ან მოცილება…"
 

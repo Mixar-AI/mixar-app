@@ -1505,9 +1505,6 @@ msgstr "Моделди сиздин API ачкычыңыз башкарат"
 msgid "Custom"
 msgstr "Ыңгайлаштырылган"
 
-msgid "Use my own API key…"
-msgstr "Өз API ачкычымды колдонуу…"
-
 msgid "Change or remove my API key…"
 msgstr "API ачкычымды өзгөртүү же өчүрүү…"
 

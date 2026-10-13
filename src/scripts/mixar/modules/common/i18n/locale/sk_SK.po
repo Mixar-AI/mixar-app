@@ -1505,9 +1505,6 @@ msgstr "Model určuje váš kľúč API"
 msgid "Custom"
 msgstr "Vlastný"
 
-msgid "Use my own API key…"
-msgstr "Použiť vlastný kľúč API…"
-
 msgid "Change or remove my API key…"
 msgstr "Zmeniť alebo odstrániť môj kľúč API…"
 

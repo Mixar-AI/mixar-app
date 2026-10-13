@@ -1505,9 +1505,6 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﻦﯿﯿﻌﺗ ﺍﺭ ﻝﺪﻣ ﺎﻤﺷ API ﺪﯿ
 msgid "Custom"
 msgstr "ﯽﺷﺭﺎﻔﺳ"
 
-msgid "Use my own API key…"
-msgstr "…ﺩﻮﺷ ﻩﺩﺎﻔﺘﺳﺍ ﻡﺩﻮﺧ API ﺪﯿﻠﮐ ﺯﺍ"
-
 msgid "Change or remove my API key…"
 msgstr "…ﺩﻮﺷ ﻑﺬﺣ ﺎﯾ ﺪﻨﮐ ﺮﯿﯿﻐﺗ ﻦﻣ API ﺪﯿﻠﮐ"
 

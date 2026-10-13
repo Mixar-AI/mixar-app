@@ -1505,9 +1505,6 @@ msgstr "मॉडल आपकी API कुंजी से नियंत्�
 msgid "Custom"
 msgstr "कस्टम"
 
-msgid "Use my own API key…"
-msgstr "अपनी API कुंजी का उपयोग करें…"
-
 msgid "Change or remove my API key…"
 msgstr "मेरी API कुंजी बदलें या हटाएँ…"
 

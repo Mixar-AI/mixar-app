@@ -1505,9 +1505,6 @@ msgstr "Via API-ŝlosilo regas la modelon"
 msgid "Custom"
 msgstr "Propra"
 
-msgid "Use my own API key…"
-msgstr "Uzi mian propran API-ŝlosilon…"
-
 msgid "Change or remove my API key…"
 msgstr "Ŝanĝi aŭ forigi mian API-ŝlosilon…"
 

@@ -1505,9 +1505,6 @@ msgstr "Вашият API ключ определя модела"
 msgid "Custom"
 msgstr "Потребителски"
 
-msgid "Use my own API key…"
-msgstr "Използвай собствен API ключ…"
-
 msgid "Change or remove my API key…"
 msgstr "Промени или премахни API ключа ми…"
 

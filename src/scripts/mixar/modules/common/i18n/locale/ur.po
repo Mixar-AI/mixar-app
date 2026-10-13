@@ -1505,9 +1505,6 @@ msgstr "ﮯﮨ ﯽﺗﺮﮐ ﻝﻭﺮﭩﻨﮐ ﻝﮈﺎﻣ ﺪﯿﻠﮐ API ﯽ
 msgid "Custom"
 msgstr "ﺕﺭﻭﺮﺿ ﺐﺴﺣ"
 
-msgid "Use my own API key…"
-msgstr "…ﮟﯾﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﺪﯿﻠﮐ API ﯽﻨﭘﺍ"
-
 msgid "Change or remove my API key…"
 msgstr "…ﮟﯿﺋﺎﭩﮨ ﺎﯾ ﮟﯿﻟﺪﺑ ﺪﯿﻠﮐ API ﯽﻨﭘﺍ"
 

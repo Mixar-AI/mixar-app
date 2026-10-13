@@ -1505,9 +1505,6 @@ msgstr "Modeli API anahtarınız belirler"
 msgid "Custom"
 msgstr "Özel"
 
-msgid "Use my own API key…"
-msgstr "Kendi API anahtarımı kullan…"
-
 msgid "Change or remove my API key…"
 msgstr "API anahtarımı değiştir veya kaldır…"
 

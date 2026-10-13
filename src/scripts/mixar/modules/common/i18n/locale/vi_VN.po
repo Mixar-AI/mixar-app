@@ -1505,9 +1505,6 @@ msgstr "Khóa API của bạn quyết định mô hình"
 msgid "Custom"
 msgstr "Tùy Chỉnh"
 
-msgid "Use my own API key…"
-msgstr "Dùng khóa API của tôi…"
-
 msgid "Change or remove my API key…"
 msgstr "Đổi hoặc xóa khóa API của tôi…"
 

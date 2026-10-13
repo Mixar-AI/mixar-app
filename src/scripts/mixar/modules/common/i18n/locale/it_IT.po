@@ -1505,9 +1505,6 @@ msgstr "Il modello è determinato dalla chiave API personale"
 msgid "Custom"
 msgstr "Personalizzato"
 
-msgid "Use my own API key…"
-msgstr "Usa la mia chiave API…"
-
 msgid "Change or remove my API key…"
 msgstr "Cambia o rimuovi la mia chiave API…"
 

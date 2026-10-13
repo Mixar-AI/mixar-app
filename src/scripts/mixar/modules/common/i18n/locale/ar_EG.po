@@ -1505,9 +1505,6 @@ msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﺩﺪﺤﻳ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘ�
 msgid "Custom"
 msgstr "ﺺﺼﺨﻣ"
 
-msgid "Use my own API key…"
-msgstr "…ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﻡﺪﺨﺘﺳﺍ"
-
 msgid "Change or remove my API key…"
 msgstr "…ﻪﻟﺯﺃ ﻭﺃ ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﺮﻴّﻏ"
 

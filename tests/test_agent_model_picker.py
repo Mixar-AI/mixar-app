@@ -104,8 +104,9 @@ def test_rows_show_only_model_names_and_keep_provider_identity():
     assert rows[0].label == "Claude Sonnet 4.6"
     assert rows[0].provider == "anthropic"
     # No grouping, no provider header — one row per model, then the tail
-    # actions (reset, then the AI Provider Settings route).
-    assert _kinds(rows) == ["MODEL", "RESET", "BYOK"]
+    # (reset). With no key saved there is no API-key row: this is Mixie's
+    # dropdown, and the island's Custom AI half is the way to add a key.
+    assert _kinds(rows) == ["MODEL", "RESET"]
 
 
 def test_rows_follow_the_catalog_order_verbatim():
@@ -121,14 +122,14 @@ def test_rows_follow_the_catalog_order_verbatim():
 def test_an_empty_catalog_fails_closed_to_one_disabled_sentinel():
     rows = model_menu.build_rows([])
 
-    assert _kinds(rows) == ["SENTINEL", "BYOK"]
+    assert _kinds(rows) == ["SENTINEL"]
     assert rows[0].kind == "SENTINEL"
     assert rows[0].enabled is False
     # Never a hardcoded model list, and no clickable reset on a dead menu.
     assert rows[0].provider == "" and rows[0].model == ""
-    # The key route survives an empty catalog on purpose: nothing hosted to
-    # pick is exactly when a user's own key is the way forward.
-    assert rows[1].kind == "BYOK" and rows[1].enabled is True
+    # A saved key's route survives an empty catalog on purpose.
+    rows = model_menu.build_rows([], byok_stored=True)
+    assert _kinds(rows) == ["SENTINEL", "BYOK"] and rows[1].enabled is True
 
 
 def test_an_ineligible_row_is_greyed_not_hidden():
@@ -168,10 +169,9 @@ def test_a_paused_key_offers_switching_back_and_manage():
     # A paused key that stopped validating can't be switched back to.
     kinds = [r.kind for r in model_menu.build_rows([_record("a")], byok_stored=True)]
     assert "USE_KEY" not in kinds and "USE_MIXIE" not in kinds
-    # No key at all: only the setup route.
+    # No key at all: no API-key row in Mixie's dropdown.
     rows = model_menu.build_rows([_record("a")])
-    assert rows[-1].label == model_menu.BYOK_SETUP_TEXT
-    assert not {"USE_KEY", "USE_MIXIE"} & {r.kind for r in rows}
+    assert not {"USE_KEY", "USE_MIXIE", "BYOK"} & {r.kind for r in rows}
 
 
 def test_thinking_rows_appear_only_when_the_model_offers_levels():
@@ -183,14 +183,14 @@ def test_thinking_rows_appear_only_when_the_model_offers_levels():
     # Levels live in a SUBMENU, never inline: five models x four levels is a
     # 20+ row menu, and Blender column-wraps a menu taller than its window —
     # the levels spilled sideways and were clipped by the island.
-    assert _kinds(rows) == ["MODEL", "MODEL", "RESET", "BYOK"]
+    assert _kinds(rows) == ["MODEL", "MODEL", "RESET"]
 
     # The submenu entry appears only once a model WITH levels is the pick.
     picked = model_menu.build_rows(
         [_record("plain"), _record("thinker", thinking_levels=["low", "high"])],
         active_provider="anthropic", active_model="thinker",
     )
-    assert _kinds(picked) == ["MODEL", "MODEL", "THINKING_MENU", "RESET", "BYOK"]
+    assert _kinds(picked) == ["MODEL", "MODEL", "THINKING_MENU", "RESET"]
 
     # ...and not when the pick offers none.
     plain = model_menu.build_rows(
@@ -336,35 +336,25 @@ def test_the_wm_mirror_registers_exactly_the_contracted_property_names():
         assert f"WM.{name} = " in source
 
 
-def test_the_key_route_is_always_reachable():
-    """Keep the chat's shared settings route reachable in every menu state."""
+def test_the_key_route_is_reachable_while_a_key_is_saved():
+    """A saved key's settings route stays reachable in every menu state; with
+    no key saved, Mixie's dropdown has no API-key row at all."""
     states = {
-        "populated": model_menu.build_rows([_record("a")]),
-        "empty": model_menu.build_rows([]),
         "byok": model_menu.build_rows([_record("a")], byok_active=True),
         "empty_byok": model_menu.build_rows([], byok_active=True),
-        "ineligible": model_menu.build_rows([_record("a", eligible=False)]),
+        "paused": model_menu.build_rows([_record("a")], byok_stored=True),
+        "empty_paused": model_menu.build_rows([], byok_stored=True),
     }
     for name, rows in states.items():
         byok = [row for row in rows if row.kind == "BYOK"]
         assert len(byok) == 1, f"{name}: expected exactly one key row"
         assert byok[0].enabled is True, f"{name}: the key row must stay clickable"
-        assert byok[0].label, f"{name}: the key row needs a label"
-
-
-def test_the_key_row_says_remove_when_a_key_is_in_use():
-    """Wording carries the affordance: set one up, or get rid of the one you
-    have. A user whose picker is greyed is looking for the second."""
-    off = [r for r in model_menu.build_rows([_record("a")]) if r.kind == "BYOK"][0]
-    on = [r for r in model_menu.build_rows([_record("a")], byok_active=True)
-          if r.kind == "BYOK"][0]
-
-    assert off.label == model_menu.BYOK_SETUP_TEXT
-    assert on.label == model_menu.BYOK_MANAGE_TEXT
-    assert "remove" in on.label.lower()
-    # `active` on this row means "a key is in use" (it drives the icon), not
-    # "this is the current pick" as it does on a MODEL/THINKING row.
-    assert on.active is True and off.active is False
+        assert byok[0].label == model_menu.BYOK_MANAGE_TEXT
+        assert byok[0].active is True
+    for rows in (model_menu.build_rows([_record("a")]), model_menu.build_rows([]),
+                 model_menu.build_rows([_record("a", eligible=False)])):
+        assert not [row for row in rows if row.kind == "BYOK"]
+    assert not hasattr(model_menu, "BYOK_SETUP_TEXT")
 
 
 def test_the_key_row_invokes_the_dialog_not_executes_it():

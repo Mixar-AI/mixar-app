@@ -230,9 +230,10 @@ def open_picker(qa, area_type, active):
     models = qa.find(op='MIXAR_OT_agent_model_set', popup=True)['widgets']
     if len(models) != 2 or any(not w['enabled'] for w in models):
         raise ScenarioFail(f'{area_type} hosted models unavailable with no key: {models}')
-    settings = qa.find(**SETTINGS)['widgets']
-    if len(settings) != 1 or not settings[0]['enabled']:
-        raise ScenarioFail(f'{area_type} shared settings route unavailable')
+    # With no key saved, Mixie's dropdown has no API-key row: adding one is
+    # the island's Custom AI half (and the profile menu's AI Provider Settings).
+    if qa.find(**SETTINGS)['widgets']:
+        raise ScenarioFail(f'{area_type} Mixie dropdown still offers an API-key row')
 
 
 def save(qa, model, name):
@@ -286,7 +287,8 @@ def run(qa):
             raise ScenarioFail('Profile still offers removal after chat removed the key')
         close_popup(qa)
         open_picker(qa, 'AGENT_BUBBLE', False)
-        qa.click(**SETTINGS)
+        close_popup(qa)
+        qa.step('island_custom_ai_opens_settings', click_key_half, qa)
         check_dialog(qa)
         save(qa, 'QA Model Two', 'bubble_save')
         snaps.append(open_profile(qa, 'after_bubble_save'))
@@ -294,7 +296,8 @@ def run(qa):
         snaps.append(snap(qa, 'profile_sees_bubble_save', {'op': 'MIXAR_BYOK_OT_pick', 'text': 'QA Model Two', 'popup': True}))
         remove(qa, 'profile_remove')
         qa.step('bubble_reflects_profile_remove', open_picker, qa, 'AGENT_BUBBLE', False)
-        snaps.append(snap(qa, 'agent_bubble_restored', SETTINGS))
+        snaps.append(snap(qa, 'agent_bubble_restored',
+                          {'op': 'MIXAR_OT_agent_model_reset', 'popup': True}))
         close_popup(qa)
         counts = qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
                          "f = O._qa_profile_fixture[1]\n"

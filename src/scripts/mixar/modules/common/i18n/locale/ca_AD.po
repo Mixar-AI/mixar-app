@@ -1505,9 +1505,6 @@ msgstr "La vostra clau d'API determina el model"
 msgid "Custom"
 msgstr "A mida"
 
-msgid "Use my own API key…"
-msgstr "Usar la meva pròpia clau d'API…"
-
 msgid "Change or remove my API key…"
 msgstr "Canviar o suprimir la meva clau d'API…"
 

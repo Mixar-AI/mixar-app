@@ -1505,9 +1505,6 @@ msgstr "คีย์ API ของคุณเป็นตัวกำหนด�
 msgid "Custom"
 msgstr "กำหนดเอง"
 
-msgid "Use my own API key…"
-msgstr "ใช้คีย์ API ของฉันเอง…"
-
 msgid "Change or remove my API key…"
 msgstr "เปลี่ยนหรือลบคีย์ API ของฉัน…"
 

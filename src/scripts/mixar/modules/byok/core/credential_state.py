@@ -291,7 +291,9 @@ def _parse(data) -> Dict[str, Any]:
         parsed["byok_current_model"] = first.get("model", "") or ""
         parsed["byok_current_supports_vision"] = bool(first.get("supports_vision", True))
         parsed["byok_key_preview"] = first.get("key_preview", "") or ""
-        parsed["byok_key_stored"] = True
+        # A key is stored only when the item names its provider: an item
+        # without one is no credential (never let it light the key routes).
+        parsed["byok_key_stored"] = bool(parsed["byok_current_provider"])
         # Absent on a backend without the pause flag: a stored key is enabled.
         parsed["byok_key_paused"] = not bool(first.get("enabled", True))
         parsed["byok_key_valid"] = bool(first.get("is_valid", True))

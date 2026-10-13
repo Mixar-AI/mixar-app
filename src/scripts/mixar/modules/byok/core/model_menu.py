@@ -55,10 +55,11 @@ CHIP_SEPARATOR = " · "
 
 RESET_TEXT = "Mixie"
 
-#: The chat's route to the dialog also offered in the profile menu. Keep it
-#: enabled while BYOK is active so users can clear the key overriding their
-#: hosted pick, including when the model catalog is empty.
-BYOK_SETUP_TEXT = n_("Use my own API key…")
+#: The route to the saved key's settings, only while a key is saved (in use
+#: or paused) — enabled even then, so the key overriding the hosted pick can be
+#: changed or cleared, empty catalog included. With no key there is no row:
+#: this dropdown is Mixie's; adding a key is the island's Custom AI half (and
+#: AI Provider Settings in the profile menu).
 BYOK_MANAGE_TEXT = n_("Change or remove my API key…")
 #: The island toggle's two moves, also offered here: when the island row is
 #: fitted down to its icon this menu is the only control left on it.
@@ -165,12 +166,12 @@ def build_rows(
     current_levels: List[str] = []
 
     if not models:
-        # Still offer the key route: an empty catalog is exactly when a user
-        # has nothing hosted to pick and their own key is the way forward.
+        # Still offer the saved key's routes: an empty catalog is exactly when
+        # a user has nothing hosted to pick.
         return [
             MenuRow(kind="SENTINEL", label=EMPTY_SENTINEL_TEXT, enabled=False),
             *_toggle_rows(byok_active, byok_resumable),
-            _byok_row(byok_active or byok_stored),
+            *_byok_rows(byok_active or byok_stored),
         ]
 
     if byok_active:
@@ -230,7 +231,7 @@ def build_rows(
                 active=not active_provider and not active_model)
     )
     rows.extend(_toggle_rows(byok_active, byok_resumable))
-    rows.append(_byok_row(byok_active or byok_stored))
+    rows.extend(_byok_rows(byok_active or byok_stored))
     return rows
 
 
@@ -276,17 +277,14 @@ def build_thinking_rows(
     return []
 
 
-def _byok_row(byok_active: bool) -> MenuRow:
-    """The AI Provider Settings row.
+def _byok_rows(key_saved: bool) -> List[MenuRow]:
+    """The saved key's AI Provider Settings row, or none without a key.
 
     ``enabled`` is unconditionally True — it is the one row a configured key
     must NOT disable, because clearing that key is what it is for. ``active``
-    carries "a key is in use" so the menu can pick the icon, the way the
+    carries "a key is saved" so the menu can pick the icon, the way the
     removed topbar entry did.
     """
-    return MenuRow(
-        kind="BYOK",
-        label=BYOK_MANAGE_TEXT if byok_active else BYOK_SETUP_TEXT,
-        enabled=True,
-        active=byok_active,
-    )
+    if not key_saved:
+        return []
+    return [MenuRow(kind="BYOK", label=BYOK_MANAGE_TEXT, enabled=True, active=True)]

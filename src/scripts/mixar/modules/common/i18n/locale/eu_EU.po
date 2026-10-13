@@ -1505,9 +1505,6 @@ msgstr "Zure API gakoak kontrolatzen du eredua"
 msgid "Custom"
 msgstr "Pertsonalizatua"
 
-msgid "Use my own API key…"
-msgstr "Erabili nire API gakoa…"
-
 msgid "Change or remove my API key…"
 msgstr "Aldatu edo kendu nire API gakoa…"
 

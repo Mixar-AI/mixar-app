@@ -1505,9 +1505,6 @@ msgstr "モデルはあなたのAPIキーで決まります"
 msgid "Custom"
 msgstr "カスタム"
 
-msgid "Use my own API key…"
-msgstr "自分のAPIキーを使用…"
-
 msgid "Change or remove my API key…"
 msgstr "自分のAPIキーを変更または削除…"
 

@@ -1505,9 +1505,6 @@ msgstr "Cheia dvs. API controlează modelul"
 msgid "Custom"
 msgstr "Personalizat"
 
-msgid "Use my own API key…"
-msgstr "Folosesc propria cheie API…"
-
 msgid "Change or remove my API key…"
 msgstr "Schimbă sau elimină cheia mea API…"
 

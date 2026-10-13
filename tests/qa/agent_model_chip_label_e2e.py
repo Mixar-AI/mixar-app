@@ -79,7 +79,9 @@ L.lookup_provider_label, L.lookup_model_label = saved[4], saved[5]
 C.apply_from_payload({'byok_active': cred['byok_is_active'], 'items': [dict(
     provider=cred['byok_current_provider'], model=cred['byok_current_model'],
     supports_vision=cred['byok_current_supports_vision'],
-    key_preview=cred['byok_key_preview'])]}, bpy.context.window_manager)
+    key_preview=cred['byok_key_preview'], enabled=not cred['byok_key_paused'],
+    is_valid=cred['byok_key_valid'])] if cred['byok_key_stored'] else []},
+    bpy.context.window_manager)
 P.apply_local(saved[2])
 bpy.context.preferences.view.show_tooltips = saved[3]
 del P._qa_chip_label
@@ -119,9 +121,13 @@ def open_picker(qa):
     qa.click(**PICKER)
     # The first native click after opening a fresh island can commit its
     # composer focus. Retry once only when the popup demonstrably stayed shut.
-    if not qa.find(**KEY_ROW)['widgets']:
+    # A row only this menu has: its Mixie reset row, or with an empty catalog
+    # the saved key's row (with no key saved the menu has no API-key row).
+    opened = ("bool(drv.find(op='MIXAR_OT_agent_model_reset', popup=True) or "
+              "drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))")
+    if not qa.eval(f"result={opened}"):
         qa.click(**PICKER)
-    qa.wait("bool(drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))", timeout=5)
+    qa.wait(opened, timeout=5)
 
 
 def redraw_window_of(qa, target):
@@ -178,7 +184,9 @@ def run(qa):
         assert [r['text'] for r in rows] == ['QA Model'] and rows[0]['enabled'], rows
         assert not qa.find(text='Your key', contains=True, popup=True)['widgets']
         qa.wait("bool(drv.find(text='Thinking: High', popup=True))", timeout=5)
-        snaps.append(qa.step('hosted_menu_capture', capture, qa, 'hosted_menu', KEY_ROW))
+        # No key saved: Mixie's dropdown offers no API-key row.
+        assert not qa.find(**KEY_ROW)['widgets'], 'Mixie dropdown still offers an API-key row'
+        snaps.append(qa.step('hosted_menu_capture', capture, qa, 'hosted_menu', MODEL))
         close_menus(qa)
 
         # 2. A user key overrides the pick -> the BYOK indicator, re-mirrored

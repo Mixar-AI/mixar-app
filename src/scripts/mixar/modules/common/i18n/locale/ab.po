@@ -1505,9 +1505,6 @@ msgstr "ШәAPI ацаԥха амодель анапхгара аҿуп"
 msgid "Custom"
 msgstr "Ахатә"
 
-msgid "Use my own API key…"
-msgstr "Сара сыхатә API ацаԥха схархәоит…"
-
 msgid "Change or remove my API key…"
 msgstr "Сара сы API ацаԥха аԥсахра мамзаргьы ақәгара…"
 

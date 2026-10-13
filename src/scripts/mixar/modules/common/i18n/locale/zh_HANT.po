@@ -1505,9 +1505,6 @@ msgstr "模型由你的 API 金鑰決定"
 msgid "Custom"
 msgstr "自訂"
 
-msgid "Use my own API key…"
-msgstr "使用我自己的 API 金鑰…"
-
 msgid "Change or remove my API key…"
 msgstr "變更或移除我的 API 金鑰…"
 

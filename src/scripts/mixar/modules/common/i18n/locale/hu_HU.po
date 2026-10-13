@@ -1505,9 +1505,6 @@ msgstr "A modellt az Ön API-kulcsa határozza meg"
 msgid "Custom"
 msgstr "Egyéni"
 
-msgid "Use my own API key…"
-msgstr "Saját API-kulcs használata…"
-
 msgid "Change or remove my API key…"
 msgstr "Saját API-kulcs módosítása vagy eltávolítása…"
 

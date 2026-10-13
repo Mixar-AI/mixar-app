@@ -1505,9 +1505,6 @@ msgstr "Ufunguo wako wa API unadhibiti modeli"
 msgid "Custom"
 msgstr "Desturi"
 
-msgid "Use my own API key…"
-msgstr "Tumia ufunguo wangu wa API…"
-
 msgid "Change or remove my API key…"
 msgstr "Badilisha au ondoa ufunguo wangu wa API…"
 

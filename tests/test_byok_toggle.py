@@ -375,3 +375,10 @@ def test_the_hosted_menu_draws_the_toggle_rows_as_the_toggle_operators():
     assert 'row.kind == "USE_MIXIE":\n        line.operator("mixar_byok.use_mixie"' in source
     assert 'line.operator("mixar_byok.use_key"' in source
     assert "byok_resumable=credential_state.resumable()" in source
+
+
+def test_an_item_without_a_provider_is_not_a_stored_key(env):
+    wm, _ = env
+    credential_state.apply_from_payload(
+        {"byok_active": False, "items": [{"provider": "", "model": ""}]}, wm)
+    assert wm.byok_key_stored is False and not credential_state.resumable()

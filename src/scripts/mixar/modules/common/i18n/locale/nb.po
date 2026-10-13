@@ -1505,9 +1505,6 @@ msgstr "API-nøkkelen din styrer modellen"
 msgid "Custom"
 msgstr "Tilpasset"
 
-msgid "Use my own API key…"
-msgstr "Bruk min egen API-nøkkel…"
-
 msgid "Change or remove my API key…"
 msgstr "Endre eller fjern API-nøkkelen min…"
 

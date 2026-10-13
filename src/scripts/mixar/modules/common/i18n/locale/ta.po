@@ -1505,9 +1505,6 @@ msgstr "உங்கள் API விசை மாதிரியைக் க�
 msgid "Custom"
 msgstr "தனிப்பயன்"
 
-msgid "Use my own API key…"
-msgstr "என் சொந்த API விசையைப் பயன்படுத்து…"
-
 msgid "Change or remove my API key…"
 msgstr "என் API விசையை மாற்று அல்லது அகற்று…"
 
