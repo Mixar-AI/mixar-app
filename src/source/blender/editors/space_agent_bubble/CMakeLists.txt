@@ -31,6 +31,8 @@ set(SRC
   agent_ui_draw.cc
   agent_ui_draw_primitives.hh
   agent_ui_controls_paint.cc
+  agent_ui_provider.cc
+  agent_ui_provider_chevron.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_layout.cc
@@ -73,6 +75,7 @@ set(SRC
   agent_ui_asset_picker_intern.hh
   agent_ui_asset_picker_layout.hh
   agent_ui_draw.hh
+  agent_ui_provider.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh

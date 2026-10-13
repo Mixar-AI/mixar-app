@@ -92,9 +92,15 @@ struct AgentIslandState {
   bool model_available;
   bool model_byok_active;
   char model_label[96];
-  /* Short name of the key's provider ("Codex"), drawn in place of "Custom AI"
-   * once a key is in use; empty draws "Custom AI". */
+  /* The key chip after the Mixie | Custom AI toggle while a key is in use
+   * (wm.mixar_agent_key_*): provider ("Claude API") and model ("Opus 5.5") as
+   * drawn, whether the model opens the switch dropdown, and whether a switch
+   * is being saved (the chip then names the target, dimmed). Empty label =
+   * no chip. Read by `agent_ui_provider_gather`. */
   char model_key_label[64];
+  char model_key_model[96];
+  bool model_key_menu;
+  bool model_key_busy;
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

@@ -37,6 +37,9 @@ _WM_ATTRS = (
     'mixar_agent_model_byok_active',
     'mixar_agent_model_eligible',
     'mixar_agent_key_label',
+    'mixar_agent_key_model',
+    'mixar_agent_key_menu',
+    'mixar_agent_key_busy',
 )
 
 
@@ -74,13 +77,33 @@ def register():
         ),
         default=False,
     )
-    # The island toggle's right half names the key's provider ("Codex",
-    # "Anthropic") once one is in use; empty draws "Custom AI". Written by
-    # `credential_state.apply_to_wm()`; C++ only reads it.
+    # The island key chip, right of the Mixie | Custom AI toggle while a key is
+    # in use: the provider ("Claude API"), the model ("Opus 5.5"), whether the
+    # model opens a dropdown (not for OpenRouter / Local) and whether a model
+    # switch is in flight. Written by `credential_state.apply_to_wm()`; C++
+    # only reads them. Empty label = no key, no chip.
     WM.mixar_agent_key_label = StringProperty(
         name="Agent Key Provider Label",
         description="Short name of the provider whose API key the agent uses",
         default="",
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_model = StringProperty(
+        name="Agent Key Model Label",
+        description="The model your API key runs the agent on",
+        default="",
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_menu = BoolProperty(
+        name="Agent Key Model Menu",
+        description="The key's model can be switched from the chat composer",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_busy = BoolProperty(
+        name="Agent Key Model Switching",
+        description="A model switch for your API key is being saved",
+        default=False,
         options={'SKIP_SAVE'},
     )
     WM.mixar_agent_model_eligible = BoolProperty(

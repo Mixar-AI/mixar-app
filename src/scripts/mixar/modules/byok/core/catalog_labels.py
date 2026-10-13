@@ -12,16 +12,26 @@ than keeping its own copy.
 
 from typing import Tuple
 
+from mixar.modules.common.i18n import n_
+
 from . import model_suggestions
 from ..constants import CODEX_PROVIDER_ID, LOCAL_PROVIDER_ID, OPENROUTER_PROVIDER_ID
 
-# Client-side providers whose dropdown labels are descriptive ("Codex
-# (ChatGPT sub)"); the island toggle names them in one short word.
-_TOGGLE_LABELS = {
-    CODEX_PROVIDER_ID: "Codex",
-    LOCAL_PROVIDER_ID: "Local",
+# The island key chip's short provider names (the design reads "Claude API").
+# Brand names, so never translated; the dropdown's catalog labels stay the
+# descriptive ones ("Codex (ChatGPT sub)"). Unknown ids fall back to the
+# catalog label.
+_CHIP_PROVIDER_LABELS = {
+    'anthropic': "Claude API",
+    'openai': "OpenAI API",
+    'gemini': "Gemini API",
+    'kimi': "Kimi API",
+    'fugu': "Fugu API",
     OPENROUTER_PROVIDER_ID: "OpenRouter",
+    CODEX_PROVIDER_ID: "Codex",
 }
+# The one chip name that is a word, not a brand: translated at display time.
+LOCAL_CHIP_LABEL = n_("Local")
 
 
 def lookup_provider_label(provider_id: str) -> str:
@@ -32,12 +42,31 @@ def lookup_provider_label(provider_id: str) -> str:
     return provider_id
 
 
-def toggle_provider_label(provider_id: str) -> str:
-    """The island toggle's name for the key's provider: a short word for the
-    client-side options, the catalog label otherwise (raw id as fallback)."""
+def chip_provider_label(provider_id: str) -> str:
+    """The island key chip's name for the key's provider ("Claude API"); the
+    catalog label for a provider without a short name, "" for none."""
     if not provider_id:
         return ""
-    return _TOGGLE_LABELS.get(provider_id) or lookup_provider_label(provider_id)
+    if provider_id == LOCAL_PROVIDER_ID:
+        return LOCAL_CHIP_LABEL
+    return _CHIP_PROVIDER_LABELS.get(provider_id) or lookup_provider_label(provider_id)
+
+
+def chip_model_label(provider_id: str, model_id: str) -> str:
+    """The key chip's model name: the catalog label without a leading word
+    that repeats the chip's brand ("Claude Opus 5.5" beside "Claude API"
+    reads "Opus 5.5"). A label whose remainder starts with a digit keeps its
+    brand ("Gemini 3.1 Pro" never becomes "3.1 Pro"), and a provider without
+    a short brand name keeps every label whole."""
+    if not model_id:
+        return ""
+    label = lookup_model_label(provider_id, model_id)
+    # Only a known short name is a brand; a catalog fallback is not.
+    brand = _CHIP_PROVIDER_LABELS.get(provider_id, "").split(" ", 1)[0].casefold()
+    head, _, rest = label.partition(" ")
+    if brand and rest and head.casefold() == brand and rest[0].isalpha():
+        return rest
+    return label
 
 
 def lookup_model_label(provider_id: str, model_id: str) -> str:

@@ -191,6 +191,41 @@ def save_credentials(
     ).start()
 
 
+# An older server rejects the key-less switch as a schema error (422); say what
+# to do instead of the generic form-data message.
+_SWITCH_UNSUPPORTED_MSG = n_(
+    "Couldn't switch the model here. Change it in AI Provider settings instead."
+)
+
+
+def switch_model(
+    provider: str,
+    model: str,
+    on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+) -> None:
+    """PUT /agent/byok with ``keep_stored_key`` — run the stored key on another
+    model of the same provider. No key leaves the client; the server
+    re-validates its stored key against ``model`` (≤ 15 s)."""
+    def _thread():
+        try:
+            response = get_agent_service().save_credentials_all(
+                provider=provider, model=model, api_key=None, keep_stored_key=True,
+            )
+            success, data, err = _translate(response)
+            status = getattr(response, "status_code", None)
+        except Exception as e:
+            logger.warning("BYOK switch_model failed: %s", e)
+            success, data, err = _translate_exception(e)
+            status = getattr(e, "status_code", None)
+        if not success and status == 422:
+            err = _SWITCH_UNSUPPORTED_MSG
+        _schedule_on_main(on_done, success, data, err)
+
+    threading.Thread(
+        target=_thread, daemon=True, name="MixarBYOKSwitchModel"
+    ).start()
+
+
 def delete_credentials(
     on_done: Callable[[bool, int, Optional[str]], None],
 ) -> None:

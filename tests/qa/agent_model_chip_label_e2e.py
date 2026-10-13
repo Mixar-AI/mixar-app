@@ -90,12 +90,11 @@ BYOK_ON = """
 import bpy
 from mixar.modules.byok.core import preference_state as P, credential_state as C
 wm = bpy.context.window_manager
-# The preference mirror says "key active" (the server's word) ...
+# The preference payload's server-owned flag says "key active"; it alone
+# composes the label (a credential write never recomposes it, df13460a8) ...
 P.apply_local({'mixar_agent_model_byok_active': True})
 assert wm.mixar_agent_model_label == 'Custom', wm.mixar_agent_model_label
-# ... and the credential fetch lands afterwards, on a chip someone smudged:
-# the credential mirror must recompose it, not leave it to the next pick.
-wm.mixar_agent_model_label = 'stale'
+# ... and the credential fetch lands afterwards: it fills the key chip.
 C.apply_from_payload({'byok_active': True, 'items': [dict(
     provider='qa-key-provider', model='qa-key-model', supports_vision=True,
     key_preview='sk-...qa')]}, wm)
@@ -190,11 +189,15 @@ def run(qa):
                 "bpy.context.window_manager.mixar_agent_model_label == 'Custom' and "
                 "bpy.context.window_manager.mixar_agent_model_byok_active",
                 timeout=5)
-        # 3. With a key in use API key opens AI Provider settings and Mixie
-        #    offers the switch back; the hosted menu is out of reach.
+        # 3. With a key in use Custom AI opens AI Provider settings, Mixie
+        #    offers the switch back, and the key chip names the key's model.
+        #    This provider has no catalog list, so the whole chip opens the
+        #    settings too (no dropdown) and no pulldown is left on the row.
+        qa.wait("bpy.context.window_manager.mixar_agent_key_model == 'QA Key Model' and "
+                "not bpy.context.window_manager.mixar_agent_key_menu", timeout=5)
         key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
         mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type='AGENT_BUBBLE')['widgets']
-        assert len(key) == 1 and len(mixie) == 1, (key, mixie)
+        assert len(key) == 2 and len(mixie) == 1, (key, mixie)
         assert not qa.find(**PICKER)['widgets'], 'hosted menu still offered over a user key'
         snaps.append(qa.step('chip_byok_capture', capture, qa, 'chip_byok',
                              {'op': 'MIXAR_BYOK_OT_open_dialog', 'area_type': 'AGENT_BUBBLE'},

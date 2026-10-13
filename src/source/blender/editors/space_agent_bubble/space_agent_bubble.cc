@@ -46,6 +46,8 @@
 
 #include "BLI_rect.h"
 
+#include "agent_ui_provider.hh"
+
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 
@@ -709,80 +711,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                 TIP_("Auto mode: the agent decides open choices itself instead of asking you, "
                      "and lists its decisions in the summary"));
 
-  /* --- Mixie | Custom AI, right of Auto ---
-   * Two native buttons over the painted toggle, split at the seam the layout
-   * shares with the painter. Mixie while it is already active pops the
-   * hosted model menu (a pulldown anchored to this half; a free popup opened
-   * downward from the cursor on this bottom row covered Upload Reference).
-   * Mixie while a key is in use (`mixar_byok.use_mixie`) opens AI Provider
-   * settings on its remove confirmation: a key is active exactly while it is stored, so going back
-   * to Mixie means removing it. API key always opens AI Provider settings.
-   * The fitted-down icon form keeps the hosted menu. Absent until the Python
-   * half registers the mirror; an empty rect means the budget dropped it. */
-  if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
-    const bool toggle = layout->model_form != AgentModelChipForm::Icon;
-    rctf mixie_rect = layout->chip_model;
-    rctf key_rect = layout->chip_model;
-    if (toggle) {
-      mixie_rect.xmax = layout->model_split_x;
-      key_rect.xmin = layout->model_split_x;
-    }
-    if (state->model_byok_active && toggle) {
-      /* Its own operator, never `open_dialog` with a property: block rebuilds
-       * match the active button to its predecessor by operator type, so two
-       * adjacent unlabelled `open_dialog` buttons traded their properties
-       * after the key half resized. */
-      agent_bubble_rect_to_region(region, mixie_rect, &bx, &by, &bw, &bh);
-      uiDefButO(
-          block,
-          ui::ButtonType::But,
-          "mixar_byok.use_mixie",
-          blender::wm::OpCallContext::InvokeDefault,
-          "",
-          bx,
-          by,
-          bw,
-          bh,
-          TIP_("Switch back to Mixie, Mixar's hosted models. This removes your saved API key"));
-    }
-    else {
-      agent_bubble_rect_to_region(region, mixie_rect, &bx, &by, &bw, &bh);
-      uiDefMenuBut(
-          block,
-          [](bContext *C, ui::Layout *menu_layout, void * /*arg*/) {
-            MenuType *mt = WM_menutype_find("MIXIE_CHAT_MT_agent_model", false);
-            if (mt != nullptr) {
-              ui::menutype_draw(C, mt, menu_layout);
-            }
-          },
-          nullptr,
-          "",
-          bx,
-          by,
-          bw,
-          bh,
-          state->model_byok_active ?
-              TIP_("Your own API key is in use, and it decides the model") :
-              TIP_("Mixie is answering. Click to choose which Mixie model the agent runs on"));
-    }
-    if (toggle) {
-      agent_bubble_rect_to_region(region, key_rect, &bx, &by, &bw, &bh);
-      uiDefButO(block,
-                ui::ButtonType::But,
-                "mixar_byok.open_dialog",
-                blender::wm::OpCallContext::InvokeDefault,
-                "",
-                bx,
-                by,
-                bw,
-                bh,
-                state->model_byok_active ?
-                    TIP_("Your own API key is in use, so Mixar credits are not charged. "
-                         "Click to change it") :
-                    TIP_("Use your own API key: pick a provider and model in AI Provider "
-                         "settings. Mixar credits are not charged while it is in use"));
-    }
-  }
+  /* --- Mixie | Custom AI and the key chip, right of Auto ---
+   * (agent_ui_provider.cc). Absent until the Python half registers the
+   * mirror; an empty rect means the budget dropped it. */
+  agent_bubble_provider_buttons(block, region, *layout, *state);
 
   if (!agent_bubble_references_visible(C)) {
     agent_bubble_send_button(C, region, block, *layout, *state);

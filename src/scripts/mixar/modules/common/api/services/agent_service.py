@@ -58,6 +58,7 @@ class AgentService(BaseService):
         api_key: Optional[str],
         base_url: Optional[str] = None,
         supports_vision: Optional[bool] = None,
+        keep_stored_key: bool = False,
     ) -> APIResponse:
         """PUT /agent/byok — upsert BYOK config across all agent roles.
 
@@ -71,6 +72,10 @@ class AgentService(BaseService):
         ``base_url`` / ``supports_vision`` are sent only when provided (the
         "local" provider registering its relay target) — omitting them keeps the
         payload byte-identical for older backends.
+
+        ``keep_stored_key`` switches the model of the stored key in place
+        (``api_key`` is None): the server reuses the key it holds for the same
+        provider and re-validates it against ``model``. Sent only when set.
         """
         payload = {"provider": provider, "model": model}
         if api_key is not None:
@@ -79,6 +84,8 @@ class AgentService(BaseService):
             payload["base_url"] = base_url
         if supports_vision is not None:
             payload["supports_vision"] = bool(supports_vision)
+        if keep_stored_key:
+            payload["keep_stored_key"] = True
         return self.put("byok", json=payload)
 
     def delete_credentials_all(self) -> APIResponse:

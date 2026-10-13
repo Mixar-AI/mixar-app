@@ -34,6 +34,8 @@ enum class AgentIslandControl {
   Voice,
   Auto,
   Model,
+  KeyChip,  /* The key chip's provider word (opens AI Provider settings). */
+  KeyModel, /* The key chip's model pill (the switch dropdown). */
   Generate,
   Count,
 };

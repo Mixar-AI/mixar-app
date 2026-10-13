@@ -49,7 +49,8 @@ static void run(const Scenario &sc, const float text_size, const float window_px
                            SWITCH_W * u,
                            CLEAR_W * u,
                            WAVE_W * u,
-                           text_size};
+                           text_size,
+                           u};
   AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
   agent_chip_forms(
       sc.in, m, [&](const char *s) { return float(std::strlen(s)) * text_size * 0.55f; }, chips);
@@ -114,6 +115,18 @@ int main()
   AgentChipRowInputs no_voice = idle;
   no_voice.voice_available = false;
 
+  /* The user's own key in use: the toggle plus its key chip. */
+  AgentChipRowInputs key = idle;
+  key.model_key_active = true;
+  key.model_key_label = "Claude API";
+  key.model_key_model = "Opus 5.5";
+  key.model_key_menu = true;
+
+  AgentChipRowInputs key_free_form = key;
+  key_free_form.model_key_label = "OpenRouter";
+  key_free_form.model_key_model = "anthropic/claude-opus-4.8";
+  key_free_form.model_key_menu = false;
+
   const Scenario scenarios[] = {
       {"idle", idle},
       {"capturing", capturing},
@@ -121,6 +134,8 @@ int main()
       {"queued", queued},
       {"long_model", long_model},
       {"no_voice", no_voice},
+      {"key", key},
+      {"key_free_form", key_free_form},
   };
   /* Native widget text at 100% / 125% / 15-point / 15-point at 125%. */
   const float sizes[] = {11.0f, 13.75f, 15.0f, 18.75f};

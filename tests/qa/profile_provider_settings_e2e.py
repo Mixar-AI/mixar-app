@@ -41,7 +41,8 @@ saved = (B.get_agent_service, F.get_agent_service,
          copy.deepcopy(M._platform_records), M.is_loaded(),
          wm.mixie_chat_is_logged_in, bpy.context.scene.mixie_chat_user_id,
          bpy.context.preferences.view.show_tooltips)
-fixture = SimpleNamespace(active=False, model='', saves=0, deletes=0, fetches=0)
+fixture = SimpleNamespace(active=False, model='', saves=0, deletes=0, fetches=0,
+                          switches=0, rejected=0, reject_next=False)
 def response(data):
     return SimpleNamespace(success=True, status_code=200, data={'data': data})
 def payload():
@@ -51,6 +52,18 @@ def get_preference():
     fixture.fetches += 1
     return response({'byok_active': fixture.active, 'items': []})
 def save_credentials(**kwargs):
+    if kwargs.get('keep_stored_key'):
+        # The island chip's switch: no key on the wire, the stored one reused
+        # for the same provider (the backend contract), re-validated.
+        assert kwargs['api_key'] is None and fixture.active and kwargs['provider'] == 'openai'
+        if fixture.reject_next:
+            fixture.reject_next = False
+            fixture.rejected += 1
+            return SimpleNamespace(success=False, status_code=400,
+                data={'status': 'failure', 'message': 'Model not available: QA rejection'})
+        fixture.switches += 1
+        fixture.model = kwargs['model']
+        return response(payload())
     assert kwargs['api_key'] == 'qa-synthetic-key'
     fixture.saves += 1
     fixture.active, fixture.model = True, kwargs['model']
@@ -155,11 +168,12 @@ def check_dialog(qa):
 
 
 def key_half(qa):
-    """The island toggle's API key half: the rightmost settings button."""
+    """The island toggle's Custom AI half: the leftmost settings button (with a
+    key in use, the key chip's provider word is another one, further right)."""
     halves = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
     if not halves:
         raise ScenarioFail('Island Mixie | Custom AI toggle missing')
-    return max(halves, key=lambda w: w['rect'][0])
+    return min(halves, key=lambda w: w['rect'][0])
 
 
 def click_key_half(qa):
@@ -171,13 +185,19 @@ def open_picker(qa, area_type, active):
     if area_type == 'AGENT_BUBBLE':
         qa.eval('result=str(bpy.ops.mixar.agent_bubble_show_window())')
     if active:
-        # A key in use: API key opens the shared dialog, Mixie offers the
-        # switch back, and the hosted menu is not offered over the key.
+        # A key in use: Custom AI and the key chip's provider word open the
+        # shared dialog, Mixie offers the switch back, and the only pulldown
+        # left on the row is the chip's model switch, right of the toggle —
+        # the hosted menu is not offered over the key.
         key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type=area_type)['widgets']
         mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type=area_type)['widgets']
-        if len(key) != 1 or len(mixie) != 1 or qa.find(
-                but_type='Pulldown', area_type=area_type, region_type='TOOLS')['widgets']:
-            raise ScenarioFail(f'{area_type} toggle does not show the key in use: {key} {mixie}')
+        pulls = qa.find(but_type='Pulldown', area_type=area_type, region_type='TOOLS')['widgets']
+        # (A narrow island fits the chip as its pill alone, without the
+        # provider word's button.)
+        if (len(key) not in (1, 2) or len(mixie) != 1 or len(pulls) != 1
+                or pulls[0]['rect'][0] <= max(w['rect'][0] for w in key)):
+            raise ScenarioFail(f'{area_type} toggle does not show the key in use: '
+                               f'{key} {mixie} {pulls}')
         return
     # The settings dialog pills the island while it is up and restores it on
     # close; let that land. The first native click after the island comes

@@ -286,9 +286,36 @@ def test_the_optimistic_local_write_composes_too():
     assert wm.mixar_agent_model_label == "Claude Sonnet 4.6 · Medium High"
 
 
-def test_the_island_toggle_names_the_keys_provider_in_one_short_word():
+def test_the_key_chip_names_providers_the_way_the_design_does():
     from mixar.modules.byok.core import catalog_labels
-    assert catalog_labels.toggle_provider_label('codex') == 'Codex'
-    assert catalog_labels.toggle_provider_label('openrouter') == 'OpenRouter'
-    assert catalog_labels.toggle_provider_label('local') == 'Local'
-    assert catalog_labels.toggle_provider_label('') == ''
+    assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
+    assert catalog_labels.chip_provider_label('openai') == 'OpenAI API'
+    assert catalog_labels.chip_provider_label('gemini') == 'Gemini API'
+    assert catalog_labels.chip_provider_label('kimi') == 'Kimi API'
+    assert catalog_labels.chip_provider_label('fugu') == 'Fugu API'
+    assert catalog_labels.chip_provider_label('codex') == 'Codex'
+    assert catalog_labels.chip_provider_label('openrouter') == 'OpenRouter'
+    assert catalog_labels.chip_provider_label('local') == 'Local'
+    assert catalog_labels.chip_provider_label('') == ''
+
+
+def test_the_key_chip_drops_a_model_word_that_repeats_the_brand(monkeypatch):
+    from mixar.modules.byok.core import catalog_labels
+    labels = {('anthropic', 'claude-opus-5-5'): 'Claude Opus 5.5',
+              ('gemini', 'gemini-3-1-pro'): 'Gemini 3.1 Pro',
+              ('openai', 'gpt-5-5'): 'GPT-5.5',
+              ('kimi', 'kimi-k2'): 'Kimi K2'}
+    monkeypatch.setattr(catalog_labels, 'lookup_model_label',
+                        lambda provider, model: labels.get((provider, model), model))
+    assert catalog_labels.chip_model_label('anthropic', 'claude-opus-5-5') == 'Opus 5.5'
+    # A remainder starting with a digit keeps its brand.
+    assert catalog_labels.chip_model_label('gemini', 'gemini-3-1-pro') == 'Gemini 3.1 Pro'
+    assert catalog_labels.chip_model_label('openai', 'gpt-5-5') == 'GPT-5.5'
+    assert catalog_labels.chip_model_label('kimi', 'kimi-k2') == 'K2'
+    # A provider without a short brand name never strips a word.
+    monkeypatch.setattr(catalog_labels, 'lookup_provider_label', lambda pid: 'QA Key Provider')
+    labels[('qa-key-provider', 'qa-key-model')] = 'QA Key Model'
+    assert catalog_labels.chip_model_label('qa-key-provider', 'qa-key-model') == 'QA Key Model'
+    # Unknown ids read raw; no model, no label.
+    assert catalog_labels.chip_model_label('anthropic', 'claude-x') == 'claude-x'
+    assert catalog_labels.chip_model_label('anthropic', '') == ''

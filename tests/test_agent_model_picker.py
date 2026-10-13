@@ -260,10 +260,11 @@ def _menu_tree():
 
 def test_the_island_chip_anchors_the_menu_instead_of_a_free_popup():
     source = (
-        ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
+        ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_provider.cc"
     ).read_text(encoding="utf-8")
     assert "uiDefMenuBut(" in source
-    assert 'WM_menutype_find("MIXIE_CHAT_MT_agent_model"' in source
+    assert "WM_menutype_find(static_cast<const char *>(arg)" in source
+    assert '"MIXIE_CHAT_MT_agent_model"' in source
     assert "wm.call_menu" not in source
 
 

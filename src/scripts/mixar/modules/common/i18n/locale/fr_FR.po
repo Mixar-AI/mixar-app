@@ -1439,6 +1439,12 @@ msgstr "Données de formulaire invalides — veuillez contacter le support."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Un problème est survenu de notre côté. Veuillez réessayer."
 
+msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Lecture du catalogue de modèles locaux"
 
@@ -1526,6 +1532,15 @@ msgstr "Effort de raisonnement du modèle actuellement choisi."
 msgid "No thinking levels for this model"
 msgstr "Aucun niveau de réflexion pour ce modèle"
 
+msgid "Model"
+msgstr "Modèle"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Votre propre clé API est utilisée — choisissez « Modifier ou supprimer ma clé API » dans ce menu pour choisir un modèle hébergé"
 
@@ -1537,9 +1552,6 @@ msgstr "Utiliser ce modèle pour l’agent"
 
 msgid "Provider"
 msgstr "Fournisseur"
-
-msgid "Model"
-msgstr "Modèle"
 
 msgid "Label"
 msgstr "Libellé"
@@ -1850,6 +1862,18 @@ msgstr "Rafraîchir le catalogue de modèles"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Revalider le catalogue fournisseurs+modèles auprès du serveur"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
 msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
 msgstr ""
 
@@ -1884,6 +1908,24 @@ msgid "Agent Key Provider Label"
 msgstr ""
 
 msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Model Switching"
+msgstr ""
+
+msgid "A model switch for your API key is being saved"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -3008,7 +3050,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -18840,7 +18882,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -24535,9 +24577,6 @@ msgstr "Chasse"
 msgid "NEW"
 msgstr "NOUVEAU"
 
-msgid "Custom AI"
-msgstr ""
-
 msgid "Ask Mixie anything..."
 msgstr "Demandez n’importe quoi à Mixie..."
 
@@ -24693,6 +24732,27 @@ msgstr "{} · Enter pour envoyer"
 
 msgid "Sketch · Enter to send"
 msgstr "Croquis · Enter pour envoyer"
+
+msgid "Custom AI"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24891,18 +24951,6 @@ msgstr "Le mode auto est activé : l’agent tranche lui-même les choix en sus
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Mode auto : l’agent tranche lui-même les choix en suspens au lieu de vous interroger, et liste ses décisions dans le résumé"
-
-msgid "Your own API key is in use, and it decides the model"
-msgstr ""
-
-msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
-msgstr ""
-
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
-msgstr ""
-
-msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
-msgstr ""
 
 msgid "Agent Bubble"
 msgstr "Bulle de l’agent"

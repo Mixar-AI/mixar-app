@@ -53,6 +53,8 @@ _DEFAULTS: Dict[str, Any] = {
 _lock = threading.Lock()
 _state: Dict[str, Any] = dict(_DEFAULTS)
 _epoch: int = 0
+# The model an in-place switch is saving (the island chip's dropdown), or "".
+_switch_target: str = ""
 
 
 def snapshot() -> Dict[str, Any]:
@@ -78,10 +80,11 @@ def clear(wm=None) -> None:
     ``wm`` is the caller's live WindowManager when it has one — logout does,
     and passing it avoids re-deriving it from ``bpy.context``.
     """
-    global _epoch, _state
+    global _epoch, _state, _switch_target
     with _lock:
         _epoch += 1
         _state = dict(_DEFAULTS)
+        _switch_target = ""
     apply_to_wm(wm)
 
 
@@ -133,13 +136,59 @@ def apply_to_wm(wm=None) -> None:
             # Properties not registered yet (UI auto-discovery is batched) —
             # the dict keeps the value and a later apply_to_wm picks it up.
             return
-    from . import catalog_labels
-    label = (catalog_labels.toggle_provider_label(current["byok_current_provider"])
-             if current["byok_is_active"] else "")
+    _apply_key_chip(target, current)
+
+
+def _apply_key_chip(target, current) -> None:
+    """The island key chip's mirrors: provider and model as drawn, whether
+    the model opens a dropdown, and whether a switch is in flight (the chip
+    then names the target model, dimmed). C++ only reads them."""
+    from . import catalog_labels, model_suggestions
+    from mixar.modules.common.i18n import iface_
+
+    active = bool(current["byok_is_active"])
+    provider = current["byok_current_provider"] if active else ""
+    with _lock:
+        switching = _switch_target if active else ""
+    model = switching or (current["byok_current_model"] if active else "")
+    menu = bool(provider) and not (model_suggestions.is_openrouter(provider)
+                                   or model_suggestions.is_local(provider))
+    if menu:
+        items = model_suggestions.get_model_items(provider)
+        menu = any(mid != 'NONE' for mid, _label, _desc in items)
     try:
-        target.mixar_agent_key_label = label
+        target.mixar_agent_key_label = iface_(catalog_labels.chip_provider_label(provider))
+        target.mixar_agent_key_model = catalog_labels.chip_model_label(provider, model)
+        target.mixar_agent_key_menu = menu
+        target.mixar_agent_key_busy = bool(switching)
     except Exception:  # registered in a later auto-discovery batch
         pass
+
+
+# ---------------------------------------------------------------------------
+# In-place model switch (the island chip's dropdown)
+# ---------------------------------------------------------------------------
+
+def switching() -> str:
+    """The model a switch is saving right now, or ""."""
+    with _lock:
+        return _switch_target
+
+
+def begin_switch(model: str, wm=None) -> None:
+    """Mark a model switch in flight: the chip names ``model`` until it lands."""
+    global _switch_target
+    with _lock:
+        _switch_target = model
+    apply_to_wm(wm)
+
+
+def end_switch(wm=None) -> None:
+    """The switch landed (or failed): the chip names the stored model again."""
+    global _switch_target
+    with _lock:
+        _switch_target = ""
+    apply_to_wm(wm)
 
 
 

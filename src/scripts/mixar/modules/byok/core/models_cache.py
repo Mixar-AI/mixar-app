@@ -256,7 +256,7 @@ def _redraw() -> None:
         # a popup only re-runs draw() when its own region is refreshed.
         from ..ui.operators import byok_dialog_refresh
         byok_dialog_refresh.refresh()
-        # The toggle's provider name is a catalog label; re-mirror it.
+        # The island key chip names catalog labels; re-mirror them.
         from . import credential_state
         credential_state.apply_to_wm()
     except Exception as exc:

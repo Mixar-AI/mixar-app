@@ -1439,6 +1439,12 @@ msgstr "フォームデータが無効です — サポートにお問い合わ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "サーバー側で問題が発生しました。もう一度お試しください。"
 
+msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ローカルモデルカタログを読み込み中"
 
@@ -1526,6 +1532,15 @@ msgstr "現在選択中のモデルの推論の強度。"
 msgid "No thinking levels for this model"
 msgstr "このモデルには思考レベルがありません"
 
+msgid "Model"
+msgstr "モデル"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "自分のAPIキーを使用中です — ホスト型モデルを選ぶには、このメニューの「自分のAPIキーを変更または削除」を選択してください"
 
@@ -1537,9 +1552,6 @@ msgstr "このモデルをエージェントに使用します"
 
 msgid "Provider"
 msgstr "プロバイダー"
-
-msgid "Model"
-msgstr "モデル"
 
 msgid "Label"
 msgstr "ラベル"
@@ -1850,6 +1862,18 @@ msgstr "モデルカタログを更新"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "プロバイダーとモデルのカタログをバックエンドから再検証します"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
 msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
 msgstr ""
 
@@ -1884,6 +1908,24 @@ msgid "Agent Key Provider Label"
 msgstr ""
 
 msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Model Switching"
+msgstr ""
+
+msgid "A model switch for your API key is being saved"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -3008,7 +3050,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -18844,7 +18886,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -24539,9 +24581,6 @@ msgstr "キャッチ中"
 msgid "NEW"
 msgstr "新着"
 
-msgid "Custom AI"
-msgstr ""
-
 msgid "Ask Mixie anything..."
 msgstr "Mixieに何でも聞いてください..."
 
@@ -24697,6 +24736,27 @@ msgstr "{} · Enterで送信"
 
 msgid "Sketch · Enter to send"
 msgstr "スケッチ · Enterで送信"
+
+msgid "Custom AI"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24895,18 +24955,6 @@ msgstr "自動モードがオンです：エージェントは未決定の選択
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "自動モード：エージェントはあなたに質問する代わりに未決定の選択肢を自分で決め、その決定をまとめに記載します"
-
-msgid "Your own API key is in use, and it decides the model"
-msgstr ""
-
-msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
-msgstr ""
-
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
-msgstr ""
-
-msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
-msgstr ""
 
 msgid "Agent Bubble"
 msgstr "エージェントバブル"

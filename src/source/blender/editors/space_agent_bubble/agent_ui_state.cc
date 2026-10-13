@@ -59,6 +59,7 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_cat_activity.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_provider.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -411,31 +412,9 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                                std::clamp(RNA_property_float_get(&wm_ptr, level), 0.0f, 1.0f) :
                                0.0f;
   }
-  /* Hosted model pick — the WindowManager mirror the Python half writes
-   * (byok preference state). A build whose Python half has not landed, or
-   * an old .blend opened before the properties registered, reads as "no
-   * picker": the chip is left out entirely instead of popping a menu that
-   * is not registered. */
-  r_state->model_available = false;
-  r_state->model_byok_active = false;
-  r_state->model_label[0] = '\0';
-  r_state->model_key_label[0] = '\0';
-  if (wm) {
-    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    PropertyRNA *label = RNA_struct_find_property(&wm_ptr, "mixar_agent_model_label");
-    if (label && RNA_property_type(label) == PROP_STRING) {
-      r_state->model_available = true;
-      read_string_prop(
-          &wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
-      r_state->model_byok_active = read_bool_prop(&wm_ptr, "mixar_agent_model_byok_active");
-      if (r_state->model_byok_active) {
-        read_string_prop(&wm_ptr,
-                         "mixar_agent_key_label",
-                         r_state->model_key_label,
-                         sizeof(r_state->model_key_label));
-      }
-    }
-  }
+  /* Hosted model pick and the key chip: the Python half's WindowManager
+   * mirror; absent properties read as "no picker" (agent_ui_provider.cc). */
+  agent_ui_provider_gather(wm, r_state);
 
   cat.listening = r_state->voice_listening;
   if (scene) {

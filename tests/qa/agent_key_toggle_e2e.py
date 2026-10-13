@@ -11,10 +11,14 @@ Proves, against the real C++ toggle, the real props dialog and real clicks:
      right column (OpenRouter -> its free-text model field);
   3. the island steps aside to its pill while the centred dialog is up and
      comes back by itself when it closes;
-  4. saving a key flips the toggle to the key's side, which then names the
-     provider instead of "Custom AI" (Mixie becomes `use_mixie`, the hosted
-     menu is withdrawn);
-  5. Mixie with a key in use opens straight on the remove confirmation;
+  4. saving a key flips the toggle to Custom AI and puts the key chip after
+     it, naming the provider ("OpenAI API") and the model (Mixie becomes
+     `use_mixie`, the hosted menu is withdrawn);
+  5. the chip's model pill is a dropdown of the provider's models: picking
+     one saves the SAME key on that model with no key on the wire
+     (`keep_stored_key`) and no dialog — the island never steps aside; a
+     rejected switch keeps the stored model and says why in a toast;
+  6. Mixie with a key in use opens straight on the remove confirmation;
      Keep My Key backs out with the key intact, Remove returns to Mixie.
 
 Only the HTTP service boundary and the catalog are fixtures (shared with
@@ -42,6 +46,9 @@ OUT.mkdir(parents=True, exist_ok=True)
 HALVES = {'op': 'MIXAR_BYOK_OT_open_dialog', 'area_type': 'AGENT_BUBBLE'}
 USE_MIXIE = {'op': 'MIXAR_BYOK_OT_use_mixie', 'area_type': 'AGENT_BUBBLE'}
 MIXIE_MENU = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE', 'region_type': 'TOOLS'}
+# With a key in use the only pulldown on the row is the key chip's model pill.
+KEY_MODEL_MENU = MIXIE_MENU
+SWITCH = {'op': 'MIXAR_BYOK_OT_switch_model', 'popup': True}
 PICK = {'op': 'MIXAR_BYOK_OT_pick', 'popup': True}
 
 
@@ -78,6 +85,16 @@ def open_from_island(qa, pick_half):
 
 
 HOST = "__import__('mixar.modules.byok.ui.operators.byok_dialog_host', fromlist=['x'])"
+# The fixture's models under design-length labels (same ids, so the stored
+# credential stays valid); the credential mirror re-derives the chip from them.
+RELABEL = """
+from mixar.modules.byok.core import model_suggestions as M, credential_state as C
+M.populate_from_payload({'providers': [{'id': 'openai', 'label': 'QA Provider',
+    'models': [{'id': 'qa-one', 'label': 'GPT-5.5', 'platform_available': True},
+               {'id': 'qa-two', 'label': 'GPT-5.4', 'platform_available': True}]}]})
+C.apply_to_wm()
+result = True
+"""
 
 
 def island_comes_back(qa):
@@ -86,12 +103,24 @@ def island_comes_back(qa):
     qa.wait(f"not {HOST}._island_minimised and len(drv.find(**{HALVES!r})) >= 1", timeout=10)
 
 
+def open_key_models(qa):
+    """Click the key chip's model pill until its dropdown is up (the first
+    native click after the island returns can commit composer focus)."""
+    for _ in range(2):
+        click_widget(qa, qa.find(**KEY_MODEL_MENU)['widgets'][0])
+        time.sleep(.5)
+        if qa.find(**SWITCH)['widgets']:
+            return
+    qa.wait(f"bool(drv.find(**{SWITCH!r}))", timeout=5)
+
+
 def mixie_half_with_key(qa):
     halves = qa.find(**USE_MIXIE)['widgets']
     if len(halves) != 1:
         raise ScenarioFail(f'Expected the Mixie half to offer switching back: {halves}')
+    # Custom AI, and with a full key chip its provider word, lie to the right.
     key = qa.find(**HALVES)['widgets']
-    if len(key) != 1 or key[0]['rect'][0] <= halves[0]['rect'][0]:
+    if not key or min(w['rect'][0] for w in key) <= halves[0]['rect'][0]:
         raise ScenarioFail(f'Mixie half is not left of the key half: {halves} {key}')
     return halves[0]
 
@@ -140,13 +169,67 @@ def run(qa):
         save(qa, 'QA Model Two', 'toggle_save')
         qa.wait(f"{WM}.mixar_agent_model_byok_active", timeout=10)
         qa.step('island_back_after_save', island_comes_back, qa)
-        qa.step('key_half_names_provider', qa.wait,
-                f"{WM}.mixar_agent_key_label == 'QA Provider'", timeout=5)
-        qa.wait(f"len(drv.find(**{HALVES!r})) == 1 and len(drv.find(**{USE_MIXIE!r})) == 1 "
-                f"and not drv.find(**{MIXIE_MENU!r})", timeout=10)
+        qa.step('key_chip_names_provider_and_model', qa.wait,
+                f"{WM}.mixar_agent_key_label == 'OpenAI API' and "
+                f"{WM}.mixar_agent_key_model == 'QA Model Two' and {WM}.mixar_agent_key_menu",
+                timeout=5)
+        # Custom AI opens settings; the chip's model pill is the only pulldown,
+        # right of the toggle. (These fixture names are long enough that a
+        # narrow island fits the chip as its pill alone — step 5c proves the
+        # full chip with design-length names.)
+        qa.wait(f"len(drv.find(**{USE_MIXIE!r})) == 1 and len(drv.find(**{HALVES!r})) >= 1 "
+                f"and len(drv.find(**{KEY_MODEL_MENU!r})) == 1", timeout=10)
+        pill = qa.find(**KEY_MODEL_MENU)['widgets'][0]
+        toggle_end = min(w['rect'][2] for w in qa.find(**HALVES)['widgets'])
+        if pill['rect'][0] <= toggle_end:
+            raise ScenarioFail(f'The model pill is not right of the toggle: {pill}')
         snaps.append(snap(qa, 'toggle_on_api_key', HALVES, margin=500))
 
-        # 4a. Mixie with a key -> remove confirmation; Keep My Key backs out.
+        # 5. Switch the model from the chip: no dialog, no key.
+        qa.step('open_key_models', open_key_models, qa)
+        rows = [w['text'] for w in qa.find(**SWITCH)['widgets']]
+        if rows != ['QA Model One', 'QA Model Two']:
+            raise ScenarioFail(f'The key dropdown does not list the provider models: {rows}')
+        snaps.append(snap(qa, 'key_model_menu', {**SWITCH, 'text': 'QA Model One'}, margin=600))
+        qa.step('switch_to_model_one', qa.click, **SWITCH, text='QA Model One')
+        qa.wait(f"{WM}.byok_current_model == 'qa-one' and "
+                f"{WM}.mixar_agent_key_model == 'QA Model One' and not {WM}.mixar_agent_key_busy",
+                timeout=10)
+        if qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
+                   f"result=O._dialog_open or {HOST}._island_minimised"):
+            raise ScenarioFail('Switching the model opened the settings dialog')
+        qa.wait("not bool(drv.find(popup=True))", timeout=5)
+        snaps.append(snap(qa, 'key_chip_switched', HALVES, margin=500))
+
+        # 5b. A rejected switch keeps the stored model and says why.
+        qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
+                "O._qa_profile_fixture[1].reject_next = True\nresult=True")
+        qa.step('open_key_models_again', open_key_models, qa)
+        qa.step('switch_rejected', qa.click, **SWITCH, text='QA Model Two')
+        qa.wait("__import__('mixar.modules.common.notifications', fromlist=['x'])"
+                ".get_notification_store().contains('byok_switch_model')", timeout=10)
+        qa.wait(f"{WM}.byok_current_model == 'qa-one' and "
+                f"{WM}.mixar_agent_key_model == 'QA Model One' and not {WM}.mixar_agent_key_busy",
+                timeout=5)
+        snaps.append(snap(qa, 'key_switch_rejected', HALVES, margin=500))
+
+        # 5c. Design-length names ("OpenAI API" / "GPT-5.5") fit the full chip:
+        #     its provider word is a second settings button, right of Custom AI.
+        qa.eval(RELABEL)
+        qa.wait(f"{WM}.mixar_agent_key_model == 'GPT-5.5' and len(drv.find(**{HALVES!r})) == 2",
+                timeout=10)
+        halves = sorted(qa.find(**HALVES)['widgets'], key=lambda w: w['rect'][0])
+        pill = qa.find(**KEY_MODEL_MENU)['widgets'][0]
+        if not halves[0]['rect'][2] <= halves[1]['rect'][0] <= pill['rect'][0]:
+            raise ScenarioFail(f'Key chip order is not toggle | provider | model: {halves} {pill}')
+        snaps.append(snap(qa, 'key_chip_full', HALVES, margin=500))
+        qa.step('provider_word_opens_settings', open_from_island, qa,
+                lambda qa: sorted(qa.find(**HALVES)['widgets'], key=lambda w: w['rect'][0])[1])
+        check_dialog(qa)
+        close_popup(qa)
+        qa.step('island_back_after_provider_word', island_comes_back, qa)
+
+        # 6a. Mixie with a key -> remove confirmation; Keep My Key backs out.
         qa.step('mixie_keep', open_from_island, qa, mixie_half_with_key)
         qa.wait(f"{WM}.byok_dialog_state == 'CONFIRM_REMOVE'", timeout=10)
         qa.wait("bool(drv.find(op='MIXAR_BYOK_OT_confirm_remove', popup=True))", timeout=5)
@@ -157,7 +240,7 @@ def run(qa):
         close_popup(qa)
         qa.step('island_back_after_keep', island_comes_back, qa)
 
-        # 4b. Mixie again -> Remove -> back on Mixie.
+        # 6b. Mixie again -> Remove -> back on Mixie.
         qa.step('mixie_remove', open_from_island, qa, mixie_half_with_key)
         qa.wait(f"{WM}.byok_dialog_state == 'CONFIRM_REMOVE'", timeout=10)
         qa.step('confirm_remove', qa.click, op='MIXAR_BYOK_OT_confirm_remove', popup=True)
@@ -167,14 +250,18 @@ def run(qa):
         qa.click(text='Done', popup=True)
         close_popup(qa)
         qa.step('island_back_after_remove', island_comes_back, qa)
-        qa.step('key_half_reads_api_key', qa.wait, f"{WM}.mixar_agent_key_label == ''", timeout=5)
-        qa.wait(f"len(drv.find(**{MIXIE_MENU!r})) == 1", timeout=10)
+        qa.step('key_chip_gone', qa.wait,
+                f"{WM}.mixar_agent_key_label == '' and {WM}.mixar_agent_key_model == ''",
+                timeout=5)
+        qa.wait(f"len(drv.find(**{MIXIE_MENU!r})) == 1 and len(drv.find(**{HALVES!r})) == 1",
+                timeout=10)
         snaps.append(snap(qa, 'toggle_back_on_mixie', HALVES, margin=500))
 
         counts = qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
                          "f = O._qa_profile_fixture[1]\n"
-                         "result = {'saves': f.saves, 'deletes': f.deletes}")
-        if counts != {'saves': 1, 'deletes': 1}:
+                         "result = {'saves': f.saves, 'deletes': f.deletes, "
+                         "'switches': f.switches, 'rejected': f.rejected}")
+        if counts != {'saves': 1, 'deletes': 1, 'switches': 1, 'rejected': 1}:
             raise ScenarioFail(f'Unexpected service calls: {counts}')
         return {'service_calls': counts, 'snaps': snaps,
                 'transport': 'synthetic service; real UI, worker threads and timers'}

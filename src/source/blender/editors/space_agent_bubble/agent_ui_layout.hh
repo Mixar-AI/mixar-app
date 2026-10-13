@@ -154,8 +154,14 @@ struct AgentIslandLayout {
    * to carry it without eating Upload Reference. */
   rctf chip_model;
   AgentModelChipForm model_form;
-  /* The toggle's seam: Mixie left of it, API key right of it. */
+  /* The toggle's seam: Mixie left of it, Custom AI right of it. */
   float model_split_x;
+  /* The key chip right of the toggle while the user's own key is in use
+   * (provider word, then the model pill); empty otherwise or when the row
+   * fitted the toggle down to its icon. `key_compact` drops the provider
+   * word and keeps the pill. Shared by the painter and the native buttons. */
+  rctf chip_key;
+  bool key_compact;
   /* Form each chip was fitted at (#agent_chip_fit): 0 is the full label; a
    * higher index sheds text down to the chip's icon. Painters read this. */
   int chip_form[AGENT_CHIP_SLOT_COUNT];

@@ -626,6 +626,6 @@ def test_the_island_mixie_half_has_its_own_operator():
     """Two adjacent unlabelled `open_dialog` buttons traded their properties
     across block rebuilds; the Mixie half must be a different operator."""
     island = (ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
-              / "space_agent_bubble.cc").read_text(encoding="utf-8")
+              / "agent_ui_provider.cc").read_text(encoding="utf-8")
     assert '"mixar_byok.use_mixie"' in island
     assert '"USE_MIXIE"' not in island
