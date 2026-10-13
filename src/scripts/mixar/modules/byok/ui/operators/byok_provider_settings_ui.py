@@ -107,13 +107,15 @@ class FormPlan:
         self.state = state
         self.provider = wm.byok_form_provider
         self.chips = []
-        # Lines directly above the key prompt: the key in use, or the error.
+        # Lines directly above the key prompt: the key in use, then the error.
+        # A failed save or remove never touches the stored key, so the key in
+        # use stays named in ERROR too (its Remove button only in IDLE).
         self.strips = []
+        if wm.byok_is_active and state in ('IDLE', 'ERROR'):
+            self.strips.append(('in_use', None))
         if state == 'ERROR' and wm.byok_last_error:
-            self.strips = [('error', line) for line in
-                           _wrap(iface_(wm.byok_last_error), ERROR_WRAP_CHARS)[:2]]
-        elif wm.byok_is_active and state == 'IDLE':
-            self.strips = [('in_use', None)]
+            self.strips += [('error', line) for line in
+                            _wrap(iface_(wm.byok_last_error), ERROR_WRAP_CHARS)[:2]]
         strips_h = len(self.strips) * S.STRIP_H
 
         if model_suggestions.is_local(self.provider):
@@ -216,6 +218,8 @@ class FormPlan:
                 model=model_label(wm.byok_current_provider, wm.byok_current_model),
                 key=wm.byok_key_preview or iface_("key stored securely"),
             ), S.NOTE, translate=False)
+            if self.state != 'IDLE':
+                continue
             text = iface_("Remove API Key…")
             width = S.text_width(strip, S.DANGER_BUTTON, text) + S.BUTTON_PAD
             S.button(S.sized(strip, width), OP_REQUEST_REMOVE, text, S.DANGER_BUTTON)

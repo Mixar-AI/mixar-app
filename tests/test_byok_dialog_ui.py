@@ -388,6 +388,20 @@ def test_remove_failure_lands_on_error(monkeypatch):
     assert wm.byok_is_active is True  # config untouched on failure
 
 
+def test_error_keeps_the_active_configuration_visible():
+    """A failed re-save never touches the stored key, so the dialog must
+    not suggest the active configuration has gone away."""
+    for card_api in (True, False):
+        log = _draw('ERROR', card_api, byok_is_active=True, byok_last_error="Key rejected",
+                    byok_current_provider='anthropic', byok_current_model='m')
+        assert any("In use:" in e for e in log), log
+        assert any("Key rejected" in e for e in log), log
+        assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+
+    log = _draw('ERROR', card_api=True)
+    assert not any("In use:" in e for e in log)
+
+
 # ---------------------------------------------------------------------------
 # C++ contract pinning (this suite cannot compile the overlay)
 # ---------------------------------------------------------------------------
