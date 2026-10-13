@@ -27858,6 +27858,15 @@ msgstr "Unos ćaskanja"
 msgid "Type your message here"
 msgstr "Ovde unesite poruku"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 # derived
 msgid "Chat Messages"
 msgstr "Poruke ćaskanja"
@@ -31482,6 +31491,40 @@ msgstr "Pokreće ili zaustavlja diktiranje u nacrt skice"
 msgid "Stop the running turn"
 msgstr "Zaustavi tekući potez"
 
+# derived
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Vrati\n"
+"\n"
+"Vraća prompt koji ste napisali pre nego što je prerađen."
+
+# derived
+msgid "Refining this prompt..."
+msgstr "Prerada ovog prompta..."
+
+# derived
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Preradi ponovo\n"
+"\n"
+"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
+
+# derived
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Preradi\n"
+"\n"
+"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
+
 msgid "Folder context"
 msgstr ""
 
@@ -32772,40 +32815,6 @@ msgstr ""
 "Prompt\n"
 "\n"
 "Opišite šta treba generisati. Pritisnite Enter da pošaljete ovaj čvor."
-
-# derived
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Vrati\n"
-"\n"
-"Vraća prompt koji ste napisali pre nego što je prerađen."
-
-# derived
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Preradi ponovo\n"
-"\n"
-"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
-
-# derived
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Preradi\n"
-"\n"
-"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
-
-# derived
-msgid "Refining this prompt..."
-msgstr "Prerada ovog prompta..."
 
 # derived
 msgid ""

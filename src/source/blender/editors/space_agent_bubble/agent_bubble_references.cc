@@ -138,6 +138,55 @@ void agent_bubble_send_button(const bContext * /*C*/,
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
             state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send"));
+
+  /* Refine / Revert: the moodboard node's operators, addressed at the
+   * composer. Same tooltips and disabled hints as the node tile, so one
+   * translation serves both. Exec, not invoke: the request is async and
+   * the operator returns at once. */
+  auto square = [&](const rctf &rect, const char *op, const char *tip) {
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                op,
+                                wm::OpCallContext::ExecDefault,
+                                "",
+                                int(rect.xmin) - region->winrct.xmin,
+                                int(rect.ymin) - region->winrct.ymin,
+                                short(BLI_rctf_size_x(&rect)),
+                                short(BLI_rctf_size_y(&rect)),
+                                tip);
+    if (but) {
+      RNA_boolean_set(ui::button_operator_ptr_ensure(but), "chat", true);
+    }
+    return but;
+  };
+  if (BLI_rctf_size_x(&layout.btn_revert) > 0.0f) {
+    ui::Button *revert = square(
+        layout.btn_revert,
+        "mixie.revert_prompt",
+        TIP_("Revert\n\nRestore the prompt you wrote before it was refined."));
+    if (revert && state.prompt_refining) {
+      ui::button_disable(revert, N_("Refining this prompt..."));
+    }
+  }
+  if (BLI_rctf_size_x(&layout.btn_refine) > 0.0f) {
+    ui::Button *refine = square(
+        layout.btn_refine,
+        "mixie.refine_prompt",
+        state.prompt_refined ?
+            TIP_("Refine Again\n\nRewrite this prompt once more "
+                 "for the model it will be sent to. Revert still "
+                 "restores your own wording, not the previous "
+                 "refinement.") :
+            TIP_("Refine\n\nRewrite this prompt for the model it "
+                 "will be sent to, adding the detail that model "
+                 "responds to."));
+    if (refine && (state.prompt_empty || state.prompt_refining)) {
+      /* N_: the tooltip translates a disabled hint when it shows it. */
+      ui::button_disable(refine,
+                         state.prompt_refining ? N_("Refining this prompt...") :
+                                                 N_("Write a prompt first"));
+    }
+  }
 }
 
 namespace {
