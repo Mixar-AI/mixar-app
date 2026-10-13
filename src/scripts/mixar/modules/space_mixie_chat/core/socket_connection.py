@@ -39,6 +39,8 @@ class SocketConnection:
             except Exception as e:
                 logger.error(f"JSON-RPC run loop error: {e}")
 
+            from mixar.modules.mcp_bridge.core.lease import invalidate_transport
+            invalidate_transport(self)
             if self._reauth_stop:
                 self._reauth_stop.set()
                 self._reauth_stop = None
@@ -257,7 +259,11 @@ class SocketConnection:
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
+        from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
+        from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
+        from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
+        from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -281,17 +287,31 @@ class SocketConnection:
                 # Image bytes by HTTP reference; sync frames stay small.
                 "agent_history_v2",
                 "script_execution",
+                # Prepared terrain imports plus mesh_bounds/linked_scatter.
+                # The backend gates these APIs on the connected instance.
+                "forest_runtime_v1",
+                "terrain_raycast_v1",
+                "inspection_preview_v1",
                 "notifications",
                 "local_llm",
                 # Client answers blender.liveness on the WS thread; the
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
                 "liveness",
+                *([MCP_CAPABILITY] if not self._role else []),
+                *(["mixar_ui_v1"] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
                 # context_folder.* reads of the folders a chat attached.
                 CONTEXT_FOLDER_CAPABILITY,
+                # context_folder.view_video: this build decodes folder videos.
+                CONTEXT_FOLDER_VIDEO_CAPABILITY,
+                # moodboard.view_video: the agent reviews board videos as frames.
+                MOODBOARD_VIDEO_CAPABILITY,
+                # mixar.scene_render_start accepts agent_ref_json and reports
+                # the render's terminal outcome as generation.agent_result.
+                SCENE_RENDER_CALLBACKS_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

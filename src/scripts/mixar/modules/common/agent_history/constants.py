@@ -10,6 +10,9 @@ CAPABILITY_V2 = 'agent_history_v2'
 # Stable across reconnects; recovery removes only the archive sync warning.
 SYNC_NOTICE_ID = 'mixar-agent-history-sync'
 POLL_SECONDS = 2.0
+# Live scene IDs are sent every poll; older on-disk sessions need slower discovery.
+DISCOVERY_SECONDS = 30.0
+IDLE_CACHE_SESSIONS = 128
 REQUEST_TIMEOUT = 20.0  # main-thread scene capture only
 # A sync reply is bound to its connection: wait for it (or the disconnect) instead
 # of abandoning it on a timer and re-requesting the same batch. The cap only

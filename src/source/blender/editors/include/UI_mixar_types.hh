@@ -49,15 +49,15 @@ enum class MixarCardElement : uint8_t {
   Heading,
   /** "(rahul@mixar.app)" — small, dim. */
   Muted,
-  /** "Usage Remaining" — small, one tier brighter than #Muted so the section
+  /** "Credits" — small, one tier brighter than #Muted so the section
    * reads as a heading rather than as more metadata. */
   SectionLabel,
-  /** "4300 of 5000 left" — small, muted, right-aligned. */
+  /** "couldn't refresh" — small, muted, right-aligned. */
   MetaRight,
   /** "PRO Plan" — small bordered chip. */
   Pill,
-  /** Full-width quota bar with the percentage inside the fill. */
-  UsageBar,
+  /** "6,800 credits" — the balance at heading weight; payload 1 = empty. */
+  CreditBalance,
   /** "Buy Credits" — accent-outlined compact button. */
   AccentButton,
   /** Dashboard / AI Provider Settings / Docs — outlined icon buttons. */
@@ -136,6 +136,9 @@ enum class MixarCardIcon : uint8_t {
   Cross,
   /** Wrapped box with a ribbon — refer a friend. */
   Gift,
+  /** Two-pin plug — external MCP connections. */
+  Plug,
+  Count,
 };
 
 struct MixarScope {

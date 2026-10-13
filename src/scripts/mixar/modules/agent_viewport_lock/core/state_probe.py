@@ -42,6 +42,9 @@ def is_agent_executing(scene=None) -> bool:
             scene = bpy.context.scene
         if scene is None:
             return False
+        from mixar.modules.mcp_bridge.core.lease import has_active_operation
+        if has_active_operation(getattr(scene, "mixie_session_id", "")):
+            return True
         # Harness v3: a worker-class task never touches this document, so the
         # whole-turn input block stands down (capability-based unlock). A
         # FOREGROUND-class task (texturing / lighting / editing existing

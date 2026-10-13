@@ -15,9 +15,9 @@ its own operators, so ordinary outliner edits desynchronise it:
 * a world whose proxy is gone leaves its hidden source mesh behind, and that
   mesh still renders splat quads through ``KIRI_3DGS_Render_GN`` at F12.
 
-This module owns the reconciliation: a depsgraph handler *detects* proxy
-add/remove and visibility changes, a debounced timer *does the work* (never
-mutate scene data inside ``depsgraph_update_post``).
+This module owns the reconciliation: a depsgraph handler schedules a debounced
+timer to detect proxy add/remove and visibility changes. Neither full-scene
+scans nor scene mutations run inside ``depsgraph_update_post``.
 
 Hiding itself is handled inside the vendored addon — see the MIXAR PATCH in
 ``kiri_3dgs_render/__init__.py`` (``mixar_object_visibility``), which finally
@@ -44,6 +44,7 @@ _RECONCILE_DELAY_S = 0.2
 _known_proxies = None      # frozenset[str] | None
 _known_visibility = None   # tuple[bool, ...] | None
 _reconcile_pending = False
+_check_pending = False
 
 
 # --------------------------------------------------------------------------- #
@@ -264,9 +265,23 @@ def note_splats_imported() -> None:
 
 @persistent
 def on_depsgraph_update(_scene=None, _depsgraph=None):
-    """Detect only; all mutation happens in the debounced timer."""
-    global _known_proxies, _known_visibility
+    """Coalesce updates; operator loops must not scan every object per edit."""
+    global _check_pending
 
+    if _reconcile_pending or _check_pending:
+        return
+    _check_pending = True
+    try:
+        bpy.app.timers.register(_check_splats, first_interval=_RECONCILE_DELAY_S)
+    except Exception:  # noqa: BLE001 - restricted context
+        _check_pending = False
+
+
+def _check_splats():
+    """Detect changes once after a burst of edits, on the main loop."""
+    global _known_proxies, _known_visibility, _check_pending
+
+    _check_pending = False
     if _reconcile_pending:
         return
     try:
@@ -289,19 +304,21 @@ def on_depsgraph_update(_scene=None, _depsgraph=None):
 @persistent
 def on_load_post(_filepath=None):
     """Re-baseline for the newly opened file (its splats are not 'new')."""
-    global _known_proxies, _known_visibility, _reconcile_pending
+    global _known_proxies, _known_visibility
 
-    _reconcile_pending = False
+    cancel_pending()
     _known_proxies = None
     _known_visibility = None
 
 
 def cancel_pending() -> None:
-    global _reconcile_pending
+    global _reconcile_pending, _check_pending
 
     _reconcile_pending = False
+    _check_pending = False
     try:
-        if bpy.app.timers.is_registered(reconcile_splats):
-            bpy.app.timers.unregister(reconcile_splats)
+        for callback in (_check_splats, reconcile_splats):
+            if bpy.app.timers.is_registered(callback):
+                bpy.app.timers.unregister(callback)
     except Exception:  # noqa: BLE001 - interpreter shutdown
         pass

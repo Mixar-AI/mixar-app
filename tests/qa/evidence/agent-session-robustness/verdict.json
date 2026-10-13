@@ -1,0 +1,177 @@
+{
+  "date": "2026-10-01",
+  "production": {
+    "version": "4.1.3",
+    "environment": "Prod",
+    "backend": "https://api.mixar.app",
+    "checks": {
+      "running_row_remains_running": false,
+      "completion_capture_in_origin": false,
+      "completion_is_success": true,
+      "cancel_is_failure": false,
+      "cancel_row_is_failed": false,
+      "cancel_has_no_capture": true,
+      "render_uses_gpu": true,
+      "no_terminal_row_during_native_render": false,
+      "dispatch_fault_replied": false,
+      "next_script_completed": false
+    },
+    "default_cycles_device": "GPU",
+    "compute_device_type": "METAL",
+    "devices": [
+      {
+        "name": "Apple M4 Pro",
+        "type": "CPU",
+        "enabled": false
+      },
+      {
+        "name": "Apple M4 Pro (GPU - 20 cores)",
+        "type": "METAL",
+        "enabled": true
+      }
+    ],
+    "preview": {
+      "while_running": "DONE",
+      "origin_capture_count": 0,
+      "render": {
+        "engine": "CYCLES",
+        "device": "GPU",
+        "samples": 128,
+        "width": 1280,
+        "height": 960,
+        "elapsed_seconds": 8.759
+      }
+    },
+    "cancel": {
+      "row": "DONE",
+      "success": true,
+      "status": "cancelled"
+    },
+    "dispatch_recovery": {
+      "first": null,
+      "second": null,
+      "second_executed": false,
+      "timer_active": true
+    }
+  },
+  "branch": {
+    "version": "4.1.4",
+    "environment": "Dev",
+    "backend": "https://uat5.mixar.app",
+    "checks": {
+      "running_row_remains_running": true,
+      "completion_capture_in_origin": true,
+      "completion_is_success": true,
+      "cancel_is_failure": true,
+      "cancel_row_is_failed": true,
+      "cancel_has_no_capture": true,
+      "render_uses_gpu": true,
+      "no_terminal_row_during_native_render": true,
+      "dispatch_fault_replied": true,
+      "next_script_completed": true
+    },
+    "default_cycles_device": "GPU",
+    "compute_device_type": "METAL",
+    "devices": [
+      {
+        "name": "Apple M4 Pro",
+        "type": "CPU",
+        "enabled": false
+      },
+      {
+        "name": "Apple M4 Pro (GPU - 20 cores)",
+        "type": "METAL",
+        "enabled": true
+      }
+    ],
+    "preview": {
+      "while_running": "RUNNING",
+      "origin_capture_count": 1,
+      "render": {
+        "engine": "CYCLES",
+        "device": "GPU",
+        "samples": 128,
+        "width": 1280,
+        "height": 960,
+        "elapsed_seconds": 9.367
+      }
+    },
+    "cancel": {
+      "row": "FAILED",
+      "success": false,
+      "status": "cancelled"
+    },
+    "dispatch_recovery": {
+      "first": {
+        "success": false,
+        "error": "Executor request failed",
+        "error_type": "executor_failed",
+        "effects_uncertain": false
+      },
+      "second": {
+        "success": true,
+        "output": "second\n"
+      },
+      "second_executed": true,
+      "timer_active": false
+    }
+  },
+  "candidate_backend": {
+    "clarification": {
+      "rows": [
+        {
+          "label": "Asked a question",
+          "status": "DONE",
+          "detail": ""
+        },
+        {
+          "label": "Asked a question",
+          "status": "DONE",
+          "detail": ""
+        }
+      ],
+      "answer": "red"
+    },
+    "materials": {
+      "Viewport_Only": {
+        "display": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ],
+        "shader": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ]
+      },
+      "Shader_Red": {
+        "display": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ],
+        "shader": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ]
+      }
+    },
+    "regression_tests_passed": 568,
+    "status": "Awaiting deployment and live model verification"
+  },
+  "client_regression_tests_passed": 111,
+  "limits": [
+    "Native comparisons use installed product modules and actual script queues, with response transport substituted.",
+    "No authenticated production model turns: the isolated production profile was signed out.",
+    "Clarification replay uses actual candidate-backend graph events; the material render validates its API guidance, not universal model adherence.",
+    "Single preview timings do not establish a speed change; both builds already use GPU.",
+    "Full coordinated Buddha-temple replay remains outstanding.",
+    "The prior stuck-cancellation-display finding was caused by capturing a collapsed island window; normal restoration shows Failed."
+  ]
+}

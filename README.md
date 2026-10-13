@@ -49,6 +49,18 @@ You need everything required to build Blender 5.2 itself. Follow Blender's offic
 
 Mixar additionally needs **Python 3.11+** and **rsync** on the build host (macOS and Linux ship these; on Windows, install via WSL or Cygwin if missing).
 
+The native Windows build (`scripts/windows/build.bat`) requires **Visual Studio
+2022 17.14.14 or newer** with the C++ workload. Blender 5.2 embeds **Python 3.13**
+from the pinned `upstream/lib/windows_x64` libraries; installing a newer host
+Python does not replace those libraries. The build checks both dependency
+revisions and Python payloads before overlaying, and reports the exact repair
+command if a checkout or Git LFS download is incomplete. Old Python cache
+entries are cleared automatically while compiled objects are kept.
+Ninja builds select the Visual Studio installation's default toolset explicitly.
+When that compiler changes, old CMake configuration is backed up under the build
+directory's `.mixar-toolchain-backups/` before configuring again. Target objects
+are retained; reapply any options previously set only in the CMake cache.
+
 ### Quickstart
 
 ```bash
@@ -126,9 +138,18 @@ build/<env>/            CMake build directory
    - installs Python packages into the embedded Blender Python
 
 On Windows, both overlay passes replace files when their timestamps or sizes
-differ, even when upstream is older than a previous branch's override. Every
-build reruns CMake after the overlay so restored CMake files remove stale
-targets; existing object files are retained for incremental compilation.
+differ, even when upstream is older than a previous branch's override. After
+both copies succeed, files absent from both inputs move to
+`build/.mixar-overlay-backups/`, preventing old headers from shadowing their
+replacements. Generated environment headers and retained-file timestamps are
+preserved. Every build reruns CMake after the overlay so restored CMake files
+remove stale targets; existing object files are retained for incremental compilation.
+Bundled configuration, package installation and import checks use Python's `-s`
+flag, so packages in the user's Python installation cannot affect those steps.
+The Mixar-owned `src/scripts/mixar/` package is mirrored separately to remove
+retired Python directories, preserving the generated `_build_env.py` marker.
+The mirror excludes local virtual environments and Python caches and refuses a
+missing source package. Other input files retain their incremental copy behavior.
 
 ---
 

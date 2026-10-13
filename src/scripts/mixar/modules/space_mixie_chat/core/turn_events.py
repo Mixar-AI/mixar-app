@@ -18,6 +18,7 @@ from mixar.modules.common.i18n import rpt_
 from ..constants import SessionState
 from .agent_events import AgentEvent
 from . import turn_cursor
+from .turn_event_pump import TurnEventPump
 
 logger = get_logger(__name__)
 _LOCK = threading.Lock()
@@ -34,6 +35,7 @@ _commands = {}
 _blocked = set()
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_ITEMS = 512
+_pump = TurnEventPump(lambda: _drain())
 
 
 @dataclass
@@ -48,10 +50,12 @@ class Turn:
 
 
 def arm():
-    """Arm during connection setup or a UI send (main thread)."""
-    import bpy
-    if not bpy.app.timers.is_registered(_drain):
-        bpy.app.timers.register(_drain, first_interval=0.02, persistent=True)
+    """Enable ingress after teardown; an empty inbox needs no timer."""
+    _pump.enable()
+    with _LOCK:
+        pending = bool(_inbox or _overflow)
+    if pending:
+        _pump.request()
 
 
 def _scene_id(scene):
@@ -106,11 +110,12 @@ def handle_turn_notification(method, params):
         if (lane is not None and len(lane) >= _MAX_ITEMS) or _inbox_bytes + size > _MAX_BYTES:
             if len(_overflow) < 32:
                 _overflow.add(sid)
-            return
-        if lane is None:
-            lane = _inbox[sid] = deque()
-        lane.append((method, params, size))
-        _inbox_bytes += size
+        else:
+            if lane is None:
+                lane = _inbox[sid] = deque()
+            lane.append((method, params, size))
+            _inbox_bytes += size
+    _pump.request()
 
 
 def _pop_round_robin():
@@ -168,8 +173,14 @@ def _drain():
         # Only the overflowed sessions replay from their cursors; the other
         # tabs' deliveries were never dropped. (Also recovers a dropped start
         # or command acknowledgement of those sessions.)
-        reconnect(session_ids=overflowed)
-    return 0.02
+        try:
+            reconnect(session_ids=overflowed)
+        except Exception:
+            with _LOCK:
+                _overflow.update(overflowed)
+            raise  # The pump retries recovery with bounded backoff.
+    with _LOCK:
+        return 0.02 if _inbox or _overflow else None
 
 
 def _consume(method, params):
@@ -430,10 +441,7 @@ def drop_scene(scene_name):
 
 def shutdown(app_exit=False):
     """Stop the consumer on disable/reload; atexit must never call bpy."""
-    if not app_exit:
-        import bpy
-        if bpy.app.timers.is_registered(_drain):
-            bpy.app.timers.unregister(_drain)
+    _pump.stop(app_exit=app_exit)
     reset()
 
 

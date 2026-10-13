@@ -160,6 +160,12 @@ struct AgentIslandLayout {
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;
+  /* Refine (and, once a rewrite has landed, Revert) left of Send — the same
+   * pair as a moodboard node's prompt, square because Send must stay the
+   * obvious action. Chat tabs only; empty elsewhere. The chip row is budgeted
+   * up to the leftmost of them. */
+  rctf btn_refine;
+  rctf btn_revert;
 };
 
 void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);

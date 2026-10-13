@@ -30,7 +30,7 @@ def mirror(rig, monkeypatch):
     monkeypatch.setattr(props, '_shown_scene', lambda: rig.windows[0].scene)
     monkeypatch.setattr(props, '_status_of', lambda scene: scene.mixie_chat_state)
     monkeypatch.setattr(props, '_workers', lambda sid: (0, 0))
-    monkeypatch.setattr(props, '_tag_zen_viewports', lambda: None)
+    monkeypatch.setattr(props, '_tag_drawer_viewports', lambda: None)
     monkeypatch.setattr(props, '_last_signature', ())
     monkeypatch.setattr(props, '_last_status', {})
     monkeypatch.setattr(props, '_finished_unseen', {})

@@ -30,7 +30,7 @@ from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
 
-from ...core.scene_tab_snapshot import zen_view3d_override
+from ...core.scene_tab_snapshot import drawer_view3d_override
 
 logger = get_logger(__name__)
 
@@ -53,7 +53,7 @@ _last_status: dict = {}
 _last_signature: tuple = ()
 
 
-def _tag_zen_viewports() -> None:
+def _tag_drawer_viewports() -> None:
     """Repaint the drawer: its region listens for scene/window notifiers, but a
     timer-driven list change sends none."""
     wm = getattr(bpy.context, 'window_manager', None)
@@ -79,7 +79,7 @@ class MixarSceneTab(PropertyGroup):
 
 # --- slide clock (mirror of the moodboard drawer) ---------------------------
 
-_view3d_override = zen_view3d_override
+_view3d_override = drawer_view3d_override
 
 
 _THUMBS_INTERVAL = 1.0
@@ -200,7 +200,7 @@ def refresh_scene_tabs() -> int:
             for field, value in zip(fields, values):
                 setattr(tab, field, value)
         _last_signature = signature
-        _tag_zen_viewports()
+        _tag_drawer_viewports()
     return len(tabs)
 
 

@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akció"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Letöltés: {percent}%"
 
-msgid "Upgrade"
-msgstr "Csomagváltás"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% lesz hátra"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Előfizetés"
@@ -2930,23 +2933,29 @@ msgstr "Csomag neve"
 msgid "Display name of the current plan"
 msgstr "Az aktuális csomag megjelenített neve"
 
-msgid "Remaining"
-msgstr "Fennmaradó"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "A ciklus kreditkeretéből még elérhető százalék"
-
 msgid "Credits Remaining"
 msgstr "Fennmaradó kreditek"
 
-msgid "Credits left in the current cycle"
-msgstr "A jelenlegi ciklusban fennmaradó kreditek"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Kreditek összesen"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "A jelenlegi ciklus kreditkerete"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Feltölthető"
@@ -3065,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Fájlok"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3140,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Eredetpont"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4963,6 +5017,195 @@ msgstr "Lokális kiszolgáló modellje"
 
 msgid "Local model last error"
 msgstr "Lokális modell utolsó hibája"
+
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "Másolás"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
 
 msgid "Processing..."
 msgstr "Feldolgozás..."
@@ -6950,9 +7193,6 @@ msgstr "Csomópont törlése"
 msgid "Duplicate Nodes (Shift D)"
 msgstr "Csomópontok megkettőzése (Shift D)"
 
-msgid "Copy"
-msgstr "Másolás"
-
 msgid "Continue With"
 msgstr "Folytatás ezzel"
 
@@ -8722,11 +8962,11 @@ msgstr "A Moodboard→csevegés melléklet-szinkron frissítése ({shortcut})"
 msgid "Sync failed: {error}"
 msgstr "A szinkronizálás sikertelen: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Nincs kijelölt moodboard-kép"
@@ -9024,9 +9264,6 @@ msgstr "Mappa"
 
 msgid "Directory of the selected file(s)"
 msgstr "A kijelölt fájl(ok) mappája"
-
-msgid "Files"
-msgstr "Fájlok"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Nem sikerült betölteni a médiát: {filepath}"
@@ -18588,7 +18825,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19341,8 +19578,14 @@ msgstr "Módosítás..."
 msgid "Awaiting Input..."
 msgstr "Bemenetre vár..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "A videókhoz Videó mód kell. Távolítsa el a videót, ha az ügynöknek küldi."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
+
+msgid "User ID"
+msgstr "Felhasználói azonosító"
+
+msgid "User ID for Mixie Chat login"
+msgstr "Felhasználói azonosító a Mixie Chat bejelentkezéshez"
 
 msgid "Agent expects: {formats}"
 msgstr "Az ügynök ezeket várja: {formats}"
@@ -19416,8 +19659,20 @@ msgstr "Az üzenet nem küldhető el"
 msgid "You're out of credits"
 msgstr "Elfogyott a kreditje"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Elhasználta a havi kreditjeit. Váltson nagyobb csomagra, hogy tovább alkothasson a Mixie-vel."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Csomagváltás"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
@@ -19602,7 +19857,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -20524,11 +20779,14 @@ msgstr "Törlendő archivált munkamenet"
 msgid "Chat removed from history"
 msgstr "A csevegés eltávolítva az előzményekből"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Nem adható hozzá: {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Elérte a mellékletkorlátot ({count})"
@@ -20536,14 +20794,14 @@ msgstr "Elérte a mellékletkorlátot ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Kihagyva: {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Nem adható hozzá: {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Ezek a referenciák már csatolva vannak"
 
 msgid "Added {count} image(s)"
 msgstr "{count} kép hozzáadva"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Hozzáadás blendből"
@@ -20560,6 +20818,9 @@ msgstr "{size} – van adat"
 msgid "{size} - No data"
 msgstr "{size} – nincs adat"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Kép kijelölése a blendfájlból"
 
@@ -20568,6 +20829,12 @@ msgstr "A kép már hozzá van adva"
 
 msgid "Image not found in blend file"
 msgstr "A kép nem található a blendfájlban"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "A kép már csatolva van"
@@ -21319,6 +21586,15 @@ msgstr "Csevegési bemenet"
 msgid "Type your message here"
 msgstr "Írja ide az üzenetét"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 msgid "Chat Messages"
 msgstr "Csevegési üzenetek"
 
@@ -21444,12 +21720,6 @@ msgstr ""
 
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 – gyors és hatékony"
-
-msgid "User ID"
-msgstr "Felhasználói azonosító"
-
-msgid "User ID for Mixie Chat login"
-msgstr "Felhasználói azonosító a Mixie Chat bejelentkezéshez"
 
 msgid "Password"
 msgstr "Jelszó"
@@ -23422,9 +23692,6 @@ msgstr "Kurzor illesztése"
 msgid "Snap 2D cursor"
 msgstr "2D kurzor illesztése"
 
-msgid "Origin"
-msgstr "Eredetpont"
-
 msgid "Mirror selected UVs"
 msgstr "A kijelölt UV-k tükrözése"
 
@@ -24160,10 +24427,16 @@ msgstr "Üdvözöljük !"
 msgid "%s Plan"
 msgstr "%s csomag"
 
-msgid "Checking usage…"
-msgstr "Felhasználás ellenőrzése…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s kredit"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24174,15 +24447,6 @@ msgstr "Csomagok megtekintése"
 
 msgid "couldn't refresh"
 msgstr "nem sikerült frissíteni"
-
-msgid "%s of %s left"
-msgstr "%s / %s maradt"
-
-msgid "%s credits"
-msgstr "%s kredit"
-
-msgid "no credits"
-msgstr "nincs kredit"
 
 msgid "Docs"
 msgstr "Dokumentáció"
@@ -24202,6 +24466,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Adjon hozzá egy festőréteget a Rétegek panelen a festés megkezdéséhez"
 
@@ -24214,7 +24481,43 @@ msgstr "Diktálás indítása vagy leállítása a vázlatpiszkozatba"
 msgid "Stop the running turn"
 msgstr "A futó forduló leállítása"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Visszaállítás\n"
+"\n"
+"A finomítás előtti, Ön által írt prompt visszaállítása."
+
+msgid "Refining this prompt..."
+msgstr "A prompt finomítása..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Finomítás újra\n"
+"\n"
+"A prompt újraírása még egyszer ahhoz a modellhez, amelynek elküldik. A Visszaállítás továbbra is az Ön saját megfogalmazását állítja vissza, nem az előző finomítást."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Finomítás\n"
+"\n"
+"A prompt újraírása ahhoz a modellhez, amelynek elküldik, kiegészítve azokkal a részletekkel, amelyekre a modell reagál."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24225,6 +24528,9 @@ msgstr "Referencia eltávolítása"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Ennek a vázlatnak és a sorban álló rajzának az elvetése"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24595,7 +24901,7 @@ msgstr "Szabályok — a projekt- és a globális szabályok szerkesztése az ü
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25220,36 +25526,6 @@ msgstr ""
 "Írja le, mit kell generálni. Nyomja meg az Entert a csomópont elküldéséhez."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Visszaállítás\n"
-"\n"
-"A finomítás előtti, Ön által írt prompt visszaállítása."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Finomítás újra\n"
-"\n"
-"A prompt újraírása még egyszer ahhoz a modellhez, amelynek elküldik. A Visszaállítás továbbra is az Ön saját megfogalmazását állítja vissza, nem az előző finomítást."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Finomítás\n"
-"\n"
-"A prompt újraírása ahhoz a modellhez, amelynek elküldik, kiegészítve azokkal a részletekkel, amelyekre a modell reagál."
-
-msgid "Refining this prompt..."
-msgstr "A prompt finomítása..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -25464,12 +25740,6 @@ msgstr "A kijelölt moodboard-elem nem videó"
 
 msgid "Cannot decode video: %s"
 msgstr "A videó nem dekódolható: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Moodboard-videó lebegtetés-figyelő"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "A moodboardon belüli videólejátszás leállítása, amikor a mutató elhagyja a lapját"
 
 msgid "This board item has no image or video to preview"
 msgstr "Ennek a táblaelemnek nincs előnézhető képe vagy videója"
@@ -27748,15 +28018,6 @@ msgstr "Az ejtési útvonalak nem lehetnek üres karakterláncok"
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Az ejtési útvonalaknak nem üres JSON-tömbnek kell lenniük"
 
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "A QA-képkocka rögzítéséhez a --enable-event-simulate kell"
-
-msgid "Unable to read QA window frame"
-msgstr "A QA-ablakkeret nem olvasható"
-
-msgid "Unable to save QA window frame"
-msgstr "A QA-ablakkeret nem menthető"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -27785,6 +28046,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "A QA-képkocka rögzítéséhez a --enable-event-simulate kell"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 msgid "Microphone permission is required"

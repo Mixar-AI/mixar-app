@@ -152,6 +152,9 @@ class Job:
     # for every user-initiated job — and an empty ref means no callback is
     # ever sent. See core/agent_results.py.
     agent_ref: dict = field(default_factory=dict)
+    # Who asked for this job, sent as X-Mixar-Job-Origin on submit: "user",
+    # "mixar_agent" (the in-app agent's ref) or "mcp" (an external AI app).
+    origin: str = "user"
     # Set only after the backend acknowledges the terminal outcome. The
     # independent callback outbox retries uncertain delivery after disconnect.
     _agent_reported: bool = field(default=False, repr=False)

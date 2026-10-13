@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Acción"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Descargando {percent}%"
 
-msgid "Upgrade"
-msgstr "Mejorar plan"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "Queda un {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Suscripción"
@@ -2930,23 +2933,29 @@ msgstr "Nombre del plan"
 msgid "Display name of the current plan"
 msgstr "Nombre visible del plan actual"
 
-msgid "Remaining"
-msgstr "Restante"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Porcentaje de la asignación de créditos del ciclo que sigue disponible"
-
 msgid "Credits Remaining"
 msgstr "Créditos restantes"
 
-msgid "Credits left in the current cycle"
-msgstr "Créditos que quedan en el ciclo actual"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Total de créditos"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Asignación de créditos del ciclo actual"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Puede recargar"
@@ -3065,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Archivos"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3140,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Origen"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4963,6 +5017,195 @@ msgstr "Modelo del servidor local"
 
 msgid "Local model last error"
 msgstr "Último error del modelo local"
+
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
 
 msgid "Processing..."
 msgstr "Procesando..."
@@ -6950,9 +7193,6 @@ msgstr "Borrar nodo"
 msgid "Duplicate Nodes (Shift D)"
 msgstr "Duplicar nodos (Shift D)"
 
-msgid "Copy"
-msgstr "Copiar"
-
 msgid "Continue With"
 msgstr "Continuar con"
 
@@ -8722,11 +8962,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Error de sincronización: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Se omitió {count} video: el agente solo acepta imágenes fijas. Use Gen. de video en el moodboard para clips"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Se omitieron {count} videos: el agente solo acepta imágenes fijas. Use Gen. de video en el moodboard para clips"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "No hay imágenes del moodboard seleccionadas"
@@ -9024,9 +9264,6 @@ msgstr "Carpeta"
 
 msgid "Directory of the selected file(s)"
 msgstr "Carpeta de los archivos seleccionados"
-
-msgid "Files"
-msgstr "Archivos"
 
 msgid "Failed to load media: {filepath}"
 msgstr "No se pudo cargar el medio: {filepath}"
@@ -18588,7 +18825,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19341,8 +19578,14 @@ msgstr "Modificando..."
 msgid "Awaiting Input..."
 msgstr "Esperando respuesta..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Los videos requieren el modo Video. Elimine el video para enviar al agente."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
+
+msgid "User ID"
+msgstr "ID de usuario"
+
+msgid "User ID for Mixie Chat login"
+msgstr "ID de usuario para iniciar sesión en Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "El agente admite: {formats}"
@@ -19416,8 +19659,20 @@ msgstr "No se pudo enviar el mensaje"
 msgid "You're out of credits"
 msgstr "Se quedó sin créditos"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Ha usado su asignación mensual de créditos. Mejore su plan para seguir creando con Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Mejorar plan"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "El comentario está vacío"
@@ -19602,7 +19857,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -20524,11 +20779,14 @@ msgstr "Sesión archivada que se borrará"
 msgid "Chat removed from history"
 msgstr "Chat eliminado del historial"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "No se puede agregar {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Se alcanzó el límite de adjuntos ({count})"
@@ -20536,14 +20794,14 @@ msgstr "Se alcanzó el límite de adjuntos ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Se omitió {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "No se puede agregar {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Estas referencias ya están adjuntas"
 
 msgid "Added {count} image(s)"
 msgstr "Se agregaron {count} imagen(es)"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Agregar desde .blend"
@@ -20560,6 +20818,9 @@ msgstr "{size} - Con datos"
 msgid "{size} - No data"
 msgstr "{size} - Sin datos"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Selecciona una imagen del archivo .blend"
 
@@ -20568,6 +20829,12 @@ msgstr "La imagen ya se agregó"
 
 msgid "Image not found in blend file"
 msgstr "No se encontró la imagen en el archivo .blend"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "La imagen ya está adjunta"
@@ -21319,6 +21586,15 @@ msgstr "Entrada del chat"
 msgid "Type your message here"
 msgstr "Escriba su mensaje aquí"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 msgid "Chat Messages"
 msgstr "Mensajes del chat"
 
@@ -21444,12 +21720,6 @@ msgstr ""
 
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 - Rápido y eficiente"
-
-msgid "User ID"
-msgstr "ID de usuario"
-
-msgid "User ID for Mixie Chat login"
-msgstr "ID de usuario para iniciar sesión en Mixie Chat"
 
 msgid "Password"
 msgstr "Contraseña"
@@ -23422,9 +23692,6 @@ msgstr "Adherir cursor"
 msgid "Snap 2D cursor"
 msgstr "Adhiere el cursor 2D"
 
-msgid "Origin"
-msgstr "Origen"
-
 msgid "Mirror selected UVs"
 msgstr "Simetriza las UV seleccionadas"
 
@@ -24160,10 +24427,16 @@ msgstr "¡Le damos la bienvenida!"
 msgid "%s Plan"
 msgstr "Plan %s"
 
-msgid "Checking usage…"
-msgstr "Consultando el uso…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s créditos"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24174,15 +24447,6 @@ msgstr "Ver planes"
 
 msgid "couldn't refresh"
 msgstr "no se pudo actualizar"
-
-msgid "%s of %s left"
-msgstr "Quedan %s de %s"
-
-msgid "%s credits"
-msgstr "%s créditos"
-
-msgid "no credits"
-msgstr "sin créditos"
 
 msgid "Docs"
 msgstr "Documentación"
@@ -24202,6 +24466,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Agrega una capa de pintura en el panel Capas para empezar a pintar"
 
@@ -24214,7 +24481,43 @@ msgstr "Inicia o detiene el dictado en el borrador del boceto"
 msgid "Stop the running turn"
 msgstr "Detiene el turno en curso"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Revertir\n"
+"\n"
+"Restaura el prompt que escribiste antes de refinarlo."
+
+msgid "Refining this prompt..."
+msgstr "Refinando este prompt..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Refinar de nuevo\n"
+"\n"
+"Reescribe este prompt otra vez para el modelo al que se enviará. Revertir sigue restaurando su redacción original, no el refinamiento anterior."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Refinar\n"
+"\n"
+"Reescribe este prompt para el modelo al que se enviará, agregando los detalles a los que responde ese modelo."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24225,6 +24528,9 @@ msgstr "Elimina la referencia"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Descarta este boceto y su dibujo en cola"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24595,7 +24901,7 @@ msgstr "Reglas: edita las reglas globales y del proyecto para el agente"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25220,36 +25526,6 @@ msgstr ""
 "Describa lo que desea generar. Pulse Enter para enviar este nodo."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Revertir\n"
-"\n"
-"Restaura el prompt que escribiste antes de refinarlo."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Refinar de nuevo\n"
-"\n"
-"Reescribe este prompt otra vez para el modelo al que se enviará. Revertir sigue restaurando su redacción original, no el refinamiento anterior."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Refinar\n"
-"\n"
-"Reescribe este prompt para el modelo al que se enviará, agregando los detalles a los que responde ese modelo."
-
-msgid "Refining this prompt..."
-msgstr "Refinando este prompt..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -25464,12 +25740,6 @@ msgstr "El elemento seleccionado del moodboard no es un video"
 
 msgid "Cannot decode video: %s"
 msgstr "No se puede decodificar el video: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Monitor de video del moodboard al pasar el puntero"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Detiene la reproducción integrada del video del moodboard cuando el puntero sale de su celda"
 
 msgid "This board item has no image or video to preview"
 msgstr "Este elemento del tablero no tiene ninguna imagen ni video para previsualizar"
@@ -27748,15 +28018,6 @@ msgstr "Las rutas soltadas deben ser cadenas no vacías"
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Las rutas soltadas deben ser un array JSON no vacío"
 
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "La captura de fotogramas de QA requiere --enable-event-simulate"
-
-msgid "Unable to read QA window frame"
-msgstr "No se pudo leer el fotograma de la ventana de QA"
-
-msgid "Unable to save QA window frame"
-msgstr "No se pudo guardar el fotograma de la ventana de QA"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -27785,6 +28046,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "La captura de fotogramas de QA requiere --enable-event-simulate"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 msgid "Microphone permission is required"

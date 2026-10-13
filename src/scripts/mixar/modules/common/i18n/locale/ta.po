@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "செயல்"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "பதிவிறக்குகிறது {percent}%"
 
-msgid "Upgrade"
-msgstr "மேம்படுத்து"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% மீதம்"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "சந்தா"
@@ -2930,23 +2933,29 @@ msgstr "திட்டப் பெயர்"
 msgid "Display name of the current plan"
 msgstr "நடப்புத் திட்டத்தின் காட்சிப் பெயர்"
 
-msgid "Remaining"
-msgstr "மீதம்"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "சுழற்சிக் கிரெடிட் ஒதுக்கீட்டில் இன்னும் கிடைக்கும் சதவீதம்"
-
 msgid "Credits Remaining"
 msgstr "மீதமுள்ள கிரெடிட்கள்"
 
-msgid "Credits left in the current cycle"
-msgstr "நடப்புச் சுழற்சியில் மீதமுள்ள கிரெடிட்கள்"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "மொத்தக் கிரெடிட்கள்"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "நடப்புச் சுழற்சிக்கான கிரெடிட் ஒதுக்கீடு"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "மேலே நிரப்பலாம்"
@@ -3065,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "கோப்புகள்"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3140,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "தோற்றம்"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4963,6 +5017,195 @@ msgstr "உள்ளகச் சேவையக மாதிரி"
 
 msgid "Local model last error"
 msgstr "உள்ளக மாதிரியின் கடைசிப் பிழை"
+
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "நகலெடு"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
 
 msgid "Processing..."
 msgstr "செயலாக்குகிறது..."
@@ -6950,9 +7193,6 @@ msgstr "முனையை அழி"
 msgid "Duplicate Nodes (Shift D)"
 msgstr "முனைகளை நகலெடு (Shift D)"
 
-msgid "Copy"
-msgstr "நகலெடு"
-
 msgid "Continue With"
 msgstr "இதனுடன் தொடர்"
 
@@ -8722,11 +8962,11 @@ msgstr "மூட்போர்டு→அரட்டை இணைப்ப�
 msgid "Sync failed: {error}"
 msgstr "ஒத்திசைவு தோல்வி: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளி தவிர்க்கப்பட்டது: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளிகள் தவிர்க்கப்பட்டன: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "மூட்போர்டு படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
@@ -9024,9 +9264,6 @@ msgstr "அடைவு"
 
 msgid "Directory of the selected file(s)"
 msgstr "தேர்ந்தெடுத்த கோப்புகளின் அடைவு"
-
-msgid "Files"
-msgstr "கோப்புகள்"
 
 msgid "Failed to load media: {filepath}"
 msgstr "ஊடகத்தை ஏற்ற முடியவில்லை: {filepath}"
@@ -18588,7 +18825,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19341,8 +19578,14 @@ msgstr "மாற்றுகிறது..."
 msgid "Awaiting Input..."
 msgstr "உள்ளீட்டிற்காகக் காத்திருக்கிறது..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "காணொளிகளுக்குக் காணொளி பயன்முறை தேவை. முகவருக்கு அனுப்பக் காணொளியை அகற்றவும்."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
+
+msgid "User ID"
+msgstr "பயனர் அடையாளம்"
+
+msgid "User ID for Mixie Chat login"
+msgstr "Mixie அரட்டை உள்நுழைவுக்கான பயனர் அடையாளம்"
 
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
@@ -19416,8 +19659,20 @@ msgstr "செய்தியை அனுப்பத் தவறியது"
 msgid "You're out of credits"
 msgstr "உங்கள் கிரெடிட்கள் தீர்ந்துவிட்டன"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "உங்கள் மாதக் கிரெடிட் ஒதுக்கீட்டைப் பயன்படுத்திவிட்டீர்கள். Mixie-உடன் தொடர்ந்து உருவாக்க உங்கள் திட்டத்தை மேம்படுத்தவும்."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "மேம்படுத்து"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "பின்னூட்டக் கருத்து காலியாக உள்ளது"
@@ -19602,7 +19857,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -20524,11 +20779,14 @@ msgstr "அழிக்க வேண்டிய காப்பக அமர்
 msgid "Chat removed from history"
 msgstr "அரட்டை வரலாற்றிலிருந்து அகற்றப்பட்டது"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
@@ -20536,14 +20794,14 @@ msgstr "இணைப்புக் கோப்பு வரம்பு ({coun
 msgid "Skipped {name}: {error}"
 msgstr "{name} தவிர்க்கப்பட்டது: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
-
 msgid "These references are already attached"
 msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
 
 msgid "Added {count} image(s)"
 msgstr "{count} படம்(கள்) சேர்க்கப்பட்டன"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-இலிருந்து சேர்"
@@ -20560,6 +20818,9 @@ msgstr "{size} - தரவு உள்ளது"
 msgid "{size} - No data"
 msgstr "{size} - தரவு இல்லை"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend கோப்பிலிருந்து படத்தைத் தேர்ந்தெடு"
 
@@ -20568,6 +20829,12 @@ msgstr "படம் ஏற்கெனவே சேர்க்கப்பட�
 
 msgid "Image not found in blend file"
 msgstr "blend கோப்பில் படம் காணவில்லை"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "படம் ஏற்கெனவே இணைக்கப்பட்டது"
@@ -21319,6 +21586,15 @@ msgstr "அரட்டை உள்ளீடு"
 msgid "Type your message here"
 msgstr "உங்கள் செய்தியை இங்கே தட்டச்சு செய்யுங்கள்"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 msgid "Chat Messages"
 msgstr "அரட்டைச் செய்திகள்"
 
@@ -21444,12 +21720,6 @@ msgstr "Haiku"
 
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 - வேகமானதும் திறமையானதும்"
-
-msgid "User ID"
-msgstr "பயனர் அடையாளம்"
-
-msgid "User ID for Mixie Chat login"
-msgstr "Mixie அரட்டை உள்நுழைவுக்கான பயனர் அடையாளம்"
 
 msgid "Password"
 msgstr "கடவுச்சொல்"
@@ -23422,9 +23692,6 @@ msgstr "ச்னாப் கர்சர்"
 msgid "Snap 2D cursor"
 msgstr "2D கர்சரை ஸ்னாப் செய்"
 
-msgid "Origin"
-msgstr "தோற்றம்"
-
 msgid "Mirror selected UVs"
 msgstr "தேர்ந்தெடுத்த UV-களைக் கண்ணாடி செய்"
 
@@ -24160,10 +24427,16 @@ msgstr "வரவேற்கிறோம் !"
 msgid "%s Plan"
 msgstr "%s திட்டம்"
 
-msgid "Checking usage…"
-msgstr "பயன்பாடு சரிபார்க்கப்படுகிறது…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s கிரெடிட்கள்"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24174,15 +24447,6 @@ msgstr "திட்டங்களைக் காண்"
 
 msgid "couldn't refresh"
 msgstr "புதுப்பிக்க முடியவில்லை"
-
-msgid "%s of %s left"
-msgstr "%s / %s மீதம்"
-
-msgid "%s credits"
-msgstr "%s கிரெடிட்கள்"
-
-msgid "no credits"
-msgstr "கிரெடிட்கள் இல்லை"
 
 msgid "Docs"
 msgstr "ஆவணங்கள்"
@@ -24202,6 +24466,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "வண்ணம் தீட்டத் தொடங்க அடுக்குகள் பேனலில் ஒரு வண்ணப்பூச்சு அடுக்கைச் சேர்க்கவும்"
 
@@ -24214,7 +24481,43 @@ msgstr "வரைவு வரைவில் குரல் தட்டச்
 msgid "Stop the running turn"
 msgstr "இயங்கும் திருப்பத்தை நிறுத்து"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"திரும்பப்பெறு\n"
+"\n"
+"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
+
+msgid "Refining this prompt..."
+msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"மீண்டும் செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24225,6 +24528,9 @@ msgstr "குறிப்பை அகற்று"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "இந்த வரைவையும் அதன் வரிசை வரைவையும் நிராகரி"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24595,7 +24901,7 @@ msgstr "விதிகள் — முகவருக்கான திட்
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25220,36 +25526,6 @@ msgstr ""
 "எதை உருவாக்குவது என்பதை விவரிக்கவும். இந்த முனையைச் சமர்ப்பிக்க Enter அழுத்தவும்."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"திரும்பப்பெறு\n"
-"\n"
-"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"மீண்டும் செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
-
-msgid "Refining this prompt..."
-msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -25464,12 +25740,6 @@ msgstr "தேர்ந்தெடுத்த மூட்போர்டு �
 
 msgid "Cannot decode video: %s"
 msgstr "காணொளியைக் குறிநீக்க முடியாது: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "மூட்போர்டு காணொளி மேல்வட்டக் கண்காணிப்பு"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "சுட்டி அதன் ஓட்டை விட்டால் வரிசை மூட்போர்டு காணொளி இயக்கத்தை நிறுத்துகிறது"
 
 msgid "This board item has no image or video to preview"
 msgstr "இந்தப் பலகை உருப்படியில் முன்னோட்டமிட படமோ காணொளியோ இல்லை"
@@ -27748,15 +28018,6 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
 
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "QA பிரேம் பிடிப்புக்கு --enable-event-simulate தேவை"
-
-msgid "Unable to read QA window frame"
-msgstr "QA சாளரப் பிரேமைப் படிக்க முடியவில்லை"
-
-msgid "Unable to save QA window frame"
-msgstr "QA சாளரப் பிரேமைச் சேமிக்க முடியவில்லை"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -27785,6 +28046,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "QA பிரேம் பிடிப்புக்கு --enable-event-simulate தேவை"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 msgid "Microphone permission is required"

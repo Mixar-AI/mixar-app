@@ -61,6 +61,15 @@ class SocketDispatch:
         elif method == JSONRPCMethod.BLENDER_LIVENESS:
             self._handle_liveness(request_id)
 
+        elif method in ("mcp.begin_operation", "mcp.end_operation"):
+            from mixar.modules.mcp_bridge.core.rpc import handle_request
+            if getattr(self, "_role", None):
+                if request_id:
+                    self.queue_response(request_id, {"success": False,
+                        "error_type": "capability_unavailable", "error": "MCP requires a desktop instance"})
+            else:
+                handle_request(self, method, params, request_id)
+
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
@@ -75,6 +84,9 @@ class SocketDispatch:
 
         elif isinstance(method, str) and method.startswith(CONTEXT_FOLDER_RPC_PREFIX):
             self._handle_context_folder_request(method, params, request_id)
+
+        elif method == JSONRPCMethod.MOODBOARD_VIEW_VIDEO:
+            self._handle_moodboard_video_request(params, request_id)
 
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
@@ -223,6 +235,13 @@ class SocketDispatch:
         # ONLY when present so older five-positional callbacks keep working.
         envelope = params.get("envelope")
 
+        from mixar.modules.mcp_bridge.core.lease import authorize_script
+        refusal = authorize_script(session_id, agent_ctx)
+        if refusal is not None:
+            if request_id:
+                self.queue_response(request_id, refusal)
+            return
+
         if self._on_script_execute:
             try:
                 if isinstance(envelope, dict):
@@ -294,6 +313,27 @@ class SocketDispatch:
             }
         if request_id and result is not None:
             self.queue_response(request_id, result)
+
+    def _handle_moodboard_video_request(self, params: dict, request_id: Optional[str]) -> None:
+        """Sample a Moodboard video as frames: the name resolves on the main
+        thread (bpy), the decode runs on a worker; the reply is deferred."""
+        if not request_id:
+            return
+        try:
+            from mixar.modules.moodboard.core.video_rpc import handle_request
+            from .main_thread_executor import run_on_main_thread
+
+            handle_request(
+                JSONRPCMethod.MOODBOARD_VIEW_VIDEO, params,
+                lambda result: self.queue_response(request_id, result),
+                run_on_main_thread=run_on_main_thread,
+            )
+        except Exception as exc:  # noqa: BLE001 - must always answer
+            logger.error("moodboard video request failed: %s", exc)
+            self.queue_response(request_id, {"success": False, "error": {
+                "code": "capability_unavailable",
+                "message": "Moodboard video is unavailable in this client",
+            }})
 
     def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
         """Handle a server-initiated agent.sandbox_control request (parent side).

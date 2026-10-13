@@ -6,10 +6,10 @@ Inspect authored data, never source-code keywords or model-supplied object names
 Only the owning object's name leaves the client. Shared action/slot digests are
 cached within ONE snapshot; reusing them across calls would miss key edits.
 """
-import hashlib
 from array import array
 
 from ...common.utils.animation import bound_fcurves
+from ...common.utils.digests import sha256
 
 
 def _identity(value):
@@ -47,40 +47,54 @@ def _rna(value, depth=0):
 
 
 def _digest(value):
-    return hashlib.sha256(repr(value).encode()).hexdigest()
+    return sha256(repr(value).encode()).finalize().hex()
 
 
 def _custom(owner):
     def value(v):
+        if isinstance(v, bytes):
+            # Preserve binary identity without allocating its escaped repr.
+            return ("bytes", len(v), sha256(v).finalize().hex())
         if hasattr(v, "as_pointer"):
             return _identity(v)
         if hasattr(v, "to_dict"):
             return tuple(sorted((k, value(x)) for k, x in v.to_dict().items()))
         if hasattr(v, "to_list"):
             return tuple(v.to_list())
+        if isinstance(v, dict):
+            return tuple(sorted((k, value(x)) for k, x in v.items()))
+        if isinstance(v, (tuple, list)):
+            return tuple(value(x) for x in v)
         return v
     return tuple(sorted((k, value(v)) for k, v in owner.items())) if owner else ()
 
 
 def _curve(curve):
-    digest = hashlib.sha256()
-    digest.update(repr((curve.data_path, curve.array_index, _rna(curve))).encode())
+    digest = sha256()
+    digest.update(repr((curve.data_path, curve.array_index, _rna(curve),
+                        len(curve.keyframe_points), len(curve.sampled_points))).encode())
     # foreach_get avoids a Python float/tuple allocation for every key coordinate.
     for collection, fields in ((curve.keyframe_points, ("co", "handle_left", "handle_right")),
                                (curve.sampled_points, ("co",))):
         for field in fields:
             values = array('f', [0.0]) * (len(collection) * 2)
             collection.foreach_get(field, values)
-            digest.update(values.tobytes())
-    digest.update(repr(tuple((k.interpolation, k.easing, k.handle_left_type,
-                              k.handle_right_type, k.amplitude, k.back, k.period)
-                             for k in curve.keyframe_points)).encode())
+            digest.update(memoryview(values).cast("B"))
+    # RNA bulk reads include enums as their numeric values. Keep all authored
+    # settings in the digest; never cache them across before/after snapshots.
+    for kind, fields in (("i", ("interpolation", "easing", "handle_left_type",
+                               "handle_right_type")),
+                         ("f", ("amplitude", "back", "period"))):
+        for field in fields:
+            values = array(kind, [0]) * len(curve.keyframe_points)
+            curve.keyframe_points.foreach_get(field, values)
+            digest.update(memoryview(values).cast("B"))
     digest.update(repr(tuple(_rna(m) for m in curve.modifiers)).encode())
     if curve.driver:
         digest.update(repr((_rna(curve.driver), tuple(
             (v.name, v.type, tuple(_rna(t) for t in v.targets))
             for v in curve.driver.variables))).encode())
-    return digest.hexdigest()
+    return digest.finalize().hex()
 
 
 def _action(binding, cache):

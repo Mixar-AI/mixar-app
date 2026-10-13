@@ -8,13 +8,14 @@ atomic JSON, the per-session index, listing, and the per-kind prune. The
 caps live with the policy in ``turn_checkpoints``.
 """
 
-import hashlib
 import json
 import os
 import re
 import time
 import uuid
 from datetime import datetime, timezone
+
+from ...common.utils.digests import sha256_file
 
 _INDEX_FILENAME = "index.json"
 _RECORD_VERSION = 1
@@ -98,11 +99,7 @@ def _atomic_write_json(path: str, data) -> None:
 
 
 def _sha256(path: str) -> str:
-    digest = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return sha256_file(path)
 
 
 # =============================================================================

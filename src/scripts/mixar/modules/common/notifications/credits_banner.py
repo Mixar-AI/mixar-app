@@ -133,6 +133,17 @@ def _minimise_agent_island() -> None:
         logger.debug("Credits banner: island minimise skipped: %s", exc)
 
 
+def _account_needs_subscription() -> bool:
+    """No plan behind the account: the banner asks for a subscription."""
+    try:
+        from mixar.modules.common.usage.core.state import needs_subscription
+
+        return needs_subscription()
+    except Exception as exc:  # noqa: BLE001 — copy only, never block the banner
+        logger.debug("Credits banner: tier lookup skipped: %s", exc)
+        return False
+
+
 def _open_on_main():
     global _pending_trigger, _last_activity
     try:
@@ -157,6 +168,7 @@ def _open_on_main():
         with bpy.context.temp_override(window=window):
             result = bpy.ops.mixar.credits_banner(
                 'INVOKE_DEFAULT', image_path=banner_image_path(),
+                subscribe=_account_needs_subscription(),
             )
     except Exception as exc:  # noqa: BLE001
         logger.error("Credits banner failed to open: %s", exc)

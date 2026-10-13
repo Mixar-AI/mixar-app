@@ -79,7 +79,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         bubble_rect.ymax = layout.y_pos + layout.bubble_height;
         if (glass_bed) {
           chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
-                                  layout.style.bg_color[3]);
+                                  layout.style.bg_color);
         }
         else {
           chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
@@ -207,7 +207,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       bubble_rect.ymax = layout.y_pos + layout.bubble_height;
       if (glass_bed) {
         chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
-                                layout.style.bg_color[3]);
+                                layout.style.bg_color);
       }
       else {
         chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);

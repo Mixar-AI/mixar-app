@@ -220,8 +220,9 @@ def draw_dialog(layout, wm):
         _footer_done(layout)
         return
 
-    # IDLE / SAVING / ERROR — the form states.
-    if wm.byok_is_active and state != 'ERROR':
+    # IDLE / SAVING / ERROR — the form states. A failed save or remove
+    # leaves the stored key in place, so the active config stays visible.
+    if wm.byok_is_active:
         _draw_current_config(col, wm, with_remove=(state == 'IDLE'))
         col.separator(factor=0.6)
     _draw_form(col, wm, disabled=(state == 'SAVING'))

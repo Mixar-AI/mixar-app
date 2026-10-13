@@ -307,6 +307,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     /* A scene saved before the chat registered the property reads false —
      * the same default the send path uses (core/composer_send.py). */
     r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
+    r_state->prompt_refined = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refined");
+    r_state->prompt_refining = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refining");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
@@ -506,21 +508,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   }
   else if (r_state->mark_count > 0) {
     r_state->placeholder = IFACE_("Sketch ready. Add instructions, then Send.");
-  }
-
-  /* Same property the account card meters — one source of truth for credits.
-   * The backend owns the percentage (grandfathered allocations, trials and
-   * clamping all live there); this only ever reads it. */
-  r_state->credits_remaining = -1.0f;
-  if (wm) {
-    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    if (read_bool_prop(&wm_ptr, "mixar_usage_ready")) {
-      PropertyRNA *pct = RNA_struct_find_property(&wm_ptr, "mixar_usage_remaining_pct");
-      if (pct && RNA_property_type(pct) == PROP_FLOAT) {
-        r_state->credits_remaining =
-            std::clamp(RNA_property_float_get(&wm_ptr, pct) / 100.0f, 0.0f, 1.0f);
-      }
-    }
   }
 }
 

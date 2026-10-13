@@ -612,3 +612,147 @@ def test_sidebar_state_is_scoped_to_the_owning_scene():
     finally:
         engine.forget_sidebar_state()
     assert engine.sidebar_can_revert(owner_a, "MixieTab") is False
+
+
+# ---------------------------------------------------------------------------
+# The Agent chat composer (ChatSlot)
+# ---------------------------------------------------------------------------
+
+
+def _chat_scene(text="make the cube red"):
+    return SimpleNamespace(
+        mixie_chat_input=text,
+        mixie_chat_prompt_pre_refine="",
+        mixie_chat_prompt_refined=False,
+        mixie_chat_prompt_refining=False,
+        mixie_chat_prompt_refine_epoch=0,
+    )
+
+
+def _send(scene):
+    """What every send path does: clear the composer, firing its update."""
+    from mixar.modules.space_mixie_chat.ui.properties import chat_props
+
+    scene.mixie_chat_input = ""
+    chat_props._end_refine_draft(scene)
+
+
+def _chat():
+    from mixar.modules.moodboard.core import prompt_refine_chat
+
+    return prompt_refine_chat
+
+
+def test_the_chat_refines_through_its_own_profile_key(monkeypatch):
+    seen = {}
+
+    def responder(prompt):
+        return {"prompt": "Make the selected cube red", "original_prompt": prompt}
+
+    engine = _install_service(monkeypatch, responder)
+    scene = _chat_scene()
+    slot = _chat().chat_slot(scene)
+    seen["service"] = slot.service_key
+    engine.refine(slot, lambda ok, msg: None)
+
+    assert seen["service"] == "agent_chat"
+    assert scene.mixie_chat_input == "Make the selected cube red"
+    assert scene.mixie_chat_prompt_refined is True
+    assert scene.mixie_chat_prompt_pre_refine == "make the cube red"
+    assert scene.mixie_chat_prompt_refining is False
+
+
+def test_a_second_chat_refinement_still_reverts_to_the_users_words(monkeypatch):
+    rewrites = iter(["Draft one", "Draft two"])
+    engine = _install_service(
+        monkeypatch,
+        lambda prompt: {"prompt": next(rewrites), "original_prompt": prompt},
+    )
+    scene = _chat_scene()
+    engine.refine(_chat().chat_slot(scene), lambda ok, msg: None)
+    engine.refine(_chat().chat_slot(scene), lambda ok, msg: None)
+
+    assert scene.mixie_chat_input == "Draft two"
+    assert engine.revert(_chat().chat_slot(scene)) is True
+    assert scene.mixie_chat_input == "make the cube red"
+    assert scene.mixie_chat_prompt_refined is False
+
+
+def test_sending_drops_the_stash_so_revert_never_resurrects_a_sent_message(
+    monkeypatch,
+):
+    engine = _install_service(
+        monkeypatch,
+        lambda prompt: {"prompt": "Make the selected cube red", "original_prompt": prompt},
+    )
+    scene = _chat_scene()
+    engine.refine(_chat().chat_slot(scene), lambda ok, msg: None)
+    _send(scene)
+
+    assert scene.mixie_chat_prompt_refined is False
+    assert scene.mixie_chat_prompt_pre_refine == ""
+    assert engine.revert(_chat().chat_slot(scene)) is False
+    assert scene.mixie_chat_input == ""
+
+
+def test_a_refinement_landing_after_the_send_is_dropped(monkeypatch):
+    """The answer belongs to the message that was sent, not to the empty
+    composer the user is now looking at."""
+    engine = _engine()
+    pending = {}
+
+    class _Service:
+        def refine_async(self, prompt, *, on_success=None, on_error=None, **_):
+            pending["deliver"] = lambda: on_success(SimpleNamespace(
+                data={"data": {"prompt": "Make the selected cube red",
+                               "original_prompt": prompt}}))
+
+    import types
+
+    stub = types.ModuleType("mixar.modules.common.api.services")
+    stub.get_prompt_refine_service = lambda: _Service()
+    monkeypatch.setitem(sys.modules, "mixar.modules.common.api.services", stub)
+    monkeypatch.setattr(engine, "redraw_prompt_surfaces", lambda: None)
+
+    scene = _chat_scene()
+    engine.refine(_chat().chat_slot(scene), lambda ok, msg: None)
+    assert scene.mixie_chat_prompt_refining is True
+
+    _send(scene)
+    assert scene.mixie_chat_prompt_refining is False
+
+    pending["deliver"]()
+    assert scene.mixie_chat_input == ""
+    assert scene.mixie_chat_prompt_refined is False
+    assert scene.mixie_chat_prompt_pre_refine == ""
+
+
+def test_an_ordinary_send_writes_no_refine_state():
+    """Nothing stashed, nothing in flight: the clear must not touch RNA."""
+    from mixar.modules.space_mixie_chat.ui.properties import chat_props
+
+    scene = _chat_scene("")
+    chat_props._end_refine_draft(scene)
+    assert scene.mixie_chat_prompt_refine_epoch == 0
+
+
+def test_the_chat_props_are_skip_save_and_unregistered():
+    source = _read(
+        ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/properties/chat_props.py"
+    )
+    for name in ("mixie_chat_prompt_pre_refine", "mixie_chat_prompt_refined",
+                 "mixie_chat_prompt_refining", "mixie_chat_prompt_refine_epoch"):
+        block = source.split(f"bpy.types.Scene.{name} =", 1)[1].split(")\n", 1)[0]
+        assert "SKIP_SAVE" in block, name
+        assert f"'{name}'" in source, f"{name} is never unregistered"
+    # The chat addresses the slot's props by name; it never imports moodboard.
+    assert "moodboard" not in source.split("def _end_refine_draft", 1)[1].split(
+        '"""', 2)[2].split("\ndef ", 1)[0]
+
+
+def test_the_refine_operators_can_address_the_chat():
+    source = _read(MOODBOARD / "ui/operators/prompt_refine_ops.py")
+    assert source.count(
+        "chat: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})") == 2
+    assert "chat_slot(scene)" in source
+    assert "'AGENT_BUBBLE'" in _read(MOODBOARD / "core/prompt_refine.py")

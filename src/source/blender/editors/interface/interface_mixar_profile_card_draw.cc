@@ -5,7 +5,7 @@
 /** \file
  * \ingroup edinterface
  *
- * Mixar account card — text, divider and quota-bar drawing.
+ * Mixar account card — text, divider and credit-balance drawing.
  *
  * Every card element paints its own glyphs: the heading needs a size
  * the generic widget text path cannot give it, and the buttons need
@@ -44,77 +44,6 @@
 namespace blender::ui {
 
 namespace {
-
-/* Quota bar bands, keyed on the fraction REMAINING. Must stay in step
- * with `modules/common/usage/constants.py` — the bar's colour and the
- * popover's wording come from two different languages. */
-constexpr float CARD_USAGE_CRITICAL_FACTOR = 0.20f;
-constexpr float CARD_USAGE_WARNING_FACTOR = 0.50f;
-
-/* The quota bar's healthy ramp: deep teal into the brand cyan, matching
- * the dashboard's usage bar rather than the app-wide Generate gradient
- * (which runs through lime and would read as a different semantic).
- *
- * The trailing 255 is load-bearing: these are uchar[4] and a three-value
- * initializer zero-fills alpha, which draws the whole fill invisible. */
-constexpr uchar CARD_USAGE_RAMP_START[4] = {6, 122, 128, 255};
-constexpr uchar CARD_USAGE_RAMP_END[4] = {0, 192, 199, 255};
-
-
-/**
- * Left-to-right two-stop ramp, clipped to a rounded rect.
- *
- * Same tri-strip approach as `mixar_draw_gradient_hbar`, sampled about
- * once per pixel so the corners don't facet.
- */
-void fill_ramp(const rctf *rect, float rad, const uchar from[4], const uchar to[4])
-{
-  const float w = rect->xmax - rect->xmin;
-  const float h = rect->ymax - rect->ymin;
-  if (w <= 0.0f || h <= 0.0f) {
-    return;
-  }
-  rad = std::min(rad, std::min(w, h) * 0.5f);
-
-  const int cols = std::max(2, int(w));
-  const float xc_l = rect->xmin + rad;
-  const float xc_r = rect->xmax - rad;
-
-  float c0[4], c1[4];
-  mixar_card_to_float(from, c0);
-  mixar_card_to_float(to, c1);
-
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  const uint col = GPU_vertformat_attr_add(
-      format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_SMOOTH_COLOR);
-
-  GPU_blend(GPU_BLEND_ALPHA);
-  immBegin(GPU_PRIM_TRI_STRIP, (cols + 1) * 2);
-  for (int i = 0; i <= cols; i++) {
-    const float t = float(i) / float(cols);
-    const float x = rect->xmin + t * w;
-    float top = rect->ymax;
-    float bot = rect->ymin;
-    if (x < xc_l || x > xc_r) {
-      const float dx = (x < xc_l) ? (xc_l - x) : (x - xc_r);
-      const float dy = sqrtf(std::max(0.0f, rad * rad - dx * dx));
-      top = rect->ymax - rad + dy;
-      bot = rect->ymin + rad - dy;
-    }
-    float c[4];
-    interp_v4_v4v4(c, c0, c1, t);
-    immAttr4fv(col, c);
-    immVertex2f(pos, x, bot);
-    immAttr4fv(col, c);
-    immVertex2f(pos, x, top);
-  }
-  immEnd();
-  immUnbindProgram();
-  GPU_blend(GPU_BLEND_NONE);
-}
 
 /* -------------------------------------------------------------------- */
 /* Elements                                                              */
@@ -207,85 +136,39 @@ void draw_divider(rcti *rect)
 }
 
 /**
- * Slim quota bar with the percentage in its own slot to the right.
+ * The credit balance, e.g. "6,800 credits": heading weight, left-aligned.
  *
- * The label deliberately does NOT sit inside the fill. Text on the fill
- * has to switch colour depending on how far the fill reaches, which
- * makes the most important number on the card least readable exactly
- * when it matters — at the extremes. A reserved slot is legible at every
- * value and lets the track keep a constant width.
+ * A plain number rather than a meter — the web dashboard prints the same
+ * figure, so the two can never disagree about a denominator. An empty
+ * balance (payload 1) turns danger-red; nothing else changes colour,
+ * because an absolute count has no honest "warning" band.
  */
-void draw_usage_bar(Button *but, rcti *rect)
+void draw_credit_balance(Button *but, rcti *rect)
 {
-  uchar danger_u[4], warning_u[4], fg1_u[4], sunken_u[4], border_strong_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
-  mixar_theme_copy_u(MixarThemeSlot::Warning, MX_WARNING, warning_u);
+  uchar fg1_u[4], danger_u[4];
   mixar_theme_copy_u(MixarThemeSlot::Fg1, MX_FG_1, fg1_u);
-  mixar_theme_copy_u(MixarThemeSlot::Sunken, MX_BG_SUNKEN, sunken_u);
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
-  const float factor = std::clamp(but->mixar_style.progress, 0.0f, 1.0f);
-
-  const float pad = float(mixar_card_text_pad());
-  const float gap = 10.0f * UI_SCALE_FAC;
-
-  /* Severity drives the fill and the label together, so a red bar can
-   * never sit beside a neutral-looking number. */
-  const bool is_critical = factor < CARD_USAGE_CRITICAL_FACTOR;
-  const bool is_warning = !is_critical && factor < CARD_USAGE_WARNING_FACTOR;
-  const bool is_healthy = !is_critical && !is_warning;
-  const uchar *accent_col = is_critical ? danger_u : (is_warning ? warning_u : fg1_u);
-
-  /* Measure the label first; the track takes whatever is left. */
-  const uiFontStyle fs = mixar_card_font(1.0f, mixar_chrome::card_heading_weight);
-  fontstyle_set(&fs);
-  const float label_w = but->drawstr.empty() ?
-                            0.0f :
-                            BLF_width(fs.uifont_id, but->drawstr.c_str(), but->drawstr.size());
+  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
+  const bool is_empty = but->mixar_style.progress >= 1.0f;
 
   rcti text_rect = *rect;
-  text_rect.xmax = int(float(rect->xmax) - pad);
-  text_rect.xmin = int(float(text_rect.xmax) - label_w);
+  text_rect.xmin += mixar_card_text_pad();
+  text_rect.xmax -= mixar_card_text_pad();
 
-  const float height = std::min(float(BLI_rcti_size_y(rect)), 16.0f * UI_SCALE_FAC);
-  const float y_center = float(rect->ymin + rect->ymax) * 0.5f;
-
-  rctf track;
-  track.xmin = float(rect->xmin) + pad;
-  track.xmax = float(text_rect.xmin) - gap;
-  track.ymin = y_center - height * 0.5f;
-  track.ymax = y_center + height * 0.5f;
-
-  /* A card squeezed narrow can leave no room for a track; the percentage
-   * alone still tells the whole story, so drop the bar rather than draw
-   * a degenerate sliver. */
-  if (track.xmax - track.xmin > height * 2.0f) {
-    const float rad = height * 0.5f;
-
-    GPU_blend(GPU_BLEND_ALPHA);
-    mixar_card_fill_round(&track, rad, sunken_u);
-    mixar_card_outline_round(&track, rad, border_strong_u, 1.0f);
-
-    if (factor > 0.0f) {
-      rctf fill = track;
-      /* Never round a non-zero remainder away to nothing: a sliver of
-       * colour is the difference between "almost out" and "out". */
-      const float span = track.xmax - track.xmin;
-      fill.xmax = std::min(track.xmin + std::max(factor * span, height), track.xmax);
-
-      if (is_healthy) {
-        fill_ramp(&fill, rad, CARD_USAGE_RAMP_START, CARD_USAGE_RAMP_END);
-        GPU_blend(GPU_BLEND_ALPHA);
-      }
-      else {
-        /* Warning and critical stay flat — a two-tone alarm reads as a
-         * gradient artifact rather than a signal. */
-        mixar_card_fill_round(&fill, rad, accent_col);
-      }
-    }
-    GPU_blend(GPU_BLEND_NONE);
+  /* Shrink rather than clip a very large balance: the layout sized this
+   * rect from the default font and #BLF_clipping has no ellipsis. */
+  float scale = mixar_chrome::card_heading_scale;
+  const uiFontStyle probe = mixar_card_font(scale, mixar_chrome::card_heading_weight);
+  const float width = float(fontstyle_string_width(&probe, but->drawstr.c_str()));
+  const float avail = float(BLI_rcti_size_x(&text_rect));
+  if (width > avail && width > 0.0f) {
+    scale = std::max(1.0f, scale * avail / width);
   }
 
-  mixar_card_draw_text(fs, &text_rect, but->drawstr.c_str(), accent_col, UI_STYLE_TEXT_RIGHT);
+  mixar_card_draw_text(mixar_card_font(scale, mixar_chrome::card_heading_weight),
+                       &text_rect,
+                       but->drawstr.c_str(),
+                       is_empty ? danger_u : fg1_u,
+                       UI_STYLE_TEXT_LEFT);
 }
 
 /* -------------------------------------------------------------------- */
@@ -349,8 +232,8 @@ void UI_mixar_profile_card_draw_element(
     case MixarCardElement::Pill:
       draw_pill(but, rect);
       break;
-    case MixarCardElement::UsageBar:
-      draw_usage_bar(but, rect);
+    case MixarCardElement::CreditBalance:
+      draw_credit_balance(but, rect);
       break;
     case MixarCardElement::Divider:
       draw_divider(rect);

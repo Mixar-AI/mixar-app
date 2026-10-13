@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "액션"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "다운로드 중 {percent}%"
 
-msgid "Upgrade"
-msgstr "업그레이드"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% 남음"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "구독"
@@ -2930,23 +2933,29 @@ msgstr "요금제 이름"
 msgid "Display name of the current plan"
 msgstr "현재 요금제의 표시 이름입니다"
 
-msgid "Remaining"
-msgstr "남은 양"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "주기별 크레딧 할당량 중 아직 사용 가능한 비율입니다"
-
 msgid "Credits Remaining"
 msgstr "남은 크레딧"
 
-msgid "Credits left in the current cycle"
-msgstr "현재 주기에 남은 크레딧입니다"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "총 크레딧"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "현재 주기의 크레딧 할당량입니다"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "충전 가능"
@@ -3065,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "파일"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3140,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "오리진"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4963,6 +5017,195 @@ msgstr "로컬 서버 모델"
 
 msgid "Local model last error"
 msgstr "로컬 모델 마지막 오류"
+
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "복사"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
 
 msgid "Processing..."
 msgstr "처리 중..."
@@ -6950,9 +7193,6 @@ msgstr "노드 삭제"
 msgid "Duplicate Nodes (Shift D)"
 msgstr "노드 복제 (Shift D)"
 
-msgid "Copy"
-msgstr "복사"
-
 msgid "Continue With"
 msgstr "다음으로 계속"
 
@@ -8722,11 +8962,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "동기화 실패: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "비디오 {count}개를 건너뛰었습니다: 에이전트는 정지 이미지만 받습니다. 클립은 무드보드의 비디오 생성을 사용하세요"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "비디오 {count}개를 건너뛰었습니다: 에이전트는 정지 이미지만 받습니다. 클립은 무드보드의 비디오 생성을 사용하세요"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "선택된 무드보드 이미지가 없습니다"
@@ -9024,9 +9264,6 @@ msgstr "디렉토리"
 
 msgid "Directory of the selected file(s)"
 msgstr "선택한 파일의 디렉토리"
-
-msgid "Files"
-msgstr "파일"
 
 msgid "Failed to load media: {filepath}"
 msgstr "미디어를 불러오지 못했습니다: {filepath}"
@@ -18588,7 +18825,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19341,8 +19578,14 @@ msgstr "수정 중..."
 msgid "Awaiting Input..."
 msgstr "입력 대기 중..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "비디오는 비디오 모드가 필요합니다. 에이전트에게 보내려면 비디오를 제거하세요."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
+
+msgid "User ID"
+msgstr "사용자 ID"
+
+msgid "User ID for Mixie Chat login"
+msgstr "Mixie 채팅 로그인용 사용자 ID"
 
 msgid "Agent expects: {formats}"
 msgstr "에이전트가 요구하는 형식: {formats}"
@@ -19416,8 +19659,20 @@ msgstr "메시지를 보내지 못했습니다"
 msgid "You're out of credits"
 msgstr "크레딧이 모두 소진되었습니다"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "월간 크레딧 한도를 모두 사용했습니다. Mixie로 계속 작업하려면 플랜을 업그레이드하세요."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "업그레이드"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "피드백 코멘트가 비어 있습니다"
@@ -19602,7 +19857,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -20524,11 +20779,14 @@ msgstr "삭제할 보관된 세션"
 msgid "Chat removed from history"
 msgstr "채팅이 기록에서 제거되었습니다"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}을(를) 추가할 수 없음: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "첨부 파일 한도({count}개)에 도달했습니다"
@@ -20536,14 +20794,14 @@ msgstr "첨부 파일 한도({count}개)에 도달했습니다"
 msgid "Skipped {name}: {error}"
 msgstr "{name} 건너뜀: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}을(를) 추가할 수 없음: {error}"
-
 msgid "These references are already attached"
 msgstr "이 참조는 이미 첨부되어 있습니다"
 
 msgid "Added {count} image(s)"
 msgstr "이미지 {count}개를 추가했습니다"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend에서 추가"
@@ -20560,6 +20818,9 @@ msgstr "{size} - 데이터 있음"
 msgid "{size} - No data"
 msgstr "{size} - 데이터 없음"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Blend 파일에서 이미지를 선택합니다"
 
@@ -20568,6 +20829,12 @@ msgstr "이미지가 이미 추가되었습니다"
 
 msgid "Image not found in blend file"
 msgstr "Blend 파일에서 이미지를 찾을 수 없습니다"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "이미지가 이미 첨부되어 있습니다"
@@ -21319,6 +21586,15 @@ msgstr "채팅 입력"
 msgid "Type your message here"
 msgstr "여기에 메시지를 입력하세요"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 msgid "Chat Messages"
 msgstr "채팅 메시지"
 
@@ -21444,12 +21720,6 @@ msgstr ""
 
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 - 빠르고 효율적"
-
-msgid "User ID"
-msgstr "사용자 ID"
-
-msgid "User ID for Mixie Chat login"
-msgstr "Mixie 채팅 로그인용 사용자 ID"
 
 msgid "Password"
 msgstr "비밀번호"
@@ -23422,9 +23692,6 @@ msgstr "커서를 스냅"
 msgid "Snap 2D cursor"
 msgstr "2D 커서를 스냅합니다"
 
-msgid "Origin"
-msgstr "오리진"
-
 msgid "Mirror selected UVs"
 msgstr "선택한 UV를 미러링합니다"
 
@@ -24160,10 +24427,16 @@ msgstr "환영합니다!"
 msgid "%s Plan"
 msgstr "%s 플랜"
 
-msgid "Checking usage…"
-msgstr "사용량 확인 중…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s 크레딧"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24174,15 +24447,6 @@ msgstr "플랜 보기"
 
 msgid "couldn't refresh"
 msgstr "새로고침할 수 없음"
-
-msgid "%s of %s left"
-msgstr "%s 남음 / 총 %s"
-
-msgid "%s credits"
-msgstr "%s 크레딧"
-
-msgid "no credits"
-msgstr "크레딧 없음"
 
 msgid "Docs"
 msgstr "문서"
@@ -24202,6 +24466,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "칠하기를 시작하려면 레이어 패널에서 페인트 레이어를 추가하세요"
 
@@ -24214,7 +24481,43 @@ msgstr "스케치 초안에 받아쓰기를 시작하거나 중지합니다"
 msgid "Stop the running turn"
 msgstr "실행 중인 턴을 중지합니다"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"되돌리기\n"
+"\n"
+"다듬기 전에 작성한 프롬프트를 복원합니다."
+
+msgid "Refining this prompt..."
+msgstr "프롬프트를 다듬는 중..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"다시 다듬기\n"
+"\n"
+"이 프롬프트를 전송될 모델에 맞게 한 번 더 다시 작성합니다. 되돌리기는 이전 다듬기 결과가 아니라 직접 작성한 원래 문구를 복원합니다."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"다듬기\n"
+"\n"
+"이 프롬프트를 전송될 모델에 맞게 다시 작성하고, 해당 모델이 잘 반응하는 디테일을 추가합니다."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24225,6 +24528,9 @@ msgstr "참조 제거"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "이 스케치와 대기 중인 드로잉을 버립니다"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24595,7 +24901,7 @@ msgstr "규칙 — 에이전트의 프로젝트 및 전역 규칙을 편집합�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25220,36 +25526,6 @@ msgstr ""
 "생성할 내용을 설명하세요. Enter 키를 눌러 이 노드를 제출합니다."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"되돌리기\n"
-"\n"
-"다듬기 전에 작성한 프롬프트를 복원합니다."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"다시 다듬기\n"
-"\n"
-"이 프롬프트를 전송될 모델에 맞게 한 번 더 다시 작성합니다. 되돌리기는 이전 다듬기 결과가 아니라 직접 작성한 원래 문구를 복원합니다."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"다듬기\n"
-"\n"
-"이 프롬프트를 전송될 모델에 맞게 다시 작성하고, 해당 모델이 잘 반응하는 디테일을 추가합니다."
-
-msgid "Refining this prompt..."
-msgstr "프롬프트를 다듬는 중..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -25464,12 +25740,6 @@ msgstr "선택한 무드보드 항목이 비디오가 아닙니다"
 
 msgid "Cannot decode video: %s"
 msgstr "비디오를 디코딩할 수 없습니다: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "무드보드 비디오 호버 모니터"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "포인터가 타일을 벗어나면 무드보드 인라인 비디오 재생을 중지합니다"
 
 msgid "This board item has no image or video to preview"
 msgstr "이 보드 항목에는 미리 볼 이미지나 비디오가 없습니다"
@@ -27748,15 +28018,6 @@ msgstr "드롭 경로는 비어 있지 않은 문자열이어야 합니다"
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "드롭 경로는 비어 있지 않은 JSON 배열이어야 합니다"
 
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "QA 프레임 캡처에는 --enable-event-simulate가 필요합니다"
-
-msgid "Unable to read QA window frame"
-msgstr "QA 창 프레임을 읽을 수 없습니다"
-
-msgid "Unable to save QA window frame"
-msgstr "QA 창 프레임을 저장할 수 없습니다"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -27785,6 +28046,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "QA 프레임 캡처에는 --enable-event-simulate가 필요합니다"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 msgid "Microphone permission is required"

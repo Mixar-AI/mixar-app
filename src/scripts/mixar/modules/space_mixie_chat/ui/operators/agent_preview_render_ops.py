@@ -14,6 +14,7 @@ the executor holds the tool call open until the job ends
 (``core/preview_deferral.py``). Polling stays internal to the client.
 """
 
+import json
 import bpy
 
 from ...core import preview_render
@@ -30,7 +31,7 @@ class MIXIE_CHAT_OT_agent_preview_render(bpy.types.Operator):
 
     job_key: bpy.props.StringProperty()
     # The render's real size (0 = keep the scene's, scaled to the preview cap)
-    # and engine ("eevee" | "cycles"; "" = keep the scene's own).
+    # and engine ("auto" | "eevee" | "cycles"; "" = keep the scene's own).
     width: bpy.props.IntProperty(default=0, min=0, max=8192)
     height: bpy.props.IntProperty(default=0, min=0, max=8192)
     engine: bpy.props.StringProperty(default="")
@@ -39,12 +40,16 @@ class MIXIE_CHAT_OT_agent_preview_render(bpy.types.Operator):
     # OS killing the app (docs/render-job-contract.md). 0 = no limit, which is what
     # an older backend that does not send the parameter gets.
     max_faces: bpy.props.IntProperty(default=0, min=0)
+    inspection_json: bpy.props.StringProperty(default="")
 
     def execute(self, context):
         # A single response slot; retained job results live in the core module.
+        inspection = json.loads(self.inspection_json) if self.inspection_json else None
+        if inspection is not None and not isinstance(inspection, dict):
+            return {"CANCELLED"}
         bpy.app.driver_namespace[RESPONSE_NS] = preview_render.start(
             context, self.job_key, width=self.width, height=self.height,
-            engine=self.engine, max_faces=self.max_faces)
+            engine=self.engine, max_faces=self.max_faces, inspection=inspection)
         return {"FINISHED"}
 
 

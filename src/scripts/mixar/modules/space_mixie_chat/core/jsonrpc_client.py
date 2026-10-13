@@ -220,6 +220,8 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
 
     def disconnect(self) -> None:
         """Close connection and stop background thread."""
+        from mixar.modules.mcp_bridge.core.lease import invalidate_transport
+        invalidate_transport(self)
         self._running.clear()
         if self._archive_sync:
             self._archive_sync.stop()

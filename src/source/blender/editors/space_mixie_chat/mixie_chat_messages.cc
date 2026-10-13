@@ -432,6 +432,10 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
     needs_layout_rebuild = true;
   } else if (layout_epoch != rt->prev_layout_epoch) {
     needs_layout_rebuild = true;
+  } else if (chat_ui_theme_signature() != rt->prev_theme_signature) {
+    /* Preferences > Themes > Chat edits bTheme in place; the cached styles
+     * would otherwise keep the old colours and sizes until the next message. */
+    needs_layout_rebuild = true;
   } else if (!g_msg_props.initialized) {
     /* The global RNA property cache was cleared while our layout cache
      * stayed populated. agent_bubble_free() clears the process-global caches

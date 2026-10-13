@@ -18,6 +18,7 @@
 
 #include "BLI_rect.h"
 
+#include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -306,6 +307,58 @@ void moodboard_qa_targets(const wmWindow *win,
       t.rect_win.ymin = region->winrct.ymin + int(ry) - radius;
       t.rect_win.ymax = region->winrct.ymin + int(ry) + radius;
       r_targets.push_back(std::move(t));
+    }
+  }
+
+  /* Movie play/pause discs, on standalone tiles and node previews alike, at
+   * the centre and radius the draw pass and both click hit-tests share. `sel`
+   * is whether the movie is playing and `value` its current frame, so a
+   * scenario can assert that playback runs to its end wherever the pointer
+   * goes. Reading the frame settles playback by the clock, as a draw would. */
+  if (PropertyRNA *images = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images")) {
+    const int media_count = RNA_property_collection_length(&scene_ptr, images);
+    for (int i = 0; i < media_count; i++) {
+      PointerRNA media;
+      if (!RNA_property_collection_lookup_int(&scene_ptr, images, i, &media)) {
+        continue;
+      }
+      Image *image = static_cast<Image *>(RNA_pointer_get(&media, "image").data);
+      if (!image || image->source != IMA_SRC_MOVIE) {
+        continue;
+      }
+      char owner[MIXIE_GRAPH_ID_BUF] = "";
+      ed::mixie::mixie_rna_string_get_clamped(&media, "embedded_node_id", owner, sizeof(owner));
+      const bool in_node = owner[0] != '\0';
+      if (!in_node) {
+        ed::mixie::mixie_rna_string_get_clamped(&media, "node_id", owner, sizeof(owner));
+      }
+      /* A node offers playback for its first embedded movie only. */
+      const rctf *card = cache.outputs.lookup_ptr(owner);
+      if (!card ||
+          (in_node && ed::mixie::moodboard_find_embedded_media_index(&scene_ptr, owner) != i))
+      {
+        continue;
+      }
+      rctf tile = *card;
+      if (in_node) {
+        ed::mixie::moodboard_graph_node_preview_bounds(*card, &tile);
+      }
+      const float radius = ed::mixie::moodboard_video_play_radius(v2d, tile);
+      const rctf disc = {BLI_rctf_cent_x(&tile) - radius,
+                         BLI_rctf_cent_x(&tile) + radius,
+                         BLI_rctf_cent_y(&tile) - radius,
+                         BLI_rctf_cent_y(&tile) + radius};
+      MixarQATarget t;
+      if (canvas_rect_to_window(region, disc, &t.rect_win)) {
+        bool playing = false;
+        const int frame = ed::mixie::moodboard_video_playback_frame(image, &playing);
+        t.surface = "moodboard_video";
+        t.text = owner;
+        t.value = std::to_string(frame);
+        t.index = i;
+        t.sel = playing;
+        r_targets.push_back(std::move(t));
+      }
     }
   }
 

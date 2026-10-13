@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Movies never become Agent image payloads, including restored draft data."""
+"""Movies never become Agent image payloads, including restored draft data;
+new entry points route them to context-file chips instead."""
 
+import os
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -54,26 +56,42 @@ def test_encoder_cannot_turn_video_into_a_still_or_raw_image_payload(images, mon
     assert image_utils.encode_attachment_for_upload(path, source) is None
 
 
-def test_from_blend_refuses_movie_before_adding_or_mirroring(images):
-    mirror = Mock()
-    namespace = dict(bpy=SimpleNamespace(data=SimpleNamespace(images=images)),
-                     VIDEO_ATTACHMENT_REJECTED=VIDEO_ATTACHMENT_REJECTED,
-                     mirror_attachment_to_moodboard=mirror)
+def test_from_blend_routes_a_movie_to_a_context_file(tmp_path):
+    # Retargeted: a MOVIE datablock is no longer refused — its file becomes a
+    # context-file chip (attach_file); still no pill and no board mirror.
+    clip = tmp_path / 'clip.mp4'
+    clip.write_bytes(b'\x00\x00\x00\x18ftypmp42')
+    images = {'clip': SimpleNamespace(source='MOVIE', has_data=True, filepath=str(clip))}
+    mirror, attach = Mock(), Mock(return_value={'success': True, 'file_id': 'f', 'name': 'clip.mp4',
+                                                'kind': 'video', 'already': False})
+    namespace = dict(os=os, rpt_=lambda s: s,
+                     bpy=SimpleNamespace(data=SimpleNamespace(images=images),
+                                         path=SimpleNamespace(abspath=lambda p: p)),
+                     attach_file=attach, mirror_attachment_to_moodboard=mirror,
+                     redraw_chat_areas=Mock(), sync_bubble_attachment_size_deferred=Mock())
     execute = function(CHAT/'ui/operators/image_ops.py', 'execute', namespace,
                        'MIXIE_CHAT_OT_add_image_from_blend')
     scene = SimpleNamespace(mixie_chat_pending_attachments=Attachments())
     op = SimpleNamespace(dropped_image_name='clip', image_name='', report=Mock())
-    assert execute(op, SimpleNamespace(scene=scene)) == {'CANCELLED'}
+    assert execute(op, SimpleNamespace(scene=scene)) == {'FINISHED'}
     assert not scene.mixie_chat_pending_attachments
     mirror.assert_not_called()
-    op.report.assert_called_once_with({'WARNING'}, VIDEO_ATTACHMENT_REJECTED)
+    attach.assert_called_once_with(scene, os.path.realpath(str(clip)), origin='blend')
+    # A movie whose file vanished is an error, not a silent no-op.
+    images['clip'].filepath = str(tmp_path / 'gone.mp4')
+    attach.reset_mock()
+    assert execute(op, SimpleNamespace(scene=scene)) == {'CANCELLED'}
+    attach.assert_not_called()
+    assert op.report.call_args.args[0] == {'ERROR'}
 
 
-def test_from_blend_picker_omits_movies():
+def test_from_blend_picker_includes_movies():
+    # Retargeted: movies are listed (flagged is_movie) so the picker can
+    # attach one as a context file.
     def image(name, source):
         return SimpleNamespace(name=name, source=source, type='IMAGE', size=(64, 64),
                                has_data=True, filepath='')
     namespace = dict(bpy=SimpleNamespace(data=SimpleNamespace(
         images=[image('clip', 'MOVIE'), image('photo', 'FILE')])) )
     get_images = function(CHAT/'core/image_utils.py', 'get_blend_images', namespace)
-    assert [i['name'] for i in get_images()] == ['photo']
+    assert [(i['name'], i['is_movie']) for i in get_images()] == [('clip', True), ('photo', False)]

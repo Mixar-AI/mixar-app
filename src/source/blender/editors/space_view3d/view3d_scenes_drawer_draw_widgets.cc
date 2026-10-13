@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Widgets of the Zen Mode Scenes drawer's draw pass: the RNA readers that
+ * Widgets of the Scenes drawer's draw pass: the RNA readers that
  * pull `wm.mixar_scene_tabs` into the region runtime, elided text, the status
  * pill palette and the pill painter. The layout of the pass itself is
  * `view3d_scenes_drawer_draw.cc`.

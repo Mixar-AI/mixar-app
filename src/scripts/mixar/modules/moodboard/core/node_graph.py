@@ -13,6 +13,7 @@ from mixar.modules.common.i18n import rpt_
 from ..constants import GRAPH_NODE_ID_MAXLEN
 from .media_utils import is_still_item
 from .moodboard_utils import get_moodboard_image_display_size
+from .video_duration_seed import seed_video_duration
 from .node_schema import (
     output_type_for_action,
     refresh_node_height,
@@ -291,6 +292,10 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
         input_order=socket_index,
     )
     refresh_node_socket_visibility(scene, target)
+    if source_type == 'VIDEO':
+        # Only a video changes what "as long as the input" means; a still
+        # reference must leave the duration the user sees untouched.
+        seed_video_duration(target, input_media_items(scene, target))
     return link
 
 

@@ -14,7 +14,9 @@ Responses are normalized to the Blender-side status names used by
 existing concrete Job classes.
 """
 
+import contextvars
 import uuid
+from contextlib import contextmanager
 from typing import Callable, Optional
 from urllib.parse import quote
 
@@ -29,6 +31,22 @@ from ..response import APIResponse
 from .base_service import BaseService
 
 logger = get_logger(__name__)
+
+
+#: Who asked for the job ("user", "mixar_agent", "mcp"), for the backend's
+#: generation telemetry. Older backends ignore the header.
+ORIGIN_HEADER = "X-Mixar-Job-Origin"
+_submit_origin = contextvars.ContextVar("mixar_job_origin", default="")
+
+
+@contextmanager
+def submitting_as(origin: str):
+    """Stamp ``origin`` on every job submit made inside this block."""
+    token = _submit_origin.set(origin or "")
+    try:
+        yield
+    finally:
+        _submit_origin.reset(token)
 
 
 _STATE_TO_STATUS = {
@@ -155,9 +173,12 @@ class JobQueueService(BaseService):
         }
         if max_retries is not None:
             body["max_retries"] = max_retries
+        origin = _submit_origin.get()
+        extra = {"headers": {ORIGIN_HEADER: origin}} if origin else {}
         return self.post_async(
             "jobs",
             json=body,
+            **extra,
             on_success=self._wrap_success(on_success),
             on_error=on_error,
             on_complete=on_complete,

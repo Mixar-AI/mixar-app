@@ -3048,7 +3048,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akcija"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -3682,13 +3682,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Preuzimanje {percent}%"
 
-# derived
-msgid "Upgrade"
-msgstr "Unapredi"
+msgid "{count} credit"
+msgstr ""
 
-# derived
-msgid "{percent}% left"
-msgstr "{percent}% preostalo"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 # derived
 msgid "Subscription"
@@ -3758,28 +3759,29 @@ msgid "Display name of the current plan"
 msgstr "Prikazano ime tekućeg plana"
 
 # derived
-msgid "Remaining"
-msgstr "Preostalo"
-
-# derived
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Procenat dodele kredita u ciklusu koji je još dostupan"
-
-# derived
 msgid "Credits Remaining"
 msgstr "Preostali krediti"
 
-# derived
-msgid "Credits left in the current cycle"
-msgstr "Krediti preostali u tekućem ciklusu"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-# derived
-msgid "Credits Total"
-msgstr "Ukupno kredita"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-# derived
-msgid "Credit allocation for the current cycle"
-msgstr "Dodela kredita za tekući ciklus"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 # derived
 msgid "Can Top Up"
@@ -3930,16 +3932,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Datoteke"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3951,7 +3965,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3966,6 +3980,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3978,10 +3998,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Centar"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 # derived
@@ -6348,6 +6395,195 @@ msgstr "Model lokalnog servera"
 # derived
 msgid "Local model last error"
 msgstr "Poslednja greška lokalnog modela"
+
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "Kopiraj"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
 
 # derived
 msgid "Processing..."
@@ -8950,9 +9186,6 @@ msgstr "Obriši čvor"
 msgid "Duplicate Nodes (Shift D)"
 msgstr "Dupliraj čvorove (Shift D)"
 
-msgid "Copy"
-msgstr "Kopiraj"
-
 # derived
 msgid "Continue With"
 msgstr "Nastavi sa"
@@ -11255,13 +11488,11 @@ msgstr "Osveži sinhronizaciju priloga mudbord→čet ({shortcut})"
 msgid "Sync failed: {error}"
 msgstr "Sinhronizacija nije uspela: {error}"
 
-# derived
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeno video-zapisa: {count}. Agent prihvata samo nepokretne slike. Za isečke koristite generisanje videa na mudbordu"
+msgid "Attached {count} video as context"
+msgstr ""
 
-# derived
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeno video-zapisa: {count}. Agent prihvata samo nepokretne slike. Za isečke koristite generisanje videa na mudbordu"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 # derived
 msgid "No moodboard images selected"
@@ -11654,9 +11885,6 @@ msgstr "Direktorijum"
 # derived
 msgid "Directory of the selected file(s)"
 msgstr "Direktorijum izabranih datoteka"
-
-msgid "Files"
-msgstr "Datoteke"
 
 # derived
 msgid "Failed to load media: {filepath}"
@@ -24075,7 +24303,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -25059,9 +25287,16 @@ msgstr "Izmena..."
 msgid "Awaiting Input..."
 msgstr "Čeka se unos..."
 
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
+
 # derived
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Video-zapisi zahtevaju režim video-zapisa. Uklonite video-zapis da biste poslali agentu."
+msgid "User ID"
+msgstr "ID korisnika"
+
+# derived
+msgid "User ID for Mixie Chat login"
+msgstr "ID korisnika za prijavu u ćaskanje Mixie"
 
 # derived
 msgid "Agent expects: {formats}"
@@ -25159,9 +25394,21 @@ msgstr "Nije uspelo slanje poruke"
 msgid "You're out of credits"
 msgstr "Potrošili ste kredite"
 
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
 # derived
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Iskoristili ste mesečnu kvotu kredita. Nadogradite plan da nastavite da stvarate uz Mixie."
+msgid "Upgrade"
+msgstr "Unapredi"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 # derived
 msgid "Feedback comment is empty"
@@ -25402,7 +25649,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -26591,11 +26838,15 @@ msgstr "Arhivirana sesija za brisanje"
 msgid "Chat removed from history"
 msgstr "Ćaskanje je uklonjeno iz istorijata"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+# derived
+msgid "Cannot add {name}: {error}"
+msgstr "Nije moguće dodati {name}: {error}"
 
 # derived
 msgid "Attachment limit ({count}) reached"
@@ -26606,16 +26857,15 @@ msgid "Skipped {name}: {error}"
 msgstr "Preskočeno {name}: {error}"
 
 # derived
-msgid "Cannot add {name}: {error}"
-msgstr "Nije moguće dodati {name}: {error}"
-
-# derived
 msgid "These references are already attached"
 msgstr "Ove reference su već priložene"
 
 # derived
 msgid "Added {count} image(s)"
 msgstr "Dodatih slika: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 # derived
 msgid "Add from Blend"
@@ -26637,6 +26887,9 @@ msgstr "{size} — ima podatke"
 msgid "{size} - No data"
 msgstr "{size} — nema podatke"
 
+msgid "{name} (video)"
+msgstr ""
+
 # derived
 msgid "Select image from blend file"
 msgstr "Izaberi sliku iz blend datoteke"
@@ -26648,6 +26901,12 @@ msgstr "Slika je već dodata"
 # derived
 msgid "Image not found in blend file"
 msgstr "Slika nije pronađena u blend datoteci"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 # derived
 msgid "Image already attached"
@@ -27599,6 +27858,15 @@ msgstr "Unos ćaskanja"
 msgid "Type your message here"
 msgstr "Ovde unesite poruku"
 
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
+
 # derived
 msgid "Chat Messages"
 msgstr "Poruke ćaskanja"
@@ -27763,14 +28031,6 @@ msgstr ""
 # derived
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 — brz i efikasan"
-
-# derived
-msgid "User ID"
-msgstr "ID korisnika"
-
-# derived
-msgid "User ID for Mixie Chat login"
-msgstr "ID korisnika za prijavu u ćaskanje Mixie"
 
 # derived
 msgid "Password"
@@ -30293,9 +30553,6 @@ msgstr "Lepljenje kursora"
 msgid "Snap 2D cursor"
 msgstr "Prikači 2D kursor"
 
-msgid "Origin"
-msgstr "Centar"
-
 # derived
 msgid "Mirror selected UVs"
 msgstr "Ogleda izabrane UV"
@@ -31168,11 +31425,17 @@ msgstr "Dobro došli !"
 msgid "%s Plan"
 msgstr "Plan %s"
 
-# derived
-msgid "Checking usage…"
-msgstr "Provera korišćenja…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+# derived
+msgid "%s credits"
+msgstr "krediti: %s"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 # derived
@@ -31186,18 +31449,6 @@ msgstr "Pogledaj planove"
 # derived
 msgid "couldn't refresh"
 msgstr "osvežavanje nije uspelo"
-
-# derived
-msgid "%s of %s left"
-msgstr "preostalo %s od %s"
-
-# derived
-msgid "%s credits"
-msgstr "krediti: %s"
-
-# derived
-msgid "no credits"
-msgstr "nema kredita"
 
 # derived
 msgid "Docs"
@@ -31221,6 +31472,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 # derived
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Dodajte sloj za bojenje u panelu Slojevi da biste počeli da bojite"
@@ -31237,7 +31491,47 @@ msgstr "Pokreće ili zaustavlja diktiranje u nacrt skice"
 msgid "Stop the running turn"
 msgstr "Zaustavi tekući potez"
 
+# derived
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Vrati\n"
+"\n"
+"Vraća prompt koji ste napisali pre nego što je prerađen."
+
+# derived
+msgid "Refining this prompt..."
+msgstr "Prerada ovog prompta..."
+
+# derived
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Preradi ponovo\n"
+"\n"
+"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
+
+# derived
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Preradi\n"
+"\n"
+"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 # derived
@@ -31251,6 +31545,9 @@ msgstr "Ukloni referencu"
 # derived
 msgid "Discard this sketch and its queued drawing"
 msgstr "Odbacuje ovu skicu i njen crtež u redu"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -31719,7 +32016,7 @@ msgstr "Pravila — uredite pravila projekta i globalna pravila za agenta"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 # derived
@@ -32521,40 +32818,6 @@ msgstr ""
 
 # derived
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Vrati\n"
-"\n"
-"Vraća prompt koji ste napisali pre nego što je prerađen."
-
-# derived
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Preradi ponovo\n"
-"\n"
-"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
-
-# derived
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Preradi\n"
-"\n"
-"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
-
-# derived
-msgid "Refining this prompt..."
-msgstr "Prerada ovog prompta..."
-
-# derived
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -32834,14 +33097,6 @@ msgstr "Izabrana stavka mudborda nije video"
 # derived
 msgid "Cannot decode video: %s"
 msgstr "Nije moguće dekodirati video: %s"
-
-# derived
-msgid "Moodboard Video Hover Monitor"
-msgstr "Nadgledanje lebdenja videa mudborda"
-
-# derived
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Zaustavlja ugrađenu reprodukciju videa mudborda kada pokazivač napusti njegovu pločicu"
 
 # derived
 msgid "This board item has no image or video to preview"
@@ -35767,18 +36022,6 @@ msgstr "Putanje otpuštanja moraju biti neprazni nizovi"
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje otpuštanja moraju biti neprazan JSON niz"
 
-# derived
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "Snimanje QA kadra zahteva --enable-event-simulate"
-
-# derived
-msgid "Unable to read QA window frame"
-msgstr "Nije moguće pročitati kadar QA prozora"
-
-# derived
-msgid "Unable to save QA window frame"
-msgstr "Nije moguće sačuvati kadar QA prozora"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -35813,6 +36056,25 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+# derived
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "Snimanje QA kadra zahteva --enable-event-simulate"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 # derived
