@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 #include "BLI_math_vector.h"
 #include "BLI_rect.h"
@@ -27,6 +28,7 @@
 
 #include "ED_mixar_glass.hh"
 
+#include "mixie_chat_line_break.hh"
 #include "mixie_chat_ui_types.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -258,14 +260,14 @@ void chat_ui_calc_text_bounds_font(const char *text,
                                    int font_id,
                                    float *out_width,
                                    float *out_height,
-                                   BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
+                                   BLFWrapMode wrap_mode = CHAT_PROSE_WRAP);
 float chat_ui_draw_text_wrapped_font(const char *text,
                                      const rctf *rect,
                                      int font_size,
                                      int flags,
                                      int font_id,
                                      const float color[4],
-                                     BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
+                                     BLFWrapMode wrap_mode = CHAT_PROSE_WRAP);
 
 int chat_ui_mono_font()
 {
@@ -376,8 +378,12 @@ void chat_ui_calc_text_bounds_font(const char *text,
    * This ensures consistent wrapping between bounds calculation and rendering. */
   BLF_wordwrap(font_id, int(max_width), wrap_mode);
 
+  /* Kinsoku may move a break; measure the lines the draw pass will draw. */
+  std::string prose_storage;
+  const char *prose = chat_ui_prose_text(font_id, text, int(max_width), wrap_mode, prose_storage);
+
   rcti bbox;
-  BLF_boundbox(font_id, text, text_len, &bbox);
+  BLF_boundbox(font_id, prose, strlen(prose), &bbox);
 
   /* Return actual dimensions - width clamped to max_width, height from bbox */
   float bbox_width = float(BLI_rcti_size_x(&bbox));
@@ -435,10 +441,13 @@ float chat_ui_draw_text_wrapped_font(const char *text,
   BLF_wordwrap(font_id, int(wrap_width), wrap_mode);
   BLF_color4fv(font_id, color);
 
+  std::string prose_storage;
+  const char *prose = chat_ui_prose_text(font_id, text, int(wrap_width), wrap_mode, prose_storage);
+
   /* Calculate bbox with CURRENT wrap settings for accurate positioning.
    * This ensures positioning matches actual rendered text layout. */
   rcti bbox;
-  BLF_boundbox(font_id, text, strlen(text), &bbox);
+  BLF_boundbox(font_id, prose, strlen(prose), &bbox);
 
   /* Position so bottom of text aligns with rect bottom (bottom-aligned).
    * bbox.ymin is negative (distance from baseline to bottom of lowest descender).
@@ -448,7 +457,7 @@ float chat_ui_draw_text_wrapped_font(const char *text,
 
   /* Draw text - View2D handles clipping automatically, no scissor test needed */
   BLF_position(font_id, rect->xmin, baseline_y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
+  BLF_draw(font_id, prose, strlen(prose));
 
   BLF_disable(font_id, BLF_WORD_WRAP);
   
@@ -570,6 +579,50 @@ static float rt_run_width(
   return w;
 }
 
+/* Width of [s,e) of buf across its style runs. */
+static float rt_span_width(const char *buf,
+                           const unsigned char *st,
+                           int s,
+                           int e,
+                           int font_size,
+                           int mono_font)
+{
+  float w = 0.0f;
+  for (int j = s; j < e;) {
+    const unsigned char rf = st[j];
+    int k = j;
+    while (k < e && st[k] == rf) {
+      k++;
+    }
+    w += rt_run_width(buf, j, k, rf, font_size, mono_font);
+    j = k;
+  }
+  return w;
+}
+
+/* End of the longest prefix of [s,e) that fits `avail` (at least one
+ * character), measured a character at a time so a long token stays linear. */
+static int rt_fit_prefix(const char *buf,
+                         const unsigned char *st,
+                         int s,
+                         int e,
+                         float avail,
+                         int font_size,
+                         int mono_font)
+{
+  float w = 0.0f;
+  int j = s;
+  while (j < e) {
+    const int size = chat_ui_utf8_char_size(buf, j, e);
+    w += rt_run_width(buf, j, j + size, st[j], font_size, mono_font);
+    if (w > avail && j > s) {
+      break;
+    }
+    j += size;
+  }
+  return j;
+}
+
 float chat_ui_rich_text(const char *text,
                         const rctf *rect,
                         int font_size,
@@ -642,29 +695,26 @@ float chat_ui_rich_text(const char *text,
       continue;
     }
 
-    /* A word: maximal non-space run (may span style boundaries). */
+    /* A unit: a non-space run (may span style boundaries) that also ends at
+     * a CJK break opportunity, so Chinese and Japanese prose wraps. */
     const int ws = i;
-    while (i < n && buf[i] != ' ' && buf[i] != '\t' && buf[i] != '\n') {
-      i++;
-    }
-    const int we = i;
+    int we = chat_ui_line_unit_end(buf, i, n);
 
-    float word_w = 0.0f;
-    for (int j = ws; j < we;) {
-      const unsigned char rf = st[j];
-      int k = j;
-      while (k < we && st[k] == rf) {
-        k++;
-      }
-      word_w += rt_run_width(buf, j, k, rf, font_size, mono_font);
-      j = k;
-    }
+    float word_w = rt_span_width(buf, st, ws, we, font_size, mono_font);
 
     if (pen_x + word_w > right && pen_x > left) {
       max_line_w = fmaxf(max_line_w, pen_x - left);
       line_top -= line_h;
       pen_x = left;
     }
+
+    /* Wider than a whole line (a URL, a long identifier): fold at the edge;
+     * the remainder is the next unit. */
+    if (word_w > right - left) {
+      we = rt_fit_prefix(buf, st, ws, we, right - left, font_size, mono_font);
+      word_w = rt_span_width(buf, st, ws, we, font_size, mono_font);
+    }
+    i = we;
 
     if (do_draw) {
       const float baseline = line_top - ascender;

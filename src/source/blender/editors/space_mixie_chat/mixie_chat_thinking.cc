@@ -54,7 +54,7 @@ static int get_visual_line_count(const char *text, float wrap_width, int font_si
   const int font_id = BLF_default();
   BLF_size(font_id, font_size);
   BLF_enable(font_id, BLF_WORD_WRAP);
-  BLF_wordwrap(font_id, int(wrap_width));
+  BLF_wordwrap(font_id, int(wrap_width), CHAT_PROSE_WRAP);
 
   rcti bbox;
   BLF_boundbox(font_id, text, strlen(text), &bbox);
