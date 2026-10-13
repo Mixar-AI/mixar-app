@@ -28,7 +28,27 @@ def test_the_buttons_run_the_moodboard_operators_on_the_chat():
     body = _send_button_body()
     assert '"mixie.refine_prompt"' in body
     assert '"mixie.revert_prompt"' in body
-    assert 'RNA_boolean_set(ui::button_operator_ptr_ensure(but), "chat", true)' in body
+    assert 'RNA_boolean_set(props, "chat", true)' in body
+
+
+def test_the_buttons_survive_drawing_before_their_operators_register():
+    """The composer draws before the Python operators register (bootstrap
+    phase 4 loads them in batches). uiDefButO still returns a button then, with
+    no operator type, so its property pointer is null; writing through it
+    segfaulted every launch. Each Python-operator button in the island must
+    only write props it actually got."""
+    body = _send_button_body()
+    assert ("if (PointerRNA *props = but ? ui::button_operator_ptr_ensure(but) : nullptr) {"
+            in body)
+    for name, guarded in (
+        ("agent_bubble_references.cc", ("preview", "button")),
+        ("agent_ui_generations_libraries.cc", ("remove",)),
+    ):
+        source = _read(name)
+        for but in guarded:
+            assert f"{but} ? ui::button_operator_ptr_ensure({but}) : nullptr" in source, (name, but)
+        assert "RNA_string_set(ui::button_operator_ptr_ensure(" not in source, name
+        assert "RNA_boolean_set(ui::button_operator_ptr_ensure(" not in source, name
 
 
 def test_the_buttons_share_the_node_tiles_tooltips_and_hints():
