@@ -27,8 +27,12 @@ def new_token() -> str:
 
 
 def discovery_directory() -> Path:
+    # A folder holding only these records, so the hub can take every
+    # ``*.json`` in it as one. ``~/.mixar/connector`` is the MCP launcher's
+    # install folder (``installation.json``, ``tools.json``) and
+    # ``~/.mixar/mcp`` holds the MCP relay's records.
     override = os.environ.get("MIXAR_CONNECTOR_DISCOVERY_DIR")
-    return Path(override).expanduser() if override else Path.home() / ".mixar" / "connector"
+    return Path(override).expanduser() if override else Path.home() / ".mixar" / "hub"
 
 
 def publish(port: int, token: str) -> Path:
