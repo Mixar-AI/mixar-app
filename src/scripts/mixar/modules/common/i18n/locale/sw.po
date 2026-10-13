@@ -1400,12 +1400,6 @@ msgstr "Hitilafu"
 msgid "Last request failed"
 msgstr "Ombi la mwisho limeshindwa"
 
-msgid "Confirm Remove"
-msgstr "Thibitisha kuondoa"
-
-msgid "Awaiting delete confirmation"
-msgstr "Inasubiri uthibitisho wa kufuta"
-
 msgid "Loading…"
 msgstr "Inapakia…"
 
@@ -1440,6 +1434,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "Kuna hitilafu upande wetu. Tafadhali jaribu tena."
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1487,6 +1484,12 @@ msgstr "Anzisha kwanza modeli ya ndani (lazima iwe inaendeshwa ili kuhifadhi)."
 msgid "Base URL and model name are required."
 msgstr "URL ya msingi na jina la modeli vinahitajika."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Seva ya ndani ilijibu HTTP {status}."
 
@@ -1507,6 +1510,12 @@ msgstr "Tumia ufunguo wangu wa API…"
 
 msgid "Change or remove my API key…"
 msgstr "Badilisha au ondoa ufunguo wangu wa API…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Ufikiri"
@@ -1574,6 +1583,39 @@ msgstr "Haikuweza kubadilisha modeli"
 msgid "Could not reset model"
 msgstr "Haikuweza kuweka upya modeli"
 
+msgid "Load from ~/.codex/auth.json"
+msgstr "Leta kutoka ~/.codex/auth.json"
+
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "Soma ~/.codex/auth.json kutoka mashine hii hadi kwenye uga"
+
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "~/.codex/auth.json haikupatikana — endesha `codex login` kwanza"
+
+msgid "Could not read ~/.codex/auth.json"
+msgstr "Haikuweza kusoma ~/.codex/auth.json"
+
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json ni tupu"
+
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json ni kubwa mno kwa uga huu na imekatwa — haitahifadhiwa ipasavyo"
+
+msgid "Loaded auth.json"
+msgstr "Imeletwa auth.json"
+
+msgid "Paste auth.json"
+msgstr "Bandika auth.json"
+
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "Bandika ~/.codex/auth.json yako kutoka ubao wa kunakili hadi kwenye uga"
+
+msgid "Clipboard is empty"
+msgstr "Ubao wa kunakili ni tupu"
+
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json iliyobandikwa ni kubwa mno kwa uga huu na imekatwa — haitahifadhiwa ipasavyo"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -1601,10 +1643,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
@@ -1612,12 +1654,6 @@ msgstr "Krediti za Mixar zitatozwa kwa maombi yajayo ya wakala."
 
 msgid "Removing your key…"
 msgstr "Inaondoa ufunguo wako…"
-
-msgid "Keep My Key"
-msgstr "Weka ufunguo wangu"
-
-msgid "Remove API Key"
-msgstr "Ondoa ufunguo wa API"
 
 msgid "SAVED"
 msgstr ""
@@ -1700,12 +1736,6 @@ msgstr "Mipangilio ya mtoa huduma wa AI"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti za Mixar hazitozwi kwa maombi ya wakala."
 
-msgid "Settings"
-msgstr "Mipangilio"
-
-msgid "Use Mixie"
-msgstr ""
-
 msgid "Validate with the provider and save your API key"
 msgstr "Thibitisha na mtoa huduma na uhifadhi ufunguo wako wa API"
 
@@ -1721,53 +1751,23 @@ msgstr "Chagua modeli ya Codex na ulete fungu lako la auth.json."
 msgid "Save failed."
 msgstr "Kuhifadhi kumeshindwa."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Leta kutoka ~/.codex/auth.json"
+msgid "Couldn't save your API key"
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Soma ~/.codex/auth.json kutoka mashine hii hadi kwenye uga"
+msgid "Please try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json haikupatikana — endesha `codex login` kwanza"
+msgid "Remove API Key"
+msgstr "Ondoa ufunguo wa API"
 
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Haikuweza kusoma ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ni tupu"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ni kubwa mno kwa uga huu na imekatwa — haitahifadhiwa ipasavyo"
-
-msgid "Loaded auth.json"
-msgstr "Imeletwa auth.json"
-
-msgid "Paste auth.json"
-msgstr "Bandika auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Bandika ~/.codex/auth.json yako kutoka ubao wa kunakili hadi kwenye uga"
-
-msgid "Clipboard is empty"
-msgstr "Ubao wa kunakili ni tupu"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json iliyobandikwa ni kubwa mno kwa uga huu na imekatwa — haitahifadhiwa ipasavyo"
-
-msgid "Remove"
-msgstr "Ondoa"
-
-msgid "Start the remove-confirmation flow"
-msgstr "Anzisha mtiririko wa uthibitisho wa kuondoa"
-
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "Ghairi mtiririko wa kuondoa na urudi kwenye kidirisha kuu"
-
-msgid "Delete the stored API key server-side"
-msgstr "Futa ufunguo wa API uliohifadhiwa upande wa seva"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 msgid "Remove failed."
 msgstr "Kuondoa kumeshindwa."
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -1820,14 +1820,20 @@ msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8.
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Ondoa ufunguo wa API…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Inathibitisha na mtoa huduma…"
@@ -1874,7 +1880,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 msgid "Agent Model Provider"
@@ -1926,6 +1947,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -6400,6 +6427,9 @@ msgstr "Maelezo ya matundu"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Chagua sehemu zote za mhusika mmoja — huwekwa rigi kama mifupa moja"
+
+msgid "Settings"
+msgstr "Mipangilio"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Hutambua aina ya mifupa kiotomatiki"
@@ -24736,13 +24766,19 @@ msgstr "Mchoro · Enter kutuma"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

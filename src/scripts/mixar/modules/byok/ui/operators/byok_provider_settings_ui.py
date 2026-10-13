@@ -26,7 +26,8 @@ from . import byok_sheet as S
 
 OP_PICK = "mixar_byok.pick"
 OP_SAVE = "mixar_byok.save"
-OP_REQUEST_REMOVE = "mixar_byok.request_remove"
+OP_REMOVE = "mixar_byok.confirm_remove"
+OP_USE_KEY = "mixar_byok.use_key"
 OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
 OP_CODEX_PASTE = "mixar_byok.codex_paste"
 
@@ -107,12 +108,20 @@ class FormPlan:
         self.state = state
         self.provider = wm.byok_form_provider
         self.chips = []
-        # Lines directly above the key prompt: the key in use, then the error.
-        # A failed save or remove never touches the stored key, so the key in
-        # use stays named in ERROR too (its Remove button only in IDLE).
+        # Lines directly above the key prompt: the stored key (in use, or
+        # paused by the island's Mixie side), then the error. A failed save or
+        # remove never touches the stored key, so it stays named in ERROR too
+        # (its buttons only in IDLE).
         self.strips = []
-        if wm.byok_is_active and state in ('IDLE', 'ERROR'):
-            self.strips.append(('in_use', None))
+        if state in ('IDLE', 'ERROR'):
+            if wm.byok_is_active:
+                self.strips.append(('in_use', None))
+            elif wm.byok_key_stored and wm.byok_key_paused:
+                self.strips.append(('paused', None))
+            elif wm.byok_key_stored:
+                # Stored, switched on, yet not answering: it stopped validating
+                # (a revoked Codex sign-in) and must be entered again.
+                self.strips.append(('invalid', None))
         if state == 'ERROR' and wm.byok_last_error:
             self.strips += [('error', line) for line in
                             _wrap(iface_(wm.byok_last_error), ERROR_WRAP_CHARS)[:2]]
@@ -213,16 +222,29 @@ class FormPlan:
             if kind == 'error':
                 S.label(strip, line, S.DANGER_TEXT, translate=False)
                 continue
-            S.label(strip, iface_("In use: {provider} · {model} · {key}").format(
+            values = dict(
                 provider=provider_label(wm.byok_current_provider),
                 model=model_label(wm.byok_current_provider, wm.byok_current_model),
-                key=wm.byok_key_preview or iface_("key stored securely"),
-            ), S.NOTE, translate=False)
+                key=wm.byok_key_preview or iface_("key stored securely"))
+            resumable = getattr(wm, 'mixar_agent_key_resumable', False)
+            if kind == 'in_use':
+                text = iface_("In use: {provider} · {model} · {key}")
+            elif kind == 'paused' and resumable:
+                text = iface_("Paused, Mixie is answering: {provider} · {model} · {key}")
+            else:
+                text = iface_("Saved key stopped working, enter it again: {provider} · {model} · {key}")
+            S.label(strip, text.format(**values), S.NOTE, translate=False)
             if self.state != 'IDLE':
                 continue
-            text = iface_("Remove API Key…")
-            width = S.text_width(strip, S.DANGER_BUTTON, text) + S.BUTTON_PAD
-            S.button(S.sized(strip, width), OP_REQUEST_REMOVE, text, S.DANGER_BUTTON)
+            if kind == 'paused' and resumable:
+                # The island's Custom AI does the same; here for the profile route.
+                use = iface_("Use This Key")
+                S.button(S.sized(strip, S.text_width(strip, S.SECONDARY, use) + S.BUTTON_PAD),
+                         OP_USE_KEY, use, S.SECONDARY)
+                S.gap(strip, S.GAP)
+            remove = iface_("Remove API Key")
+            S.button(S.sized(strip, S.text_width(strip, S.DANGER_BUTTON, remove) + S.BUTTON_PAD),
+                     OP_REMOVE, remove, S.DANGER_BUTTON)
 
     def _save_text(self):
         if self.state == 'SAVING':

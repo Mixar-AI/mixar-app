@@ -40,6 +40,7 @@ _WM_ATTRS = (
     'mixar_agent_key_model',
     'mixar_agent_key_menu',
     'mixar_agent_key_busy',
+    'mixar_agent_key_resumable',
 )
 
 
@@ -103,6 +104,14 @@ def register():
     WM.mixar_agent_key_busy = BoolProperty(
         name="Agent Key Model Switching",
         description="A model switch for your API key is being saved",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    # A paused key that still validates: Custom AI switches back to it with
+    # no dialog (the island's Custom AI tooltip names it).
+    WM.mixar_agent_key_resumable = BoolProperty(
+        name="Agent Key Resumable",
+        description="Your saved API key is paused; Custom AI switches back to it",
         default=False,
         options={'SKIP_SAVE'},
     )

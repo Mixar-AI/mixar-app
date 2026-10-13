@@ -306,6 +306,7 @@ void agent_ui_provider_gather(wmWindowManager *wm, AgentIslandState *r_state)
   r_state->model_key_model[0] = '\0';
   r_state->model_key_menu = false;
   r_state->model_key_busy = false;
+  r_state->model_key_resumable = false;
   if (!wm) {
     return;
   }
@@ -318,6 +319,7 @@ void agent_ui_provider_gather(wmWindowManager *wm, AgentIslandState *r_state)
   read_string(&wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
   r_state->model_byok_active = read_bool(&wm_ptr, "mixar_agent_model_byok_active");
   if (!r_state->model_byok_active) {
+    r_state->model_key_resumable = read_bool(&wm_ptr, "mixar_agent_key_resumable");
     return;
   }
   read_string(
@@ -350,14 +352,19 @@ void agent_bubble_provider_buttons(ui::Block *block,
                                    const AgentIslandState &state)
 {
   /* Two native buttons over the painted toggle, split at the seam the layout
-   * shares with the painter. Mixie while it is in use pops the hosted model
-   * menu (a pulldown anchored to this half). Mixie while a key is in use
-   * (`mixar_byok.use_mixie`, its own operator: block rebuilds match the
-   * active button to its predecessor by operator type, so two adjacent
-   * `open_dialog` buttons with different properties could trade them) opens
-   * AI Provider settings on its remove confirmation, because a key is active
-   * exactly while it is stored. Custom AI always opens AI Provider settings.
-   * The fitted-down icon form keeps the hosted menu. */
+   * shares with the painter (byok/ui/operators/byok_toggle_ops.py decides
+   * what a click does; neither half ever deletes a key):
+   * - Mixie while a key is in use is `mixar_byok.use_mixie`: it pauses the
+   *   key and Mixie answers at once, no dialog. While Mixie answers it is a
+   *   pulldown on the hosted model menu (anchored to this half; a free popup
+   *   opened downward from the cursor on this bottom row covered Upload).
+   * - Custom AI is `mixar_byok.use_key`: it resumes a paused key with no
+   *   dialog, and otherwise (a key in use, none stored, or one that must be
+   *   entered again) opens AI Provider settings.
+   * Distinct operators on purpose: block rebuilds match the active button to
+   * its predecessor by operator type, so two adjacent buttons of one operator
+   * with different properties could trade them. The fitted-down icon form
+   * keeps the hosted menu. */
   if (!state.model_available || BLI_rctf_size_x(&layout.chip_model) <= 0.0f) {
     return;
   }
@@ -373,7 +380,8 @@ void agent_bubble_provider_buttons(ui::Block *block,
            region,
            mixie,
            "mixar_byok.use_mixie",
-           TIP_("Switch back to Mixie, Mixar's hosted models. This removes your saved API key"));
+           TIP_("Switch to Mixie, Mixar's hosted models. Your API key stays saved: "
+                "Custom AI switches back to it"));
   }
   else {
     menu_but(block,
@@ -388,10 +396,13 @@ void agent_bubble_provider_buttons(ui::Block *block,
     op_but(block,
            region,
            key,
-           "mixar_byok.open_dialog",
+           "mixar_byok.use_key",
            state.model_byok_active ?
                TIP_("Your own API key is in use, so Mixar credits are not charged. "
-                    "Click to change it") :
+                    "Click to change it in AI Provider settings") :
+           state.model_key_resumable ?
+               TIP_("Switch back to your saved API key. Mixar credits are not charged "
+                    "while it is in use") :
                TIP_("Use your own API key: pick a provider and model in AI Provider "
                     "settings. Mixar credits are not charged while it is in use"));
   }

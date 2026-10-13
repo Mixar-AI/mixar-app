@@ -101,6 +101,9 @@ struct AgentIslandState {
   char model_key_model[96];
   bool model_key_menu;
   bool model_key_busy;
+  /* A paused key that still validates: Custom AI switches back to it with no
+   * dialog (only its tooltip differs here; Python decides the click). */
+  bool model_key_resumable;
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

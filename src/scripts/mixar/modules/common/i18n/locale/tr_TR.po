@@ -1400,12 +1400,6 @@ msgstr "Hata"
 msgid "Last request failed"
 msgstr "Son istek başarısız oldu"
 
-msgid "Confirm Remove"
-msgstr "Kaldırmayı Onayla"
-
-msgid "Awaiting delete confirmation"
-msgstr "Silme onayı bekleniyor"
-
 msgid "Loading…"
 msgstr "Yükleniyor…"
 
@@ -1440,6 +1434,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "Bizim tarafımızda bir sorun oluştu. Lütfen tekrar deneyin."
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1487,6 +1484,12 @@ msgstr "Önce yerel modeli başlatın (kaydetmek için çalışıyor olmalıdır
 msgid "Base URL and model name are required."
 msgstr "Temel URL ve model adı gereklidir."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Yerel sunucu HTTP {status} yanıtı verdi."
 
@@ -1507,6 +1510,12 @@ msgstr "Kendi API anahtarımı kullan…"
 
 msgid "Change or remove my API key…"
 msgstr "API anahtarımı değiştir veya kaldır…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Düşünme"
@@ -1574,6 +1583,39 @@ msgstr "Model değiştirilemedi"
 msgid "Could not reset model"
 msgstr "Model sıfırlanamadı"
 
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json dosyasından yükle"
+
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "~/.codex/auth.json dosyasını bu makineden alana okur"
+
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "~/.codex/auth.json bulunamadı — önce `codex login` komutunu çalıştırın"
+
+msgid "Could not read ~/.codex/auth.json"
+msgstr "~/.codex/auth.json okunamadı"
+
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json boş"
+
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json bu alan için çok büyük ve kırpıldı — doğru şekilde kaydedilmeyecek"
+
+msgid "Loaded auth.json"
+msgstr "auth.json yüklendi"
+
+msgid "Paste auth.json"
+msgstr "auth.json Yapıştır"
+
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "~/.codex/auth.json içeriğinizi kopyalama panosundan alana yapıştırır"
+
+msgid "Clipboard is empty"
+msgstr "Pano boş"
+
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "Yapıştırılan auth.json bu alan için çok büyük ve kırpıldı — doğru şekilde kaydedilmeyecek"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -1601,10 +1643,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
@@ -1612,12 +1654,6 @@ msgstr "Sonraki ajan istekleri için Mixar kredisi harcanacak."
 
 msgid "Removing your key…"
 msgstr "Anahtarınız kaldırılıyor…"
-
-msgid "Keep My Key"
-msgstr "Anahtarımı Koru"
-
-msgid "Remove API Key"
-msgstr "API Anahtarını Kaldır"
 
 msgid "SAVED"
 msgstr ""
@@ -1700,12 +1736,6 @@ msgstr "YZ Sağlayıcı Ayarları"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar ajanı için kendi API anahtarınızı kullanır. Etkinken ajan istekleri için Mixar kredisi harcanmaz."
 
-msgid "Settings"
-msgstr "Ayarlar"
-
-msgid "Use Mixie"
-msgstr ""
-
 msgid "Validate with the provider and save your API key"
 msgstr "Sağlayıcıyla doğrular ve API anahtarınızı kaydeder"
 
@@ -1721,53 +1751,23 @@ msgstr "Bir Codex modeli seçin ve auth.json paketinizi yükleyin."
 msgid "Save failed."
 msgstr "Kaydetme başarısız."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json dosyasından yükle"
+msgid "Couldn't save your API key"
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "~/.codex/auth.json dosyasını bu makineden alana okur"
+msgid "Please try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json bulunamadı — önce `codex login` komutunu çalıştırın"
+msgid "Remove API Key"
+msgstr "API Anahtarını Kaldır"
 
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json okunamadı"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json boş"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json bu alan için çok büyük ve kırpıldı — doğru şekilde kaydedilmeyecek"
-
-msgid "Loaded auth.json"
-msgstr "auth.json yüklendi"
-
-msgid "Paste auth.json"
-msgstr "auth.json Yapıştır"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "~/.codex/auth.json içeriğinizi kopyalama panosundan alana yapıştırır"
-
-msgid "Clipboard is empty"
-msgstr "Pano boş"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Yapıştırılan auth.json bu alan için çok büyük ve kırpıldı — doğru şekilde kaydedilmeyecek"
-
-msgid "Remove"
-msgstr "Kaldır"
-
-msgid "Start the remove-confirmation flow"
-msgstr "Kaldırma onayı akışını başlatır"
-
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "Kaldırma akışını iptal eder ve ana iletişim kutusuna döner"
-
-msgid "Delete the stored API key server-side"
-msgstr "Saklanan API anahtarını sunucu tarafında siler"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 msgid "Remove failed."
 msgstr "Kaldırma başarısız."
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -1820,14 +1820,20 @@ msgstr "openrouter.ai/models adresindeki herhangi bir kısa ad, örn. anthropic/
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API Anahtarını Kaldır…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Sağlayıcıyla doğrulanıyor…"
@@ -1874,7 +1880,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 msgid "Agent Model Provider"
@@ -1926,6 +1947,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -6400,6 +6427,9 @@ msgstr "Örgü Bilgisi"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Bir karakterin tüm parçalarını seçin — tek bir iskelet olarak riglenir"
+
+msgid "Settings"
+msgstr "Ayarlar"
 
 msgid "Auto-detects the skeleton type"
 msgstr "İskelet türünü otomatik algılar"
@@ -24736,13 +24766,19 @@ msgstr "Eskiz · Göndermek için Enter"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

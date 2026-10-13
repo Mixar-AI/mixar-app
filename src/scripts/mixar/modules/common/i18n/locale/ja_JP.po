@@ -1400,12 +1400,6 @@ msgstr "エラー"
 msgid "Last request failed"
 msgstr "前回のリクエストは失敗しました"
 
-msgid "Confirm Remove"
-msgstr "削除を確認"
-
-msgid "Awaiting delete confirmation"
-msgstr "削除の確認待ち"
-
 msgid "Loading…"
 msgstr "読み込み中…"
 
@@ -1440,6 +1434,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "サーバー側で問題が発生しました。もう一度お試しください。"
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1487,6 +1484,12 @@ msgstr "先にローカルモデルを起動してください（保存するに
 msgid "Base URL and model name are required."
 msgstr "ベースURLとモデル名は必須です。"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "ローカルサーバーが HTTP {status} を返しました。"
 
@@ -1507,6 +1510,12 @@ msgstr "自分のAPIキーを使用…"
 
 msgid "Change or remove my API key…"
 msgstr "自分のAPIキーを変更または削除…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "思考"
@@ -1574,6 +1583,39 @@ msgstr "モデルを変更できませんでした"
 msgid "Could not reset model"
 msgstr "モデルをリセットできませんでした"
 
+msgid "Load from ~/.codex/auth.json"
+msgstr "~/.codex/auth.json から読み込む"
+
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "このマシンの ~/.codex/auth.json をフィールドに読み込みます"
+
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "~/.codex/auth.json が見つかりません — 先に `codex login` を実行してください"
+
+msgid "Could not read ~/.codex/auth.json"
+msgstr "~/.codex/auth.json を読み取れませんでした"
+
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json が空です"
+
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
+
+msgid "Loaded auth.json"
+msgstr "auth.json を読み込みました"
+
+msgid "Paste auth.json"
+msgstr "auth.json を貼り付け"
+
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "クリップボードの ~/.codex/auth.json をフィールドに貼り付けます"
+
+msgid "Clipboard is empty"
+msgstr "クリップボードが空です"
+
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "貼り付けた auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -1601,10 +1643,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
@@ -1612,12 +1654,6 @@ msgstr "今後のエージェントリクエストにはMixarクレジットが�
 
 msgid "Removing your key…"
 msgstr "キーを削除中…"
-
-msgid "Keep My Key"
-msgstr "キーを保持"
-
-msgid "Remove API Key"
-msgstr "APIキーを削除"
 
 msgid "SAVED"
 msgstr ""
@@ -1700,12 +1736,6 @@ msgstr "AIプロバイダー設定"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixarエージェントに自分のAPIキーを使用します。有効な間、エージェントリクエストにMixarクレジットは消費されません。"
 
-msgid "Settings"
-msgstr "設定"
-
-msgid "Use Mixie"
-msgstr ""
-
 msgid "Validate with the provider and save your API key"
 msgstr "プロバイダーで検証してAPIキーを保存します"
 
@@ -1721,53 +1751,23 @@ msgstr "Codexモデルを選択し、auth.json バンドルを読み込んでく
 msgid "Save failed."
 msgstr "保存に失敗しました。"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json から読み込む"
+msgid "Couldn't save your API key"
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "このマシンの ~/.codex/auth.json をフィールドに読み込みます"
+msgid "Please try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json が見つかりません — 先に `codex login` を実行してください"
+msgid "Remove API Key"
+msgstr "APIキーを削除"
 
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json を読み取れませんでした"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json が空です"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
-
-msgid "Loaded auth.json"
-msgstr "auth.json を読み込みました"
-
-msgid "Paste auth.json"
-msgstr "auth.json を貼り付け"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "クリップボードの ~/.codex/auth.json をフィールドに貼り付けます"
-
-msgid "Clipboard is empty"
-msgstr "クリップボードが空です"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼り付けた auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
-
-msgid "Remove"
-msgstr "削除"
-
-msgid "Start the remove-confirmation flow"
-msgstr "削除確認のフローを開始します"
-
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "削除フローをキャンセルしてメインダイアログに戻ります"
-
-msgid "Delete the stored API key server-side"
-msgstr "保存されたAPIキーをサーバー側で削除します"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 msgid "Remove failed."
 msgstr "削除に失敗しました。"
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -1820,14 +1820,20 @@ msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-op
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-msgid "Remove API Key…"
-msgstr "APIキーを削除…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "プロバイダーで検証中…"
@@ -1874,7 +1880,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 msgid "Agent Model Provider"
@@ -1926,6 +1947,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -6400,6 +6427,9 @@ msgstr "メッシュ情報"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "1体のキャラクターのすべてのパーツを選択してください — 単一のスケルトンとしてリグ付けされます"
+
+msgid "Settings"
+msgstr "設定"
 
 msgid "Auto-detects the skeleton type"
 msgstr "スケルトンの種類を自動検出します"
@@ -24740,13 +24770,19 @@ msgstr "スケッチ · Enterで送信"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

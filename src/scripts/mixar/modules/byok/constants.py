@@ -26,7 +26,9 @@ BYOK_API_KEY_MAX_LENGTH = 256
 #   SAVED           recap card + [Done] — the explicit "it saved" moment
 #   REMOVED         recap card + [Done]
 #   ERROR           form + inline error + [Cancel][Try Again]
-#   CONFIRM_REMOVE  config card + warning + [Keep My Key][Remove API Key]
+#
+# Remove API Key deletes on its first click (REMOVING -> REMOVED); there is no
+# confirmation step, so closing the dialog afterwards never keeps the key.
 DIALOG_STATE_ITEMS = (
     ('IDLE',            "Idle",            "Ready for input"),
     ('SAVING',          "Saving",          "Save request in flight"),
@@ -34,7 +36,6 @@ DIALOG_STATE_ITEMS = (
     ('SAVED',           "Saved",           "Save confirmed — showing the recap"),
     ('REMOVED',         "Removed",         "Delete confirmed — showing the recap"),
     ('ERROR',           "Error",           "Last request failed"),
-    ('CONFIRM_REMOVE',  "Confirm Remove",  "Awaiting delete confirmation"),
 )
 
 # Sentinels shown in the provider dropdown when no real providers are

@@ -60,6 +60,10 @@ RESET_TEXT = "Mixie"
 #: hosted pick, including when the model catalog is empty.
 BYOK_SETUP_TEXT = n_("Use my own API key…")
 BYOK_MANAGE_TEXT = n_("Change or remove my API key…")
+#: The island toggle's two moves, also offered here: when the island row is
+#: fitted down to its icon this menu is the only control left on it.
+USE_MIXIE_TEXT = n_("Switch to Mixie (keep my key)")
+USE_KEY_TEXT = n_("Switch back to my API key")
 
 @dataclass(frozen=True)
 class MenuRow:
@@ -139,6 +143,8 @@ def build_rows(
     byok_active: bool = False,
     byok_provider_label: str = "",
     byok_model_label: str = "",
+    byok_stored: bool = False,
+    byok_resumable: bool = False,
 ) -> List[MenuRow]:
     """Rows for the picker, in the order the backend returned the models.
 
@@ -149,7 +155,11 @@ def build_rows(
     admin dashboard.
 
     ``byok_provider_label`` / ``byok_model_label`` are the key's catalog
-    labels (or raw ids) and only shape the NOTE row's wording.
+    labels (or raw ids) and only shape the NOTE row's wording. ``byok_stored``
+    is a key saved but paused by the island's Mixie side: the hosted rows are
+    live, and the key row offers to change or remove it. ``byok_resumable``
+    (a paused key that still validates) adds "Switch back to my API key";
+    a key in use adds "Switch to Mixie (keep my key)".
     """
     rows: List[MenuRow] = []
     current_levels: List[str] = []
@@ -159,7 +169,8 @@ def build_rows(
         # has nothing hosted to pick and their own key is the way forward.
         return [
             MenuRow(kind="SENTINEL", label=EMPTY_SENTINEL_TEXT, enabled=False),
-            _byok_row(byok_active),
+            *_toggle_rows(byok_active, byok_resumable),
+            _byok_row(byok_active or byok_stored),
         ]
 
     if byok_active:
@@ -218,8 +229,18 @@ def build_rows(
         MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active,
                 active=not active_provider and not active_model)
     )
-    rows.append(_byok_row(byok_active))
+    rows.extend(_toggle_rows(byok_active, byok_resumable))
+    rows.append(_byok_row(byok_active or byok_stored))
     return rows
+
+
+def _toggle_rows(byok_active: bool, byok_resumable: bool) -> List[MenuRow]:
+    """Pause / resume rows (the island toggle's moves, never a deletion)."""
+    if byok_active:
+        return [MenuRow(kind="USE_MIXIE", label=USE_MIXIE_TEXT)]
+    if byok_resumable:
+        return [MenuRow(kind="USE_KEY", label=USE_KEY_TEXT)]
+    return []
 
 
 def build_thinking_rows(

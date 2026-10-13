@@ -190,17 +190,18 @@ def run(qa):
                 "bpy.context.window_manager.mixar_agent_model_byok_active",
                 timeout=5)
         # 3. With a key in use Custom AI opens AI Provider settings, Mixie
-        #    offers the switch back, and the key chip names the key's model.
+        #    switches back (a pause), and the key chip names the key's model.
         #    This provider has no catalog list, so the whole chip opens the
         #    settings too (no dropdown) and no pulldown is left on the row.
         qa.wait("bpy.context.window_manager.mixar_agent_key_model == 'QA Key Model' and "
                 "not bpy.context.window_manager.mixar_agent_key_menu", timeout=5)
-        key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
+        key = qa.find(op='MIXAR_BYOK_OT_use_key', area_type='AGENT_BUBBLE')['widgets']
+        chip = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
         mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type='AGENT_BUBBLE')['widgets']
-        assert len(key) == 2 and len(mixie) == 1, (key, mixie)
+        assert len(key) == 1 and len(chip) == 1 and len(mixie) == 1, (key, chip, mixie)
         assert not qa.find(**PICKER)['widgets'], 'hosted menu still offered over a user key'
         snaps.append(qa.step('chip_byok_capture', capture, qa, 'chip_byok',
-                             {'op': 'MIXAR_BYOK_OT_open_dialog', 'area_type': 'AGENT_BUBBLE'},
+                             {'op': 'MIXAR_BYOK_OT_use_key', 'area_type': 'AGENT_BUBBLE'},
                              400))
         return {'snaps': snaps, 'real_backend_mutations': 0}
     finally:

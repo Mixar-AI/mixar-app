@@ -42,15 +42,19 @@ saved = (B.get_agent_service, F.get_agent_service,
          wm.mixie_chat_is_logged_in, bpy.context.scene.mixie_chat_user_id,
          bpy.context.preferences.view.show_tooltips)
 fixture = SimpleNamespace(active=False, model='', saves=0, deletes=0, fetches=0,
-                          switches=0, rejected=0, reject_next=False)
+                          switches=0, rejected=0, reject_next=False, enabled=True,
+                          pauses=0, resumes=0, state_rejected=0, reject_state_next=False)
 def response(data):
     return SimpleNamespace(success=True, status_code=200, data={'data': data})
+# `active` = a key is stored; `enabled` = not paused by the island toggle
+# (the backend's contract: byok_active needs both).
 def payload():
-    return {'byok_active': fixture.active, 'items': [{'provider': 'openai',
-            'model': fixture.model, 'key_preview': 'QA fixture'}] if fixture.active else []}
+    return {'byok_active': fixture.active and fixture.enabled, 'items': [{'provider': 'openai',
+            'model': fixture.model, 'key_preview': 'QA fixture', 'enabled': fixture.enabled,
+            'is_valid': True}] if fixture.active else []}
 def get_preference():
     fixture.fetches += 1
-    return response({'byok_active': fixture.active, 'items': []})
+    return response({'byok_active': fixture.active and fixture.enabled, 'items': []})
 def save_credentials(**kwargs):
     if kwargs.get('keep_stored_key'):
         # The island chip's switch: no key on the wire, the stored one reused
@@ -62,19 +66,34 @@ def save_credentials(**kwargs):
             return SimpleNamespace(success=False, status_code=400,
                 data={'status': 'failure', 'message': 'Model not available: QA rejection'})
         fixture.switches += 1
-        fixture.model = kwargs['model']
+        fixture.model, fixture.enabled = kwargs['model'], True
         return response(payload())
     assert kwargs['api_key'] == 'qa-synthetic-key'
     fixture.saves += 1
-    fixture.active, fixture.model = True, kwargs['model']
+    fixture.active, fixture.model, fixture.enabled = True, kwargs['model'], True
+    return response(payload())
+def set_byok_state(enabled):
+    if fixture.reject_state_next:
+        fixture.reject_state_next = False
+        fixture.state_rejected += 1
+        return SimpleNamespace(success=False, status_code=502,
+            data={'status': 'failure', 'message': 'Provider unreachable: QA rejection'})
+    if not fixture.active:
+        return SimpleNamespace(success=False, status_code=400,
+            data={'status': 'failure', 'message': 'No saved API key'})
+    fixture.enabled = bool(enabled)
+    if enabled:
+        fixture.resumes += 1
+    else:
+        fixture.pauses += 1
     return response(payload())
 def delete_credentials():
     fixture.deletes += 1
-    fixture.active, fixture.model = False, ''
+    fixture.active, fixture.model, fixture.enabled = False, '', True
     return response({'removed': 1})
 service = SimpleNamespace(get_model_preference=get_preference,
     get_credentials=lambda: response(payload()), save_credentials_all=save_credentials,
-    delete_credentials_all=delete_credentials)
+    delete_credentials_all=delete_credentials, set_byok_state=set_byok_state)
 B.get_agent_service = F.get_agent_service = lambda: service
 O._deregister_local_if_switched_away = lambda provider: None
 M.populate_from_payload({'providers': [{'id': 'openai', 'label': 'QA Provider',
@@ -168,12 +187,11 @@ def check_dialog(qa):
 
 
 def key_half(qa):
-    """The island toggle's Custom AI half: the leftmost settings button (with a
-    key in use, the key chip's provider word is another one, further right)."""
-    halves = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type='AGENT_BUBBLE')['widgets']
-    if not halves:
-        raise ScenarioFail('Island Mixie | Custom AI toggle missing')
-    return min(halves, key=lambda w: w['rect'][0])
+    """The island toggle's Custom AI half (`mixar_byok.use_key`)."""
+    halves = qa.find(op='MIXAR_BYOK_OT_use_key', area_type='AGENT_BUBBLE')['widgets']
+    if len(halves) != 1:
+        raise ScenarioFail(f'Island Mixie | Custom AI toggle missing: {halves}')
+    return halves[0]
 
 
 def click_key_half(qa):
@@ -185,17 +203,15 @@ def open_picker(qa, area_type, active):
     if area_type == 'AGENT_BUBBLE':
         qa.eval('result=str(bpy.ops.mixar.agent_bubble_show_window())')
     if active:
-        # A key in use: Custom AI and the key chip's provider word open the
-        # shared dialog, Mixie offers the switch back, and the only pulldown
-        # left on the row is the chip's model switch, right of the toggle —
-        # the hosted menu is not offered over the key.
-        key = qa.find(op='MIXAR_BYOK_OT_open_dialog', area_type=area_type)['widgets']
+        # A key in use: Custom AI opens the shared dialog, Mixie switches
+        # back (a pause, no dialog), and the only pulldown left on the row is
+        # the key chip's model switch, right of the toggle — the hosted menu
+        # is not offered over the key.
+        key = qa.find(op='MIXAR_BYOK_OT_use_key', area_type=area_type)['widgets']
         mixie = qa.find(op='MIXAR_BYOK_OT_use_mixie', area_type=area_type)['widgets']
         pulls = qa.find(but_type='Pulldown', area_type=area_type, region_type='TOOLS')['widgets']
-        # (A narrow island fits the chip as its pill alone, without the
-        # provider word's button.)
-        if (len(key) not in (1, 2) or len(mixie) != 1 or len(pulls) != 1
-                or pulls[0]['rect'][0] <= max(w['rect'][0] for w in key)):
+        if (len(key) != 1 or len(mixie) != 1 or len(pulls) != 1
+                or pulls[0]['rect'][0] <= key[0]['rect'][0]):
             raise ScenarioFail(f'{area_type} toggle does not show the key in use: '
                                f'{key} {mixie} {pulls}')
         return
@@ -233,8 +249,8 @@ def save(qa, model, name):
 
 
 def remove(qa, name):
-    qa.step(name + '_request', qa.click, op='MIXAR_BYOK_OT_request_remove', popup=True)
-    qa.step(name + '_confirm', qa.click, op='MIXAR_BYOK_OT_confirm_remove', popup=True)
+    # One click: there is no confirmation step to back out of.
+    qa.step(name + '_remove', qa.click, op='MIXAR_BYOK_OT_confirm_remove', popup=True)
     qa.wait(f"{WM}.byok_dialog_state == 'REMOVED' and not {WM}.byok_is_active "
             f"and not {WM}.mixar_agent_model_byok_active", timeout=10)
     qa.wait("bool(drv.find(text='Done', popup=True))", timeout=5)
@@ -266,7 +282,7 @@ def run(qa):
         remove(qa, 'island_remove')
         snaps.append(open_profile(qa, 'after_island_remove'))
         qa.wait(f"not {WM}.byok_is_active", timeout=5)
-        if qa.find(op='MIXAR_BYOK_OT_request_remove', popup=True)['total']:
+        if qa.find(op='MIXAR_BYOK_OT_confirm_remove', popup=True)['total']:
             raise ScenarioFail('Profile still offers removal after chat removed the key')
         close_popup(qa)
         open_picker(qa, 'AGENT_BUBBLE', False)

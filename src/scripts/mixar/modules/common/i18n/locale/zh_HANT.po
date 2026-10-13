@@ -1400,12 +1400,6 @@ msgstr "錯誤"
 msgid "Last request failed"
 msgstr "上次要求失敗"
 
-msgid "Confirm Remove"
-msgstr "確認移除"
-
-msgid "Awaiting delete confirmation"
-msgstr "等待確認刪除"
-
 msgid "Loading…"
 msgstr "載入中…"
 
@@ -1440,6 +1434,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "我們這邊發生問題，請再試一次。"
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1487,6 +1484,12 @@ msgstr "請先啟動本機模型（必須在執行中才能儲存）。"
 msgid "Base URL and model name are required."
 msgstr "必須填寫基礎 URL 和模型名稱。"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "本機伺服器回應 HTTP {status}。"
 
@@ -1507,6 +1510,12 @@ msgstr "使用我自己的 API 金鑰…"
 
 msgid "Change or remove my API key…"
 msgstr "變更或移除我的 API 金鑰…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "思考"
@@ -1574,6 +1583,39 @@ msgstr "無法變更模型"
 msgid "Could not reset model"
 msgstr "無法重設模型"
 
+msgid "Load from ~/.codex/auth.json"
+msgstr "從 ~/.codex/auth.json 載入"
+
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
+
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "找不到 ~/.codex/auth.json——請先執行 `codex login`"
+
+msgid "Could not read ~/.codex/auth.json"
+msgstr "無法讀取 ~/.codex/auth.json"
+
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json 是空的"
+
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
+
+msgid "Loaded auth.json"
+msgstr "已載入 auth.json"
+
+msgid "Paste auth.json"
+msgstr "貼上 auth.json"
+
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "從剪貼簿將你的 ~/.codex/auth.json 貼上至欄位"
+
+msgid "Clipboard is empty"
+msgstr "剪貼簿為空白"
+
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "貼上的 auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -1601,10 +1643,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
@@ -1612,12 +1654,6 @@ msgstr "之後的智慧代理要求將扣除 Mixar 點數。"
 
 msgid "Removing your key…"
 msgstr "正在移除你的金鑰…"
-
-msgid "Keep My Key"
-msgstr "保留我的金鑰"
-
-msgid "Remove API Key"
-msgstr "移除 API 金鑰"
 
 msgid "SAVED"
 msgstr ""
@@ -1700,12 +1736,6 @@ msgstr "AI 供應商設定"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "為 Mixar 智慧代理使用你自己的 API 金鑰。啟用期間，智慧代理要求不會扣除 Mixar 點數。"
 
-msgid "Settings"
-msgstr "設定"
-
-msgid "Use Mixie"
-msgstr ""
-
 msgid "Validate with the provider and save your API key"
 msgstr "向供應商驗證並儲存你的 API 金鑰"
 
@@ -1721,53 +1751,23 @@ msgstr "請選擇 Codex 模型並載入你的 auth.json 檔案。"
 msgid "Save failed."
 msgstr "儲存失敗。"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "從 ~/.codex/auth.json 載入"
+msgid "Couldn't save your API key"
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
+msgid "Please try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "找不到 ~/.codex/auth.json——請先執行 `codex login`"
+msgid "Remove API Key"
+msgstr "移除 API 金鑰"
 
-msgid "Could not read ~/.codex/auth.json"
-msgstr "無法讀取 ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json 是空的"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
-
-msgid "Loaded auth.json"
-msgstr "已載入 auth.json"
-
-msgid "Paste auth.json"
-msgstr "貼上 auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "從剪貼簿將你的 ~/.codex/auth.json 貼上至欄位"
-
-msgid "Clipboard is empty"
-msgstr "剪貼簿為空白"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼上的 auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
-
-msgid "Remove"
-msgstr "移除"
-
-msgid "Start the remove-confirmation flow"
-msgstr "開始移除確認流程"
-
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "取消移除流程並返回主對話框"
-
-msgid "Delete the stored API key server-side"
-msgstr "在伺服器端刪除已儲存的 API 金鑰"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 msgid "Remove failed."
 msgstr "移除失敗。"
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -1820,14 +1820,20 @@ msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-msgid "Remove API Key…"
-msgstr "移除 API 金鑰…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "正在向供應商驗證…"
@@ -1874,7 +1880,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 msgid "Agent Model Provider"
@@ -1926,6 +1947,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -6400,6 +6427,9 @@ msgstr "網格資訊"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "選取同一角色的所有部件——將綁定為單一骨架"
+
+msgid "Settings"
+msgstr "設定"
 
 msgid "Auto-detects the skeleton type"
 msgstr "自動偵測骨架類型"
@@ -24736,13 +24766,19 @@ msgstr "草圖 · 按 Enter 傳送"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

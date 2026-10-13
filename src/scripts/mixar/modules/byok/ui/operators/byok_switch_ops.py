@@ -10,7 +10,8 @@ with ``keep_stored_key`` makes the server reuse the key it stores for the same
 provider and re-validate it against the new model (`byok_client.switch_model`).
 
 While the request is in flight the chip names the target model, dimmed, and
-the dropdown's rows are disabled (`credential_state.begin_switch`). Success
+the dropdown's rows are disabled (`credential_state.begin_switch`; one island
+mutation at a time, shared with the Mixie | Custom AI toggle). Success
 adopts the server's echo exactly like a dialog save; a failure puts the stored
 model back and says why in a toast. Nothing here opens the dialog.
 """
@@ -40,7 +41,8 @@ class MIXAR_BYOK_OT_switch_model(Operator):
     @classmethod
     def poll(cls, context):
         snap = credential_state.snapshot()
-        return bool(snap["byok_is_active"]) and not credential_state.switching()
+        return (bool(snap["byok_is_active"]) and not credential_state.pending()
+                and not byok_client.mutation_in_flight())
 
     def execute(self, context):
         snap = credential_state.snapshot()
@@ -53,8 +55,11 @@ class MIXAR_BYOK_OT_switch_model(Operator):
             self.report({'WARNING'}, n_("That model is not available for your key"))
             return {'CANCELLED'}
 
+        if byok_client.mutation_in_flight():
+            return {'CANCELLED'}  # a dialog save / removal is still in flight
         epoch = credential_state.current_epoch()
-        credential_state.begin_switch(self.model, context.window_manager)
+        if not credential_state.begin_switch(self.model, context.window_manager):
+            return {'CANCELLED'}  # a toggle or another switch is in flight
         _redraw()
 
         def _done(success, data, err):
@@ -67,7 +72,9 @@ class MIXAR_BYOK_OT_switch_model(Operator):
 def _on_switch_done(success, data, err, epoch):
     """Main-thread callback: adopt the echo, or restore and explain."""
     try:
-        credential_state.end_switch()
+        if credential_state.current_epoch() != epoch:
+            return  # logged out meanwhile; `clear()` already reset everything
+        credential_state.end_pending()
         if success:
             if credential_state.apply_from_payload(data or {}, epoch=epoch):
                 preference_state.refresh()
@@ -77,6 +84,10 @@ def _on_switch_done(success, data, err, epoch):
         else:
             logger.warning("BYOK model switch failed: %s", err)
             _toast(err)
+            # The refusal may mean the key changed elsewhere (paused or
+            # removed from another device): re-read so the island follows.
+            credential_state.refresh()
+            preference_state.refresh()
     except Exception as e:  # noqa: BLE001 — a callback must never raise into a timer
         logger.error("BYOK switch callback failed: %s", e, exc_info=True)
     _redraw()

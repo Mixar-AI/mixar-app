@@ -8,7 +8,7 @@
 State machine lives on WindowManager (see ui/properties/byok_props.py).
 The dialog operator's draw() delegates to `byok_dialog_ui.draw_dialog`,
 which dispatches on `wm.byok_dialog_state` (IDLE / SAVING / REMOVING /
-SAVED / REMOVED / ERROR / CONFIRM_REMOVE) and renders with the profile
+SAVED / REMOVED / ERROR) and renders with the profile
 card's design system. Save and Remove spawn async work through
 `core/byok_client.py`; callbacks mutate WM state on the main thread and
 the props dialog redraws on the next tick.
@@ -21,13 +21,10 @@ lands on an explicit SAVED / REMOVED recap with one Done button, so
 "did it save?" is never a question.
 """
 
-import os
-
 import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from bpy.props import EnumProperty
 from mixar.modules.common.i18n import n_
 
 from ...constants import PROVIDER_DIALOG_WIDTH
@@ -36,7 +33,6 @@ from ...core import preference_state
 from . import byok_dialog_host, byok_dialog_refresh, byok_dialog_ui
 from .byok_state_ops import (
     _apply_cached_state,
-    _clear_cached_state,
     _redraw_mixie_chat_areas,
 )
 
@@ -70,6 +66,15 @@ def _wipe_form_secrets(wm):
 _dialog_open = False
 
 
+def _account_busy() -> bool:
+    """Another change of the key or the pick is in flight: an island toggle /
+    model switch, a save / removal sent from a dialog closed mid-request, or a
+    hosted pick (whose echo / revert would put the old byok_active back over
+    this save's). One at a time, so no late answer undoes another."""
+    return (credential_state.pending() or byok_client.mutation_in_flight()
+            or preference_state.mutation_pending())
+
+
 class MIXAR_BYOK_OT_open_dialog(Operator):
     """Configure your own API provider and key for the Mixar agent"""
     bl_idname = "mixar_byok.open_dialog"
@@ -79,32 +84,25 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         "While active, Mixar credits are not charged for agent requests."
     )
 
-    # USE_MIXIE is the island toggle's "Mixie" side while a key is active:
-    # a key is active exactly while it is stored, so going back to Mixie
-    # opens straight on the remove confirmation.
-    mode: EnumProperty(
-        items=(('SETTINGS', "Settings", ""), ('USE_MIXIE', "Use Mixie", "")),
-        default='SETTINGS',
-        options={'SKIP_SAVE', 'HIDDEN'},
-    )
-
     def invoke(self, context, event):
         global _dialog_open
         if _dialog_open:
             return {'CANCELLED'}
         wm = context.window_manager
-        # Reset dialog-local state on open. Never prefill the api_key field.
-        wm.byok_dialog_state = 'IDLE'
-        wm.byok_last_error = ''
+        # Reset dialog-local state on open — unless a save / remove is still
+        # in flight, whose SAVING / REMOVING the dialog keeps showing until it
+        # lands. Never prefill the api_key field.
+        # (The dialog can be closed with Esc mid-request; only the ✕ hides.)
+        if not byok_client.mutation_in_flight():
+            wm.byok_dialog_state = 'IDLE'
+            wm.byok_last_error = ''
         _wipe_form_secrets(wm)  # never prefill credential material
-        if self.mode == 'USE_MIXIE' and wm.byok_is_active:
-            wm.byok_dialog_state = 'CONFIRM_REMOVE'
-        # If we already have an active config, prefill provider/model so
+        # If a key is stored (in use or paused), prefill provider/model so
         # the user sees what's currently saved and can edit from there.
         # Provider assignment can fail if the cache hasn't been populated
         # yet (the saved provider isn't in the current EnumProperty items)
         # — guard against TypeError.
-        if wm.byok_is_active:
+        if wm.byok_is_active or wm.byok_key_stored:
             if wm.byok_current_provider:
                 try:
                     wm.byok_form_provider = wm.byok_current_provider
@@ -193,11 +191,14 @@ class MIXAR_BYOK_OT_save(Operator):
         # message the user can act on — the old silently-greyed Save
         # button gave no clue what was missing (and the card-styled
         # button has no disabled look to lean on).
-        return context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+        # The island's toggle / model switch is a mutation of the same key:
+        # one at a time, or a late echo would resurrect what this changes.
+        return (context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+                and not _account_busy())
 
     def execute(self, context):
         wm = context.window_manager
-        if wm.byok_dialog_state in ('SAVING', 'REMOVING'):
+        if wm.byok_dialog_state in ('SAVING', 'REMOVING') or _account_busy():
             return {'CANCELLED'}
         provider = wm.byok_form_provider
 
@@ -330,7 +331,13 @@ def _on_save_done(success: bool, data, err, epoch=None):
             _wipe_form_secrets(wm)
             if not applied:
                 logger.debug("BYOK save landed after logout; echo dropped")
+                wm.byok_dialog_state = 'IDLE'
                 return
+            # The echo is the server's word: move the island now (reads issued
+            # before it are dropped), and let the refresh confirm.
+            preference_state.invalidate_reads()
+            preference_state.apply_local(
+                {'mixar_agent_model_byok_active': bool((data or {}).get('byok_active'))}, wm)
             preference_state.refresh()
             # SAVED, not IDLE: the dialog shows an explicit recap with a
             # single Done button, so the user never has to wonder
@@ -340,133 +347,84 @@ def _on_save_done(success: bool, data, err, epoch=None):
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
             _deregister_local_if_switched_away(wm.byok_current_provider)
         else:
+            if epoch is not None and epoch != credential_state.current_epoch():
+                wm.byok_dialog_state = 'IDLE'
+                return  # another account by now; nothing of this save remains
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or n_("Save failed.")
             logger.warning("BYOK save failed: %s", err)
+            _toast_if_closed(n_("Couldn't save your API key"), err)
         _redraw_mixie_chat_areas()
     except Exception as e:
         logger.error("BYOK save callback failed: %s", e, exc_info=True)
 
 
-# ---------------------------------------------------------------------------
-# Codex — paste auth.json from clipboard
-# ---------------------------------------------------------------------------
+def _toast_if_closed(title, err):
+    """A request whose dialog was closed (Esc) still owes the user its
+    failure; an open dialog shows it inline."""
+    if _dialog_open:
+        return
+    try:
+        from mixar.modules.common.notifications import get_notification_store
 
-class MIXAR_BYOK_OT_codex_load_file(Operator):
-    """Read ~/.codex/auth.json from this machine into the field"""
-    bl_idname = "mixar_byok.codex_load_file"
-    bl_label = "Load from ~/.codex/auth.json"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        wm = context.window_manager
-        path = os.path.expanduser(os.path.join("~", ".codex", "auth.json"))
-        if not os.path.exists(path):
-            self.report({'WARNING'}, "~/.codex/auth.json not found — run `codex login` first")
-            return {'CANCELLED'}
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Codex auth.json read failed: %s", e)
-            self.report({'ERROR'}, "Could not read ~/.codex/auth.json")
-            return {'CANCELLED'}
-        if not content:
-            self.report({'WARNING'}, "~/.codex/auth.json is empty")
-            return {'CANCELLED'}
-        wm.byok_form_codex_bundle = content
-        if len(wm.byok_form_codex_bundle) < len(content):
-            # StringProperty maxlen truncates silently — a clipped bundle is
-            # invalid JSON and the save fails with an error the user can't
-            # connect to truncation.
-            self.report(
-                {'ERROR'},
-                "auth.json is too large for this field and was truncated — "
-                "it will not save correctly",
-            )
-            _wipe_form_secrets(wm)
-            return {'CANCELLED'}
-        _redraw_mixie_chat_areas()
-        self.report({'INFO'}, "Loaded auth.json")
-        return {'FINISHED'}
-
-
-class MIXAR_BYOK_OT_codex_paste(Operator):
-    """Paste your ~/.codex/auth.json from the clipboard into the field"""
-    bl_idname = "mixar_byok.codex_paste"
-    bl_label = "Paste auth.json"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        wm = context.window_manager
-        # Read the clipboard directly — this preserves the multi-line JSON that
-        # a single-line prop field can't accept via a manual paste.
-        clip = (wm.clipboard or "").strip()
-        if not clip:
-            self.report({'WARNING'}, "Clipboard is empty")
-            return {'CANCELLED'}
-        wm.byok_form_codex_bundle = clip
-        if len(wm.byok_form_codex_bundle) < len(clip):
-            self.report(
-                {'ERROR'},
-                "Pasted auth.json is too large for this field and was "
-                "truncated — it will not save correctly",
-            )
-            _wipe_form_secrets(wm)
-            return {'CANCELLED'}
-        _redraw_mixie_chat_areas()
-        return {'FINISHED'}
+        get_notification_store().push(
+            "error", title, body=err or n_("Please try again."), ttl_ms=8000,
+            id="byok_request_failed",
+        )
+    except Exception:  # noqa: BLE001 — the log line already records it
+        pass
 
 
 # ---------------------------------------------------------------------------
-# Remove (two-click confirm)
+# Remove (one click: closing the dialog afterwards never keeps the key)
 # ---------------------------------------------------------------------------
-
-class MIXAR_BYOK_OT_request_remove(Operator):
-    """Start the remove-confirmation flow"""
-    bl_idname = "mixar_byok.request_remove"
-    bl_label = "Remove"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        context.window_manager.byok_dialog_state = 'CONFIRM_REMOVE'
-        return {'FINISHED'}
-
-
-class MIXAR_BYOK_OT_cancel_remove(Operator):
-    """Cancel the remove flow and return to the main dialog"""
-    bl_idname = "mixar_byok.cancel_remove"
-    bl_label = "Cancel"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        context.window_manager.byok_dialog_state = 'IDLE'
-        return {'FINISHED'}
-
 
 class MIXAR_BYOK_OT_confirm_remove(Operator):
-    """Delete the stored API key server-side"""
+    """Delete your saved API key. The agent goes back to Mixie"""
     bl_idname = "mixar_byok.confirm_remove"
-    bl_label = "Confirm Remove"
+    bl_label = "Remove API Key"
     bl_options = {'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+                and not _account_busy())
 
     def execute(self, context):
         wm = context.window_manager
+        if wm.byok_dialog_state in ('SAVING', 'REMOVING') or _account_busy():
+            return {'CANCELLED'}
         wm.byok_dialog_state = 'REMOVING'
         wm.byok_last_error = ''
         _redraw_mixie_chat_areas()
 
-        byok_client.delete_credentials(on_done=_on_delete_done)
+        epoch = credential_state.current_epoch()
+
+        def _done(success: bool, removed_count: int, err):
+            _on_delete_done(success, removed_count, err, epoch=epoch)
+
+        byok_client.delete_credentials(on_done=_done)
         return {'FINISHED'}
 
 
-def _on_delete_done(success: bool, removed_count: int, err):
+def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
     """Main-thread delete callback."""
     try:
         wm = bpy.context.window_manager
+        if epoch is not None and epoch != credential_state.current_epoch():
+            # Logged out (or into another account) meanwhile: this result
+            # belongs to an account the mirror no longer shows.
+            wm.byok_dialog_state = 'IDLE'
+            return
         if success:
-            _clear_cached_state(wm)
+            # Nothing stored any more — without bumping the logout epoch (a
+            # save made right after must keep its echo). Mixie answers now:
+            # every row is gone, so byok_active is false by construction;
+            # move the island at once and let the refresh confirm.
+            credential_state.apply_removed(wm)
             _wipe_form_secrets(wm)
+            preference_state.invalidate_reads()
+            preference_state.apply_local({'mixar_agent_model_byok_active': False}, wm)
             preference_state.refresh()
             # REMOVED, not IDLE — explicit recap, same as the save path.
             wm.byok_dialog_state = 'REMOVED'
@@ -477,6 +435,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or n_("Remove failed.")
             logger.warning("BYOK remove failed: %s", err)
+            _toast_if_closed(n_("Couldn't remove your API key"), err)
         _redraw_mixie_chat_areas()
     except Exception as e:
         logger.error("BYOK delete callback failed: %s", e, exc_info=True)
@@ -491,9 +450,5 @@ def _on_delete_done(success: bool, removed_count: int, err):
 classes = (
     MIXAR_BYOK_OT_open_dialog,
     MIXAR_BYOK_OT_save,
-    MIXAR_BYOK_OT_codex_load_file,
-    MIXAR_BYOK_OT_codex_paste,
-    MIXAR_BYOK_OT_request_remove,
-    MIXAR_BYOK_OT_cancel_remove,
     MIXAR_BYOK_OT_confirm_remove,
 )

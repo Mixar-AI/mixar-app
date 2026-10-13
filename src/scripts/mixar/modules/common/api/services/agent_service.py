@@ -88,6 +88,11 @@ class AgentService(BaseService):
             payload["keep_stored_key"] = True
         return self.put("byok", json=payload)
 
+    def set_byok_state(self, enabled: bool) -> APIResponse:
+        """PUT /agent/byok/state — pause (False) or resume (True) the stored
+        key without deleting or re-sending it. Echoes {items, byok_active}."""
+        return self.put("byok/state", json={"enabled": bool(enabled)})
+
     def delete_credentials_all(self) -> APIResponse:
         """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
         return self.delete("credentials/all")

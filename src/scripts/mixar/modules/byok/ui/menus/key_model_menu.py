@@ -49,6 +49,7 @@ class MIXAR_BYOK_MT_key_model(Menu):
         layout = self.layout
         layout.ui_units_x = 12
         switching = credential_state.switching()
+        busy = bool(credential_state.pending())
         rows = menu_rows(credential_state.snapshot(), switching)
         if not rows:
             line = layout.row()
@@ -58,8 +59,9 @@ class MIXAR_BYOK_MT_key_model(Menu):
         for mid, label, active in rows:
             line = layout.row()
             line.scale_y = 1.15
-            # One switch at a time: the chip names the target until it lands.
-            line.enabled = not switching
+            # One island mutation at a time: the chip names a switch's target
+            # until it lands, and a toggle in flight holds the rows too.
+            line.enabled = not busy
             props = line.operator(OP_SWITCH, text=label, translate=False)
             props.model = mid
             if hasattr(line, "mixar_cinema_row"):

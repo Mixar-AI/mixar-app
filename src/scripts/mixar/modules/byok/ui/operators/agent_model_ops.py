@@ -23,7 +23,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
-from ...core import preference_client, preference_state
+from ...core import credential_state, preference_client, preference_state
 
 logger = get_logger(__name__)
 
@@ -65,7 +65,7 @@ class MIXAR_OT_agent_model_set(Operator):
 
     @classmethod
     def poll(cls, context):
-        if preference_state.mutation_pending():
+        if preference_state.mutation_pending() or credential_state.pending():
             cls.poll_message_set(preference_state.PENDING_MESSAGE)
             return False
         return True
@@ -131,7 +131,7 @@ class MIXAR_OT_agent_model_reset(Operator):
 
     @classmethod
     def poll(cls, context):
-        if preference_state.mutation_pending():
+        if preference_state.mutation_pending() or credential_state.pending():
             cls.poll_message_set(preference_state.PENDING_MESSAGE)
             return False
         return True

@@ -145,9 +145,10 @@ def test_the_byok_note_row_carries_the_named_key():
     assert rows[0].kind == "NOTE"
     assert rows[0].label == "Your key: OpenRouter · Claude Sonnet 4.6"
     assert rows[0].enabled is False
-    # Every other rule is untouched: hosted rows greyed, the key row live.
-    assert all(row.enabled is False for row in rows if row.kind != "BYOK")
-    assert [row.enabled for row in rows if row.kind == "BYOK"] == [True]
+    # Every other rule is untouched: hosted rows greyed, the key routes live
+    # (change or remove it, or switch to Mixie keeping it).
+    assert all(row.enabled is False for row in rows if row.kind not in {"BYOK", "USE_MIXIE"})
+    assert [row.enabled for row in rows if row.kind in {"USE_MIXIE", "BYOK"}] == [True, True]
 
 
 def test_the_byok_note_row_keeps_the_generic_text_before_the_credential_lands():
@@ -165,7 +166,7 @@ def test_no_note_row_without_a_key_and_none_on_the_empty_catalog():
     # The empty catalog keeps its sentinel + key route, exactly as before.
     kinds = [row.kind for row in model_menu.build_rows(
         [], byok_active=True, byok_provider_label="OpenRouter")]
-    assert kinds == ["SENTINEL", "BYOK"]
+    assert kinds == ["SENTINEL", "USE_MIXIE", "BYOK"]
 
 
 def test_the_menu_feeds_the_note_from_the_credential_state():

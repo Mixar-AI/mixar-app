@@ -24,7 +24,7 @@ outside a running Blender.
 import bpy
 from bpy.types import Menu
 
-from ...core import catalog_labels, model_menu, model_suggestions, preference_state
+from ...core import catalog_labels, credential_state, model_menu, model_suggestions, preference_state
 
 THINKING_MENU_ID = "MIXIE_CHAT_MT_agent_model_thinking"
 
@@ -46,7 +46,8 @@ def _style_row(line, row) -> None:
     """Use the same shared painter as Cinema's aspect-ratio options."""
     if hasattr(line, "mixar_cinema_row"):
         kind = "CAPTION" if row.kind in {"NOTE", "SENTINEL"} else (
-            "ACTIVE" if row.active and row.kind != "BYOK" else "OPTION")
+            "ACTIVE" if row.active and row.kind not in {"BYOK", "USE_MIXIE", "USE_KEY"}
+            else "OPTION")
         line.mixar_cinema_row(kind=kind)
 
 
@@ -59,6 +60,11 @@ def _draw_row(layout, row) -> None:
         line.label(text=row.label)
     elif row.kind == "RESET":
         line.operator("mixar.agent_model_reset", text=row.label)
+    elif row.kind == "USE_MIXIE":
+        line.operator("mixar_byok.use_mixie", text=row.label)
+    elif row.kind == "USE_KEY":
+        line.operator_context = 'INVOKE_DEFAULT'
+        line.operator("mixar_byok.use_key", text=row.label)
     elif row.kind == "BYOK":
         # This shared settings operator opens its dialog in invoke().
         line.operator_context = 'INVOKE_DEFAULT'
@@ -96,6 +102,8 @@ class MIXIE_CHAT_MT_agent_model(Menu):
             byok_active=bool(current["mixar_agent_model_byok_active"]),
             byok_provider_label=byok_provider_label,
             byok_model_label=byok_model_label,
+            byok_stored=bool(credential_state.snapshot()["byok_key_stored"]),
+            byok_resumable=credential_state.resumable(),
         )
         # A build without the BYOK dialog would draw a row that pops nothing;
         # the removed topbar entry guarded the same way.
@@ -105,7 +113,7 @@ class MIXIE_CHAT_MT_agent_model(Menu):
             if row.kind == "BYOK" and not dialog_available:
                 continue
             # One rule above the tail, however many of its rows draw.
-            tail = row.kind in {"THINKING_MENU", "RESET", "BYOK"}
+            tail = row.kind in {"THINKING_MENU", "RESET", "USE_MIXIE", "USE_KEY", "BYOK"}
             if tail and index and not separated:
                 layout.separator()
                 separated = True

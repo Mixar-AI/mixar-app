@@ -160,6 +160,8 @@ def _clear_byok_state_on_logout(wm):
         ('byok_current_model', ''),
         ('byok_current_supports_vision', True),
         ('byok_key_preview', ''),
+        ('byok_key_stored', False),
+        ('byok_key_paused', False),
         ('byok_form_api_key', ''),
         ('byok_form_openrouter_model', ''),
         ('byok_form_codex_bundle', ''),

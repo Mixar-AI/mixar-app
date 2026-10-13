@@ -178,6 +178,9 @@ def _wm(state='IDLE', **extra):
         byok_current_model='',
         byok_current_supports_vision=True,
         byok_key_preview='',
+        byok_key_stored=False,
+        byok_key_paused=False,
+        mixar_agent_key_resumable=False,
         byok_form_provider='NONE',
         byok_form_model='NONE',
         byok_form_api_key='',
@@ -222,27 +225,21 @@ def test_every_state_marks_exactly_one_active_default_button():
 def test_footer_actions_per_state():
     # IDLE with an active config: the header close button, Save, and
     # Remove beside the key in use — three distinct, unambiguous actions.
-    log = _draw('IDLE', card_api=True, byok_is_active=True,
+    log = _draw('IDLE', card_api=True, byok_is_active=True, byok_key_stored=True,
                 byok_current_provider='anthropic', byok_current_model='m')
     assert f"popup_confirm:{byok_dialog_ui.CLOSE_GLYPH}" in log
     assert f"op:{byok_dialog_ui.OP_SAVE}" in log
-    assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
+    assert f"op:{byok_dialog_ui.OP_REMOVE}" in log
+    assert f"op:{byok_dialog_ui.OP_USE_KEY}" not in log
     assert "card_button:ACCENT:True" in log
 
     # Fresh setup: no Remove anywhere.
     log = _draw('IDLE', card_api=True)
-    assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+    assert f"op:{byok_dialog_ui.OP_REMOVE}" not in log
 
     # Error retries through the same save operator.
     log = _draw('ERROR', card_api=True)
     assert f"op:{byok_dialog_ui.OP_SAVE}" in log
-
-    # Confirm-remove offers exactly keep/remove, keep is the default.
-    log = _draw('CONFIRM_REMOVE', card_api=True, byok_is_active=True)
-    assert f"op:{byok_dialog_ui.OP_CANCEL_REMOVE}" in log
-    assert f"op:{byok_dialog_ui.OP_CONFIRM_REMOVE}" in log
-    assert "card_button:CARD:True" in log      # Keep My Key
-    assert "card_button:DANGER:False" in log   # Remove API Key
 
     # The recap states close through a single Done button.
     for state in ('SAVED', 'REMOVED'):
@@ -254,6 +251,32 @@ def test_footer_actions_per_state():
     for state in ('SAVING', 'REMOVING'):
         log = _draw(state, card_api=True, byok_is_active=True)
         assert not any(e.startswith("popup_confirm:") for e in log)
+
+
+def test_a_paused_key_is_named_and_can_be_used_again_or_removed():
+    """The island's Mixie side pauses the key; the dialog says so and offers
+    Use This Key (only while it still validates) beside Remove."""
+    base = dict(byok_key_stored=True, byok_key_paused=True,
+                byok_current_provider='anthropic', byok_current_model='m')
+    log = _draw('IDLE', card_api=True, mixar_agent_key_resumable=True, **base)
+    assert any("Paused, Mixie is answering:" in e for e in log), log
+    assert f"op:{byok_dialog_ui.OP_USE_KEY}" in log
+    assert f"op:{byok_dialog_ui.OP_REMOVE}" in log
+    assert not any("In use:" in e for e in log)
+    # A paused key that stopped validating can only be removed or replaced.
+    log = _draw('IDLE', card_api=True, mixar_agent_key_resumable=False, **base)
+    assert f"op:{byok_dialog_ui.OP_USE_KEY}" not in log
+    assert f"op:{byok_dialog_ui.OP_REMOVE}" in log
+    assert any("stopped working" in e for e in log)
+
+
+def test_an_invalid_key_is_not_called_paused():
+    """A revoked sign-in (enabled, not valid) was never paused by the user."""
+    log = _draw('IDLE', card_api=True, byok_key_stored=True, byok_key_paused=False,
+                byok_current_provider='codex', byok_current_model='m')
+    assert not any("Paused" in e for e in log)
+    assert any("stopped working, enter it again" in e for e in log)
+    assert f"op:{byok_dialog_ui.OP_USE_KEY}" not in log
 
 
 def test_dialog_never_draws_its_own_ok_button():
@@ -288,9 +311,8 @@ def test_all_provider_branches_render_in_both_modes():
 
 
 def test_dialog_states_cover_the_full_flow():
-    assert ALL_STATES == (
-        'IDLE', 'SAVING', 'REMOVING', 'SAVED', 'REMOVED', 'ERROR', 'CONFIRM_REMOVE',
-    )
+    # No confirmation state: Remove API Key deletes on its first click.
+    assert ALL_STATES == ('IDLE', 'SAVING', 'REMOVING', 'SAVED', 'REMOVED', 'ERROR')
 
 
 def test_save_success_lands_on_saved_recap(monkeypatch):
@@ -344,17 +366,15 @@ def test_save_failure_lands_on_error(monkeypatch):
     assert wm.byok_last_error == "key rejected"
 
 
-def test_remove_flow_walks_confirm_removing_removed(monkeypatch):
+def test_remove_deletes_on_the_first_click(monkeypatch):
+    """Remove API Key has no confirmation step: the first click deletes, so
+    closing the dialog afterwards can never keep the key."""
     wm = _wm('IDLE', byok_is_active=True, byok_current_provider='openai')
     context = SimpleNamespace(window_manager=wm)
     monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
     monkeypatch.setattr(byok_ops.bpy.context, "window_manager", wm, raising=False)
-
-    byok_ops.MIXAR_BYOK_OT_request_remove().execute(context)
-    assert wm.byok_dialog_state == 'CONFIRM_REMOVE'
-
-    byok_ops.MIXAR_BYOK_OT_cancel_remove().execute(context)
-    assert wm.byok_dialog_state == 'IDLE'
+    assert not hasattr(byok_ops, "MIXAR_BYOK_OT_request_remove")
+    assert not hasattr(byok_ops, "MIXAR_BYOK_OT_cancel_remove")
 
     seen = {}
 
@@ -364,7 +384,6 @@ def test_remove_flow_walks_confirm_removing_removed(monkeypatch):
         on_done(True, 1, None)
 
     monkeypatch.setattr(byok_ops.byok_client, "delete_credentials", fake_delete)
-    byok_ops.MIXAR_BYOK_OT_request_remove().execute(context)
     byok_ops.MIXAR_BYOK_OT_confirm_remove().execute(context)
 
     assert seen['state_during'] == 'REMOVING'
@@ -373,8 +392,21 @@ def test_remove_flow_walks_confirm_removing_removed(monkeypatch):
     assert wm.byok_current_provider == ''
 
 
+def test_save_and_remove_wait_for_an_island_mutation(monkeypatch):
+    """A toggle / model switch echo landing after a save or remove would
+    resurrect what they changed: one mutation of the key at a time."""
+    from mixar.modules.byok.core import credential_state
+    monkeypatch.setattr(credential_state, "pending", lambda: "pause")
+    wm = _wm('IDLE', byok_is_active=True)
+    context = SimpleNamespace(window_manager=wm)
+    assert not byok_ops.MIXAR_BYOK_OT_confirm_remove.poll(context)
+    assert not byok_ops.MIXAR_BYOK_OT_save.poll(context)
+    assert byok_ops.MIXAR_BYOK_OT_confirm_remove().execute(context) == {'CANCELLED'}
+    assert wm.byok_dialog_state == 'IDLE'
+
+
 def test_remove_failure_lands_on_error(monkeypatch):
-    wm = _wm('CONFIRM_REMOVE', byok_is_active=True)
+    wm = _wm('IDLE', byok_is_active=True)
     context = SimpleNamespace(window_manager=wm)
     monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
     monkeypatch.setattr(byok_ops.bpy.context, "window_manager", wm, raising=False)
@@ -396,7 +428,7 @@ def test_error_keeps_the_active_configuration_visible():
                     byok_current_provider='anthropic', byok_current_model='m')
         assert any("In use:" in e for e in log), log
         assert any("Key rejected" in e for e in log), log
-        assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+        assert f"op:{byok_dialog_ui.OP_REMOVE}" not in log
 
     log = _draw('ERROR', card_api=True)
     assert not any("In use:" in e for e in log)
@@ -615,11 +647,18 @@ def test_busy_states_have_no_close_button():
         assert f"popup_confirm:{byok_dialog_ui.CLOSE_GLYPH}" not in log
 
 
-def test_use_mixie_mode_opens_on_the_remove_confirmation():
+def test_mixie_never_opens_the_settings_dialog():
+    """Mixie pauses the key (the toggle never deletes one) and Custom AI
+    resumes it; neither half reaches the dialog through a remove flow."""
     source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
               / "byok_ops.py").read_text(encoding="utf-8")
-    assert "('USE_MIXIE'" in source
-    assert "if self.mode == 'USE_MIXIE' and wm.byok_is_active:" in source
+    assert "USE_MIXIE" not in source and "CONFIRM_REMOVE" not in source
+    toggle = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+              / "byok_toggle_ops.py").read_text(encoding="utf-8")
+    use_mixie = toggle[toggle.index("class MIXAR_BYOK_OT_use_mixie"):
+                       toggle.index("class MIXAR_BYOK_OT_use_key")]
+    assert "open_dialog" not in use_mixie
+    assert "_toggle(False" in use_mixie
 
 
 def test_the_island_mixie_half_has_its_own_operator():
@@ -628,4 +667,5 @@ def test_the_island_mixie_half_has_its_own_operator():
     island = (ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
               / "agent_ui_provider.cc").read_text(encoding="utf-8")
     assert '"mixar_byok.use_mixie"' in island
+    assert '"mixar_byok.use_key"' in island
     assert '"USE_MIXIE"' not in island

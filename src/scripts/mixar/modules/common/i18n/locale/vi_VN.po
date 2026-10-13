@@ -1400,12 +1400,6 @@ msgstr "Lỗi/Sai Số"
 msgid "Last request failed"
 msgstr "Yêu cầu gần nhất thất bại"
 
-msgid "Confirm Remove"
-msgstr "Xác Nhận Xóa"
-
-msgid "Awaiting delete confirmation"
-msgstr "Đang chờ xác nhận xóa"
-
 msgid "Loading…"
 msgstr "Đang tải…"
 
@@ -1440,6 +1434,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "Đã xảy ra lỗi từ phía chúng tôi. Vui lòng thử lại."
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1487,6 +1484,12 @@ msgstr "Hãy khởi động mô hình cục bộ trước (mô hình phải đan
 msgid "Base URL and model name are required."
 msgstr "Cần có URL cơ sở và tên mô hình."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Máy chủ cục bộ trả về HTTP {status}."
 
@@ -1507,6 +1510,12 @@ msgstr "Dùng khóa API của tôi…"
 
 msgid "Change or remove my API key…"
 msgstr "Đổi hoặc xóa khóa API của tôi…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Suy Nghĩ"
@@ -1574,6 +1583,39 @@ msgstr "Không thể đổi mô hình"
 msgid "Could not reset model"
 msgstr "Không thể hoàn lại mô hình"
 
+msgid "Load from ~/.codex/auth.json"
+msgstr "Nạp từ ~/.codex/auth.json"
+
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "Đọc ~/.codex/auth.json từ máy này vào trường"
+
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "Không tìm thấy ~/.codex/auth.json — hãy chạy `codex login` trước"
+
+msgid "Could not read ~/.codex/auth.json"
+msgstr "Không thể đọc ~/.codex/auth.json"
+
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json trống"
+
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
+
+msgid "Loaded auth.json"
+msgstr "Đã nạp auth.json"
+
+msgid "Paste auth.json"
+msgstr "Dán auth.json"
+
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "Dán ~/.codex/auth.json của bạn từ bảng nhớ tạm vào trường"
+
+msgid "Clipboard is empty"
+msgstr "Bộ nhớ tạm hiện thời là trống rỗng"
+
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json đã dán quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -1601,10 +1643,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 msgid "Mixar credits will be charged for future agent requests."
@@ -1612,12 +1654,6 @@ msgstr "Tín dụng Mixar sẽ bị trừ cho các yêu cầu tác nhân sau nà
 
 msgid "Removing your key…"
 msgstr "Đang xóa khóa của bạn…"
-
-msgid "Keep My Key"
-msgstr "Giữ Khóa của Tôi"
-
-msgid "Remove API Key"
-msgstr "Xóa Khóa API"
 
 msgid "SAVED"
 msgstr ""
@@ -1700,12 +1736,6 @@ msgstr "Sắp Đặt Nhà Cung Cấp AI"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Dùng khóa API riêng của bạn cho tác nhân Mixar. Khi đang bật, tín dụng Mixar không bị trừ cho các yêu cầu tác nhân."
 
-msgid "Settings"
-msgstr "Sắp Đặt"
-
-msgid "Use Mixie"
-msgstr ""
-
 msgid "Validate with the provider and save your API key"
 msgstr "Xác thực với nhà cung cấp và lưu khóa API của bạn"
 
@@ -1721,53 +1751,23 @@ msgstr "Chọn một mô hình Codex và nạp gói auth.json của bạn."
 msgid "Save failed."
 msgstr "Lưu thất bại."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Nạp từ ~/.codex/auth.json"
+msgid "Couldn't save your API key"
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Đọc ~/.codex/auth.json từ máy này vào trường"
+msgid "Please try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Không tìm thấy ~/.codex/auth.json — hãy chạy `codex login` trước"
+msgid "Remove API Key"
+msgstr "Xóa Khóa API"
 
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Không thể đọc ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json trống"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
-
-msgid "Loaded auth.json"
-msgstr "Đã nạp auth.json"
-
-msgid "Paste auth.json"
-msgstr "Dán auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Dán ~/.codex/auth.json của bạn từ bảng nhớ tạm vào trường"
-
-msgid "Clipboard is empty"
-msgstr "Bộ nhớ tạm hiện thời là trống rỗng"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json đã dán quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
-
-msgid "Remove"
-msgstr "Xóa/Loại Bỏ"
-
-msgid "Start the remove-confirmation flow"
-msgstr "Bắt đầu quy trình xác nhận xóa"
-
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "Hủy quy trình xóa và trở về hộp thoại chính"
-
-msgid "Delete the stored API key server-side"
-msgstr "Xóa khóa API đã lưu phía máy chủ"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 msgid "Remove failed."
 msgstr "Xóa thất bại."
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -1820,14 +1820,20 @@ msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claud
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Xóa Khóa API…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 msgid "Validating with provider…"
 msgstr "Đang xác thực với nhà cung cấp…"
@@ -1874,7 +1880,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 msgid "Agent Model Provider"
@@ -1926,6 +1947,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 msgid "Agent Model Eligible"
@@ -6400,6 +6427,9 @@ msgstr "Thông Tin Khung Lưới"
 
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Hãy chọn mọi bộ phận của một nhân vật — sẽ được dựng khung rối thành một bộ xương duy nhất"
+
+msgid "Settings"
+msgstr "Sắp Đặt"
 
 msgid "Auto-detects the skeleton type"
 msgstr "Tự động phát hiện loại bộ xương"
@@ -24736,13 +24766,19 @@ msgstr "Phác Thảo · Enter để gửi"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

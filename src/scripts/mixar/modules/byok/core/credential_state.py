@@ -38,6 +38,10 @@ _FIELDS = (
     "byok_current_model",
     "byok_current_supports_vision",
     "byok_key_preview",
+    # A key is stored (active or paused); paused = stored but switched off by
+    # the island toggle (the server's `enabled: false`), so Mixie answers.
+    "byok_key_stored",
+    "byok_key_paused",
 )
 
 _DEFAULTS: Dict[str, Any] = {
@@ -48,13 +52,28 @@ _DEFAULTS: Dict[str, Any] = {
     # false "text-only" note.
     "byok_current_supports_vision": True,
     "byok_key_preview": "",
+    "byok_key_stored": False,
+    "byok_key_paused": False,
+    # Not mirrored: whether the stored key still validates (a paused key that
+    # does not can only be entered again, never resumed).
+    "byok_key_valid": True,
 }
 
 _lock = threading.Lock()
 _state: Dict[str, Any] = dict(_DEFAULTS)
 _epoch: int = 0
-# The model an in-place switch is saving (the island chip's dropdown), or "".
-_switch_target: str = ""
+# The one mutation the island may have in flight: an in-place model switch
+# (the key chip's dropdown) or a pause / resume (the Mixie | Custom AI toggle).
+# While set, background fetches are dropped (their answer predates the
+# mutation and would flip the island back) and a second mutation is refused.
+# `before` is the state to restore when an optimistic toggle fails.
+_pending: Optional[Dict[str, Any]] = None
+# Bumped by every write this process knows the answer of (a mutation's start
+# and end, a save / remove echo): a GET issued before it is dropped when it
+# lands, so an older read can never overwrite a newer write. Its failure
+# retry carries the serial too, so new work cancels it.
+_request_serial: int = 0
+_RETRY_DELAY_S = 15.0
 
 
 def snapshot() -> Dict[str, Any]:
@@ -64,12 +83,18 @@ def snapshot() -> Dict[str, Any]:
 
 
 def refresh() -> None:
-    """Re-read the credential state from the server."""
+    """Re-read the credential state from the server (skipped while the island
+    has a mutation in flight: its echo is the fresher answer)."""
+    global _request_serial
     with _lock:
+        if _pending is not None:
+            return
         epoch = _epoch
+        _request_serial += 1
+        serial = _request_serial
 
     def _done(success: bool, data, err):
-        _apply_fetch_result(epoch, success, data, err)
+        _apply_fetch_result(epoch, success, data, err, serial=serial)
 
     byok_client.fetch_state(on_done=_done)
 
@@ -80,11 +105,12 @@ def clear(wm=None) -> None:
     ``wm`` is the caller's live WindowManager when it has one — logout does,
     and passing it avoids re-deriving it from ``bpy.context``.
     """
-    global _epoch, _state, _switch_target
+    global _epoch, _state, _pending, _request_serial
     with _lock:
         _epoch += 1
+        _request_serial += 1
         _state = dict(_DEFAULTS)
-        _switch_target = ""
+        _pending = None
     apply_to_wm(wm)
 
 
@@ -107,15 +133,23 @@ def apply_from_payload(data: Optional[dict], wm=None, *, epoch: Optional[int] = 
     bumped it since, the payload is dropped and False is returned; the check
     and the store share one `_lock` acquisition, like `_apply_fetch_result`.
     """
-    global _state
+    global _state, _request_serial
     parsed = _parse(data)
     with _lock:
         if epoch is not None and epoch != _epoch:
             logger.debug("BYOK save echo dropped (stale epoch)")
             return False
         _state = parsed
+        _request_serial += 1  # an echo is newer than any GET in flight
     apply_to_wm(wm)
     return True
+
+
+def apply_removed(wm=None, *, epoch: Optional[int] = None) -> bool:
+    """The key was deleted: reset to "nothing stored" WITHOUT touching the
+    lifecycle epoch (that is logout's; bumping it here would drop the echo of
+    a save made right after the removal)."""
+    return apply_from_payload({"byok_active": False, "items": []}, wm, epoch=epoch)
 
 
 def apply_to_wm(wm=None) -> None:
@@ -148,9 +182,8 @@ def _apply_key_chip(target, current) -> None:
 
     active = bool(current["byok_is_active"])
     provider = current["byok_current_provider"] if active else ""
-    with _lock:
-        switching = _switch_target if active else ""
-    model = switching or (current["byok_current_model"] if active else "")
+    switching_to = switching() if active else ""
+    model = switching_to or (current["byok_current_model"] if active else "")
     menu = bool(provider) and not (model_suggestions.is_openrouter(provider)
                                    or model_suggestions.is_local(provider))
     if menu:
@@ -160,7 +193,8 @@ def _apply_key_chip(target, current) -> None:
         target.mixar_agent_key_label = iface_(catalog_labels.chip_provider_label(provider))
         target.mixar_agent_key_model = catalog_labels.chip_model_label(provider, model)
         target.mixar_agent_key_menu = menu
-        target.mixar_agent_key_busy = bool(switching)
+        target.mixar_agent_key_busy = bool(switching_to)
+        target.mixar_agent_key_resumable = resumable(current)
     except Exception:  # registered in a later auto-discovery batch
         pass
 
@@ -169,27 +203,71 @@ def _apply_key_chip(target, current) -> None:
 # In-place model switch (the island chip's dropdown)
 # ---------------------------------------------------------------------------
 
+def resumable(current: Optional[Dict[str, Any]] = None) -> bool:
+    """A paused key that still validates: Custom AI switches back to it with
+    no dialog. A paused key that stopped validating must be entered again."""
+    current = current if current is not None else snapshot()
+    return bool(current["byok_key_stored"] and current["byok_key_paused"]
+                and current["byok_key_valid"] and not current["byok_is_active"])
+
+
+def pending() -> str:
+    """The island mutation in flight: "switch", "pause", "resume" or ""."""
+    with _lock:
+        return _pending["kind"] if _pending else ""
+
+
 def switching() -> str:
-    """The model a switch is saving right now, or ""."""
+    """The model an in-place switch is saving right now, or ""."""
     with _lock:
-        return _switch_target
+        return _pending["model"] if _pending and _pending["kind"] == "switch" else ""
 
 
-def begin_switch(model: str, wm=None) -> None:
-    """Mark a model switch in flight: the chip names ``model`` until it lands."""
-    global _switch_target
+def begin_switch(model: str, wm=None) -> bool:
+    """Mark a model switch in flight: the chip names ``model`` until it lands.
+    False (nothing changed) when another mutation is already in flight."""
+    global _pending, _request_serial
     with _lock:
-        _switch_target = model
+        if _pending is not None:
+            return False
+        _pending = {"kind": "switch", "model": model, "before": dict(_state)}
+        _request_serial += 1
     apply_to_wm(wm)
+    return True
 
 
-def end_switch(wm=None) -> None:
-    """The switch landed (or failed): the chip names the stored model again."""
-    global _switch_target
+def begin_toggle(enabled: bool, wm=None) -> bool:
+    """Optimistically switch the stored key on (Custom AI) or off (Mixie): the
+    island flips at once and `end_pending` either keeps the server's echo or
+    restores this. False when another mutation is in flight, or for a resume
+    with no stored key (a pause is the server's to refuse: the island may show
+    a key in use before this mirror has loaded)."""
+    global _pending, _state, _request_serial
     with _lock:
-        _switch_target = ""
+        if _pending is not None or (enabled and not _state["byok_key_stored"]):
+            return False
+        _pending = {"kind": "resume" if enabled else "pause", "model": "",
+                    "before": dict(_state)}
+        flipped = dict(_state)
+        flipped["byok_is_active"] = bool(enabled)
+        flipped["byok_key_paused"] = not enabled
+        _state = flipped
+        _request_serial += 1
     apply_to_wm(wm)
+    return True
 
+
+def end_pending(wm=None, *, restore: bool = False) -> None:
+    """The mutation landed (or failed). ``restore`` puts back the state from
+    before an optimistic toggle; a successful caller adopts its echo next."""
+    global _pending, _state, _request_serial
+    with _lock:
+        before = _pending["before"] if _pending else None
+        _pending = None
+        _request_serial += 1
+        if restore and before is not None:
+            _state = before
+    apply_to_wm(wm)
 
 
 # ---------------------------------------------------------------------------
@@ -213,10 +291,14 @@ def _parse(data) -> Dict[str, Any]:
         parsed["byok_current_model"] = first.get("model", "") or ""
         parsed["byok_current_supports_vision"] = bool(first.get("supports_vision", True))
         parsed["byok_key_preview"] = first.get("key_preview", "") or ""
+        parsed["byok_key_stored"] = True
+        # Absent on a backend without the pause flag: a stored key is enabled.
+        parsed["byok_key_paused"] = not bool(first.get("enabled", True))
+        parsed["byok_key_valid"] = bool(first.get("is_valid", True))
     return parsed
 
 
-def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
+def _apply_fetch_result(epoch: int, success: bool, data, err, *, serial=None) -> None:
     """Main-thread fetch callback.
 
     A FAILED fetch leaves the state alone. Only the server retires a credential,
@@ -229,13 +311,41 @@ def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
         if epoch != _epoch:
             logger.debug("BYOK state response dropped (stale epoch)")
             return
+        if _pending is not None or (serial is not None and serial != _request_serial):
+            # Issued before a write this process made (an island mutation,
+            # a save / remove echo): it would put the older state back.
+            logger.debug("BYOK state response dropped (superseded)")
+            return
         if success:
             _state = _parse(data)
-        else:
-            logger.debug("BYOK state fetch failed (keeping cached state): %s", err)
-            return
+    if not success:
+        logger.debug("BYOK state fetch failed (keeping cached state, retrying): %s", err)
+        _schedule_retry(epoch, serial)
+        return
     apply_to_wm()
     _redraw()
+
+
+def _schedule_retry(epoch, serial) -> None:
+    """One failed read must not leave the mirror empty for the session (the
+    key chip would never draw, a paused key never resume). Logout and any
+    newer write cancel the ticket."""
+    try:
+        import bpy
+    except Exception:  # noqa: BLE001
+        return
+
+    def retry():
+        with _lock:
+            if epoch != _epoch or serial != _request_serial or _pending is not None:
+                return None
+        refresh()
+        return None
+
+    try:
+        bpy.app.timers.register(retry, first_interval=_RETRY_DELAY_S)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("BYOK state retry not scheduled: %s", exc)
 
 
 def _redraw() -> None:

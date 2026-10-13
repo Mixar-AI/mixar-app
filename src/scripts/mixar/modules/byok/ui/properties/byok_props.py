@@ -142,6 +142,8 @@ _WM_ATTRS = (
     'byok_current_model',
     'byok_current_supports_vision',
     'byok_key_preview',
+    'byok_key_stored',
+    'byok_key_paused',
     'byok_dialog_state',
     'byok_last_error',
 )
@@ -251,6 +253,10 @@ def register():
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
     WM.byok_key_preview = StringProperty(default='')
+    # A key is stored; paused = stored but switched off on the island
+    # (Mixie answers, Custom AI resumes it without re-entering it).
+    WM.byok_key_stored = BoolProperty(default=False)
+    WM.byok_key_paused = BoolProperty(default=False)
 
     # --- Dialog state machine ---
     WM.byok_dialog_state = EnumProperty(

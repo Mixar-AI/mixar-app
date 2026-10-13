@@ -1796,14 +1796,6 @@ msgid "Last request failed"
 msgstr "Poslednji zahtev nije uspeo"
 
 # derived
-msgid "Confirm Remove"
-msgstr "Potvrdi uklanjanje"
-
-# derived
-msgid "Awaiting delete confirmation"
-msgstr "Čeka se potvrda brisanja"
-
-# derived
 msgid "Loading…"
 msgstr "Učitavanje…"
 
@@ -1848,6 +1840,9 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "Nešto je pošlo naopako na našoj strani. Pokušajte ponovo."
 
 msgid "Couldn't switch the model here. Change it in AI Provider settings instead."
+msgstr ""
+
+msgid "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
 msgstr ""
 
 msgid "Local"
@@ -1908,6 +1903,12 @@ msgstr "Prvo pokrenite lokalni model (mora da radi da bi se sačuvalo)."
 msgid "Base URL and model name are required."
 msgstr "Osnovni URL i ime modela su obavezni."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 # derived
 msgid "The local server answered HTTP {status}."
 msgstr "Lokalni server je odgovorio HTTP statusom {status}."
@@ -1934,6 +1935,12 @@ msgstr "Koristi moj API ključ…"
 # derived
 msgid "Change or remove my API key…"
 msgstr "Promeni ili ukloni moj API ključ…"
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 # derived
 msgid "Thinking"
@@ -2019,6 +2026,50 @@ msgstr "Nije moguće promeniti model"
 msgid "Could not reset model"
 msgstr "Nije moguće resetovati model"
 
+# derived
+msgid "Load from ~/.codex/auth.json"
+msgstr "Učitaj iz ~/.codex/auth.json"
+
+# derived
+msgid "Read ~/.codex/auth.json from this machine into the field"
+msgstr "Čita ~/.codex/auth.json sa ovog računara u polje"
+
+# derived
+msgid "~/.codex/auth.json not found — run `codex login` first"
+msgstr "~/.codex/auth.json nije pronađen — prvo pokrenite `codex login`"
+
+# derived
+msgid "Could not read ~/.codex/auth.json"
+msgstr "Nije moguće pročitati ~/.codex/auth.json"
+
+# derived
+msgid "~/.codex/auth.json is empty"
+msgstr "~/.codex/auth.json je prazan"
+
+# derived
+msgid "auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
+
+# derived
+msgid "Loaded auth.json"
+msgstr "auth.json je učitan"
+
+# derived
+msgid "Paste auth.json"
+msgstr "Nalepi auth.json"
+
+# derived
+msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
+msgstr "Lepi vaš ~/.codex/auth.json iz ostave u polje"
+
+# derived
+msgid "Clipboard is empty"
+msgstr "Ostava je prazna"
+
+# derived
+msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
+msgstr "Nalepljeni auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
+
 msgid "AI Provider settings"
 msgstr ""
 
@@ -2047,10 +2098,10 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "SWITCH BACK TO MIXIE?"
+msgid "REMOVING YOUR API KEY"
 msgstr ""
 
-msgid "This removes your saved API key; the agent runs on Mixie again."
+msgid "The agent goes back to Mixie when your key is removed."
 msgstr ""
 
 # derived
@@ -2060,14 +2111,6 @@ msgstr "Mixar krediti će se naplaćivati za buduće zahteve agenta."
 # derived
 msgid "Removing your key…"
 msgstr "Uklanjanje vašeg ključa…"
-
-# derived
-msgid "Keep My Key"
-msgstr "Zadrži moj ključ"
-
-# derived
-msgid "Remove API Key"
-msgstr "Ukloni API ključ"
 
 msgid "SAVED"
 msgstr ""
@@ -2170,12 +2213,6 @@ msgstr "Podešavanja AI dobavljača"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Koristite sopstveni API ključ za Mixar agenta. Dok je aktivno, Mixar krediti se ne naplaćuju za zahteve agenta."
 
-msgid "Settings"
-msgstr "Podešavanja"
-
-msgid "Use Mixie"
-msgstr ""
-
 # derived
 msgid "Validate with the provider and save your API key"
 msgstr "Proverava kod dobavljača i čuva vaš API ključ"
@@ -2196,68 +2233,25 @@ msgstr "Izaberite Codex model i učitajte vaš auth.json paket."
 msgid "Save failed."
 msgstr "Čuvanje nije uspelo."
 
-# derived
-msgid "Load from ~/.codex/auth.json"
-msgstr "Učitaj iz ~/.codex/auth.json"
+msgid "Couldn't save your API key"
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
 
 # derived
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Čita ~/.codex/auth.json sa ovog računara u polje"
+msgid "Remove API Key"
+msgstr "Ukloni API ključ"
 
-# derived
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nije pronađen — prvo pokrenite `codex login`"
-
-# derived
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nije moguće pročitati ~/.codex/auth.json"
-
-# derived
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json je prazan"
-
-# derived
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
-
-# derived
-msgid "Loaded auth.json"
-msgstr "auth.json je učitan"
-
-# derived
-msgid "Paste auth.json"
-msgstr "Nalepi auth.json"
-
-# derived
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Lepi vaš ~/.codex/auth.json iz ostave u polje"
-
-# derived
-msgid "Clipboard is empty"
-msgstr "Ostava je prazna"
-
-# derived
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Nalepljeni auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
-
-msgid "Remove"
-msgstr "Ukloni"
-
-# derived
-msgid "Start the remove-confirmation flow"
-msgstr "Pokreće tok potvrde uklanjanja"
-
-# derived
-msgid "Cancel the remove flow and return to the main dialog"
-msgstr "Odustaje od toka uklanjanja i vraća se u glavni dijalog"
-
-# derived
-msgid "Delete the stored API key server-side"
-msgstr "Briše sačuvani API ključ na serveru"
+msgid "Delete your saved API key. The agent goes back to Mixie"
+msgstr ""
 
 # derived
 msgid "Remove failed."
 msgstr "Uklanjanje nije uspelo."
+
+msgid "Couldn't remove your API key"
+msgstr ""
 
 msgid "Choose"
 msgstr ""
@@ -2311,15 +2305,20 @@ msgstr "Bilo koja oznaka sa openrouter.ai/models, npr. anthropic/claude-opus-4.8
 msgid "Pick a model that supports tool / function calling - the agent needs it."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
-msgstr ""
-
 msgid "key stored securely"
 msgstr ""
 
-# derived
-msgid "Remove API Key…"
-msgstr "Ukloni API ključ…"
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Saved key stopped working, enter it again: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Use This Key"
+msgstr ""
 
 # derived
 msgid "Validating with provider…"
@@ -2373,7 +2372,22 @@ msgstr ""
 msgid "Couldn't switch model"
 msgstr ""
 
-msgid "Switch back to Mixie, Mixar's hosted models. This removes your saved API key"
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to your saved key, or opens AI Provider settings"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
 msgstr ""
 
 # derived
@@ -2434,6 +2448,12 @@ msgid "Agent Key Model Switching"
 msgstr ""
 
 msgid "A model switch for your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
 msgstr ""
 
 # derived
@@ -8119,6 +8139,9 @@ msgstr "Podaci o mešu"
 # derived
 msgid "Select all parts of one character — rigged as a single skeleton"
 msgstr "Izaberite sve delove jednog lika — riguju se kao jedan skelet"
+
+msgid "Settings"
+msgstr "Podešavanja"
 
 # derived
 msgid "Auto-detects the skeleton type"
@@ -31782,13 +31805,19 @@ msgstr "Skica · Enter za slanje"
 msgid "Custom AI"
 msgstr ""
 
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
 msgid "Your own API key is in use, and it decides the model"
 msgstr ""
 
 msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
 msgstr ""
 
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it"
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
 msgstr ""
 
 msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"

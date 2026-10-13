@@ -125,9 +125,12 @@ def invalidate_agent_settings():
     in `space_mixie_chat/ui/operators/auth_ops.py`.
     """
     try:
-        from mixar.modules.byok.core import credential_state
+        from mixar.modules.byok.core import byok_client, credential_state
 
         credential_state.clear()
+        # The previous account's save / removal must not hold the next
+        # account's dialog and toggle busy (its late answer is epoch-guarded).
+        byok_client.reset_in_flight()
     except Exception as e:
         logger.warning(f"BYOK state clear failed: {e}")
     try:

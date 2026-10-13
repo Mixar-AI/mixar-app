@@ -150,11 +150,28 @@ def test_byok_active_disables_every_row():
     )
 
     assert any(row.kind == "NOTE" for row in rows)
-    # Every row EXCEPT the key route, which must stay clickable — it is the
-    # way to clear the key without leaving the chat model picker.
-    assert all(row.enabled is False for row in rows if row.kind != "BYOK")
+    # Every row EXCEPT the key routes, which must stay clickable — the way to
+    # change or clear the key, or switch to Mixie keeping it (the island row
+    # fitted down to its icon has no other control).
+    assert all(row.enabled is False for row in rows if row.kind not in {"BYOK", "USE_MIXIE"})
     byok = [row for row in rows if row.kind == "BYOK"]
     assert len(byok) == 1 and byok[0].enabled is True
+    assert [row.kind for row in rows][-2:] == ["USE_MIXIE", "BYOK"]
+
+
+def test_a_paused_key_offers_switching_back_and_manage():
+    rows = model_menu.build_rows([_record("a")], byok_stored=True, byok_resumable=True)
+    kinds = [row.kind for row in rows]
+    assert "USE_KEY" in kinds and "USE_MIXIE" not in kinds
+    assert all(row.enabled for row in rows if row.kind == "MODEL")  # Mixie answers
+    assert rows[-1].kind == "BYOK" and rows[-1].label == model_menu.BYOK_MANAGE_TEXT
+    # A paused key that stopped validating can't be switched back to.
+    kinds = [r.kind for r in model_menu.build_rows([_record("a")], byok_stored=True)]
+    assert "USE_KEY" not in kinds and "USE_MIXIE" not in kinds
+    # No key at all: only the setup route.
+    rows = model_menu.build_rows([_record("a")])
+    assert rows[-1].label == model_menu.BYOK_SETUP_TEXT
+    assert not {"USE_KEY", "USE_MIXIE"} & {r.kind for r in rows}
 
 
 def test_thinking_rows_appear_only_when_the_model_offers_levels():

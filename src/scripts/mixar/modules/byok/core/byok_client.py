@@ -139,6 +139,107 @@ schedule_on_main = _schedule_on_main
 # BYOK credentials
 # ---------------------------------------------------------------------------
 
+# Saves and removals actually sent and not yet answered (main thread only:
+# counted when the request starts, released just before its callback runs).
+# The dialog reads it: closed with Esc mid-request and reopened, it must keep
+# showing that request's progress instead of offering a second one.
+_mutations_in_flight = 0
+# Bumped by a logout reset: a request counted before it never releases into
+# the next account's count.
+_in_flight_generation = 0
+
+
+def mutation_in_flight() -> bool:
+    """A save or removal was sent and has not been answered yet."""
+    return _mutations_in_flight > 0
+
+
+def _track(on_done: Callable) -> Callable:
+    """Count a request until its callback runs. The release happens before
+    the caller's callback, so even a raising callback cannot leave it stuck;
+    `_run_worker` guarantees the callback is delivered."""
+    global _mutations_in_flight
+    _mutations_in_flight += 1
+    generation = _in_flight_generation
+    released = [False]
+
+    def _release():
+        global _mutations_in_flight
+        if not released[0]:
+            released[0] = True
+            if generation == _in_flight_generation:
+                _mutations_in_flight = max(0, _mutations_in_flight - 1)
+
+    def _done(*args):
+        _release()
+        on_done(*args)
+
+    _done.release = _release
+    return _done
+
+
+def hold() -> Callable[[], None]:
+    """Count a save that starts with local work before its HTTP call (the
+    Local custom endpoint's ping); call the returned release once that work
+    ends, then send the request (which counts itself)."""
+    return _track(lambda *args: None).release
+
+
+def reset_in_flight() -> None:
+    """Logout: the next account must not wait on the previous one's request
+    (its late callback is epoch-guarded and never drives the count negative)."""
+    global _mutations_in_flight, _in_flight_generation
+    _mutations_in_flight = 0
+    _in_flight_generation += 1
+
+
+def _run_worker(name: str, work: Callable[[], tuple], on_done: Callable,
+                failure: tuple) -> None:
+    """Run ``work`` off the main thread and ALWAYS deliver ``on_done(*result)``
+    on the main thread — ``failure`` when anything at all goes wrong (even the
+    error classification itself), on the calling (main) thread when no worker
+    can be started. A request that never answers would otherwise leave
+    the dialog busy and every key action refused for the session. (With no
+    timer at all only the in-flight count is released: bpy is main-thread.)"""
+    def _deliver(result):
+        try:
+            _schedule_on_main(on_done, *result)
+        except Exception as e:  # noqa: BLE001
+            # No timer (interpreter shutdown): never touch bpy from this
+            # thread; just release the in-flight count.
+            logger.warning("BYOK %s: main-thread delivery failed: %s", name, e)
+            getattr(on_done, "release", lambda: None)()
+
+    def _thread():
+        result = failure
+        try:
+            result = work()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("BYOK %s failed: %s", name, e)
+            try:
+                result = _shape_exception(e, failure)
+            except Exception as inner:  # noqa: BLE001
+                logger.warning("BYOK %s: error classification failed: %s", name, inner)
+        finally:
+            _deliver(result)
+
+    try:
+        threading.Thread(target=_thread, daemon=True, name=name).start()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("BYOK %s: worker not started: %s", name, e)
+        on_done(*failure)
+
+
+def _shape_exception(exc: Exception, failure: tuple) -> tuple:
+    """`_translate_exception`'s tri-tuple, in the arity ``failure`` uses."""
+    if len(failure) != 3:
+        return failure
+    success, data, err = _translate_exception(exc)
+    if len(failure) == 3 and isinstance(failure[1], int):
+        return False, 0, err  # delete's (success, removed_count, error)
+    return success, data, err
+
+
 def fetch_state(
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
 ) -> None:
@@ -147,18 +248,11 @@ def fetch_state(
     On success the `data` arg of `on_done` is the response's inner `data`
     payload (dict with keys `byok_active`, `items`).
     """
-    def _thread():
-        try:
-            response = get_agent_service().get_credentials()
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK fetch_state failed: %s", e)
-            success, data, err = _translate_exception(e)
-        _schedule_on_main(on_done, success, data, err)
+    def _work():
+        return _translate(get_agent_service().get_credentials())
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKFetchState"
-    ).start()
+    _run_worker("MixarBYOKFetchState", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
 
 
 def save_credentials(
@@ -174,21 +268,17 @@ def save_credentials(
     ``base_url`` / ``supports_vision`` are forwarded only when provided
     (the "local" provider's relay-target registration).
     """
-    def _thread():
-        try:
-            response = get_agent_service().save_credentials_all(
-                provider=provider, model=model, api_key=api_key,
-                base_url=base_url, supports_vision=supports_vision,
-            )
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK save_credentials failed: %s", e)
-            success, data, err = _translate_exception(e)
-        _schedule_on_main(on_done, success, data, err)
+    on_done = _track(on_done)
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKSave"
-    ).start()
+    def _work():
+        response = get_agent_service().save_credentials_all(
+            provider=provider, model=model, api_key=api_key,
+            base_url=base_url, supports_vision=supports_vision,
+        )
+        return _translate(response)
+
+    _run_worker("MixarBYOKSave", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
 
 
 # An older server rejects the key-less switch as a schema error (422); say what
@@ -206,24 +296,53 @@ def switch_model(
     """PUT /agent/byok with ``keep_stored_key`` — run the stored key on another
     model of the same provider. No key leaves the client; the server
     re-validates its stored key against ``model`` (≤ 15 s)."""
-    def _thread():
+    def _work():
         try:
             response = get_agent_service().save_credentials_all(
                 provider=provider, model=model, api_key=None, keep_stored_key=True,
             )
             success, data, err = _translate(response)
             status = getattr(response, "status_code", None)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("BYOK switch_model failed: %s", e)
             success, data, err = _translate_exception(e)
             status = getattr(e, "status_code", None)
         if not success and status == 422:
             err = _SWITCH_UNSUPPORTED_MSG
-        _schedule_on_main(on_done, success, data, err)
+        return success, data, err
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKSwitchModel"
-    ).start()
+    _run_worker("MixarBYOKSwitchModel", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
+
+
+# An older server has no pause route (404/405) or rejects the body (422).
+_STATE_UNSUPPORTED_MSG = n_(
+    "Switching needs the latest Mixar server. Remove the key in AI Provider settings to go back to Mixie."
+)
+
+
+def set_key_enabled(
+    enabled: bool,
+    on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+) -> None:
+    """PUT /agent/byok/state — the island toggle: pause the stored key so Mixie
+    answers (False), or resume it (True). The key is never sent or deleted;
+    the echo is the credential list with the resulting ``byok_active``."""
+    def _work():
+        try:
+            response = get_agent_service().set_byok_state(enabled)
+            success, data, err = _translate(response)
+            status = getattr(response, "status_code", None)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("BYOK set_key_enabled failed: %s", e)
+            success, data, err = _translate_exception(e)
+            status = getattr(e, "status_code", None)
+        if not success and status in (404, 405, 422):
+            err = _STATE_UNSUPPORTED_MSG
+        return success, data, err
+
+    _run_worker("MixarBYOKSetEnabled", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
 
 
 def delete_credentials(
@@ -232,24 +351,15 @@ def delete_credentials(
     """DELETE /agent/credentials/all — remove BYOK config. Always 200 on
     a reachable server; `removed_count` is the row count deleted.
     """
-    def _thread():
-        try:
-            response = get_agent_service().delete_credentials_all()
-            success, data, err = _translate(response)
-            if success:
-                removed = 0
-                if isinstance(data, dict):
-                    value = data.get("removed", 0)
-                    if isinstance(value, int):
-                        removed = value
-                _schedule_on_main(on_done, True, removed, None)
-            else:
-                _schedule_on_main(on_done, False, 0, err)
-        except Exception as e:
-            logger.warning("BYOK delete_credentials failed: %s", e)
-            _, _, err = _translate_exception(e)
-            _schedule_on_main(on_done, False, 0, err)
+    on_done = _track(on_done)
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKDelete"
-    ).start()
+    def _work():
+        response = get_agent_service().delete_credentials_all()
+        success, data, err = _translate(response)
+        if not success:
+            return False, 0, err
+        removed = data.get("removed", 0) if isinstance(data, dict) else 0
+        return True, removed if isinstance(removed, int) else 0, None
+
+    _run_worker("MixarBYOKDelete", _work, on_done,
+                (False, 0, _GENERIC_SERVER_ERROR_MSG))

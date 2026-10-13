@@ -129,10 +129,13 @@ def test_the_mirrors_are_registered_window_manager_properties():
 def test_a_switch_in_flight_names_the_target_dimmed_until_it_lands(state):
     wm = SimpleNamespace()
     state.apply_from_payload(_payload(), wm)
-    state.begin_switch('claude-sonnet-5-5', wm)
-    assert state.switching() == 'claude-sonnet-5-5'
+    assert state.begin_switch('claude-sonnet-5-5', wm)
+    assert state.switching() == 'claude-sonnet-5-5' and state.pending() == 'switch'
     assert _mirror(wm) == ('Claude API', 'Sonnet 5.5', True, True)
-    state.end_switch(wm)
+    # One island mutation at a time.
+    assert not state.begin_switch('claude-opus-5-5', wm)
+    assert not state.begin_toggle(False, wm)
+    state.end_pending(wm)
     assert state.switching() == ''
     assert _mirror(wm) == ('Claude API', 'Opus 5.5', True, False)
 

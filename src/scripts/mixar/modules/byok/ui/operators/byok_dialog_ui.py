@@ -11,8 +11,9 @@ sidebar with its LOCAL MODEL foot, and a right column whose contents
 follow ``wm.byok_dialog_state``:
 
   IDLE / ERROR / SAVING  the form (`byok_provider_settings_ui.FormPlan`)
-  CONFIRM_REMOVE         the switch-back warning, Keep My Key / Remove
-  REMOVING / SAVED / REMOVED   a recap with one Done (or a busy pill)
+  REMOVING               the key's recap and a busy pill (Remove API Key deletes
+                         on its first click; there is no confirmation step)
+  SAVED / REMOVED        a recap with one Done
 
 The one-action contract: every state marks exactly ONE button as the
 dialog's active default (`byok_sheet.button(default=True)` /
@@ -34,9 +35,8 @@ from . import byok_sheet as S
 # Operator idnames as literals — byok_ops imports this module for its
 # draw() body, so importing the classes back would be circular.
 OP_SAVE = form.OP_SAVE
-OP_REQUEST_REMOVE = form.OP_REQUEST_REMOVE
-OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
-OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
+OP_REMOVE = form.OP_REMOVE
+OP_USE_KEY = form.OP_USE_KEY
 OP_CODEX_LOAD_FILE = form.OP_CODEX_LOAD_FILE
 OP_CODEX_PASTE = form.OP_CODEX_PASTE
 
@@ -74,10 +74,8 @@ def draw_dialog(layout, wm):
 
 
 def _plan(layout, wm, state):
-    if state == 'CONFIRM_REMOVE':
-        return _ConfirmPlan(wm, removing=False)
     if state == 'REMOVING':
-        return _ConfirmPlan(wm, removing=True)
+        return _RemovingPlan(wm)
     if state == 'SAVED':
         return _RecapPlan(wm, saved=True)
     if state == 'REMOVED':
@@ -136,47 +134,33 @@ def _lines(area, lines, kind=S.BODY):
         S.label(S.row(area, BODY_ROW, left=S.RIGHT_INSET), line, kind, translate=False)
 
 
-def _pill_width(layout, kind, text):
-    return S.text_width(layout, kind, text) + 2 * S.BUTTON_PAD
-
-
-class _ConfirmPlan:
-    """CONFIRM_REMOVE (Keep My Key is the safe default) and REMOVING."""
+class _RemovingPlan:
+    """REMOVING: the key being deleted and a busy pill until the DELETE lands."""
 
     need = 7 * BODY_ROW + S.GAP
     bottom = S.action_block_height()
 
-    def __init__(self, wm, removing):
+    def __init__(self, wm):
         self.wm = wm
-        self.removing = removing
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
-        S.caption(col, n_("SWITCH BACK TO MIXIE?"), S.RIGHT_INSET)
+        S.caption(col, n_("REMOVING YOUR API KEY"), S.RIGHT_INSET)
         S.sep(col, S.CAPTION_TO_CHIPS)
         area = S.fixed(col, geo.area)
         _lines(area, _config_lines(self.wm))
         S.sep(area, S.GAP)
         _lines(area, [
-            iface_("This removes your saved API key; the agent runs on Mixie again."),
+            iface_("The agent goes back to Mixie when your key is removed."),
             iface_("Mixar credits will be charged for future agent requests."),
         ], S.NOTE)
         S.sep(col, S.NOTE_TO_INPUT)
         line = S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN, align='RIGHT')
-        if self.removing:
-            busy = S.sized(line, S.SAVE_W)
-            busy.enabled = False
-            # A disabled pill keeps the primary slot (and the active-default
-            # flag) while the delete is in flight; Return does nothing on it.
-            S.button(busy, OP_SAVE, iface_("Removing your key…"), S.PRIMARY, default=True)
-            return
-        keep = iface_("Keep My Key")
-        S.button(S.sized(line, _pill_width(line, S.SECONDARY, keep)), OP_CANCEL_REMOVE, keep,
-                 S.SECONDARY, default=True)
-        S.gap(line, S.GAP)
-        remove = iface_("Remove API Key")
-        S.button(S.sized(line, _pill_width(line, S.DANGER_BUTTON, remove)), OP_CONFIRM_REMOVE,
-                 remove, S.DANGER_BUTTON)
+        busy = S.sized(line, S.SAVE_W)
+        busy.enabled = False
+        # A disabled pill keeps the primary slot (and the active-default
+        # flag) while the delete is in flight; Return does nothing on it.
+        S.button(busy, OP_SAVE, iface_("Removing your key…"), S.PRIMARY, default=True)
 
 
 class _RecapPlan:
