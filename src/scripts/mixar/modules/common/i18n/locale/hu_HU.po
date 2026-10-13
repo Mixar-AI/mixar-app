@@ -2948,7 +2948,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3074,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Fájlok"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3107,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3122,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3140,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Eredetpont"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8962,11 @@ msgstr "A Moodboard→csevegés melléklet-szinkron frissítése ({shortcut})"
 msgid "Sync failed: {error}"
 msgstr "A szinkronizálás sikertelen: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Nincs kijelölt moodboard-kép"
@@ -9219,9 +9264,6 @@ msgstr "Mappa"
 
 msgid "Directory of the selected file(s)"
 msgstr "A kijelölt fájl(ok) mappája"
-
-msgid "Files"
-msgstr "Fájlok"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Nem sikerült betölteni a médiát: {filepath}"
@@ -18783,7 +18825,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19578,8 @@ msgstr "Módosítás..."
 msgid "Awaiting Input..."
 msgstr "Bemenetre vár..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "A videókhoz Videó mód kell. Távolítsa el a videót, ha az ügynöknek küldi."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Felhasználói azonosító"
@@ -19622,6 +19664,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Csomagváltás"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
@@ -20728,11 +20779,14 @@ msgstr "Törlendő archivált munkamenet"
 msgid "Chat removed from history"
 msgstr "A csevegés eltávolítva az előzményekből"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Nem adható hozzá: {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Elérte a mellékletkorlátot ({count})"
@@ -20740,14 +20794,14 @@ msgstr "Elérte a mellékletkorlátot ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Kihagyva: {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Nem adható hozzá: {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Ezek a referenciák már csatolva vannak"
 
 msgid "Added {count} image(s)"
 msgstr "{count} kép hozzáadva"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Hozzáadás blendből"
@@ -20764,6 +20818,9 @@ msgstr "{size} – van adat"
 msgid "{size} - No data"
 msgstr "{size} – nincs adat"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Kép kijelölése a blendfájlból"
 
@@ -20772,6 +20829,12 @@ msgstr "A kép már hozzá van adva"
 
 msgid "Image not found in blend file"
 msgstr "A kép nem található a blendfájlban"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "A kép már csatolva van"
@@ -23620,9 +23683,6 @@ msgstr "Kurzor illesztése"
 msgid "Snap 2D cursor"
 msgstr "2D kurzor illesztése"
 
-msgid "Origin"
-msgstr "Eredetpont"
-
 msgid "Mirror selected UVs"
 msgstr "A kijelölt UV-k tükrözése"
 
@@ -24397,6 +24457,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Adjon hozzá egy festőréteget a Rétegek panelen a festés megkezdéséhez"
 
@@ -24412,6 +24475,12 @@ msgstr "A futó forduló leállítása"
 msgid "Folder context"
 msgstr ""
 
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Nagyobb vázlat megtekintése. Adjon hozzá utasításokat a csevegésben, majd nyomja meg a Küldés gombot"
 
@@ -24420,6 +24489,9 @@ msgstr "Referencia eltávolítása"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Ennek a vázlatnak és a sorban álló rajzának az elvetése"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24862,7 @@ msgstr "Szabályok — a projekt- és a globális szabályok szerkesztése az ü
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"

@@ -82,7 +82,8 @@ AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
   g.row_pitch = g.image_size + 40 * u;
   float content_height = 0;
   for (const AgentReference &item : items) {
-    const bool folder = item.source == "FOLDER";
+    /* Folders and context files share the compact row. */
+    const bool folder = item.source == "FOLDER" || item.source == "CONTEXT_FILE";
     const float height = folder ? 72 * u : g.image_size;
     const float x = folder ? g.view.xmin : BLI_rctf_cent_x(&g.view) - g.image_size / 2;
     const float top = g.view.ymax - content_height;
@@ -198,20 +199,30 @@ void agent_bubble_references_draw(const bContext *C,
           CTX_data_main(C), path.c_str(), board, image.xmin, image.ymin, g.image_size);
     }
     MIXAR_THEME_LOAD(dim, TextSecondary);
-    const bool folder = STREQ(source, "FOLDER");
+    /* A context file draws like a folder chip: its kind picks the glyph. */
+    const bool file = STREQ(source, "CONTEXT_FILE");
+    const bool folder = STREQ(source, "FOLDER") || file;
     if (folder) {
       MIXAR_THEME_LOAD(text, Text);
       const float cy = BLI_rctf_cent_y(&image);
       const rctf glyph = {image.xmin + 10 * u, image.xmin + 38 * u, cy - 14 * u, cy + 14 * u};
-      agent_ui_icon_draw(AGENT_ICON_FOLDER, &glyph, dim, plate);
+      const bool video = file && item.kind == "video";
+      const AgentIcon icon = !file                 ? AGENT_ICON_FOLDER :
+                               video                 ? AGENT_ICON_VIDEO :
+                               item.kind == "image"  ? AGENT_ICON_IMAGE :
+                               item.kind == "model"  ? AGENT_ICON_MESH :
+                                                       AGENT_ICON_RULES;
+      agent_ui_icon_draw(icon, &glyph, dim, plate);
       const float text_x = image.xmin + 48 * u;
       const float text_width = BLI_rctf_size_x(&image) - 84 * u;
       const auto caption = ui::mixar_fit_text(
           name.c_str(), text_width,
           ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
       pane_label_left(caption.c_str(), text_x, cy + 10 * u, 15 * agent_ui_text_unit(), text);
-      const auto detail = ui::mixar_fit_text(
-          IFACE_("Folder context"), text_width, 12 * agent_ui_text_unit());
+      const char *subtitle = !file ? IFACE_("Folder context") :
+                             video ? IFACE_("Video context") :
+                                     IFACE_("File context");
+      const auto detail = ui::mixar_fit_text(subtitle, text_width, 12 * agent_ui_text_unit());
       pane_label_left(detail.c_str(), text_x, cy - 12 * u, 12 * agent_ui_text_unit(), dim);
     }
     else {
@@ -247,6 +258,7 @@ void agent_bubble_references_draw(const bContext *C,
       ui::Button *button = uiDefIconButO(block,
                                          ui::ButtonType::But,
                                          generation ? "mixar.pane_remove_reference" :
+                                         file       ? "mixie_chat.remove_context_file" :
                                          folder     ? "mixie_chat.remove_context_folder" :
                                                       "mixie_chat.remove_attachment",
                                          wm::OpCallContext::ExecDefault,
@@ -257,7 +269,10 @@ void agent_bubble_references_draw(const bContext *C,
                                          int(BLI_rctf_size_y(&close)),
                                          TIP_("Remove reference"));
       PointerRNA *props = ui::button_operator_ptr_ensure(button);
-      if (folder) {
+      if (file) {
+        RNA_string_set(props, "file_id", path.c_str());
+      }
+      else if (folder) {
         RNA_string_set(props, "folder_id", path.c_str());
       }
       else {
@@ -267,6 +282,8 @@ void agent_bubble_references_draw(const bContext *C,
       ui::mixar_button_tooltip_owned(
           button,
           item.sketch ? TIP_("Discard this sketch and its queued drawing") :
+          file   ? fmt::format(fmt::runtime(TIP_("Detach {}; the agent can no longer read it")),
+                               name).c_str() :
           folder ? fmt::format(fmt::runtime(TIP_("Detach folder {}; the agent can no longer read it")),
                                name).c_str() :
                    fmt::format(fmt::runtime(TIP_("Remove {}")), name).c_str());
@@ -335,7 +352,9 @@ void qa_targets(const wmWindow *win,
     const rctf image = image_rect(g, index);
     rctf visible;
     if (BLI_rctf_isect(&image, &g.view, &visible)) {
-      append(item.source == "FOLDER" ? "reference_folder" : "reference_preview",
+      append(item.source == "FOLDER"       ? "reference_folder" :
+             item.source == "CONTEXT_FILE" ? "reference_file" :
+                                             "reference_preview",
              item.name,
              item.path,
              index,

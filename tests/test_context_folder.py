@@ -25,8 +25,10 @@ CHAT = ROOT / "src/scripts/mixar/modules/space_mixie_chat"
 
 
 class _Folders(list):
+    """Fake CollectionProperty for folder AND file rows (file rows also carry ``kind``)."""
+
     def add(self):
-        item = SimpleNamespace(folder_id="", name="")
+        item = SimpleNamespace(folder_id="", file_id="", name="", kind="")
         self.append(item)
         return item
 
@@ -35,7 +37,8 @@ class _Folders(list):
 
 
 def _scene(session_id="session-1"):
-    return SimpleNamespace(mixie_context_folders=_Folders(), mixie_session_id=session_id)
+    return SimpleNamespace(mixie_context_folders=_Folders(), mixie_context_files=_Folders(),
+                           mixie_context_files_id="", mixie_session_id=session_id)
 
 
 @pytest.fixture
@@ -236,13 +239,16 @@ def test_send_stamps_folder_context_and_the_socket_routes_the_rpc():
     assert "CONTEXT_FOLDER_CAPABILITY," in handshake
 
 
-def test_the_island_paperclip_opens_the_attach_menu_and_draws_folder_chips():
+def test_the_island_paperclip_opens_the_attach_menu_and_draws_folder_and_file_chips():
     bubble = ROOT / "src/source/blender/editors/space_agent_bubble"
     assert '"mixie_chat.attach"' in (bubble / "space_agent_bubble.cc").read_text()
     items = (bubble / "agent_bubble_reference_items.cc").read_text()
     assert '"mixie_context_folders"' in items and '"FOLDER"' in items
+    # Extended: single context files are chips of the same column.
+    assert '"mixie_context_files"' in items and '"CONTEXT_FILE"' in items
     draw = (bubble / "agent_bubble_references.cc").read_text()
     assert '"mixie_chat.remove_context_folder"' in draw and 'RNA_string_set(props, "folder_id"' in draw
+    assert '"mixie_chat.remove_context_file"' in draw and 'RNA_string_set(props, "file_id"' in draw
 
 
 # ── importer (bpy stubbed) ───────────────────────────────────────────────

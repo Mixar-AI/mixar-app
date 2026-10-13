@@ -23,6 +23,7 @@ from ..constants import (
     VIDEO_SUFFIXES,
 )
 from .errors import ContextFolderError
+from .file_set import is_file_set
 
 _KIND_BY_SUFFIX = {
     **{suffix: KIND_TEXT for suffix in TEXT_SUFFIXES},
@@ -66,9 +67,16 @@ def normalize_relative_path(value, *, allow_empty: bool = False) -> str:
     return path.as_posix()
 
 
-def resolve_in_root(root: Path, relative_path, *, allow_empty: bool = False) -> Path:
-    """Resolve under ``root`` and prove no symlink escapes it."""
+def resolve_in_root(root, relative_path, *, allow_empty: bool = False) -> Path:
+    """Resolve under ``root`` and prove no symlink escapes it. For a
+    ``FileSet`` the path must be exactly one member name; the filesystem is
+    never consulted outside the member's own path."""
     relative_path = normalize_relative_path(relative_path, allow_empty=allow_empty)
+    if is_file_set(root):
+        member = root.member(relative_path) if relative_path else None
+        if member is None:
+            raise ContextFolderError("not_found", "No such file in the attached folder")
+        return member
     root = Path(root).resolve(strict=True)
     candidate = (root / relative_path).resolve(strict=False) if relative_path else root
     if candidate != root and root not in candidate.parents:
@@ -76,7 +84,7 @@ def resolve_in_root(root: Path, relative_path, *, allow_empty: bool = False) -> 
     return candidate
 
 
-def existing_file(root: Path, relative_path) -> Path:
+def existing_file(root, relative_path) -> Path:
     path = resolve_in_root(root, relative_path)
     if not path.is_file():
         raise ContextFolderError("not_found", "No such file in the attached folder")

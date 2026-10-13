@@ -4,6 +4,8 @@
 
 """A scene copy never keeps the original's chat session."""
 
+from types import SimpleNamespace
+
 import pytest
 from _open_run_support import _scene, live_bpy  # noqa: F401
 
@@ -120,3 +122,28 @@ def test_the_growth_timer_also_adopts(adoption, monkeypatch):
     monkeypatch.setattr(scene_identity, "dedupe_session_ids", lambda: [])
     assert scene_identity._dedupe_later() is None
     assert made.mixie_chat_state == "IDLE"
+
+
+def test_the_copy_mints_its_own_context_files_set(scenes, tmp_path):
+    """The copy carried its source's context-file rows and set id: two chats
+    would publish competing memberships under ONE id. The copy gets its own
+    id and publishes its set; a copy without rows gets no id at all."""
+    from mixar.modules.context_folder.core.registry import FolderRegistry, set_registry_for_tests
+
+    registry = FolderRegistry(tmp_path / "context_folders.json")
+    set_registry_for_tests(registry)
+    try:
+        original, copy, other = scenes
+        row = SimpleNamespace(file_id="file-1", name="clip.mp4", kind="video", origin="picker")
+        for scene in (original, copy):
+            scene.mixie_context_files = [row]
+            scene.mixie_context_files_id = "set-shared"
+        other.mixie_context_files, other.mixie_context_files_id = [], "set-stale"
+        scene_identity.detach_copy(copy, "sess-k")
+        scene_identity.detach_copy(other, "sess-r")
+        assert original.mixie_context_files_id == "set-shared"
+        assert copy.mixie_context_files_id and copy.mixie_context_files_id != "set-shared"
+        assert registry._sets[copy.mixie_context_files_id] == (("clip.mp4", "file-1"),)
+        assert other.mixie_context_files_id == ""
+    finally:
+        set_registry_for_tests(None)
