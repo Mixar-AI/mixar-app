@@ -28,6 +28,7 @@ static constexpr float ISLAND_W = 1310.0f;
 static constexpr float SEG_X = 24.0f;
 static constexpr float SEND_W = 114.0f;
 static constexpr float CHIP_GAP = 12.0f;
+static constexpr float CHIP_H = 44.0f;
 static constexpr float CHIP_ICON = 18.0f;
 static constexpr float CHIP_ICON_GAP = 8.0f;
 static constexpr float CHIP_PAD_X = 12.0f;
@@ -53,7 +54,9 @@ static void run(const Scenario &sc, const float text_size, const float window_px
   AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
   agent_chip_forms(
       sc.in, m, [&](const char *s) { return float(std::strlen(s)) * text_size * 0.55f; }, chips);
-  const float span = (ISLAND_W - SEG_X * 2.0f - SEND_W) * u;
+  /* Worst case for the chat row: Refine AND Revert, each a chip-height
+   * square stepped left off Send at the row gap (agent_ui_layout_fit_controls). */
+  const float span = (ISLAND_W - SEG_X * 2.0f - SEND_W - 2.0f * (CHIP_H + CHIP_GAP)) * u;
   const float gap = CHIP_GAP * u;
   const AgentChipFit fit = agent_chip_fit(chips, span, gap);
 

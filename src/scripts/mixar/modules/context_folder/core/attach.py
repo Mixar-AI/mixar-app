@@ -16,6 +16,7 @@ from mixar.modules.common.i18n import n_
 from ..constants import MAX_FOLDERS
 from . import grants
 from .errors import ContextFolderError
+from .files import publish_set
 from .manifest import attached_folders, build_folder_context
 from .registry import get_registry
 
@@ -60,8 +61,13 @@ def detach_folder(scene, folder_id: str) -> bool:
 
 
 def grant_session(scene, session_id: str) -> None:
-    """Grant the session exactly the folders attached to its scene now."""
-    grants.grant(session_id, [folder_id for folder_id, _ in attached_folders(scene)])
+    """Grant the session exactly the folders attached to its scene now, plus
+    the scene's "Attached files" set (published first) when it has files."""
+    folder_ids = [folder_id for folder_id, _ in attached_folders(scene)]
+    set_id = publish_set(scene)
+    if set_id:
+        folder_ids.append(set_id)
+    grants.grant(session_id, folder_ids)
 
 
 def folder_context_for_send(scene, session_id: str) -> dict:

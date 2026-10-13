@@ -32,6 +32,7 @@ set(SRC
   mixie_chat_history_events.cc
   mixie_chat_history_overlay.cc
   mixie_chat_lightbox.cc
+  mixie_chat_line_break.cc
   mixie_chat_history_rows.cc
   mixie_chat_history_util.cc
   mixie_chat_hit_testing.cc
@@ -53,6 +54,7 @@ set(SRC
   mixie_chat_messages_layout.cc
   mixie_chat_messages_render.cc
   mixie_chat_props.cc
+  mixie_chat_prose_wrap.cc
   mixie_chat_rules_events.cc
   mixie_chat_rules_overlay.cc
   mixie_chat_rules_chrome.cc
@@ -77,6 +79,7 @@ set(SRC
   mixie_chat_ink_intern.hh
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
+  mixie_chat_line_break.hh
   mixie_chat_markdown_intern.hh
   mixie_chat_rules_intern.hh
   mixie_chat_ui_types.hh

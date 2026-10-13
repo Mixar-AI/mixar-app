@@ -6,7 +6,10 @@
 """
 Mixie Chat Image Operators
 
-Operators for image attachment handling in the chat interface.
+Operators for image attachment handling in the chat interface. The file
+picker / drop operator routes by path: 3D models are imported, images become
+pills, and EVERY other file (video, PDF, text, audio…) becomes a persistent
+context-file chip through ``context_folder.core.files.attach_file``.
 """
 
 import os
@@ -16,8 +19,9 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
-from mixar.modules.common.i18n import rpt_, tip_
-from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS, VIDEO_ATTACHMENT_REJECTED
+from mixar.modules.common.i18n import iface_, rpt_, tip_
+from mixar.modules.context_folder.core.files import attach_file
+from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS
 from ...core import (
     cleanup_loaded_file_image,
     cleanup_loaded_file_images,
@@ -34,16 +38,14 @@ from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_defe
 
 
 class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
-    """Add images or 3D models from files, up to the per-message limit"""
-    bl_idname = "mixie_chat.add_image_from_file"
-    bl_label = "Add Images or 3D Models"
+    """Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"""
+    bl_idname = "mixie_chat.add_image_from_file"  # frozen: QA scenarios and the native dropbox name it
+    bl_label = "Add Files"
     bl_options = {'REGISTER'}
 
-    # ImportHelper settings
-    filter_glob: StringProperty(
-        default=";".join(f"*{ext}" for ext in sorted(SUPPORTED_IMAGE_FORMATS | MODEL_EXTENSIONS)),
-        options={'HIDDEN'}
-    )
+    # ImportHelper settings. An empty glob lists EVERY file: filesel.cc only
+    # arms FILE_TYPE_OPERATOR filtering when the glob is non-empty.
+    filter_glob: StringProperty(default="", options={'HIDDEN'})
 
     # Multi-file selection support
     files: CollectionProperty(type=OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
@@ -71,12 +73,30 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             filepaths = [self.filepath]
 
         added = 0
+        attached_files = 0
         rejected = 0
+        limit_reported = False
         for filepath in filepaths:
+            # Neither a model nor an image: a persistent context-file chip,
+            # with its own cap (MAX_CONTEXT_FILES), outside the pill limit.
+            if not is_model_file(filepath) and \
+                    os.path.splitext(filepath)[1].lower() not in SUPPORTED_IMAGE_FORMATS:
+                result = attach_file(scene, filepath)
+                if not result["success"]:
+                    rejected += 1
+                    self.report({'WARNING'}, rpt_("Cannot add {name}: {error}").format(
+                        name=os.path.basename(filepath),
+                        error=rpt_(result["error"]).format(**result["error_args"])))
+                elif not result["already"]:
+                    attached_files += 1
+                continue
+
             if len(attachments) >= MAX_ATTACHMENTS_PER_MESSAGE:
-                self.report({'WARNING'}, rpt_("Attachment limit ({count}) reached").format(
-                    count=MAX_ATTACHMENTS_PER_MESSAGE))
-                break
+                if not limit_reported:
+                    self.report({'WARNING'}, rpt_("Attachment limit ({count}) reached").format(
+                        count=MAX_ATTACHMENTS_PER_MESSAGE))
+                    limit_reported = True
+                continue
 
             # #1268: a 3D model file is imported into the scene AT ATTACH
             # TIME (client-side; the path never leaves the addon) and the
@@ -128,7 +148,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             mirror_attachment_to_moodboard(scene, filepath, 'FILE')
             added += 1
 
-        if added == 0:
+        if added == 0 and attached_files == 0:
             if not rejected:
                 self.report({'INFO'}, "These references are already attached")
             return {'CANCELLED'}
@@ -142,7 +162,10 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
                     if region.type == 'TOOLS':
                         region.tag_redraw()
 
-        self.report({'INFO'}, rpt_("Added {count} image(s)").format(count=added))
+        if added:
+            self.report({'INFO'}, rpt_("Added {count} image(s)").format(count=added))
+        if attached_files:
+            self.report({'INFO'}, rpt_("Attached {count} file(s) as context").format(count=attached_files))
         return {'FINISHED'}
 
 
@@ -167,7 +190,9 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
             dims = f"{img['width']}x{img['height']}"
             desc = (tip_("{size} - Has data") if img['has_data']
                     else tip_("{size} - No data")).format(size=dims)
-            items.append((name, name, desc))
+            # A movie attaches as a context file, not a pill; say so in the list.
+            label = iface_("{name} (video)").format(name=name) if img.get('is_movie') else name
+            items.append((name, label, desc))
 
         return items
 
@@ -222,8 +247,20 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
 
         image = bpy.data.images[image_name]
         if image.source == 'MOVIE':
-            self.report({'WARNING'}, VIDEO_ATTACHMENT_REJECTED)
-            return {'CANCELLED'}
+            # No video content part on the wire: the movie's FILE becomes a
+            # context-file chip the agent samples frames from.
+            filepath = os.path.realpath(bpy.path.abspath(image.filepath)) if image.filepath else ""
+            if not filepath or not os.path.isfile(filepath):
+                self.report({'ERROR'}, rpt_("The video file behind {name} is missing").format(name=image_name))
+                return {'CANCELLED'}
+            result = attach_file(scene, filepath, origin="blend")
+            if not result["success"]:
+                self.report({'ERROR'}, rpt_(result["error"]).format(**result["error_args"]))
+                return {'CANCELLED'}
+            redraw_chat_areas()
+            sync_bubble_attachment_size_deferred(force_attachment_height=True)
+            self.report({'INFO'}, rpt_("Attached {name} as context").format(name=result["name"]))
+            return {'FINISHED'}
         if not image.has_data:
             self.report({'WARNING'}, "Image has no pixel data")
             return {'CANCELLED'}

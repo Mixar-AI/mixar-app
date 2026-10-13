@@ -431,7 +431,7 @@ void mixie_chat_render_messages(const bContext *C,
                                           smixie->sel_start, smixie->sel_end,
                                           seg_hit.font_size, sel_font, line_h,
                                           seg_hit.mono ? BLFWrapMode::HardLimit :
-                                                         BLFWrapMode::Minimal);
+                                                         CHAT_PROSE_WRAP);
             }
           }
         }

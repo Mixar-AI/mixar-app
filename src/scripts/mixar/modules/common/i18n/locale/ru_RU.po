@@ -2957,7 +2957,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3083,16 +3083,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Файлы"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3104,7 +3116,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3119,6 +3131,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3131,10 +3149,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Ориджин"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8926,11 +8971,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Ошибка синхронизации: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Пропущено видео: {count}. Агент принимает только статичные изображения. Для клипов используйте генерацию видео на мудборде"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Пропущено видео: {count}. Агент принимает только статичные изображения. Для клипов используйте генерацию видео на мудборде"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Изображения мудборда не выбраны"
@@ -9228,9 +9273,6 @@ msgstr "Папка"
 
 msgid "Directory of the selected file(s)"
 msgstr "Папка выбранных файлов"
-
-msgid "Files"
-msgstr "Файлы"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Не удалось загрузить медиафайл: {filepath}"
@@ -18792,7 +18834,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19545,8 +19587,8 @@ msgstr "Изменение..."
 msgid "Awaiting Input..."
 msgstr "Ожидание ввода..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Для видео нужен режим «Видео». Удалите видео, чтобы отправить сообщение агенту."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID пользователя"
@@ -20779,11 +20821,14 @@ msgstr "Архивный сеанс для удаления"
 msgid "Chat removed from history"
 msgstr "Чат удалён из истории"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Не удалось добавить {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Достигнут лимит вложений ({count})"
@@ -20791,14 +20836,14 @@ msgstr "Достигнут лимит вложений ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Пропущено {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Не удалось добавить {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Эти референсы уже прикреплены"
 
 msgid "Added {count} image(s)"
 msgstr "Добавлено изображений: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Добавить из Blend-файла"
@@ -20815,6 +20860,9 @@ msgstr "{size} — есть данные"
 msgid "{size} - No data"
 msgstr "{size} — нет данных"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Выбор изображения из blend-файла"
 
@@ -20823,6 +20871,12 @@ msgstr "Изображение уже добавлено"
 
 msgid "Image not found in blend file"
 msgstr "Изображение не найдено в blend-файле"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Изображение уже прикреплено"
@@ -21573,6 +21627,15 @@ msgstr "Ввод чата"
 
 msgid "Type your message here"
 msgstr "Введите сообщение здесь"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Сообщения чата"
@@ -23677,9 +23740,6 @@ msgstr "Переместить курсор к"
 msgid "Snap 2D cursor"
 msgstr "Привязать 2D-курсор"
 
-msgid "Origin"
-msgstr "Ориджин"
-
 msgid "Mirror selected UVs"
 msgstr "Отразить выделенные UV"
 
@@ -24469,7 +24529,43 @@ msgstr "Начать или остановить диктовку в черно�
 msgid "Stop the running turn"
 msgstr "Остановить текущий ход"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Вернуть\n"
+"\n"
+"Восстановить промпт, написанный до улучшения."
+
+msgid "Refining this prompt..."
+msgstr "Улучшение промпта..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Улучшить снова\n"
+"\n"
+"Ещё раз переписать промпт под модель, которой он будет отправлен. «Вернуть» по-прежнему восстанавливает вашу формулировку, а не предыдущее улучшение."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Улучшить\n"
+"\n"
+"Переписать промпт под модель, которой он будет отправлен, добавив детали, на которые она реагирует."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24480,6 +24576,9 @@ msgstr "Удалить референс"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Отменить этот набросок и его рисунок в очереди"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24850,7 +24949,7 @@ msgstr "Правила — изменить правила проекта и г�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25473,36 +25572,6 @@ msgstr ""
 "Промпт\n"
 "\n"
 "Опишите, что нужно сгенерировать. Нажмите Enter, чтобы отправить эту ноду."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Вернуть\n"
-"\n"
-"Восстановить промпт, написанный до улучшения."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Улучшить снова\n"
-"\n"
-"Ещё раз переписать промпт под модель, которой он будет отправлен. «Вернуть» по-прежнему восстанавливает вашу формулировку, а не предыдущее улучшение."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Улучшить\n"
-"\n"
-"Переписать промпт под модель, которой он будет отправлен, добавив детали, на которые она реагирует."
-
-msgid "Refining this prompt..."
-msgstr "Улучшение промпта..."
 
 msgid ""
 "Assemble\n"

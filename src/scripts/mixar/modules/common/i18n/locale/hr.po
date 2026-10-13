@@ -2957,7 +2957,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3083,16 +3083,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Datoteke"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3104,7 +3116,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3119,6 +3131,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3131,10 +3149,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Ishodište"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8926,11 +8971,11 @@ msgstr "Osvježava sinkronizaciju privitaka s moodboarda u razgovor ({shortcut})
 msgid "Sync failed: {error}"
 msgstr "Sinkronizacija nije uspjela: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeni videozapisi: {count}. Agent prima samo nepomične slike. Za isječke upotrijebite generiranje videozapisa na moodboardu"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeni videozapisi: {count}. Agent prima samo nepomične slike. Za isječke upotrijebite generiranje videozapisa na moodboardu"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Nije odabrana nijedna slika moodboarda"
@@ -9228,9 +9273,6 @@ msgstr "Direktorij"
 
 msgid "Directory of the selected file(s)"
 msgstr "Direktorij odabranih datoteka"
-
-msgid "Files"
-msgstr "Datoteke"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Učitavanje medija nije uspjelo: {filepath}"
@@ -18792,7 +18834,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19545,8 +19587,8 @@ msgstr "Izmjena..."
 msgid "Awaiting Input..."
 msgstr "Čeka unos..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Videozapisi traže način Video. Uklonite videozapis da biste poslali agentu."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID korisnika"
@@ -20779,11 +20821,14 @@ msgstr "Arhivirana sesija za brisanje"
 msgid "Chat removed from history"
 msgstr "Razgovor je uklonjen iz povijesti"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Nije moguće dodati {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Dosegnuto je ograničenje privitaka ({count})"
@@ -20791,14 +20836,14 @@ msgstr "Dosegnuto je ograničenje privitaka ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Preskočeno {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Nije moguće dodati {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Ove reference su već privijene"
 
 msgid "Added {count} image(s)"
 msgstr "Dodane slike: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Dodaj iz blenda"
@@ -20815,6 +20860,9 @@ msgstr "{size} - ima podatke"
 msgid "{size} - No data"
 msgstr "{size} - nema podataka"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Odaberi sliku iz blend datoteke"
 
@@ -20823,6 +20871,12 @@ msgstr "Slika je već dodana"
 
 msgid "Image not found in blend file"
 msgstr "Slika nije pronađena u blend datoteci"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Slika je već privijena"
@@ -21573,6 +21627,15 @@ msgstr "Unos razgovora"
 
 msgid "Type your message here"
 msgstr "Ovdje upišite poruku"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Poruke razgovora"
@@ -23677,9 +23740,6 @@ msgstr "Prilijepi kursor"
 msgid "Snap 2D cursor"
 msgstr "Priljepljuje 2D kursor"
 
-msgid "Origin"
-msgstr "Ishodište"
-
 msgid "Mirror selected UVs"
 msgstr "Zrcali odabrane UV-ove"
 
@@ -24469,7 +24529,43 @@ msgstr "Pokrenite ili zaustavite diktiranje u skicu"
 msgid "Stop the running turn"
 msgstr "Zaustavi tekući potez"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Vrati\n"
+"\n"
+"Vraća upit koji ste napisali prije dorade."
+
+msgid "Refining this prompt..."
+msgstr "Dorada ovog upita..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Doradi ponovno\n"
+"\n"
+"Još jednom prepisuje ovaj upit za model kojem će biti poslan. Vrati i dalje vraća Vašu formulaciju, a ne prethodnu doradu."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Doradi\n"
+"\n"
+"Prepisuje ovaj upit za model kojem će biti poslan, dodajući detalj na koji taj model reagira."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24480,6 +24576,9 @@ msgstr "Ukloni referencu"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Odbaci ovu skicu i njezin crtež u redu čekanja"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24850,7 +24949,7 @@ msgstr "Pravila — uredite projektna i globalna pravila za agenta"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25473,36 +25572,6 @@ msgstr ""
 "Upit\n"
 "\n"
 "Opišite što generirati. Pritisnite Enter za slanje ovog čvora."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Vrati\n"
-"\n"
-"Vraća upit koji ste napisali prije dorade."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Doradi ponovno\n"
-"\n"
-"Još jednom prepisuje ovaj upit za model kojem će biti poslan. Vrati i dalje vraća Vašu formulaciju, a ne prethodnu doradu."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Doradi\n"
-"\n"
-"Prepisuje ovaj upit za model kojem će biti poslan, dodajući detalj na koji taj model reagira."
-
-msgid "Refining this prompt..."
-msgstr "Dorada ovog upita..."
 
 msgid ""
 "Assemble\n"

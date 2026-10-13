@@ -2957,7 +2957,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3083,16 +3083,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "文件"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3104,7 +3116,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3119,6 +3131,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3131,10 +3149,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "原点"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8926,11 +8971,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "同步失败：{error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "已跳过 {count} 个视频：智能体仅接受静态图像。如需处理视频片段，请在情绪板上使用视频生成"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "已跳过 {count} 个视频：智能体仅接受静态图像。如需处理视频片段，请在情绪板上使用视频生成"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "未选择情绪板图像"
@@ -9228,9 +9273,6 @@ msgstr "文件夹"
 
 msgid "Directory of the selected file(s)"
 msgstr "所选文件所在的目录"
-
-msgid "Files"
-msgstr "文件"
 
 msgid "Failed to load media: {filepath}"
 msgstr "无法加载媒体：{filepath}"
@@ -18792,7 +18834,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19545,8 +19587,8 @@ msgstr "修改中..."
 msgid "Awaiting Input..."
 msgstr "等待输入..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "视频需要使用视频模式。请移除视频后再发送给智能体。"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "用户 ID"
@@ -20779,11 +20821,14 @@ msgstr "要删除的已归档会话"
 msgid "Chat removed from history"
 msgstr "已从历史记录中移除对话"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "无法添加 {name}：{error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "已达到附件数量上限（{count}）"
@@ -20791,14 +20836,14 @@ msgstr "已达到附件数量上限（{count}）"
 msgid "Skipped {name}: {error}"
 msgstr "已跳过 {name}：{error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "无法添加 {name}：{error}"
-
 msgid "These references are already attached"
 msgstr "这些参考图已附加"
 
 msgid "Added {count} image(s)"
 msgstr "已添加 {count} 张图像"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "从 Blend 添加"
@@ -20815,6 +20860,9 @@ msgstr "{size} - 有数据"
 msgid "{size} - No data"
 msgstr "{size} - 无数据"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "从 Blend 文件中选择图像"
 
@@ -20823,6 +20871,12 @@ msgstr "图像已添加"
 
 msgid "Image not found in blend file"
 msgstr "在 Blend 文件中找不到图像"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "图像已附加"
@@ -21573,6 +21627,15 @@ msgstr "对话输入"
 
 msgid "Type your message here"
 msgstr "在此输入消息"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "对话消息"
@@ -23677,9 +23740,6 @@ msgstr "吸附游标"
 msgid "Snap 2D cursor"
 msgstr "吸附 2D 游标"
 
-msgid "Origin"
-msgstr "原点"
-
 msgid "Mirror selected UVs"
 msgstr "镜像选中的 UV"
 
@@ -24469,7 +24529,43 @@ msgstr "开始或停止向草图草稿听写"
 msgid "Stop the running turn"
 msgstr "停止正在运行的回合"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"还原\n"
+"\n"
+"恢复优化前您编写的提示词。"
+
+msgid "Refining this prompt..."
+msgstr "正在优化此提示词..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"再次优化\n"
+"\n"
+"针对将要发送到的模型再次改写此提示词。“还原”仍会恢复您自己的措辞，而不是上一次的优化结果。"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"优化\n"
+"\n"
+"针对将要发送到的模型改写此提示词，补充该模型能更好响应的细节。"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24480,6 +24576,9 @@ msgstr "移除参考"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "丢弃此草图及其排队中的绘画"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24850,7 +24949,7 @@ msgstr "规则——编辑智能体的项目规则和全局规则"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25473,36 +25572,6 @@ msgstr ""
 "提示词\n"
 "\n"
 "描述要生成的内容。按 Enter 提交此节点。"
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"还原\n"
-"\n"
-"恢复优化前您编写的提示词。"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"再次优化\n"
-"\n"
-"针对将要发送到的模型再次改写此提示词。“还原”仍会恢复您自己的措辞，而不是上一次的优化结果。"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"优化\n"
-"\n"
-"针对将要发送到的模型改写此提示词，补充该模型能更好响应的细节。"
-
-msgid "Refining this prompt..."
-msgstr "正在优化此提示词..."
 
 msgid ""
 "Assemble\n"

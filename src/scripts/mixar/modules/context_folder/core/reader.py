@@ -73,7 +73,8 @@ def read_text(root, path, start_line=None, end_line=None) -> dict:
     if file_kind(relative) != KIND_TEXT:
         raise ContextFolderError(
             "not_text",
-            "Only text files can be read; view images, import models, and ask the user about documents",
+            "Only text files can be read; view images and videos, import models, "
+            "and ask the user about documents",
         )
     if target.stat().st_size > MAX_TEXT_FILE_BYTES:
         raise ContextFolderError("file_too_large", "That file is too large to read")

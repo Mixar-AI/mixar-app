@@ -7,6 +7,7 @@ Handlers only set Python flags. A main-thread timer finalizes after native
 teardown, keeping the shared render reservation through persistence/restore.
 No chat lifetime, polling RPC, preview caps or synchronous fallback.
 """
+import json
 import re
 import shutil
 import tempfile
@@ -18,13 +19,45 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.render_coordinator import core as slot
-from ..constants import RESULTS_NS, MAX_RESULTS, TICK_SECONDS, LOST_AFTER_SECONDS
+from ..constants import (RESULTS_NS, MAX_RESULTS, TICK_SECONDS, LOST_AFTER_SECONDS,
+                         CALLBACK_FEATURE_KEY, CALLBACK_JOB_TYPES, CALLBACK_STATUSES)
 from .settings import Settings, render_info
 from .outputs import deliver, notify
 
 logger = get_logger(__name__)
 _job = None
 _records = {}
+_AGENT_REF_FIELDS = ('generation_id', 'session_id', 'run_id')
+
+
+def _agent_ref(raw):
+    """The agent run identity, or None: a bad ref must never block a render."""
+    try:
+        ref = json.loads(raw) if raw else None
+    except Exception:
+        return None
+    if not isinstance(ref, dict):
+        return None
+    if all(isinstance(ref.get(name), str) and ref[name] for name in _AGENT_REF_FIELDS):
+        return ref
+    return None
+
+
+def _report(job, status, error='', result_name=''):
+    """One ``generation.agent_result`` through the job-queue outbox (retried there)."""
+    ref = job.get('agent_ref')
+    if not ref:
+        return
+    try:
+        from mixar.modules.common.job_queue.core.agent_results import report_agent_result_params
+        report_agent_result_params(job['key'], dict(
+            agent_ref=dict(ref), generation_id=ref['generation_id'],
+            feature_key=CALLBACK_FEATURE_KEY, job_type=CALLBACK_JOB_TYPES[job['kind']],
+            model='', label=job.get('label', ''), backend_job_id=job['key'],
+            status=CALLBACK_STATUSES[status], error=error,
+            result_names=[result_name] if result_name else []))
+    except Exception:
+        logger.exception('Scene render agent callback failed')
 
 
 def _publish(key, value):
@@ -74,6 +107,7 @@ def _before_load(_unused, _extra=None):
         # The timer retains only its old job and cleans files after native teardown.
         _job['invalidated'] = True
         notify(_job['key'], _job['kind'], 'cancelled', rpt_('The project was closed.'))
+        _report(_job, 'cancelled', 'project_closed')
         slot.release(_job['reservation'])
     _job = None
     _records.clear()
@@ -119,10 +153,11 @@ def _tick(job):
     notify(job['key'], job['kind'], value['status'],
            rpt_('Open Moodboard to view it.') if value['status'] == 'done' else
            rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '')
+    _report(job, value['status'], value.get('error', ''), value.get('moodboard_image_name', ''))
     return None
 
 
-def start(context, key, kind='image', label='', expected_session='', **options):
+def start(context, key, kind='image', label='', expected_session='', agent_ref_json='', **options):
     global _job
     if not isinstance(key, str) or not re.fullmatch('[a-f0-9]{32}', key):
         return _reply('', 'failed', error='invalid_job_id')
@@ -171,7 +206,8 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         settings = Settings(scene)
         job = dict(key=key, kind=kind, scene=scene, session=session, settings=settings,
                    folder=folder, path=path, label=label[:200], started=time.monotonic(),
-                   terminal=None, written=0, reservation=reservation, render={})
+                   terminal=None, written=0, reservation=reservation, render={},
+                   agent_ref=_agent_ref(agent_ref_json))
         _job = job
         settings.apply(kind, path, **options)
         job['render'] = render_info(scene)

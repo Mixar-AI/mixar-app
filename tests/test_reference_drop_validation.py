@@ -12,11 +12,11 @@ from unittest.mock import Mock
 from PIL import Image
 import pytest
 
-from mixar.modules.space_mixie_chat.constants import MAX_ATTACHMENTS_PER_MESSAGE
+from mixar.modules.space_mixie_chat.constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAT = ROOT / 'src/scripts/mixar/modules/space_mixie_chat'
-VIDEO_MESSAGE = "Videos can't be sent to the agent yet"
+VIDEO_MESSAGE = "Attach the video as a file: videos become context the agent can watch"
 
 
 class Attachments(list):
@@ -34,12 +34,17 @@ def function(path, name, namespace, owner=None):
     return namespace[name]
 
 
-def execute(paths, *, attachments=None, valid=None, model=False):
+def execute(paths, *, attachments=None, valid=None, model=False, attach=None):
     attachments = attachments if attachments is not None else Attachments()
     mirror = Mock()
     importer = Mock(return_value={'success': True, 'display_name': 'model.obj',
                                   'imported_object_names': ['Object']})
+    # Non-image, non-model paths route to context_folder's attach_file (a chip,
+    # not a pill); the harness injects it like every other collaborator.
+    attach = attach if attach is not None else Mock(
+        return_value={'success': True, 'file_id': 'f', 'name': 'clip.mp4', 'kind': 'video', 'already': False})
     namespace = dict(os=os, MAX_ATTACHMENTS_PER_MESSAGE=MAX_ATTACHMENTS_PER_MESSAGE, rpt_=lambda s: s,
+                     SUPPORTED_IMAGE_FORMATS=SUPPORTED_IMAGE_FORMATS, attach_file=attach,
                      is_model_file=lambda p: model, import_model_attachment=importer,
                      validate_image_file=valid or (lambda p: (False, 'Cannot decode image')),
                      find_attachment_for_file=lambda a, p: None,
@@ -149,34 +154,45 @@ def test_webp_reference_is_supported(validate, tmp_path):
 
 @pytest.mark.parametrize('name', ['clip.mp4', 'clip.MOV', 'clip.webm'])
 def test_video_reference_is_refused_with_a_specific_reason(validate, tmp_path, name):
+    # validate_image_file still guards OTHER callers (a restored legacy video
+    # pill, the encoder) with the specific message...
     path = tmp_path/name
     path.write_bytes(b'\x00\x00\x00\x18ftypmp42')
     valid, err = validate(str(path))
     assert valid is False
     assert err == VIDEO_MESSAGE
     assert 'Unsupported format' not in err
+    # ...but the picker never reaches it for a video: the path is routed to
+    # attach_file (a context-file chip), no pill, no board mirror.
+    attach = Mock(return_value={'success': True, 'file_id': 'f', 'name': name, 'kind': 'video', 'already': False})
+    result, attachments, mirror, _, report = execute([str(path)], attach=attach)
+    assert result == {'FINISHED'} and not attachments
+    attach.assert_called_once()
+    assert attach.call_args.args[1] == str(path)
+    mirror.assert_not_called()
+    assert 'Attached 1 file(s) as context' in report.call_args.args[1]
 
 
-def test_chat_drop_poll_refuses_movie_paths_before_release():
+def test_chat_drop_poll_routes_movie_paths_to_python():
+    # Retargeted: a movie drop is no longer refused at hover; Python routes it
+    # to a context-file chip, so the poll must not name FILE_TYPE_MOVIE at all.
     src = (ROOT/'src/source/blender/editors/space_mixie_chat/mixie_chat_dragdrop.cc').read_text()
     start = src.index('if (drag->type == WM_DRAG_PATH)')
     body = src[start:src.index('return false;\n}', start)]
-    assert 'WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE)' in body
-    assert body.index('FILE_TYPE_MOVIE') < body.index('return true;')
+    assert 'FILE_TYPE_MOVIE' not in body
+    assert 'return true;' in body
 
 
-def test_moodboard_attach_reports_skipped_videos():
+def test_moodboard_attach_reports_videos_attached_as_context():
+    # Retargeted: selected videos are attached as context files (never
+    # "skipped"); the operator reports how many were newly attached.
     src = ROOT/'src/scripts/mixar/modules/moodboard/ui/operators/chat_integration_ops.py'
-    namespace = dict(is_video_item=lambda item: item.video)
-    count = function(src, 'count_selected_videos', namespace)
-    still = SimpleNamespace(selected=True, video=False)
-    clip = SimpleNamespace(selected=True, video=True)
-    idle = SimpleNamespace(selected=False, video=True)
-    assert count(SimpleNamespace(mixie_moodboard_images=[still, clip, idle, clip])) == 2
     body = src.read_text()
+    assert 'count_selected_videos' not in body and 'Skipped' not in body
     execute = body[body.index('class MIXIE_OT_moodboard_send_to_chat'):]
-    assert 'count_selected_videos(scene)' in execute
-    assert "'WARNING'" in execute[execute.index('skipped_videos'):]
+    assert 'sync_selected_videos(scene)' in execute
+    assert 'Attached {count} video as context' in execute
+    assert 'Attached {count} videos as context' in execute
 
 
 @pytest.mark.parametrize('target,remaining', [('/tmp/b.obj', ['/tmp/a.obj']),

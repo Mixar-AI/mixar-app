@@ -2957,7 +2957,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3083,16 +3083,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Dosieroj"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3104,7 +3116,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3119,6 +3131,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3131,10 +3149,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Origino"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8926,11 +8971,11 @@ msgstr "Refreŝigi la sinkronigon de kunsendaĵoj de inspirtabulo al babilo ({sh
 msgid "Sync failed: {error}"
 msgstr "Sinkronigo malsukcesis: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preterlasis {count} videon: la agento akceptas nur senmovajn bildojn. Uzu Video-generadon sur la inspirtabulo por filmetoj"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preterlasis {count} videojn: la agento akceptas nur senmovajn bildojn. Uzu Video-generadon sur la inspirtabulo por filmetoj"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Neniuj bildoj de la inspirtabulo elektitaj"
@@ -9228,9 +9273,6 @@ msgstr "Dosierujo"
 
 msgid "Directory of the selected file(s)"
 msgstr "Dosierujo de la elektitaj dosieroj"
-
-msgid "Files"
-msgstr "Dosieroj"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Malsukcesis ŝargi aŭdvidaĵon: {filepath}"
@@ -18792,7 +18834,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19545,8 +19587,8 @@ msgstr "Modifado..."
 msgid "Awaiting Input..."
 msgstr "Atendado de enigo..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Videoj postulas Video-modon. Forigu la videon por sendi al la agento."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Uzant-ID"
@@ -20779,11 +20821,14 @@ msgstr "Arĥivita seanco forviŝota"
 msgid "Chat removed from history"
 msgstr "Babilado forigita el la historio"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Ne eblas aldoni {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Limo de kunsendaĵoj ({count}) atingita"
@@ -20791,14 +20836,14 @@ msgstr "Limo de kunsendaĵoj ({count}) atingita"
 msgid "Skipped {name}: {error}"
 msgstr "Preterlasis {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Ne eblas aldoni {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Ĉi tiuj referencoj jam estas kunsenditaj"
 
 msgid "Added {count} image(s)"
 msgstr "Aldonis {count} bildo(j)n"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Aldoni el Blend"
@@ -20815,6 +20860,9 @@ msgstr "{size} - Havas datumojn"
 msgid "{size} - No data"
 msgstr "{size} - Neniuj datumoj"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Elekti bildon el blend-dosiero"
 
@@ -20823,6 +20871,12 @@ msgstr "Bildo jam aldonita"
 
 msgid "Image not found in blend file"
 msgstr "Bildo ne trovita en la blend-dosiero"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Bildo jam kunsendita"
@@ -21573,6 +21627,15 @@ msgstr "Babil-enigo"
 
 msgid "Type your message here"
 msgstr "Tajpu vian mesaĝon ĉi tie"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Babil-mesaĝoj"
@@ -23677,9 +23740,6 @@ msgstr "Kapti kursoron"
 msgid "Snap 2D cursor"
 msgstr "Kaptas la 2D-kursoron"
 
-msgid "Origin"
-msgstr "Origino"
-
 msgid "Mirror selected UVs"
 msgstr "Spegulas la elektitajn UV-ojn"
 
@@ -24469,7 +24529,43 @@ msgstr "Startigas aŭ haltigas diktadon en la skizan malneton"
 msgid "Stop the running turn"
 msgstr "Haltigi la kurantan turnon"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Malfari\n"
+"\n"
+"Restarigi la inviton, kiun vi skribis antaŭ ol ĝi estis rafinita."
+
+msgid "Refining this prompt..."
+msgstr "Rafinado de ĉi tiu invito..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Rafini denove\n"
+"\n"
+"Reskribi ĉi tiun inviton ankoraŭ unu fojon por la modelo, al kiu ĝi estos sendita. Malfari ankoraŭ restarigas vian propran vortumon, ne la antaŭan rafinaĵon."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Rafini\n"
+"\n"
+"Reskribi ĉi tiun inviton por la modelo, al kiu ĝi estos sendita, aldonante la detalon, al kiu tiu modelo respondas."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24480,6 +24576,9 @@ msgstr "Forigi referencon"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Forĵetas ĉi tiun skizon kaj ĝian envicigitan desegnon"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24850,7 +24949,7 @@ msgstr "Reguloj — redaktu projektajn kaj ĝeneralajn regulojn por la agento"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25473,36 +25572,6 @@ msgstr ""
 "Invito\n"
 "\n"
 "Priskribu, kion generi. Premu Enter por sendi ĉi tiun nodon."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Malfari\n"
-"\n"
-"Restarigi la inviton, kiun vi skribis antaŭ ol ĝi estis rafinita."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Rafini denove\n"
-"\n"
-"Reskribi ĉi tiun inviton ankoraŭ unu fojon por la modelo, al kiu ĝi estos sendita. Malfari ankoraŭ restarigas vian propran vortumon, ne la antaŭan rafinaĵon."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Rafini\n"
-"\n"
-"Reskribi ĉi tiun inviton por la modelo, al kiu ĝi estos sendita, aldonante la detalon, al kiu tiu modelo respondas."
-
-msgid "Refining this prompt..."
-msgstr "Rafinado de ĉi tiu invito..."
 
 msgid ""
 "Assemble\n"

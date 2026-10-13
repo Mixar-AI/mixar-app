@@ -23,6 +23,8 @@ inside the depsgraph handler (the handler-pattern rule).
 
 from __future__ import annotations
 
+import uuid
+
 import bpy
 from bpy.app.handlers import persistent
 
@@ -86,8 +88,25 @@ def detach_copy(scene, was: str) -> None:
                 del scene[key]
         except Exception:  # noqa: BLE001
             pass
+    _renew_context_files_id(scene)
     slog("tab.dedupe", scene, was=was)
     logger.info("Scene %r was a copy of the chat session %s: detached as a new chat", scene.name, was[:8])
+
+
+def _renew_context_files_id(scene) -> None:
+    """The copy also carried its source's context-file rows AND their set id
+    (``mixie_context_files_id``); left alone, two chats would publish competing
+    memberships under one id. Mint the copy its own id and publish its set —
+    just blanking it would hide the copied chips from the agent."""
+    if not hasattr(scene, "mixie_context_files_id"):
+        return
+    try:
+        from mixar.modules.context_folder.core.files import publish_set
+
+        scene.mixie_context_files_id = str(uuid.uuid4()) if len(scene.mixie_context_files) else ""
+        publish_set(scene)
+    except Exception:  # noqa: BLE001 — a stripped build without context files
+        logger.debug("context-file set renewal failed for %r", scene.name, exc_info=True)
 
 
 def dedupe_session_ids(scenes=None) -> list[str]:
