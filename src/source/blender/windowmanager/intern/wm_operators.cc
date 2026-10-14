@@ -104,6 +104,7 @@
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
+#include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_types.hh"
 
@@ -3540,6 +3541,7 @@ static wmOperatorStatus radial_control_modal(bContext *C, wmOperator *op, const 
     if (wm->op_undo_depth == 0) {
       ID *id = rc->ptr.owner_id;
       if (ED_undo_is_legacy_compatible_for_property(C, id, rc->ptr)) {
+        Mixar_StallScope stall_scope("undo_push", op->type->idname);
         ED_undo_push(C, op->type->name);
       }
     }

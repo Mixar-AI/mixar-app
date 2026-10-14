@@ -38,6 +38,7 @@ _FIELDS = (
     "byok_current_model",
     "byok_current_supports_vision",
     "byok_key_preview",
+    "byok_device_key_missing",
 )
 
 _DEFAULTS: Dict[str, Any] = {
@@ -48,6 +49,17 @@ _DEFAULTS: Dict[str, Any] = {
     # false "text-only" note.
     "byok_current_supports_vision": True,
     "byok_key_preview": "",
+    # Server says active but THIS device holds no usable key (an upgrade from
+    # a client that stored keys server-side, a second machine, or an expired
+    # Codex sign-in). Derived from `key_store` after every successful apply;
+    # the dialog then asks for the key only.
+    "byok_device_key_missing": False,
+    # Whether a server payload has been applied since the last `clear()`.
+    # Not mirrored. Before the cold-start fetch lands the default "inactive"
+    # is not knowledge: a 409 `byok_key_required` in that window refreshes
+    # the mirror (`byok_notice`) instead of flipping "Key needed on this
+    # device" over a key that is on this device.
+    "byok_state_loaded": False,
 }
 
 _lock = threading.Lock()
@@ -72,16 +84,19 @@ def refresh() -> None:
     byok_client.fetch_state(on_done=_done)
 
 
-def clear(wm=None) -> None:
+def clear(wm=None, *, loaded: bool = False) -> None:
     """Reset to defaults and invalidate any fetch already in flight.
 
     ``wm`` is the caller's live WindowManager when it has one — logout does,
-    and passing it avoids re-deriving it from ``bpy.context``.
+    and passing it avoids re-deriving it from ``bpy.context``. ``loaded``
+    is True for a server-confirmed removal (DELETE landed: "inactive" is
+    knowledge, so the next turn's 409 handling must not treat the mirror
+    as unfetched) and False on logout, where nothing is known yet.
     """
     global _epoch, _state
     with _lock:
         _epoch += 1
-        _state = dict(_DEFAULTS)
+        _state = dict(_DEFAULTS, byok_state_loaded=loaded)
     apply_to_wm(wm)
 
 
@@ -112,7 +127,39 @@ def apply_from_payload(data: Optional[dict], wm=None, *, epoch: Optional[int] = 
             return False
         _state = parsed
     apply_to_wm(wm)
+    _check_device_key(parsed)
     return True
+
+
+def set_device_key_missing(missing: bool) -> None:
+    """Main thread: record whether this device holds a usable key."""
+    global _state
+    with _lock:
+        if _state["byok_device_key_missing"] == bool(missing):
+            return
+        _state = dict(_state, byok_device_key_missing=bool(missing))
+    apply_to_wm()
+    _redraw()
+
+
+def _check_device_key(parsed: Dict[str, Any]) -> None:
+    """After a successful apply: ask the key store (worker thread) whether
+    this device can actually sign the next turn. Inactive → never missing."""
+    if not parsed["byok_is_active"]:
+        set_device_key_missing(False)
+        return
+    epoch = current_epoch()
+
+    def _done(missing: bool):
+        if epoch == current_epoch():
+            set_device_key_missing(missing)
+
+    try:
+        from . import key_store
+
+        key_store.check_presence_async(parsed["byok_current_provider"], _done)
+    except Exception as exc:  # noqa: BLE001 — a store fault is not a missing key
+        logger.debug("BYOK device key check skipped: %s", exc)
 
 
 def apply_to_wm(wm=None) -> None:
@@ -149,6 +196,7 @@ def _parse(data) -> Dict[str, Any]:
     parsed = dict(_DEFAULTS)
     if not isinstance(data, dict):
         return parsed
+    parsed["byok_state_loaded"] = True
     parsed["byok_is_active"] = bool(data.get("byok_active", False))
     items = data.get("items") or []
     if items and isinstance(items[0], dict):
@@ -174,12 +222,13 @@ def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
             logger.debug("BYOK state response dropped (stale epoch)")
             return
         if success:
-            _state = _parse(data)
+            _state = parsed = _parse(data)
         else:
             logger.debug("BYOK state fetch failed (keeping cached state): %s", err)
             return
     apply_to_wm()
     _redraw()
+    _check_device_key(parsed)
 
 
 def _redraw() -> None:

@@ -30,7 +30,7 @@ def request(record, method, path, payload=None, headers=None, timeout=10):
         conn.request(method, path, body=body, headers={
             "Authorization": "Bearer " + record["token"], "Content-Type": "application/json", **(headers or {})})
         response = conn.getresponse()
-        raw = response.read(MAX_BODY+1)
+        raw = discovery.read_body(response, MAX_BODY)
         if len(raw) > MAX_BODY:
             raise ValueError("MCP response exceeds the local transport limit")
         if not 200 <= response.status < 300:

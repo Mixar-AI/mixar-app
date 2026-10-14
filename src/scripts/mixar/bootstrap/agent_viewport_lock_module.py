@@ -102,7 +102,7 @@ def _lock_tick():
             # repaints — without this final tag it would only clear on
             # user interaction (e.g. a click).
             _was_executing = False
-            halo_renderer.tag_view3d_redraw()
+            halo_renderer.tag_view3d_redraw(active=False)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Agent viewport lock tick error: %s", exc)
     return HALO_TICK_IDLE_S

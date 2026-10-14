@@ -1439,6 +1439,33 @@ msgstr "Dữ liệu biểu mẫu không hợp lệ — vui lòng liên hệ bộ
 msgid "Something went wrong on our end. Please try again."
 msgstr "Đã xảy ra lỗi từ phía chúng tôi. Vui lòng thử lại."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Đang đọc danh mục mô hình cục bộ"
 
@@ -1562,6 +1589,30 @@ msgstr "Không thể đổi mô hình"
 msgid "Could not reset model"
 msgstr "Không thể hoàn lại mô hình"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Dùng gói đăng ký ChatGPT của bạn — không trừ tín dụng Mixar."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Đang xóa khóa của bạn…"
 
@@ -1570,6 +1621,9 @@ msgstr "Đang xác thực với nhà cung cấp…"
 
 msgid "AI Provider Settings"
 msgstr "Sắp Đặt Nhà Cung Cấp AI"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Đang Hoạt Động"
@@ -1601,38 +1655,32 @@ msgstr "Mô hình chỉ văn bản — trò chuyện hoạt động; nhiệm v�
 msgid "Remove API Key…"
 msgstr "Xóa Khóa API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Thiết Lập Nhà Cung Cấp"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Được lưu dạng mã hóa, chỉ dùng cho các yêu cầu tác nhân Mixar — sau khi lưu chỉ hiển thị bản xem trước đã che."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Chọn mô hình hỗ trợ gọi công cụ / hàm — tác nhân cần tính năng này."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Nạp từ ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…hoặc dán thủ công"
-
-msgid "{count} characters pasted"
-msgstr "Đã dán {count} ký tự"
-
-msgid "Empty — paste your auth.json"
-msgstr "Trống — hãy dán auth.json của bạn"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Chạy  codex login  trong terminal, sau đó nạp hoặc dán toàn bộ"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "nội dung của ~/.codex/auth.json (nút dán đọc từ bảng nhớ tạm của bạn)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Dùng gói đăng ký ChatGPT của bạn — không trừ tín dụng Mixar."
 
 msgid "Couldn't apply your changes"
 msgstr "Không thể áp dụng thay đổi của bạn"
@@ -1742,41 +1790,8 @@ msgstr "Chọn mô hình cho nhà cung cấp này và nhập khóa API."
 msgid "Model slug and API key are required."
 msgstr "Cần có slug mô hình và khóa API."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Chọn một mô hình Codex và nạp gói auth.json của bạn."
-
 msgid "Save failed."
 msgstr "Lưu thất bại."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Đọc ~/.codex/auth.json từ máy này vào trường"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Không tìm thấy ~/.codex/auth.json — hãy chạy `codex login` trước"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Không thể đọc ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json trống"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
-
-msgid "Loaded auth.json"
-msgstr "Đã nạp auth.json"
-
-msgid "Paste auth.json"
-msgstr "Dán auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Dán ~/.codex/auth.json của bạn từ bảng nhớ tạm vào trường"
-
-msgid "Clipboard is empty"
-msgstr "Bộ nhớ tạm hiện thời là trống rỗng"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json đã dán quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
 
 msgid "Remove"
 msgstr "Xóa/Loại Bỏ"
@@ -1850,11 +1865,11 @@ msgstr "Khóa API của bạn được lưu dạng mã hóa và chỉ dùng cho 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bất kỳ slug mô hình nào từ openrouter.ai/models (ví dụ anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json của Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Nội dung của ~/.codex/auth.json (hãy chạy `codex login` trước)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Chế độ cục bộ"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Tập Tin"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Tọa Độ Gốc"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Đồng bộ thất bại: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Đã bỏ qua {count} video: tác nhân chỉ chấp nhận hình ảnh tĩnh. Hãy dùng Sinh Tạo Video trên bảng cảm hứng cho các đoạn phim"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Đã bỏ qua {count} video: tác nhân chỉ chấp nhận hình ảnh tĩnh. Hãy dùng Sinh Tạo Video trên bảng cảm hứng cho các đoạn phim"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Chưa chọn hình ảnh bảng cảm hứng nào"
@@ -9219,9 +9279,6 @@ msgstr "Thư Mục"
 
 msgid "Directory of the selected file(s)"
 msgstr "Thư mục của các tập tin đã chọn"
-
-msgid "Files"
-msgstr "Tập Tin"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Không thể nạp phương tiện: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "Đang Sửa Đổi..."
 msgid "Awaiting Input..."
 msgstr "Đang Chờ Nhập..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Video cần chế độ Video. Hãy xóa video để gửi cho Tác Nhân."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID Người Dùng"
@@ -19547,6 +19604,9 @@ msgstr "ID người dùng để đăng nhập Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Tác nhân chấp nhận: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Đã dừng*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Nâng Cấp"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Nhận xét phản hồi đang trống"
@@ -20728,11 +20797,14 @@ msgstr "Phiên đã lưu trữ cần xóa"
 msgid "Chat removed from history"
 msgstr "Đã xóa cuộc trò chuyện khỏi lịch sử"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Không thể thêm {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Đã đạt giới hạn tệp đính kèm ({count})"
@@ -20740,14 +20812,14 @@ msgstr "Đã đạt giới hạn tệp đính kèm ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Đã bỏ qua {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Không thể thêm {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Các tham chiếu này đã được đính kèm"
 
 msgid "Added {count} image(s)"
 msgstr "Đã thêm {count} hình ảnh"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Thêm từ Blend"
@@ -20764,6 +20836,9 @@ msgstr "{size} - Có dữ liệu"
 msgid "{size} - No data"
 msgstr "{size} - Không có dữ liệu"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Chọn hình ảnh từ tập tin blend"
 
@@ -20772,6 +20847,12 @@ msgstr "Hình ảnh đã được thêm"
 
 msgid "Image not found in blend file"
 msgstr "Không tìm thấy hình ảnh trong tập tin blend"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Hình ảnh đã được đính kèm"
@@ -21522,6 +21603,15 @@ msgstr "Ô Nhập Trò Chuyện"
 
 msgid "Type your message here"
 msgstr "Nhập tin nhắn tại đây"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Tin Nhắn Trò Chuyện"
@@ -23620,9 +23710,6 @@ msgstr "Bắt Dính Con Trỏ"
 msgid "Snap 2D cursor"
 msgstr "Bắt dính con trỏ 2D"
 
-msgid "Origin"
-msgstr "Tọa Độ Gốc"
-
 msgid "Mirror selected UVs"
 msgstr "Phản chiếu đối xứng các UV đã chọn"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Thêm một Tầng Lớp Sơn trong bảng Tầng Lớp để bắt đầu sơn"
 
@@ -24409,7 +24499,43 @@ msgstr "Bắt đầu hoặc dừng đọc chính tả vào bản nháp phác th�
 msgid "Stop the running turn"
 msgstr "Dừng lượt đang chạy"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Quay trở lại\n"
+"\n"
+"Khôi phục lời nhắc bạn đã viết trước khi được tinh chỉnh."
+
+msgid "Refining this prompt..."
+msgstr "Đang tinh chỉnh lời nhắc này..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Tinh chỉnh lại\n"
+"\n"
+"Viết lại lời nhắc này thêm một lần nữa cho mô hình sẽ nhận nó. Quay Trở Lại vẫn khôi phục cách diễn đạt của chính bạn, không phải lần tinh chỉnh trước đó."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Tinh chỉnh\n"
+"\n"
+"Viết lại lời nhắc này cho mô hình sẽ nhận nó, bổ sung những chi tiết mà mô hình đó phản hồi tốt."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "Xóa tham chiếu"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Hủy bỏ phác thảo này và nét vẽ đang chờ của nó"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "Quy tắc — biên soạn quy tắc dự án và quy tắc toàn cục 
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "Mô tả thứ cần sinh tạo. Nhấn Enter để gửi nút này."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Quay trở lại\n"
-"\n"
-"Khôi phục lời nhắc bạn đã viết trước khi được tinh chỉnh."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Tinh chỉnh lại\n"
-"\n"
-"Viết lại lời nhắc này thêm một lần nữa cho mô hình sẽ nhận nó. Quay Trở Lại vẫn khôi phục cách diễn đạt của chính bạn, không phải lần tinh chỉnh trước đó."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Tinh chỉnh\n"
-"\n"
-"Viết lại lời nhắc này cho mô hình sẽ nhận nó, bổ sung những chi tiết mà mô hình đó phản hồi tốt."
-
-msgid "Refining this prompt..."
-msgstr "Đang tinh chỉnh lời nhắc này..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "Không Gian Bộ Chất Liệu"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Dùng các bảng ở thanh bên để quản lý bộ chất liệu"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "Về đầu tiên"
@@ -28050,6 +28155,12 @@ msgstr "Bộ lọc phần mở rộng tập tin"
 
 msgid "Write compressed .mixar file"
 msgstr "Ghi tập tin .mixar được nén"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Lưu thành tập tin .mixar"

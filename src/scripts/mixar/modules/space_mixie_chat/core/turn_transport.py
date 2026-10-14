@@ -108,16 +108,41 @@ class TurnTransport:
                     **(result.get('result') or {}),
                 })
             # An admission receipt is not completion; the journal owns lifecycle.
-        try:
-            command(method, payload, ack, command_id=command_id)
-            self._running = True
-            return True
-        except Exception as exc:
-            turn_events.handle_turn_notification('agent.command.result', {
-                'session_id': payload['session_id'], 'command_id': command_id,
-                'ok': False, 'message': str(exc),
-            })
-            return False
+
+        outcome = {}
+
+        def dispatch(byok_fields, byok_error):
+            # Main thread. The server holds BYOK metadata only, so the key
+            # rides every chat/input command; a refusal (expired Codex
+            # sign-in) takes the same settled path as a server rejection.
+            if byok_error:
+                turn_events.handle_turn_notification('agent.command.result', {
+                    'session_id': payload['session_id'], 'command_id': command_id,
+                    'ok': False, 'message': byok_error.get('message'),
+                    'data': {'code': byok_error.get('code')},
+                })
+                outcome['ok'] = False
+                return
+            payload.update(byok_fields or {})
+            try:
+                command(method, payload, ack, command_id=command_id)
+                self._running = True
+                outcome['ok'] = True
+            except Exception as exc:
+                turn_events.handle_turn_notification('agent.command.result', {
+                    'session_id': payload['session_id'], 'command_id': command_id,
+                    'ok': False, 'message': str(exc),
+                })
+                outcome['ok'] = False
+
+        # Synchronous while BYOK is inactive (the platform path keeps its
+        # result and timing); otherwise a worker thread reads the credential
+        # store (and refreshes a Codex token) and `dispatch` runs from a
+        # main-thread timer, so the send is accepted here and a failure
+        # settles through the expected command id above.
+        from mixar.modules.byok.core.turn_credentials import prepare
+        prepare(dispatch, method=method, action=payload.get('action'))
+        return outcome.get('ok', True)
 
     def start_stream(self, message, instance_id, session_id, plan_required=True,
                      execution_required=True, approval_required=True, auth_token=None,

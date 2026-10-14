@@ -1439,6 +1439,33 @@ msgstr "Форманын маалыматы жараксыз — колдоо к
 msgid "Something went wrong on our end. Please try again."
 msgstr "Биздин тарапта ката кетти. Кайра аракет кылыңыз."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Жергиликтүү модель каталогу окулууда"
 
@@ -1562,6 +1589,30 @@ msgstr "Моделди өзгөртүү мүмкүн болгон жок"
 msgid "Could not reset model"
 msgstr "Моделди кайра коюу мүмкүн болгон жок"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "ChatGPT жазылууңузду колдонот — Mixar кредиттери алынбайт."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Ачкычыңыз өчүрүлүүдө…"
 
@@ -1570,6 +1621,9 @@ msgstr "Провайдер менен текшерүүдө…"
 
 msgid "AI Provider Settings"
 msgstr "ЖИ провайдеринин ырастоолору"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Активдүү"
@@ -1601,38 +1655,32 @@ msgstr "Текст гана модели — чат иштейт; 3D тапшы�
 msgid "Remove API Key…"
 msgstr "API ачкычын өчүрүү…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Провайдерди орнотуу"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Шифрленип сакталат, Mixar агентинин сурамдары үчүн гана колдонулат — сактагандан кийин жашырылган алдын ала көрүнүш гана көрсөтүлөт."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Аспап / функция чакырууну колдогон моделди тандаңыз — агентке ал керек."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models сайтынан каалаган slug, мисалы anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json файлынан жүктөө"
-
-msgid "…or paste it manually"
-msgstr "…же кол менен коюу"
-
-msgid "{count} characters pasted"
-msgstr "{count} символ коюлду"
-
-msgid "Empty — paste your auth.json"
-msgstr "Бош — auth.json файлын коюңуз"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Терминалда  codex login  иштетиңиз, андан соң толук мазмунун жүктөңүз же коюңуз."
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json файлынын мазмуну (коюу баскычы алмашуу буферин окуйт)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPT жазылууңузду колдонот — Mixar кредиттери алынбайт."
 
 msgid "Couldn't apply your changes"
 msgstr "Өзгөртүүлөрүңүз колдонулган жок"
@@ -1742,41 +1790,8 @@ msgstr "Бул провайдер үчүн моделди тандап, API ач
 msgid "Model slug and API key are required."
 msgstr "Моделдин slug'ы жана API ачкычы талап кылынат."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codex моделин тандап, auth.json топтомун жүктөңүз."
-
 msgid "Save failed."
 msgstr "Сактоо ишке ашкан жок."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Бул компьютердеги ~/.codex/auth.json файлын талаага окуйт"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json табылган жок — адегенде `codex login` иштетиңиз"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json окуу мүмкүн болгон жок"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json бош"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json бул талаа үчүн өтө чоң жана кыскартылды — туура сакталбайт"
-
-msgid "Loaded auth.json"
-msgstr "auth.json жүктөлдү"
-
-msgid "Paste auth.json"
-msgstr "auth.json коюу"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Алмашуу буфериндеги ~/.codex/auth.json файлын талаага коюңуз"
-
-msgid "Clipboard is empty"
-msgstr "Алмашуу буфери бош"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Коюлган auth.json бул талаа үчүн өтө чоң жана кыскартылды — туура сакталбайт"
 
 msgid "Remove"
 msgstr "Өчүрүү"
@@ -1850,11 +1865,11 @@ msgstr "API ачкычыңыз шифрленип сакталат жана Mixa
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models сайтынан каалаган модель slug'ы (мисалы anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json мазмуну (адегенде `codex login` иштетиңиз)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Жергиликтүү режим"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Файлдар"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Таяныч чекити"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "Мудборд→маек тиркемесин шайкештирүүн�
 msgid "Sync failed: {error}"
 msgstr "Шайкештирүү ишке ашкан жок: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} видео өткөрүлдү: агент кыймылсыз сүрөттөрдү гана кабыл алат. Клиптер үчүн мудборддогу Видео генерациясын колдонуңуз"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} видео өткөрүлдү: агент кыймылсыз сүрөттөрдү гана кабыл алат. Клиптер үчүн мудборддогу Видео генерациясын колдонуңуз"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Мудборд сүрөттөрү тандалган жок"
@@ -9219,9 +9279,6 @@ msgstr "Папка"
 
 msgid "Directory of the selected file(s)"
 msgstr "Тандалган файлдын (файлдардын) папкасы"
-
-msgid "Files"
-msgstr "Файлдар"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Медианы жүктөө ишке ашкан жок: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "Өзгөртүүдө..."
 msgid "Awaiting Input..."
 msgstr "Кириш күтүлүүдө..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Видеолор Видео режимин талап кылат. Агентке жөнөтүү үчүн видеону өчүрүңүз."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Колдонуучу ID"
@@ -19547,6 +19604,9 @@ msgstr "Mixie маегине кирүү үчүн колдонуучу ID"
 
 msgid "Agent expects: {formats}"
 msgstr "Агент күтөт: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Токтотулду*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Жогорулатуу"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Пикир комментарийи бош"
@@ -20728,11 +20797,14 @@ msgstr "Өчүрүлө турган архивделген сеанс"
 msgid "Chat removed from history"
 msgstr "Маек тарыхтан өчүрүлдү"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} кошулбайт: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Тиркеме чегине жетти ({count})"
@@ -20740,14 +20812,14 @@ msgstr "Тиркеме чегине жетти ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "{name} өткөрүлүп жиберилди: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} кошулбайт: {error}"
-
 msgid "These references are already attached"
 msgstr "Бул үлгүлөр мурунтан тиркелген"
 
 msgid "Added {count} image(s)"
 msgstr "Кошулган сүрөттөр: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blendден кошуу"
@@ -20764,6 +20836,9 @@ msgstr "{size} - Маалыматы бар"
 msgid "{size} - No data"
 msgstr "{size} - Маалыматы жок"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Blend файлынан сүрөт тандоо"
 
@@ -20772,6 +20847,12 @@ msgstr "Сүрөт мурунтан кошулган"
 
 msgid "Image not found in blend file"
 msgstr "Сүрөт blend файлында табылган жок"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Сүрөт мурунтан тиркелген"
@@ -21522,6 +21603,15 @@ msgstr "Маек кириши"
 
 msgid "Type your message here"
 msgstr "Билдирүүңүздү бул жерге териңиз"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Маек билдирүүлөрү"
@@ -23620,9 +23710,6 @@ msgstr "Курсорду туташтыруу"
 msgid "Snap 2D cursor"
 msgstr "2D курсорду туташтырат."
 
-msgid "Origin"
-msgstr "Таяныч чекити"
-
 msgid "Mirror selected UVs"
 msgstr "Тандалган UV'лерди күзгүлөйт."
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Сүрөт тартууну баштоо үчүн Каттар панелине боёк катын кошуңуз"
 
@@ -24409,7 +24499,43 @@ msgstr "Эскиз долбооруна үн менен жазууну башт�
 msgid "Stop the running turn"
 msgstr "Аткарылып жаткан кайрылууну токтотуу"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Кайтаруу\n"
+"\n"
+"Тактоодон мурун жазган промптуңузду калыбына келтирет."
+
+msgid "Refining this prompt..."
+msgstr "Бул промпт такталууда..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Кайра тактоо\n"
+"\n"
+"Бул промптту жөнөтүлө турган модель үчүн дагы бир жолу кайра жазат. Кайтаруу мурунку тактоону эмес, өз сөзүңүздү калыбына келтирет."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Тактоо\n"
+"\n"
+"Бул промптту жөнөтүлө турган модель үчүн кайра жазат жана ошол модель жооп берген деталды кошот."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "Үлгүнү өчүрүү"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Бул эскизди жана анын кезектеги чиймесин жокко чыгаруу"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "Эрежелер — агент үчүн долбоор жана жал�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "Эмнени генерациялоону баяндаңыз. Бул түйүндү жөнөтүү үчүн Enter басыңыз."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Кайтаруу\n"
-"\n"
-"Тактоодон мурун жазган промптуңузду калыбына келтирет."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Кайра тактоо\n"
-"\n"
-"Бул промптту жөнөтүлө турган модель үчүн дагы бир жолу кайра жазат. Кайтаруу мурунку тактоону эмес, өз сөзүңүздү калыбына келтирет."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Тактоо\n"
-"\n"
-"Бул промптту жөнөтүлө турган модель үчүн кайра жазат жана ошол модель жооп берген деталды кошот."
-
-msgid "Refining this prompt..."
-msgstr "Бул промпт такталууда..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "Текстуралар топтому мейкиндиги"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Текстуралар топтомдорун башкаруу үчүн каптал панелдерин колдонуңуз."
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "Биринчисине кайтуу"
@@ -28050,6 +28155,12 @@ msgstr "Файл кеңейтүүсүнүн чыпкасы"
 
 msgid "Write compressed .mixar file"
 msgstr "Кысылган .mixar файлын жазуу"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar файлы катары сактоо"

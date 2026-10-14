@@ -1439,6 +1439,33 @@ msgstr "படிவத் தரவு தவறானது — ஆதரவ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "எங்கள் பக்கத்தில் ஏதோ தவறு நேர்ந்தது. மீண்டும் முயலுங்கள்."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "உள்ளக மாதிரி அட்டவணையைப் படிக்கிறது"
 
@@ -1562,6 +1589,30 @@ msgstr "மாதிரியை மாற்ற முடியவில்ல�
 msgid "Could not reset model"
 msgstr "மாதிரியை மீட்டமைக்க முடியவில்லை"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "உங்கள் விசையை அகற்றுகிறது…"
 
@@ -1570,6 +1621,9 @@ msgstr "வழங்குநரிடம் சரிபார்க்கி�
 
 msgid "AI Provider Settings"
 msgstr "AI வழங்குநர் அமைப்புகள்"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "செயலில்"
@@ -1601,38 +1655,32 @@ msgstr "உரை மட்டும் மாதிரி — அரட்ட�
 msgid "Remove API Key…"
 msgstr "API விசையை அகற்று…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "வழங்குநர் அமைப்பு"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-இலிருந்து ஏற்று"
-
-msgid "…or paste it manually"
-msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
-
-msgid "{count} characters pasted"
-msgstr "ஒட்டிய எழுத்துகள்: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "காலி — உங்கள் auth.json-ஐ ஒட்டுங்கள்"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "உங்கள் முனையத்தில்  codex login  இயக்கி, முழுவதையும் ஏற்றுங்கள் அல்லது ஒட்டுங்கள்"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (ஒட்டு பொத்தான் உங்கள் இடைநிலைப் பலகையைப் படிக்கும்)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
 
 msgid "Couldn't apply your changes"
 msgstr "உங்கள் மாற்றங்களைப் பயன்படுத்த முடியவில்லை"
@@ -1742,41 +1790,8 @@ msgstr "இந்த வழங்குநருக்கு ஒரு மாத
 msgid "Model slug and API key are required."
 msgstr "மாதிரி ஸ்லக்கும் API விசையும் தேவை."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "ஒரு Codex மாதிரியைத் தேர்ந்தெடுத்து உங்கள் auth.json தொகுப்பை ஏற்றுங்கள்."
-
 msgid "Save failed."
 msgstr "சேமிப்பு தோல்வி."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "இந்த இயந்திரத்திலிருந்து ~/.codex/auth.json-ஐ புலத்துக்குள் படிக்கிறது"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json இல்லை — முதலில் `codex login` இயக்குங்கள்"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ஐ படிக்க முடியவில்லை"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json காலியாக உள்ளது"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ஏற்றப்பட்டது"
-
-msgid "Paste auth.json"
-msgstr "auth.json-ஐ ஒட்டு"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "இடைநிலைப் பலகையிலிருந்து உங்கள் ~/.codex/auth.json-ஐ புலத்துக்குள் ஒட்டுகிறது"
-
-msgid "Clipboard is empty"
-msgstr "கிளிப்போர்டு காலியாக உள்ளது"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ஒட்டிய auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
 
 msgid "Remove"
 msgstr "அகற்று"
@@ -1850,11 +1865,11 @@ msgstr "உங்கள் API விசை மறைகுறியாக்க
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் மாதிரி ஸ்லக் (எ.கா. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (முதலில் `codex login` இயக்குங்கள்)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "உள்ளகப் பயன்முறை"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "கோப்புகள்"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "தோற்றம்"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "மூட்போர்டு→அரட்டை இணைப்ப�
 msgid "Sync failed: {error}"
 msgstr "ஒத்திசைவு தோல்வி: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளி தவிர்க்கப்பட்டது: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளிகள் தவிர்க்கப்பட்டன: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "மூட்போர்டு படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
@@ -9219,9 +9279,6 @@ msgstr "அடைவு"
 
 msgid "Directory of the selected file(s)"
 msgstr "தேர்ந்தெடுத்த கோப்புகளின் அடைவு"
-
-msgid "Files"
-msgstr "கோப்புகள்"
 
 msgid "Failed to load media: {filepath}"
 msgstr "ஊடகத்தை ஏற்ற முடியவில்லை: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "மாற்றுகிறது..."
 msgid "Awaiting Input..."
 msgstr "உள்ளீட்டிற்காகக் காத்திருக்கிறது..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "காணொளிகளுக்குக் காணொளி பயன்முறை தேவை. முகவருக்கு அனுப்பக் காணொளியை அகற்றவும்."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "பயனர் அடையாளம்"
@@ -19547,6 +19604,9 @@ msgstr "Mixie அரட்டை உள்நுழைவுக்கான ப�
 
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*நிறுத்தப்பட்டது*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "மேம்படுத்து"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "பின்னூட்டக் கருத்து காலியாக உள்ளது"
@@ -20728,11 +20797,14 @@ msgstr "அழிக்க வேண்டிய காப்பக அமர்
 msgid "Chat removed from history"
 msgstr "அரட்டை வரலாற்றிலிருந்து அகற்றப்பட்டது"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
@@ -20740,14 +20812,14 @@ msgstr "இணைப்புக் கோப்பு வரம்பு ({coun
 msgid "Skipped {name}: {error}"
 msgstr "{name} தவிர்க்கப்பட்டது: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
-
 msgid "These references are already attached"
 msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
 
 msgid "Added {count} image(s)"
 msgstr "{count} படம்(கள்) சேர்க்கப்பட்டன"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-இலிருந்து சேர்"
@@ -20764,6 +20836,9 @@ msgstr "{size} - தரவு உள்ளது"
 msgid "{size} - No data"
 msgstr "{size} - தரவு இல்லை"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend கோப்பிலிருந்து படத்தைத் தேர்ந்தெடு"
 
@@ -20772,6 +20847,12 @@ msgstr "படம் ஏற்கெனவே சேர்க்கப்பட�
 
 msgid "Image not found in blend file"
 msgstr "blend கோப்பில் படம் காணவில்லை"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "படம் ஏற்கெனவே இணைக்கப்பட்டது"
@@ -21522,6 +21603,15 @@ msgstr "அரட்டை உள்ளீடு"
 
 msgid "Type your message here"
 msgstr "உங்கள் செய்தியை இங்கே தட்டச்சு செய்யுங்கள்"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "அரட்டைச் செய்திகள்"
@@ -23620,9 +23710,6 @@ msgstr "ச்னாப் கர்சர்"
 msgid "Snap 2D cursor"
 msgstr "2D கர்சரை ஸ்னாப் செய்"
 
-msgid "Origin"
-msgstr "தோற்றம்"
-
 msgid "Mirror selected UVs"
 msgstr "தேர்ந்தெடுத்த UV-களைக் கண்ணாடி செய்"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "வண்ணம் தீட்டத் தொடங்க அடுக்குகள் பேனலில் ஒரு வண்ணப்பூச்சு அடுக்கைச் சேர்க்கவும்"
 
@@ -24409,7 +24499,43 @@ msgstr "வரைவு வரைவில் குரல் தட்டச்
 msgid "Stop the running turn"
 msgstr "இயங்கும் திருப்பத்தை நிறுத்து"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"திரும்பப்பெறு\n"
+"\n"
+"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
+
+msgid "Refining this prompt..."
+msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"மீண்டும் செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "குறிப்பை அகற்று"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "இந்த வரைவையும் அதன் வரிசை வரைவையும் நிராகரி"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "விதிகள் — முகவருக்கான திட்
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "எதை உருவாக்குவது என்பதை விவரிக்கவும். இந்த முனையைச் சமர்ப்பிக்க Enter அழுத்தவும்."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"திரும்பப்பெறு\n"
-"\n"
-"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"மீண்டும் செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
-
-msgid "Refining this prompt..."
-msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "அமைப்புத் தொகுப்புகள் இடம�
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "அமைப்புத் தொகுப்புகளை நிர்வகிக்க பக்கப்பட்டிப் பேனல்களைப் பயன்படுத்து"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "முதலுக்குத் திரும்பு"
@@ -28050,6 +28155,12 @@ msgstr "கோப்பு நீட்டிப்பு வடிகட்ட�
 
 msgid "Write compressed .mixar file"
 msgstr "சுருக்கப்பட்ட .mixar கோப்பை எழுது"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar கோப்பாகச் சேமி"

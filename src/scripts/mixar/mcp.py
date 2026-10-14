@@ -32,7 +32,7 @@ def local_request(record, method, path, body=None, headers=None, timeout=610):
             "Authorization": "Bearer " + record["token"],
             "Content-Type": "application/json", **(headers or {})})
         response = connection.getresponse()
-        data = response.read(MAX_MESSAGE_BYTES + 1)
+        data = _DISCOVERY.read_body(response, MAX_MESSAGE_BYTES)
         if len(data) > MAX_MESSAGE_BYTES:
             raise ValueError("MCP response exceeds the transport limit")
         return response.status, data

@@ -92,6 +92,12 @@ struct AgentIslandState {
   bool model_available;
   bool model_byok_active;
   char model_label[96];
+
+  /* Refine / Revert of the composer draft (scene.mixie_chat_prompt_refined /
+   * _refining, moodboard/core/prompt_refine_chat.py). Refined adds Revert
+   * beside Refine; refining greys Refine out until the answer lands. */
+  bool prompt_refined;
+  bool prompt_refining;
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */
@@ -117,6 +123,10 @@ void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, c
 void agent_ui_draw_handwriting_control(ARegion *region, const AgentIslandLayout *layout,
                                        const AgentIslandState *state);
 void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
+/** Refine / Revert left of Send (agent_ui_refine_paint.cc); no-op off the chat tabs. */
+void agent_ui_draw_refine_controls(ARegion *region,
+                                   const AgentIslandLayout *layout,
+                                   const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
 

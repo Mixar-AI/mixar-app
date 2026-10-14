@@ -1847,6 +1847,33 @@ msgstr "Pogrešni podaci obrasca — obratite se podršci."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Nešto je pošlo naopako na našoj strani. Pokušajte ponovo."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 # derived
 msgid "Reading the local model catalog"
 msgstr "Čitanje kataloga lokalnih modela"
@@ -2007,6 +2034,31 @@ msgstr "Nije moguće promeniti model"
 msgid "Could not reset model"
 msgstr "Nije moguće resetovati model"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+# derived
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Koristi vašu ChatGPT pretplatu — Mixar krediti se ne naplaćuju."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 # derived
 msgid "Removing your key…"
 msgstr "Uklanjanje vašeg ključa…"
@@ -2018,6 +2070,9 @@ msgstr "Provera kod dobavljača…"
 # derived
 msgid "AI Provider Settings"
 msgstr "Podešavanja AI dobavljača"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktivno"
@@ -2058,13 +2113,27 @@ msgstr "Model samo za tekst — ćaskanje radi; 3D zadaci se izvršavaju bez viz
 msgid "Remove API Key…"
 msgstr "Ukloni API ključ…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 # derived
 msgid "Provider Setup"
 msgstr "Podešavanje dobavljača"
 
-# derived
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Čuva se šifrovano, koristi se samo za zahteve Mixar agenta — posle čuvanja prikazuje se samo maskirani pregled."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 # derived
 msgid "Pick a model that supports tool / function calling — the agent needs it."
@@ -2073,34 +2142,6 @@ msgstr "Izaberite model koji podržava pozivanje alata / funkcija — agentu je 
 # derived
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bilo koja oznaka sa openrouter.ai/models, npr. anthropic/claude-opus-4.8."
-
-# derived
-msgid "Load from ~/.codex/auth.json"
-msgstr "Učitaj iz ~/.codex/auth.json"
-
-# derived
-msgid "…or paste it manually"
-msgstr "…ili ga nalepite ručno"
-
-# derived
-msgid "{count} characters pasted"
-msgstr "Nalepljeni znakovi: {count}"
-
-# derived
-msgid "Empty — paste your auth.json"
-msgstr "Prazno — nalepite auth.json"
-
-# derived
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Pokrenite  codex login  u terminalu, pa učitajte ili nalepite ceo"
-
-# derived
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "sadržaj ~/.codex/auth.json (dugme za lepljenje čita ostavu)."
-
-# derived
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Koristi vašu ChatGPT pretplatu — Mixar krediti se ne naplaćuju."
 
 # derived
 msgid "Couldn't apply your changes"
@@ -2246,52 +2287,8 @@ msgid "Model slug and API key are required."
 msgstr "Oznaka modela i API ključ su obavezni."
 
 # derived
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Izaberite Codex model i učitajte vaš auth.json paket."
-
-# derived
 msgid "Save failed."
 msgstr "Čuvanje nije uspelo."
-
-# derived
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Čita ~/.codex/auth.json sa ovog računara u polje"
-
-# derived
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nije pronađen — prvo pokrenite `codex login`"
-
-# derived
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nije moguće pročitati ~/.codex/auth.json"
-
-# derived
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json je prazan"
-
-# derived
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
-
-# derived
-msgid "Loaded auth.json"
-msgstr "auth.json je učitan"
-
-# derived
-msgid "Paste auth.json"
-msgstr "Nalepi auth.json"
-
-# derived
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Lepi vaš ~/.codex/auth.json iz ostave u polje"
-
-# derived
-msgid "Clipboard is empty"
-msgstr "Ostava je prazna"
-
-# derived
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Nalepljeni auth.json je prevelik za ovo polje i skraćen je — neće se ispravno sačuvati"
 
 msgid "Remove"
 msgstr "Ukloni"
@@ -2388,12 +2385,11 @@ msgstr "Vaš API ključ se čuva šifrovan i koristi se samo za zahteve Mixar ag
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bilo koja oznaka modela sa openrouter.ai/models (npr. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-# derived
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Sadržaj ~/.codex/auth.json (prvo pokrenite `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 # derived
 msgid "Local mode"
@@ -3774,7 +3770,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3932,16 +3928,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Datoteke"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3953,7 +3961,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3968,6 +3976,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3980,10 +3994,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Centar"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 # derived
@@ -11443,13 +11484,11 @@ msgstr "Osveži sinhronizaciju priloga mudbord→čet ({shortcut})"
 msgid "Sync failed: {error}"
 msgstr "Sinhronizacija nije uspela: {error}"
 
-# derived
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeno video-zapisa: {count}. Agent prihvata samo nepokretne slike. Za isečke koristite generisanje videa na mudbordu"
+msgid "Attached {count} video as context"
+msgstr ""
 
-# derived
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Preskočeno video-zapisa: {count}. Agent prihvata samo nepokretne slike. Za isečke koristite generisanje videa na mudbordu"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 # derived
 msgid "No moodboard images selected"
@@ -11842,9 +11881,6 @@ msgstr "Direktorijum"
 # derived
 msgid "Directory of the selected file(s)"
 msgstr "Direktorijum izabranih datoteka"
-
-msgid "Files"
-msgstr "Datoteke"
 
 # derived
 msgid "Failed to load media: {filepath}"
@@ -24263,7 +24299,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -25247,9 +25283,8 @@ msgstr "Izmena..."
 msgid "Awaiting Input..."
 msgstr "Čeka se unos..."
 
-# derived
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Video-zapisi zahtevaju režim video-zapisa. Uklonite video-zapis da biste poslali agentu."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 # derived
 msgid "User ID"
@@ -25262,6 +25297,9 @@ msgstr "ID korisnika za prijavu u ćaskanje Mixie"
 # derived
 msgid "Agent expects: {formats}"
 msgstr "Agent očekuje: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 # derived
 msgid "*Stopped*"
@@ -25361,6 +25399,15 @@ msgstr ""
 # derived
 msgid "Upgrade"
 msgstr "Unapredi"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 # derived
 msgid "Feedback comment is empty"
@@ -26790,11 +26837,15 @@ msgstr "Arhivirana sesija za brisanje"
 msgid "Chat removed from history"
 msgstr "Ćaskanje je uklonjeno iz istorijata"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+# derived
+msgid "Cannot add {name}: {error}"
+msgstr "Nije moguće dodati {name}: {error}"
 
 # derived
 msgid "Attachment limit ({count}) reached"
@@ -26805,16 +26856,15 @@ msgid "Skipped {name}: {error}"
 msgstr "Preskočeno {name}: {error}"
 
 # derived
-msgid "Cannot add {name}: {error}"
-msgstr "Nije moguće dodati {name}: {error}"
-
-# derived
 msgid "These references are already attached"
 msgstr "Ove reference su već priložene"
 
 # derived
 msgid "Added {count} image(s)"
 msgstr "Dodatih slika: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 # derived
 msgid "Add from Blend"
@@ -26836,6 +26886,9 @@ msgstr "{size} — ima podatke"
 msgid "{size} - No data"
 msgstr "{size} — nema podatke"
 
+msgid "{name} (video)"
+msgstr ""
+
 # derived
 msgid "Select image from blend file"
 msgstr "Izaberi sliku iz blend datoteke"
@@ -26847,6 +26900,12 @@ msgstr "Slika je već dodata"
 # derived
 msgid "Image not found in blend file"
 msgstr "Slika nije pronađena u blend datoteci"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 # derived
 msgid "Image already attached"
@@ -27797,6 +27856,15 @@ msgstr "Unos ćaskanja"
 # derived
 msgid "Type your message here"
 msgstr "Ovde unesite poruku"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 # derived
 msgid "Chat Messages"
@@ -30484,9 +30552,6 @@ msgstr "Lepljenje kursora"
 msgid "Snap 2D cursor"
 msgstr "Prikači 2D kursor"
 
-msgid "Origin"
-msgstr "Centar"
-
 # derived
 msgid "Mirror selected UVs"
 msgstr "Ogleda izabrane UV"
@@ -31406,6 +31471,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 # derived
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Dodajte sloj za bojenje u panelu Slojevi da biste počeli da bojite"
@@ -31422,7 +31490,47 @@ msgstr "Pokreće ili zaustavlja diktiranje u nacrt skice"
 msgid "Stop the running turn"
 msgstr "Zaustavi tekući potez"
 
+# derived
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Vrati\n"
+"\n"
+"Vraća prompt koji ste napisali pre nego što je prerađen."
+
+# derived
+msgid "Refining this prompt..."
+msgstr "Prerada ovog prompta..."
+
+# derived
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Preradi ponovo\n"
+"\n"
+"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
+
+# derived
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Preradi\n"
+"\n"
+"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 # derived
@@ -31436,6 +31544,9 @@ msgstr "Ukloni referencu"
 # derived
 msgid "Discard this sketch and its queued drawing"
 msgstr "Odbacuje ovu skicu i njen crtež u redu"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -31904,7 +32015,7 @@ msgstr "Pravila — uredite pravila projekta i globalna pravila za agenta"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 # derived
@@ -32706,40 +32817,6 @@ msgstr ""
 
 # derived
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Vrati\n"
-"\n"
-"Vraća prompt koji ste napisali pre nego što je prerađen."
-
-# derived
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Preradi ponovo\n"
-"\n"
-"Ponovo prepisuje ovaj prompt za model kojem će biti poslat. Vrati i dalje vraća vaše sopstvene reči, ne prethodnu preradu."
-
-# derived
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Preradi\n"
-"\n"
-"Prepisuje ovaj prompt za model kojem će biti poslat, dodajući detalje na koje taj model reaguje."
-
-# derived
-msgid "Refining this prompt..."
-msgstr "Prerada ovog prompta..."
-
-# derived
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -33475,6 +33552,12 @@ msgstr "Prostor skupova tekstura"
 # derived
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Koristite panele bočne trake za upravljanje skupovima tekstura"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 # derived
 msgid "Back to first"
@@ -36086,6 +36169,12 @@ msgstr "Filter ekstenzije datoteke"
 # derived
 msgid "Write compressed .mixar file"
 msgstr "Upiši komprimovanu .mixar datoteku"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 # derived
 msgid "Save as .mixar file"

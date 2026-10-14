@@ -106,12 +106,18 @@ result = [region.y, region.y + region.height]
         assert badge and main, ('missing BETA tag or label', path)
         badge_width = max(x for x,_ in badge)-min(x for x,_ in badge)+1
         main_width = max(x for x,_ in main)-min(x for x,_ in main)+1
+        main_height = max(y for _,y in main)-min(y for _,y in main)+1
+        # A disabled alpha blend paints the whole gradient texture rectangle.
+        # Real glyphs leave substantial background between and inside letters.
+        coverage = len(main) / (main_width * main_height)
+        assert coverage < .65, ('solid rectangle replaces Cinema Mode text', coverage, path)
         assert badge_width < main_width*.5, ('stage tag is not a small label', path)
         badge_mid = (max(y for _,y in badge)+min(y for _,y in badge))/2
         main_mid = (max(y for _,y in main)+min(y for _,y in main))/2
         assert abs(badge_mid-main_mid) <= 1.5*scale, ('stage tag off the label band', path)
     return {'logical_width': width, 'logical_height': height,
-            'row_heights': row_heights, 'scale': scale, 'path': str(path)}
+            'row_heights': row_heights, 'scale': scale,
+            'label_coverage': coverage, 'path': str(path)}
 
 
 def compare_capsules():
@@ -148,7 +154,7 @@ result = {'scale': bpy.context.preferences.view.ui_scale,
           'tooltips': bpy.context.preferences.view.show_tooltips,
           'zen': drv.main_window().workspace.name == 'Zen Mode'}
 ''')
-    qa.cmd('dismiss_splash')
+    qa.press('ESC')
     results = {}
     try:
         redraw(qa, 'bpy.context.preferences.view.show_tooltips = False')

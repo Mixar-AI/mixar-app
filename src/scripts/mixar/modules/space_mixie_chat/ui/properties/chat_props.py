@@ -454,6 +454,32 @@ def on_chat_input_changed(self, context):
     except AttributeError:
         pass  # mention props not registered (isolated tests)
 
+    if not self.mixie_chat_input.strip():
+        _end_refine_draft(self)
+
+
+def _end_refine_draft(scene):
+    """An emptied composer ends the draft Refine / Revert was working on.
+
+    Every send clears the input, so this is where a sent message's Revert
+    stash is dropped — it must never come back into the next draft — and
+    where the epoch moves, orphaning a refinement still in flight so its late
+    answer cannot refill the empty composer. The slot itself lives in
+    ``moodboard/core/prompt_refine_chat.py``; it is addressed by property
+    name here so the chat does not import the moodboard.
+    """
+    try:
+        # Nothing stashed and nothing in flight: no write, so an ordinary
+        # send does not touch RNA (each write notifies and tags the scene).
+        if not (scene.mixie_chat_prompt_refined or scene.mixie_chat_prompt_refining):
+            return
+        scene.mixie_chat_prompt_refine_epoch += 1
+        scene.mixie_chat_prompt_pre_refine = ""
+        scene.mixie_chat_prompt_refined = False
+        scene.mixie_chat_prompt_refining = False
+    except AttributeError:
+        pass  # refine props not registered (isolated tests)
+
 
 def _execute_send_message():
     """Execute send_message (called from timer to avoid calling bpy.ops in property update).
@@ -768,6 +794,38 @@ def register():
         maxlen=CHAT_INPUT_MAXLEN,
         options={'TEXTEDIT_UPDATE'},  # Triggers update callback on each keystroke
         update=on_chat_input_changed,  # Detects Enter key via \x1F marker
+    )
+
+    # Refine / Revert state for the composer (the moodboard engine's ChatSlot,
+    # moodboard/core/prompt_refine_chat.py). On the Scene because the island
+    # painting the buttons is C++. SKIP_SAVE: a pre-refine draft is a
+    # this-session affordance, and an interrupted refinement must not reload
+    # as permanently in flight.
+    bpy.types.Scene.mixie_chat_prompt_pre_refine = StringProperty(
+        name="Prompt Before Refine",
+        default="",
+        maxlen=CHAT_INPUT_MAXLEN,
+        options={'SKIP_SAVE'},
+    )
+    # Separate from a non-empty stash, matching the canvas node's props.
+    bpy.types.Scene.mixie_chat_prompt_refined = BoolProperty(
+        name="Prompt Refined",
+        description="The chat draft was refined and can be reverted",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    bpy.types.Scene.mixie_chat_prompt_refining = BoolProperty(
+        name="Refining Prompt",
+        description="A refinement of the chat draft is in flight",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    # Bumped whenever the composer empties; a refinement started in an
+    # earlier draft reads dead and drops its answer.
+    bpy.types.Scene.mixie_chat_prompt_refine_epoch = IntProperty(
+        name="Refine Draft Epoch",
+        default=0,
+        options={'SKIP_SAVE', 'HIDDEN'},
     )
 
     bpy.types.Scene.mixie_chat_messages = CollectionProperty(
@@ -1094,6 +1152,8 @@ def unregister():
         'mixie_run_open', 'mixie_run_id',
         'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
+        'mixie_chat_prompt_pre_refine', 'mixie_chat_prompt_refined',
+        'mixie_chat_prompt_refining', 'mixie_chat_prompt_refine_epoch',
     ):
         if hasattr(bpy.types.Scene, attr):
             delattr(bpy.types.Scene, attr)

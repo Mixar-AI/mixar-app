@@ -238,8 +238,8 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
   /* Wrap the text exactly the way the draw pass does, then highlight the
    * selected span per visual line — the old single-rect version measured
    * the whole selection as one line, which was wrong for any wrapped text. */
-  const blender::Vector<blender::StringRef> lines =
-      BLF_string_wrap(font_id, text, int(BLI_rctf_size_x(text_rect)), wrap_mode);
+  blender::Vector<blender::StringRef> lines;
+  chat_ui_wrap_lines(font_id, text, int(BLI_rctf_size_x(text_rect)), wrap_mode, lines);
   if (lines.is_empty()) {
     return;
   }

@@ -1439,6 +1439,33 @@ msgstr "Virheelliset lomaketiedot — ottakaa yhteyttä tukeen."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Jokin meni vikaan meidän puolellamme. Yrittäkää uudelleen."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Luetaan paikallisten mallien luetteloa"
 
@@ -1562,6 +1589,30 @@ msgstr "Mallia ei voitu vaihtaa"
 msgid "Could not reset model"
 msgstr "Mallia ei voitu nollata"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Käyttää ChatGPT-tilaustanne — Mixar-krediittejä ei veloiteta."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Poistetaan avaintanne…"
 
@@ -1570,6 +1621,9 @@ msgstr "Tarkistetaan palveluntarjoajalla…"
 
 msgid "AI Provider Settings"
 msgstr "Tekoälyn palveluntarjoajan asetukset"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktiivinen"
@@ -1601,38 +1655,32 @@ msgstr "Tekstimalli — keskustelu toimii; 3D-tehtävät suoritetaan ilman visua
 msgid "Remove API Key…"
 msgstr "Poista API-avain…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Palveluntarjoajan määritys"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Tallennetaan salattuna ja käytetään vain Mixar-agentin pyyntöihin — tallennuksen jälkeen näytetään vain peitetty esikatselu."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Valitkaa malli, joka tukee työkalu- ja funktiokutsuja — agentti tarvitsee niitä."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Mikä tahansa tunnus osoitteesta openrouter.ai/models, esim. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Lataa tiedostosta ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…tai liittäkää se käsin"
-
-msgid "{count} characters pasted"
-msgstr "Liitetty {count} merkkiä"
-
-msgid "Empty — paste your auth.json"
-msgstr "Tyhjä — liittäkää auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Suorittakaa  codex login  päätteessänne ja ladatkaa tai liittäkää sitten koko"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "tiedoston ~/.codex/auth.json sisältö (liitä-painike lukee leikepöytänne)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Käyttää ChatGPT-tilaustanne — Mixar-krediittejä ei veloiteta."
 
 msgid "Couldn't apply your changes"
 msgstr "Muutoksianne ei voitu ottaa käyttöön"
@@ -1742,41 +1790,8 @@ msgstr "Valitkaa tälle palveluntarjoajalle malli ja syöttäkää API-avain."
 msgid "Model slug and API key are required."
 msgstr "Mallin tunnus ja API-avain vaaditaan."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Valitkaa Codex-malli ja ladatkaa auth.json-pakettinne."
-
 msgid "Save failed."
 msgstr "Tallennus epäonnistui."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Lukee tämän koneen tiedoston ~/.codex/auth.json kenttään"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Tiedostoa ~/.codex/auth.json ei löydy — suorittakaa ensin `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Tiedostoa ~/.codex/auth.json ei voitu lukea"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "Tiedosto ~/.codex/auth.json on tyhjä"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json on liian suuri tähän kenttään, ja se katkaistiin — se ei tallennu oikein"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ladattu"
-
-msgid "Paste auth.json"
-msgstr "Liitä auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Liittää leikepöydän tiedoston ~/.codex/auth.json kenttään"
-
-msgid "Clipboard is empty"
-msgstr "Leikepöytä on tyhjä"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Liitetty auth.json on liian suuri tähän kenttään, ja se katkaistiin — se ei tallennu oikein"
 
 msgid "Remove"
 msgstr "Poista"
@@ -1850,11 +1865,11 @@ msgstr "API-avaimenne tallennetaan salattuna ja sitä käytetään vain Mixar-ag
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Mikä tahansa mallin tunnus osoitteesta openrouter.ai/models (esim. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex-auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Tiedoston ~/.codex/auth.json sisältö (suorittakaa ensin `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Paikallinen tila"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Tiedostot"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Origo"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "Virkistää tunnelmataulun ja keskustelun liitteiden synkronoinnin ({sho
 msgid "Sync failed: {error}"
 msgstr "Synkronointi epäonnistui: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Ohitettuja videoita: {count}. Agentti hyväksyy vain stillkuvat. Käyttäkää tunnelmataulun videonluontia klippeihin."
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Ohitettuja videoita: {count}. Agentti hyväksyy vain stillkuvat. Käyttäkää tunnelmataulun videonluontia klippeihin."
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Tunnelmataulukuvia ei ole valittu."
@@ -9219,9 +9279,6 @@ msgstr "Hakemisto"
 
 msgid "Directory of the selected file(s)"
 msgstr "Valittujen tiedostojen hakemisto."
-
-msgid "Files"
-msgstr "Tiedostot"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Median lataus epäonnistui: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "Muokataan..."
 msgid "Awaiting Input..."
 msgstr "Odotetaan syötettä..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Videot vaativat videotilan. Poista video, jos haluat lähettää sen agentille."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Käyttäjätunnus"
@@ -19547,6 +19604,9 @@ msgstr "Käyttäjätunnus Mixie-keskusteluun kirjautumista varten"
 
 msgid "Agent expects: {formats}"
 msgstr "Agentti odottaa: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Pysäytetty*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Päivitä"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Palautekommentti on tyhjä"
@@ -20728,11 +20797,14 @@ msgstr "Poistettava arkistoitu istunto"
 msgid "Chat removed from history"
 msgstr "Keskustelu poistettiin historiasta"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Kohdetta {name} ei voi lisätä: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Liiteraja ({count}) saavutettiin"
@@ -20740,14 +20812,14 @@ msgstr "Liiteraja ({count}) saavutettiin"
 msgid "Skipped {name}: {error}"
 msgstr "Ohitettiin {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Kohdetta {name} ei voi lisätä: {error}"
-
 msgid "These references are already attached"
 msgstr "Nämä referenssit on jo liitetty"
 
 msgid "Added {count} image(s)"
 msgstr "Lisättiin {count} kuvaa"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Lisää Blend-tiedostosta"
@@ -20764,6 +20836,9 @@ msgstr "{size} – sisältää tiedot"
 msgid "{size} - No data"
 msgstr "{size} – ei tietoja"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Valitse kuva Blend-tiedostosta"
 
@@ -20772,6 +20847,12 @@ msgstr "Kuva on jo lisätty"
 
 msgid "Image not found in blend file"
 msgstr "Kuvaa ei löydy Blend-tiedostosta"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Kuva on jo liitetty"
@@ -21522,6 +21603,15 @@ msgstr "Keskustelun syöte"
 
 msgid "Type your message here"
 msgstr "Kirjoita viestisi tähän"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Keskustelun viestit"
@@ -23620,9 +23710,6 @@ msgstr "Tartuta kursori"
 msgid "Snap 2D cursor"
 msgstr "Tartuta 2D-kursori"
 
-msgid "Origin"
-msgstr "Origo"
-
 msgid "Mirror selected UVs"
 msgstr "Peilaa valitut UV:t"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Lisää maalaustaso Tasot-paneelissa aloittaaksesi maalaamisen"
 
@@ -24409,7 +24499,43 @@ msgstr "Aloita tai lopeta sanelu luonnokseen"
 msgid "Stop the running turn"
 msgstr "Pysäytä käynnissä oleva vuoro"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Palauta\n"
+"\n"
+"Palauta kehote, jonka kirjoitit ennen hiontaa."
+
+msgid "Refining this prompt..."
+msgstr "Hiotaan tätä kehotetta..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Hio uudelleen\n"
+"\n"
+"Kirjoita tämä kehote vielä kerran uudelleen sille mallille, jolle se lähetetään. Palauta palauttaa yhä omat sanasi, ei edellistä hiontaa."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Hio\n"
+"\n"
+"Kirjoita tämä kehote uudelleen sille mallille, jolle se lähetetään, ja lisää yksityiskohta, johon malli reagoi."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "Poista referenssi"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Hylkää tämä luonnos ja sen jonossa oleva piirros"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "Säännöt — muokkaa projektin ja yleisiä sääntöjä agentille"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "Kuvaile, mitä luodaan. Paina Enter lähettääksesi tämän noodin."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Palauta\n"
-"\n"
-"Palauta kehote, jonka kirjoitit ennen hiontaa."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Hio uudelleen\n"
-"\n"
-"Kirjoita tämä kehote vielä kerran uudelleen sille mallille, jolle se lähetetään. Palauta palauttaa yhä omat sanasi, ei edellistä hiontaa."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Hio\n"
-"\n"
-"Kirjoita tämä kehote uudelleen sille mallille, jolle se lähetetään, ja lisää yksityiskohta, johon malli reagoi."
-
-msgid "Refining this prompt..."
-msgstr "Hiotaan tätä kehotetta..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "Tekstuurijoukkojen tila"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Hallitse tekstuurijoukkoja sivupaneeleilla"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "Takaisin ensimmäiseen"
@@ -28050,6 +28155,12 @@ msgstr "Tiedostopäätteen suodatin"
 
 msgid "Write compressed .mixar file"
 msgstr "Kirjoita pakattu .mixar-tiedosto"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Tallenna .mixar-tiedostona"

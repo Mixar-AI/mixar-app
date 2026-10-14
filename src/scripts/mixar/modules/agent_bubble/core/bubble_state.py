@@ -24,3 +24,6 @@ autoshow_start_minimised = False
 # User-dismissal tracking
 user_explicitly_closed = False
 closed_for_save = False
+# > 0 while a snapshot copy (turn checkpoint) is being written: on_save_pre
+# keeps the island and pill open for that save (see keep_windows_for_snapshot).
+snapshot_save_depth = 0

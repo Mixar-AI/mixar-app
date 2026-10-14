@@ -307,6 +307,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     /* A scene saved before the chat registered the property reads false —
      * the same default the send path uses (core/composer_send.py). */
     r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
+    r_state->prompt_refined = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refined");
+    r_state->prompt_refining = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refining");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");

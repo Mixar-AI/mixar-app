@@ -58,3 +58,9 @@ def test_both_surfaces_draw_the_shared_tag():
 def test_no_version_suffix_survives():
     for source in (_code(LABEL), _code(BRAND)):
         assert not re.search(r'"V\d+"', source), "Cinema Mode shows a version, not the stage tag"
+
+
+def test_cinema_flushes_native_labels_before_changing_gpu_clip():
+    label = _code(LABEL).split('void mixar_cinema_label(', 1)[1]
+    assert label.index('BLF_batch_draw_flush();') < label.index('GPU_scissor(x0, y0,')
+    assert label.index('BLF_batch_draw_flush();') < label.index('draw_tinted_text(font, label,')
