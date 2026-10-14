@@ -227,8 +227,9 @@ scripts/audit_out/
 .sync-state
 .sync-state-*
 
-# Blender autosave backups
+# Blender autosave backups (Mixar saves .mixar, so its backups are .mixar1)
 *.blend1
+*.mixar[0-9]*
 
 # Local Azure signing metadata (values come from env vars / secrets in CI)
 scripts/windows/codesign-tools/metadata.json
