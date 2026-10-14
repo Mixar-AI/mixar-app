@@ -138,8 +138,29 @@ static const char *scene_string_prop(const Scene *scene, const char *name)
   return nullptr;
 }
 
+static int group_int_prop(const IDProperty *group, const char *name, int fallback);
+
+/** The agent preview's private render scene (space_mixie_chat/core/render_scene.py):
+ * a linked copy of a tab's scene that lives for one render job and shares every
+ * object, collection, world and camera of that tab. Counted as a tab, its reach
+ * made the tab's whole content "shared", and a push while it existed was filed
+ * under a tab no user can see (the reach rule). It is a lane: it claims nothing. */
+static const char *INTERNAL_RENDER_SCENE_PROP = "mixar_internal_render_scene";
+
+static bool scene_is_internal_render(const Scene *scene)
+{
+  if (scene == nullptr) {
+    return false;
+  }
+  return group_int_prop(scene->id.properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0 ||
+         group_int_prop(scene->id.system_properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0;
+}
+
 bool BKE_undo_tab_scene_is_lane(const Scene *scene)
 {
+  if (scene_is_internal_render(scene)) {
+    return true;
+  }
   const char *session = scene_string_prop(scene, SCENE_SESSION_PROP);
   return session != nullptr && STRPREFIX(session, LANE_PREFIX);
 }
