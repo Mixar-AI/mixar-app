@@ -597,6 +597,10 @@ def press(uid: int, what: str) -> None:
     # Every mesh as it stands before the press, orphans too: a restored object's
     # shared mesh is kept as it is now when only another tab changed it since.
     mesh_before = {m.session_uid: _data_hash(m) for m in bpy.data.meshes}
+    # ...and every object's transform, unlinked ones too: a kept object returns as
+    # the other tabs left it, possibly a version only a walk restored (no snapshot).
+    matrix_before = {str(o.session_uid): [round(x, 4) for row in o.matrix_basis for x in row]
+                     for o in bpy.data.objects}
     shared = {u: shared_with(uid, u) for u in before if u != uid}
     stack_before = active_step()
     entry = {"press": what, "tab": scene_of(uid).name}
@@ -757,7 +761,8 @@ def press(uid: int, what: str) -> None:
                         for w, g in zip(ws, gs))
                 elif f in ("matrix", "type"):
                     ok = obj_shared and ((was is not None and got.get(f) == was.get(f)) or
-                                         _held_since(k, f, got.get(f), step))
+                                         _held_since(k, f, got.get(f), step) or
+                                         (f == "matrix" and matrix_before.get(k) == got.get(f)))
                 elif f in ("mesh", "data_uid"):
                     data_shared = obj_shared or (was is not None and was.get("data") in s_data)
                     ok = data_shared and ((was is not None and got.get(f) == was.get(f)) or
