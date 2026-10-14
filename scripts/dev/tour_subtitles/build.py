@@ -34,11 +34,18 @@ def stamp(ms):
     return f"{hours:02}:{minutes:02}:{seconds:02},{millis:03}"
 
 
+def cue_lines(path):
+    """One cue per line, after the leading ``#`` licence header."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    while lines and (lines[0].startswith("#") or not lines[0].strip()):
+        lines.pop(0)
+    return lines
+
+
 def tracks():
     schedule = json.loads((HERE / "en.json").read_text(encoding="utf-8"))
     texts = {"en": [row[2] for row in schedule]}
-    texts.update({p.stem: p.read_text(encoding="utf-8").splitlines()
-                  for p in sorted(HERE.glob("*.txt"))})
+    texts.update({p.stem: cue_lines(p) for p in sorted(HERE.glob("*.txt"))})
     texts["sr_RS@latin"] = [serbian_latin(s) for s in texts["sr_RS"]]
     for code, lines in texts.items():
         if len(lines) != len(schedule) or not all(line.strip() for line in lines):

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Merhaba, ben Mixar'dan Naman.
+Merhaba, ben Naman.
 Birkaç dakika içinde uygulamayı tanıtacağım.
 Burası görünüm alanınız.
 İçinde dolaşabileceğiniz bir 3D alan.
@@ -26,9 +26,9 @@ Ajanın varlıklarınızı kullanması için kendi kütüphanenizi bağlayın,
 krediden tasarruf edin.
 Sol üstte sahneler çekmecesi var.
 Her sahnenin kendi sekmesi ve Mixie ajanı var.
-Görevleri yan yana yürütün, aralarında istediğiniz an geçin.
-Sahneniz hazır olunca Cinema Mode'a geçin,
-kamerayı yönetin ve video iş akışları oluşturun.
+Görevleri yan yana yürütün, istediğiniz an geçiş yapın; gerçek paralellik.
+Çekime hazır olduğunuzda Cinema Mode'a geçin,
+kamerayı yönetin ve profesyonel kalitede videolar oluşturun.
 Fikirler 2D'de başlar.
 Moodboard'u sağdan çekin veya tilde tuşuna basın.
 Referanslar ve fikirler için bir tuvaldir.
@@ -40,6 +40,6 @@ Tüm panelleri ve kısayollarıyla Blender çalışma alanı burada.
 Mixie ikisinde de çalışır. Size uygun olanı seçin.
 Zen Mode'a dönelim.
 Yaratıcı ortak programımız size kredi sağlar
-ve AI ile 3D'nin geleceğini şekillendiren bir topluluğa katılmanızı sağlar.
+ve medyada AI'ın geleceğini şekillendiren bir topluluğa katılmanızı sağlar.
 İşte bu kadar. Artık her şeyin yerini biliyorsunuz.
 Birlikte 3D üretelim.

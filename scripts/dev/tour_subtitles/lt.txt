@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Sveiki, aš Naman iš Mixar.
+Sveiki, aš Naman.
 Per kelias minutes parodysiu jums programą.
 Tai jūsų 3D rodinys.
 Trimatė erdvė, kurioje galite judėti.
@@ -26,9 +26,9 @@ Prijunkite savo biblioteką, kad agentas naudotų jūsų išteklius,
 ir taupytų kreditus.
 Viršuje kairėje yra scenų stalčius.
 Kiekviena scena turi savo kortelę ir Mixie agentą.
-Vykdykite užduotis lygiagrečiai ir bet kada jas perjunkite.
-Kai scena paruošta, pereikite į Cinema Mode,
-kad valdytumėte kamerą ir kurtumėte vaizdo darbo eigas.
+Vykdykite užduotis lygiagrečiai ir bet kada perjunkite – tikras lygiagretumas.
+Kai būsite pasiruošę filmuoti, pereikite į Cinema Mode,
+kad valdytumėte kamerą ir kurtumėte profesionalios kokybės vaizdo įrašus.
 Idėjos prasideda nuo 2D.
 Ištraukite moodboard iš dešinės arba paspauskite tildę.
 Tai drobė pavyzdžiams ir idėjoms.
@@ -40,6 +40,6 @@ Mokate Blender? Pereikite į Engine Mode.
 Mixie veikia abiejuose. Rinkitės patogesnį.
 Grįžkime į Zen Mode.
 Mūsų kūrybinių partnerių programa suteikia kreditų
-ir bendruomenę, kuriančią AI ir 3D ateitį.
+ir bendruomenę, kuriančią AI ateitį medijose.
 Štai ir viskas. Dabar žinote, kur ką rasti.
 Kurkime 3D kartu.
