@@ -236,11 +236,40 @@ def test_cluster_shrinks_to_fit_a_tiny_video():
 
 
 def test_skip_tour_clears_the_caption_pill():
-    # The longest act caption sits top-left; Skip tour top-right.
+    # The longest act caption sits top-left; Skip tour top-right. On the
+    # 4:3 half card the pill shortens itself rather than run under Skip tour.
     layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
-    longest = max((b.label for b in beats.MIXAR_INTRO.beats), key=len)
-    caption_right = layout.video[0] + 10 + card._text_width(longest, config.CONTROL_FONT_PX) + 20
-    assert caption_right < layout.buttons["exit"][0]
+    skip_left = layout.buttons["exit"][0]
+    for beat in beats.MIXAR_INTRO.beats:
+        rect, text = card.caption_rect(layout.video, beat.label, config.CONTROL_FONT_PX, 1.0,
+                                       clear_right=skip_left)
+        assert text, beat.label
+        assert rect[2] + card.CAPTION_SKIP_GAP <= skip_left + 1e-6, beat.label
+        assert rect[0] == pytest.approx(layout.video[0] + card.CAPTION_INSET)
+
+
+def test_caption_pill_ellipsises_a_long_translation():
+    layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
+    skip_left = layout.buttons["exit"][0]
+    long_label = "Teil 3 · Szenen und der Kinomodus im Detail erklärt"
+    rect, text = card.caption_rect(layout.video, long_label, config.CONTROL_FONT_PX, 1.0,
+                                   clear_right=skip_left)
+    assert text.endswith("\u2026") and len(text) < len(long_label)
+    assert long_label.startswith(text[:-1])
+    assert rect[2] + card.CAPTION_SKIP_GAP <= skip_left + 1e-6
+    # Without a bound the whole label is kept.
+    _rect, whole = card.caption_rect(layout.video, long_label, config.CONTROL_FONT_PX, 1.0)
+    assert whole == long_label
+
+
+def test_fit_text_keeps_what_fits_and_never_exceeds_the_bound():
+    px = config.CONTROL_FONT_PX
+    assert card.fit_text("Welcome", px, 10_000.0) == "Welcome"
+    assert card.fit_text("", px, 50.0) == ""
+    assert card.fit_text("Welcome", px, 0.0) == ""
+    for max_w in (20.0, 40.0, 60.0, 90.0):
+        out = card.fit_text("Part 3 · Scenes and Cinema", px, max_w)
+        assert card._text_width(out, px) <= max_w
 
 
 def test_exit_confirm_is_centred_and_buttons_sit_inside_the_dialog():

@@ -61,7 +61,7 @@ logger = get_logger(__name__)
 
 __all__ = (
     "CardLayout", "compute_card_layout", "layout_from_card_rect", "draw_card",
-    "draw_caption_under", "caption_under_rect",
+    "draw_caption_under", "caption_under_rect", "caption_rect", "fit_text",
     "hit_test", "qa_targets",
     "ExitConfirmLayout", "compute_exit_confirm_layout", "draw_exit_confirm",
     "hit_test_exit_confirm",
@@ -175,19 +175,58 @@ def _draw_video(texture, rect: tuple, alpha: float) -> None:
                   _with_alpha(VIDEO_PLACEHOLDER, alpha))
 
 
-def _draw_caption(video_rect: tuple, caption: str, px: float, s: float, alpha: float) -> None:
-    """Small pill over the video's top-left naming the part of the tour."""
-    if not caption:
-        return
-    pad_x, pad_y, inset = 10 * s, 5 * s, 10 * s
-    tw = _text_width(caption, px)
-    w, h = tw + 2 * pad_x, px + 2 * pad_y
+CAPTION_PAD_X_OVER = 10.0     # logical px, the act caption pill over the video
+CAPTION_PAD_Y_OVER = 5.0
+CAPTION_INSET = 10.0
+CAPTION_SKIP_GAP = 8.0        # clear air between the caption and Skip tour
+_ELLIPSIS = "\u2026"
+
+
+def fit_text(text: str, px: float, max_w: float) -> str:
+    """``text`` shortened with an ellipsis so it measures at most ``max_w``
+    at ``px``. Pure; the whole text when it already fits."""
+    if not text or _text_width(text, px) <= max_w:
+        return text
+    if _text_width(_ELLIPSIS, px) > max_w:
+        return ""
+    lo, hi = 0, len(text)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if _text_width(text[:mid].rstrip() + _ELLIPSIS, px) <= max_w:
+            lo = mid
+        else:
+            hi = mid - 1
+    return text[:lo].rstrip() + _ELLIPSIS
+
+
+def caption_rect(video_rect: tuple, caption: str, px: float, s: float,
+                 clear_right: Optional[float] = None) -> tuple:
+    """The act caption pill over the video's top-left: ``(rect, text)``.
+    ``text`` is the caption shortened so the pill's right edge stays
+    ``CAPTION_SKIP_GAP`` left of ``clear_right`` (the Skip tour pill on a
+    narrow card or a long translation). Pure, for the tests."""
+    pad_x, pad_y, inset = CAPTION_PAD_X_OVER * s, CAPTION_PAD_Y_OVER * s, CAPTION_INSET * s
     xmin = video_rect[0] + inset
     ymax = video_rect[3] - inset
-    draw_rounded_rect(xmin, ymax - h, w, h, h * 0.5,
+    text = caption or ""
+    if text and clear_right is not None:
+        max_w = clear_right - CAPTION_SKIP_GAP * s - xmin - 2 * pad_x
+        text = fit_text(text, px, max_w) if max_w > 0 else ""
+    w, h = _text_width(text, px) + 2 * pad_x, px + 2 * pad_y
+    return (xmin, ymax - h, xmin + w, ymax), text
+
+
+def _draw_caption(video_rect: tuple, caption: str, px: float, s: float, alpha: float,
+                  clear_right: Optional[float] = None) -> None:
+    """Small pill over the video's top-left naming the part of the tour."""
+    rect, text = caption_rect(video_rect, caption, px, s, clear_right)
+    if not text:
+        return
+    xmin, ymin, xmax, ymax = rect
+    h = ymax - ymin
+    draw_rounded_rect(xmin, ymin, xmax - xmin, h, h * 0.5,
                       _with_alpha(config.HINT_BG, alpha * 0.9))
-    draw_text_centered((xmin, ymax - h, xmin + w, ymax), caption, px,
-                       _with_alpha(config.HINT_TEXT, alpha))
+    draw_text_centered(rect, text, px, _with_alpha(config.HINT_TEXT, alpha))
 
 
 def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: float) -> None:
@@ -263,7 +302,8 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool,
         px = config.CONTROL_FONT_PX * s
         # The controls' scrim goes under the caption and Skip tour pills.
         draw_controls(layout, paused, s, hover, alpha * ca)
-        _draw_caption(layout.video, caption, px, s, alpha)
+        _draw_caption(layout.video, caption, px, s, alpha,
+                      clear_right=layout.buttons["exit"][0])
         draw_skip_tour(layout, s, hover, alpha, ca)
         _draw_subtitle(layout, subtitle, config.SUBTITLE_FONT_PX * s, s, alpha)
         if loading_text:
