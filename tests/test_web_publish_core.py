@@ -98,15 +98,33 @@ class TestComputeSha256:
 
 
 class TestCameraPoseToConfig:
-    def test_translation_and_look(self):
+    def test_translation_and_look_in_gltf_axes(self):
+        # Blender (x, y, z) Z-up → glTF / three.js (x, z, -y) Y-up, the frame
+        # the exported GLB and the viewer use.
         matrix = _Matrix([(1.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0),
                           (0.0, 0.0, 1.0, 0.0), (3.0, 4.0, 5.0, 1.0)])
-        config = camera_pose_to_config(matrix, 50.0, 36.0)
-        assert config["position"] == [3.0, 4.0, 5.0]
-        # Camera +Z basis is +Z world; the camera looks down -Z.
-        assert config["target"] == pytest.approx([3.0, 4.0, 5.0 - 10.0])
+        config = camera_pose_to_config(matrix, 50.0, 36.0, aspect=1.0)
+        assert config["position"] == [3.0, 5.0, -4.0]
+        # The camera looks down Blender -Z, i.e. three.js -Y.
+        assert config["target"] == pytest.approx([3.0, 5.0 - 10.0, -4.0])
+        assert config["up"] == [0.0, 1.0, 0.0]
+        # Square frame: vertical FOV equals the sensor-width FOV.
         expected = math.degrees(2 * math.atan(36.0 / 100.0))
         assert config["fov"] == pytest.approx(expected, rel=0.01)
+
+    def test_fov_is_vertical_for_three_js(self):
+        from mixar.modules.web_publish.core.publish_state import vertical_fov_degrees
+
+        horizontal = 2 * math.atan(36.0 / 100.0)
+        landscape = vertical_fov_degrees(50.0, 36.0, 24.0, "AUTO", 16 / 9)
+        assert landscape == pytest.approx(
+            math.degrees(2 * math.atan(math.tan(horizontal / 2) / (16 / 9))))
+        # Portrait AUTO: the sensor width spans the (larger) height.
+        assert vertical_fov_degrees(50.0, 36.0, 24.0, "AUTO", 0.5) == pytest.approx(
+            math.degrees(horizontal))
+        assert vertical_fov_degrees(50.0, 36.0, 24.0, "VERTICAL", 16 / 9) == pytest.approx(
+            math.degrees(2 * math.atan(24.0 / 100.0)))
+        assert vertical_fov_degrees(0.0, 36.0) is None
 
     def test_lens_zero_omits_fov(self):
         matrix = _Matrix([(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)])
