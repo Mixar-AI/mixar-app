@@ -20124,8 +20124,8 @@ msgstr "Logowanie nie powiodło się"
 msgid "Sign in with your Mixar account"
 msgstr "Zaloguj się kontem Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Oczekiwanie na przeglądarkę..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Zaloguj się przez przeglądarkę"
@@ -21238,6 +21238,12 @@ msgstr "Wznawianie poprzedniego zadania..."
 
 msgid "Could not resume the previous task"
 msgstr "Nie można wznowić poprzedniego zadania"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25046,6 +25052,12 @@ msgstr "Liczba zamkniętych"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Liczba zamkniętych okien dymka agenta"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Ustaw rozmiar okna dymka agenta"
 
@@ -28149,6 +28161,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

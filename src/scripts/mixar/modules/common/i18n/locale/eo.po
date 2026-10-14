@@ -20124,8 +20124,8 @@ msgstr "Ensaluto malsukcesis"
 msgid "Sign in with your Mixar account"
 msgstr "Ensalutu per via Mixar-konto"
 
-msgid "Waiting for browser..."
-msgstr "Atendado de la retumilo..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Ensaluti per retumilo"
@@ -21237,6 +21237,12 @@ msgstr "Daŭrigo de antaŭa tasko..."
 
 msgid "Could not resume the previous task"
 msgstr "Ne eblis daŭrigi la antaŭan taskon"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Nombro de fermitaj"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Nombro de fermitaj fenestroj de la Agenta veziko"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Agordi grandon de la fenestro de la Agenta veziko"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

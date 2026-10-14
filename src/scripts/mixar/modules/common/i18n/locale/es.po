@@ -20124,8 +20124,8 @@ msgstr "Error al iniciar sesión"
 msgid "Sign in with your Mixar account"
 msgstr "Inicie sesión con su cuenta de Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Esperando al navegador..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Iniciar sesión con el navegador"
@@ -21237,6 +21237,12 @@ msgstr "Reanudando la tarea anterior..."
 
 msgid "Could not resume the previous task"
 msgstr "No se pudo reanudar la tarea anterior"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Ventanas cerradas"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Cantidad de ventanas de la burbuja del agente cerradas"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Definir tamaño de la ventana de la burbuja del agente"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

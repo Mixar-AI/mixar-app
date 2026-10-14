@@ -20124,8 +20124,8 @@ msgstr "Đăng Nhập Thất Bại"
 msgid "Sign in with your Mixar account"
 msgstr "Đăng nhập bằng tài khoản Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Đang chờ trình duyệt..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Đăng Nhập bằng Trình Duyệt"
@@ -21237,6 +21237,12 @@ msgstr "Đang tiếp tục tác vụ trước..."
 
 msgid "Could not resume the previous task"
 msgstr "Không thể tiếp tục tác vụ trước"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Số Lượng Đã Đóng"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Số cửa sổ Bong Bóng Tác Nhân đã đóng"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Đặt Kích Thước Cửa Sổ Bong Bóng Tác Nhân"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

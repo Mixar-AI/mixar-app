@@ -20124,8 +20124,8 @@ msgstr "Saio-hasierak huts egin du"
 msgid "Sign in with your Mixar account"
 msgstr "Hasi saioa zure Mixar kontuarekin"
 
-msgid "Waiting for browser..."
-msgstr "Arakatzailearen zain..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Hasi saioa arakatzailearekin"
@@ -21237,6 +21237,12 @@ msgstr "Aurreko lana berrekiten..."
 
 msgid "Could not resume the previous task"
 msgstr "Ezin izan da aurreko lana berrekin"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Itxitako kopurua"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Itxitako agentearen burbuila leihoen kopurua"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Ezarri agentearen burbuilaren leiho-tamaina"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

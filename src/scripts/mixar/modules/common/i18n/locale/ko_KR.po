@@ -20124,8 +20124,8 @@ msgstr "로그인 실패"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar 계정으로 로그인하세요"
 
-msgid "Waiting for browser..."
-msgstr "브라우저 대기 중..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "브라우저로 로그인"
@@ -21237,6 +21237,12 @@ msgstr "이전 작업 재개 중..."
 
 msgid "Could not resume the previous task"
 msgstr "이전 작업을 재개할 수 없습니다"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "닫힌 개수"
 msgid "Number of Agent Bubble windows closed"
 msgstr "닫힌 에이전트 버블 창의 개수"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "에이전트 버블 창 크기 설정"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

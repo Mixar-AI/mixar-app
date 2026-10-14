@@ -20124,8 +20124,8 @@ msgstr "Kirjautuminen epäonnistui"
 msgid "Sign in with your Mixar account"
 msgstr "Kirjaudu sisään Mixar-tililläsi"
 
-msgid "Waiting for browser..."
-msgstr "Odotetaan selainta..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Kirjaudu selaimella"
@@ -21237,6 +21237,12 @@ msgstr "Jatketaan aiempaa tehtävää..."
 
 msgid "Could not resume the previous task"
 msgstr "Aiempaa tehtävää ei voitu jatkaa"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Suljettujen määrä"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Suljettujen Agenttikuplan ikkunoiden määrä"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Aseta Agenttikuplan ikkunan koko"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

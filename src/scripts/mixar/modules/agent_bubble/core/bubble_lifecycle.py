@@ -18,6 +18,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.sign_in import sign_in_holds_autoshow
 from mixar.modules.agent_bubble.core import pill_icons
 from mixar.modules.agent_bubble.core.bubble_state import (
     LOAD_AUTOSHOW_RETRY_LIMIT,
@@ -154,6 +155,11 @@ def _load_autoshow_tick_inner():
     if _is_app_exiting():
         _st.load_autoshow_attempts = 0
         return None
+
+    if sign_in_holds_autoshow():
+        # The user is in the browser for a sign-in: the bubble window must
+        # not come up over it. Not an attempt — poll until Mixar is active.
+        return 0.3
 
     from mixar.modules.agent_bubble.core.bubble_autoshow import try_invoke_bubble as _try_invoke_bubble
 

@@ -20124,8 +20124,8 @@ msgstr "Аҭалара алымшеит"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar аккаунт ала аҩналара"
 
-msgid "Waiting for browser..."
-msgstr "Абраузер аԥыжәара..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Абраузер ала аҭалара"
@@ -21237,6 +21237,12 @@ msgstr "Аԥхьатәи аусура еиҭа алагара иаҿуп..."
 
 msgid "Could not resume the previous task"
 msgstr "Аԥхьатәи аусура еиҭа алагара алымшеит"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Иарку Ахыԥхьаӡара"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Иарку Агент Аԥенџьыр аԥенџьырқәа рхыԥхьаӡара"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Агент Аԥенџьыр Аԥенџьыр Ашәага Ашьақәыргылара"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

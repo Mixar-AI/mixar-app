@@ -20124,8 +20124,8 @@ msgstr "Innlogging mislyktes"
 msgid "Sign in with your Mixar account"
 msgstr "Logg inn med Mixar-kontoen din"
 
-msgid "Waiting for browser..."
-msgstr "Venter på nettleseren..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Logg inn med nettleser"
@@ -21237,6 +21237,12 @@ msgstr "Gjenopptar forrige oppgave..."
 
 msgid "Could not resume the previous task"
 msgstr "Kunne ikke gjenoppta den forrige oppgaven"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Antall lukket"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Antall agentboblevinduer som ble lukket"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Angi størrelse på agentboblevindu"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

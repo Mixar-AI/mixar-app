@@ -20124,8 +20124,8 @@ msgstr "Kuingia kumeshindwa"
 msgid "Sign in with your Mixar account"
 msgstr "Ingia kwa akaunti yako ya Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Inasubiri kivinjari..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Ingia kwa kivinjari"
@@ -21237,6 +21237,12 @@ msgstr "Inaendeleza kazi iliyotangulia..."
 
 msgid "Could not resume the previous task"
 msgstr "Haikuweza kuendeleza kazi iliyotangulia"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Idadi iliyofungwa"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Idadi ya madirisha ya Kiputo cha wakala yaliyofungwa"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Weka ukubwa wa dirisha la Kiputo cha wakala"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

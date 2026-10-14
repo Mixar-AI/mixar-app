@@ -20124,8 +20124,8 @@ msgstr "登录失败"
 msgid "Sign in with your Mixar account"
 msgstr "使用您的 Mixar 账户登录"
 
-msgid "Waiting for browser..."
-msgstr "正在等待浏览器..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "通过浏览器登录"
@@ -21237,6 +21237,12 @@ msgstr "正在继续先前的任务..."
 
 msgid "Could not resume the previous task"
 msgstr "无法继续先前的任务"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "已关闭数量"
 msgid "Number of Agent Bubble windows closed"
 msgstr "已关闭的智能体气泡窗口数量"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "设置智能体气泡窗口大小"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

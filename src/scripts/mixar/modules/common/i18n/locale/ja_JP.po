@@ -20128,8 +20128,8 @@ msgstr "ログインに失敗しました"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar アカウントでサインイン"
 
-msgid "Waiting for browser..."
-msgstr "ブラウザーを待機中..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ブラウザーでログイン"
@@ -21241,6 +21241,12 @@ msgstr "前のタスクを再開中..."
 
 msgid "Could not resume the previous task"
 msgstr "前のタスクを再開できませんでした"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25049,6 +25055,12 @@ msgstr "閉じた数"
 msgid "Number of Agent Bubble windows closed"
 msgstr "閉じたエージェントバブルウィンドウの数"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "エージェントバブルのウィンドウサイズを設定"
 
@@ -28152,6 +28164,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

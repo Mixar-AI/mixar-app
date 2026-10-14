@@ -20124,8 +20124,8 @@ msgstr "Gagal Masuk"
 msgid "Sign in with your Mixar account"
 msgstr "Masuk dengan akun Mixar Anda"
 
-msgid "Waiting for browser..."
-msgstr "Menunggu browser..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Masuk dengan Browser"
@@ -21237,6 +21237,12 @@ msgstr "Melanjutkan tugas sebelumnya..."
 
 msgid "Could not resume the previous task"
 msgstr "Tidak dapat melanjutkan tugas sebelumnya"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Jumlah yang Ditutup"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Jumlah jendela Gelembung Agen yang ditutup"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Tetapkan Ukuran Jendela Gelembung Agen"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

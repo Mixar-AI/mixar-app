@@ -20124,8 +20124,8 @@ msgstr "लॉगिन विफल"
 msgid "Sign in with your Mixar account"
 msgstr "अपने Mixar खाते से साइन इन करें"
 
-msgid "Waiting for browser..."
-msgstr "ब्राउज़र की प्रतीक्षा..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ब्राउज़र से लॉगिन करें"
@@ -21237,6 +21237,12 @@ msgstr "पिछला कार्य फिर से शुरू हो र
 
 msgid "Could not resume the previous task"
 msgstr "पिछला कार्य फिर से शुरू नहीं हो सका"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "बंद की गई संख्या"
 msgid "Number of Agent Bubble windows closed"
 msgstr "बंद की गई एजेंट बबल खिड़कियों की संख्या"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "एजेंट बबल खिड़की का आकार सेट करें"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

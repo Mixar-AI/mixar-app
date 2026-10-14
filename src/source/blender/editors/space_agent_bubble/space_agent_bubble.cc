@@ -234,6 +234,7 @@ extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
+extern "C" void Mixar_AppActivate(void *window_handle);
 extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle);
 extern "C" void Mixar_DispatchMainAfter(float delay_seconds,
                                         void (*callback)(void *),
@@ -3469,6 +3470,47 @@ void MIXAR_OT_agent_bubble_purge_windows(wmOperatorType *ot)
               INT_MAX);
 }
 
+/* Bring Mixar in front of every other application. The sign-in flow calls
+ * it (Python idname: mixar.activate_app) once a browser SSO login has
+ * SUCCEEDED, so the user lands back in the app they were signing into;
+ * it is never called on a failed or cancelled login. macOS activates the
+ * app, Windows foregrounds the main window, elsewhere it is a no-op
+ * (OPERATOR_CANCELLED, which the Python wrapper reads as "not done").
+ * Window order and the bubble's own activation rules are untouched. */
+static wmOperatorStatus mixar_activate_app_exec(bContext *C, wmOperator * /*op*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  wmWindowManager *wm = CTX_wm_manager(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (win == nullptr && wm != nullptr) {
+    win = static_cast<wmWindow *>(wm->windows.first);
+  }
+  /* Walk up to the top-level window: a timer may run with a bubble or
+   * dialog window in context, and the foreground target is the main one. */
+  while (win != nullptr && win->parent != nullptr) {
+    win = win->parent;
+  }
+  void *ghostwin = nullptr;
+  if (win != nullptr && win->runtime != nullptr) {
+    ghostwin = win->runtime->ghostwin;
+  }
+  Mixar_AppActivate(ghostwin);
+  return OPERATOR_FINISHED;
+#else
+  UNUSED_VARS(C);
+  return OPERATOR_CANCELLED;
+#endif
+}
+
+void MIXAR_OT_activate_app(wmOperatorType *ot)
+{
+  ot->name = "Activate Mixar";
+  ot->idname = "MIXAR_OT_activate_app";
+  ot->description = "Bring Mixar in front of other applications";
+
+  ot->exec = mixar_activate_app_exec;
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -4324,6 +4366,7 @@ static void agent_bubble_operatortypes()
   mixie_chat_operatortypes();
   WM_operatortype_append(MIXAR_OT_agent_bubble_show_window);
   WM_operatortype_append(MIXAR_OT_agent_bubble_purge_windows);
+  WM_operatortype_append(MIXAR_OT_activate_app);
   WM_operatortype_append(MIXAR_OT_bubble_set_size);
   WM_operatortype_append(MIXAR_OT_bubble_sync_attachment_size);
   WM_operatortype_append(MIXAR_OT_bubble_window_begin_drag);

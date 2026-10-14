@@ -20124,8 +20124,8 @@ msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻞﺸﻓ"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar ﺏﺎﺴﺤﺑ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
 
-msgid "Waiting for browser..."
-msgstr "...ﺢﻔﺼﺘﻤﻟﺍ ﺭﺎﻈﺘﻧﺎﺑ"
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﺢﻔﺼﺘﻤﻟﺍ ﺮﺒﻋ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
@@ -21237,6 +21237,12 @@ msgstr "...ﺔﻘﺑﺎﺴﻟﺍ ﺔﻤﻬﻤﻟﺍ ﻑﺎﻨﺌﺘﺳﺍ ﺭٍ�
 
 msgid "Could not resume the previous task"
 msgstr "ﺔﻘﺑﺎﺴﻟﺍ ﺔﻤﻬﻤﻟﺍ ﻑﺎﻨﺌﺘﺳﺍ ﺭﺬﻌﺗ"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "ﺔﻘﻠﻐﻤﻟﺍ ﺩﺪﻋ"
 msgid "Number of Agent Bubble windows closed"
 msgstr "ﺔﻘﻠﻐﻤﻟﺍ ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺬﻓﺍﻮﻧ ﺩﺪﻋ"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﻢﺠﺣ ﻦﻴﻴﻌﺗ"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"

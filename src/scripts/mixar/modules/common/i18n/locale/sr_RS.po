@@ -20124,8 +20124,8 @@ msgstr "Пријава није успела"
 msgid "Sign in with your Mixar account"
 msgstr "Пријавите се налогом Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Чека се прегледач..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Пријава прегледачем"
@@ -21237,6 +21237,12 @@ msgstr "Настављање претходног задатка..."
 
 msgid "Could not resume the previous task"
 msgstr "Није било могуће наставити претходни задатак"
+
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
 
 msgid "Adjust Last Operation..."
 msgstr ""
@@ -25045,6 +25051,12 @@ msgstr "Број затворених"
 msgid "Number of Agent Bubble windows closed"
 msgstr "Број затворених прозора мехурића агента"
 
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
+
 msgid "Set Agent Bubble Window Size"
 msgstr "Постави величину прозора мехурића агента"
 
@@ -28148,6 +28160,12 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
 msgstr ""
 
 msgid "Undo History (per-tab)"
