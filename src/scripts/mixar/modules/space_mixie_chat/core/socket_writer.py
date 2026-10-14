@@ -18,15 +18,23 @@ def start_writer(client):
                 continue
             if stopped.is_set() or client._ws is not socket:
                 return
+            size = len(frame)
+            client._diag.send_starting(size)
             try:
                 socket.send(frame)
-            except Exception:
+            except Exception as exc:
+                # Was silent: a send that outlived the socket timeout (a large
+                # frame on a slow uplink) tore the connection down unexplained.
+                timeout = socket.gettimeout() if hasattr(socket, 'gettimeout') else None
+                client._diag.end('writer_error', exc, send_bytes=size, socket_timeout_s=timeout,
+                                 queued=client._outbound.qsize())
                 client._connected = False
                 try:
                     socket.close()
                 except Exception:
                     pass
                 return
+            client._diag.sent(size)
             client._expire_pending()
 
     thread = threading.Thread(target=write, name='MixarSocketWriter', daemon=True)

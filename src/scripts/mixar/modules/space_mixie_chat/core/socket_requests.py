@@ -100,6 +100,7 @@ class SocketRequests:
 
     def _enqueue_frame(self, frame, *, required=False):
         """Never block the UI or reader on backpressure; force recovery if needed."""
+        encoded = ''
         try:
             encoded = json.dumps(frame)
             if len(encoded.encode('utf-8')) > 32 * 1024 * 1024:
@@ -109,6 +110,9 @@ class SocketRequests:
         except (Full, ValueError):
             if required and self._ws:
                 # A tool result cannot be silently lost or replayed as execution.
+                self._diag.end('backpressure', queued=self._outbound.qsize(),
+                               queued_bytes=getattr(self._outbound, 'queued_bytes', None),
+                               frame_bytes=len(encoded.encode('utf-8')))
                 self._connected = False
                 threading.Thread(target=self._ws.close, daemon=True).start()
             return False

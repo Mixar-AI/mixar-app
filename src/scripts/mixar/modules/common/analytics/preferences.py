@@ -24,6 +24,7 @@ def set_enabled(enabled: bool) -> bool:
                 if isinstance(result, dict) and result.get('code'):
                     # Reconnect carries the new consent in the handshake.
                     if client._ws:
+                        client._diag.end('consent_reconnect')
                         client._ws.close()
             client.send_request('system.set_context', {'telemetry_consent': bool(enabled)},
                                 on_result=acknowledged)
@@ -31,6 +32,7 @@ def set_enabled(enabled: bool) -> bool:
         from mixar.config.logging_config import get_logger
         get_logger(__name__).debug('Consent update waits for the next agent connection')
         if client and client.is_connected and client._ws:
+            client._diag.end('consent_reconnect')
             import threading
             threading.Thread(target=client._ws.close, daemon=True).start()
     return saved
