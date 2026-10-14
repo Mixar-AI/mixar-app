@@ -1439,6 +1439,33 @@ msgstr ".הכימתל תונפל אנ — םיניקת אל ספוט ינותנ"
 msgid "Something went wrong on our end. Please try again."
 msgstr ".בוש תוסנל אנ .ונלצא שבתשה והשמ"
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ימוקמה לדומה גולטק תא ארוק"
 
@@ -1562,6 +1589,30 @@ msgstr "לדומה תא תונשל היה ןתינ אל"
 msgid "Could not reset model"
 msgstr "לדומה תא לחתאל היה ןתינ אל"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "…חתפמה תא ריסמ"
 
@@ -1570,6 +1621,9 @@ msgstr "…קפסה לומ תמאמ"
 
 msgid "AI Provider Settings"
 msgstr "AI קפס תורדגה"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "ליעפ"
@@ -1601,38 +1655,32 @@ msgstr ".יתוזח בושמ ילב תוצר דממ-תלת תומישמ ;דבו�
 msgid "Remove API Key…"
 msgstr "…API חתפמ תרסה"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "קפס תרדגה"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא — Mixar ןכוס תושקבל קר שמשמו ,ןפצומ ןסחואמ"
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירקב ךמותש לדומ רוחבל שי"
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ךותמ הניעט"
-
-msgid "…or paste it manually"
-msgstr "תינדי הקבדה וא…"
-
-msgid "{count} characters pasted"
-msgstr "םיוות {count} וקבדוה"
-
-msgid "Empty — paste your auth.json"
-msgstr "auth.json תא קיבדהל שי — קיר"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "תא קיבדהל וא ןועטל זאו ,ףוסמב  codex login  ץירהל שי"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(םיריזגה חול תא ארוק הקבדהה רותפכ) codex/auth.json./~ לש אלמה ןכותה"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
 
 msgid "Couldn't apply your changes"
 msgstr "םייונישה תא ליחהל היה ןתינ אל"
@@ -1742,41 +1790,8 @@ msgstr ".API חתפמ ןיזהלו הז קפסל לדומ רוחבל שי"
 msgid "Model slug and API key are required."
 msgstr ".הבוח תודש םה API חתפמו לדומ לש slug ההזמ"
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr ".auth.json תליבח תא ןועטלו Codex לדומ רוחבל שי"
-
 msgid "Save failed."
 msgstr ".הלשכנ הרימשה"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "הדשה לא הז בשחממ codex/auth.json./~ תאירק"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json הליחת ץירהל שי — אצמנ אל `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "codex/auth.json./~ תא אורקל היה ןתינ אל"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json קיר"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json יוארכ רמשיי אל אוה — ץצוקו הז הדשל ידמ לודג"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ןעטנ"
-
-msgid "Paste auth.json"
-msgstr "auth.json תקבדה"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "הדשה לא םיריזגה חולמ codex/auth.json./~ תקבדה"
-
-msgid "Clipboard is empty"
-msgstr "קיר םיריזגה חול"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json יוארכ רמשיי אל אוה — ץצוקו הז הדשל ידמ לודג קבדוהש"
 
 msgid "Remove"
 msgstr "הרסה"
@@ -1850,11 +1865,11 @@ msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא .Mixar ן
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "(anthropic/claude-opus-4.8 לשמל) openrouter.ai/models-מ slug ההזמ לכ"
 
-msgid "Codex auth.json"
-msgstr "auth.json לש Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "(`codex login` הליחת ץירהל שי) codex/auth.json./~ לש ןכותה"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ימוקמ בצמ"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "םיצבק"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "תישאר"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "({shortcut}) טא'צל הארשהה חולמ םיפרוצמה םיצבק
 msgid "Sync failed: {error}"
 msgstr "{error} :לשכנ ןורכנסה"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "הארשהה חולב ואידיו תריציב שמתשהל שי םיפילקל .דבלב סליטס תונומת לבקמ ןכוסה .{count} :גלודש ואידיו"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "הארשהה חולב ואידיו תריציב שמתשהל שי םיפילקל .דבלב סליטס תונומת לבקמ ןכוסה .{count} :גלודש ואידיו"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "הארשה חול תונומת ורחבנ אל"
@@ -9219,9 +9279,6 @@ msgstr "הייקית"
 
 msgid "Directory of the selected file(s)"
 msgstr "ורחבנש םיצבקה תייקית"
-
-msgid "Files"
-msgstr "םיצבק"
 
 msgid "Failed to load media: {filepath}"
 msgstr "{filepath} :הלשכנ הידמה תניעט"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "...הנשמ"
 msgid "Awaiting Input..."
 msgstr "...טלקל ןיתממ"
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr ".ןכוסל חולשל ידכ ואידיווה תא ריסהל שי .ואידיו בצמ םישרוד םינוטרס"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "שמתשמ ההזמ"
@@ -19547,6 +19604,9 @@ msgstr "Mixie טא'צל תורבחתהל שמתשמ ההזמ"
 
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ל הפצמ ןכוסה"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*רצענ*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "גורדש"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "הקיר בושמה תרעה"
@@ -20728,11 +20797,14 @@ msgstr "הקיחמל ןויכראב הלעפה"
 msgid "Chat removed from history"
 msgstr "הירוטסיההמ רסוה טא'צה"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
@@ -20740,14 +20812,14 @@ msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
 msgid "Skipped {name}: {error}"
 msgstr "{name}: {error} לע גוליד"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
-
 msgid "These references are already attached"
 msgstr "םיפרוצמ רבכ הלאה םיסנרפרה"
 
 msgid "Added {count} image(s)"
 msgstr "תונומת {count} ופסונ"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-מ הפסוה"
@@ -20764,6 +20836,9 @@ msgstr "{size} - םינותנ שי"
 msgid "{size} - No data"
 msgstr "{size} - םינותנ ןיא"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend ץבוקמ הנומת תריחב"
 
@@ -20772,6 +20847,12 @@ msgstr "הפסונ רבכ הנומתה"
 
 msgid "Image not found in blend file"
 msgstr "blend ץבוקב האצמנ אל הנומתה"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "תפרוצמ רבכ הנומתה"
@@ -21522,6 +21603,15 @@ msgstr "טא'צ טלק"
 
 msgid "Type your message here"
 msgstr "ןאכ העדוהה תא דילקהל שי"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "טא'צ תועדוה"
@@ -23620,9 +23710,6 @@ msgstr "ןמס תדמצה"
 msgid "Snap 2D cursor"
 msgstr "ידממ-וד ןמס דימצמ"
 
-msgid "Origin"
-msgstr "תישאר"
-
 msgid "Mirror selected UVs"
 msgstr "םירחבנ UV ףקשמ"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "רייצל ליחתהל ידכ תובכשה חולב רויצ תבכש ףיסוהל שי"
 
@@ -24409,7 +24499,43 @@ msgstr "הציקסה תטויטל הבתכה רצוע וא ליחתמ"
 msgid "Stop the running turn"
 msgstr "ליעפה בבסה תא רצוע"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"רוזחש\n"
+"\n"
+".השטולש ינפל הבתכנש היחנהה תא רזחשמ"
+
+msgid "Refining this prompt..."
+msgstr "...וזה היחנהה תא שטלמ"
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"ףסונ שוטיל\n"
+"\n"
+".םדוקה שוטילה תא אל ,ירוקמה חוסינה תא ריזחמ ןיידע רוזחש .חלשית איה וילאש לדומה רובע םעפ דוע וזה היחנהה תא שדחמ בתוכ"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"שוטיל\n"
+"\n"
+".וילא ביגמ לדומהש טוריפה תא ףיסומו ,חלשית איה וילאש לדומה רובע וזה היחנהה תא שדחמ בתוכ"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "סנרפר תרסה"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "רותבש רויצה תאו וזה הציקסה תא ךילשמ"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "ןכוסה לש םיילבולגה םיללכהו טקיורפה ילל�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 ".הזה תמוצה תא חלוש Enter .רוציל המ וראת"
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"רוזחש\n"
-"\n"
-".השטולש ינפל הבתכנש היחנהה תא רזחשמ"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"ףסונ שוטיל\n"
-"\n"
-".םדוקה שוטילה תא אל ,ירוקמה חוסינה תא ריזחמ ןיידע רוזחש .חלשית איה וילאש לדומה רובע םעפ דוע וזה היחנהה תא שדחמ בתוכ"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"שוטיל\n"
-"\n"
-".וילא ביגמ לדומהש טוריפה תא ףיסומו ,חלשית איה וילאש לדומה רובע וזה היחנהה תא שדחמ בתוכ"
-
-msgid "Refining this prompt..."
-msgstr "...וזה היחנהה תא שטלמ"
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "םימקרמ תוכרע בחרמ"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "םימקרמ תוכרע להנל ידכ דצה לגרס תוחולב ושמתשה"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "ןושארל הרזח"
@@ -28050,6 +28155,12 @@ msgstr "ץבוק תמויס ןנסמ"
 
 msgid "Write compressed .mixar file"
 msgstr "סוחד mixar. ץבוק תביתכ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "mixar. ץבוקכ הרימש"

@@ -55,7 +55,7 @@ float chat_ui_draw_bubble(const ChatBubbleStyle *style,
   bubble_rect.ymax = y + bubble_height;
 
   if (glass) {
-    chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color[3]);
+    chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color);
   }
   else {
     chat_ui_draw_rounded_rect(&bubble_rect, style->corner_radius, style->bg_color);

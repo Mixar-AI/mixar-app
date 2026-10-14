@@ -27,9 +27,9 @@ from .device import get_device_id
 
 logger = get_logger(__name__)
 
-# Windows-specific credential handling to match C++ implementation
-# C++ uses TargetName format: "MixarSafeStorage@AccessToken" and "MixarSafeStorage@RefreshToken"
-# Python keyring uses a different format, causing inconsistency
+# Windows-specific credential handling to match the C++ implementation
+# (creator_auth.cc): TargetName "<item>@MixarSafeStorage", which Python
+# keyring's compound format would not produce.
 
 _is_windows = platform.system() == "Windows"
 
@@ -41,10 +41,10 @@ if _is_windows:
     CRED_TYPE_GENERIC = 1
     CRED_PERSIST_LOCAL_MACHINE = 2
 
-    # Use username@service format (matches Python keyring's compound format)
+    # Use username@service format (matches Python keyring's compound format).
+    # Windows keeps the original names (see ACCESS_TOKEN_ITEM below).
     WIN_TARGET_NAME_ACCESS = "AccessToken@MixarSafeStorage"
     WIN_TARGET_NAME_REFRESH = "RefreshToken@MixarSafeStorage"
-    WIN_TARGET_NAME_REFRESH_ATTEMPT = "RefreshAttempt@MixarSafeStorage"
 
     class CREDENTIAL(ctypes.Structure):
         _fields_ = [
@@ -123,16 +123,34 @@ else:
     import keyring
 
 
+# Item names (shared with the C++ shell, creator_auth.cc, which reads the
+# access token before Python runs). On macOS they carry a "Mixar." prefix
+# since the bundle id lost its version stamp: an item created by an older
+# signing identity can be neither read nor deleted without a Keychain dialog,
+# so the stable identity uses new names and never touches the old items —
+# the user signs in once (there is no silent move: the old item is unreadable
+# by definition). Windows (Credential Manager) and Linux (SecretService) have
+# no per-app access list, so they keep the original names and an upgrade
+# keeps the session; renaming there would sign every user out.
+_is_macos = platform.system() == "Darwin"
+ACCESS_TOKEN_ITEM = "Mixar.AccessToken" if _is_macos else "AccessToken"
+REFRESH_TOKEN_ITEM = "Mixar.RefreshToken" if _is_macos else "RefreshToken"
+
+
+def _read_token(item, win_target):
+    """The token under its item name, or "" when absent."""
+    if _is_windows:
+        return _win_get_password(win_target) or ""
+    # macOS: dialog-free reads (common/utils/credential_store); Linux: SecretService.
+    from mixar.modules.common.utils import credential_store
+
+    return credential_store.get_secret(item) or ""
+
+
 def get_access_token():
     """Get the stored access token from system credential storage."""
     try:
-        if _is_windows:
-            # Use Windows Credential Manager directly with C++ compatible format
-            token = _win_get_password(WIN_TARGET_NAME_ACCESS)
-        else:
-            # Use keyring for macOS/Linux
-            token = keyring.get_password("MixarSafeStorage", "AccessToken")
-        return token if token else ""
+        return _read_token(ACCESS_TOKEN_ITEM, WIN_TARGET_NAME_ACCESS if _is_windows else None)
     except Exception as e:
         logger.warning(f"Failed to retrieve access token: {e}")
         return ""
@@ -143,11 +161,10 @@ def store_access_token(token):
     try:
         if _is_windows:
             # Use Windows Credential Manager directly with C++ compatible format
-            return _win_set_password(WIN_TARGET_NAME_ACCESS, "AccessToken", token)
-        else:
-            # Use keyring for macOS/Linux
-            keyring.set_password("MixarSafeStorage", "AccessToken", token)
-            return True
+            return _win_set_password(WIN_TARGET_NAME_ACCESS, ACCESS_TOKEN_ITEM, token)
+        from mixar.modules.common.utils import credential_store
+
+        return credential_store.set_secret(ACCESS_TOKEN_ITEM, token)
     except Exception as e:
         logger.error(f"Failed to store access token: {e}")
         return False
@@ -159,10 +176,9 @@ def delete_access_token():
         if _is_windows:
             # Use Windows Credential Manager directly with C++ compatible format
             return _win_delete_password(WIN_TARGET_NAME_ACCESS)
-        else:
-            # Use keyring for macOS/Linux
-            keyring.delete_password("MixarSafeStorage", "AccessToken")
-            return True
+        from mixar.modules.common.utils import credential_store
+
+        return credential_store.delete_secret(ACCESS_TOKEN_ITEM)
     except Exception as e:
         logger.warning(f"Failed to delete access token: {e}")
         return False
@@ -171,13 +187,7 @@ def delete_access_token():
 def get_refresh_token():
     """Get the stored refresh token from system credential storage."""
     try:
-        if _is_windows:
-            # Use Windows Credential Manager directly with C++ compatible format
-            token = _win_get_password(WIN_TARGET_NAME_REFRESH)
-        else:
-            # Use keyring for macOS/Linux
-            token = keyring.get_password("MixarSafeStorage", "RefreshToken")
-        return token if token else ""
+        return _read_token(REFRESH_TOKEN_ITEM, WIN_TARGET_NAME_REFRESH if _is_windows else None)
     except Exception as e:
         logger.warning(f"Failed to retrieve refresh token: {e}")
         return ""
@@ -188,11 +198,10 @@ def store_refresh_token(token):
     try:
         if _is_windows:
             # Use Windows Credential Manager directly with C++ compatible format
-            return _win_set_password(WIN_TARGET_NAME_REFRESH, "RefreshToken", token)
-        else:
-            # Use keyring for macOS/Linux
-            keyring.set_password("MixarSafeStorage", "RefreshToken", token)
-            return True
+            return _win_set_password(WIN_TARGET_NAME_REFRESH, REFRESH_TOKEN_ITEM, token)
+        from mixar.modules.common.utils import credential_store
+
+        return credential_store.set_secret(REFRESH_TOKEN_ITEM, token)
     except Exception as e:
         logger.error(f"Failed to store refresh token: {e}")
         return False
@@ -204,13 +213,17 @@ def delete_refresh_token():
         if _is_windows:
             # Use Windows Credential Manager directly with C++ compatible format
             return _win_delete_password(WIN_TARGET_NAME_REFRESH)
-        else:
-            # Use keyring for macOS/Linux
-            keyring.delete_password("MixarSafeStorage", "RefreshToken")
-            return True
+        from mixar.modules.common.utils import credential_store
+
+        return credential_store.delete_secret(REFRESH_TOKEN_ITEM)
     except Exception as e:
         logger.warning(f"Failed to delete refresh token: {e}")
         return False
+
+
+# Key of the pending-refresh marker inside the credential bundle
+# (`common/utils/credential_store`); replaced the standalone "RefreshAttempt" item.
+REFRESH_ATTEMPT_KEY = "auth:refresh_attempt"
 
 
 def _refresh_token_digest(token):
@@ -228,20 +241,26 @@ def _load_persisted_refresh_attempt():
     At worst the backend rejects that attempt as a definitive replay and the
     user re-authenticates once — instead of refresh being wedged forever.
     """
+    # The marker lives in the credential bundle (one Keychain item for every
+    # Python-owned secret, read once per process); an older build's own
+    # "RefreshAttempt" item is moved in on first use.
+    from mixar.modules.common.utils import credential_store
+
     try:
-        if _is_windows:
-            raw = _win_get_password(WIN_TARGET_NAME_REFRESH_ATTEMPT)
-        else:
-            raw = keyring.get_password("MixarSafeStorage", "RefreshAttempt")
+        credential_store.migrate_legacy_entry(
+            "RefreshAttempt", REFRESH_ATTEMPT_KEY, parse=json.loads)
+        if not credential_store.store_available():
+            logger.error("Failed to read pending refresh attempt: store unavailable")
+            return False, None
+        parsed = credential_store.get_value(REFRESH_ATTEMPT_KEY)
     except Exception as e:
         logger.error(f"Failed to read pending refresh attempt: {e}")
         return False, None
-    if not raw:
+    if not parsed:
         return True, None
 
     attempt = None
     try:
-        parsed = json.loads(raw)
         digest = parsed.get("refresh_token_digest")
         idempotency_key = parsed.get("idempotency_key")
         parsed_key = uuid.UUID(idempotency_key)
@@ -270,22 +289,13 @@ def _load_persisted_refresh_attempt():
 
 def _persist_refresh_attempt(attempt):
     """Atomically store digest + idempotency key before the HTTP request."""
+    from mixar.modules.common.utils import credential_store
+
     try:
-        raw = json.dumps(
-            {
-                "refresh_token_digest": attempt["refresh_token_digest"],
-                "idempotency_key": attempt["idempotency_key"],
-            },
-            separators=(",", ":"),
-        )
-        if _is_windows:
-            return _win_set_password(
-                WIN_TARGET_NAME_REFRESH_ATTEMPT,
-                "RefreshAttempt",
-                raw,
-            )
-        keyring.set_password("MixarSafeStorage", "RefreshAttempt", raw)
-        return True
+        return credential_store.set_value(REFRESH_ATTEMPT_KEY, {
+            "refresh_token_digest": attempt["refresh_token_digest"],
+            "idempotency_key": attempt["idempotency_key"],
+        })
     except Exception as e:
         logger.error(f"Failed to persist pending refresh attempt: {e}")
         return False
@@ -293,14 +303,10 @@ def _persist_refresh_attempt(attempt):
 
 def _delete_persisted_refresh_attempt():
     """Delete the durable logical-attempt marker; absence is success."""
+    from mixar.modules.common.utils import credential_store
+
     try:
-        if _is_windows:
-            return _win_delete_password(WIN_TARGET_NAME_REFRESH_ATTEMPT)
-        raw = keyring.get_password("MixarSafeStorage", "RefreshAttempt")
-        if not raw:
-            return True
-        keyring.delete_password("MixarSafeStorage", "RefreshAttempt")
-        return True
+        return credential_store.delete_value(REFRESH_ATTEMPT_KEY)
     except Exception as e:
         logger.error(f"Failed to delete pending refresh attempt: {e}")
         return False

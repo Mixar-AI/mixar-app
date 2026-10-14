@@ -81,6 +81,41 @@ CODEX_PROVIDER_ITEM = (
     "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
 )
 
+# --- Local key store + per-turn pass-through -------------------------------
+# The backend stores BYOK metadata only; the key lives in the OS credential
+# store on this machine (core/key_store.py) and rides every `chat` / `input`
+# command as these payload fields (core/turn_credentials.py).
+BYOK_TURN_KEY_FIELD = "byok_key"
+BYOK_TURN_ACCOUNT_FIELD = "byok_account_id"
+# The `input` action the server exempts from the key requirement (an abort
+# makes no model call): sent at once, no store read, no Codex refresh.
+BYOK_TURN_ABORT_ACTION = "abort"
+# Command error code the server answers with when BYOK is active and the
+# command carried no key (409). The client shows the message and points at
+# AI Provider Settings — never retries on its own.
+BYOK_KEY_REQUIRED_CODE = "byok_key_required"
+# Client-side pre-send refusals share the command-error path under these codes.
+BYOK_CODEX_EXPIRED_CODE = "byok_codex_expired"
+BYOK_CODEX_REFRESH_FAILED_CODE = "byok_codex_refresh_failed"
+# Credential-store entry name prefix; the Mixar user id is appended so two
+# accounts on one machine never share a key.
+BYOK_KEY_STORE_PREFIX = "BYOK"
+
+# --- Codex (ChatGPT) token refresh ------------------------------------------
+# The desktop keeps the refresh token and renews the access token itself
+# (the server only ever sees the access token + account id).
+CODEX_TOKEN_URL = "https://auth.openai.com/oauth/token"
+CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+CODEX_TOKEN_SCOPE = "openid profile email offline_access"
+CODEX_USER_AGENT = "codex_cli_rs/0.20.0"
+CODEX_REFRESH_TIMEOUT_S = 10
+# Refresh BEFORE sending when the access token expires within this window
+# (or carries no `exp` at all).
+CODEX_REFRESH_MARGIN_S = 24 * 60 * 60
+# The ChatGPT account id claim inside Codex id/access tokens.
+CODEX_AUTH_CLAIM = "https://api.openai.com/auth"
+CODEX_ACCOUNT_ID_CLAIM = "chatgpt_account_id"
+
 # "Local (this computer)" — a client-side-only provider option: the agent's
 # LLM calls are relayed over the agent WebSocket to a model server running on
 # the user's own machine (managed llama-server via modules/local_models, or a

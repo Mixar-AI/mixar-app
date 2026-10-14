@@ -71,7 +71,7 @@ def register() -> None:
     )
     wm.mixar_usage_bonus_remaining = IntProperty(
         name="Bonus Credits Remaining",
-        description="Top-up, referral and sign-up bonus credits left",
+        description="Top-up and referral credits left",
         default=0,
         min=0,
     )

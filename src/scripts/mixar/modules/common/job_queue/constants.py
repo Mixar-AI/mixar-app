@@ -4,11 +4,14 @@
 
 """Constants for the job queue framework."""
 
-# Re-export poll constants from hunyuan to keep one source of truth.
-from mixar.modules.hunyuan.constants import (
-    MAX_POLL_DURATION,
-    MAX_CONSECUTIVE_POLL_ERRORS,
-)
+# Client-side ceiling on the waiting-for-the-backend phase. It must stay >= the
+# backend's own budgets (job_queue_configs: default_queue_timeout_s +
+# default_execution_timeout_s), or the client cancels a job the user has already
+# paid for while the backend is still working on it.
+MAX_POLL_DURATION = 3600.0  # 60 minutes
+
+# Maximum consecutive poll errors before marking job as FAILED
+MAX_CONSECUTIVE_POLL_ERRORS = 5
 
 # Auth watcher poll interval (seconds)
 AUTH_RETRY_INTERVAL_S = 5.0

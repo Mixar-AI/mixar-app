@@ -143,7 +143,7 @@ def _wm(state='IDLE', **extra):
         byok_form_model='NONE',
         byok_form_api_key='',
         byok_form_openrouter_model='',
-        byok_form_codex_bundle='',
+        byok_form_codex_path='',
         byok_form_local_mode='MANAGED',
         byok_form_local_model='NONE',
         byok_form_local_detected='NONE',
@@ -235,7 +235,7 @@ def test_all_provider_branches_render_in_both_modes():
     for provider, extra in (
         ('anthropic', {}),
         ('openrouter', {'byok_form_openrouter_model': 'a/b'}),
-        ('codex', {'byok_form_codex_bundle': 'x' * 10}),
+        ('codex', {'byok_form_codex_path': ''}),
         ('local', {'byok_form_local_mode': 'MANAGED'}),
         ('local', {'byok_form_local_mode': 'CUSTOM'}),
     ):
@@ -347,6 +347,19 @@ def test_remove_failure_lands_on_error(monkeypatch):
     assert wm.byok_dialog_state == 'ERROR'
     assert wm.byok_last_error == "server said no"
     assert wm.byok_is_active is True  # config untouched on failure
+
+
+def test_error_keeps_the_active_configuration_visible():
+    """A failed re-save never touches the stored key, so the dialog must
+    not suggest the active configuration has gone away."""
+    for card_api in (True, False):
+        log = _draw('ERROR', card_api, byok_is_active=True,
+                    byok_current_provider='anthropic', byok_current_model='m')
+        assert any(e.endswith("Current Configuration") for e in log), log
+        assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+
+    log = _draw('ERROR', card_api=True)
+    assert not any(e.endswith("Current Configuration") for e in log)
 
 
 # ---------------------------------------------------------------------------

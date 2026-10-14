@@ -35,6 +35,8 @@ enum class AgentIslandControl {
   Auto,
   Model,
   Generate,
+  Refine,
+  Revert,
   Count,
 };
 

@@ -1815,13 +1815,16 @@ elseif(APPLE)
     MACOSX_BUNDLE_LONG_VERSION_STRING "${_BUNDLE_LONG_VERSION}"
   )
 
-  # Set versioned bundle identifier and display name
+  # The bundle identifier is NEVER versioned (see platform_apple.cmake): it is
+  # part of the code-signing identity the Keychain binds every stored
+  # credential to, so a per-release id re-prompted for each item on every
+  # upgrade. Only the display name carries the version.
   if(DEFINED ENV{MIXAR_VERSION})
     string(REPLACE "." ";" _mixar_ver "$ENV{MIXAR_VERSION}")
     list(GET _mixar_ver 0 _MIXAR_MAJOR)
     list(GET _mixar_ver 1 _MIXAR_MINOR)
     set_target_properties(mixar PROPERTIES
-      MACOSX_BUNDLE_GUI_IDENTIFIER "com.mixar.mixar-${_MIXAR_MAJOR}-${_MIXAR_MINOR}"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "com.mixar.mixar"
       MACOSX_BUNDLE_BUNDLE_NAME "Mixar ${_MIXAR_MAJOR}.${_MIXAR_MINOR}"
     )
   else()

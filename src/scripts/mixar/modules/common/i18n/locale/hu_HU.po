@@ -1439,6 +1439,33 @@ msgstr "Érvénytelen űrlapadatok – forduljon az ügyfélszolgálathoz."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Hiba történt a mi oldalunkon. Próbálja újra."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "A lokális modellkatalógus beolvasása"
 
@@ -1562,6 +1589,30 @@ msgstr "Nem sikerült modellt váltani"
 msgid "Could not reset model"
 msgstr "Nem sikerült alaphelyzetbe állítani a modellt"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "A kulcs eltávolítása…"
 
@@ -1570,6 +1621,9 @@ msgstr "Ellenőrzés a szolgáltatónál…"
 
 msgid "AI Provider Settings"
 msgstr "MI-szolgáltató beállításai"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktív"
@@ -1601,38 +1655,32 @@ msgstr "Csak szöveges modell – a csevegés működik; a 3D-feladatok vizuáli
 msgid "Remove API Key…"
 msgstr "API-kulcs eltávolítása…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Szolgáltató beállítása"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Titkosítva tárolva, csak a Mixar ügynök kéréseihez használva – mentés után csak maszkolt előnézet látható."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Válasszon eszköz-/függvényhívást támogató modellt – az ügynöknek szüksége van rá."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bármely azonosító az openrouter.ai/models oldalról, pl. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Betöltés innen: ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…vagy illessze be kézzel"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter beillesztve"
-
-msgid "Empty — paste your auth.json"
-msgstr "Üres – illessze be az auth.json fájlját"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Futtassa a  codex login  parancsot a terminálban, majd töltse be vagy illessze be a"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json teljes tartalmát (a beillesztés gomb a vágólapról olvas)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
 
 msgid "Couldn't apply your changes"
 msgstr "Nem sikerült alkalmazni a módosításokat"
@@ -1742,41 +1790,8 @@ msgstr "Válasszon modellt ehhez a szolgáltatóhoz, és adjon meg egy API-kulcs
 msgid "Model slug and API key are required."
 msgstr "A modellazonosító és az API-kulcs megadása kötelező."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Válasszon egy Codex-modellt, és töltse be az auth.json csomagját."
-
 msgid "Save failed."
 msgstr "A mentés sikertelen."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "A ~/.codex/auth.json beolvasása erről a gépről a mezőbe"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "A ~/.codex/auth.json nem található – előbb futtassa a `codex login` parancsot"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nem sikerült beolvasni: ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "A ~/.codex/auth.json üres"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Az auth.json túl nagy ehhez a mezőhöz, ezért csonkolva lett – nem fog megfelelően mentődni"
-
-msgid "Loaded auth.json"
-msgstr "auth.json betöltve"
-
-msgid "Paste auth.json"
-msgstr "auth.json beillesztése"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "A ~/.codex/auth.json beillesztése a vágólapról a mezőbe"
-
-msgid "Clipboard is empty"
-msgstr "A vágólap üres"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "A beillesztett auth.json túl nagy ehhez a mezőhöz, ezért csonkolva lett – nem fog megfelelően mentődni"
 
 msgid "Remove"
 msgstr "Eltávolítás"
@@ -1850,11 +1865,11 @@ msgstr "Az API-kulcs titkosítva tárolódik, és csak a Mixar ügynökkérései
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bármely modellazonosító az openrouter.ai/models oldalról (pl. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "A ~/.codex/auth.json tartalma (előbb futtassa a `codex login` parancsot)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Lokális mód"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Fájlok"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Eredetpont"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "A Moodboard→csevegés melléklet-szinkron frissítése ({shortcut})"
 msgid "Sync failed: {error}"
 msgstr "A szinkronizálás sikertelen: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} videó kihagyva: az ügynök csak állóképeket fogad el. Klipekhez használja a moodboardon a Videógenerálást"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Nincs kijelölt moodboard-kép"
@@ -9219,9 +9279,6 @@ msgstr "Mappa"
 
 msgid "Directory of the selected file(s)"
 msgstr "A kijelölt fájl(ok) mappája"
-
-msgid "Files"
-msgstr "Fájlok"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Nem sikerült betölteni a médiát: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "Módosítás..."
 msgid "Awaiting Input..."
 msgstr "Bemenetre vár..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "A videókhoz Videó mód kell. Távolítsa el a videót, ha az ügynöknek küldi."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Felhasználói azonosító"
@@ -19547,6 +19604,9 @@ msgstr "Felhasználói azonosító a Mixie Chat bejelentkezéshez"
 
 msgid "Agent expects: {formats}"
 msgstr "Az ügynök ezeket várja: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Leállítva*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Csomagváltás"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
@@ -20728,11 +20797,14 @@ msgstr "Törlendő archivált munkamenet"
 msgid "Chat removed from history"
 msgstr "A csevegés eltávolítva az előzményekből"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Nem adható hozzá: {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Elérte a mellékletkorlátot ({count})"
@@ -20740,14 +20812,14 @@ msgstr "Elérte a mellékletkorlátot ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Kihagyva: {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Nem adható hozzá: {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Ezek a referenciák már csatolva vannak"
 
 msgid "Added {count} image(s)"
 msgstr "{count} kép hozzáadva"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Hozzáadás blendből"
@@ -20764,6 +20836,9 @@ msgstr "{size} – van adat"
 msgid "{size} - No data"
 msgstr "{size} – nincs adat"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Kép kijelölése a blendfájlból"
 
@@ -20772,6 +20847,12 @@ msgstr "A kép már hozzá van adva"
 
 msgid "Image not found in blend file"
 msgstr "A kép nem található a blendfájlban"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "A kép már csatolva van"
@@ -21522,6 +21603,15 @@ msgstr "Csevegési bemenet"
 
 msgid "Type your message here"
 msgstr "Írja ide az üzenetét"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Csevegési üzenetek"
@@ -23620,9 +23710,6 @@ msgstr "Kurzor illesztése"
 msgid "Snap 2D cursor"
 msgstr "2D kurzor illesztése"
 
-msgid "Origin"
-msgstr "Eredetpont"
-
 msgid "Mirror selected UVs"
 msgstr "A kijelölt UV-k tükrözése"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Adjon hozzá egy festőréteget a Rétegek panelen a festés megkezdéséhez"
 
@@ -24409,7 +24499,43 @@ msgstr "Diktálás indítása vagy leállítása a vázlatpiszkozatba"
 msgid "Stop the running turn"
 msgstr "A futó forduló leállítása"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Visszaállítás\n"
+"\n"
+"A finomítás előtti, Ön által írt prompt visszaállítása."
+
+msgid "Refining this prompt..."
+msgstr "A prompt finomítása..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Finomítás újra\n"
+"\n"
+"A prompt újraírása még egyszer ahhoz a modellhez, amelynek elküldik. A Visszaállítás továbbra is az Ön saját megfogalmazását állítja vissza, nem az előző finomítást."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Finomítás\n"
+"\n"
+"A prompt újraírása ahhoz a modellhez, amelynek elküldik, kiegészítve azokkal a részletekkel, amelyekre a modell reagál."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "Referencia eltávolítása"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Ennek a vázlatnak és a sorban álló rajzának az elvetése"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "Szabályok — a projekt- és a globális szabályok szerkesztése az ü
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "Írja le, mit kell generálni. Nyomja meg az Entert a csomópont elküldéséhez."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Visszaállítás\n"
-"\n"
-"A finomítás előtti, Ön által írt prompt visszaállítása."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Finomítás újra\n"
-"\n"
-"A prompt újraírása még egyszer ahhoz a modellhez, amelynek elküldik. A Visszaállítás továbbra is az Ön saját megfogalmazását állítja vissza, nem az előző finomítást."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Finomítás\n"
-"\n"
-"A prompt újraírása ahhoz a modellhez, amelynek elküldik, kiegészítve azokkal a részletekkel, amelyekre a modell reagál."
-
-msgid "Refining this prompt..."
-msgstr "A prompt finomítása..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "Textúrakészletek tere"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Az oldalsáv paneljeivel kezelheti a textúrakészleteket"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "Vissza az elsőhöz"
@@ -28050,6 +28155,12 @@ msgstr "Fájlkiterjesztés-szűrő"
 
 msgid "Write compressed .mixar file"
 msgstr "Tömörített .mixar fájl írása"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Mentés .mixar fájlként"

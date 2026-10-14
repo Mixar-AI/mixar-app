@@ -180,7 +180,14 @@ class EventProcessor:
         message = result.get('message') or rpt_('Message could not be delivered')
         data = result.get('data') or {}
         status = result.get('status_code') or data.get('status_code')
-        if is_credits_exhausted_error(status, message):
+        from .byok_notice import byok_error_message
+        byok_message = byok_error_message(result, data, status)
+        if byok_message:
+            # The server holds no key material: a 409 `byok_key_required`
+            # (or a local Codex refusal) is answered by AI Provider Settings,
+            # never by an automatic retry.
+            self._handle_agent_error_internal(byok_message, scene)
+        elif is_credits_exhausted_error(status, message):
             actions = data.get('data') or data
             add_credit_upgrade_chat_message(scene=scene, body=message,
                                             action_url=actions.get('action_url'))

@@ -32,8 +32,21 @@ using namespace blender;
 #endif
 
 static const char* SERVICE_NAME = "MixarSafeStorage";
+/* Item names. On macOS they carry a "Mixar." prefix since the bundle id
+ * stopped being version-stamped: a Keychain item created by an older signing
+ * identity can be neither read nor deleted without a SecurityAgent dialog, so
+ * the stable identity uses NEW names and leaves the old items alone (the user
+ * signs in once). Windows (Credential Manager) and Linux (SecretService) have
+ * no per-app access list, so they keep the original names and an upgrade
+ * keeps the session. Python (auth/core/auth.py) uses the same names per
+ * platform; this read gates startup in release builds, before Python runs. */
+#if defined(__APPLE__)
+static const char* ACCOUNT_NAME = "Mixar.AccessToken";
+static const char* REFRESH_ACCOUNT_NAME = "Mixar.RefreshToken";
+#else
 static const char* ACCOUNT_NAME = "AccessToken";
 static const char* REFRESH_ACCOUNT_NAME = "RefreshToken";
+#endif
 
 #ifdef _WIN32
 // Use "username@service" format to match Python keyring's compound TargetName format

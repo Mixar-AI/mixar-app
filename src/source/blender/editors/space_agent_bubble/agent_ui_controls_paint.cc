@@ -461,6 +461,8 @@ void agent_ui_draw_chip_row(ARegion *region,
     }
   }
 
+  agent_ui_draw_refine_controls(region, layout, state);
+
   /* Send. */
   float generate_fill[4];
   agent_ui_motion_color(

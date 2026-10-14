@@ -23,13 +23,15 @@ inside the depsgraph handler (the handler-pattern rule).
 
 from __future__ import annotations
 
+import uuid
+
 import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
 
-from ..constants import SessionState, is_lane_scene
+from ..constants import SessionState, is_internal_scene, is_lane_scene
 
 logger = get_logger(__name__)
 
@@ -86,6 +88,7 @@ def detach_copy(scene, was: str) -> None:
                 del scene[key]
         except Exception:  # noqa: BLE001
             pass
+    _renew_context_files_id(scene)
     slog("tab.dedupe", scene, was=was)
     logger.info("Scene %r was a copy of the chat session %s: detached as a new chat", scene.name, was[:8])
 
@@ -123,6 +126,22 @@ def dedupe_scene_ids(scenes=None) -> list[str]:
             cleared.append(scene.name)
             slog("tab.scene_id_dedupe", scene, was=value)
     return cleared
+
+
+def _renew_context_files_id(scene) -> None:
+    """The copy also carried its source's context-file rows AND their set id
+    (``mixie_context_files_id``); left alone, two chats would publish competing
+    memberships under one id. Mint the copy its own id and publish its set —
+    just blanking it would hide the copied chips from the agent."""
+    if not hasattr(scene, "mixie_context_files_id"):
+        return
+    try:
+        from mixar.modules.context_folder.core.files import publish_set
+
+        scene.mixie_context_files_id = str(uuid.uuid4()) if len(scene.mixie_context_files) else ""
+        publish_set(scene)
+    except Exception:  # noqa: BLE001 — a stripped build without context files
+        logger.debug("context-file set renewal failed for %r", scene.name, exc_info=True)
 
 
 def dedupe_session_ids(scenes=None) -> list[str]:
@@ -169,6 +188,7 @@ def _account_source(scene):
     window = getattr(getattr(bpy.context, "window", None), "scene", None)
     for candidate in [window, *bpy.data.scenes]:
         if (candidate is not None and candidate is not scene and not is_lane_scene(candidate)
+                and not is_internal_scene(candidate)
                 and getattr(candidate, "mixie_chat_user_id", "")):
             return candidate
     return None
@@ -187,7 +207,7 @@ def adopt_scene(scene) -> bool:
     """
     from .session import get_session_manager
 
-    if scene is None or is_lane_scene(scene):
+    if scene is None or is_lane_scene(scene) or is_internal_scene(scene):
         return False
     session = get_session_manager()
     if session.get_state(scene) != SessionState.OFFLINE or session.run_open(scene):

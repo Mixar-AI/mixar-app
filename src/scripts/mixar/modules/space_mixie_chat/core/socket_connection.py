@@ -261,6 +261,9 @@ class SocketConnection:
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
         from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
+        from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
+        from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
+        from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -302,6 +305,13 @@ class SocketConnection:
                 ADDON_PROJECT_VERIFY_CAPABILITY,
                 # context_folder.* reads of the folders a chat attached.
                 CONTEXT_FOLDER_CAPABILITY,
+                # context_folder.view_video: this build decodes folder videos.
+                CONTEXT_FOLDER_VIDEO_CAPABILITY,
+                # moodboard.view_video: the agent reviews board videos as frames.
+                MOODBOARD_VIDEO_CAPABILITY,
+                # mixar.scene_render_start accepts agent_ref_json and reports
+                # the render's terminal outcome as generation.agent_result.
+                SCENE_RENDER_CALLBACKS_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

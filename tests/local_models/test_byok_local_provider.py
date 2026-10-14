@@ -139,6 +139,10 @@ def test_byok_client_forwards_extended_fields(monkeypatch):
     service, captured = _capturing_service()
     monkeypatch.setattr(byok_client, "get_agent_service", lambda: service)
     monkeypatch.setattr(byok_client.threading, "Thread", InlineThread)
+    # No signed-in user here: the device-store write is stubbed so the 200
+    # is reported as a success (a failed store write is an error of its own,
+    # pinned in tests/test_byok_key_store.py).
+    monkeypatch.setattr(byok_client, "_store_local_key", lambda *a: True)
     done = {}
     monkeypatch.setattr(
         byok_client, "_schedule_on_main",

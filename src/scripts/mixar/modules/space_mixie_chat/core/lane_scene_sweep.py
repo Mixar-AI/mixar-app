@@ -21,7 +21,7 @@ Everything here is main-thread only (mutates scenes) and fail-soft.
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import AGENT_LANE_SESSION_PREFIX
+from ..constants import AGENT_LANE_SESSION_PREFIX, is_internal_scene
 
 logger = get_logger(__name__)
 
@@ -76,11 +76,12 @@ def _point_windows_away_from(lane) -> None:
 
     fallback = None
     for s in bpy.data.scenes:
-        if s is not lane and not _is_leaked_lane_scene(s):
+        if s is not lane and not _is_leaked_lane_scene(s) and not is_internal_scene(s):
             fallback = s
             break
     if fallback is None:
-        fallback = next((s for s in bpy.data.scenes if s is not lane), None)
+        fallback = next((s for s in bpy.data.scenes
+                         if s is not lane and not is_internal_scene(s)), None)
     if fallback is None:
         return
     for wm in bpy.data.window_managers:

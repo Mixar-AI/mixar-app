@@ -266,7 +266,10 @@ void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
 static void agent_bubble_island_panel_color(float r_rgba[4])
 {
   if (agent_bubble_island_bed_is_transparent()) {
-    const float wash[4] = AGENT_COL_GLASS_WASH;
+    float wash[4] = AGENT_COL_GLASS_WASH;
+#ifdef WIN32
+    agent_bubble_windows_island_wash(wash);
+#endif
     r_rgba[0] = wash[0] * wash[3];
     r_rgba[1] = wash[1] * wash[3];
     r_rgba[2] = wash[2] * wash[3];
@@ -641,12 +644,13 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   }
 
   agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
-  /* A small menu (context_folder/ui/menus/attach_menu.py): an image or 3D
-   * file through `mixie_chat.add_image_from_file`, or a folder the agent
-   * uses as context. Dropping a file on the island still attaches it. */
+  /* A small menu (context_folder/ui/menus/attach_menu.py): any files through
+   * `mixie_chat.add_image_from_file` (images become pills, models import,
+   * everything else becomes a context-file chip), or a folder the agent uses
+   * as context. Dropping a file on the island still attaches it. */
   uiDefButO(block, ui::ButtonType::But, "mixie_chat.attach",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-            TIP_("Attach a reference image or 3D file, or a folder the agent can use as context"));
+            TIP_("Attach files or a folder the agent can use as context"));
 
   /* --- Scribble chips, right of Upload ---
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
@@ -883,7 +887,10 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   if (agent_bubble_island_bed_is_transparent()) {
     /* A replacement bed, unlike alpha blending, must premultiply itself. */
-    const float wash[4] = AGENT_COL_GLASS_WASH;
+    float wash[4] = AGENT_COL_GLASS_WASH;
+#ifdef WIN32
+    agent_bubble_windows_island_wash(wash);
+#endif
     agent_bubble_replace_frost_wash(&r, wash);
     return;
   }
@@ -1228,6 +1235,10 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
       mixie_chat_history_read_visible(CTX_wm_manager(C)))
   {
+#ifdef WIN32
+    const float transcript_wash[4] = AGENT_COL_GLASS_WASH;
+    agent_bubble_windows_transcript_color(panel_bg, transcript_wash);
+#endif
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
     mixie_chat_clear_bg_override();
@@ -1784,10 +1795,12 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
   if (attachments_prop == nullptr) {
     return 0;
   }
-  /* Attached context folders show as chips in the same reference column. */
+  /* Attached context folders and files show as chips in the same reference column. */
   PropertyRNA *folders_prop = RNA_struct_find_property(&scene_ptr, "mixie_context_folders");
+  PropertyRNA *files_prop = RNA_struct_find_property(&scene_ptr, "mixie_context_files");
   return RNA_property_collection_length(&scene_ptr, attachments_prop) +
-         (folders_prop ? RNA_property_collection_length(&scene_ptr, folders_prop) : 0);
+         (folders_prop ? RNA_property_collection_length(&scene_ptr, folders_prop) : 0) +
+         (files_prop ? RNA_property_collection_length(&scene_ptr, files_prop) : 0);
 }
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)
@@ -2858,7 +2871,10 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
   /* Replace the complete region with the premultiplied native-frost wash. */
-  const float wash[4] = AGENT_COL_GLASS_WASH;
+  float wash[4] = AGENT_COL_GLASS_WASH;
+#ifdef WIN32
+  agent_bubble_windows_island_wash(wash);
+#endif
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {
     agent_bubble_replace_frost_wash(&region_rect, wash);
@@ -3829,6 +3845,12 @@ static void minimise_anim_finish(void *user_data)
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
+#ifdef __APPLE__
+    /* Detached only now that the fade is over (see mixar_bubble_minimise_exec). */
+    if (g_host_ghostwin != nullptr) {
+      Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
+    }
+#endif
     Mixar_WindowOrderOut(g_bubble_ghostwin);
     Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
   }
@@ -3987,12 +4009,12 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
-   * hides or it will vanish too). */
+   * hides or it will vanish too). The bubble itself stays a child of the
+   * host until minimise_anim_finish: detached now, nothing keeps it above
+   * the host, the host (just clicked) covers it at once and the sink-and-fade
+   * plays unseen — the island blinked out for ~0.3 s before the pill showed. */
   if (g_pill_ghostwin != nullptr) {
     Mixar_WindowDetachFromParent(g_pill_ghostwin, g_bubble_ghostwin);
-  }
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #endif
 

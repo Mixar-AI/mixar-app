@@ -1439,6 +1439,33 @@ msgstr "ഫോം ഡാറ്റ അസാധുവാണ് — ദയവാ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "ഞങ്ങളുടെ ഭാഗത്ത് എന്തോ തെറ്റ് സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ലോക്കൽ മോഡൽ കാറ്റലോഗ് വായിക്കുന്നു"
 
@@ -1562,6 +1589,30 @@ msgstr "മോഡൽ മാറ്റാനായില്ല"
 msgid "Could not reset model"
 msgstr "മോഡൽ പുനഃക്രമീകരിക്കാനായില്ല"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "നിങ്ങളുടെ ChatGPT സബ്സ്ക്രിപ്ഷൻ ഉപയോഗിക്കുന്നു — Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "നിങ്ങളുടെ കീ നീക്കം ചെയ്യുന്നു…"
 
@@ -1570,6 +1621,9 @@ msgstr "ദാതാവിനൊപ്പം സാധൂകരിക്കു�
 
 msgid "AI Provider Settings"
 msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "സജീവം"
@@ -1601,38 +1655,32 @@ msgstr "ടെക്സ്റ്റ്-മാത്രം മോഡൽ — ച�
 msgid "Remove API Key…"
 msgstr "API കീ നീക്കം ചെയ്യുക…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "ദാതാവ് സജ്ജീകരണം"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "എൻക്രിപ്റ്റ് ചെയ്ത് സൂക്ഷിക്കുന്നു, Mixar ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് മാത്രം ഉപയോഗിക്കുന്നു — സംരക്ഷിച്ച ശേഷം മറച്ച പ്രിവ്യൂ മാത്രം കാണിക്കും."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "ടൂൾ / ഫംഗ്ഷൻ കോളിംഗ് പിന്തുണയുള്ള മോഡൽ തിരഞ്ഞെടുക്കുക — ഏജന്റിന് അത് വേണം."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് സ്ലഗും, ഉദാ. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ൽ നിന്ന് ലോഡ് ചെയ്യുക"
-
-msgid "…or paste it manually"
-msgstr "…അല്ലെങ്കിൽ കൈകൊണ്ട് ഒട്ടിക്കുക"
-
-msgid "{count} characters pasted"
-msgstr "{count} അക്ഷരങ്ങൾ ഒട്ടിച്ചു"
-
-msgid "Empty — paste your auth.json"
-msgstr "ശൂന്യം — നിങ്ങളുടെ auth.json ഒട്ടിക്കുക"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ടെർമിനലിൽ  codex login  പ്രവർത്തിപ്പിക്കുക, പിന്നെ പൂർണ്ണമായി ലോഡ് ചെയ്യുകയോ ഒട്ടിക്കുകയോ ചെയ്യുക"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-ന്റെ ഉള്ളടക്കം (ഒട്ടിക്കൽ ബട്ടൺ നിങ്ങളുടെ ക്ലിപ്പ്ബോർഡ് വായിക്കുന്നു)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "നിങ്ങളുടെ ChatGPT സബ്സ്ക്രിപ്ഷൻ ഉപയോഗിക്കുന്നു — Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
 
 msgid "Couldn't apply your changes"
 msgstr "നിങ്ങളുടെ മാറ്റങ്ങൾ പ്രയോഗിക്കാനായില്ല"
@@ -1742,41 +1790,8 @@ msgstr "ഈ ദാതാവിന് ഒരു മോഡൽ തിരഞ്ഞ�
 msgid "Model slug and API key are required."
 msgstr "മോഡൽ സ്ലഗും API കീയും ആവശ്യമാണ്."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "ഒരു Codex മോഡൽ തിരഞ്ഞെടുത്ത് നിങ്ങളുടെ auth.json ബണ്ടിൽ ലോഡ് ചെയ്യുക."
-
 msgid "Save failed."
 msgstr "സംരക്ഷണം പരാജയപ്പെട്ടു."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "ഈ മെഷീനിലെ ~/.codex/auth.json ഫീൽഡിലേക്ക് വായിക്കുക"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json കണ്ടെത്തിയില്ല — ആദ്യം `codex login` പ്രവർത്തിപ്പിക്കുക"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json വായിക്കാനായില്ല"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ശൂന്യമാണ്"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ഈ ഫീൽഡിന് വളരെ വലുതാണ്, മുറിച്ചു — ശരിയായി സംരക്ഷിക്കില്ല"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ലോഡ് ചെയ്തു"
-
-msgid "Paste auth.json"
-msgstr "auth.json ഒട്ടിക്കുക"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "ക്ലിപ്പ്ബോർഡിലെ ~/.codex/auth.json ഫീൽഡിലേക്ക് ഒട്ടിക്കുക"
-
-msgid "Clipboard is empty"
-msgstr "ക്ലിപ്പ്ബോർഡ് ശൂന്യമാണ്"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ഒട്ടിച്ച auth.json ഈ ഫീൽഡിന് വളരെ വലുതാണ്, മുറിച്ചു — ശരിയായി സംരക്ഷിക്കില്ല"
 
 msgid "Remove"
 msgstr "നീക്കം ചെയ്യുക"
@@ -1850,11 +1865,11 @@ msgstr "നിങ്ങളുടെ API കീ എൻക്രിപ്റ്റ
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് മോഡൽ സ്ലഗും (ഉദാ. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-ന്റെ ഉള്ളടക്കം (ആദ്യം `codex login` പ്രവർത്തിപ്പിക്കുക)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ലോക്കൽ മോഡ്"
@@ -2948,7 +2963,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -3074,16 +3089,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "ഫയലുകൾ"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3122,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3137,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3155,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "ഒറിജിൻ"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -8917,11 +8977,11 @@ msgstr "മൂഡ്ബോർഡ്→ചാറ്റ് അറ്റാച്�
 msgid "Sync failed: {error}"
 msgstr "സിങ്ക് പരാജയപ്പെട്ടു: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} വീഡിയോ ഒഴിവാക്കി: ഏജന്റ് നിശ്ചല ചിത്രങ്ങൾ മാത്രം സ്വീകരിക്കുന്നു. ക്ലിപ്പുകൾക്ക് മൂഡ്ബോർഡിലെ വീഡിയോ ജെൻ ഉപയോഗിക്കുക"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} വീഡിയോകൾ ഒഴിവാക്കി: ഏജന്റ് നിശ്ചല ചിത്രങ്ങൾ മാത്രം സ്വീകരിക്കുന്നു. ക്ലിപ്പുകൾക്ക് മൂഡ്ബോർഡിലെ വീഡിയോ ജെൻ ഉപയോഗിക്കുക"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "മൂഡ്ബോർഡ് ചിത്രങ്ങളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
@@ -9219,9 +9279,6 @@ msgstr "ഡയറക്ടറി"
 
 msgid "Directory of the selected file(s)"
 msgstr "തിരഞ്ഞെടുത്ത ഫയലുകളുടെ ഡയറക്ടറി"
-
-msgid "Files"
-msgstr "ഫയലുകൾ"
 
 msgid "Failed to load media: {filepath}"
 msgstr "മീഡിയ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല: {filepath}"
@@ -18783,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19536,8 +19593,8 @@ msgstr "മാറ്റം വരുത്തുന്നു..."
 msgid "Awaiting Input..."
 msgstr "ഇൻപുട്ടിനായി കാത്തിരിക്കുന്നു..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "വീഡിയോകൾക്ക് വീഡിയോ മോഡ് വേണം. ഏജന്റിലേക്ക് അയയ്ക്കാൻ വീഡിയോ നീക്കം ചെയ്യുക."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ഉപയോക്തൃ ID"
@@ -19547,6 +19604,9 @@ msgstr "Mixie ചാറ്റ് ലോഗിനുള്ള ഉപയോക്�
 
 msgid "Agent expects: {formats}"
 msgstr "ഏജന്റ് പ്രതീക്ഷിക്കുന്നത്: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*നിർത്തി*"
@@ -19622,6 +19682,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "അപ്ഗ്രേഡ് ചെയ്യുക"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "ഫീഡ്ബാക്ക് കുറിപ്പ് ശൂന്യമാണ്"
@@ -20728,11 +20797,14 @@ msgstr "ഇല്ലാതാക്കേണ്ട ആർക്കൈവ് ച�
 msgid "Chat removed from history"
 msgstr "ചാറ്റ് ചരിത്രത്തിൽ നിന്ന് നീക്കം ചെയ്തു"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} ചേർക്കാനാവില്ല: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) എത്തി"
@@ -20740,14 +20812,14 @@ msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) 
 msgid "Skipped {name}: {error}"
 msgstr "{name} ഒഴിവാക്കി: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} ചേർക്കാനാവില്ല: {error}"
-
 msgid "These references are already attached"
 msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
 
 msgid "Added {count} image(s)"
 msgstr "{count} ചിത്രം ചേർത്തു"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "ബ്ലെൻഡിൽ നിന്ന് ചേർക്കുക"
@@ -20764,6 +20836,9 @@ msgstr "{size} - ഡാറ്റയുണ്ട്"
 msgid "{size} - No data"
 msgstr "{size} - ഡാറ്റയില്ല"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "ബ്ലെൻഡ് ഫയലിൽ നിന്ന് ചിത്രം തിരഞ്ഞെടുക്കുക"
 
@@ -20772,6 +20847,12 @@ msgstr "ചിത്രം ഇതിനകം ചേർത്തു"
 
 msgid "Image not found in blend file"
 msgstr "ബ്ലെൻഡ് ഫയലിൽ ചിത്രം കണ്ടെത്തിയില്ല"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "ചിത്രം ഇതിനകം അറ്റാച്ച് ചെയ്തു"
@@ -21522,6 +21603,15 @@ msgstr "ചാറ്റ് ഇൻപുട്ട്"
 
 msgid "Type your message here"
 msgstr "സന്ദേശം ഇവിടെ ടൈപ്പ് ചെയ്യുക"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "ചാറ്റ് സന്ദേശങ്ങൾ"
@@ -23620,9 +23710,6 @@ msgstr "കഴ്സർ സ്നാപ്പ് ചെയ്യുക"
 msgid "Snap 2D cursor"
 msgstr "2D കഴ്സർ സ്നാപ്പ് ചെയ്യുക"
 
-msgid "Origin"
-msgstr "ഒറിജിൻ"
-
 msgid "Mirror selected UVs"
 msgstr "തിരഞ്ഞെടുത്ത UV-കൾ മിറർ ചെയ്യുക"
 
@@ -24397,6 +24484,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "പെയിന്റ് തുടങ്ങാൻ ലെയറുകൾ പാനലിൽ ഒരു പെയിന്റ് ലെയർ ചേർക്കുക"
 
@@ -24409,7 +24499,43 @@ msgstr "സ്കെച്ച് ഡ്രാഫ്റ്റിലേക്ക�
 msgid "Stop the running turn"
 msgstr "നടക്കുന്ന ടേൺ നിർത്തുക"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"പഴയപടിയാക്കുക\n"
+"\n"
+"മെച്ചപ്പെടുത്തുന്നതിന് മുമ്പ് നിങ്ങൾ എഴുതിയ പ്രോംപ്റ്റ് പുനഃസ്ഥാപിക്കുക."
+
+msgid "Refining this prompt..."
+msgstr "ഈ പ്രോംപ്റ്റ് മെച്ചപ്പെടുത്തുന്നു..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"വീണ്ടും മെച്ചപ്പെടുത്തുക\n"
+"\n"
+"അയയ്ക്കുന്ന മോഡലിന് അനുയോജ്യമായി ഈ പ്രോംപ്റ്റ് ഒരിക്കൽ കൂടി മാറ്റിയെഴുതുക. പഴയപടിയാക്കുക നിങ്ങളുടെ സ്വന്തം വാചകം തിരികെ തരും, മുമ്പത്തെ മെച്ചപ്പെടുത്തൽ അല്ല."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"മെച്ചപ്പെടുത്തുക\n"
+"\n"
+"അയയ്ക്കുന്ന മോഡൽ പ്രതികരിക്കുന്ന വിശദാംശങ്ങൾ ചേർത്ത് ഈ പ്രോംപ്റ്റ് ആ മോഡലിന് അനുയോജ്യമായി മാറ്റിയെഴുതുക."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +24546,9 @@ msgstr "റഫറൻസ് നീക്കം ചെയ്യുക"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ഈ സ്കെച്ചും ക്യൂവിലുള്ള വരയും ഉപേക്ഷിക്കുക"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24790,7 +24919,7 @@ msgstr "നിയമങ്ങൾ — ഏജന്റിനുള്ള പ്ര
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -25415,36 +25544,6 @@ msgstr ""
 "ജനറേറ്റ് ചെയ്യേണ്ടത് വിവരിക്കുക. ഈ നോഡ് സമർപ്പിക്കാൻ Enter അമർത്തുക."
 
 msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"പഴയപടിയാക്കുക\n"
-"\n"
-"മെച്ചപ്പെടുത്തുന്നതിന് മുമ്പ് നിങ്ങൾ എഴുതിയ പ്രോംപ്റ്റ് പുനഃസ്ഥാപിക്കുക."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"വീണ്ടും മെച്ചപ്പെടുത്തുക\n"
-"\n"
-"അയയ്ക്കുന്ന മോഡലിന് അനുയോജ്യമായി ഈ പ്രോംപ്റ്റ് ഒരിക്കൽ കൂടി മാറ്റിയെഴുതുക. പഴയപടിയാക്കുക നിങ്ങളുടെ സ്വന്തം വാചകം തിരികെ തരും, മുമ്പത്തെ മെച്ചപ്പെടുത്തൽ അല്ല."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"മെച്ചപ്പെടുത്തുക\n"
-"\n"
-"അയയ്ക്കുന്ന മോഡൽ പ്രതികരിക്കുന്ന വിശദാംശങ്ങൾ ചേർത്ത് ഈ പ്രോംപ്റ്റ് ആ മോഡലിന് അനുയോജ്യമായി മാറ്റിയെഴുതുക."
-
-msgid "Refining this prompt..."
-msgstr "ഈ പ്രോംപ്റ്റ് മെച്ചപ്പെടുത്തുന്നു..."
-
-msgid ""
 "Assemble\n"
 "\n"
 "Attach the connected parts to the body, locally. Uses no credits."
@@ -26007,6 +26106,12 @@ msgstr "ടെക്സ്ചർ സെറ്റ് സ്പേസ്"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ടെക്സ്ചർ സെറ്റുകൾ കൈകാര്യം ചെയ്യാൻ സൈഡ്ബാർ പാനലുകൾ ഉപയോഗിക്കുക"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "ആദ്യത്തേതിലേക്ക് മടങ്ങുക"
@@ -28050,6 +28155,12 @@ msgstr "ഫയൽ എക്സ്റ്റൻഷൻ ഫിൽറ്റർ"
 
 msgid "Write compressed .mixar file"
 msgstr "കംപ്രസ് ചെയ്ത .mixar ഫയൽ എഴുതുക"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ഫയലായി സംരക്ഷിക്കുക"

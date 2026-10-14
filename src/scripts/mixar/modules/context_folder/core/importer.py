@@ -15,6 +15,7 @@ import os
 from ..constants import KIND_IMAGE, KIND_MODEL, MAX_IMPORT_NAMES
 from . import grants
 from .errors import ContextFolderError, public_error
+from .file_set import local_roots
 from .paths import existing_file, file_kind, normalize_relative_path
 from .registry import get_registry
 
@@ -98,8 +99,9 @@ def import_folder_file(session_id: str, folder_id: str, path: str, to_moodboard:
     if not result.get("success"):
         # Importer messages can quote the file; keep only the relative form.
         message = str(result.get("error") or "The import failed")
-        for form in {str(root), str(root).replace("/", "\\")}:
-            message = message.replace(form, "")
+        for local in local_roots(root):
+            for form in {local, local.replace("/", "\\")}:
+                message = message.replace(form, "")
         return {"success": False, "error": {"code": "import_failed", "message": message[:300]}}
     result["path"] = relative
     return result

@@ -248,4 +248,11 @@ void view3d_smooth_free(RegionView3D *rv3d);
 /* view3d_toast_click.cc */
 void view3d_toast_click_register(ARegion *region);
 
+/* view3d_agent_halo.cc */
+void view3d_agent_halo_overlay_draw(const bContext *C, ARegion *region);
+void MIXAR_OT_agent_halo_redraw(wmOperatorType *ot);
+
+/* view3d_display_prewarm.cc */
+void view3d_display_shader_prewarm(const bContext *C);
+
 }  // namespace blender

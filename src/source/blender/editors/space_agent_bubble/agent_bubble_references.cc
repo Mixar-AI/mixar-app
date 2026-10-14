@@ -82,7 +82,8 @@ AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
   g.row_pitch = g.image_size + 40 * u;
   float content_height = 0;
   for (const AgentReference &item : items) {
-    const bool folder = item.source == "FOLDER";
+    /* Folders and context files share the compact row. */
+    const bool folder = item.source == "FOLDER" || item.source == "CONTEXT_FILE";
     const float height = folder ? 72 * u : g.image_size;
     const float x = folder ? g.view.xmin : BLI_rctf_cent_x(&g.view) - g.image_size / 2;
     const float top = g.view.ymax - content_height;
@@ -137,6 +138,59 @@ void agent_bubble_send_button(const bContext * /*C*/,
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
             state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send"));
+
+  /* Refine / Revert: the moodboard node's operators, addressed at the
+   * composer. Same tooltips and disabled hints as the node tile, so one
+   * translation serves both. Exec, not invoke: the request is async and
+   * the operator returns at once. */
+  auto square = [&](const rctf &rect, const char *op, const char *tip) {
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                op,
+                                wm::OpCallContext::ExecDefault,
+                                "",
+                                int(rect.xmin) - region->winrct.xmin,
+                                int(rect.ymin) - region->winrct.ymin,
+                                short(BLI_rctf_size_x(&rect)),
+                                short(BLI_rctf_size_y(&rect)),
+                                tip);
+    /* Python operators register in time-budgeted batches after startup, so
+     * the composer draws before these two exist. The button then has no
+     * operator type and a null property pointer; it gains both on a later
+     * redraw, once the operator is registered. */
+    if (PointerRNA *props = but ? ui::button_operator_ptr_ensure(but) : nullptr) {
+      RNA_boolean_set(props, "chat", true);
+    }
+    return but;
+  };
+  if (BLI_rctf_size_x(&layout.btn_revert) > 0.0f) {
+    ui::Button *revert = square(
+        layout.btn_revert,
+        "mixie.revert_prompt",
+        TIP_("Revert\n\nRestore the prompt you wrote before it was refined."));
+    if (revert && state.prompt_refining) {
+      ui::button_disable(revert, N_("Refining this prompt..."));
+    }
+  }
+  if (BLI_rctf_size_x(&layout.btn_refine) > 0.0f) {
+    ui::Button *refine = square(
+        layout.btn_refine,
+        "mixie.refine_prompt",
+        state.prompt_refined ?
+            TIP_("Refine Again\n\nRewrite this prompt once more "
+                 "for the model it will be sent to. Revert still "
+                 "restores your own wording, not the previous "
+                 "refinement.") :
+            TIP_("Refine\n\nRewrite this prompt for the model it "
+                 "will be sent to, adding the detail that model "
+                 "responds to."));
+    if (refine && (state.prompt_empty || state.prompt_refining)) {
+      /* N_: the tooltip translates a disabled hint when it shows it. */
+      ui::button_disable(refine,
+                         state.prompt_refining ? N_("Refining this prompt...") :
+                                                 N_("Write a prompt first"));
+    }
+  }
 }
 
 namespace {
@@ -198,20 +252,30 @@ void agent_bubble_references_draw(const bContext *C,
           CTX_data_main(C), path.c_str(), board, image.xmin, image.ymin, g.image_size);
     }
     MIXAR_THEME_LOAD(dim, TextSecondary);
-    const bool folder = STREQ(source, "FOLDER");
+    /* A context file draws like a folder chip: its kind picks the glyph. */
+    const bool file = STREQ(source, "CONTEXT_FILE");
+    const bool folder = STREQ(source, "FOLDER") || file;
     if (folder) {
       MIXAR_THEME_LOAD(text, Text);
       const float cy = BLI_rctf_cent_y(&image);
       const rctf glyph = {image.xmin + 10 * u, image.xmin + 38 * u, cy - 14 * u, cy + 14 * u};
-      agent_ui_icon_draw(AGENT_ICON_FOLDER, &glyph, dim, plate);
+      const bool video = file && item.kind == "video";
+      const AgentIcon icon = !file                 ? AGENT_ICON_FOLDER :
+                               video                 ? AGENT_ICON_VIDEO :
+                               item.kind == "image"  ? AGENT_ICON_IMAGE :
+                               item.kind == "model"  ? AGENT_ICON_MESH :
+                                                       AGENT_ICON_RULES;
+      agent_ui_icon_draw(icon, &glyph, dim, plate);
       const float text_x = image.xmin + 48 * u;
       const float text_width = BLI_rctf_size_x(&image) - 84 * u;
       const auto caption = ui::mixar_fit_text(
           name.c_str(), text_width,
           ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
       pane_label_left(caption.c_str(), text_x, cy + 10 * u, 15 * agent_ui_text_unit(), text);
-      const auto detail = ui::mixar_fit_text(
-          IFACE_("Folder context"), text_width, 12 * agent_ui_text_unit());
+      const char *subtitle = !file ? IFACE_("Folder context") :
+                             video ? IFACE_("Video context") :
+                                     IFACE_("File context");
+      const auto detail = ui::mixar_fit_text(subtitle, text_width, 12 * agent_ui_text_unit());
       pane_label_left(detail.c_str(), text_x, cy - 12 * u, 12 * agent_ui_text_unit(), dim);
     }
     else {
@@ -233,7 +297,9 @@ void agent_bubble_references_draw(const bContext *C,
                                       int(BLI_rctf_size_x(&visible_image)),
                                       int(BLI_rctf_size_y(&visible_image)),
                                       TIP_("View sketch larger. Add instructions in chat, then Send"));
-      RNA_string_set(ui::button_operator_ptr_ensure(preview), "image_name", path.c_str());
+      if (PointerRNA *props = preview ? ui::button_operator_ptr_ensure(preview) : nullptr) {
+        RNA_string_set(props, "image_name", path.c_str());
+      }
     }
     rctf close = {
         image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
@@ -247,6 +313,7 @@ void agent_bubble_references_draw(const bContext *C,
       ui::Button *button = uiDefIconButO(block,
                                          ui::ButtonType::But,
                                          generation ? "mixar.pane_remove_reference" :
+                                         file       ? "mixie_chat.remove_context_file" :
                                          folder     ? "mixie_chat.remove_context_folder" :
                                                       "mixie_chat.remove_attachment",
                                          wm::OpCallContext::ExecDefault,
@@ -256,17 +323,24 @@ void agent_bubble_references_draw(const bContext *C,
                                          int(BLI_rctf_size_x(&close)),
                                          int(BLI_rctf_size_y(&close)),
                                          TIP_("Remove reference"));
-      PointerRNA *props = ui::button_operator_ptr_ensure(button);
-      if (folder) {
-        RNA_string_set(props, "folder_id", path.c_str());
-      }
-      else {
-        RNA_string_set(props, "attachment_path", path.c_str());
-        RNA_string_set(props, "attachment_source", source ? source : "");
+      /* Null until the operator registers; see the composer's Refine / Revert. */
+      if (PointerRNA *props = button ? ui::button_operator_ptr_ensure(button) : nullptr) {
+        if (file) {
+          RNA_string_set(props, "file_id", path.c_str());
+        }
+        else if (folder) {
+          RNA_string_set(props, "folder_id", path.c_str());
+        }
+        else {
+          RNA_string_set(props, "attachment_path", path.c_str());
+          RNA_string_set(props, "attachment_source", source ? source : "");
+        }
       }
       ui::mixar_button_tooltip_owned(
           button,
           item.sketch ? TIP_("Discard this sketch and its queued drawing") :
+          file   ? fmt::format(fmt::runtime(TIP_("Detach {}; the agent can no longer read it")),
+                               name).c_str() :
           folder ? fmt::format(fmt::runtime(TIP_("Detach folder {}; the agent can no longer read it")),
                                name).c_str() :
                    fmt::format(fmt::runtime(TIP_("Remove {}")), name).c_str());
@@ -335,7 +409,9 @@ void qa_targets(const wmWindow *win,
     const rctf image = image_rect(g, index);
     rctf visible;
     if (BLI_rctf_isect(&image, &g.view, &visible)) {
-      append(item.source == "FOLDER" ? "reference_folder" : "reference_preview",
+      append(item.source == "FOLDER"       ? "reference_folder" :
+             item.source == "CONTEXT_FILE" ? "reference_file" :
+                                             "reference_preview",
              item.name,
              item.path,
              index,

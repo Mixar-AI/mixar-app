@@ -199,7 +199,10 @@ void agent_ui_generations_libraries(
                                        "");
         pane_but_tooltip_owned(
             remove, ("Remove \"" + name + "\" from your libraries (files stay on disk)").c_str());
-        RNA_string_set(ui::button_operator_ptr_ensure(remove), "library_name", name.c_str());
+        /* A Python operator: null props until it registers after startup. */
+        if (PointerRNA *props = remove ? ui::button_operator_ptr_ensure(remove) : nullptr) {
+          RNA_string_set(props, "library_name", name.c_str());
+        }
       }
     }
   }

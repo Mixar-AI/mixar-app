@@ -42,6 +42,30 @@ def test_capture_writes_a_snapshot_and_a_record(tc):
     assert tc.m.has_checkpoints("sess-1") is True
 
 
+def test_capture_skips_the_thumbnail_and_keeps_the_island_open(tc):
+    """The snapshot copy must not hold the Send: no camera-render thumbnail
+    (seconds on a heavy scene) and no save_pre purge of the island/pill."""
+    tc.m.capture(_scene(users=1), "hello")
+    kwargs = tc.bpy.ops.wm.save_as_mainfile.call_args.kwargs
+    assert kwargs["thumbnail"] is False and kwargs["copy"] is True
+    assert tc.snapshot_guard.return_value.__enter__.called
+    assert tc.snapshot_guard.return_value.__exit__.called
+
+
+def test_capture_saves_without_the_thumbnail_switch_on_an_older_binary(tc):
+    real_save = tc.bpy.ops.wm.save_as_mainfile.side_effect
+
+    def strict_save(**kwargs):
+        if "thumbnail" in kwargs:
+            raise TypeError('keyword "thumbnail" unrecognized')
+        return real_save(**kwargs)
+
+    tc.bpy.ops.wm.save_as_mainfile.side_effect = strict_save
+    record = tc.m.capture(_scene(users=1), "hello")
+    assert record is not None and record["bytes"] == len(b"scene-v1")
+    assert "thumbnail" not in tc.bpy.ops.wm.save_as_mainfile.call_args.kwargs
+
+
 def test_capture_assigns_a_session_to_a_new_chat_and_remembers_it(tc):
     scene = _scene(session_id="", users=0)
     record = tc.m.capture(scene, "first message")
