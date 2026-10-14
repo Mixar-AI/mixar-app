@@ -44,6 +44,7 @@ from mixar.modules.common.utils import credential_store
 
 from ..constants import BYOK_KEY_STORE_PREFIX, CODEX_PROVIDER_ID
 from . import codex_auth
+from mixar.modules.auth.core.auth import user_id_from_token  # noqa: F401 — the key record's scope
 
 logger = get_logger(__name__)
 
@@ -60,20 +61,6 @@ _user_memo: tuple = ("", None)
 # ---------------------------------------------------------------------------
 # User scope
 # ---------------------------------------------------------------------------
-
-def user_id_from_token(token: Optional[str]) -> Optional[str]:
-    """The Mixar user id: the access token's ``sub`` claim (no signature
-    check — this only scopes a local entry, the server authenticates)."""
-    if not token or token.count(".") != 2:
-        return None
-    try:
-        encoded = token.split(".")[1]
-        claims = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
-        sub = claims.get("sub")
-        return str(sub) if sub else None
-    except Exception:  # noqa: BLE001 — not a JWT
-        return None
-
 
 def current_user_id() -> Optional[str]:
     """The signed-in Mixar user's id: the ``sub`` of the access token in the
@@ -225,6 +212,23 @@ def delete(user_id: Optional[str] = None) -> bool:
         return False
     credential_store.delete_secret(_legacy_entry_name(user_id))
     return credential_store.delete_value(_entry_name(user_id))
+
+
+def reassign(old_user_id: Optional[str], new_user_id: Optional[str]) -> bool:
+    """Re-scope this device's record from one user to another: a guest's key
+    becomes the account's when signing in claims the guest (the backend moved
+    the row). The account's own record, if any, wins — then the guest's is
+    simply dropped. True when a record now serves ``new_user_id``."""
+    if not old_user_id or not new_user_id or old_user_id == new_user_id:
+        return False
+    record = load(old_user_id)
+    if record is None:
+        return False
+    if load(new_user_id) is None and not save(record, new_user_id):
+        return False
+    delete(old_user_id)
+    logger.info("BYOK key record re-scoped from the claimed guest to the account")
+    return True
 
 
 def update(changes: Dict[str, Any], user_id: Optional[str] = None) -> bool:

@@ -24,7 +24,9 @@ from ....config.config import add_config, get_config, get_server_url
 from ....config.logging_config import get_logger
 from ...common.network import classify_network_error, log_network_failure
 from ..utils.constants import AUTH_BASE_URL
-from .auth import get_access_token, store_login_token_pair, take_replaced_refresh_token
+from .auth import (
+    get_access_token, store_login_token_pair, take_replaced_refresh_token, user_id_from_token,
+)
 from .device import get_device_id
 
 logger = get_logger(__name__)
@@ -198,14 +200,22 @@ def sign_in(login_fn) -> dict:
     goes through: ``login_fn`` stores the account's pair, after which the
     replaced refresh token — the guest's proof of possession — is claimed
     under the account's bearer. The result gains ``switched_from_guest`` so
-    the main-thread apply path can drop the guest socket and reload state.
+    the main-thread apply path can drop the guest socket and reload state,
+    plus ``guest_user_id`` / ``byok_moved`` so the device key record the guest
+    saved can be re-scoped to the account (``byok.core.key_store.reassign``).
     """
     was_guest = is_guest()
+    guest_user_id = user_id_from_token(get_access_token()) if was_guest else None
     result = login_fn()
     if not result.get("success"):
         return result
     guest_refresh = take_replaced_refresh_token()
     if was_guest and guest_refresh:
-        result["claimed_guest"] = claim_guest(guest_refresh).get("claimed", False)
+        claim = claim_guest(guest_refresh)
+        result["claimed_guest"] = claim.get("claimed", False)
+        # The roles whose key row moved to the account: the key material for
+        # them lives on this device under the guest's id (byok key_store).
+        result["byok_moved"] = list(claim.get("byok_moved") or [])
+        result["guest_user_id"] = guest_user_id
     result["switched_from_guest"] = was_guest
     return result

@@ -521,11 +521,28 @@ def _user_info_after_sso(result: dict):
     """
     if not result.get("success"):
         return None
+    _carry_guest_device_key(result)
     try:
         return get_user_info()
     except Exception as e:  # noqa: BLE001
         logger.warning("User info fetch after SSO failed: %s", e)
         return None
+
+
+def _carry_guest_device_key(result: dict) -> None:
+    """Background thread, right after a sign-in that claimed a guest: the
+    backend moved the guest's BYOK row to the account, so the key material
+    for it — on this device, keyed by user id — is re-scoped to the account
+    too, or its first turn would report the device key missing. Only when
+    the claim moved a role; the account's own record always wins."""
+    if not (result.get("switched_from_guest") and result.get("byok_moved")
+            and result.get("guest_user_id")):
+        return
+    try:
+        from mixar.modules.byok.core import key_store
+        key_store.reassign(result["guest_user_id"], key_store.current_user_id())
+    except Exception as e:  # noqa: BLE001 — the user can re-add the key
+        logger.warning("Guest BYOK device key carry-over failed: %s", e)
 
 
 def _sync_pending_flag_timer():
@@ -718,6 +735,20 @@ class MIXIE_CHAT_OT_logout(Operator):
         global _auth_check_started, _auto_connect_scheduled
         scene = context.scene
         wm = context.window_manager
+
+        # Every open chat belongs to the account that is leaving; the next
+        # seat (a fresh guest, or nobody) owns none of them and the backend
+        # refuses a continued session it does not own (-32013). Each tab
+        # starts a fresh chat, archived under the account first — History
+        # reads scene.mixie_chat_user_id, which is cleared below.
+        from .session_ops import start_new_chat
+        for open_scene in bpy.data.scenes:
+            if (getattr(open_scene, "mixie_session_id", "")
+                    or len(getattr(open_scene, "mixie_chat_messages", ()))):
+                try:
+                    start_new_chat(open_scene)
+                except Exception as e:  # noqa: BLE001 — never block a sign-out
+                    logger.warning("Fresh chat for %r at sign-out failed: %s", open_scene.name, e)
 
         # Disconnect WebSocket first (if connected)
         from ...core import get_connection_manager

@@ -386,6 +386,43 @@ def test_every_sign_in_path_goes_through_the_claiming_wrapper():
     assert source.count("_leave_guest_session(") == 3  # def + two apply paths
 
 
+def test_claim_carries_the_guest_device_key_to_the_account():
+    """QA 2026-10-14: after a claim the account's BYOK row was active server-side
+    but the device reported the key missing — the local record is keyed by
+    user id. guest.sign_in reports the guest's id and the roles the claim
+    moved; the post-SSO background step re-scopes the record (account wins)."""
+    guest_src = (MODULES / "auth/core/guest.py").read_text()
+    assert 'result["guest_user_id"] = guest_user_id' in guest_src
+    assert 'result["byok_moved"] = list(claim.get("byok_moved") or [])' in guest_src
+    ops = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
+    after_sso = ops[ops.index("def _user_info_after_sso"):ops.index("def _carry_guest_device_key")]
+    assert "_carry_guest_device_key(result)" in after_sso
+    carry = ops[ops.index("def _carry_guest_device_key"):]
+    carry = carry[:carry.index("\ndef ")]
+    assert "key_store.reassign(result[\"guest_user_id\"], key_store.current_user_id())" in carry
+    assert 'result.get("byok_moved")' in carry
+
+
+def test_sign_out_starts_a_fresh_chat_in_every_tab():
+    """QA 2026-10-14: after sign-out the fresh guest continued the account's
+    open session and the backend refused it (-32013 Session unavailable).
+    Sign-out runs the New Chat body on every tab that has a session or a
+    transcript, before the socket drops and before the owner identity the
+    History archive reads is cleared."""
+    source = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
+    logout = source[source.index("class MIXIE_CHAT_OT_logout"):]
+    body = logout[:logout.index("return {'FINISHED'}")]
+    fresh = body.index("start_new_chat(open_scene)")
+    assert fresh < body.index("manager.disconnect()")
+    assert fresh < body.index('scene.mixie_chat_user_id = ""')
+    assert "for open_scene in bpy.data.scenes" in body
+
+    ops = (MODULES / "space_mixie_chat/ui/operators/session_ops.py").read_text()
+    assert "def start_new_chat(scene, report=None)" in ops
+    new_session = ops[ops.index("class MIXIE_CHAT_OT_new_session"):]
+    assert "start_new_chat(context.scene, report=self.report)" in new_session
+
+
 def test_signed_out_surfaces_admit_guests():
     panel = (MODULES / "space_mixie_chat/ui/login_panel.py").read_text()
     assert "mixie_chat_is_guest" in panel

@@ -357,3 +357,29 @@ def test_v1_records_that_copied_codex_tokens_are_upgraded_to_a_reference(monkeyp
     assert record == key_store.make_record("codex", None)
     assert "refresh_token" not in record and record["auth_path"] == ""
     assert "rt" not in json.dumps(fake.entries)           # the token copy did not survive the move
+
+
+def test_reassign_moves_the_claimed_guest_record_to_the_account(monkeypatch):
+    """Signing in claims the guest: the backend moved its BYOK row, so the key
+    material on this device (keyed by user id) follows it — unless the
+    account already has its own record on this device, which wins."""
+    fake = _patch_store(monkeypatch)
+    guest = key_store.make_record("codex", None, auth_path="")
+    key_store.save(guest, "guest-1")
+
+    assert key_store.reassign("guest-1", "acct-1") is True
+    assert key_store.load("guest-1") is None
+    assert key_store.load("acct-1")["provider"] == "codex"
+    assert f"{key_store.BYOK_KEY_STORE_PREFIX.lower()}:guest-1" not in _bundle(fake)
+
+    # The account's own record wins; the guest's copy is dropped.
+    key_store.save(key_store.make_record("anthropic", "sk-own"), "acct-2")
+    key_store.save(key_store.make_record("codex", None, auth_path=""), "guest-2")
+    assert key_store.reassign("guest-2", "acct-2") is True
+    assert key_store.load("acct-2")["provider"] == "anthropic"
+    assert key_store.load("guest-2") is None
+
+    # Nothing to move, same user, or no ids: a no-op.
+    assert key_store.reassign("guest-3", "acct-3") is False
+    assert key_store.reassign("acct-3", "acct-3") is False
+    assert key_store.reassign(None, "acct-3") is False

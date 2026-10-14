@@ -6,6 +6,7 @@
 Authentication utilities for Mixar
 """
 
+import base64
 import hashlib
 import json
 import platform
@@ -145,6 +146,21 @@ def _read_token(item, win_target):
     from mixar.modules.common.utils import credential_store
 
     return credential_store.get_secret(item) or ""
+
+
+def user_id_from_token(token):
+    """The Mixar user id: the access token's ``sub`` claim (no signature
+    check — this only scopes local, per-user state such as the BYOK key
+    record; the server authenticates)."""
+    if not token or token.count(".") != 2:
+        return None
+    try:
+        encoded = token.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
+        sub = claims.get("sub")
+        return str(sub) if sub else None
+    except Exception:  # noqa: BLE001 — not a JWT
+        return None
 
 
 def get_access_token():
