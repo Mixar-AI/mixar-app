@@ -1112,6 +1112,9 @@ msgstr "Tilan tarkistus epäonnistui: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skannaa resurssikirjastot, tarkistaa muutokset, renderöi vain uudet esikatselut ja lähettää ne koulutus-API:lle"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Käynnistetään…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Resurssia ei voitu lisätä kohtaukseen."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺖﯿﻌﺿﻭ ﯽﺳﺭﺮﺑ"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ﺪﺘﺳﺮﻓ‌ﯽﻣ ﺵﺯﻮﻣﺁ API ﻪﺑ ﻭ ﺪﻨﮐ‌ﯽﻣ ﺭﺪﻧﺭ ﺍﺭ ﺪﯾﺪﺟ ﯼﺎﻫ‌ﺶﯾﺎﻤﻨﺸﯿﭘ ﻂﻘﻓ ،ﺪﻨﮐ‌ﯽﻣ ﯽﺳﺭﺮﺑ ﺍﺭ ﺎﻫﺮﯿﯿﻐﺗ ،ﺪﻨﮐ‌ﯽﻣ ﺶﯾﻮﭘ ﺍﺭ ﯽﯾﺍﺭﺍﺩ ﯼﺎﻫ‌ﻪﻧﺎﺨﺑﺎﺘﮐ"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "…ﻉﻭﺮﺷ ﻝﺎﺣ ﺭﺩ"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr ".ﺪﺸﻧ ﻦﮑﻤﻣ ﻪﻨﺤﺻ ﻪﺑ ﯽﯾﺍﺭﺍﺩ ﻥﺩﻭﺰﻓﺍ"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

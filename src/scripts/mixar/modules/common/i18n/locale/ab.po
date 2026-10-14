@@ -1112,6 +1112,9 @@ msgstr "Астатус агәаҭара алымшеит: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Аресурсқәа ршәҟәыԥхьарҭақәа рскан, аԥсахрақәа ргәаҭара, аҿыц аԥхьаԥшрақәа мацара архиара, аԥышәара API ахь ашьҭра"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Алагара…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Аресурс асцена ахь ацҵара алымшеит."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "状态检查失败：{error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "扫描资产库、检查更改、仅渲染新预览，并发送到训练 API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "正在启动…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "无法将资产添加到场景。"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

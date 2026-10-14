@@ -1415,6 +1415,9 @@ msgstr "Provera statusa nije uspela: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skenira zbirke resursa, proverava izmene, renderuje samo nove preglede i šalje ih API-ju za obuku"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 # derived
 msgid "Starting…"
 msgstr "Pokretanje…"
@@ -25599,9 +25602,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Nije bilo moguće dodati resurs u scenu."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

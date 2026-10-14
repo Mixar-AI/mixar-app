@@ -1112,6 +1112,9 @@ msgstr "Kontrola stavu selhala: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Prohledá knihovny assetů, zkontroluje změny, vykreslí pouze nové náhledy a odešle je do trénovacího API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Spouštění…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Asset se nepodařilo přidat do scény."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

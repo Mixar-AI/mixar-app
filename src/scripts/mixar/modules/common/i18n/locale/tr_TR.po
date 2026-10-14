@@ -1112,6 +1112,9 @@ msgstr "Durum denetimi başarısız: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Varlık kütüphanelerini tarar, değişiklikleri denetler, yalnızca yeni önizlemelerin sunumunu oluşturur ve eğitim API'sine gönderir"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Başlatılıyor…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Varlık sahneye eklenemedi."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

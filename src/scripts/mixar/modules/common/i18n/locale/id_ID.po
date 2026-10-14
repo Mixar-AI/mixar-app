@@ -1112,6 +1112,9 @@ msgstr "Pemeriksaan status gagal: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Memindai perpustakaan aset, memeriksa perubahan, merender hanya pratinjau baru, lalu mengirimkannya ke API pelatihan"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Memulai…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Tidak dapat menambahkan aset ke adegan."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

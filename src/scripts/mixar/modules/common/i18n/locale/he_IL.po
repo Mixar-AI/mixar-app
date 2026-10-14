@@ -1112,6 +1112,9 @@ msgstr "{error} :הלשכנ בצמה תקידב"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ןומיאה API-ל החילשו ,דבלב תושדח תומידקמ תוגוצת דוביע ,םייוניש תקידב ,םיסכנה תוירפס תקירס"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "…ליחתמ"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr ".הנצסל סכנה תא ףיסוהל ןתינ אל"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Kontrolo de stato malsukcesis: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skanas rimedbibliotekojn, kontrolas ŝanĝojn, redonas nur novajn antaŭvidojn, kaj sendas al la trejna API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Startigante…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Ne eblis aldoni la rimedon al la sceno."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

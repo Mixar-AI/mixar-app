@@ -1112,6 +1112,9 @@ msgstr "Ha fallat la comprovació de l'estat: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Explora les biblioteques de recursos, comprova si hi ha canvis, revela només els previsionats nous i els envia a l'API d'entrenament"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Iniciant…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "No s'ha pogut afegir el recurs a l'escena."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

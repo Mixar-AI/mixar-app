@@ -361,13 +361,24 @@ def test_close_4009_at_the_handshake_is_transient_not_auth(chat_core):
 def test_every_sign_in_path_goes_through_the_claiming_wrapper():
     source = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
     tree = ast.parse(source)
+
+    def _is_call_to(node, name):
+        return isinstance(node, ast.Call) and ast.unparse(node.func) == name
+
+    # Every sso_login(...) call must sit inside a guest.sign_in(...) argument
+    # (the lambda that threads the cancel handle through).
+    wrapped = {
+        id(inner)
+        for outer in ast.walk(tree) if _is_call_to(outer, "guest.sign_in")
+        for arg in outer.args for inner in ast.walk(arg)
+        if _is_call_to(inner, "sso_login")
+    }
     bare = [
         node.lineno for node in ast.walk(tree)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-        and node.func.id == "sso_login"
+        if _is_call_to(node, "sso_login") and id(node) not in wrapped
     ]
     assert bare == [], f"sso_login() called without guest.sign_in at lines {bare}"
-    assert source.count("guest.sign_in(sso_login)") == 2
+    assert source.count("guest.sign_in(lambda: sso_login(cancel=cancel))") == 2
     # Startup without a pair and a sign-out both become a guest; a guest
     # that signs in leaves its session first.
     assert "_enter_guest_session(fallback=_reauthenticate)" in source

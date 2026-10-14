@@ -1112,6 +1112,9 @@ msgstr "स्थिति जाँच विफल: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "एसेट लायब्रेरी स्कैन करता है, परिवर्तन जाँचता है, केवल नए पूर्वावलोकन प्रतिपादित करता है, और उन्हें प्रशिक्षण API को भेजता है"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "शुरू हो रहा है…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "एसेट को दृश्य में नहीं जोड़ा जा सका।"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

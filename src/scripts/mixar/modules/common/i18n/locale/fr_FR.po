@@ -1112,6 +1112,9 @@ msgstr "Échec de la vérification de l’état : {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Analyser les bibliothèques d’assets, détecter les changements, rendre uniquement les nouvelles prévisualisations et les envoyer à l’API d’entraînement"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Démarrage…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Impossible d’ajouter l’asset à la scène."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

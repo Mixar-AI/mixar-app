@@ -1112,6 +1112,9 @@ msgstr "状態の確認に失敗しました: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "アセットライブラリをスキャンして変更を確認し、新しいプレビューのみをレンダリングして学習APIに送信します"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "開始中…"
 
@@ -19877,9 +19880,6 @@ msgid "Could not add the asset to the scene."
 msgstr "アセットをシーンに追加できませんでした。"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

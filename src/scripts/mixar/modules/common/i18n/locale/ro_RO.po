@@ -1112,6 +1112,9 @@ msgstr "Verificarea stării a eșuat: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Scanează bibliotecile de resurse, verifică modificările, randează doar previzualizările noi și le trimite la API-ul de antrenare"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Se pornește…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Resursa nu a putut fi adăugată în scenă."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

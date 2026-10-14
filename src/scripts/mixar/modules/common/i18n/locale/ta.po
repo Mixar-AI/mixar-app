@@ -1112,6 +1112,9 @@ msgstr "நிலைச் சரிபார்ப்பு தோல்வி:
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "சொத்து நூலகங்களை வருடி, மாற்றங்களைச் சரிபார்த்து, புதிய முன்னோட்டங்களை மட்டும் வழங்கி, பயிற்சி API-க்கு அனுப்புகிறது"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "தொடங்குகிறது…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "சொத்தைக் காட்சியில் சேர்க்க முடியவில்லை."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

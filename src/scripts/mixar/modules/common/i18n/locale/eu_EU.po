@@ -1112,6 +1112,9 @@ msgstr "Egoera-egiaztapenak huts egin du: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Eskaneatu baliabide-liburutegiak, egiaztatu aldaketak, errendatu aurrebista berriak soilik, eta bidali entrenamendu-APIra"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Hastatzen…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Ezin izan da baliabidea eszenara gehitu."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Az állapotellenőrzés sikertelen: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Assetkönyvtárak átvizsgálása, változások keresése, csak az új előnézetek renderelése és elküldése a tanítási API-nak"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Indítás…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Az asset nem adható a jelenethez."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "ตรวจสอบสถานะล้มเหลว: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "สแกนคลังสินทรัพย์ ตรวจหาการเปลี่ยนแปลง เรนเดอร์เฉพาะภาพตัวอย่างใหม่ และส่งไปยัง API การฝึก"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "กำลังเริ่มต้น…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "ไม่สามารถเพิ่มสินทรัพย์ลงในฉากได้"
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

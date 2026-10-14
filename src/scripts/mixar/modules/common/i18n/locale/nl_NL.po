@@ -1112,6 +1112,9 @@ msgstr "Statuscontrole mislukt: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Scant assetbibliotheken, controleert op wijzigingen, rendert alleen nieuwe voorbeelden en stuurt ze naar de trainings-API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Starten…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Kon het asset niet aan de scène toevoegen."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

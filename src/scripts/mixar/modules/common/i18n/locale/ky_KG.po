@@ -1112,6 +1112,9 @@ msgstr "Абалды текшерүү ишке ашкан жок: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Ресурс китепканаларын карап, өзгөрүүлөрдү текшерип, жаңы алдын ала көрүнүштөрдү гана визуалдаштырып, үйрөтүү API'сине жөнөтөт"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Башталууда…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Ресурс сахнага кошулган жок."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

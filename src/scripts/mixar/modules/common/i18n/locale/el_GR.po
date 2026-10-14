@@ -1112,6 +1112,9 @@ msgstr "Ο έλεγχος κατάστασης απέτυχε: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Σαρώνει τις βιβλιοθήκες πόρων, ελέγχει για αλλαγές, αποδίδει μόνο νέες προεπισκοπήσεις και τις στέλνει στο API εκπαίδευσης"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Έναρξη…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

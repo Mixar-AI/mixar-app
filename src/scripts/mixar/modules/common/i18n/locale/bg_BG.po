@@ -1112,6 +1112,9 @@ msgstr "Проверката на състоянието е неуспешна: 
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Сканира библиотеките с ресурси, проверява за промени, рендерира само новите прегледи и ги изпраща към API за обучение"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Стартиране…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Ресурсът не можа да се добави в сцената."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Statussjekk mislyktes: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skann ressursbibliotek, se etter endringer, gjengi bare nye forhåndsvisninger, og send til trenings-API-et"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Starter…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Kunne ikke legge ressursen til i scenen."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

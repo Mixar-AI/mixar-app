@@ -1112,6 +1112,9 @@ msgstr "სტატუსის შემოწმება ჩავარდ�
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ასკანირებს აქტივების ბიბლიოთეკებს, ამოწმებს ცვლილებებს, ხატავს მხოლოდ ახალ გადახედვებს და აგზავნის სწავლების API-ზე"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "იწყება…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "აქტივის სცენაზე დამატება ვერ მოხერხდა."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Falló la comprobación del estado: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Examina las bibliotecas de recursos, busca cambios, procesa solo las previsualizaciones nuevas y las envía a la API de entrenamiento"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Iniciando…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "No se pudo agregar el recurso a la escena."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

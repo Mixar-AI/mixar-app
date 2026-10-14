@@ -1112,6 +1112,9 @@ msgstr "നില പരിശോധന പരാജയപ്പെട്ടു:
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "അസറ്റ് ലൈബ്രറികൾ സ്കാൻ ചെയ്ത് മാറ്റങ്ങൾ പരിശോധിക്കുക, പുതിയ പ്രിവ്യൂകൾ മാത്രം റെൻഡർ ചെയ്ത് പരിശീലന API-യിലേക്ക് അയയ്ക്കുക"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "ആരംഭിക്കുന്നു…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "അസറ്റ് സീനിലേക്ക് ചേർക്കാനായില്ല."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Kiểm tra trạng thái thất bại: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Quét thư viện tài sản, kiểm tra thay đổi, chỉ kết xuất ảnh xem trước mới, rồi gửi đến API huấn luyện"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Đang bắt đầu…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Không thể thêm tài sản vào cảnh."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"

@@ -1112,6 +1112,9 @@ msgstr "Preverjanje stanja ni uspelo: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Pregleda knjižnice sredstev, preveri spremembe, upodobi le nove predoglede in jih pošlje v API za učenje"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Začenjanje…"
 
@@ -19873,9 +19876,6 @@ msgid "Could not add the asset to the scene."
 msgstr "Sredstva ni bilo mogoče dodati v sceno."
 
 msgid "Sign in to continue"
-msgstr ""
-
-msgid "Sign in to Mixar to use this."
 msgstr ""
 
 msgid "Sign in to use Mixar models, or add your own key"
