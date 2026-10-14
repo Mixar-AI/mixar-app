@@ -5714,9 +5714,6 @@ msgstr "მოულოდნელი შეცდომა ტექსტუ�
 msgid "Failed to apply textures to any object"
 msgstr "ტექსტურების გამოყენება ვერცერთ ობიექტზე ვერ მოხერხდა"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBR ტექსტურების გამოყენება"
-
 msgid "Both refined and guide masks are required"
 msgstr "საჭიროა როგორც დაზუსტებული, ისე სახელმძღვანელო ნიღბები"
 
@@ -6352,9 +6349,6 @@ msgstr "სამყაროს ჩამოტვირთვა/გარდ�
 
 msgid "World imported but produced no objects"
 msgstr "სამყარო დაიმპორტდა, მაგრამ ობიექტები არ შექმნილა"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: სამყაროს იმპორტი"
 
 msgid "Failed to import world: {error}"
 msgstr "სამყაროს იმპორტი ვერ მოხერხდა: {error}"
@@ -10902,9 +10896,6 @@ msgstr "წარმოქმნილი მასალის პასუხ�
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "მასალა წარმოიქმნა, მაგრამ გამოყენება ვერ მოხერხდა: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "პროცედურული მასალის წარმოქმნა"
 
 msgid "Material generation failed"
 msgstr "მასალის წარმოქმნა ვერ მოხერხდა"
@@ -21268,6 +21259,9 @@ msgstr ""
 msgid "Preferences..."
 msgstr ""
 
+msgid "Undo Whole Document..."
+msgstr ""
+
 msgid "Undo History is unavailable while an agent works"
 msgstr ""
 
@@ -24415,6 +24409,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "ფაილი შენახულია Mixar-ის უფრო ახალი ვერსიით (%d.%d), ზოგი მონაცემი შეიძლება დაიკარგოს"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "ფაილი შენახულია უფრო ახალი ვერსიით, გახსენით Mixar %s ან უფრო ახლით"
 
@@ -26833,6 +26884,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "სამუშაო სივრცის დავალების იდენტიფიკატორი"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28076,6 +28148,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

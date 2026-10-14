@@ -1449,6 +1449,15 @@ static UndoStep *undosys_tab_preload_step(const UndoStep *from,
   if (dir == STEP_REDO && (target->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP)) {
     return nullptr;
   }
+  /* A step that names no datablocks (sculpt) keeps its state in the live mesh,
+   * not in a memfile: the memfile below it is the mesh BEFORE its strokes, and
+   * undoing onto it would drop them (with no reference to resolve afterwards,
+   * the walk crashed: sculpt, leave Sculpt Mode, Cmd+Z). The tab keeps the
+   * object-level state of the step it comes from, as the document walk did
+   * before #WITH_GLOBAL_UNDO_CORRECT_ORDER. */
+  if (target->type->step_foreach_ID_ref == nullptr) {
+    return nullptr;
+  }
   if (!undosys_tab_step_is_global(from)) {
     /* Between two mode steps the object-level state is the same only when the
      * step left edits nothing the target does not restore: an edit-mesh step on
@@ -1512,7 +1521,9 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
       undosys_step_decode(C, G_MAIN, ustack, preload, dir, false);
       BKE_undo_tabs_walk_restored_note(preload);
       BKE_undo_tabs_partial_end();
-      target->type->step_foreach_ID_ref(target, undosys_id_ref_resolve, G_MAIN);
+      if (target->type->step_foreach_ID_ref) {
+        target->type->step_foreach_ID_ref(target, undosys_id_ref_resolve, G_MAIN);
+      }
     }
     UNDO_NESTED_CHECK_BEGIN;
     target->type->step_decode(C, G_MAIN, target, dir, is_final);
@@ -1603,7 +1614,7 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
   UndoStep *ref = BKE_undosys_tab_cursor(ustack, tab_uid);
   if (ref == nullptr) {
     if (r_reason) {
-      *r_reason = "nothing to undo in this tab";
+      *r_reason = RPT_("nothing to undo in this tab");
     }
     return false;
   }
@@ -1618,7 +1629,9 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
       /* The step beneath must be acceptable BEFORE the active step is
        * un-applied: a refusal after that would leave the active step
        * half-undone and the next press would apply its delta twice. */
-      if (!undosys_tab_step_check(ustack, C, tab_uid, us, r_reason)) {
+      if (!undosys_tab_step_check(
+              ustack, C, tab_uid, us, r_reason, undosys_tab_preload_step(ref, us, STEP_UNDO)))
+      {
         return false;
       }
       if (!undosys_tab_step_decode(ustack, C, tab_uid, ref, STEP_UNDO, false, r_reason)) {
@@ -1628,7 +1641,7 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
     return undosys_tab_step_apply(ustack, C, tab_uid, us, STEP_UNDO, r_reason, ref);
   }
   if (r_reason) {
-    *r_reason = "nothing to undo in this tab";
+    *r_reason = RPT_("nothing to undo in this tab");
   }
   return false;
 }
@@ -1639,7 +1652,7 @@ bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, const uint32_t ta
   UndoStep *target = undosys_tab_next_step(ustack, cursor, tab_uid);
   if (target == nullptr) {
     if (r_reason) {
-      *r_reason = "nothing to redo in this tab";
+      *r_reason = RPT_("nothing to redo in this tab");
     }
     return false;
   }
@@ -1657,7 +1670,7 @@ bool BKE_undosys_tab_step_check(UndoStack *ustack,
     UndoStep *target = undosys_tab_next_step(ustack, ref, tab_uid);
     if (target == nullptr) {
       if (r_reason) {
-        *r_reason = "nothing to redo in this tab";
+        *r_reason = RPT_("nothing to redo in this tab");
       }
       return false;
     }
@@ -1677,7 +1690,7 @@ bool BKE_undosys_tab_step_check(UndoStack *ustack,
         ustack, C, tab_uid, us, r_reason, undosys_tab_preload_step(ref, us, STEP_UNDO));
   }
   if (r_reason) {
-    *r_reason = "nothing to undo in this tab";
+    *r_reason = RPT_("nothing to undo in this tab");
   }
   return false;
 }
@@ -1687,14 +1700,14 @@ bool BKE_undosys_tab_step_load(
 {
   if (target == nullptr || target->skip || target->mixar_tab_uid != tab_uid) {
     if (r_reason) {
-      *r_reason = "that step is not this tab's";
+      *r_reason = RPT_("that step is not this tab's");
     }
     return false;
   }
   UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab_uid);
   if (cursor == target) {
     if (r_reason) {
-      *r_reason = "this tab is already at that step";
+      *r_reason = RPT_("this tab is already at that step");
     }
     return false;
   }
@@ -1709,7 +1722,7 @@ bool BKE_undosys_tab_step_load(
   while (BKE_undosys_tab_cursor(ustack, tab_uid) != target) {
     if (--guard < 0) {
       if (r_reason) {
-        *r_reason = "the walk did not reach that step";
+        *r_reason = RPT_("the walk did not reach that step");
       }
       return false;
     }

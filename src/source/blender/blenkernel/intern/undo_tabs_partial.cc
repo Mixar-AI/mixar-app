@@ -16,6 +16,8 @@
 #include <memory>
 #include <string>
 
+#include <fmt/format.h>
+
 #include "CLG_log.h"
 
 #include "BLI_listbase.h"
@@ -29,6 +31,8 @@
 #include "BLI_vector.hh"
 
 #include "BLO_undofile.hh"
+
+#include "BLT_translation.hh"
 
 #include "DNA_ID.h"
 #include "DNA_genfile.h"
@@ -1113,14 +1117,14 @@ static SharedFate shared_fate(const UndoStack *ustack,
       continue;
     }
     if (c.index > lo) {
-      foreign = "another tab changed it since that step";
+      foreign = RPT_("another tab changed it since that step");
       continue;
     }
     const UndoStep *cursor = (c.author != UNDO_TAB_DOCUMENT) ?
                                  BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), c.author) :
                                  nullptr;
     if (!c.by_walk && (c.index > active || (cursor != nullptr && c.index > step_index(ustack, cursor)))) {
-      foreign = "another tab has taken back its own change to it";
+      foreign = RPT_("another tab has taken back its own change to it");
     }
   }
   /* Keeping it exactly as it is never touches another tab's work, whatever the
@@ -1140,7 +1144,7 @@ static SharedFate shared_fate(const UndoStack *ustack,
     return SharedFate::Refuse;
   }
   if (absent_at_target) {
-    *r_why = "this tab made it after that step and another tab uses it now";
+    *r_why = RPT_("this tab made it after that step and another tab uses it now");
     return SharedFate::Refuse;
   }
   return SharedFate::Restore;
@@ -1167,9 +1171,9 @@ static bool partial_validate(Main *bmain,
    * and silently never come back (review 2026-10-01, R5). Fails closed. */
   if (step_owners == nullptr) {
     if (r_reason) {
-      *r_reason =
+      *r_reason = RPT_(
           "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks "
-          "every tab)";
+          "every tab)");
     }
     return false;
   }
@@ -1178,7 +1182,8 @@ static bool partial_validate(Main *bmain,
    * deletes itself by undo; closing a tab is the drawer's. */
   if (!step_owners->owner.contains(tab_uid)) {
     if (r_reason) {
-      *r_reason = "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)";
+      *r_reason = RPT_(
+          "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)");
     }
     return false;
   }
@@ -1255,8 +1260,9 @@ static bool partial_validate(Main *bmain,
   }
   if (moved_count > 0) {
     if (r_reason) {
-      *r_reason = "moved between tabs since that step: " + moved +
-                  " (Edit > Undo Whole Document walks every tab)";
+      *r_reason = fmt::format(fmt::runtime(RPT_("moved between tabs since that step: {names} "
+                                                "(Edit > Undo Whole Document walks every tab)")),
+                              fmt::arg("names", moved));
     }
     return false;
   }
@@ -1305,8 +1311,10 @@ static bool partial_validate(Main *bmain,
       }
       if (!deleted.empty()) {
         if (r_reason) {
-          *r_reason = "shared with another tab since that step and deleted there: " + deleted +
-                      " (Edit > Undo Whole Document walks every tab)";
+          *r_reason = fmt::format(
+              fmt::runtime(RPT_("shared with another tab since that step and deleted there: "
+                                "{names} (Edit > Undo Whole Document walks every tab)")),
+              fmt::arg("names", deleted));
         }
         return false;
       }
@@ -1332,14 +1340,16 @@ static bool partial_validate(Main *bmain,
   }
   if (!gone.empty()) {
     if (r_reason) {
-      *r_reason = "shared with another tab at that step and gone since: " + gone +
-                  " (Edit > Undo Whole Document walks every tab)";
+      *r_reason = fmt::format(fmt::runtime(RPT_("shared with another tab at that step and gone "
+                                                "since: {names} (Edit > Undo Whole Document "
+                                                "walks every tab)")),
+                              fmt::arg("names", gone));
     }
     return false;
   }
   if (g_memfile_get == nullptr) {
     if (r_reason) {
-      *r_reason = "shared with another tab (Edit > Undo Whole Document walks every tab)";
+      *r_reason = RPT_("shared with another tab (Edit > Undo Whole Document walks every tab)");
     }
     return false;
   }
@@ -1388,13 +1398,18 @@ static bool partial_validate(Main *bmain,
         }
         break;
       case SharedFate::Refuse:
-        refused += (refused.empty() ? "" : "; ") + item.value + " (" + why + ")";
+        refused += (refused.empty() ? "" : "; ") +
+                   fmt::format(fmt::runtime(RPT_("{name} ({why})")),
+                               fmt::arg("name", item.value),
+                               fmt::arg("why", why));
         break;
     }
   }
   if (!refused.empty()) {
     if (r_reason) {
-      *r_reason = "shared with another tab: " + refused + " (Edit > Undo Whole Document walks every tab)";
+      *r_reason = fmt::format(fmt::runtime(RPT_("shared with another tab: {names} (Edit > Undo "
+                                                "Whole Document walks every tab)")),
+                              fmt::arg("names", refused));
     }
     return false;
   }
@@ -1452,7 +1467,7 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
   for (ID *id : ids) {
     if (id == nullptr) {
       if (r_reason) {
-        *r_reason = "a datablock that step edited no longer exists";
+        *r_reason = RPT_("a datablock that step edited no longer exists");
       }
       ok = false;
       break;
@@ -1467,8 +1482,10 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
     }
     if (owner != tab_uid && owner != UNDO_TAB_DOCUMENT) {
       if (r_reason) {
-        *r_reason = std::string("'") + (id->name + 2) + "' " +
-                    (owner == UNDO_TAB_SHARED ? "is shared between tabs" : "belongs to another tab");
+        *r_reason = fmt::format(fmt::runtime(owner == UNDO_TAB_SHARED ?
+                                                 RPT_("'{name}' is shared between tabs") :
+                                                 RPT_("'{name}' belongs to another tab")),
+                                fmt::arg("name", id->name + 2));
       }
       ok = false;
       break;
