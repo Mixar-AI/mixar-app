@@ -111,10 +111,14 @@ def publish_status(publish_id: str) -> Dict[str, Any]:
                               else "failed")
     ready = status == "ready"
     failed = status in ("failed", "cancelled")
+    from mixar.modules.web_publish.core.links import is_safe_share_link
+
+    link = next((url for url in (result.share_url, result.viewer_url)
+                 if url and is_safe_share_link(url)), None)
     return {
         "status": status,
         "progress": 1.0 if ready else round(float(progress.progress), 3),
-        "share_url": (result.share_url or result.viewer_url or None) if ready else None,
+        "share_url": link if ready else None,
         "slug": (result.slug or None) if ready else None,
         "error": (progress.error_text or None) if failed else None,
         "warning": progress.warning or None,
