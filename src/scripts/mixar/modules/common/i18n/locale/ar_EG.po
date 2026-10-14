@@ -26347,6 +26347,12 @@ msgstr "ﺞﻴﺴﻨﻟﺍ ﺕﺎﻋﻮﻤﺠﻣ ﺔﺣﺎﺴﻣ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ﺞﻴﺴﻨﻟﺍ ﺕﺎﻋﻮﻤﺠﻣ ﺓﺭﺍﺩﻹ﻿ ﻲﺒﻧﺎﺠﻟﺍ ﻂﻳﺮﺸﻟﺍ ﺡﺍﻮﻟﺃ ﻡﺪﺨﺘﺳﺍ"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ﻝﻭﻷ﻿ﺍ ﻰﻟﺇ ﺓﺩﻮﻌﻟﺍ"
 
@@ -28386,6 +28392,12 @@ msgstr "ﻒﻠﻤﻟﺍ ﺩﺍﺪﺘﻣﺍ ﻲﻔﺼﻣ"
 
 msgid "Write compressed .mixar file"
 msgstr "ﺎﻃًﻮﻐﻀﻣ mixar. ﻒﻠﻣ ﺐﺘﻜﻳ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "mixar. ﻒﻠﻤﻛ ﻆﻔﺤﻳ"

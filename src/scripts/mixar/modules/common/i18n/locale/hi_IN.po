@@ -26347,6 +26347,12 @@ msgstr "बनावट समूह स्थान"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "बनावट समूह प्रबंधित करने के लिए साइडबार पैनलों का उपयोग करें"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "पहले पर वापस"
 
@@ -28386,6 +28392,12 @@ msgstr "संचिका एक्सटेंशन निस्पादक"
 
 msgid "Write compressed .mixar file"
 msgstr "संपीड़ित .mixar संचिका लिखता है"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar संचिका के रूप में सहेजता है"

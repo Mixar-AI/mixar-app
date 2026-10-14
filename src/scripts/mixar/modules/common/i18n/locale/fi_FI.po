@@ -26347,6 +26347,12 @@ msgstr "Tekstuurijoukkojen tila"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Hallitse tekstuurijoukkoja sivupaneeleilla"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Takaisin ensimmäiseen"
 
@@ -28386,6 +28392,12 @@ msgstr "Tiedostopäätteen suodatin"
 
 msgid "Write compressed .mixar file"
 msgstr "Kirjoita pakattu .mixar-tiedosto"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Tallenna .mixar-tiedostona"

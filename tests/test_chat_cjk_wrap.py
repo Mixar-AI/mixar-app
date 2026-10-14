@@ -205,7 +205,7 @@ def test_closing_punctuation_never_starts_a_wrapped_line(tmp_path):
 
 
 def test_rich_text_uses_cjk_units_and_folds_long_tokens():
-    source = (CHAT / "mixie_chat_ui_primitives.cc").read_text(encoding="utf-8")
+    source = (CHAT / "mixie_chat_ui_rich_text.cc").read_text(encoding="utf-8")
     body = source[source.index("float chat_ui_rich_text("):]
     assert "chat_ui_line_unit_end(buf, i, n)" in body
     assert "rt_fit_prefix(" in body

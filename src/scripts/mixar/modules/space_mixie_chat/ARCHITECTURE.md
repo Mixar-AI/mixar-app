@@ -309,7 +309,7 @@ public names), `core/checkpoint_store.py` (paths, index, per-kind prune),
 `ui/operators/checkpoint_ops.py` (card sync, the revert operator).
 
 Before every fresh turn `chat_ops.send_message` captures the whole document with
-`save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
+`save_as_mainfile(copy=True, thumbnail=False)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
 as the `turn` record "before turn N" (sha256-deduplicated files, newest 20 per
 session). File hashes use streaming accelerated SHA-256 from
 `common/utils/digests.py`, retaining identical stored digests and deduplication
@@ -318,14 +318,18 @@ Capture binds the record to the turn's command id once the send is
 accepted. A document with Automatically Pack Resources on reports an error per
 image missing on disk while packing; Blender still writes the copy, so the
 capture keeps a snapshot that exists after such a `RuntimeError` and only
-gives up when nothing was written. The Agent Bubble's `save_pre` purge closes the island for this save
-like any other (bubble screens must never reach a file, and a later restore's
-read must never find a live bubble window to free); the island is re-shown
-after the save. A send started from a bubble click therefore closes the window
-whose region is on the click handler's stack, which is why native click
-dispatchers call operators only through `mixie_chat_call_operator_and_redraw`:
-it re-checks that the region still exists in a live screen before redrawing it
-(the purge restores a live context window, so only a screen walk can tell).
+gives up when nothing was written. The snapshot skips the file thumbnail
+(the Mixar `thumbnail` property of `WM_OT_save_as_mainfile`): with the AUTO
+preview and a scene camera, Blender renders the camera through EEVEE for the
+thumbnail, which held every Send for seconds on a production scene (7 s of a
+7.5 s save on a 1.2M-polygon file; 0.3 s without). The save runs inside the
+Agent Bubble's `keep_windows_for_snapshot`, so its `save_pre` purge does not
+close the island and pill for the snapshot (a restore's read closes them
+itself). A user save still purges the windows, and such a save can start from
+a bubble click, which is why native click dispatchers call operators only
+through `mixie_chat_call_operator_and_redraw`: it re-checks that the region
+still exists in a live screen before redrawing it (the purge restores a live
+context window, so only a screen walk can tell).
 
 **One timeline, position = chat length.** The snapshot before turn N holds N-1
 user messages, so `timeline(session_id, scene)` splits the turns by the scene's
@@ -364,8 +368,8 @@ the turns can be reapplied; a new message from there mints a new session and
 forgets it. A jump whose keep-capture fails is refused ("nothing was
 changed"); a jump whose read fails drops the record it had just captured.
 Every read is preceded by the Agent Bubble purge
-(`close_restored_agent_bubble_windows`), because a jump with nothing to keep
-saves nothing and `save_pre` would not have closed the island.
+(`close_restored_agent_bubble_windows`): snapshot saves keep the island open,
+so the restore is the one place that closes it before a file read.
 
 **Card.** The header (and the island's history-button row) shows a
 Checkpoints button once the session has one. It opens the native past-chats

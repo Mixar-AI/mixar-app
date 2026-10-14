@@ -77,7 +77,10 @@ result = cp.list_checkpoints({SCENE}.mixie_session_id)
             turns = [r for r in records if r['kind'] == 'turn']
             assert len(turns) == index + 1, records
             assert all(r['bytes'] > 0 for r in turns), turns
-            qa.wait("bool(drv.find(surface='pill_cat'))", timeout=8)
+            # The snapshot save keeps the island and pill open (no save_pre
+            # purge for turn checkpoints), so the island the Send came from
+            # must still be there; open_pill minimises and restores it.
+            qa.wait("drv.island_state()['mode'] == 'island'", timeout=8)
             settle(qa)
         open_pill(qa)
         capture(qa, out, 'after-twelve-saves')

@@ -18,14 +18,16 @@ import time
 from typing import Optional
 
 from ..constants import (
-    CLEANUP_MAX_AGE_DAYS, DEFAULT_DATA_SUBDIR, ENV_BASE_DIR, MAX_LIST_RESULTS,
+    CAT_UNDO, CLEANUP_MAX_AGE_DAYS, DEFAULT_DATA_SUBDIR, ENV_BASE_DIR, MAX_LIST_RESULTS,
     MAX_SCRIPT_CHARS, MODULE_DIR_NAME, NO_SESSION, OPERATIONS_FILE, SCRIPTS_SUBDIR,
+    UNDO_ONLY_MAX_AGE_DAYS,
 )
 from .record import OperationRecord, build_manual_record
 
 _lock = threading.Lock()
 _seq_cache: dict = {}
 _last_cleanup_day: Optional[int] = None
+_cleanup_thread: Optional[threading.Thread] = None
 
 
 def _base_dir() -> str:
@@ -82,64 +84,105 @@ def _session_ids() -> list:
         return []
 
 
-def cleanup_expired(max_age_days: int = CLEANUP_MAX_AGE_DAYS, *, now: Optional[float] = None) -> None:
+def _read_records(ops_path: str) -> list:
+    """(raw_line, parsed_or_None) per non-empty line; a torn line parses to None."""
+    rows = []
+    with open(ops_path, "r", encoding="utf-8") as f:
+        for line in f:
+            raw = line.strip()
+            if not raw:
+                continue
+            try:
+                rows.append((raw, json.loads(raw)))
+            except Exception:
+                rows.append((raw, None))
+    return rows
+
+
+def cleanup_expired(max_age_days: int = CLEANUP_MAX_AGE_DAYS, *, now: Optional[float] = None,
+                    undo_only_max_age_days: float = UNDO_ONLY_MAX_AGE_DAYS) -> dict:
     """Prune operation records and saved scripts older than ``max_age_days``.
 
-    Uses JSONL record timestamps rather than platform-specific birth times, so it behaves
-    consistently on macOS and Windows. Best-effort: failures are ignored by design.
+    A session whose records are all undo/redo markers older than ``undo_only_max_age_days``
+    is removed whole: it describes nothing (every undo in a fresh scene used to open one).
+    A file is rewritten only when a record was dropped, so an up-to-date store costs one
+    read per session. Safe to run off the main thread: each session's rewrite holds the
+    store lock, and nothing here touches bpy. Uses JSONL record timestamps rather than
+    platform-specific birth times, so it behaves consistently on macOS and Windows.
+    Best-effort: failures are ignored by design. Returns counts for tests and logs.
     """
+    stats = {"sessions": 0, "rewritten": 0, "removed_sessions": 0, "removed_records": 0}
     if max_age_days <= 0:
-        return
-    cutoff = (time.time() if now is None else now) - (max_age_days * 86400)
+        return stats
+    now = time.time() if now is None else now
+    cutoff = now - (max_age_days * 86400)
+    undo_cutoff = now - (undo_only_max_age_days * 86400)
     for sid in _session_ids():
         ops_path = _ops_path(sid)
         if not os.path.isfile(ops_path):
             continue
-        kept = []
-        removed_scripts = []
+        stats["sessions"] += 1
         try:
-            with open(ops_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    raw = line.strip()
-                    if not raw:
-                        continue
-                    try:
-                        rec = json.loads(raw)
-                    except Exception:
-                        kept.append(raw)
-                        continue
-                    if float(rec.get("ts", 0) or 0) < cutoff:
+            with _lock:
+                rows = _read_records(ops_path)
+                parsed = [rec for _raw, rec in rows if rec is not None]
+                undo_only = bool(parsed) and all(
+                    rec.get("category") == CAT_UNDO for rec in parsed)
+                newest = max((float(rec.get("ts", 0) or 0) for rec in parsed), default=0.0)
+                if undo_only and newest < undo_cutoff:
+                    shutil.rmtree(session_dir(sid), ignore_errors=True)
+                    _seq_cache.pop(sid, None)
+                    stats["removed_sessions"] += 1
+                    stats["removed_records"] += len(parsed)
+                    continue
+                kept = []
+                removed_scripts = []
+                for raw, rec in rows:
+                    if rec is not None and float(rec.get("ts", 0) or 0) < cutoff:
                         script_path = _script_path_for_record(sid, rec)
                         if script_path:
                             removed_scripts.append(script_path)
+                        stats["removed_records"] += 1
                     else:
-                        kept.append(json.dumps(rec, ensure_ascii=False))
-            if kept:
-                tmp_path = ops_path + ".tmp"
-                with open(tmp_path, "w", encoding="utf-8") as f:
-                    f.write("\n".join(kept) + "\n")
-                os.replace(tmp_path, ops_path)
-            else:
-                shutil.rmtree(session_dir(sid), ignore_errors=True)
+                        kept.append(raw)
+                if len(kept) == len(rows):
+                    continue
+                if kept:
+                    tmp_path = ops_path + ".tmp"
+                    with open(tmp_path, "w", encoding="utf-8") as f:
+                        f.write("\n".join(kept) + "\n")
+                    os.replace(tmp_path, ops_path)
+                    stats["rewritten"] += 1
+                else:
+                    shutil.rmtree(session_dir(sid), ignore_errors=True)
+                    stats["removed_sessions"] += 1
                 _seq_cache.pop(sid, None)
-                continue
             for script_path in removed_scripts:
                 try:
                     os.remove(script_path)
                 except Exception:
                     pass
-            _seq_cache.pop(sid, None)
         except Exception:
             pass
+    return stats
 
 
-def _cleanup_once_per_day() -> None:
-    global _last_cleanup_day
+def _schedule_cleanup_once_per_day() -> None:
+    """Run the prune on a daemon thread the first time the store is written each day.
+
+    It used to run inline in the first append of the day, which on the main thread held
+    the UI for 5.4 s with 13,658 sessions on disk.
+    """
+    global _last_cleanup_day, _cleanup_thread
     day = int(time.time() // 86400)
     if _last_cleanup_day == day:
         return
-    cleanup_expired()
+    if _cleanup_thread is not None and _cleanup_thread.is_alive():
+        return
     _last_cleanup_day = day
+    _cleanup_thread = threading.Thread(
+        target=cleanup_expired, name="mixar-operation-history-cleanup", daemon=True)
+    _cleanup_thread.start()
 
 
 def _next_seq(session_id: str) -> int:
@@ -173,8 +216,8 @@ def _next_seq(session_id: str) -> int:
 
 def append_operation(rec: OperationRecord, script_text: Optional[str] = None) -> OperationRecord:
     try:
+        _schedule_cleanup_once_per_day()
         with _lock:
-            _cleanup_once_per_day()
             sid = rec.session_id or NO_SESSION
             rec.session_id = sid
             _ensure_dirs(sid)

@@ -55,6 +55,7 @@
 #include "WM_types.hh"
 
 #include "view3d_director.hh"
+#include "view3d_intern.hh"
 #include "view3d_director_camera_move.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -339,6 +340,7 @@ void view3d_director_operatortypes()
   WM_operatortype_append(MIXAR_OT_director_place_camera);
   WM_operatortype_append(MIXAR_OT_director_scroll_cameras);
   WM_operatortype_append(MIXAR_OT_director_walk);
+  WM_operatortype_append(MIXAR_OT_agent_halo_redraw);
 }
 
 /** \} */

@@ -103,6 +103,8 @@
 #    include "BPY_extern.hh"
 #  endif
 
+#  include "RE_pipeline.h"
+
 #  include "WM_api.hh"
 #  include "WM_types.hh"
 
@@ -152,6 +154,20 @@ static void rna_Main_ID_remove(Main *bmain,
    * here would be a use-after-free race. Upstream editor operators call
    * ED_preview_kill_jobs() before deleting; this Python path must do the same. */
   ED_preview_kill_jobs_for_id(static_cast<wmWindowManager *>(bmain->wm.first), id);
+
+  /* Mixar: a scene's Render (and its result buffers, and with Persistent Data the whole
+   * engine) is keyed by the Scene's address and upstream frees it only on file load or
+   * exit. The agent preview renders a fresh private scene per job and removes it after,
+   * so every job leaked one (~12 MB at 1024x768). Free it here unless a job still owns
+   * the scene. */
+  if (GS(id->name) == ID_SCE) {
+    wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+    if (wm == nullptr || !WM_jobs_test(wm, id, WM_JOB_TYPE_ANY)) {
+      if (Render *re = RE_GetSceneRender(reinterpret_cast<Scene *>(id))) {
+        RE_FreeRender(re);
+      }
+    }
+  }
 
   if (do_unlink) {
     BKE_id_delete(bmain, id);

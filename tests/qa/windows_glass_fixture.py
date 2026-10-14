@@ -87,6 +87,8 @@ def _api():
                                   ctypes.c_int, ctypes.c_int, wintypes.UINT]
     user.SetForegroundWindow.argtypes = [wintypes.HWND]
     user.BringWindowToTop.argtypes = [wintypes.HWND]
+    user.IsIconic.argtypes = [wintypes.HWND]
+    user.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
     user.GetForegroundWindow.restype = wintypes.HWND
     user.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
     user.WindowFromPoint.argtypes = [wintypes.POINT]
@@ -152,6 +154,10 @@ def foreground(pid):
     visible = windows(pid)
     parent = max((w for w in visible if not w.get('role')),
                  key=lambda w: (w['rect'][2] - w['rect'][0]) * (w['rect'][3] - w['rect'][1]))
+    # A hidden PowerShell launch can leave GHOST's main HWND minimized.
+    # Such a host has a zero-sized client and cannot render a live backdrop.
+    if user.IsIconic(parent['hwnd']):
+        user.ShowWindow(parent['hwnd'], 9)  # SW_RESTORE, this QA process only.
     kernel = ctypes.WinDLL('kernel32')
     current_thread = kernel.GetCurrentThreadId()
     foreground_thread = user.GetWindowThreadProcessId(user.GetForegroundWindow(), None)

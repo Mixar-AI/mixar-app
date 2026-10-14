@@ -24,6 +24,7 @@ from ..constants import CAT_MATERIAL, CAT_OBJECT, CAT_UNDO
 from . import store
 from .record import build_manual_record, category_for_operator
 from .scene_diff import diff_snapshots, snapshot_scene
+from . import scene_key
 from .scene_key import get_scene_history_id
 
 logger = get_logger(__name__)
@@ -117,7 +118,8 @@ def _iter_scenes():
         scene = _context_scene()
         return [scene] if scene is not None else []
     try:
-        return [scene for scene in scenes if scene is not None]
+        from mixar.modules.common.render_coordinator.constants import is_internal_scene
+        return [scene for scene in scenes if scene is not None and not is_internal_scene(scene)]
     except Exception:
         scene = _context_scene()
         return [scene] if scene is not None else []
@@ -426,6 +428,7 @@ def _on_load(*_args):
     _dirty_scene_deadlines.clear()
     _prev.clear()
     store.reset_cache()
+    scene_key.forget_all()
     _prime_existing_scene_baselines()
 
 

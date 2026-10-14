@@ -23,7 +23,7 @@ def test_click_mapping_uses_the_rendered_pixel_geometry():
     for member in ('text_rect', 'line_height', 'visible_lines', 'scroll_offset'):
         assert 'state.' + member in draw
         assert 'state.' + member in click
-    lines = body(HANDLERS, 'static int ui_multiline_get_lines', 'static void textedit_move_vertical_mixar')
+    lines = body(HANDLERS, 'static int ui_multiline_get_lines', 'static bool textedit_move_vertical_mixar')
     assert 'state.font' in lines and 'state.wrap_width' in lines
     assert '1.2f' not in lines
     assert 'mixar_multiline_wrap(' in draw and 'mixar_multiline_wrap(' in lines

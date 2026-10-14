@@ -33,6 +33,9 @@
 #include "bpy_capi_utils.hh"
 #include "bpy_rna.hh"
 #include "bpy_rna_callback.hh" /* Own include. */
+#include "bpy_mixar_stall.hh"
+
+#include "WM_stall_monitor.hh"
 
 namespace blender {
 
@@ -57,7 +60,12 @@ static void cb_region_draw(const bContext *C, ARegion * /*region*/, void *custom
 
   cb_func = PyTuple_GET_ITEM((PyObject *)customdata, 1);
   cb_args = PyTuple_GET_ITEM((PyObject *)customdata, 2);
+  /* Mixar: stall-monitor breadcrumb naming the draw handler. */
+  char stall_name[96];
+  bpy_mixar_stall_callable_name(cb_func, stall_name, sizeof(stall_name));
+  const int stall_index = Mixar_stall_scope_push("draw_cb", stall_name);
   result = PyObject_CallObject(cb_func, cb_args);
+  Mixar_stall_scope_pop(stall_index);
 
   if (result) {
     Py_DECREF(result);
