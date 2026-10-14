@@ -5798,6 +5798,12 @@ msgstr "Karakter összeállítása"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "A generált részek csatolása riggelt vagy sima testhez, helyben"
 
+msgid "Use Image Style Only"
+msgstr "Csak a kép stílusának használata"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Bekapcsolva csak a kép művészi stílusa kerül átvitelre (a prompt továbbra is érvényes). Kikapcsolva a kép közvetlenül irányítja a textúragenerálást"
+
 msgid "Enter a prompt in the image node"
 msgstr "Adjon meg egy promptot a képcsomópontban"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "A modellgenerálás nem érhető el a generálási katalógusban"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Ezt a modellgenerálási módot a következtetési csomópontok még nem támogatják"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Nincs elérhető engedélyezett 3D-generálási modell"
@@ -8013,12 +8019,6 @@ msgstr "Stílusátviteli kép – művészi stílust alkalmaz a generált textú
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referenciakép – közvetlenül irányítja a textúragenerálást (a prompt figyelmen kívül marad)"
-
-msgid "Use Image Style Only"
-msgstr "Csak a kép stílusának használata"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Bekapcsolva csak a kép művészi stílusa kerül átvitelre (a prompt továbbra is érvényes). Kikapcsolva a kép közvetlenül irányítja a textúragenerálást"
 
 msgid "Output texture resolution in pixels"
 msgstr "A kimeneti textúra felbontása pixelben"

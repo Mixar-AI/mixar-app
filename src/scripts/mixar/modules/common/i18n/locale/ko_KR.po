@@ -5798,6 +5798,12 @@ msgstr "캐릭터 조립"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "생성된 파트를 리깅된 바디나 일반 바디에 로컬로 부착합니다"
 
+msgid "Use Image Style Only"
+msgstr "이미지 스타일만 사용"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "활성화하면 이미지의 예술적 스타일만 전이됩니다 (프롬프트는 계속 적용). 비활성화하면 이미지가 텍스처 생성을 직접 결정합니다"
+
 msgid "Enter a prompt in the image node"
 msgstr "이미지 노드에 프롬프트를 입력하세요"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "생성 카탈로그에서 모델 생성을 사용할 수 없습니다"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "이 모델 생성 모드는 아직 추론 노드에서 지원되지 않습니다"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "사용 가능한 활성 3D 생성 모델이 없습니다"
@@ -8013,12 +8019,6 @@ msgstr "스타일 전이 이미지 - 생성된 텍스처에 예술적 스타일�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "참조 이미지 - 텍스처 생성을 직접 결정합니다 (프롬프트 무시)"
-
-msgid "Use Image Style Only"
-msgstr "이미지 스타일만 사용"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "활성화하면 이미지의 예술적 스타일만 전이됩니다 (프롬프트는 계속 적용). 비활성화하면 이미지가 텍스처 생성을 직접 결정합니다"
 
 msgid "Output texture resolution in pixels"
 msgstr "출력 텍스처 해상도(픽셀)입니다"

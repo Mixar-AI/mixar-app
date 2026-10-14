@@ -5798,6 +5798,12 @@ msgstr "Montera karaktär"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Fäster genererade delar på en riggad eller vanlig kropp, lokalt"
 
+msgid "Use Image Style Only"
+msgstr "Använd endast bildens stil"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "När aktiverat överförs endast bildens konstnärliga stil (prompten gäller fortfarande). När inaktiverat styr bilden texturgenereringen direkt"
+
 msgid "Enter a prompt in the image node"
 msgstr "Ange en prompt i bildnoden"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Modellgenerering är inte tillgänglig i genereringskatalogen"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Det här läget för Modellgenerering stöds inte av inferensnoder ännu"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Ingen aktiverad modell för 3D-generering är tillgänglig"
@@ -8013,12 +8019,6 @@ msgstr "Bild för stilöverföring - tillämpar konstnärlig stil på de generer
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referensbild - styr texturgenereringen direkt (prompten ignoreras)"
-
-msgid "Use Image Style Only"
-msgstr "Använd endast bildens stil"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "När aktiverat överförs endast bildens konstnärliga stil (prompten gäller fortfarande). När inaktiverat styr bilden texturgenereringen direkt"
 
 msgid "Output texture resolution in pixels"
 msgstr "Upplösning för utdatatextur i pixlar"

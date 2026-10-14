@@ -5798,6 +5798,12 @@ msgstr "ﺖﯿﺼﺨﺷ ﻥﺩﺮﮐ ﻢﻫﺮﺳ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻞﺻﻭ ﻩﺩﺎﺳ ﺎﯾ ﻩﺪﺷ‌ﮓﯾﺭ ﻥﺪﺑ ﮏﯾ ﻪﺑ ﯽﻠﺤﻣ ﺕﺭﻮﺻ‌ﻪﺑ ﺍﺭ ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌ﻪﻌﻄﻗ"
 
+msgid "Use Image Style Only"
+msgstr "ﺮﯾﻮﺼﺗ ﮏﺒﺳ ﻂﻘﻓ"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ ﺮﯾﻮﺼﺗ ،ﺖﺳﺍ ﻝﺎﻌﻓﺮﯿﻏ ﯽﺘﻗﻭ .(ﺩﻮﺷ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻥﺎﻨﭽﻤﻫ ﺖﭙﻣﺍﺮﭘ) ﺩﻮﺷ‌ﯽﻣ ﻞﻘﺘﻨﻣ ﺮﯾﻮﺼﺗ ﯼﺮﻨﻫ ﮏﺒﺳ ﻂﻘﻓ ،ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ"
+
 msgid "Enter a prompt in the image node"
 msgstr "ﺪﯿﻨﮐ ﺩﺭﺍﻭ ﺖﭙﻣﺍﺮﭘ ﮏﯾ ﺮﯾﻮﺼﺗ ﻩﺮﮔ ﺭﺩ"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﺪﯿﻟﻮﺗ ﺖﺳﺮﻬﻓ ﺭﺩ ﻝﺪﻣ ﺪﯿﻟﻮﺗ"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ﺩﻮﺷ‌ﯽﻤﻧ ﯽﻧﺎﺒﯿﺘﺸﭘ ﺝﺎﺘﻨﺘﺳﺍ ﯼﺎﻫ‌ﻩﺮﮔ ﺭﺩ ﺯﻮﻨﻫ ﻝﺪﻣ ﺪﯿﻟﻮﺗ ﺖﻟﺎﺣ ﻦﯾﺍ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯽﻟﺎﻌﻓ ﯼﺪﻌﺑ‌ﻪﺳ ﺪﯿﻟﻮﺗ ﻝﺪﻣ"
@@ -8013,12 +8019,6 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "(ﺩﻮﺷ‌ﯽﻣ ﻪﺘﻓﺮﮔ ﻩﺪﯾﺩﺎﻧ ﺖﭙﻣﺍﺮﭘ) ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ - ﻊﺟﺮﻣ ﺮﯾﻮﺼﺗ"
-
-msgid "Use Image Style Only"
-msgstr "ﺮﯾﻮﺼﺗ ﮏﺒﺳ ﻂﻘﻓ"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ ﺮﯾﻮﺼﺗ ،ﺖﺳﺍ ﻝﺎﻌﻓﺮﯿﻏ ﯽﺘﻗﻭ .(ﺩﻮﺷ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻥﺎﻨﭽﻤﻫ ﺖﭙﻣﺍﺮﭘ) ﺩﻮﺷ‌ﯽﻣ ﻞﻘﺘﻨﻣ ﺮﯾﻮﺼﺗ ﯼﺮﻨﻫ ﮏﺒﺳ ﻂﻘﻓ ،ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ"
 
 msgid "Output texture resolution in pixels"
 msgstr "ﻞﺴﮑﯿﭘ ﻪﺑ ﯽﺟﻭﺮﺧ ﺖﻓﺎﺑ ﺡﻮﺿﻭ"

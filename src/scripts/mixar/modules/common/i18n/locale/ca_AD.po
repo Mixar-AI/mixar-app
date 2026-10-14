@@ -5798,6 +5798,12 @@ msgstr "Muntar el personatge"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Enganxa les peces generades a un cos aparellat o simple, localment"
 
+msgid "Use Image Style Only"
+msgstr "Utilitzar només l'estil de la imatge"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Quan està habilitat, només es transfereix l'estil artístic de la imatge (la indicació continua aplicant-se). Quan està deshabilitat, la imatge dirigeix directament la generació de textures"
+
 msgid "Enter a prompt in the image node"
 msgstr "Introdueixi una indicació al node d'imatge"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "La generació de models no està disponible al catàleg de generació"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Aquest mode de generació de models encara no és compatible amb els nodes d'inferència"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "No hi ha cap model de generació 3D habilitat"
@@ -8013,12 +8019,6 @@ msgstr "Imatge de transferència d'estil - aplica un estil artístic a les textu
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Imatge de referència - dirigeix directament la generació de textures (la indicació s'ignora)"
-
-msgid "Use Image Style Only"
-msgstr "Utilitzar només l'estil de la imatge"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Quan està habilitat, només es transfereix l'estil artístic de la imatge (la indicació continua aplicant-se). Quan està deshabilitat, la imatge dirigeix directament la generació de textures"
 
 msgid "Output texture resolution in pixels"
 msgstr "Resolució de la textura de sortida en píxels"

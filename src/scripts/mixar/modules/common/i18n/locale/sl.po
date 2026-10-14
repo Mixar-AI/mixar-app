@@ -5798,6 +5798,12 @@ msgstr "Sestavi lik"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Krajevno pripne generirane dele na okosteno ali navadno telo"
 
+msgid "Use Image Style Only"
+msgstr "Uporabi le slog slike"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Ko je omogočeno, se prenese le umetniški slog slike (poziv še velja). Ko je onemogočeno, slika neposredno vodi generiranje tekstur"
+
 msgid "Enter a prompt in the image node"
 msgstr "Vnesite poziv v vozlišče slike"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generiranje modela v katalogu generiranja ni na voljo"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Tega načina generiranja modela vozlišča sklepanja še ne podpirajo"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Na voljo ni nobenega omogočenega modela za generiranje 3D"
@@ -8013,12 +8019,6 @@ msgstr "Slika prenosa sloga - uveljavi umetniški slog na generiranih teksturah"
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referenčna slika - neposredno vodi generiranje tekstur (poziv je prezrt)"
-
-msgid "Use Image Style Only"
-msgstr "Uporabi le slog slike"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Ko je omogočeno, se prenese le umetniški slog slike (poziv še velja). Ko je onemogočeno, slika neposredno vodi generiranje tekstur"
 
 msgid "Output texture resolution in pixels"
 msgstr "Izhodna ločljivost teksture v pikslih"

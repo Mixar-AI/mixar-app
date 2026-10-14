@@ -5798,6 +5798,12 @@ msgstr "Ensamblar personaje"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Une localmente las partes generadas a un cuerpo con o sin rig"
 
+msgid "Use Image Style Only"
+msgstr "Usar solo el estilo de la imagen"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Si está habilitado, solo se transfiere el estilo artístico de la imagen (el prompt sigue aplicándose). Si está deshabilitado, la imagen dirige directamente la generación de texturas"
+
 msgid "Enter a prompt in the image node"
 msgstr "Introduce un prompt en el nodo de imagen"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generación de modelos no está disponible en el catálogo de generación"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Este modo de Generación de modelos aún no es compatible con los nodos de inferencia"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "No hay ningún modelo de generación 3D habilitado disponible"
@@ -8013,12 +8019,6 @@ msgstr "Imagen de transferencia de estilo - aplica un estilo artístico a las te
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Imagen de referencia - dirige directamente la generación de texturas (se ignora el prompt)"
-
-msgid "Use Image Style Only"
-msgstr "Usar solo el estilo de la imagen"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Si está habilitado, solo se transfiere el estilo artístico de la imagen (el prompt sigue aplicándose). Si está deshabilitado, la imagen dirige directamente la generación de texturas"
 
 msgid "Output texture resolution in pixels"
 msgstr "Resolución de la textura de salida en píxeles"

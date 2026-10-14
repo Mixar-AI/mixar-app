@@ -5798,6 +5798,12 @@ msgstr "組裝角色"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "在本機將生成的部件附加至已綁定或一般的身體"
 
+msgid "Use Image Style Only"
+msgstr "僅使用影像風格"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
+
 msgid "Enter a prompt in the image node"
 msgstr "請在影像節點中輸入提示詞"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "生成編目中無法使用「模型生成」"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "推論節點尚不支援此「模型生成」模式"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "沒有可用的已啟用 3D 生成模型"
@@ -8013,12 +8019,6 @@ msgstr "風格轉換影像 - 將藝術風格套用至生成的紋理"
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "參考影像 - 直接驅動紋理生成（忽略提示詞）"
-
-msgid "Use Image Style Only"
-msgstr "僅使用影像風格"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
 
 msgid "Output texture resolution in pixels"
 msgstr "輸出紋理解析度（像素）"

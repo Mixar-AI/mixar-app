@@ -7337,6 +7337,14 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Prilaže generisane delove rigovanom ili običnom telu, lokalno"
 
 # derived
+msgid "Use Image Style Only"
+msgstr "Koristi samo stil slike"
+
+# derived
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Kada je omogućeno, prenosi se samo umetnički stil slike (prompt i dalje važi). Kada je onemogućeno, slika direktno vodi generisanje teksture"
+
+# derived
 msgid "Enter a prompt in the image node"
 msgstr "Unesite prompt u čvor slike"
 
@@ -7368,9 +7376,8 @@ msgstr "Generisanje slike nije uspelo"
 msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generisanje modela nije dostupno u katalogu generisanja"
 
-# derived
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Ovaj režim generisanja modela još ne podržavaju čvorovi zaključivanja"
+msgstr ""
 
 # derived
 msgid "No enabled 3D generation model is available"
@@ -10224,14 +10231,6 @@ msgstr "Slika prenosa stila — primenjuje umetnički stil na generisane tekstur
 # derived
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referentna slika — direktno vodi generisanje teksture (prompt se zanemaruje)"
-
-# derived
-msgid "Use Image Style Only"
-msgstr "Koristi samo stil slike"
-
-# derived
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Kada je omogućeno, prenosi se samo umetnički stil slike (prompt i dalje važi). Kada je onemogućeno, slika direktno vodi generisanje teksture"
 
 # derived
 msgid "Output texture resolution in pixels"

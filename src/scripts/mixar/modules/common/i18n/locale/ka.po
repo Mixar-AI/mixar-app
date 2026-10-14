@@ -5798,6 +5798,12 @@ msgstr "პერსონაჟის აწყობა"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ამაგრებს წარმოქმნილ ნაწილებს რიგიან ან ჩვეულებრივ სხეულზე, ლოკალურად"
 
+msgid "Use Image Style Only"
+msgstr "მხოლოდ გამოსახულების სტილის გამოყენება"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "ჩართვისას გადადის მხოლოდ გამოსახულების მხატვრული სტილი (პრომპტი კვლავ მოქმედებს). გამორთვისას გამოსახულება პირდაპირ მართავს ტექსტურის წარმოქმნას"
+
 msgid "Enter a prompt in the image node"
 msgstr "შეიყვანეთ პრომპტი გამოსახულების კვანძში"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "მოდელის წარმოქმნა წარმოქმნის კატალოგში მიუწვდომელია"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "მოდელის წარმოქმნის ეს რეჟიმი დასკვნის კვანძებს ჯერ არ აქვს მხარდაჭერილი"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ჩართული 3D წარმოქმნის მოდელი ხელმისაწვდომი არ არის"
@@ -8013,12 +8019,6 @@ msgstr "სტილის გადატანის გამოსახუ�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "რეფერენსი გამოსახულება — პირდაპირ მართავს ტექსტურის წარმოქმნას (პრომპტი უგულებელყოფილია)"
-
-msgid "Use Image Style Only"
-msgstr "მხოლოდ გამოსახულების სტილის გამოყენება"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "ჩართვისას გადადის მხოლოდ გამოსახულების მხატვრული სტილი (პრომპტი კვლავ მოქმედებს). გამორთვისას გამოსახულება პირდაპირ მართავს ტექსტურის წარმოქმნას"
 
 msgid "Output texture resolution in pixels"
 msgstr "გამონატანი ტექსტურის გარჩევადობა პიქსელებში"

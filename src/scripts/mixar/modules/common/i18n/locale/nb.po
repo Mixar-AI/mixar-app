@@ -5798,6 +5798,12 @@ msgstr "Sett sammen figur"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Fest genererte deler til en rigget eller vanlig kropp, lokalt"
 
+msgid "Use Image Style Only"
+msgstr "Bruk bare bildestil"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Når aktivert, overføres bare bildets kunstneriske stil (ledeteksten gjelder fortsatt). Når deaktivert, styrer bildet teksturgenereringen direkte"
+
 msgid "Enter a prompt in the image node"
 msgstr "Skriv en ledetekst i bildenoden"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Modellgenerering er utilgjengelig i genereringskatalogen"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Denne modellgenereringsmodusen støttes ikke av inferensnoder ennå"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Ingen aktivert 3D-genereringsmodell er tilgjengelig"
@@ -8013,12 +8019,6 @@ msgstr "Stiloverføringsbilde – overfører kunstnerisk stil til de genererte t
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referansebilde – styrer teksturgenereringen direkte (ledetekst ignoreres)"
-
-msgid "Use Image Style Only"
-msgstr "Bruk bare bildestil"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Når aktivert, overføres bare bildets kunstneriske stil (ledeteksten gjelder fortsatt). Når deaktivert, styrer bildet teksturgenereringen direkte"
 
 msgid "Output texture resolution in pixels"
 msgstr "Utdataoppløsning for tekstur i piksler"
