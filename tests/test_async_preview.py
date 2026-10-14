@@ -36,6 +36,28 @@ def _scene():
     )
 
 
+class PassThroughScenes:
+    """Stand-in for ``render_scene`` that renders the given scene itself, so these
+    tests keep pinning the job lifecycle on one scene object. The private copy is
+    covered by ``test_preview_private_scene.py``."""
+
+    @staticmethod
+    def isolate_final(_source):
+        return False
+
+    @staticmethod
+    def create(source, *, inspection):
+        return source
+
+    @staticmethod
+    def remove(_scene):
+        return None
+
+    @staticmethod
+    def sweep(keep=None):
+        return 0
+
+
 @pytest.fixture
 def preview(monkeypatch):
     handlers_mod = sys.modules.get("bpy.app.handlers")
@@ -58,6 +80,7 @@ def preview(monkeypatch):
     fake.context.preferences.view.render_display_type = "WINDOW"
     fake.ops.render.render.return_value = {"RUNNING_MODAL"}
     monkeypatch.setattr(module, "bpy", fake)
+    monkeypatch.setattr(module, "render_scene", PassThroughScenes)
     monkeypatch.setattr(module.render_slot, "bpy", fake)
     monkeypatch.setattr(module.render_slot, "_active", None)
     return module

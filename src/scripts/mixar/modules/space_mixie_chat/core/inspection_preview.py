@@ -1,6 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Temporary inspection rig owned by the native preview job until teardown."""
+"""Temporary inspection rig owned by the native preview job until teardown.
+
+Content, focus and framing are read from the user's scene (``source``); the rig's
+camera, sun, world, engine and size go to the private render scene (``scene``,
+``render_scene.py``), so the user's scene and viewport never change. Only object
+``hide_render`` flags are written to shared objects, and the job restores them.
+"""
 import math
 
 import bpy
@@ -13,7 +19,8 @@ from .inspection_bounds import (
 
 
 class Inspection:
-    def __init__(self, scene, params, set_value):
+    def __init__(self, source, scene, params, set_value):
+        self.source = source
         self.scene = scene
         self.params = params
         self.set = set_value
@@ -33,7 +40,7 @@ class Inspection:
         return obj
 
     def prepare(self, context):
-        p, scene = self.params, self.scene
+        p, scene, source = self.params, self.scene, self.source
         view = str(p.get('view', 'camera'))
         shading = str(p.get('shading', 'material'))
         if shading not in {'solid', 'material'} or p.get('engine') in {'splat', 'kiri', 'gaussian', '3dgs'}:
@@ -43,8 +50,8 @@ class Inspection:
         from .preview_render import _apply_resolution
         _apply_resolution(scene.render, self.set, int(p.get('width', 1024)), int(p.get('height', 768)))
         self.set(scene.render, 'resolution_percentage', 100)
-        self.instances = _instance_corners(context, scene)
-        content = [o for o in scene.objects if o.type in {
+        self.instances = _instance_corners(context, source)
+        content = [o for o in source.objects if o.type in {
             'MESH', 'CURVE', 'SURFACE', 'FONT', 'META', 'VOLUME', 'POINTCLOUD',
             'CURVES', 'GREASEPENCIL', 'GPENCIL'} and o.visible_get()]
         shells = _find_enclosing_shells([o for o in content if o.type == 'MESH']) if p.get('hide_shells') else []
@@ -69,7 +76,7 @@ class Inspection:
                       'missing': missing, 'hidden': len(hidden),
                       'include_touching': touching_enabled, 'tolerance_m': .01}
         mark = view.startswith('mark:')
-        camera = scene.camera
+        camera = source.camera
         auto_frame = view != 'camera' or camera is None or bool(focus or p.get('focus_point'))
         if mark:
             original = bpy.data.objects.get(view[5:].strip())
@@ -83,6 +90,12 @@ class Inspection:
         elif focus or p.get('focus_point'):
             # Frame a private copy, preserving all user camera animation/constraints.
             camera = self._camera(camera)
+        own_camera = camera is not source.camera
+        if own_camera:
+            # The rig's camera lives only in the private scene, which no viewport
+            # depsgraph evaluates: keep its world matrix in step with its transform
+            # by hand. Framing reads it below and the label projection after the render.
+            camera.matrix_world = camera.matrix_basis.copy()
         context.view_layer.update()
         center = radius = None
         if not mark:
@@ -109,6 +122,8 @@ class Inspection:
                 camera.data.ortho_scale *= radius * 1.15 / max(half_gate, 1e-9)
             camera.data.clip_start = max(.00001, (distance - radius) * .5)
             camera.data.clip_end = distance + radius * 3 + 100
+        if own_camera:
+            camera.matrix_world = camera.matrix_basis.copy()
         # EEVEE's first shader compilation can hold the shared graphics context
         # and stall UI drawing even with INVOKE_DEFAULT. Cycles' render job does
         # its material work off the UI thread, on the user's configured device.

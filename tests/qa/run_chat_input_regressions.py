@@ -19,6 +19,7 @@ SCENARIOS = (
     'multiline_field_isolation_e2e.py',
     'mixie_text_selection_e2e.py',
     'mixie_open_type_send_e2e.py',
+    'prompt_recall_e2e.py',
     'voice_composer_focus_e2e.py',
 )
 

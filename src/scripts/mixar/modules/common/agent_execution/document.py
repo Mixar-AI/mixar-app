@@ -53,9 +53,13 @@ def _bpy():
 def _first_scene(bpy=None):
     bpy = bpy or _bpy()
     try:
+        from mixar.modules.common.render_coordinator.constants import is_internal_scene
         scenes = bpy.data.scenes
         for s in scenes:
-            return s
+            # Never the agent preview's private render scene: the document id
+            # would change for the length of a render.
+            if not is_internal_scene(s):
+                return s
     except Exception:
         pass
     try:

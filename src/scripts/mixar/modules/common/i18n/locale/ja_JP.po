@@ -26351,6 +26351,12 @@ msgstr "テクスチャセットスペース"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "サイドバーのパネルでテクスチャセットを管理してください"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "最初に戻る"
 
@@ -28390,6 +28396,12 @@ msgstr "ファイル拡張子のフィルター"
 
 msgid "Write compressed .mixar file"
 msgstr ".mixarファイルを圧縮して書き込みます"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixarファイルとして保存します"

@@ -13,7 +13,8 @@ from test_async_preview import KEY, OTHER, preview, _pixels  # noqa: F401
 def rig(preview, monkeypatch):
     state = {'prepared': 0, 'cleaned': 0, 'fail_prepare': False, 'fail_finish': False}
     class Inspection:
-        def __init__(self, scene, params, set_value):
+        def __init__(self, source, scene, params, set_value):
+            assert source is scene      # the pass-through stand-in renders the source
             self.scene, self.set = scene, set_value
         def prepare(self, context):
             state['prepared'] += 1

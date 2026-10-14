@@ -26347,6 +26347,12 @@ msgstr "พื้นที่ชุดพื้นผิว"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ใช้แผงแถบด้านข้างเพื่อจัดการชุดพื้นผิว"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "กลับไปรายการแรก"
 
@@ -28386,6 +28392,12 @@ msgstr "ตัวกรองนามสกุลไฟล์"
 
 msgid "Write compressed .mixar file"
 msgstr "เขียนไฟล์ .mixar แบบบีบอัด"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "บันทึกเป็นไฟล์ .mixar"

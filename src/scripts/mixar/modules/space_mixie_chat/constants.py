@@ -58,6 +58,13 @@ def is_lane_scene(scene) -> bool:
     return getattr(scene, 'mixie_session_id', '').startswith(AGENT_LANE_SESSION_PREFIX)
 
 
+# Private preview-render scenes (core/render_scene.py); defined with the render
+# coordinator so `common` can filter them without importing this module.
+from mixar.modules.common.render_coordinator.constants import (  # noqa: E402,F401
+    INTERNAL_RENDER_SCENE_PROP, is_internal_scene,
+)
+
+
 # SESSION STATES
 
 class SessionState(Enum):
