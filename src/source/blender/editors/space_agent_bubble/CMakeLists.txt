@@ -31,6 +31,7 @@ set(SRC
   agent_ui_draw.cc
   agent_ui_draw_primitives.hh
   agent_ui_controls_paint.cc
+  agent_ui_refine_paint.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_layout.cc

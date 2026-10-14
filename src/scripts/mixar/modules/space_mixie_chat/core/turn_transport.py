@@ -4,6 +4,11 @@
 
 import uuid
 
+from mixar.modules.byok.constants import (
+    BYOK_TRANSPORT_KEY_STALE_CODE,
+    BYOK_TURN_ACCOUNT_FIELD,
+    BYOK_TURN_KEY_FIELD,
+)
 from mixar.modules.common.agent_rpc.client import command, call
 from mixar.modules.common.i18n import n_
 from .agent_events import AgentEvent
@@ -44,7 +49,11 @@ class TurnTransport:
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
-    def _send(self, method, payload, user_message=None, interjecting=False):
+    def _send(self, method, payload, user_message=None, interjecting=False, retry_of=None):
+        """``retry_of`` is the command id of the attempt this send repeats
+        after a ``byok_transport_key_stale`` refusal (see ``settled``): the
+        user bubble is re-keyed to the new id, and a second refusal is
+        shown, never retried again — the guard is this argument."""
         from .session import get_session_manager
         scene = self._scene()
         if scene is None:
@@ -76,9 +85,25 @@ class TurnTransport:
         if user_message is not None:
             user_message.bubble_id = command_id
             user_message.delivery_hint = 'queued' if joining else ''
+        elif retry_of:
+            for item in scene.mixie_chat_messages:
+                if item.sender == 'USER' and item.bubble_id == retry_of:
+                    item.bubble_id = command_id
+                    break
 
         def settled(target, result):
             from .queue_processor import get_event_processor
+            if retry_of is None and _stale_transport_key(result):
+                # The key was sealed to a server key that has since rotated:
+                # forget the cached one and resend this command ONCE under a
+                # new id (the server journals the refusal under the old one,
+                # and keys the receipt on the payload's content).
+                from mixar.modules.byok.core import transport_seal
+                transport_seal.invalidate()
+                for field in (BYOK_TURN_KEY_FIELD, BYOK_TURN_ACCOUNT_FIELD):
+                    payload.pop(field, None)
+                self._send(method, payload, None, interjecting, retry_of=command_id)
+                return
             for item in target.mixie_chat_messages:
                 if item.sender == 'USER' and item.bubble_id == command_id:
                     # English state tokens: the chat renderer translates them when drawn.
@@ -89,6 +114,13 @@ class TurnTransport:
                 processor = get_event_processor()
                 processor._clear_loader_bubbles(target)
                 get_session_manager().set_state(target, previous_state)
+                from .byok_notice import byok_error_code
+                if byok_error_code(result, result.get('data') or {}):
+                    # A refusal over the user's own key: keep the command so
+                    # the key-missing card can resend it (new id) once the
+                    # key is entered or the account switches to credits.
+                    from . import byok_resend
+                    byok_resend.remember(payload['session_id'], command_id, method, payload, joining)
                 processor.handle_command_error(result, target)
             self._running = False
 
@@ -108,16 +140,41 @@ class TurnTransport:
                     **(result.get('result') or {}),
                 })
             # An admission receipt is not completion; the journal owns lifecycle.
-        try:
-            command(method, payload, ack, command_id=command_id)
-            self._running = True
-            return True
-        except Exception as exc:
-            turn_events.handle_turn_notification('agent.command.result', {
-                'session_id': payload['session_id'], 'command_id': command_id,
-                'ok': False, 'message': str(exc),
-            })
-            return False
+
+        outcome = {}
+
+        def dispatch(byok_fields, byok_error):
+            # Main thread. The server holds BYOK metadata only, so the key
+            # rides every chat/input command; a refusal (expired Codex
+            # sign-in) takes the same settled path as a server rejection.
+            if byok_error:
+                turn_events.handle_turn_notification('agent.command.result', {
+                    'session_id': payload['session_id'], 'command_id': command_id,
+                    'ok': False, 'message': byok_error.get('message'),
+                    'data': {'code': byok_error.get('code')},
+                })
+                outcome['ok'] = False
+                return
+            payload.update(byok_fields or {})
+            try:
+                command(method, payload, ack, command_id=command_id)
+                self._running = True
+                outcome['ok'] = True
+            except Exception as exc:
+                turn_events.handle_turn_notification('agent.command.result', {
+                    'session_id': payload['session_id'], 'command_id': command_id,
+                    'ok': False, 'message': str(exc),
+                })
+                outcome['ok'] = False
+
+        # Synchronous while BYOK is inactive (the platform path keeps its
+        # result and timing); otherwise a worker thread reads the credential
+        # store (and refreshes a Codex token) and `dispatch` runs from a
+        # main-thread timer, so the send is accepted here and a failure
+        # settles through the expected command id above.
+        from mixar.modules.byok.core.turn_credentials import prepare
+        prepare(dispatch, method=method, action=payload.get('action'))
+        return outcome.get('ok', True)
 
     def start_stream(self, message, instance_id, session_id, plan_required=True,
                      execution_required=True, approval_required=True, auth_token=None,
@@ -169,6 +226,15 @@ class TurnTransport:
             return True
         except Exception:
             return False
+
+
+def _stale_transport_key(result):
+    """A settled command refused with ``byok_transport_key_stale`` (409):
+    the receipt shape carries the code at the top level, a JSON-RPC error
+    under ``data``."""
+    from .byok_notice import byok_error_code
+    data = result.get('data') if isinstance(result, dict) else None
+    return byok_error_code(result, data or {}) == BYOK_TRANSPORT_KEY_STALE_CODE
 
 
 def create_turn_handler(scene_name='', host='', on_event=None, on_error=None, on_complete=None):

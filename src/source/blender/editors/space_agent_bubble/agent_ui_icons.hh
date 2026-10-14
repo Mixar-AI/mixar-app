@@ -46,6 +46,7 @@ enum AgentIcon {
   AGENT_ICON_CROSS, /* X — clear the queued marks. */
   AGENT_ICON_MIC,   /* Microphone — the Voice chip. */
   AGENT_ICON_FOLDER, /* Folder — an attached context folder's reference chip. */
+  AGENT_ICON_SPARKLE, /* Four-point sparkle — Refine the chat draft. */
 
   AGENT_ICON_COUNT,
 };

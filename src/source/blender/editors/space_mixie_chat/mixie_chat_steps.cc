@@ -88,7 +88,7 @@ float chat_ui_wrapped_first_line_center(int font_size,
   rcti cap_bb;
   BLF_boundbox(font_id, "M", 1, &cap_bb);
   BLF_enable(font_id, BLF_WORD_WRAP);
-  BLF_wordwrap(font_id, int(wrap_width));
+  BLF_wordwrap(font_id, int(wrap_width), CHAT_PROSE_WRAP);
   rcti text_bb;
   BLF_boundbox(font_id, text, strlen(text), &text_bb);
   BLF_disable(font_id, BLF_WORD_WRAP);

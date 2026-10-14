@@ -134,6 +134,7 @@ def test_harness_mirrors_the_theme_metrics():
         "SEG_X": "AGENT_SEG_X",
         "SEND_W": "AGENT_BTN_GENERATE_W",
         "CHIP_GAP": "AGENT_CHIP_GAP",
+        "CHIP_H": "AGENT_CHIP_H",
         "CHIP_ICON": "AGENT_CHIP_ICON",
         "CHIP_ICON_GAP": "AGENT_CHIP_ICON_GAP",
         "CHIP_PAD_X": "AGENT_CHIP_PAD_X",
@@ -152,7 +153,10 @@ def test_layout_measures_with_the_island_font_and_places_the_fit():
     assert "agent_chip_forms(" in body
     assert "ui::mixar_text_width(label, size)" in body
     assert "agent_chip_fit(chips, span, gap)" in body
-    assert "layout.btn_generate.xmin - layout.chip_upload.xmin" in body
+    # The span ends at Send, or at Refine / Revert where the chat shows them
+    # (tests/test_island_prompt_refine.py).
+    assert "float row_end = layout.btn_generate.xmin;" in body
+    assert "row_end - layout.chip_upload.xmin" in body
     assert "std::copy_n(fit.form" in body
     assert "int chip_form[AGENT_CHIP_SLOT_COUNT];" in LAYOUT_HH
 

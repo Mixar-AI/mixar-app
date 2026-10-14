@@ -3,11 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-Moodboard Module Constants
-
-Centralized configuration values for the moodboard module.
-"""
+"""Moodboard module constants: centralized configuration values."""
 
 from mixar.modules.common.constants import SKETCH_COLOR_RGBA
 from mixar.modules.common.i18n import n_
@@ -24,11 +20,9 @@ CHARACTER_PARTS_CAPABILITY_KEY = "character_parts"
 # Frozen backend contract: the job_queue job_type / service key stays
 # "scene_gen" even though the service's capability moved to Character Parts.
 SCENE_GEN_JOB_TYPE = "scene_gen"
-# NOTE: the model slug is deliberately NOT a constant here. Model rows are
-# server-owned and change without a client release, so the submit path reads
-# the service's default from the generation catalog
-# (``generation_params.catalog_default_model``) and aborts when the catalog
-# cannot answer.
+# NOTE: no model slug constant here — model rows are server-owned and change
+# without a client release; the submit path reads the service's default from
+# the catalog (``generation_params.catalog_default_model``) or aborts.
 
 # ============================================================================
 # TURNAROUND / MULTI-VIEW DETECTION
@@ -61,7 +55,6 @@ TURNAROUND_VIEW_DEFAULT = TURNAROUND_VIEW_ORDER[0]
 # Vendor cap: 1 frontal + 7 angles. The Input Image is the frontal one, so the
 # group itself tops out at seven companions.
 TURNAROUND_MAX_COMPANIONS = len(TURNAROUND_VIEW_ORDER)
-
 
 # ---------------------------------------------------------------------------
 # detect-views response vocabulary (NOT view_type labels)
@@ -436,7 +429,6 @@ FRAME_DEFAULT_HEIGHT = 640.0
 FRAME_MIN_WIDTH = 220.0
 FRAME_MIN_HEIGHT = 160.0
 
-
 # Editable node templates: identity, label, icon, catalog capability.
 # The canvas strip prioritizes 3D, video and mesh, then reveals the rest in
 # this list order as width allows; every entry stays in the + menu.
@@ -498,3 +490,8 @@ PARAMETER_HELP_BY_LABEL = {
 # Canvas navigation remains available during text placement and inline editing.
 TEXTBOX_NAVIGATION_EVENTS = frozenset({'WHEELUPMOUSE', 'WHEELDOWNMOUSE',
     'WHEELLEFTMOUSE', 'WHEELRIGHTMOUSE', 'TRACKPADZOOM', 'TRACKPADPAN'})
+
+# Server→client RPC (core/video_rpc.py): the agent reviews a board video as
+# sampled frames; the capability is advertised in the WebSocket handshake.
+VIDEO_RPC = "moodboard.view_video"
+VIDEO_CAPABILITY = "moodboard_video_v1"

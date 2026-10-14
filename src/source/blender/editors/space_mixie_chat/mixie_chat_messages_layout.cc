@@ -617,6 +617,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     rt->prev_layout_epoch =
         epoch_prop ? RNA_property_int_get(scene_ptr, epoch_prop) : 0;
   }
+  rt->prev_theme_signature = chat_ui_theme_signature();
   rt->cached_total_height = total_height;
 
   return total_height;

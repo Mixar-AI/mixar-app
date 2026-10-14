@@ -1433,11 +1433,38 @@ msgstr "Serveur local personnalisé"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Connecter Mixar à un serveur compatible OpenAI que vous exécutez déjà (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Données de formulaire invalides — veuillez contacter le support."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Un problème est survenu de notre côté. Veuillez réessayer."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Lecture du catalogue de modèles locaux"
@@ -1514,6 +1541,12 @@ msgstr "Votre clé : {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Enregistrement du modèle de l’agent… Veuillez patienter avant d’envoyer un message ou de changer de modèle."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Modèle de l’agent"
 
@@ -1562,14 +1595,44 @@ msgstr "Impossible de changer de modèle"
 msgid "Could not reset model"
 msgstr "Impossible de réinitialiser le modèle"
 
-msgid "Removing your key…"
-msgstr "Suppression de votre clé…"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Validation auprès du fournisseur…"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Utilise votre abonnement ChatGPT — aucun crédit Mixar n’est débité."
+
+msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Réglages du fournisseur d’IA"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Actif"
@@ -1577,8 +1640,11 @@ msgstr "Actif"
 msgid "Not configured"
 msgstr "Non configuré"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Exécutez l’agent Mixar chez votre propre fournisseur — aucun crédit Mixar n’est débité tant que cette option est active."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Configuration actuelle"
@@ -1598,77 +1664,68 @@ msgstr "Stockée de façon sécurisée"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Modèle texte uniquement — la discussion fonctionne ; les tâches 3D s’exécutent sans retour visuel."
 
-msgid "Remove API Key…"
-msgstr "Supprimer la clé API…"
+msgid "Remove key…"
+msgstr ""
+
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Enter your API key to continue"
+msgstr ""
+
+msgid "Your provider and model are already set — just paste the key."
+msgstr ""
+
+msgid "Your key is stored only on this computer. Mixar never keeps it."
+msgstr ""
 
 msgid "Provider Setup"
 msgstr "Configuration du fournisseur"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Stockée chiffrée, utilisée uniquement pour les requêtes de l’agent Mixar — seul un aperçu masqué est affiché après l’enregistrement."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Choisissez un modèle qui prend en charge l’appel d’outils / de fonctions — l’agent en a besoin."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "N’importe quel identifiant de openrouter.ai/models, par ex. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Charger depuis ~/.codex/auth.json"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ou collez-le manuellement"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} caractères collés"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Vide — collez votre auth.json"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Exécutez  codex login  dans votre terminal, puis chargez ou collez tout le"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "contenu de ~/.codex/auth.json (le bouton Coller lit votre presse-papier)."
+msgid "Key removed"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Utilise votre abonnement ChatGPT — aucun crédit Mixar n’est débité."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Impossible d’appliquer vos modifications"
-
-msgid "Remove your API key?"
-msgstr "Supprimer votre clé API ?"
-
-msgid "The agent will use Mixar's default provider again."
-msgstr "L’agent utilisera de nouveau le fournisseur par défaut de Mixar."
-
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Les crédits Mixar seront débités pour les prochaines requêtes de l’agent."
-
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "L’agent Mixar s’exécute désormais chez votre fournisseur — aucun crédit Mixar n’est débité."
-
-msgid "API key removed"
-msgstr "Clé API supprimée"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "L’agent utilise de nouveau le fournisseur par défaut de Mixar."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Les crédits Mixar sont de nouveau débités pour les requêtes de l’agent."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Réessayer"
 
-msgid "Save & Activate"
-msgstr "Enregistrer et activer"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Garder ma clé"
-
-msgid "Remove API Key"
-msgstr "Supprimer la clé API"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Décompression de l’environnement d’exécution d’IA locale…"
@@ -1736,47 +1793,14 @@ msgstr "Utiliser votre propre clé API pour l’agent Mixar. Tant que cette opti
 msgid "Validate with the provider and save your API key"
 msgstr "Valider auprès du fournisseur et enregistrer votre clé API"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Choisissez un modèle pour ce fournisseur et saisissez une clé API."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "L’identifiant du modèle et la clé API sont requis."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Choisissez un modèle Codex et chargez votre fichier auth.json."
-
-msgid "Save failed."
-msgstr "Échec de l’enregistrement."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Lire ~/.codex/auth.json depuis cette machine dans le champ"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json introuvable — exécutez d’abord `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Impossible de lire ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json est vide"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json est trop volumineux pour ce champ et a été tronqué — il ne sera pas enregistré correctement"
-
-msgid "Loaded auth.json"
-msgstr "auth.json chargé"
-
-msgid "Paste auth.json"
-msgstr "Coller auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Coller votre ~/.codex/auth.json depuis le presse-papier dans le champ"
-
-msgid "Clipboard is empty"
-msgstr "Le presse-papier est vide"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Le auth.json collé est trop volumineux pour ce champ et a été tronqué — il ne sera pas enregistré correctement"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Supprimer"
@@ -1790,8 +1814,8 @@ msgstr "Annuler la suppression et revenir à la boîte de dialogue principale"
 msgid "Delete the stored API key server-side"
 msgstr "Supprimer la clé API stockée côté serveur"
 
-msgid "Remove failed."
-msgstr "Échec de la suppression."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Rafraîchir l’état BYOK"
@@ -1850,11 +1874,11 @@ msgstr "Votre clé API est stockée chiffrée et utilisée uniquement pour les r
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "N’importe quel identifiant de modèle de openrouter.ai/models (par ex. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Contenu de ~/.codex/auth.json (exécutez d’abord `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Mode local"
@@ -2366,7 +2390,7 @@ msgstr ""
 msgid "Action"
 msgstr "Action"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2897,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Téléchargement {percent}%"
 
-msgid "Upgrade"
-msgstr "Mettre à niveau"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% restants"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Abonnement"
@@ -2930,23 +2957,29 @@ msgstr "Nom du forfait"
 msgid "Display name of the current plan"
 msgstr "Nom affiché du forfait actuel"
 
-msgid "Remaining"
-msgstr "Restant"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Pourcentage de l’allocation de crédits du cycle encore disponible"
-
 msgid "Credits Remaining"
 msgstr "Crédits restants"
 
-msgid "Credits left in the current cycle"
-msgstr "Crédits restants dans le cycle actuel"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Total de crédits"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Allocation de crédits pour le cycle actuel"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Recharge possible"
@@ -3065,16 +3098,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Fichiers"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3131,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3146,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3164,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Origine"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -5030,6 +5108,18 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
 msgid "Connect AI Apps (MCP)"
 msgstr ""
 
@@ -5048,19 +5138,10 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "MCP enabled"
-msgstr ""
-
-msgid "Disable"
-msgstr ""
-
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Enable MCP"
 msgstr ""
 
 msgid "Let AI apps control Mixar's interface"
@@ -5084,7 +5165,10 @@ msgstr ""
 msgid "Setup Guide"
 msgstr ""
 
-msgid "Allow local AI clients to use your Mixar account and scenes"
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
 msgstr ""
 
 msgid "MCP preference applies until Mixar closes; saving failed"
@@ -5093,7 +5177,10 @@ msgstr ""
 msgid "MCP is waiting for the desktop connection"
 msgstr ""
 
-msgid "MCP disabled"
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
 msgstr ""
 
 msgid "Let AI Apps Control Mixar's Interface"
@@ -5630,9 +5717,6 @@ msgstr "Erreur inattendue lors du téléchargement des textures : {error}"
 msgid "Failed to apply textures to any object"
 msgstr "Impossible d’appliquer les textures à un quelconque objet"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360 : appliquer les textures PBR"
-
 msgid "Both refined and guide masks are required"
 msgstr "Les masques affiné et guide sont tous deux requis"
 
@@ -5714,6 +5798,12 @@ msgstr "Assembler le personnage"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Attacher localement les parties générées à un corps rigué ou simple"
 
+msgid "Use Image Style Only"
+msgstr "Utiliser uniquement le style de l’image"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Si activé, seul le style artistique de l’image est transféré (le prompt s’applique toujours). Si désactivé, l’image pilote directement la génération de textures"
+
 msgid "Enter a prompt in the image node"
 msgstr "Saisissez un prompt dans le nœud d’image"
 
@@ -5739,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Model Gen n’est pas disponible dans le catalogue de génération"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Ce mode Model Gen n’est pas encore pris en charge par les nœuds d’inférence"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Aucun modèle de génération 3D activé n’est disponible"
@@ -6262,9 +6352,6 @@ msgstr "Impossible de télécharger/convertir le monde : {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Monde importé mais aucun objet produit"
-
-msgid "World Labs: Import World"
-msgstr "World Labs : importer le monde"
 
 msgid "Failed to import world: {error}"
 msgstr "Impossible d’importer le monde : {error}"
@@ -7930,12 +8017,6 @@ msgstr "Image de transfert de style - applique un style artistique aux textures 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Image de référence - pilote directement la génération de textures (prompt ignoré)"
 
-msgid "Use Image Style Only"
-msgstr "Utiliser uniquement le style de l’image"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Si activé, seul le style artistique de l’image est transféré (le prompt s’applique toujours). Si désactivé, l’image pilote directement la génération de textures"
-
 msgid "Output texture resolution in pixels"
 msgstr "Résolution de sortie des textures en pixels"
 
@@ -8899,11 +8980,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Échec de la synchronisation : {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} vidéo ignorée : l’agent n’accepte que des images fixes. Utilisez Génération vidéo sur le moodboard pour les clips"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} vidéos ignorées : l’agent n’accepte que des images fixes. Utilisez Génération vidéo sur le moodboard pour les clips"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Aucune image du moodboard sélectionnée"
@@ -9201,9 +9282,6 @@ msgstr "Dossier"
 
 msgid "Directory of the selected file(s)"
 msgstr "Dossier du ou des fichiers sélectionnés"
-
-msgid "Files"
-msgstr "Fichiers"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Échec du chargement du média : {filepath}"
@@ -10821,9 +10899,6 @@ msgstr "La réponse du matériau généré ne contenait pas de script"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Matériau généré, mais impossible de l’appliquer : {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Générer un matériau procédural"
 
 msgid "Material generation failed"
 msgstr "Échec de la génération du matériau"
@@ -18765,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19518,8 +19593,8 @@ msgstr "Modification..."
 msgid "Awaiting Input..."
 msgstr "En attente de saisie..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Les vidéos nécessitent le mode Vidéo. Retirez la vidéo pour envoyer à l’agent."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID utilisateur"
@@ -19529,6 +19604,72 @@ msgstr "ID utilisateur pour la connexion à Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "L’agent attend : {formats}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Arrêté*"
@@ -19599,8 +19740,20 @@ msgstr "Échec de l’envoi du message"
 msgid "You're out of credits"
 msgstr "Vous n’avez plus de crédits"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Vous avez utilisé votre quota mensuel de crédits. Passez à une offre supérieure pour continuer à créer avec Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Mettre à niveau"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Le commentaire est vide"
@@ -20037,8 +20190,8 @@ msgstr "Échec de la connexion"
 msgid "Sign in with your Mixar account"
 msgstr "Connectez-vous avec votre compte Mixar"
 
-msgid "Waiting for browser..."
-msgstr "En attente du navigateur..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Se connecter via le navigateur"
@@ -20707,11 +20860,14 @@ msgstr "Session archivée à supprimer"
 msgid "Chat removed from history"
 msgstr "Discussion supprimée de l’historique"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Impossible d’ajouter {name} : {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Limite de pièces jointes ({count}) atteinte"
@@ -20719,14 +20875,14 @@ msgstr "Limite de pièces jointes ({count}) atteinte"
 msgid "Skipped {name}: {error}"
 msgstr "{name} ignoré : {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Impossible d’ajouter {name} : {error}"
-
 msgid "These references are already attached"
 msgstr "Ces références sont déjà jointes"
 
 msgid "Added {count} image(s)"
 msgstr "{count} image(s) ajoutée(s)"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Ajouter depuis le .blend"
@@ -20743,6 +20899,9 @@ msgstr "{size} - Contient des données"
 msgid "{size} - No data"
 msgstr "{size} - Aucune donnée"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Sélectionner une image dans le fichier .blend"
 
@@ -20751,6 +20910,12 @@ msgstr "Image déjà ajoutée"
 
 msgid "Image not found in blend file"
 msgstr "Image introuvable dans le fichier .blend"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Image déjà jointe"
@@ -21139,6 +21304,12 @@ msgstr "Reprise de la tâche précédente..."
 msgid "Could not resume the previous task"
 msgstr "Impossible de reprendre la tâche précédente"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21158,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21501,6 +21675,15 @@ msgstr "Saisie de discussion"
 
 msgid "Type your message here"
 msgstr "Saisissez votre message ici"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Messages de discussion"
@@ -23599,9 +23782,6 @@ msgstr "Aimanter le curseur"
 msgid "Snap 2D cursor"
 msgstr "Aimanter le curseur 2D"
 
-msgid "Origin"
-msgstr "Origine"
-
 msgid "Mirror selected UVs"
 msgstr "Symétriser les UV sélectionnées"
 
@@ -24301,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Fichier enregistré par une version plus récente de Mixar (%d.%d), certaines données peuvent être perdues"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Le fichier a été enregistré par une version plus récente, ouvrez-le avec Mixar %s ou ultérieur"
 
@@ -24337,10 +24574,16 @@ msgstr "Bienvenue !"
 msgid "%s Plan"
 msgstr "Forfait %s"
 
-msgid "Checking usage…"
-msgstr "Vérification de l’utilisation…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s crédits"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24351,15 +24594,6 @@ msgstr "Voir les forfaits"
 
 msgid "couldn't refresh"
 msgstr "échec du rafraîchissement"
-
-msgid "%s of %s left"
-msgstr "%s sur %s restants"
-
-msgid "%s credits"
-msgstr "%s crédits"
-
-msgid "no credits"
-msgstr "aucun crédit"
 
 msgid "Docs"
 msgstr "Docs"
@@ -24379,6 +24613,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Ajoutez un calque de peinture dans le panneau Calques pour commencer à peindre"
 
@@ -24391,7 +24628,43 @@ msgstr "Démarrer ou arrêter la dictée dans le brouillon du croquis"
 msgid "Stop the running turn"
 msgstr "Arrêter le tour en cours"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Rétablir\n"
+"\n"
+"Restaurer le prompt que vous aviez écrit avant son affinage."
+
+msgid "Refining this prompt..."
+msgstr "Affinage de ce prompt..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Affiner à nouveau\n"
+"\n"
+"Réécrire encore ce prompt pour le modèle auquel il sera envoyé. Rétablir restaure toujours votre propre formulation, et non l’affinage précédent."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Affiner\n"
+"\n"
+"Réécrire ce prompt pour le modèle auquel il sera envoyé, en ajoutant les détails auxquels ce modèle est sensible."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24402,6 +24675,9 @@ msgstr "Retirer la référence"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Abandonner ce croquis et son dessin en attente"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24772,7 +25048,7 @@ msgstr "Règles — modifier les règles du projet et les règles globales de l�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24840,6 +25116,12 @@ msgstr "Nombre de fenêtres fermées"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Nombre de fenêtres de la bulle de l’agent fermées"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Définir la taille de la fenêtre de la bulle de l’agent"
@@ -25395,36 +25677,6 @@ msgstr ""
 "Prompt\n"
 "\n"
 "Décrivez ce qu’il faut générer. Appuyez sur Enter pour soumettre ce nœud."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Rétablir\n"
-"\n"
-"Restaurer le prompt que vous aviez écrit avant son affinage."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Affiner à nouveau\n"
-"\n"
-"Réécrire encore ce prompt pour le modèle auquel il sera envoyé. Rétablir restaure toujours votre propre formulation, et non l’affinage précédent."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Affiner\n"
-"\n"
-"Réécrire ce prompt pour le modèle auquel il sera envoyé, en ajoutant les détails auxquels ce modèle est sensible."
-
-msgid "Refining this prompt..."
-msgstr "Affinage de ce prompt..."
 
 msgid ""
 "Assemble\n"
@@ -25989,6 +26241,12 @@ msgstr "Espace des ensembles de textures"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Utilisez les panneaux de la barre latérale pour gérer les ensembles de textures"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "Retour au premier"
@@ -26703,6 +26961,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Identité de la tâche de l’espace de travail"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -27949,6 +28228,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28032,6 +28335,12 @@ msgstr "Filtre d’extension de fichier"
 
 msgid "Write compressed .mixar file"
 msgstr "Écrire un fichier .mixar compressé"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Enregistrer en tant que fichier .mixar"

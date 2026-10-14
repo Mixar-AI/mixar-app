@@ -89,7 +89,7 @@ class FakeLayout:
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE'):
+    def operator(self, op, text="", icon='NONE', emboss=True, **_kw):
         self._log.append(f"op:{op}")
         return SimpleNamespace()
 
@@ -143,7 +143,7 @@ def _wm(state='IDLE', **extra):
         byok_form_model='NONE',
         byok_form_api_key='',
         byok_form_openrouter_model='',
-        byok_form_codex_bundle='',
+        byok_form_codex_path='',
         byok_form_local_mode='MANAGED',
         byok_form_local_model='NONE',
         byok_form_local_detected='NONE',
@@ -235,7 +235,7 @@ def test_all_provider_branches_render_in_both_modes():
     for provider, extra in (
         ('anthropic', {}),
         ('openrouter', {'byok_form_openrouter_model': 'a/b'}),
-        ('codex', {'byok_form_codex_bundle': 'x' * 10}),
+        ('codex', {'byok_form_codex_path': ''}),
         ('local', {'byok_form_local_mode': 'MANAGED'}),
         ('local', {'byok_form_local_mode': 'CUSTOM'}),
     ):
@@ -349,6 +349,19 @@ def test_remove_failure_lands_on_error(monkeypatch):
     assert wm.byok_is_active is True  # config untouched on failure
 
 
+def test_error_keeps_the_active_configuration_visible():
+    """A failed re-save never touches the stored key, so the dialog must
+    not suggest the active configuration has gone away."""
+    for card_api in (True, False):
+        log = _draw('ERROR', card_api, byok_is_active=True,
+                    byok_current_provider='anthropic', byok_current_model='m')
+        assert any(e.endswith("Current Configuration") for e in log), log
+        assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+
+    log = _draw('ERROR', card_api=True)
+    assert not any(e.endswith("Current Configuration") for e in log)
+
+
 # ---------------------------------------------------------------------------
 # C++ contract pinning (this suite cannot compile the overlay)
 # ---------------------------------------------------------------------------
@@ -434,3 +447,14 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+def test_the_header_links_to_the_published_byok_guide():
+    """The Guide button opens the BYOK section of the docs. The anchor id must
+    match the frontend section (mixie-frontend src/pages/docsByok.ts →
+    YOUR_OWN_PROVIDER_SECTION id 'your-own-provider'); a drift breaks the link."""
+    assert byok_dialog_ui.BYOK_GUIDE_URL == "https://www.mixar.app/docs#your-own-provider"
+    source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+              / "byok_dialog_ui.py").read_text(encoding="utf-8")
+    header = source[source.index("def _draw_header("):source.index("def ", source.index("def _draw_header(") + 1)]
+    assert 'operator("wm.url_open"' in header and "BYOK_GUIDE_URL" in header

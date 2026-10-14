@@ -576,8 +576,29 @@ class TestRefreshIdempotency(unittest.TestCase):
         auth.refresh_access_token()
 
         headers = self.calls[0][1]["headers"]
-        self.assertEqual(headers["Idempotency-Key"], "attempt-1")
+        # Deterministic per token (Option B: two instances racing on the same
+        # token send the same key so the backend coordinates them).
+        self.assertEqual(headers["Idempotency-Key"], auth._refresh_idempotency_key("old-refresh"))
+        self.assertEqual(uuid.UUID(headers["Idempotency-Key"]).version, 5)
         self.assertNotIn("X-Idempotency-Key", headers)
+
+    def test_the_idempotency_key_is_deterministic_per_token_so_two_instances_coordinate(self):
+        # The whole point of Option B: a second Mixar instance sharing the OS
+        # keychain computes the SAME key for the same refresh token, so the
+        # backend returns the same rotated pair instead of a 401 that would
+        # clear the shared credentials and log both out.
+        k1 = auth._refresh_idempotency_key("old-refresh")
+        k2 = auth._refresh_idempotency_key("old-refresh")
+        self.assertEqual(k1, k2)
+        self.assertNotEqual(k1, auth._refresh_idempotency_key("a-different-token"))
+        self.assertEqual(uuid.UUID(k1).version, 5)
+        # The key the request actually sends equals that deterministic value.
+        def post(url, **kwargs):
+            self.calls.append((url, kwargs))
+            return self._success()
+        auth.requests.post = post
+        auth.refresh_access_token()
+        self.assertEqual(self.calls[0][1]["headers"]["Idempotency-Key"], k1)
 
 
 class TestPersistedAttemptRecovery(unittest.TestCase):
@@ -732,7 +753,7 @@ class TestPersistedAttemptRecovery(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(len(calls), 1)
         sent_key = calls[0][1]["headers"]["Idempotency-Key"]
-        self.assertEqual(uuid.UUID(sent_key).version, 4)
+        self.assertEqual(uuid.UUID(sent_key).version, 5)   # deterministic uuid5
         self.assertIsNone(self._marker())
         self.assertEqual(
             credentials,

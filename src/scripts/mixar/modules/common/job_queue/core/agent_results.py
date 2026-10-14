@@ -21,6 +21,9 @@ Flow
                the backend acknowledges them, rejects them permanently, or
                the retry/age budget expires. It survives queue clearing and
                file loads, and retries on a timer and after reconnect.
+    direct   : work that never enters a ``FeatureQueue`` (``scene_render``
+               jobs) hands finished params to ``report_agent_result_params``
+               and shares the same outbox, retries and acknowledgement.
 
 Rules this file exists to keep:
   * a job with an empty ``agent_ref`` (every user-initiated one) sends nothing;
@@ -178,15 +181,39 @@ def _retire(key, *, acknowledged=False, reason=''):
                        LOG_PREFIX, key, entry.attempts, reason)
 
 
+def _retain(key, params, job_refs=()) -> bool:
+    """Put one outcome in the outbox; a key already pending or retired wins."""
+    if not key or key in _pending:
+        return False
+    _pending[key] = _PendingResult(dict(params), tuple(job_refs))
+    return True
+
+
 def _retain_batch(batch):
     if batch.retained:
         return
     params = batch.result()
     if params is not None:
         key = next(iter(batch.members))
-        _pending[key] = _PendingResult(params, tuple(batch.members.values()))
+        _retain(key, params, batch.members.values())
         batch.retained = True
         batch.outcomes.clear()
+
+
+def report_agent_result_params(key: str, params: dict) -> None:
+    """Retain pre-built ``generation.agent_result`` params and send when due.
+
+    For outcomes that never pass through a ``FeatureQueue`` (scene renders):
+    the caller owns the params contract and sends each ``key`` once; the
+    entry then retries, acknowledges and gives up exactly like a job result.
+    Must run on the main thread. Never raises.
+    """
+    try:
+        if isinstance(params, dict) and _retain(str(key or ''), params):
+            report_agent_results(())
+    except Exception:  # never escape into the caller's finalizer
+        logger.warning('%s agent result params could not be retained for %s',
+                       LOG_PREFIX, key, exc_info=True)
 
 
 def report_agent_batch(batch):
@@ -227,8 +254,8 @@ def report_agent_results(jobs) -> int:
                 continue
             if (getattr(job, "agent_ref", None) and job.state in TERMINAL_STATES
                     and not getattr(job, "_agent_reported", False)
-                    and not getattr(job, "_agent_report_abandoned", False) and job.id not in _pending):
-                _pending[job.id] = _PendingResult(build_agent_result_params(job), (weakref.ref(job),))
+                    and not getattr(job, "_agent_report_abandoned", False)):
+                _retain(job.id, build_agent_result_params(job), (weakref.ref(job),))
         # Expire even while disconnected; a retired live job cannot be re-added.
         now = time.monotonic()
         for key, entry in list(_pending.items()):

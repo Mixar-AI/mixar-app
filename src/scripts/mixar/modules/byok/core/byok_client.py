@@ -36,8 +36,12 @@ logger = get_logger(__name__)
 # APIResponse → tri-tuple translation
 # ---------------------------------------------------------------------------
 
-_VALIDATION_ERROR_MSG = n_("Invalid form data — please reach out to support.")
+_VALIDATION_ERROR_MSG = n_("Something is wrong with this form. Please contact support.")
 _GENERIC_SERVER_ERROR_MSG = n_("Something went wrong on our end. Please try again.")
+_LOCAL_STORE_FAILED_MSG = n_(
+    "Your key works, but Mixar could not save it on this computer. Enter it "
+    "again to retry."
+)
 
 
 def _translate(response: APIResponse) -> tuple[bool, Optional[Any], Optional[str]]:
@@ -168,27 +172,88 @@ def save_credentials(
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
     base_url: Optional[str] = None,
     supports_vision: Optional[bool] = None,
+    account_id: Optional[str] = None,
+    codex_auth_path: Optional[str] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+    """PUT /agent/byok — validate + register BYOK config. ≤ 15 s.
 
     ``base_url`` / ``supports_vision`` are forwarded only when provided
-    (the "local" provider's relay-target registration).
+    (the "local" provider's relay-target registration); ``account_id`` only
+    for Codex. ``codex_auth_path`` (Codex) is NEVER sent — it is the
+    reference this device keeps to the Codex CLI's sign-in file; the tokens
+    themselves stay in that file.
+
+    On 200 the key material is written to this device's credential store
+    (`key_store`) — still on the worker thread, before the callback — so the
+    next turn can carry it. The server keeps metadata only. A store write
+    that fails is reported as an ERROR (with the server's state attached, so
+    the card still shows the truth): the account is BYOK-active and this
+    device cannot sign a turn, which a "Saved" recap would hide until the
+    next message's 409.
+
+    The key is SEALED to the backend's transport key before the PUT
+    (`transport_seal`, on this worker thread); this device's store keeps the
+    plaintext — sealing is transport only. A 409 ``byok_transport_key_stale``
+    (the server rotated its key inside our cache window) drops the cached
+    key and repeats the PUT once with a fresh envelope.
     """
     def _thread():
-        try:
-            response = get_agent_service().save_credentials_all(
-                provider=provider, model=model, api_key=api_key,
-                base_url=base_url, supports_vision=supports_vision,
-            )
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK save_credentials failed: %s", e)
-            success, data, err = _translate_exception(e)
+        success, data, err = _put_sealed(provider, model, api_key, base_url,
+                                         supports_vision, account_id)
+        if success and not _store_local_key(provider, api_key, codex_auth_path):
+            success, err = False, _LOCAL_STORE_FAILED_MSG
         _schedule_on_main(on_done, success, data, err)
 
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKSave"
     ).start()
+
+
+def _put_sealed(provider, model, api_key, base_url, supports_vision, account_id,
+                *, retried: bool = False) -> tuple[bool, Optional[Any], Optional[str]]:
+    """The PUT with ``api_key`` sealed; a key that cannot be sealed is an
+    ERROR (the user-safe `SealError` message) and nothing is sent."""
+    from . import transport_seal
+
+    envelope = None
+    if api_key is not None:
+        try:
+            envelope = transport_seal.seal(api_key)
+        except transport_seal.SealError as exc:
+            return False, None, exc.message
+    try:
+        response = get_agent_service().save_credentials_all(
+            provider=provider, model=model, api_key=envelope,
+            base_url=base_url, supports_vision=supports_vision,
+            account_id=account_id,
+        )
+        return _translate(response)
+    except Exception as e:
+        if envelope is not None and not retried and is_stale_transport_key(e):
+            transport_seal.invalidate()
+            return _put_sealed(provider, model, api_key, base_url, supports_vision,
+                               account_id, retried=True)
+        logger.warning("BYOK save_credentials failed: %s", e)
+        return _translate_exception(e)
+
+
+def error_code(exc: Exception) -> str:
+    """The backend's ``code`` on an HTTP error (``{"detail": {"code": …}}``
+    or a flat envelope), or ''."""
+    body = getattr(exc, "response_data", None)
+    if not isinstance(body, dict):
+        return ""
+    detail = body.get("detail")
+    source = detail if isinstance(detail, dict) else body
+    code = source.get("code")
+    return code if isinstance(code, str) else ""
+
+
+def is_stale_transport_key(exc: Exception) -> bool:
+    from ..constants import BYOK_TRANSPORT_KEY_STALE_CODE
+
+    return (getattr(exc, "status_code", None) == 409
+            and error_code(exc) == BYOK_TRANSPORT_KEY_STALE_CODE)
 
 
 def delete_credentials(
@@ -207,6 +272,7 @@ def delete_credentials(
                     value = data.get("removed", 0)
                     if isinstance(value, int):
                         removed = value
+                _forget_local_key()
                 _schedule_on_main(on_done, True, removed, None)
             else:
                 _schedule_on_main(on_done, False, 0, err)
@@ -218,3 +284,31 @@ def delete_credentials(
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKDelete"
     ).start()
+
+
+# ---------------------------------------------------------------------------
+# This device's copy of the key (worker thread; the store blocks)
+# ---------------------------------------------------------------------------
+
+def _store_local_key(provider, api_key, codex_auth_path) -> bool:
+    """True when the record is in this device's store (Codex: the file
+    reference only — never the tokens)."""
+    try:
+        from . import key_store
+
+        record = key_store.make_record(provider, api_key, auth_path=codex_auth_path)
+        if key_store.save(record):
+            return True
+        logger.warning("BYOK key was validated but could not be stored on this device")
+    except Exception as e:  # noqa: BLE001 — the server state is already saved
+        logger.warning("BYOK local key store write failed: %s", type(e).__name__)
+    return False
+
+
+def _forget_local_key() -> None:
+    try:
+        from . import key_store
+
+        key_store.delete()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("BYOK local key store delete failed: %s", type(e).__name__)

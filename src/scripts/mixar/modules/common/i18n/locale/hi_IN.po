@@ -1433,11 +1433,38 @@ msgstr "कस्टम स्थानीय सर्वर"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Mixar को आपके द्वारा पहले से चलाए जा रहे किसी OpenAI-संगत सर्वर से जोड़ता है (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "अमान्य फ़ॉर्म डेटा — कृपया सहायता से संपर्क करें।"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "हमारी ओर से कुछ गड़बड़ हो गई। कृपया पुनः प्रयास करें।"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "स्थानीय मॉडल कैटलॉग पढ़ा जा रहा है"
@@ -1514,6 +1541,12 @@ msgstr "आपकी कुंजी: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "एजेंट मॉडल सहेजा जा रहा है… संदेश भेजने या मॉडल बदलने से पहले कृपया प्रतीक्षा करें।"
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "एजेंट मॉडल"
 
@@ -1562,14 +1595,44 @@ msgstr "मॉडल बदला नहीं जा सका"
 msgid "Could not reset model"
 msgstr "मॉडल रीसेट नहीं किया जा सका"
 
-msgid "Removing your key…"
-msgstr "आपकी कुंजी हटाई जा रही है…"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "प्रदाता से सत्यापन हो रहा है…"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "आपकी ChatGPT सदस्यता का उपयोग करता है — Mixar क्रेडिट नहीं काटे जाते।"
+
+msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "AI प्रदाता सेटिंग्स"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "सक्रिय"
@@ -1577,8 +1640,11 @@ msgstr "सक्रिय"
 msgid "Not configured"
 msgstr "कॉन्फ़िगर नहीं"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixar एजेंट को अपने प्रदाता पर चलाएँ — सक्रिय रहने के दौरान Mixar क्रेडिट नहीं काटे जाते।"
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "वर्तमान कॉन्फ़िगरेशन"
@@ -1598,77 +1664,68 @@ msgstr "सुरक्षित रूप से संग्रहीत"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "केवल-पाठ मॉडल — चैट काम करता है; 3D कार्य दृश्य प्रतिक्रिया के बिना चलते हैं।"
 
-msgid "Remove API Key…"
-msgstr "API कुंजी हटाएँ…"
+msgid "Remove key…"
+msgstr ""
+
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Enter your API key to continue"
+msgstr ""
+
+msgid "Your provider and model are already set — just paste the key."
+msgstr ""
+
+msgid "Your key is stored only on this computer. Mixar never keeps it."
+msgstr ""
 
 msgid "Provider Setup"
 msgstr "प्रदाता सेटअप"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "एन्क्रिप्ट करके संग्रहीत, केवल Mixar एजेंट अनुरोधों के लिए उपयोग — सहेजने के बाद केवल छिपा हुआ पूर्वावलोकन दिखाया जाता है।"
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ऐसा मॉडल चुनें जो टूल / फ़ंक्शन कॉलिंग का समर्थन करता हो — एजेंट को इसकी आवश्यकता है।"
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json से लोड करें"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…या इसे मैन्युअल रूप से चिपकाएँ"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} वर्ण चिपकाए गए"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "खाली — अपना auth.json चिपकाएँ"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "अपने टर्मिनल में  codex login  चलाएँ, फिर ~/.codex/auth.json की"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "पूरी सामग्री लोड करें या चिपकाएँ (चिपकाएँ बटन आपका क्लिपबोर्ड पढ़ता है)।"
+msgid "Key removed"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "आपकी ChatGPT सदस्यता का उपयोग करता है — Mixar क्रेडिट नहीं काटे जाते।"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "आपके परिवर्तन लागू नहीं किए जा सके"
-
-msgid "Remove your API key?"
-msgstr "अपनी API कुंजी हटाएँ?"
-
-msgid "The agent will use Mixar's default provider again."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता का उपयोग करेगा।"
-
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "आगे के एजेंट अनुरोधों के लिए Mixar क्रेडिट काटे जाएँगे।"
-
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar एजेंट अब आपके प्रदाता पर चलता है — Mixar क्रेडिट नहीं काटे जाते।"
-
-msgid "API key removed"
-msgstr "API कुंजी हटाई गई"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता पर है।"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "एजेंट अनुरोधों के लिए फिर से Mixar क्रेडिट काटे जाते हैं।"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "पुनः प्रयास करें"
 
-msgid "Save & Activate"
-msgstr "सहेजें और सक्रिय करें"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "मेरी कुंजी रखें"
-
-msgid "Remove API Key"
-msgstr "API कुंजी हटाएँ"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "स्थानीय AI रनटाइम अनपैक हो रहा है…"
@@ -1736,47 +1793,14 @@ msgstr "Mixar एजेंट के लिए आपकी अपनी API क
 msgid "Validate with the provider and save your API key"
 msgstr "प्रदाता से सत्यापन करके आपकी API कुंजी सहेजता है"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "इस प्रदाता के लिए एक मॉडल चुनें और API कुंजी दर्ज करें।"
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "मॉडल स्लग और API कुंजी आवश्यक हैं।"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "एक Codex मॉडल चुनें और अपना auth.json बंडल लोड करें।"
-
-msgid "Save failed."
-msgstr "सहेजना विफल रहा।"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "इस मशीन से ~/.codex/auth.json को फ़ील्ड में पढ़ता है"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json नहीं मिला — पहले `codex login` चलाएँ"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json पढ़ा नहीं जा सका"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json खाली है"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json इस फ़ील्ड के लिए बहुत बड़ा है और काट दिया गया — यह सही ढंग से सहेजा नहीं जाएगा"
-
-msgid "Loaded auth.json"
-msgstr "auth.json लोड किया गया"
-
-msgid "Paste auth.json"
-msgstr "auth.json चिपकाएँ"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "क्लिपबोर्ड से आपका ~/.codex/auth.json फ़ील्ड में चिपकाता है"
-
-msgid "Clipboard is empty"
-msgstr "क्लिपबोर्ड खाली है"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "चिपकाया गया auth.json इस फ़ील्ड के लिए बहुत बड़ा है और काट दिया गया — यह सही ढंग से सहेजा नहीं जाएगा"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "हटाएँ"
@@ -1790,8 +1814,8 @@ msgstr "हटाने का क्रम रद्द करके मुख�
 msgid "Delete the stored API key server-side"
 msgstr "सर्वर पर संग्रहीत API कुंजी मिटाता है"
 
-msgid "Remove failed."
-msgstr "हटाना विफल रहा।"
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK स्थिति ताज़ा करें"
@@ -1850,11 +1874,11 @@ msgstr "आपकी API कुंजी एन्क्रिप्ट कर�
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models से कोई भी मॉडल स्लग (जैसे anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json की सामग्री (पहले `codex login` चलाएँ)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "स्थानीय रूप"
@@ -2366,7 +2390,7 @@ msgstr ""
 msgid "Action"
 msgstr "कार्य"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2897,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "डाउनलोड हो रहा है {percent}%"
 
-msgid "Upgrade"
-msgstr "अपग्रेड करें"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% शेष"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "सदस्यता"
@@ -2930,23 +2957,29 @@ msgstr "प्लान नाम"
 msgid "Display name of the current plan"
 msgstr "वर्तमान प्लान का प्रदर्शन नाम"
 
-msgid "Remaining"
-msgstr "शेष"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "चक्र के क्रेडिट आवंटन का वह प्रतिशत जो अभी उपलब्ध है"
-
 msgid "Credits Remaining"
 msgstr "शेष क्रेडिट"
 
-msgid "Credits left in the current cycle"
-msgstr "वर्तमान चक्र में बचे क्रेडिट"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "कुल क्रेडिट"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "वर्तमान चक्र के लिए क्रेडिट आवंटन"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up and referral credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "टॉप-अप संभव"
@@ -3065,16 +3098,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "संचिकाएँ"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3086,7 +3131,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3101,6 +3146,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3113,10 +3164,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "नाभि / धुरी"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -5030,6 +5108,18 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
 msgid "Connect AI Apps (MCP)"
 msgstr ""
 
@@ -5048,19 +5138,10 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "MCP enabled"
-msgstr ""
-
-msgid "Disable"
-msgstr ""
-
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Enable MCP"
 msgstr ""
 
 msgid "Let AI apps control Mixar's interface"
@@ -5084,7 +5165,10 @@ msgstr ""
 msgid "Setup Guide"
 msgstr ""
 
-msgid "Allow local AI clients to use your Mixar account and scenes"
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
 msgstr ""
 
 msgid "MCP preference applies until Mixar closes; saving failed"
@@ -5093,7 +5177,10 @@ msgstr ""
 msgid "MCP is waiting for the desktop connection"
 msgstr ""
 
-msgid "MCP disabled"
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
 msgstr ""
 
 msgid "Let AI Apps Control Mixar's Interface"
@@ -5630,9 +5717,6 @@ msgstr "बनावट डाउनलोड के दौरान अप्�
 msgid "Failed to apply textures to any object"
 msgstr "किसी भी वस्तु पर बनावटें लागू करने में विफल"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBR बनावटें लागू करें"
-
 msgid "Both refined and guide masks are required"
 msgstr "परिष्कृत और गाइड दोनों आवरण आवश्यक हैं"
 
@@ -5714,6 +5798,12 @@ msgstr "पात्र असेंबल करें"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "उत्पन्न भागों को स्थानीय रूप से किसी रिग किए गए या साधारण शरीर से जोड़ता है"
 
+msgid "Use Image Style Only"
+msgstr "केवल छवि शैली का उपयोग करें"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "सक्षम होने पर केवल छवि की कलात्मक शैली स्थानांतरित होती है (प्रॉम्प्ट फिर भी लागू होता है)। अक्षम होने पर छवि सीधे बनावट जनरेशन को संचालित करती है"
+
 msgid "Enter a prompt in the image node"
 msgstr "छवि ग्रन्थि में एक प्रॉम्प्ट दर्ज करें"
 
@@ -5739,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "जनरेशन कैटलॉग में “मॉडल जनरेशन” उपलब्ध नहीं है"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "यह “मॉडल जनरेशन” रूप अभी इन्फ़रेंस ग्रन्थियों द्वारा समर्थित नहीं है"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "कोई सक्षम 3D जनरेशन मॉडल उपलब्ध नहीं है"
@@ -6262,9 +6352,6 @@ msgstr "जगत डाउनलोड/रूपांतरण विफल: {
 
 msgid "World imported but produced no objects"
 msgstr "जगत आयात हुआ, पर कोई वस्तु नहीं बनी"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: जगत आयात करें"
 
 msgid "Failed to import world: {error}"
 msgstr "जगत आयात विफल: {error}"
@@ -7930,12 +8017,6 @@ msgstr "शैली स्थानांतरण छवि - उत्पन�
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "संदर्भ छवि - सीधे बनावट जनरेशन को संचालित करती है (प्रॉम्प्ट अनदेखा)"
 
-msgid "Use Image Style Only"
-msgstr "केवल छवि शैली का उपयोग करें"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "सक्षम होने पर केवल छवि की कलात्मक शैली स्थानांतरित होती है (प्रॉम्प्ट फिर भी लागू होता है)। अक्षम होने पर छवि सीधे बनावट जनरेशन को संचालित करती है"
-
 msgid "Output texture resolution in pixels"
 msgstr "पिक्सेल में उत्पादन बनावट का बिंदू विस्तार"
 
@@ -8899,11 +8980,11 @@ msgstr "मूडबोर्ड→चैट अनुलग्नक सिं�
 msgid "Sync failed: {error}"
 msgstr "सिंक विफल: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} वीडियो छोड़ा गया: एजेंट केवल स्थिर छवियाँ स्वीकार करता है। क्लिप के लिए मूडबोर्ड पर वीडियो जनरेशन का उपयोग करें"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} वीडियो छोड़े गए: एजेंट केवल स्थिर छवियाँ स्वीकार करता है। क्लिप के लिए मूडबोर्ड पर वीडियो जनरेशन का उपयोग करें"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "कोई मूडबोर्ड छवि चयनित नहीं"
@@ -9201,9 +9282,6 @@ msgstr "निर्देशिका"
 
 msgid "Directory of the selected file(s)"
 msgstr "चयनित संचिकाओं की निर्देशिका"
-
-msgid "Files"
-msgstr "संचिकाएँ"
 
 msgid "Failed to load media: {filepath}"
 msgstr "मीडिया लोड करने में विफल: {filepath}"
@@ -10821,9 +10899,6 @@ msgstr "उत्पन्न पदार्थ प्रतिक्रिय�
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "पदार्थ उत्पन्न हुआ, परंतु उसे लागू करने में विफल: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "प्रक्रियात्मक पदार्थ उत्पन्न करें"
 
 msgid "Material generation failed"
 msgstr "पदार्थ जनरेशन विफल"
@@ -18765,7 +18840,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -19518,8 +19593,8 @@ msgstr "संशोधन जारी है..."
 msgid "Awaiting Input..."
 msgstr "निवेश की प्रतीक्षा..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "वीडियो के लिए वीडियो रूप आवश्यक है। एजेंट को भेजने के लिए वीडियो हटाएँ।"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "प्रयोक्ता ID"
@@ -19529,6 +19604,72 @@ msgstr "Mixie चैट लॉगिन के लिए प्रयोक्�
 
 msgid "Agent expects: {formats}"
 msgstr "एजेंट को अपेक्षित: {formats}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*रोका गया*"
@@ -19599,8 +19740,20 @@ msgstr "संदेश भेजने में विफल"
 msgid "You're out of credits"
 msgstr "आपके क्रेडिट समाप्त हो गए हैं"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "आपने अपनी मासिक क्रेडिट सीमा का उपयोग कर लिया है। Mixie के साथ निर्माण जारी रखने के लिए अपना प्लान अपग्रेड करें।"
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "अपग्रेड करें"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "प्रतिक्रिया टिप्पणी खाली है"
@@ -20037,8 +20190,8 @@ msgstr "लॉगिन विफल"
 msgid "Sign in with your Mixar account"
 msgstr "अपने Mixar खाते से साइन इन करें"
 
-msgid "Waiting for browser..."
-msgstr "ब्राउज़र की प्रतीक्षा..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ब्राउज़र से लॉगिन करें"
@@ -20707,11 +20860,14 @@ msgstr "मिटाने के लिए संग्रहीत सत्�
 msgid "Chat removed from history"
 msgstr "चैट इतिहास से हटा दी गई"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} नहीं जोड़ा जा सकता: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "अनुलग्नक सीमा ({count}) पूरी हो गई"
@@ -20719,14 +20875,14 @@ msgstr "अनुलग्नक सीमा ({count}) पूरी हो ग�
 msgid "Skipped {name}: {error}"
 msgstr "{name} छोड़ा गया: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} नहीं जोड़ा जा सकता: {error}"
-
 msgid "These references are already attached"
 msgstr "ये संदर्भ पहले से संलग्न हैं"
 
 msgid "Added {count} image(s)"
 msgstr "{count} छवि(याँ) जोड़ी गईं"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend से जोड़ें"
@@ -20743,6 +20899,9 @@ msgstr "{size} - सामग्री उपलब्ध"
 msgid "{size} - No data"
 msgstr "{size} - कोई सामग्री नहीं"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend संचिका से छवि चुनें"
 
@@ -20751,6 +20910,12 @@ msgstr "छवि पहले से जोड़ी गई है"
 
 msgid "Image not found in blend file"
 msgstr "blend संचिका में छवि नहीं मिली"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "छवि पहले से संलग्न है"
@@ -21139,6 +21304,12 @@ msgstr "पिछला कार्य फिर से शुरू हो र
 msgid "Could not resume the previous task"
 msgstr "पिछला कार्य फिर से शुरू नहीं हो सका"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21158,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21501,6 +21675,15 @@ msgstr "चैट निवेश"
 
 msgid "Type your message here"
 msgstr "अपना संदेश यहाँ लिखें"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "चैट संदेश"
@@ -23599,9 +23782,6 @@ msgstr "प्रसंकेतक स्नैप करें"
 msgid "Snap 2D cursor"
 msgstr "2D प्रसंकेतक स्नैप करता है"
 
-msgid "Origin"
-msgstr "नाभि / धुरी"
-
 msgid "Mirror selected UVs"
 msgstr "चयनित UV का दर्पण प्रतिबिंब बनाता है"
 
@@ -24301,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "संचिका Mixar के नए संस्करण (%d.%d) द्वारा सहेजी गई है, कुछ सामग्री खो सकती है"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "संचिका नए संस्करण द्वारा सहेजी गई थी, इसे Mixar %s या बाद के संस्करण से खोलें"
 
@@ -24337,10 +24574,16 @@ msgstr "स्वागत है !"
 msgid "%s Plan"
 msgstr "%s प्लान"
 
-msgid "Checking usage…"
-msgstr "उपयोग जाँचा जा रहा है…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s क्रेडिट"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24351,15 +24594,6 @@ msgstr "प्लान देखें"
 
 msgid "couldn't refresh"
 msgstr "रीफ़्रेश नहीं हो सका"
-
-msgid "%s of %s left"
-msgstr "%s शेष (कुल %s)"
-
-msgid "%s credits"
-msgstr "%s क्रेडिट"
-
-msgid "no credits"
-msgstr "कोई क्रेडिट नहीं"
 
 msgid "Docs"
 msgstr "दस्तावेज़"
@@ -24379,6 +24613,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "रंगलेप शुरू करने के लिए परतें पैनल में एक रंगलेप परत जोड़ें"
 
@@ -24391,7 +24628,43 @@ msgstr "स्केच ड्राफ़्ट में श्रुतले
 msgid "Stop the running turn"
 msgstr "चल रहे टर्न को रोकता है"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"वापस लें\n"
+"\n"
+"परिष्कृत होने से पहले लिखा गया आपका प्रॉम्प्ट पुनर्स्थापित करें।"
+
+msgid "Refining this prompt..."
+msgstr "यह प्रॉम्प्ट परिष्कृत किया जा रहा है..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"फिर से परिष्कृत करें\n"
+"\n"
+"इस प्रॉम्प्ट को उस मॉडल के लिए एक बार फिर लिखें जिसे यह भेजा जाएगा। वापस लें अब भी आपके अपने शब्द पुनर्स्थापित करता है, पिछला परिष्करण नहीं।"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"परिष्कृत करें\n"
+"\n"
+"इस प्रॉम्प्ट को उस मॉडल के लिए फिर से लिखें जिसे यह भेजा जाएगा, और वह विवरण जोड़ें जिस पर वह मॉडल प्रतिक्रिया देता है।"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24402,6 +24675,9 @@ msgstr "संदर्भ हटाता है"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "इस स्केच और इसके कतारबद्ध चित्र को त्यागता है"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24772,7 +25048,7 @@ msgstr "नियम — एजेंट के लिए परियोजन�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24840,6 +25116,12 @@ msgstr "बंद की गई संख्या"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "बंद की गई एजेंट बबल खिड़कियों की संख्या"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "एजेंट बबल खिड़की का आकार सेट करें"
@@ -25395,36 +25677,6 @@ msgstr ""
 "प्रॉम्प्ट\n"
 "\n"
 "वर्णन करें कि क्या उत्पन्न करना है। इस ग्रन्थि को सबमिट करने के लिए Enter दबाएँ।"
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"वापस लें\n"
-"\n"
-"परिष्कृत होने से पहले लिखा गया आपका प्रॉम्प्ट पुनर्स्थापित करें।"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"फिर से परिष्कृत करें\n"
-"\n"
-"इस प्रॉम्प्ट को उस मॉडल के लिए एक बार फिर लिखें जिसे यह भेजा जाएगा। वापस लें अब भी आपके अपने शब्द पुनर्स्थापित करता है, पिछला परिष्करण नहीं।"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"परिष्कृत करें\n"
-"\n"
-"इस प्रॉम्प्ट को उस मॉडल के लिए फिर से लिखें जिसे यह भेजा जाएगा, और वह विवरण जोड़ें जिस पर वह मॉडल प्रतिक्रिया देता है।"
-
-msgid "Refining this prompt..."
-msgstr "यह प्रॉम्प्ट परिष्कृत किया जा रहा है..."
 
 msgid ""
 "Assemble\n"
@@ -25989,6 +26241,12 @@ msgstr "बनावट समूह स्थान"
 
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "बनावट समूह प्रबंधित करने के लिए साइडबार पैनलों का उपयोग करें"
+
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
 
 msgid "Back to first"
 msgstr "पहले पर वापस"
@@ -26703,6 +26961,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "कार्यक्षेत्र कार्य पहचान"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -27949,6 +28228,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28032,6 +28335,12 @@ msgstr "संचिका एक्सटेंशन निस्पादक"
 
 msgid "Write compressed .mixar file"
 msgstr "संपीड़ित .mixar संचिका लिखता है"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar संचिका के रूप में सहेजता है"

@@ -40,6 +40,8 @@ ACTIONS = {
     'mixie.moodboard_run_action_node': ('moodboard', 'run_node'),
     'mixie.moodboard_cancel_action_node': ('moodboard', 'cancel_node'),
     'mixie.moodboard_connect_nodes': ('moodboard', 'connect_nodes'),
+    'mixie.moodboard_reset_node_params': ('moodboard', 'reset_node'),
+    'mixie.moodboard_delete_action_node': ('moodboard', 'delete_node'),
     'mixie_chat.send_message': ('agent', 'send_message'),
 }
 _previous_tab = None

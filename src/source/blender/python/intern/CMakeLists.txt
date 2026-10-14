@@ -33,6 +33,7 @@ set(SRC
   bpy_app_usd.cc
   bpy_audaspace.cc
   bpy_mixar_capture.cc
+  bpy_mixar_stall_watchdog.cc
   bpy_capi_utils.cc
   bpy_cli_command.cc
   bpy_driver.cc
@@ -104,6 +105,7 @@ set(SRC
   bpy_rna.hh
   bpy_rna_anim.hh
   bpy_rna_callback.hh
+  bpy_mixar_stall.hh
   bpy_rna_context.hh
   bpy_rna_data.hh
   bpy_rna_driver.hh

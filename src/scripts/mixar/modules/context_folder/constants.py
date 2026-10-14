@@ -14,10 +14,21 @@ RPC_LIST = "context_folder.list"
 RPC_READ = "context_folder.read"
 RPC_SEARCH = "context_folder.search"
 RPC_VIEW_IMAGE = "context_folder.view_image"
-RPC_METHODS = frozenset({RPC_LIST, RPC_READ, RPC_SEARCH, RPC_VIEW_IMAGE})
+RPC_VIEW_VIDEO = "context_folder.view_video"
+RPC_METHODS = frozenset({RPC_LIST, RPC_READ, RPC_SEARCH, RPC_VIEW_IMAGE, RPC_VIEW_VIDEO})
+# Advertised separately from CAPABILITY so an older client (which decodes no
+# video) gets a precise "update Mixar" error from the backend tool instead of
+# an unknown-method failure.
+VIDEO_CAPABILITY = "context_folder_video_v1"
 
 # Folders one chat may carry at once.
 MAX_FOLDERS = 5
+# Single files attached as context (videos, documents, anything that is not
+# an image pill or an imported model); they travel as ONE synthetic folder.
+MAX_CONTEXT_FILES = 20
+# Wire label of that synthetic folder — the name the agent types as a path
+# prefix, so it is never translated.
+ATTACHED_FILES_LABEL = "Attached files"
 # Files indexed per folder; a larger folder is indexed up to this many and
 # reported ``truncated`` so the agent knows the listing is partial.
 MAX_INDEXED_FILES = 2000
@@ -40,6 +51,14 @@ MAX_SEARCH_LINE_CHARS = 240
 MAX_QUERY_CHARS = 200
 MAX_IMAGE_DIM = 1024
 MAX_IMAGE_SOURCE_BYTES = 64 * 1024 * 1024
+# Frames per view_video call: equals the backend's fresh-tool-image window, so
+# every sampled frame is actually shown to the model.
+MAX_VIDEO_FRAMES = 8
+DEFAULT_VIDEO_FRAMES = 6
+MAX_VIDEO_FRAME_DIM = 1024
+DEFAULT_VIDEO_FRAME_DIM = 768
+# Decoding streams from disk; this only stops absurd inputs.
+MAX_VIDEO_SOURCE_BYTES = 4 * 1024**3
 MAX_IMPORT_NAMES = 20
 
 # Directory names never indexed: VCS metadata, dependency trees, caches.

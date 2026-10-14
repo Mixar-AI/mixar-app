@@ -1,0 +1,21 @@
+{
+  "scenario": "windows_message_opacity_e2e",
+  "passed": true,
+  "paid_requests": 0,
+  "background_error_before": {
+    "bright": 198,
+    "dark": 26
+  },
+  "background_error_after": {
+    "bright": 0,
+    "dark": 0
+  },
+  "focused_tests_passed": 33,
+  "macos": {
+    "runtime_tested": false,
+    "compiled_non_windows_path_passed": true,
+    "unchanged_function_bodies": 20
+  },
+  "windows_island_opacity_scenario": "passed",
+  "startup_health": "passed"
+}

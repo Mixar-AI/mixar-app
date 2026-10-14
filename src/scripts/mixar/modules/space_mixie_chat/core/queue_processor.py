@@ -180,13 +180,25 @@ class EventProcessor:
         message = result.get('message') or rpt_('Message could not be delivered')
         data = result.get('data') or {}
         status = result.get('status_code') or data.get('status_code')
-        if is_credits_exhausted_error(status, message):
+        from .byok_notice import present_refusal
+        if present_refusal(result, data, scene):
+            # The user's own key: the card (or the cold-start resend) takes over.
+            self._end_refused_turn(scene)
+        elif is_credits_exhausted_error(status, message):
             actions = data.get('data') or data
             add_credit_upgrade_chat_message(scene=scene, body=message,
                                             action_url=actions.get('action_url'))
             self._redraw_ui()
         else:
             self._handle_agent_error_internal(message, scene)
+
+    def _end_refused_turn(self, scene) -> None:
+        """A command the backend never started: back to IDLE, no error bubble."""
+        from .executor import get_executor
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        self._clear_loader_bubbles(scene)
+        self._session.set_state(scene, SessionState.IDLE)
+        self._redraw_ui()
 
     def _handle_agent_error_internal(self, error_message: str, scene) -> None:
         """Handle agent stream-level error (called from main thread timer).

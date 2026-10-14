@@ -399,7 +399,27 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   agent_chip_forms(
       in, metrics, [&](const char *label) { return ui::mixar_text_width(label, size); }, chips);
 
-  const float span = layout.btn_generate.xmin - layout.chip_upload.xmin;
+  /* Refine, then Revert while a refinement can be undone, step leftwards off
+   * Send at the row's own gap — the moodboard node's arrangement. Square at
+   * the chip height. Chat tabs only: the generation panes have no composer. */
+  layout.btn_refine = {};
+  layout.btn_revert = {};
+  float row_end = layout.btn_generate.xmin;
+  if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab))) {
+    const float side = BLI_rctf_size_y(&layout.btn_generate);
+    auto step_left = [&](rctf &rect) {
+      rect = layout.btn_generate;
+      rect.xmax = row_end - gap;
+      rect.xmin = rect.xmax - side;
+      row_end = rect.xmin;
+    };
+    if (state.prompt_refined) {
+      step_left(layout.btn_revert);
+    }
+    step_left(layout.btn_refine);
+  }
+
+  const float span = row_end - layout.chip_upload.xmin;
   const AgentChipFit fit = agent_chip_fit(chips, span, gap);
   layout.compact_reference = fit.compact_reference;
   std::copy_n(fit.form, int(AGENT_CHIP_SLOT_COUNT), layout.chip_form);

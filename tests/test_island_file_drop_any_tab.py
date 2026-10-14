@@ -53,10 +53,13 @@ def test_pane_tabs_take_only_os_file_drops_and_fail_closed():
     assert "return false;" in branch
 
 
-def test_movie_refusal_still_runs_on_every_tab():
+def test_movie_paths_are_routed_to_python_not_refused():
+    # Retargeted: the poll used to refuse FILE_TYPE_MOVIE before release; a
+    # movie now lands in Python, which attaches it as a context-file chip.
     body = _poll()
     path = body[body.index("if (drag->type == WM_DRAG_PATH)"):]
-    assert path.index("FILE_TYPE_MOVIE") < path.index("return true;")
+    assert "FILE_TYPE_MOVIE" not in path
+    assert "return true;" in path
 
 
 def test_pane_tab_drop_shows_agent_before_attaching():

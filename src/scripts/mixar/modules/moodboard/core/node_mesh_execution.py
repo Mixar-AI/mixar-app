@@ -4,6 +4,7 @@
 """Mesh continuations share source validation, export and queue submission."""
 
 import base64
+from contextlib import contextmanager
 
 import bpy
 
@@ -14,6 +15,7 @@ from mixar.modules.hunyuan.constants import ANIMATE_IMPORT_OPTIONS
 from .media_utils import is_still_item
 from .node_graph import action_node_by_id, input_media_items
 from .node_job_bridge import ensure_graph_listener
+from .node_client_params import PBR_STYLE_ONLY_PARAM
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 from .mesh_sources import mesh_input_objects
 
@@ -106,14 +108,18 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     return _hook
 
 
-def _attach_pbr_reference_images(scene, node, payload, operator):
+def _attach_pbr_reference_images(scene, node, payload, operator, *,
+                                 style_only=False, prompt=""):
     """Attach connected reference image(s) to a PBR texture payload.
 
     Mirrors ``enqueue_pbr_texture_job``'s guidance precedence: exactly four
     connected images become Tripo's turnaround views (by input order); one to
-    three become a single reference image (the first). The mesh input is
-    resolved separately and never appears here (``input_media_items`` yields
-    only still images, not mesh nodes).
+    three become a single reference image (the first) -- sent as
+    ``style_ref_image_bytes_b64`` when *style_only* is set AND a *prompt*
+    guides the texture, else as the direct ``reference_image_bytes_b64``, the
+    same rule as the sidebar. The mesh input is resolved separately and never
+    appears here (``input_media_items`` yields only still images, not mesh
+    nodes).
     """
     from mixar.modules.common.utils.image_utils import compress_image_for_upload
 
@@ -135,9 +141,40 @@ def _attach_pbr_reference_images(scene, node, payload, operator):
             "PBR uses the first connected reference; connect exactly four for "
             "turnaround views",
         )
-    payload["reference_image_bytes_b64"] = base64.b64encode(
-        compress_image_for_upload(images[0])
-    ).decode()
+    encoded = base64.b64encode(compress_image_for_upload(images[0])).decode()
+    if style_only and prompt:
+        payload["style_ref_image_bytes_b64"] = encoded
+    else:
+        payload["reference_image_bytes_b64"] = encoded
+
+
+@contextmanager
+def _viewport_selection_restored(view_layer):
+    """Restore the user's selection and active object after an export.
+
+    Exporting needs the source objects selected, but a Moodboard node run must
+    not leave the viewport selection changed behind the user's back. Objects
+    that went away meanwhile are skipped rather than failing the restore.
+    """
+    selected = [obj for obj in view_layer.objects if obj.select_get()]
+    active = view_layer.objects.active
+    try:
+        yield
+    finally:
+        for obj in view_layer.objects:
+            try:
+                obj.select_set(False)
+            except (ReferenceError, RuntimeError):
+                pass
+        for obj in selected:
+            try:
+                obj.select_set(True)
+            except (ReferenceError, RuntimeError):
+                pass
+        try:
+            view_layer.objects.active = active
+        except (AttributeError, ReferenceError, RuntimeError):
+            pass
 
 
 def _run_mesh_feature(context, node, operator):
@@ -165,31 +202,39 @@ def _run_mesh_feature(context, node, operator):
     if not model:
         raise ValueError(rpt_("No enabled model is available for this feature"))
 
-    # Export the exact source objects, not whatever the user last clicked.
+    # Export the exact source objects, not whatever the user last clicked, and
+    # hand the user's own selection back afterwards.
     view_layer = context.view_layer
-    try:
-        for obj in view_layer.objects:
-            obj.select_set(False)
-        for obj in objects:
-            if obj.name in view_layer.objects:
-                obj.select_set(True)
-        view_layer.objects.active = meshes[0]
-    except (AttributeError, RuntimeError) as exc:
-        logger.warning("[NodeGraph] source mesh selection failed: %s", exc)
-        raise ValueError(
-            rpt_('The source mesh cannot be selected. Make it selectable in the '
-                 'Outliner or choose another mesh on its Moodboard node.')
-        ) from exc
+    with _viewport_selection_restored(view_layer):
+        try:
+            for obj in view_layer.objects:
+                obj.select_set(False)
+            for obj in objects:
+                if obj.name in view_layer.objects:
+                    obj.select_set(True)
+            view_layer.objects.active = meshes[0]
+        except (AttributeError, RuntimeError) as exc:
+            logger.warning("[NodeGraph] source mesh selection failed: %s", exc)
+            raise ValueError(
+                rpt_('The source mesh cannot be selected. Make it selectable in the '
+                     'Outliner or choose another mesh on its Moodboard node.')
+            ) from exc
 
-    file_bytes, filename = export_selected_mesh(context, "GLB")
+        file_bytes, filename = export_selected_mesh(context, "GLB")
     payload = {
         "file_bytes_b64": base64.b64encode(file_bytes).decode(),
         "file_filename": filename,
     }
-    if node.action_type == 'PBR_GEN':
-        _attach_pbr_reference_images(context.scene, node, payload, operator)
     params = collect_node_params(node)
     prompt = node.prompt.strip()
+    # Client-side toggle, not a model parameter: it picks the payload key the
+    # reference travels under and must not be forwarded to the backend.
+    style_only = bool(params.pop(PBR_STYLE_ONLY_PARAM, False))
+    if node.action_type == 'PBR_GEN':
+        _attach_pbr_reference_images(
+            context.scene, node, payload, operator,
+            style_only=style_only, prompt=prompt,
+        )
     if prompt:
         params["prompt"] = prompt
     payload = assemble_payload(service_key, params, payload, model)

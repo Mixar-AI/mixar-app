@@ -329,7 +329,8 @@ def redraw_prompt_surfaces() -> None:
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type in {'MIXIE', 'VIEW_3D'}:
+                # AGENT_BUBBLE: the island's chat composer is a slot too.
+                if area.type in {'MIXIE', 'VIEW_3D', 'AGENT_BUBBLE'}:
                     area.tag_redraw()
     except Exception:
         pass

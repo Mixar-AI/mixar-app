@@ -73,9 +73,14 @@ def profile_layout(qa, output):
     return layouts
 
 
+#: The MCP switch's label (a checkbox: checked while MCP is on).
+SWITCH = "Allow AI apps to use Mixar (MCP)"
+
+
 def signed_out_setup(qa, output, fixture):
-    """Signed out: the dialog offers Sign In, plus Disable while MCP is still on
-    (the session expired); enabling paths refuse."""
+    """Signed out: the dialog offers Sign In, plus the MCP switch (only in its
+    "off" direction) while MCP is still on (the session expired); enabling
+    paths refuse."""
     saved = fixture / "connector" / "tools.json"
     mcp_on = "__import__('mixar.modules.mcp_bridge.core.runtime',fromlist=['x']).enabled()"
     assert qa.eval("result = list(bpy.ops.mixar.set_mcp_enabled(enabled=True))") == ["FINISHED"]
@@ -87,7 +92,7 @@ def signed_out_setup(qa, output, fixture):
     assert qa.find(text="Sign in to Mixar to connect AI apps.", popup=True)["total"] == 1
     assert qa.find(op="MIXIE_CHAT_OT_login", popup=True)["total"] == 1
     toggles = qa.find(op="MIXAR_OT_set_mcp_enabled", popup=True)["widgets"]
-    assert [w["text"] for w in toggles] == ["Disable"], toggles  # Turning off needs no account.
+    assert [w["text"] for w in toggles] == [SWITCH], toggles  # Turning off needs no account.
     assert qa.find(op="MIXAR_OT_copy_mcp_setup", popup=True)["total"] == 0
     snap(qa, output / "setup-signed-out.png", {"text": "Sign in to Mixar to connect AI apps.", "popup": True})
     qa.click(op="MIXAR_OT_set_mcp_enabled", popup=True)
@@ -148,12 +153,12 @@ def run(qa, output, fixture, fallback_only):
         verdict["layout_at_ui_scales"] = profile_layout(qa, output)
         qa.click(text=email, area_type="TOPBAR")
         qa.click(**CONNECT)
-        assert qa.find(text="MCP enabled", popup=True)["total"] == 1
+        assert qa.find(text=SWITCH, popup=True)["total"] == 1
         assert qa.find(op="MIXAR_OT_copy_mcp_setup", popup=True)["total"] >= 2
         # The card closes once its button opened the dialog: nothing drawn under it.
         assert qa.find(op="MIXAR_BYOK_OT_open_dialog", popup=True)["total"] == 0
         assert qa.find(**CONNECT)["total"] == 0
-        snap(qa, output / "setup-from-profile.png", {"text": "MCP enabled", "popup": True})
+        snap(qa, output / "setup-from-profile.png", {"text": SWITCH, "popup": True})
         verdict["card_closes_behind_dialog"] = True
         # Cancel the dialog (this crashed when the card was freed from a button
         # function), then the card must open and work again.
@@ -178,7 +183,7 @@ def run(qa, output, fixture, fallback_only):
         assert qa.find(**CONNECT)["total"] == 1
         snap(qa, output / "profile-fallback.png", CONNECT)
         qa.click(**CONNECT)
-        assert qa.find(text="MCP enabled", popup=True)["total"] == 1
+        assert qa.find(text=SWITCH, popup=True)["total"] == 1
     finally:
         close_popups(qa)
         qa.eval("p=bpy.types.MIXAR_PT_profile\np.draw=p._qa_native_draw\n"

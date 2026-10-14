@@ -12,10 +12,13 @@ Window detection, closing restored windows, load/save handlers, and
 the _load_autoshow_tick retry loop.
 """
 
+from contextlib import contextmanager
+
 import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.sign_in import sign_in_holds_autoshow
 from mixar.modules.agent_bubble.core import pill_icons
 from mixar.modules.agent_bubble.core.bubble_state import (
     LOAD_AUTOSHOW_RETRY_LIMIT,
@@ -153,6 +156,11 @@ def _load_autoshow_tick_inner():
         _st.load_autoshow_attempts = 0
         return None
 
+    if sign_in_holds_autoshow():
+        # The user is in the browser for a sign-in: the bubble window must
+        # not come up over it. Not an attempt — poll until Mixar is active.
+        return 0.3
+
     from mixar.modules.agent_bubble.core.bubble_autoshow import try_invoke_bubble as _try_invoke_bubble
 
     _st.load_autoshow_attempts += 1
@@ -191,17 +199,42 @@ def _load_autoshow_tick_inner():
     return 0.25
 
 
+@contextmanager
+def keep_windows_for_snapshot():
+    """Keep the island and pill open across a snapshot copy save.
+
+    A turn checkpoint saves a ``copy=True`` snapshot on every fresh Send,
+    usually from a click inside the island. Closing and re-creating the two
+    OS windows for it (``on_save_pre`` / ``on_save_post``) made the clicked
+    window vanish under the cursor on every message. The copy is safe to
+    write with the windows live: the native writer unlinks bubble windows,
+    runtime region data is never serialized (``RGN_FLAG_TEMP_REGIONDATA``),
+    and the checkpoint restore closes the windows itself before the read
+    (``turn_checkpoints._close_bubble_windows``). The user's own saves keep
+    the purge.
+    """
+    _st.snapshot_save_depth += 1
+    try:
+        yield
+    finally:
+        _st.snapshot_save_depth = max(0, _st.snapshot_save_depth - 1)
+
+
 @persistent
 def on_save_pre(_dummy_arg) -> None:
     """Prevent runtime bubble/pill windows from being serialized.
 
-    Runs for EVERY save, snapshot copies included: the native writer only
-    unlinks bubble windows, their screens would still be written, and a file
-    read (a turn checkpoint restore) must never find a live bubble window to
-    free. A save started from a bubble click therefore closes the island under
-    that click; the chat's native dispatchers tolerate it
-    (mixie_chat_call_operator_and_redraw re-checks the region before use).
+    Runs for every user save: the native writer only unlinks bubble windows,
+    their screens would still be written, and a file read must never find a
+    live bubble window to free. A save started from a bubble click therefore
+    closes the island under that click; the chat's native dispatchers
+    tolerate it (mixie_chat_call_operator_and_redraw re-checks the region
+    before use). Snapshot copies inside ``keep_windows_for_snapshot`` skip
+    the purge.
     """
+    if _st.snapshot_save_depth > 0:
+        _st.closed_for_save = False
+        return
     closed = close_restored_agent_bubble_windows()
     _st.closed_for_save = closed > 0
     if closed:

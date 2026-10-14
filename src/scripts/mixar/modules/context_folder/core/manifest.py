@@ -14,6 +14,7 @@ absolute path, user name or volume name is ever part of it.
 from pathlib import PurePosixPath
 
 from ..constants import (
+    ATTACHED_FILES_LABEL,
     KIND_AUDIO,
     KIND_DOCUMENT,
     KIND_IMAGE,
@@ -30,6 +31,7 @@ from ..constants import (
     PROTOCOL_VERSION,
 )
 from .errors import ContextFolderError
+from .files import publish_set
 from .indexer import index_folder
 from .paths import existing_file
 from .registry import get_registry
@@ -116,10 +118,19 @@ def describe_folder(folder_id: str, label: str) -> dict:
 
 def build_folder_context(scene) -> dict:
     """The turn's ``folder_context``. Always a complete snapshot: an empty
-    ``folders`` list tells the backend the user removed every folder."""
+    ``folders`` list tells the backend the user removed every folder.
+
+    The scene's single attached files ride LAST as one synthetic folder named
+    ``ATTACHED_FILES_LABEL`` (only while there are files). It keeps the plain
+    label: a user folder literally named the same gets the "(2)" suffix, so
+    the name the agent is told for its files never shifts."""
     entries = attached_folders(scene)
-    labels = unique_labels(name for _, name in entries)
-    return {
-        "version": PROTOCOL_VERSION,
-        "folders": [describe_folder(folder_id, label) for (folder_id, _), label in zip(entries, labels)],
-    }
+    set_id = publish_set(scene)
+    names = [name for _, name in entries]
+    labels = unique_labels([ATTACHED_FILES_LABEL, *names] if set_id else names)
+    if set_id:
+        set_label, labels = labels[0], labels[1:]
+    folders = [describe_folder(folder_id, label) for (folder_id, _), label in zip(entries, labels)]
+    if set_id:
+        folders.append(describe_folder(set_id, set_label))
+    return {"version": PROTOCOL_VERSION, "folders": folders}
