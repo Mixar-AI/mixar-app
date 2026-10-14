@@ -25,6 +25,9 @@ Three properties matter here and each is deliberate:
 - **The budget is bounded.** ``urlopen(timeout=...)`` is a per-read
   timeout that a trickling connection resets forever, so a total deadline
   is enforced between chunks.
+
+Every request names the app (``user_agent()``): the CDN blocks urllib's
+default user agent.
 """
 
 import hashlib
@@ -91,6 +94,16 @@ def _sleep_within(seconds, deadline, should_cancel, policy):
     return time.monotonic() < deadline
 
 
+def user_agent():
+    """``Mixar/<version>``, or ``Mixar`` when the version is unknown."""
+    try:
+        from ...api.client_version import get_client_version
+        version = get_client_version()
+    except Exception:  # noqa: BLE001
+        version = None
+    return f"{C.USER_AGENT_PRODUCT}/{version}" if version else C.USER_AGENT_PRODUCT
+
+
 def classify(exc):
     """Map a transport error to (message, retryable)."""
     if isinstance(exc, urllib.error.HTTPError):
@@ -106,7 +119,7 @@ def _open(url, offset, deadline, policy):
     if remaining <= 0:
         raise policy.error_cls("Download deadline exceeded", retryable=False)
 
-    request = urllib.request.Request(url)
+    request = urllib.request.Request(url, headers={"User-Agent": user_agent()})
     if offset:
         request.add_header("Range", f"bytes={offset}-")
 

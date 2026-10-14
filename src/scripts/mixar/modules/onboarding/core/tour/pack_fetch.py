@@ -68,7 +68,8 @@ def fetch_manifest(root: str) -> Optional[dict]:
     copy. Returns the manifest dict or None."""
     url = manifest_url()
     try:
-        req = urllib.request.Request(url, headers={"Cache-Control": "max-age=300"})
+        req = urllib.request.Request(url, headers={"Cache-Control": "max-age=300",
+                                                  "User-Agent": dl.user_agent()})
         with urllib.request.urlopen(req, timeout=config.PACK_MANIFEST_TIMEOUT_S) as resp:  # noqa: S310
             data = json.loads(resp.read().decode("utf-8"))
         if not isinstance(data, dict):

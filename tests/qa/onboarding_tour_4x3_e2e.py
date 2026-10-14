@@ -2,8 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 """The bundled English take in the real app: the 4:3 founder video plays in
-a 4:3 card, a gated pause holds in the silence after its line and the
-outro ends on the presenter with the replay note.
+a 4:3 card (420x315 framed, 300x225 over the UI), a gated pause holds in
+the silence after its line and the outro ends on the presenter with the
+replay note.
 
 QA_HARNESS=/path/to/mixar-qa-harness python3 tests/qa/onboarding_tour_4x3_e2e.py
 Screenshots go to QA_SCENARIO_OUT (default /tmp/onboarding-tour-4x3).
@@ -46,10 +47,18 @@ def snapshot(qa, name):
 
 
 def card(qa):
-    """[video w, video h, beat] of the card as drawn this tick."""
+    """[video w, video h, beat, ui scale] of the card as drawn this tick."""
     return json.loads(qa.eval(SETUP + """
 s = current(); v = s._card_layout.video
-result = json.dumps([v[2] - v[0], v[3] - v[1], state()['beat']])"""))
+result = json.dumps([v[2] - v[0], v[3] - v[1], state()['beat'], s._ui_scale])"""))
+
+
+def assert_card(size, variant):
+    """4:3 at 3/4 of the 16:9 card's width: hero 420x315, half 300x225."""
+    vw, vh, beat, scale = size
+    want_w = {'hero': 420, 'half': 300}[variant] * scale
+    assert abs(vw / vh - 4 / 3) < 0.01, size
+    assert abs(vw - want_w) <= 1, f'{variant} card should be {want_w:.0f} px wide: {size}'
 
 
 def english_take(qa):
@@ -76,18 +85,19 @@ result = json.dumps([s.video.width, s.video.height, s.clock.duration_ms, s.tour.
     assert abs(dur - TAKE_MS) <= 150, f'clock must span the 2:29.2 take: {info}'
     assert enter1 == 6090, f'the English table must be the re-timed one: {info}'
     settle(qa, 1.2)
-    vw, vh, beat = card(qa)
-    assert beat == 'intro' and abs(vw / vh - 4 / 3) < 0.01, (vw, vh, beat)
-    return {'take': info, 'intro_card': [vw, vh], 'intro_shot': snapshot(qa, 'intro-hero')}
+    size = card(qa)
+    assert size[2] == 'intro', size
+    assert_card(size, 'hero')
+    return {'take': info, 'intro_card': size, 'intro_shot': snapshot(qa, 'intro-hero')}
 
 
 def half_card(qa):
     qa.eval(SETUP + "current().runner._jump('island-tabs'); current().runner.tick(); result=True")
     qa.wait(f"{STATE}['beat'] == 'island-tabs'", timeout=10)
     settle(qa, 2.5)                # the card glides to its new place
-    vw, vh, beat = card(qa)
-    assert abs(vw / vh - 4 / 3) < 0.01, (vw, vh, beat)
-    return {'half_card': [vw, vh], 'island_tabs_shot': snapshot(qa, 'island-tabs-half')}
+    size = card(qa)
+    assert_card(size, 'half')
+    return {'half_card': size, 'island_tabs_shot': snapshot(qa, 'island-tabs-half')}
 
 
 def gate_holds_in_silence(qa):

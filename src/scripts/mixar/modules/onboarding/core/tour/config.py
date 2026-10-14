@@ -104,10 +104,11 @@ SPEED_OPTIONS = (1.0, 1.25, 1.5, 2.0)
 # or the exit dialog is up.
 # ---------------------------------------------------------------------------
 # Two sizes only: "hero" for the framed intro/outro, "half" for every
-# beat over the live UI (the old 300 px "card" read as a thumbnail).
+# beat over the live UI. Widths are 3/4 of the 16:9 card's, so the 4:3
+# card keeps its height (225 / 315 px) instead of covering more UI.
 CARD_VARIANTS = {
-    "hero": 560,
-    "half": 400,
+    "hero": 420,
+    "half": 300,
 }
 CARD_ASPECT = 4.0 / 3.0            # the founder take is 1440x1080 (shipped 960x720)
 CARD_MARGIN = 28
