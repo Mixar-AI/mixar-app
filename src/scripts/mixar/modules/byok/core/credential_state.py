@@ -65,6 +65,9 @@ _DEFAULTS: Dict[str, Any] = {
 _lock = threading.Lock()
 _state: Dict[str, Any] = dict(_DEFAULTS)
 _epoch: int = 0
+# One-shot main-thread callbacks for the next fetch outcome of the current
+# epoch (`on_next_fetch`); a logout `clear()` drops them with the epoch.
+_fetch_hooks: list = []
 
 
 def snapshot() -> Dict[str, Any]:
@@ -84,6 +87,26 @@ def refresh() -> None:
     byok_client.fetch_state(on_done=_done)
 
 
+def on_next_fetch(callback) -> None:
+    """Run ``callback(loaded: bool)`` on the main thread when the next fetch
+    of the current epoch settles — True when the mirror now holds the
+    server's state, False when the fetch failed (the mirror is unchanged).
+    One shot. The chat's cold-start 409 handling waits here to resend the
+    message that went out keyless (`space_mixie_chat/core/byok_notice.py`)."""
+    with _lock:
+        _fetch_hooks.append(callback)
+
+
+def _fire_fetch_hooks(loaded: bool) -> None:
+    with _lock:
+        hooks, _fetch_hooks[:] = list(_fetch_hooks), []
+    for hook in hooks:
+        try:
+            hook(loaded)
+        except Exception as exc:  # noqa: BLE001 — one hook never blocks another
+            logger.debug("BYOK fetch hook failed: %s", exc)
+
+
 def clear(wm=None, *, loaded: bool = False) -> None:
     """Reset to defaults and invalidate any fetch already in flight.
 
@@ -97,6 +120,7 @@ def clear(wm=None, *, loaded: bool = False) -> None:
     with _lock:
         _epoch += 1
         _state = dict(_DEFAULTS, byok_state_loaded=loaded)
+        _fetch_hooks[:] = []
     apply_to_wm(wm)
 
 
@@ -225,10 +249,13 @@ def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
             _state = parsed = _parse(data)
         else:
             logger.debug("BYOK state fetch failed (keeping cached state): %s", err)
-            return
+    if not success:
+        _fire_fetch_hooks(False)
+        return
     apply_to_wm()
     _redraw()
     _check_device_key(parsed)
+    _fire_fetch_hooks(True)
 
 
 def _redraw() -> None:

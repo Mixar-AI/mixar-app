@@ -199,12 +199,15 @@ def _run_prepare(monkeypatch, state, record, **kw):
     """`prepare` with the worker thread and the main-thread hop run inline."""
     from types import SimpleNamespace
 
-    from mixar.modules.byok.core import byok_client, credential_state
+    from mixar.modules.byok.core import byok_client, credential_state, transport_seal
 
     monkeypatch.setattr(credential_state, "snapshot", lambda: dict(state))
     monkeypatch.setattr(key_store, "load", lambda *a, **k: record)
     monkeypatch.setattr(turn_credentials, "threading", SimpleNamespace(Thread=_InlineThread))
     monkeypatch.setattr(byok_client, "schedule_on_main", lambda fn, *a: fn(*a))
+    # The wire field is sealed to the backend's key (`tests/test_byok_transport_seal.py`);
+    # the decision table here is read on the plaintext.
+    monkeypatch.setattr(transport_seal, "seal", lambda secret: secret)
     flips = []
     monkeypatch.setattr(credential_state, "set_device_key_missing", flips.append)
     seen = []
@@ -276,6 +279,10 @@ def test_prepare_reads_the_store_off_thread_and_calls_back_on_main():
     assert "refresher=codex_auth.refresh_access_token" in src
     assert "key_store.materialize(record)" in src
     assert "key_store.persist_changes(live, resolution.record_changes)" in src
+    # The key field is sealed on the same worker thread, after the Codex
+    # write-back, and the catch-all fallback is keyless — never plaintext.
+    assert src.index("key_store.persist_changes(live, resolution.record_changes)") < src.index("resolution = sealed(resolution)")
+    assert src.index("resolution = sealed(resolution)") < src.index("except Exception as exc:  # noqa: BLE001 — never block the turn")
 
 
 def test_codex_turn_reads_the_cli_file_and_writes_a_renewal_back(monkeypatch, tmp_path):
@@ -319,7 +326,7 @@ def test_turn_transport_attaches_the_fields_before_every_chat_and_input_command(
 
 
 def test_key_material_never_reaches_a_log_line():
-    for name in ("key_store.py", "turn_credentials.py", "codex_auth.py", "byok_client.py"):
+    for name in ("key_store.py", "turn_credentials.py", "codex_auth.py", "byok_client.py", "transport_seal.py"):
         src = (SCRIPTS / "mixar" / "modules" / "byok" / "core" / name).read_text(encoding="utf-8")
         for line in src.splitlines():
             if "logger." in line:

@@ -18,6 +18,7 @@ from ..constants import (
     GRAPH_WIDGET_MAXLEN,
 )
 from .assemble_schema import reset_assemble_parameters, sync_assemble_schema
+from .node_client_params import injected_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,13 @@ _CONNECTABLE_TYPES = {
 # one next empty per group). It only has to be roomy enough for the real
 # catalog contracts: Generate Video alone declares 30 images + 10 videos.
 _MAX_INPUT_SOCKETS = 64
-_MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
+# The Model Gen modes the Generate to 3D card can RUN: its execution is
+# image-driven (one frontal still, per-mode compression and prompt placement
+# in ``node_execution._run_model_3d``), so a catalog mode outside this set
+# (e.g. a text-only one) keeps the template hidden rather than offering a
+# node that would refuse at run time. One definition, shared with the run
+# path; pinned by ``tests/moodboard/test_template_catalog_sync.py``.
+MODEL_3D_SERVICE_KEYS = frozenset({'model_3d', 'image_to_3d', 'hunyuan_rapid'})
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
@@ -98,7 +105,7 @@ def services_for_action(action_type: str, services) -> list:
         return [] if action_type == 'ASSEMBLE' else list(services)  # ASSEMBLE is local
     return [
         service for service in services
-        if service.get("key") in _MODEL_3D_SERVICE_KEYS
+        if service.get("key") in MODEL_3D_SERVICE_KEYS
     ]
 
 
@@ -550,6 +557,8 @@ def sync_node_schema(_scene, node) -> None:
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}
+    # The catalog's own spec wins over an injected one of the same name.
+    parameters = {**injected_parameters(node.action_type), **parameters}
     schema_json = json.dumps(
         {
             "service": service_key,
@@ -677,6 +686,7 @@ def reset_node_parameters(node) -> None:
     parameters = model.get("parameters")
     if not isinstance(parameters, dict):
         parameters = {}
+    parameters = {**injected_parameters(node.action_type), **parameters}
     for parameter in node.parameters:
         raw_spec = parameters.get(parameter.name)
         spec = dict(raw_spec) if isinstance(raw_spec, dict) else {}

@@ -1433,13 +1433,13 @@ msgstr "Vlastný lokálny server"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Nasmeruje Mixar na server kompatibilný s OpenAI, ktorý už prevádzkujete (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Neplatné údaje formulára — kontaktujte podporu."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Na našej strane sa niečo pokazilo. Skúste to znova."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1541,6 +1541,12 @@ msgstr "Váš kľúč: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Ukladá sa model agenta… Pred odoslaním alebo zmenou modelu počkajte."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Model agenta"
 
@@ -1614,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "Odstraňuje sa váš kľúč…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Overuje sa u poskytovateľa…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Nastavenia poskytovateľa AI"
@@ -1631,8 +1640,11 @@ msgstr "Aktívne"
 msgid "Not configured"
 msgstr "Nenastavené"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Spúšťajte agenta Mixar u vlastného poskytovateľa — kým je to aktívne, kredity Mixar sa neúčtujú."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Aktuálna konfigurácia"
@@ -1652,8 +1664,8 @@ msgstr "Bezpečne uložené"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Iba textový model — chat funguje; 3D úlohy bežia bez vizuálnej spätnej väzby."
 
-msgid "Remove API Key…"
-msgstr "Odstrániť kľúč API…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1661,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "Nastavenie poskytovateľa"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Vyberte model, ktorý podporuje volanie nástrojov/funkcií — agent to potrebuje."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Ľubovoľný identifikátor z openrouter.ai/models, napr. anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "Vaše zmeny sa nepodarilo použiť"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Odstrániť váš kľúč API?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent bude znova používať predvoleného poskytovateľa Mixar."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Za budúce požiadavky agenta sa budú účtovať kredity Mixar."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Agent Mixar teraz beží u vášho poskytovateľa — kredity Mixar sa neúčtujú."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Kľúč API odstránený"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent sa vrátil k predvolenému poskytovateľovi Mixar."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Za požiadavky agenta sa opäť účtujú kredity Mixar."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Skúsiť znova"
 
-msgid "Save & Activate"
-msgstr "Uložiť a aktivovať"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Ponechať môj kľúč"
-
-msgid "Remove API Key"
-msgstr "Odstrániť kľúč API"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Rozbaľuje sa lokálne prostredie AI…"
@@ -1784,14 +1793,14 @@ msgstr "Použije váš vlastný kľúč API pre agenta Mixar. Kým je aktívny, 
 msgid "Validate with the provider and save your API key"
 msgstr "Overí kľúč API u poskytovateľa a uloží ho"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Vyberte model pre tohto poskytovateľa a zadajte kľúč API."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Identifikátor modelu a kľúč API sú povinné."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Uloženie zlyhalo."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Odstrániť"
@@ -1805,8 +1814,8 @@ msgstr "Zruší postup odstránenia a vráti sa do hlavného dialógu"
 msgid "Delete the stored API key server-side"
 msgstr "Odstráni uložený kľúč API na strane servera"
 
-msgid "Remove failed."
-msgstr "Odstránenie zlyhalo."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Obnoviť stav BYOK"
@@ -5708,9 +5717,6 @@ msgstr "Neočakávaná chyba pri sťahovaní textúry: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "Textúry sa nepodarilo použiť na žiadny objekt"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Použiť textúry PBR"
-
 msgid "Both refined and guide masks are required"
 msgstr "Vyžaduje sa spresnená aj vodiaca maska"
 
@@ -5792,6 +5798,12 @@ msgstr "Zostaviť postavu"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lokálne pripojí vygenerované časti k rigovanému alebo obyčajnému telu"
 
+msgid "Use Image Style Only"
+msgstr "Použiť len štýl obrázka"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Keď je zapnuté, prenesie sa len umelecký štýl obrázka (výzva stále platí). Keď je vypnuté, obrázok priamo riadi generovanie textúry"
+
 msgid "Enter a prompt in the image node"
 msgstr "Zadajte výzvu v obrazovom uzle"
 
@@ -5817,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generovanie modelov nie je dostupné v katalógu generovania"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Tento režim generovania modelov inferenčné uzly zatiaľ nepodporujú"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Nie je dostupný žiadny povolený model generovania 3D"
@@ -6340,9 +6352,6 @@ msgstr "Stiahnutie alebo konverzia sveta zlyhali: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Svet bol importovaný, ale nevznikli žiadne objekty"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Importovať svet"
 
 msgid "Failed to import world: {error}"
 msgstr "Import sveta zlyhal: {error}"
@@ -8007,12 +8016,6 @@ msgstr "Obrázok prenosu štýlu — aplikuje umelecký štýl na vygenerované 
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referenčný obrázok — priamo riadi generovanie textúry (výzva sa ignoruje)"
-
-msgid "Use Image Style Only"
-msgstr "Použiť len štýl obrázka"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Keď je zapnuté, prenesie sa len umelecký štýl obrázka (výzva stále platí). Keď je vypnuté, obrázok priamo riadi generovanie textúry"
 
 msgid "Output texture resolution in pixels"
 msgstr "Výstupné rozlíšenie textúry v pixeloch"
@@ -10896,9 +10899,6 @@ msgstr "Odpoveď s vygenerovaným materiálom neobsahovala skript"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Materiál bol vygenerovaný, ale nepodarilo sa ho použiť: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Generovať procedurálny materiál"
 
 msgid "Material generation failed"
 msgstr "Generovanie materiálu zlyhalo"
@@ -19605,7 +19605,70 @@ msgstr "ID používateľa na prihlásenie do chatu Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očakáva: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"
@@ -20127,8 +20190,8 @@ msgstr "Prihlásenie zlyhalo"
 msgid "Sign in with your Mixar account"
 msgstr "Prihláste sa účtom Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Čaká sa na prehliadač..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prihlásiť sa cez prehliadač"
@@ -21241,6 +21304,12 @@ msgstr "Pokračuje sa v predošlej úlohe..."
 msgid "Could not resume the previous task"
 msgstr "Predošlú úlohu sa nepodarilo obnoviť"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21260,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24409,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Súbor bol uložený novšou verziou Mixaru (%d.%d), niektoré údaje sa môžu stratiť"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Súbor bol uložený novšou verziou, otvorte ho v Mixare %s alebo novšom"
 
@@ -24987,6 +25116,12 @@ msgstr "Počet zatvorených"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Počet zatvorených okien bubliny agenta"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Nastaviť veľkosť okna bubliny agenta"
@@ -26827,6 +26962,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "Identita úlohy pracovného priestoru"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28070,6 +28226,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

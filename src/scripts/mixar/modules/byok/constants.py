@@ -91,15 +91,44 @@ BYOK_TURN_ACCOUNT_FIELD = "byok_account_id"
 # makes no model call): sent at once, no store read, no Codex refresh.
 BYOK_TURN_ABORT_ACTION = "abort"
 # Command error code the server answers with when BYOK is active and the
-# command carried no key (409). The client shows the message and points at
-# AI Provider Settings — never retries on its own.
+# command carried no key (409). The detail also names the account's
+# `provider` and `model`; the chat shows a desktop-owned card
+# (`space_mixie_chat/core/byok_card.py`) whose actions resend the message.
 BYOK_KEY_REQUIRED_CODE = "byok_key_required"
 # Client-side pre-send refusals share the command-error path under these codes.
 BYOK_CODEX_EXPIRED_CODE = "byok_codex_expired"
 BYOK_CODEX_REFRESH_FAILED_CODE = "byok_codex_refresh_failed"
+# Display names for the card line ("Enter your OpenAI API key to continue");
+# any other provider id is shown capitalised.
+BYOK_PROVIDER_DISPLAY_NAMES = {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "gemini": "Gemini",
+    "google": "Gemini",
+    "openrouter": "OpenRouter",
+}
 # Credential-store entry name prefix; the Mixar user id is appended so two
 # accounts on one machine never share a key.
 BYOK_KEY_STORE_PREFIX = "BYOK"
+
+# --- Sealed keys in transit (core/transport_seal.py) ------------------------
+# Every key field that leaves this device (`byok_key` per turn, `api_key` of
+# a save) is sealed to the backend's X25519 key; the backend refuses
+# plaintext. The wire format and KDF info are a frozen contract with the
+# backend's `core/byok_transport.py`.
+BYOK_TRANSPORT_ENVELOPE_PREFIX = "mxs1"
+BYOK_TRANSPORT_ALGORITHM = "hpke-base/dhkem-x25519-hkdf-sha256/hkdf-sha256/aes-128-gcm"
+BYOK_TRANSPORT_HKDF_INFO = b"mixar-byok-transport/v1"   # the HPKE application info
+# How long a fetched server key is trusted before it is fetched again
+# (the server's `Cache-Control: max-age`); a rotation inside the window is
+# answered by `byok_transport_key_stale` and one automatic resend.
+BYOK_TRANSPORT_KEY_TTL_S = 3600
+# Server codes (HTTP on the PUT routes; over the socket like the 409 above).
+BYOK_KEY_UNSEALED_CODE = "byok_key_unsealed"               # 400: plaintext / tampered
+BYOK_TRANSPORT_KEY_STALE_CODE = "byok_transport_key_stale"  # 409: refetch, resend ONCE
+BYOK_TRANSPORT_UNAVAILABLE_CODE = "byok_transport_unavailable"  # 503: no server key
+# Client-side refusal when the server key could not be fetched over the network.
+BYOK_TRANSPORT_UNREACHABLE_CODE = "byok_transport_unreachable"
 
 # --- Codex (ChatGPT) token refresh ------------------------------------------
 # The desktop keeps the refresh token and renews the access token itself

@@ -59,6 +59,11 @@ bool agent_bubble_composer_has_focused_draft(const bContext *C, void *ghost_wind
  * WM_window_open_temp. Python idname: mixar.agent_bubble_show_window. */
 void MIXAR_OT_agent_bubble_show_window(wmOperatorType *ot);
 
+/* Brings Mixar in front of other applications after a browser sign-in
+ * succeeded (Mixar_AppActivate: Cocoa app activation / Win32 foreground;
+ * no-op elsewhere). Python idname: mixar.activate_app. */
+void MIXAR_OT_activate_app(wmOperatorType *ot);
+
 /* Resizes the Agent Bubble floating window via the platform-specific
  * Mixar_WindowForceSize helper (Cocoa / Win32). Python idname:
  * mixar.bubble_set_size(width, height). */

@@ -1433,13 +1433,13 @@ msgstr "Seva ya ndani maalum"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Elekeza Mixar kwenye seva inayoendana na OpenAI unayoendesha tayari (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Data ya fomu si sahihi — tafadhali wasiliana na usaidizi."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Kuna hitilafu upande wetu. Tafadhali jaribu tena."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1541,6 +1541,12 @@ msgstr "Ufunguo wako: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Inahifadhi modeli ya wakala… Tafadhali subiri kabla ya kutuma au kubadilisha modeli."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Modeli ya wakala"
 
@@ -1614,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "Inaondoa ufunguo wako…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Inathibitisha na mtoa huduma…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Mipangilio ya mtoa huduma wa AI"
@@ -1631,8 +1640,11 @@ msgstr "Inayotumika"
 msgid "Not configured"
 msgstr "Haijawekwa"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Endesha wakala wa Mixar kwa mtoa huduma wako — krediti za Mixar hazitozwi ikiwa inatumika."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Usanidi wa sasa"
@@ -1652,8 +1664,8 @@ msgstr "Imehifadhiwa kwa usalama"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Modeli ya maandishi pekee — soga hufanya kazi; majukumu ya 3D huendeshwa bila maoni ya kuona."
 
-msgid "Remove API Key…"
-msgstr "Ondoa ufunguo wa API…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1661,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "Usanidi wa mtoa huduma"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Chagua modeli inayotumia wito wa zana / kazi — wakala anaihitaji."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "Haikuweza kutumia mabadiliko yako"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Ondoa ufunguo wako wa API?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Wakala atatumia tena mtoa huduma chaguomsingi wa Mixar."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Krediti za Mixar zitatozwa kwa maombi yajayo ya wakala."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Wakala wa Mixar sasa anaendeshwa kwa mtoa huduma wako — krediti za Mixar hazitozwi."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Ufunguo wa API umeondolewa"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Wakala amerudi kwa mtoa huduma chaguomsingi wa Mixar."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Krediti za Mixar zinatozwa tena kwa maombi ya wakala."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Jaribu tena"
 
-msgid "Save & Activate"
-msgstr "Hifadhi na uwashe"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Weka ufunguo wangu"
-
-msgid "Remove API Key"
-msgstr "Ondoa ufunguo wa API"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Inafungua kifurushi cha mazingira ya uendeshaji ya AI ya ndani…"
@@ -1784,14 +1793,14 @@ msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti 
 msgid "Validate with the provider and save your API key"
 msgstr "Thibitisha na mtoa huduma na uhifadhi ufunguo wako wa API"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Chagua modeli ya mtoa huduma huyu na uingize ufunguo wa API."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Slug ya modeli na ufunguo wa API vinahitajika."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Kuhifadhi kumeshindwa."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Ondoa"
@@ -1805,8 +1814,8 @@ msgstr "Ghairi mtiririko wa kuondoa na urudi kwenye kidirisha kuu"
 msgid "Delete the stored API key server-side"
 msgstr "Futa ufunguo wa API uliohifadhiwa upande wa seva"
 
-msgid "Remove failed."
-msgstr "Kuondoa kumeshindwa."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Onyesha upya hali ya BYOK"
@@ -5708,9 +5717,6 @@ msgstr "Hitilafu isiyotarajiwa wakati wa kupakua muundo: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "Imeshindwa kutumia miundo kwa kitu chochote"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Tumia miundo ya PBR"
-
 msgid "Both refined and guide masks are required"
 msgstr "Vinyago vilivyoboreshwa na vya mwongozo vyote vinahitajika"
 
@@ -5792,6 +5798,12 @@ msgstr "Kusanya mhusika"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Ambatisha sehemu zilizotengenezwa kwenye mwili wenye rigi au wa kawaida, ndani"
 
+msgid "Use Image Style Only"
+msgstr "Tumia mtindo wa taswira pekee"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Ikiwezeshwa, mtindo wa kisanii wa taswira pekee huhamishwa (maagizo bado yanatumika). Ikizimwa, taswira huendesha moja kwa moja utengenezaji wa muundo"
+
 msgid "Enter a prompt in the image node"
 msgstr "Ingiza maagizo katika nodi ya taswira"
 
@@ -5817,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Utengenezaji wa modeli haupatikani katika katalogi ya utengenezaji"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Modi hii ya utengenezaji wa modeli bado haitumiki na nodi za utabiri"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Hakuna modeli ya utengenezaji wa 3D iliyowezeshwa"
@@ -6340,9 +6352,6 @@ msgstr "Imeshindwa kupakua/kubadilisha ulimwengu: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Ulimwengu umeingizwa lakini haukutoa vitu"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Ingiza ulimwengu"
 
 msgid "Failed to import world: {error}"
 msgstr "Imeshindwa kuingiza ulimwengu: {error}"
@@ -8007,12 +8016,6 @@ msgstr "Taswira ya uhamishaji wa mtindo - hutumia mtindo wa kisanii kwenye miund
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Taswira ya rejeleo - huendesha moja kwa moja utengenezaji wa muundo (maagizo yamepuuzwa)"
-
-msgid "Use Image Style Only"
-msgstr "Tumia mtindo wa taswira pekee"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Ikiwezeshwa, mtindo wa kisanii wa taswira pekee huhamishwa (maagizo bado yanatumika). Ikizimwa, taswira huendesha moja kwa moja utengenezaji wa muundo"
 
 msgid "Output texture resolution in pixels"
 msgstr "Azimio la muundo wa pato kwa pikseli"
@@ -10896,9 +10899,6 @@ msgstr "Jibu la nyenzo zilizotengenezwa halikujumuisha hati"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Nyenzo zimetengenezwa lakini imeshindwa kuzitumia: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Tengeneza Nyenzo za Kiutaratibu"
 
 msgid "Material generation failed"
 msgstr "Utengenezaji wa nyenzo umeshindwa"
@@ -19605,7 +19605,70 @@ msgstr "Kitambulisho cha mtumiaji kwa kuingia kwenye mazungumzo ya Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Wakala anatarajia: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"
@@ -20127,8 +20190,8 @@ msgstr "Kuingia kumeshindwa"
 msgid "Sign in with your Mixar account"
 msgstr "Ingia kwa akaunti yako ya Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Inasubiri kivinjari..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Ingia kwa kivinjari"
@@ -21241,6 +21304,12 @@ msgstr "Inaendeleza kazi iliyotangulia..."
 msgid "Could not resume the previous task"
 msgstr "Haikuweza kuendeleza kazi iliyotangulia"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21260,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24409,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Faili imehifadhiwa na toleo jipya la Mixar (%d.%d), baadhi ya data inaweza kupotea"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Faili ilihifadhiwa na toleo jipya, ifungue kwa Mixar %s au baadaye"
 
@@ -24987,6 +25116,12 @@ msgstr "Idadi iliyofungwa"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Idadi ya madirisha ya Kiputo cha wakala yaliyofungwa"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Weka ukubwa wa dirisha la Kiputo cha wakala"
@@ -26827,6 +26962,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "Kitambulisho cha kazi ya nafasi ya kazi"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28070,6 +28226,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

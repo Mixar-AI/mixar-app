@@ -1433,13 +1433,13 @@ msgstr "커스텀 로컬 서버"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "이미 실행 중인 OpenAI 호환 서버(Ollama, LM Studio, llama.cpp 등)에 Mixar를 연결합니다"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "잘못된 양식 데이터입니다 — 지원팀에 문의하세요."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "서버 측에서 문제가 발생했습니다. 다시 시도하세요."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1541,6 +1541,12 @@ msgstr "내 키: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "에이전트 모델 저장 중… 메시지를 보내거나 모델을 변경하기 전에 잠시 기다리세요."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "에이전트 모델"
 
@@ -1614,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "키 제거 중…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "제공업체에서 검증 중…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "AI 제공업체 설정"
@@ -1631,8 +1640,11 @@ msgstr "활성"
 msgid "Not configured"
 msgstr "구성되지 않음"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "내 제공업체로 Mixar 에이전트를 실행합니다 — 활성화된 동안에는 Mixar 크레딧이 차감되지 않습니다."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "현재 구성"
@@ -1652,8 +1664,8 @@ msgstr "안전하게 저장됨"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "텍스트 전용 모델 — 채팅은 작동하지만 3D 작업은 시각적 피드백 없이 실행됩니다."
 
-msgid "Remove API Key…"
-msgstr "API 키 제거…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1661,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "제공업체 설정"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "도구/함수 호출을 지원하는 모델을 선택하세요 — 에이전트에 필요합니다."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models의 모든 슬러그를 사용할 수 있습니다. 예: anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "변경 사항을 적용할 수 없습니다"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "API 키를 제거하시겠습니까?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "에이전트가 다시 Mixar의 기본 제공업체를 사용합니다."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "이후 에이전트 요청에는 Mixar 크레딧이 차감됩니다."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "이제 Mixar 에이전트가 내 제공업체로 실행됩니다 — Mixar 크레딧이 차감되지 않습니다."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API 키가 제거되었습니다"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "에이전트가 Mixar의 기본 제공업체로 돌아왔습니다."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "에이전트 요청에 다시 Mixar 크레딧이 차감됩니다."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "다시 시도"
 
-msgid "Save & Activate"
-msgstr "저장 및 활성화"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "내 키 유지"
-
-msgid "Remove API Key"
-msgstr "API 키 제거"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "로컬 AI 런타임 압축 해제 중…"
@@ -1784,14 +1793,14 @@ msgstr "Mixar 에이전트에 내 API 키를 사용합니다. 활성화된 동�
 msgid "Validate with the provider and save your API key"
 msgstr "제공업체에서 검증한 후 API 키를 저장합니다"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "이 제공업체의 모델을 선택하고 API 키를 입력하세요."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "모델 슬러그와 API 키가 필요합니다."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "저장에 실패했습니다."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "제거"
@@ -1805,8 +1814,8 @@ msgstr "제거 절차를 취소하고 기본 대화 상자로 돌아갑니다"
 msgid "Delete the stored API key server-side"
 msgstr "서버에 저장된 API 키를 삭제합니다"
 
-msgid "Remove failed."
-msgstr "제거에 실패했습니다."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK 상태 새로고침"
@@ -5708,9 +5717,6 @@ msgstr "텍스처 다운로드 중 예기치 않은 오류: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "어떤 오브젝트에도 텍스처를 적용하지 못했습니다"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBR 텍스처 적용"
-
 msgid "Both refined and guide masks are required"
 msgstr "정제 마스크와 가이드 마스크가 모두 필요합니다"
 
@@ -5792,6 +5798,12 @@ msgstr "캐릭터 조립"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "생성된 파트를 리깅된 바디나 일반 바디에 로컬로 부착합니다"
 
+msgid "Use Image Style Only"
+msgstr "이미지 스타일만 사용"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "활성화하면 이미지의 예술적 스타일만 전이됩니다 (프롬프트는 계속 적용). 비활성화하면 이미지가 텍스처 생성을 직접 결정합니다"
+
 msgid "Enter a prompt in the image node"
 msgstr "이미지 노드에 프롬프트를 입력하세요"
 
@@ -5817,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "생성 카탈로그에서 모델 생성을 사용할 수 없습니다"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "이 모델 생성 모드는 아직 추론 노드에서 지원되지 않습니다"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "사용 가능한 활성 3D 생성 모델이 없습니다"
@@ -6340,9 +6352,6 @@ msgstr "월드를 다운로드/변환하지 못했습니다: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "월드를 가져왔지만 오브젝트가 생성되지 않았습니다"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: 월드 가져오기"
 
 msgid "Failed to import world: {error}"
 msgstr "월드를 가져오지 못했습니다: {error}"
@@ -8007,12 +8016,6 @@ msgstr "스타일 전이 이미지 - 생성된 텍스처에 예술적 스타일�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "참조 이미지 - 텍스처 생성을 직접 결정합니다 (프롬프트 무시)"
-
-msgid "Use Image Style Only"
-msgstr "이미지 스타일만 사용"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "활성화하면 이미지의 예술적 스타일만 전이됩니다 (프롬프트는 계속 적용). 비활성화하면 이미지가 텍스처 생성을 직접 결정합니다"
 
 msgid "Output texture resolution in pixels"
 msgstr "출력 텍스처 해상도(픽셀)입니다"
@@ -10896,9 +10899,6 @@ msgstr "생성된 머티리얼 응답에 스크립트가 포함되지 않았습�
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "머티리얼을 생성했지만 적용하지 못했습니다: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "프로시저럴 머티리얼 생성"
 
 msgid "Material generation failed"
 msgstr "머티리얼 생성에 실패했습니다"
@@ -19605,7 +19605,70 @@ msgstr "Mixie 채팅 로그인용 사용자 ID"
 msgid "Agent expects: {formats}"
 msgstr "에이전트가 요구하는 형식: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"
@@ -20127,8 +20190,8 @@ msgstr "로그인 실패"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar 계정으로 로그인하세요"
 
-msgid "Waiting for browser..."
-msgstr "브라우저 대기 중..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "브라우저로 로그인"
@@ -21241,6 +21304,12 @@ msgstr "이전 작업 재개 중..."
 msgid "Could not resume the previous task"
 msgstr "이전 작업을 재개할 수 없습니다"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21260,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24409,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "최신 Mixar 버전(%d.%d)에서 저장된 파일이므로 일부 데이터가 손실될 수 있습니다"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "최신 버전에서 저장된 파일입니다. Mixar %s 이상에서 여세요"
 
@@ -24987,6 +25116,12 @@ msgstr "닫힌 개수"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "닫힌 에이전트 버블 창의 개수"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "에이전트 버블 창 크기 설정"
@@ -26827,6 +26962,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "작업 공간 작업 식별자"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28070,6 +28226,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

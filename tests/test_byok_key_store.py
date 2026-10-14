@@ -219,10 +219,13 @@ def test_put_payload_carries_account_id_only_when_given():
 
 def test_byok_client_stores_the_key_locally_on_200_and_never_sends_the_refresh_token():
     src = (SCRIPTS / "mixar" / "modules" / "byok" / "core" / "byok_client.py").read_text(encoding="utf-8")
-    save_body = src[src.index("def save_credentials("):src.index("def delete_credentials(")]
-    assert "account_id=account_id," in save_body
-    assert "codex_auth_path" not in save_body.split("_store_local_key(")[0].split("save_credentials_all(")[1]
-    assert "refresh_token" not in save_body
+    save_body = src[src.index("def save_credentials("):src.index("def _put_sealed(")]
+    # The PUT itself lives in `_put_sealed`: the key goes out SEALED, the
+    # Codex file reference never goes out at all.
+    put_body = src[src.index("def _put_sealed("):src.index("def error_code(")]
+    assert "account_id=account_id," in put_body and "api_key=envelope," in put_body
+    assert "codex_auth_path" not in put_body
+    assert "refresh_token" not in save_body and "refresh_token" not in put_body
     assert "if success and not _store_local_key(provider, api_key, codex_auth_path):" in save_body
     assert "success, err = False, _LOCAL_STORE_FAILED_MSG" in save_body
     delete_body = src[src.index("def delete_credentials("):src.index("def _store_local_key(")]
@@ -239,7 +242,7 @@ def test_a_failed_device_store_write_is_an_error_that_carries_the_server_state(m
     SAVED recap followed by a 409 on the next message."""
     from types import SimpleNamespace
 
-    from mixar.modules.byok.core import byok_client
+    from mixar.modules.byok.core import byok_client, transport_seal
 
     class _Inline:
         def __init__(self, target=None, **_kw):
@@ -248,6 +251,9 @@ def test_a_failed_device_store_write_is_an_error_that_carries_the_server_state(m
         def start(self):
             self._target()
 
+    # The PUT carries the key sealed (`tests/test_byok_transport_seal.py`);
+    # this test is about what happens after the 200.
+    monkeypatch.setattr(transport_seal, "seal", lambda secret: secret)
     echo = {"byok_active": True, "items": [{"provider": "anthropic", "model": "m", "key_preview": "sk-…"}]}
     service = SimpleNamespace(save_credentials_all=lambda **kw: SimpleNamespace(
         success=True, status_code=200, data={"status": "success", "data": echo}))

@@ -1433,13 +1433,13 @@ msgstr "Aangepaste lokale server"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Verwijst Mixar naar een OpenAI-compatibele server die u al draait (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Ongeldige formuliergegevens — neem contact op met support."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Er is aan onze kant iets misgegaan. Probeer het opnieuw."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1541,6 +1541,12 @@ msgstr "Uw sleutel: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Agentmodel wordt opgeslagen… Wacht even voordat u iets verzendt of van model wisselt."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Agentmodel"
 
@@ -1614,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "Uw sleutel wordt verwijderd…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Valideren bij provider…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Instellingen AI-provider"
@@ -1631,8 +1640,11 @@ msgstr "Actief"
 msgid "Not configured"
 msgstr "Niet geconfigureerd"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Draai de Mixar-agent bij uw eigen provider — zolang dit actief is, worden er geen Mixar-credits in rekening gebracht."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Huidige configuratie"
@@ -1652,8 +1664,8 @@ msgstr "Veilig opgeslagen"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model alleen voor tekst — chatten werkt; 3D-taken lopen zonder visuele feedback."
 
-msgid "Remove API Key…"
-msgstr "API-sleutel verwijderen…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1661,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "Provider instellen"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Kies een model dat tool- / functieaanroepen ondersteunt — de agent heeft dit nodig."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Elke slug van openrouter.ai/models, bijv. anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "Kon uw wijzigingen niet toepassen"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Uw API-sleutel verwijderen?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "De agent gebruikt weer de standaardprovider van Mixar."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Voor toekomstige agentverzoeken worden Mixar-credits in rekening gebracht."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "De Mixar-agent draait nu bij uw provider — er worden geen Mixar-credits in rekening gebracht."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API-sleutel verwijderd"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "De agent is terug op de standaardprovider van Mixar."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Voor agentverzoeken worden weer Mixar-credits in rekening gebracht."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Opnieuw proberen"
 
-msgid "Save & Activate"
-msgstr "Opslaan en activeren"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Mijn sleutel behouden"
-
-msgid "Remove API Key"
-msgstr "API-sleutel verwijderen"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Lokale AI-runtime uitpakken…"
@@ -1784,14 +1793,14 @@ msgstr "Gebruikt uw eigen API-sleutel voor de Mixar-agent. Zolang dit actief is,
 msgid "Validate with the provider and save your API key"
 msgstr "Valideert bij de provider en slaat uw API-sleutel op"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Kies een model voor deze provider en voer een API-sleutel in."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Modelslug en API-sleutel zijn vereist."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Opslaan mislukt."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Verwijder"
@@ -1805,8 +1814,8 @@ msgstr "Annuleert het verwijderen en keert terug naar het hoofddialoogvenster"
 msgid "Delete the stored API key server-side"
 msgstr "Verwijdert de opgeslagen API-sleutel op de server"
 
-msgid "Remove failed."
-msgstr "Verwijderen mislukt."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK-status verversen"
@@ -5708,9 +5717,6 @@ msgstr "Onverwachte fout tijdens downloaden van texture: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "Kon texturen op geen enkel object toepassen"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBR-texturen toepassen"
-
 msgid "Both refined and guide masks are required"
 msgstr "Zowel verfijnde als gidsmaskers zijn vereist"
 
@@ -5792,6 +5798,12 @@ msgstr "Personage samenstellen"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Bevestigt gegenereerde onderdelen lokaal aan een gerigd of gewoon lichaam"
 
+msgid "Use Image Style Only"
+msgstr "Alleen stijl van afbeelding gebruiken"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Indien ingeschakeld wordt alleen de artistieke stijl van de afbeelding overgedragen (de prompt blijft gelden). Indien uitgeschakeld stuurt de afbeelding de textuurgeneratie rechtstreeks aan"
+
 msgid "Enter a prompt in the image node"
 msgstr "Voer een prompt in de afbeeldingsnode in"
 
@@ -5817,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Modelgeneratie is niet beschikbaar in de generatiecatalogus"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Deze modus van Modelgeneratie wordt nog niet ondersteund door inferentienodes"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Er is geen ingeschakeld 3D-generatiemodel beschikbaar"
@@ -6340,9 +6352,6 @@ msgstr "Kon wereld niet downloaden/converteren: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Wereld geïmporteerd, maar er zijn geen objecten ontstaan"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: wereld importeren"
 
 msgid "Failed to import world: {error}"
 msgstr "Kon wereld niet importeren: {error}"
@@ -8007,12 +8016,6 @@ msgstr "Afbeelding voor stijloverdracht - past een artistieke stijl toe op de ge
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referentieafbeelding - stuurt de textuurgeneratie rechtstreeks aan (prompt genegeerd)"
-
-msgid "Use Image Style Only"
-msgstr "Alleen stijl van afbeelding gebruiken"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Indien ingeschakeld wordt alleen de artistieke stijl van de afbeelding overgedragen (de prompt blijft gelden). Indien uitgeschakeld stuurt de afbeelding de textuurgeneratie rechtstreeks aan"
 
 msgid "Output texture resolution in pixels"
 msgstr "Resolutie van de uitvoertextuur in pixels"
@@ -10896,9 +10899,6 @@ msgstr "Het antwoord voor het gegenereerde materiaal bevatte geen script"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Materiaal gegenereerd maar toepassen mislukt: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Procedureel materiaal genereren"
 
 msgid "Material generation failed"
 msgstr "Materiaalgeneratie mislukt"
@@ -19605,7 +19605,70 @@ msgstr "Gebruikers-ID om in te loggen bij Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "Agent verwacht: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"
@@ -20127,8 +20190,8 @@ msgstr "Inloggen mislukt"
 msgid "Sign in with your Mixar account"
 msgstr "Log in met uw Mixar-account"
 
-msgid "Waiting for browser..."
-msgstr "Wachten op browser..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Inloggen via browser"
@@ -21241,6 +21304,12 @@ msgstr "Vorige taak hervatten..."
 msgid "Could not resume the previous task"
 msgstr "Kan de vorige taak niet hervatten"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21260,6 +21329,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24409,6 +24481,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Bestand opgeslagen met een nieuwere Mixar-versie (%d.%d), sommige gegevens kunnen verloren gaan"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Het bestand is opgeslagen met een nieuwere versie; open het met Mixar %s of later"
 
@@ -24987,6 +25116,12 @@ msgstr "Aantal gesloten"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Aantal gesloten vensters van de Agentbubbel"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Venstergrootte Agentbubbel instellen"
@@ -26827,6 +26962,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "Taakidentiteit van de werkruimte"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28070,6 +28226,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

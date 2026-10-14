@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Habari, mimi ni Naman kutoka Mixar.
+Habari, mimi ni Naman.
 Kwa dakika chache nitakuonyesha programu hii.
 Hili ni eneo lako la mwonekano.
 Nafasi ya 3D unayoweza kuzunguka ndani yake.
@@ -26,9 +26,9 @@ Unganisha maktaba yako ili wakala atumie rasilimali zako,
 na uokoe mikopo.
 Juu kushoto kuna droo ya mandhari.
 Kila mandhari ina kichupo chake na wakala Mixie.
-Endesha kazi sambamba na ubadilishe kati yake wakati wowote.
-Mandhari ikikamilika, badili kwenda Cinema Mode
-kuongoza kamera na kuunda mtiririko wa kazi za video.
+Endesha kazi sambamba na ubadilishe wakati wowote, kwa usambamba halisi.
+Ukiwa tayari kurekodi, nenda Cinema Mode
+kuongoza kamera na kuunda video za ubora wa kitaalamu.
 Mawazo huanza katika 2D.
 Vuta moodboard kutoka kulia au bonyeza tilde.
 Ni turubai ya marejeleo na dhana.
@@ -40,6 +40,6 @@ Eneo lote la kazi la Blender lipo, pamoja na kila paneli na njia ya mkato.
 Mixie hufanya kazi katika zote mbili. Chagua inayokufaa.
 Turudi katika Zen Mode.
 Programu yetu ya washirika wabunifu inakupa mikopo
-na jumuiya inayounda mustakabali wa AI na 3D.
+na jumuiya inayounda mustakabali wa AI katika vyombo vya habari.
 Ni hayo tu. Sasa unajua kila kitu kilipo.
 Tuunde 3D pamoja.

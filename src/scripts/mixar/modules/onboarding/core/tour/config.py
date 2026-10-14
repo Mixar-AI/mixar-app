@@ -35,10 +35,13 @@ VIDEO_FPS_FALLBACK = 24.0
 # ---------------------------------------------------------------------------
 # Bumped with every re-cut of the English take or change to the beat table;
 # a pack built for another version is never played.
-TOUR_PACK_VERSION = 1
+TOUR_PACK_VERSION = 2              # 2: the 4:3 take of 2026-10-14
 # Public manifest on the releases CDN (no auth: the first-time splash
-# starts the download before login). Override for QA/staging.
-PACKS_MANIFEST_URL = "https://cdn.mixar.app/tour-packs/manifest.json"
+# starts the download before login). Override for QA/staging. Versioned:
+# each client reads its own pack version's manifest, so a new version's
+# packs never take the dubs away from an older client (the unversioned
+# tour-packs/manifest.json stays at 1 for clients up to 4.2.3).
+PACKS_MANIFEST_URL = f"https://cdn.mixar.app/tour-packs/{TOUR_PACK_VERSION}/manifest.json"
 ENV_PACKS_MANIFEST_URL = "MIXAR_TOUR_PACKS_URL"
 # QA: a local folder laid out like the cache (``<code>/part-<k>.mp4``,
 # ``<code>/timing.json``, ``manifest.json``) that stands in for cache + CDN.
@@ -106,12 +109,13 @@ CONTROL_REVEAL_RATE = 10.0       # exponential ease of the controls strip (1/s)
 # quiet pill in the video's top-right corner that never fully hides.
 # ---------------------------------------------------------------------------
 # Two sizes only: "hero" for the framed intro/outro, "half" for every
-# beat over the live UI (the old 300 px "card" read as a thumbnail).
+# beat over the live UI. Widths are 3/4 of the 16:9 card's, so the 4:3
+# card keeps its height (225 / 315 px) instead of covering more UI.
 CARD_VARIANTS = {
-    "hero": 560,
-    "half": 400,
+    "hero": 420,
+    "half": 300,
 }
-CARD_ASPECT = 16.0 / 9.0
+CARD_ASPECT = 4.0 / 3.0            # the founder take is 1440x1080 (shipped 960x720)
 CARD_MARGIN = 28
 # Keep CARD_RADIUS <= 2.8 * CARD_PAD: the video quad has square corners
 # and must stay inside the rounded background's corner arcs.

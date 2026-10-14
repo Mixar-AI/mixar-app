@@ -215,6 +215,7 @@ class Lookdev360Job(Job):
                         stored_objects, albedo_img, optional_imgs.get("roughness"),
                         optional_imgs.get("metallic"), optional_imgs.get("normal"),
                         timestamp, stored_obj_path, on_done, on_error,
+                        scene=_job_scene(self),
                     )
                     return None
 
@@ -257,11 +258,26 @@ class Lookdev360Job(Job):
                     self._texture_urls[tex_type] = url
 
 
+def _job_scene(job):
+    """The tab the job was submitted from (the queue stamps it), else None."""
+    try:
+        from mixar.modules.common.job_queue.core.queue_download import (
+            _job_session_id, resolve_job_scene,
+        )
+        return resolve_job_scene(getattr(job, "scene_name", ""), _job_session_id(job))
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _apply_textures(
     stored_objects, albedo_img, roughness_img, metallic_img, normal_img,
-    timestamp, stored_obj_path, on_done, on_error,
+    timestamp, stored_obj_path, on_done, on_error, scene=None,
 ):
-    """Apply downloaded textures as fill layers in the paint module."""
+    """Apply downloaded textures as fill layers in the paint module.
+
+    ``scene`` is the job's tab: the result lands from a timer while the window
+    may show another tab, so its flags and its undo step go to that tab (per-tab
+    undo files the step under the tab it names)."""
     from mixar.modules.paint.core.node.node_utils import get_active_mpaint_node
     from mixar.modules.moodboard.core.lookdev360_paint_integration import (
         add_lookdev360_fill_layer,
@@ -319,7 +335,7 @@ def _apply_textures(
     # Set scene flags so the "Restore Materials" button appears in the sidebar
     # and the restore operator knows which layer to remove.
     try:
-        scene = bpy.context.scene
+        scene = scene if scene is not None else bpy.context.scene
         if hasattr(scene, 'mixie_lookdev360_has_applied'):
             scene.mixie_lookdev360_has_applied = True
         if hasattr(scene, 'mixie_lookdev360_layer_name'):
@@ -345,7 +361,8 @@ def _apply_textures(
     except OSError:
         pass
 
-    bpy.ops.ed.undo_push(message="Lookdev 360: Apply PBR Textures")
+    from mixar.modules.common.utils.undo import push_undo_step
+    push_undo_step("Lookdev 360: Apply PBR Textures", scene=scene)
     on_done(", ".join(stored_objects))
 
 

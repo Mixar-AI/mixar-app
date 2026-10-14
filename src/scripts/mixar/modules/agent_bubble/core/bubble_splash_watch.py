@@ -17,6 +17,7 @@ import time as _time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.sign_in import sign_in_holds_autoshow
 from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core.bubble_autoshow import arm_autoshow
 from mixar.modules.agent_bubble.core.bubble_lifecycle import (
@@ -40,6 +41,12 @@ def splash_watch_tick():
         # arriving mid-tour would re-open it under the tour's overlays.
         logger.info("agent_bubble: interactive tour running, autoshow not armed")
         return None
+
+    if sign_in_holds_autoshow():
+        # A sign-in sent the user to the browser and Mixar is not the
+        # active app: opening the bubble's OS window would pull Mixar in
+        # front of it. Keep polling; the bubble appears once Mixar is active.
+        return SPLASH_POLL_S
 
     try:
         from mixar.bootstrap import splash_menu

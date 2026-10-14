@@ -64,7 +64,7 @@ def test_registration_is_synchronous_and_idempotent(monkeypatch):
 def test_every_choice_has_bundled_valid_subtitles(code):
     subs = srt.load(code)
     assert subs and subs.cues, code
-    assert all(c.text.strip() and 0 <= c.start_ms < c.end_ms <= 137300 for c in subs.cues)
+    assert all(c.text.strip() and 0 <= c.start_ms < c.end_ms <= 149200 for c in subs.cues)
     assert all(a.end_ms <= b.start_ms for a, b in zip(subs.cues, subs.cues[1:])), code
 
 
@@ -91,7 +91,19 @@ def test_new_tracks_share_english_cues_and_do_not_bridge_interactive_pauses():
         for beat in MIXAR_INTRO.beats:
             if beat.gate:
                 assert subs.text_at(beat.clip_end_ms) == "", (code, beat.id)
-        assert subs.text_at(130239) and not subs.text_at(130240)
+        assert subs.text_at(148389) and not subs.text_at(148390)
+
+
+@pytest.mark.parametrize("code", language.CODES)
+def test_no_track_shows_the_next_line_during_a_gated_pause(code):
+    """English playback freezes at a gate's clip end, so the cue covering it
+    stays up for the whole pause: it must not be the next beat's line. The
+    dub-derived tracks follow the dubs' own line timing and are built by the
+    pack builder (``pack_subtitles.gate_safe``), not from ``en.json``."""
+    subs = srt.load(code)
+    for beat in MIXAR_INTRO.beats:
+        if beat.gate:
+            assert subs.text_at(beat.clip_end_ms) == "", (code, beat.id)
 
 
 def test_visual_rtl_wrap_starts_at_right_edge():
