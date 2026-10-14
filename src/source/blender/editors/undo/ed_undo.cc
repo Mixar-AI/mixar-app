@@ -36,6 +36,9 @@
 #include "UI_interface_icons.hh"
 
 #include <string>
+
+#include <fmt/format.h>
+
 #include "BKE_workspace.hh"
 
 #include "BLO_blend_validate.hh"
@@ -258,7 +261,7 @@ static bool ed_undo_tab_walk_refused(bContext *C,
     /* The preview's private scene is scrubbed of the tab it copies; its name
      * ("~Mixar agent render") means nothing to the user. */
     if (BKE_undo_tab_scene_is_internal_render(&scene)) {
-      *r_reason = "Undo waits for the agent's preview render (undoing now would cancel it)";
+      *r_reason = RPT_("Undo waits for the agent's preview render (undoing now would cancel it)");
       *r_type = RPT_WARNING;
       return true;
     }
@@ -266,8 +269,10 @@ static bool ed_undo_tab_walk_refused(bContext *C,
     if (name.empty()) {
       name = scene.id.name + 2;
     }
-    *r_reason = "Undo waits for the render or bake running in '" + name +
-                "' (undoing now would cancel it)";
+    *r_reason = fmt::format(
+        fmt::runtime(RPT_("Undo waits for the render or bake running in '{tab}' (undoing now "
+                          "would cancel it)")),
+        fmt::arg("tab", name));
     *r_type = RPT_WARNING;
     return true;
   }
@@ -285,7 +290,7 @@ static void ed_undo_tab_report_refusal(bContext *C,
                                        const eReportType type)
 {
   wmWindow *win = CTX_wm_window(C);
-  BKE_reportf(reports, type, "%s", reason.c_str());
+  BKE_report(reports, type, reason.c_str());
   CLOG_WARN(&LOG,
             "per-tab %s refused in '%s': %s",
             (dir == STEP_UNDO) ? "undo" : "redo",
@@ -549,7 +554,7 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
       ed_undo_step_pre(C, wm, undo_dir, reports);
       const bool ok = BKE_undosys_tab_step_load(ustack, C, tab, target, &reason);
       if (!ok) {
-        BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
+        BKE_report(reports, RPT_INFO, reason.c_str());
         /* The jump walks one tagged step at a time: a refusal part way leaves the
          * tab moved, and the post handlers (chat guard, epoch, live-state repair)
          * must see that walk (review 2026-10-01). Refused at the first step:
@@ -1171,11 +1176,15 @@ static wmOperatorStatus ed_undo_whole_document_invoke(bContext *C, wmOperator *o
     return OPERATOR_CANCELLED;
   }
   const std::string tabs = ed_undo_whole_document_tabs(C, target);
-  std::string message = std::string("Every tab goes back to how the document was at \"") +
-                        target->name + "\".";
-  if (!tabs.empty()) {
-    message += " Tabs that change: " + tabs + ".";
-  }
+  const std::string message =
+      tabs.empty() ?
+          fmt::format(fmt::runtime(IFACE_("Every tab goes back to how the document was at "
+                                          "\"{step}\".")),
+                      fmt::arg("step", target->name)) :
+          fmt::format(fmt::runtime(IFACE_("Every tab goes back to how the document was at "
+                                          "\"{step}\". Tabs that change: {tabs}.")),
+                      fmt::arg("step", target->name),
+                      fmt::arg("tabs", tabs));
   return WM_operator_confirm_ex(C,
                                 op,
                                 IFACE_("Undo Whole Document"),
