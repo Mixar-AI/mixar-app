@@ -90,9 +90,14 @@ classes = (MixarWebPublishProps,)
 
 
 def register():
+    """Idempotent: the agent API registers this lazily when UI discovery has
+    not run (``--background``), and discovery later reuses the live module."""
     for cls in classes:
         if not getattr(cls, "is_registered", False):
             bpy.utils.register_class(cls)
+    if hasattr(bpy.types.Scene, "mixar_web_publish") and hasattr(
+            bpy.types.WindowManager, "mixar_web_publish_status"):
+        return
     bpy.types.Scene.mixar_web_publish = PointerProperty(type=MixarWebPublishProps)
     wm = bpy.types.WindowManager
     wm.mixar_web_publish_status = EnumProperty(
