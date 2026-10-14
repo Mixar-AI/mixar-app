@@ -143,6 +143,10 @@ def test_byok_client_forwards_extended_fields(monkeypatch):
     # is reported as a success (a failed store write is an error of its own,
     # pinned in tests/test_byok_key_store.py).
     monkeypatch.setattr(byok_client, "_store_local_key", lambda *a: True)
+    # The bearer goes out sealed (tests/test_byok_transport_seal.py); the
+    # extended fields are what this test reads.
+    from mixar.modules.byok.core import transport_seal
+    monkeypatch.setattr(transport_seal, "seal", lambda secret: secret)
     done = {}
     monkeypatch.setattr(
         byok_client, "_schedule_on_main",

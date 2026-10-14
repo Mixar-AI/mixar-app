@@ -1541,6 +1541,12 @@ msgstr "Вашият ключ: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Запазване на модела на агента… Моля, изчакайте, преди да изпратите или да смените модела."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Модел на агента"
 

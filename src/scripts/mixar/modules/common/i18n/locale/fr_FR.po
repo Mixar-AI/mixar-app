@@ -1541,6 +1541,12 @@ msgstr "Votre clé : {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Enregistrement du modèle de l’agent… Veuillez patienter avant d’envoyer un message ou de changer de modèle."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Modèle de l’agent"
 

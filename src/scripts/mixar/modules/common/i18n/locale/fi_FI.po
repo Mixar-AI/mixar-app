@@ -1541,6 +1541,12 @@ msgstr "Avaimenne: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Agentin mallia tallennetaan… Odottakaa, ennen kuin lähetätte viestin tai vaihdatte mallia."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Agentin malli"
 
