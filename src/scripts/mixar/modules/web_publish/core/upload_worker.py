@@ -45,12 +45,19 @@ class _Cancelled(Exception):
     pass
 
 
-def spawn(job: PublishJob, workspace: str, service) -> threading.Thread:
-    """Start the worker for a publish already claimed with ``state.begin``."""
+def spawn(job: PublishJob, workspace: str, service) -> bool:
+    """Start the worker for a publish the caller claimed (``state.begin``)
+    before its export. Reuses that claim — never re-claims — and refuses
+    loudly (ERROR state, workspace removed) when there is no live claim."""
+    state = get_publish_state()
+    if not state.busy:
+        cleanup_workspace(workspace)
+        state.set_error(n_("The publish lost its claim before upload"))
+        return False
     thread = threading.Thread(target=_run, args=(job, workspace, service),
                               name="mixar-web-publish", daemon=True)
     thread.start()
-    return thread
+    return True
 
 
 def _run(job: PublishJob, workspace: str, service) -> None:
@@ -88,6 +95,7 @@ def _discard_draft(service, job: PublishJob, created: dict) -> None:
 
 
 def _publish(job: PublishJob, service, state, created: dict) -> None:
+    _check_cancel(state)  # cancelled while the export ran
     size_bytes = os.path.getsize(job.glb_path)
     state.set_status(STATUS_UPLOADING, n_("Reserving your scene link…"), 0.02)
     init_body = {
@@ -99,8 +107,11 @@ def _publish(job: PublishJob, service, state, created: dict) -> None:
         "scene_meta": job.scene_meta,
         "viewer_config": job.viewer_config,
     }
+    if job.existing_scene_id:
+        # Revision of an existing scene: the id selects it (a foreign or
+        # deleted id is a 404); the slug keeps older backends on the link.
+        init_body["scene_id"] = job.existing_scene_id
     if job.existing_slug:
-        # Revision of an existing scene: the slug keeps the URL stable.
         init_body["slug"] = job.existing_slug
 
     scene, upload = service.init_publish(init_body)

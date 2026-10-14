@@ -126,7 +126,9 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
         _logger.warning("web_publish export failed: %s", exc)
         return _fail(state, folder, "{message}", message=str(exc) or exc.__class__.__name__)
 
-    spawn(job, folder, service)
+    if not spawn(job, folder, service):  # reported in the state, never silent
+        ensure_timer()
+        return _refusal(n_("The publish lost its claim before upload"))
     ensure_timer()
     return {"ok": True, "publish_id": publish_id}
 
