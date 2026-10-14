@@ -272,3 +272,69 @@ def test_moderation_refusal_reason_becomes_the_code():
         ScenePublishService(client).init_publish({})
     assert info.value.code == "content_policy"
     assert info.value.params == {"message": "This title can't be published."}
+
+
+# -- template-field collisions never kill the worker or keep the slot ----------------
+
+
+def test_network_error_carrying_message_reports_and_releases_the_claim(tmp_path, monkeypatch):
+    from mixar.modules.common.api.exceptions import ConnectionError as ApiConnectionError
+
+    monkeypatch.setattr(publish_api, "log_network_failure", lambda *a, **k: None)
+    glb = tmp_path / "scene.glb"
+    glb.write_bytes(b"glTF-fake")
+    client = MagicMock()
+    client._base_url = "http://127.0.0.1:9"
+    client.post.side_effect = ApiConnectionError("Failed to connect")
+    state = get_publish_state()
+    state.claim("n1")
+    upload_worker._run(_job(glb), str(tmp_path / "mixar_web_publish_n"), ScenePublishService(client))
+    progress, _ = state.snapshot()
+    assert progress.status == STATUS_ERROR and state.busy is False
+    assert "message" in progress.error_args  # the colliding field, formatted fine
+    assert "(NET-" in progress.error_text
+    from mixar.modules.web_publish.core import agent_api
+    assert agent_api.publish_status("n1")["status"] == "failed"
+
+
+def test_export_failure_reports_through_fail_and_releases(monkeypatch):
+    from mixar.modules.web_publish.core import pipeline
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("Exporter returned CANCELLED")
+
+    monkeypatch.setattr(pipeline, "_signed_in", lambda: True)
+    monkeypatch.setattr(pipeline, "ensure_timer", lambda: None)
+    monkeypatch.setattr(pipeline, "_telemetry", lambda *a: None)
+    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [object()])
+    monkeypatch.setattr(pipeline.glb_export, "export_glb", explode)
+    props = SimpleNamespace(title="", description="", visibility="public",
+                            include_animation=True, published_scene_id="", slug="")
+    context = SimpleNamespace(scene=SimpleNamespace(name="Loft", mixar_web_publish=props))
+    outcome = pipeline.begin_publish(context)
+    assert outcome == {"ok": False, "error": "{message}",
+                       "error_args": {"message": "Exporter returned CANCELLED"}}
+    progress, _ = get_publish_state().snapshot()
+    assert progress.status == STATUS_ERROR and get_publish_state().busy is False
+    assert progress.error_text == "Exporter returned CANCELLED"
+
+
+class _Fatal(BaseException):
+    pass
+
+
+def test_unexpected_worker_crash_ends_failed_with_the_slot_free(tmp_path):
+    glb = tmp_path / "scene.glb"
+    glb.write_bytes(b"glTF-fake")
+    service = MagicMock()
+    service.init_publish.side_effect = _Fatal("boom")
+    state = get_publish_state()
+    state.claim("u1")
+    ws = tmp_path / "mixar_web_publish_u"
+    ws.mkdir()
+    upload_worker._run(_job(glb), str(ws), service)
+    progress, _ = state.snapshot()
+    assert progress.status == STATUS_ERROR and state.busy is False
+    assert progress.error_text == "Publish failed (_Fatal)"
+    assert not ws.exists()
+    assert state.claim("next") is True
