@@ -5798,6 +5798,12 @@ msgstr "ﺔﻴﺼﺨﺸﻟﺍ ﺐﻛّﺭ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺎﻴًﻠﺤﻣ ،ﻱﺩﺎﻋ ﻭﺃ ﻞﻜﻴﻬﻣ ﻢﺴﺠﺑ ﺓﺪﻟّﻮﻤﻟﺍ ءﺍﺰﺟﻷ﻿ﺍ ﻖﻓﺮﻳ"
 
+msgid "Use Image Style Only"
+msgstr "ﻂﻘﻓ ﺓﺭﻮﺼﻟﺍ ﻂﻤﻧ ﻡﺪﺨﺘﺳﺍ"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﺓﺭﻮﺼﻟﺍ ﻪﺟّﻮﺗ ،ﻞﻴﻄﻌﺘﻟﺍ ﺪﻨﻋ .(ﻪﺟّﻮﻤﻟﺍ ﻖﻴﺒﻄﺗ ﺭﺍﺮﻤﺘﺳﺍ ﻊﻣ) ﻂﻘﻓ ﺓﺭﻮﺼﻠﻟ ﻲﻨﻔﻟﺍ ﻂﻤﻨﻟﺍ ﻞﻘﻨﻳُ ،ﻞﻴﻌﻔﺘﻟﺍ ﺪﻨﻋ"
+
 msgid "Enter a prompt in the image node"
 msgstr "ﺓﺭﻮﺼﻟﺍ ﺓﺪﻘﻋ ﻲﻓ ﺎﻬًﺟّﻮﻣ ﻞﺧﺩﺃ"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﺝﻮﻟﺎﺘﻛ ﻲﻓ ﺡﺎﺘﻣ ﺮﻴﻏ ﺝﺫﺎﻤﻨﻟﺍ ﺪﻴﻟﻮﺗ"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ﺪﻌﺑ ﻝﻻ﻿ﺪﺘﺳﻻ﻿ﺍ ﺪﻘﻋ ﻲﻓ ﻡﻮﻋﺪﻣ ﺮﻴﻏ ﺍﺬﻫ ﺝﺫﺎﻤﻨﻟﺍ ﺪﻴﻟﻮﺗ ﻊﺿﻭ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ﻞﻌّﻔﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﻲﺛﻼ﻿ﺛ ﺪﻴﻟﻮﺗ ﺝﺫﻮﻤﻧ ﺮﻓﻮﺘﻳ ﻻ﻿"
@@ -8013,12 +8019,6 @@ msgstr "ﺓﺪﻟّﻮﻤﻟﺍ ﺞﺳﺎﻨﻤﻟﺍ ﻰﻠﻋ ﻲﻨﻔﻟﺍ 
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "(ﻪﺟّﻮﻤﻟﺍ ﻞﻫﺎﺠﺘﻳُ) ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﻪﺟّﻮﺗ - ﺔﻴﻌﺟﺮﻣ ﺓﺭﻮﺻ"
-
-msgid "Use Image Style Only"
-msgstr "ﻂﻘﻓ ﺓﺭﻮﺼﻟﺍ ﻂﻤﻧ ﻡﺪﺨﺘﺳﺍ"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﺓﺭﻮﺼﻟﺍ ﻪﺟّﻮﺗ ،ﻞﻴﻄﻌﺘﻟﺍ ﺪﻨﻋ .(ﻪﺟّﻮﻤﻟﺍ ﻖﻴﺒﻄﺗ ﺭﺍﺮﻤﺘﺳﺍ ﻊﻣ) ﻂﻘﻓ ﺓﺭﻮﺼﻠﻟ ﻲﻨﻔﻟﺍ ﻂﻤﻨﻟﺍ ﻞﻘﻨﻳُ ،ﻞﻴﻌﻔﺘﻟﺍ ﺪﻨﻋ"
 
 msgid "Output texture resolution in pixels"
 msgstr "ﻞﺴﻜﺒﻟﺎﺑ ﺞﺗﺎﻨﻟﺍ ﺞﻴﺴﻨﻟﺍ ﺔﻗﺩ"

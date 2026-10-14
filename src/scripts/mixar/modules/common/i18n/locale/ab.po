@@ -5798,6 +5798,12 @@ msgstr "Аперсонаж аеилаҵара"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Иԥҵоу ахәҭақәа абаҩ змоу, мамзаргьы ажьы хәыҷы ахь ҷыдала реимадара"
 
+msgid "Use Image Style Only"
+msgstr "Асахьанҵа Астиль мацара"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Иаҿартәу, асахьанҵа асахьаркыратә астиль мацара ииагалоит (апромпт ихархәоуп). Иаҿыхтәу, асахьанҵа атекстура аԥҵара аиасрала инапхгароит"
+
 msgid "Enter a prompt in the image node"
 msgstr "Асахьанҵа аузел аҿы апромпт шәҭага"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Амодель аԥҵамҭа акаталог аҿы ыҟаӡам"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Ари Амодель аԥҵамҭа аиҿкаашьа маҷкәа аинференциа аузелқәа ирыднакылаӡом"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Аҿактәу 3D аԥҵамҭа амодель ыҟаӡам"
@@ -8013,12 +8019,6 @@ msgstr "Астиль аиагаратә асахьанҵа — асахьарк�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Ахьырԥш асахьанҵа — атекстура аԥҵара аиасрала инапхгароит (апромпт ирзымхоит)"
-
-msgid "Use Image Style Only"
-msgstr "Асахьанҵа Астиль мацара"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Иаҿартәу, асахьанҵа асахьаркыратә астиль мацара ииагалоит (апромпт ихархәоуп). Иаҿыхтәу, асахьанҵа атекстура аԥҵара аиасрала инапхгароит"
 
 msgid "Output texture resolution in pixels"
 msgstr "Аҭыҵратә атекстура арезолюциа, пикселқәа рыла"

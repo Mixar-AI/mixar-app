@@ -5798,6 +5798,12 @@ msgstr "Собрать персонажа"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Локально прикрепляет сгенерированные части к телу с ригом или без"
 
+msgid "Use Image Style Only"
+msgstr "Использовать только стиль изображения"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Если включено, переносится только художественный стиль изображения (промпт по-прежнему применяется). Если выключено, изображение напрямую управляет генерацией текстур"
+
 msgid "Enter a prompt in the image node"
 msgstr "Введите промпт в ноде изображения"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Генерация моделей недоступна в каталоге генерации"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Этот режим генерации моделей пока не поддерживается нодами инференса"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Нет доступных включённых моделей 3D-генерации"
@@ -8013,12 +8019,6 @@ msgstr "Изображение для переноса стиля — приме
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Референсное изображение — напрямую управляет генерацией текстур (промпт игнорируется)"
-
-msgid "Use Image Style Only"
-msgstr "Использовать только стиль изображения"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Если включено, переносится только художественный стиль изображения (промпт по-прежнему применяется). Если выключено, изображение напрямую управляет генерацией текстур"
 
 msgid "Output texture resolution in pixels"
 msgstr "Выходное разрешение текстур в пикселях"

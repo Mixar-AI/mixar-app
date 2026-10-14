@@ -5798,6 +5798,12 @@ msgstr "Каарманды чогултуу"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Генерацияланган бөлүктөрдү ригделген же жөнөкөй денеге жергиликтүү бекитет"
 
+msgid "Use Image Style Only"
+msgstr "Сүрөттүн стилин гана колдонуу"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Күйгүзүлгөндө сүрөттүн көркөм стили гана өткөрүлөт (промпт дагы колдонулат). Өчүрүлгөндө сүрөт текстура генерациясын түздөн-түз жетектейт"
+
 msgid "Enter a prompt in the image node"
 msgstr "Сүрөт түйүнүнө промпт киргизиңиз"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Модель генерациясы генерация каталогунда жеткиликсиз"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Бул Модель генерациясы режимин жыйынтык түйүндөрү али колдобойт"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Иштетилген 3D генерация модели жеткиликсиз"
@@ -8013,12 +8019,6 @@ msgstr "Стиль өткөрүүчү сүрөт — генерацияланг�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Үлгү сүрөт — текстура генерациясын түздөн-түз жетектейт (промпт этибардан тышкары)"
-
-msgid "Use Image Style Only"
-msgstr "Сүрөттүн стилин гана колдонуу"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Күйгүзүлгөндө сүрөттүн көркөм стили гана өткөрүлөт (промпт дагы колдонулат). Өчүрүлгөндө сүрөт текстура генерациясын түздөн-түз жетектейт"
 
 msgid "Output texture resolution in pixels"
 msgstr "Чыгыш текстуранын чечими, пиксел менен"

@@ -5798,6 +5798,12 @@ msgstr "Kusanya mhusika"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Ambatisha sehemu zilizotengenezwa kwenye mwili wenye rigi au wa kawaida, ndani"
 
+msgid "Use Image Style Only"
+msgstr "Tumia mtindo wa taswira pekee"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Ikiwezeshwa, mtindo wa kisanii wa taswira pekee huhamishwa (maagizo bado yanatumika). Ikizimwa, taswira huendesha moja kwa moja utengenezaji wa muundo"
+
 msgid "Enter a prompt in the image node"
 msgstr "Ingiza maagizo katika nodi ya taswira"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Utengenezaji wa modeli haupatikani katika katalogi ya utengenezaji"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Modi hii ya utengenezaji wa modeli bado haitumiki na nodi za utabiri"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Hakuna modeli ya utengenezaji wa 3D iliyowezeshwa"
@@ -8013,12 +8019,6 @@ msgstr "Taswira ya uhamishaji wa mtindo - hutumia mtindo wa kisanii kwenye miund
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Taswira ya rejeleo - huendesha moja kwa moja utengenezaji wa muundo (maagizo yamepuuzwa)"
-
-msgid "Use Image Style Only"
-msgstr "Tumia mtindo wa taswira pekee"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Ikiwezeshwa, mtindo wa kisanii wa taswira pekee huhamishwa (maagizo bado yanatumika). Ikizimwa, taswira huendesha moja kwa moja utengenezaji wa muundo"
 
 msgid "Output texture resolution in pixels"
 msgstr "Azimio la muundo wa pato kwa pikseli"

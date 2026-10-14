@@ -5798,6 +5798,12 @@ msgstr "Figur zusammenbauen"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Hängt generierte Teile lokal an einen geriggten oder einfachen Körper an"
 
+msgid "Use Image Style Only"
+msgstr "Nur Bildstil verwenden"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Wenn aktiviert, wird nur der künstlerische Stil des Bildes übertragen (der Prompt gilt weiterhin). Wenn deaktiviert, steuert das Bild die Texturgenerierung direkt"
+
 msgid "Enter a prompt in the image node"
 msgstr "Geben Sie im Bildknoten einen Prompt ein"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Modellgenerierung ist im Generierungskatalog nicht verfügbar"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Dieser Modus der Modellgenerierung wird von Inferenzknoten noch nicht unterstützt"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Kein aktiviertes 3D-Generierungsmodell verfügbar"
@@ -8013,12 +8019,6 @@ msgstr "Stilübertragungsbild - wendet einen künstlerischen Stil auf die generi
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referenzbild - steuert die Texturgenerierung direkt (Prompt wird ignoriert)"
-
-msgid "Use Image Style Only"
-msgstr "Nur Bildstil verwenden"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Wenn aktiviert, wird nur der künstlerische Stil des Bildes übertragen (der Prompt gilt weiterhin). Wenn deaktiviert, steuert das Bild die Texturgenerierung direkt"
 
 msgid "Output texture resolution in pixels"
 msgstr "Ausgabeauflösung der Textur in Pixeln"

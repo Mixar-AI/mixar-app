@@ -5798,6 +5798,12 @@ msgstr "Asamblare personaj"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Atașează local părțile generate la un corp rigat sau simplu"
 
+msgid "Use Image Style Only"
+msgstr "Folosire doar a stilului imaginii"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Când este activat, se transferă doar stilul artistic al imaginii (promptul se aplică în continuare). Când este dezactivat, imaginea conduce direct generarea texturii"
+
 msgid "Enter a prompt in the image node"
 msgstr "Introduceți un prompt în nodul imagine"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generarea de model este indisponibilă în catalogul de generare"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Acest mod de generare de model nu este încă acceptat de nodurile de inferență"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Niciun model de generare 3D activat nu este disponibil"
@@ -8013,12 +8019,6 @@ msgstr "Imagine de transfer de stil — aplică stilul artistic texturilor gener
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Imagine de referință — conduce direct generarea texturii (promptul este ignorat)"
-
-msgid "Use Image Style Only"
-msgstr "Folosire doar a stilului imaginii"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Când este activat, se transferă doar stilul artistic al imaginii (promptul se aplică în continuare). Când este dezactivat, imaginea conduce direct generarea texturii"
 
 msgid "Output texture resolution in pixels"
 msgstr "Rezoluția texturii de ieșire, în pixeli"

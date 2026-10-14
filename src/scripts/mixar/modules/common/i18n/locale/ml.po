@@ -5798,6 +5798,12 @@ msgstr "കഥാപാത്രം അസംബിൾ ചെയ്യുക"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ജനറേറ്റ് ചെയ്ത ഭാഗങ്ങൾ റിഗ് ചെയ്തതോ സാധാരണമോ ആയ ശരീരത്തിൽ ലോക്കലായി അറ്റാച്ച് ചെയ്യുക"
 
+msgid "Use Image Style Only"
+msgstr "ചിത്ര ശൈലി മാത്രം ഉപയോഗിക്കുക"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ ചിത്രത്തിന്റെ കലാപരമായ ശൈലി മാത്രം കൈമാറുന്നു (പ്രോംപ്റ്റ് അപ്പോഴും ബാധകം). പ്രവർത്തനരഹിതമാക്കുമ്പോൾ ചിത്രം ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു"
+
 msgid "Enter a prompt in the image node"
 msgstr "ചിത്ര നോഡിൽ ഒരു പ്രോംപ്റ്റ് നൽകുക"
 
@@ -5823,7 +5829,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ജനറേഷൻ കാറ്റലോഗിൽ മോഡൽ ജനറേഷൻ ലഭ്യമല്ല"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ഈ മോഡൽ ജനറേഷൻ മോഡ് ഇൻഫറൻസ് നോഡുകൾ ഇതുവരെ പിന്തുണയ്ക്കുന്നില്ല"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "പ്രവർത്തനക്ഷമമായ 3D ജനറേഷൻ മോഡൽ ലഭ്യമല്ല"
@@ -8013,12 +8019,6 @@ msgstr "ശൈലി കൈമാറ്റ ചിത്രം - ജനറേറ�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "റഫറൻസ് ചിത്രം - ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു (പ്രോംപ്റ്റ് അവഗണിക്കുന്നു)"
-
-msgid "Use Image Style Only"
-msgstr "ചിത്ര ശൈലി മാത്രം ഉപയോഗിക്കുക"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ ചിത്രത്തിന്റെ കലാപരമായ ശൈലി മാത്രം കൈമാറുന്നു (പ്രോംപ്റ്റ് അപ്പോഴും ബാധകം). പ്രവർത്തനരഹിതമാക്കുമ്പോൾ ചിത്രം ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു"
 
 msgid "Output texture resolution in pixels"
 msgstr "പിക്സലുകളിലെ ഔട്ട്പുട്ട് ടെക്സ്ചർ റെസല്യൂഷൻ"
