@@ -30,12 +30,16 @@ command is dispatched from the main-thread callback (`turn_transport._send`).
                         by fingerprint until `codex login` replaces it
       refresh network → current token if still valid, else refuse (retryable)
 
-`prepare` adds one rule around it: an `input` abort is sent at once with no
+`prepare` adds two rules around it: an `input` abort is sent at once with no
 fields (the server exempts it — a dead Codex sign-in must never keep the user
-from declining a plan). Before the first credential fetch has landed the
-mirror reads "inactive" and the turn goes out keyless, synchronously, like
-every platform turn; a 409 in that window refreshes the mirror instead of
-flipping "Key needed on this device" (`byok_notice`).
+from declining a plan), and the key field is SEALED to the backend's X25519
+transport key before it leaves the worker thread (`sealed` →
+`transport_seal`; the backend refuses plaintext, and a key that cannot be
+sealed refuses the turn rather than falling back). Before the first
+credential fetch has landed the mirror reads "inactive" and the turn goes
+out keyless, synchronously, like every platform turn; a 409 in that window
+refreshes the mirror instead of flipping "Key needed on this device"
+(`byok_notice`).
 """
 
 from __future__ import annotations
@@ -142,6 +146,28 @@ def _resolve_codex(record: dict, token: Optional[str], now: Optional[float],
     )
 
 
+def sealed(resolution: Resolution) -> Resolution:
+    """`resolution` with its key field sealed to the backend's transport key
+    (`transport_seal`): the per-turn ``byok_key`` — a cloud key, a Local
+    bearer, a Codex access token alike — never leaves this device in
+    plaintext. ``byok_account_id`` is not a secret and stays as is. A key
+    that cannot be sealed (no server key, network down) is a refusal of the
+    turn, never a plaintext fallback. Worker thread only: HTTP on a miss.
+    """
+    if resolution.blocked or BYOK_TURN_KEY_FIELD not in resolution.fields:
+        return resolution
+    from . import transport_seal
+
+    try:
+        envelope = transport_seal.seal(resolution.fields[BYOK_TURN_KEY_FIELD])
+    except transport_seal.SealError as exc:
+        return Resolution(error=exc.message, code=exc.code, key_missing=resolution.key_missing)
+    fields = dict(resolution.fields)
+    fields[BYOK_TURN_KEY_FIELD] = envelope
+    return Resolution(fields, record_changes=resolution.record_changes,
+                      key_missing=resolution.key_missing)
+
+
 # ---------------------------------------------------------------------------
 # Main-thread entry point
 # ---------------------------------------------------------------------------
@@ -180,9 +206,10 @@ def prepare(on_ready: Callable[[Dict[str, Any], Optional[Dict[str, str]]], None]
                                      active_provider=active_provider)
                 if resolution.record_changes:
                     key_store.persist_changes(live, resolution.record_changes)
+                resolution = sealed(resolution)
         except Exception as exc:  # noqa: BLE001 — never block the turn on a store fault
             logger.warning("BYOK turn credentials unavailable: %s", type(exc).__name__)
-            resolution = Resolution()
+            resolution = Resolution()  # keyless, never plaintext: the server decides
         error = {"message": resolution.error, "code": resolution.code} if resolution.blocked else None
         missing = (record is None or resolution.key_missing
                    or resolution.code == BYOK_CODEX_EXPIRED_CODE)

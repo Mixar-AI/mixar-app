@@ -13,7 +13,10 @@ PR's branch, with the QA account's legacy rows or none. Steps:
    settings hint), no turn runs, the pill says "key needed".
 3. Save an OpenAI key through the dialog operator (`QA_BYOK_OPENAI_KEY`):
    SAVED, record in the store, masked preview on the server, pill clear.
-4. Chat → the agent answers; the turn ran on the user's key.
+4. Chat → the agent answers; the turn ran on the user's key (sealed to the
+   backend's transport key in transit). Then the sealer is bypassed for one
+   turn: a PLAINTEXT `byok_key` is refused with the 400 `byok_key_unsealed`
+   bubble, the pill stays clear, and the next sealed turn answers again.
 5. Second device: drop the record → chat → 409 bubble, pill "key needed";
    an `input` abort is still sent (server-exempt, never refused client-side).
 6. Foreign-provider record (the account was switched elsewhere) → not sent,
@@ -128,6 +131,23 @@ def run(qa):
     if 'pong' not in last_agent(s).lower():
         raise ScenarioFail(f'chat on key: {last_agent(s)[:120]!r}')
     qa.snap(str(OUT / 'byok-turn-on-key.png'))
+
+    # The server refuses a PLAINTEXT key: bypass the sealer for one turn and
+    # expect the 400 `byok_key_unsealed` bubble, with the device-key pill
+    # untouched (the key on this device is fine).
+    qa.step('plaintext key is refused by the server', qa.eval,
+            "from mixar.modules.byok.core import transport_seal; transport_seal._qa_seal = transport_seal.seal; "
+            "transport_seal.seal = lambda secret: secret; result = True")
+    s = chat(qa, 'Say pong in plaintext.')
+    qa.eval("from mixar.modules.byok.core import transport_seal; transport_seal.seal = transport_seal._qa_seal; result = True")
+    msg = last_agent(s)
+    if 'not sealed' not in msg or 'pong' in msg.lower():
+        raise ScenarioFail(f'plaintext key: expected the byok_key_unsealed bubble, got {msg[:120]!r}')
+    if s['mirror']['byok_device_key_missing'] or SETTINGS_HINT in msg:
+        raise ScenarioFail('plaintext key: a 400 must not flip the pill or point at settings')
+    s = qa.step('chat on the sealed key again', chat, qa, 'Reply with the single word pong.')
+    if 'pong' not in last_agent(s).lower():
+        raise ScenarioFail(f'chat on key after the plaintext refusal: {last_agent(s)[:120]!r}')
 
     qa.step('second device: drop the record', qa.eval,
             "from mixar.modules.byok.core import key_store, credential_state; key_store.delete(); credential_state.refresh(); result = True")

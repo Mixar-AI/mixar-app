@@ -1972,6 +1972,12 @@ msgstr "Vaš ključ: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Čuvanje modela agenta… Sačekajte pre slanja ili promene modela."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 # derived
 msgid "Agent Model"
 msgstr "Model agenta"

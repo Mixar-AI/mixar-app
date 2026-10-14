@@ -1541,6 +1541,12 @@ msgstr "თქვენი გასაღები: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "აგენტის მოდელი ინახება… გაგზავნამდე ან მოდელის შეცვლამდე დაელოდეთ."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "აგენტის მოდელი"
 

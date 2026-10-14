@@ -51,6 +51,17 @@ class AgentService(BaseService):
         """GET /agent/credentials — current BYOK state for the user."""
         return self.get("credentials")
 
+    def get_transport_key(self) -> APIResponse:
+        """GET /agent/byok/transport-key — the X25519 key every key field is
+        sealed to before it leaves this device (`byok/core/transport_seal.py`).
+
+        Authenticated like the other settings reads; ``Cache-Control:
+        private, max-age=3600``. ``data`` is ``{kid, public_key (base64url
+        raw 32 bytes), algorithm, envelope}``; a 503 ``byok_transport_unavailable``
+        means the server has no key configured.
+        """
+        return self.get("byok/transport-key")
+
     def save_credentials_all(
         self,
         provider: str,

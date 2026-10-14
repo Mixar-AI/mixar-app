@@ -191,18 +191,16 @@ def save_credentials(
     the card still shows the truth): the account is BYOK-active and this
     device cannot sign a turn, which a "Saved" recap would hide until the
     next message's 409.
+
+    The key is SEALED to the backend's transport key before the PUT
+    (`transport_seal`, on this worker thread); this device's store keeps the
+    plaintext — sealing is transport only. A 409 ``byok_transport_key_stale``
+    (the server rotated its key inside our cache window) drops the cached
+    key and repeats the PUT once with a fresh envelope.
     """
     def _thread():
-        try:
-            response = get_agent_service().save_credentials_all(
-                provider=provider, model=model, api_key=api_key,
-                base_url=base_url, supports_vision=supports_vision,
-                account_id=account_id,
-            )
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK save_credentials failed: %s", e)
-            success, data, err = _translate_exception(e)
+        success, data, err = _put_sealed(provider, model, api_key, base_url,
+                                         supports_vision, account_id)
         if success and not _store_local_key(provider, api_key, codex_auth_path):
             success, err = False, _LOCAL_STORE_FAILED_MSG
         _schedule_on_main(on_done, success, data, err)
@@ -210,6 +208,53 @@ def save_credentials(
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKSave"
     ).start()
+
+
+def _put_sealed(provider, model, api_key, base_url, supports_vision, account_id,
+                *, retried: bool = False) -> tuple[bool, Optional[Any], Optional[str]]:
+    """The PUT with ``api_key`` sealed; a key that cannot be sealed is an
+    ERROR (the user-safe `SealError` message) and nothing is sent."""
+    from . import transport_seal
+
+    envelope = None
+    if api_key is not None:
+        try:
+            envelope = transport_seal.seal(api_key)
+        except transport_seal.SealError as exc:
+            return False, None, exc.message
+    try:
+        response = get_agent_service().save_credentials_all(
+            provider=provider, model=model, api_key=envelope,
+            base_url=base_url, supports_vision=supports_vision,
+            account_id=account_id,
+        )
+        return _translate(response)
+    except Exception as e:
+        if envelope is not None and not retried and is_stale_transport_key(e):
+            transport_seal.invalidate()
+            return _put_sealed(provider, model, api_key, base_url, supports_vision,
+                               account_id, retried=True)
+        logger.warning("BYOK save_credentials failed: %s", e)
+        return _translate_exception(e)
+
+
+def error_code(exc: Exception) -> str:
+    """The backend's ``code`` on an HTTP error (``{"detail": {"code": …}}``
+    or a flat envelope), or ''."""
+    body = getattr(exc, "response_data", None)
+    if not isinstance(body, dict):
+        return ""
+    detail = body.get("detail")
+    source = detail if isinstance(detail, dict) else body
+    code = source.get("code")
+    return code if isinstance(code, str) else ""
+
+
+def is_stale_transport_key(exc: Exception) -> bool:
+    from ..constants import BYOK_TRANSPORT_KEY_STALE_CODE
+
+    return (getattr(exc, "status_code", None) == 409
+            and error_code(exc) == BYOK_TRANSPORT_KEY_STALE_CODE)
 
 
 def delete_credentials(

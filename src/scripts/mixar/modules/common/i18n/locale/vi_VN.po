@@ -1541,6 +1541,12 @@ msgstr "Khóa của bạn: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Đang lưu mô hình tác nhân… Vui lòng chờ trước khi gửi hoặc đổi mô hình."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Mô Hình Tác Nhân"
 
