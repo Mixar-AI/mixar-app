@@ -1433,13 +1433,13 @@ msgstr "Servidor local a mida"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Connecta Mixar a un servidor compatible amb OpenAI que ja executeu (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Dades del formulari no vàlides — contacteu amb el servei d'assistència."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Alguna cosa ha fallat per part nostra. Torneu-ho a provar."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1620,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "Suprimint la vostra clau…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Validant amb el proveïdor…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Paràmetres del proveïdor d'IA"
@@ -1637,8 +1640,11 @@ msgstr "Actiu"
 msgid "Not configured"
 msgstr "No configurat"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Executeu l'agent de Mixar amb el vostre propi proveïdor — mentre estigui actiu no es cobren crèdits de Mixar."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Configuració actual"
@@ -1658,8 +1664,8 @@ msgstr "Desada de manera segura"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model només de text — el xat funciona; les tasques 3D s'executen sense retroferència visual."
 
-msgid "Remove API Key…"
-msgstr "Suprimir clau d'API…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1667,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "Configuració del proveïdor"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Trieu un model compatible amb la crida d'eines / funcions — l'agent ho necessita."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Qualsevol identificador d'openrouter.ai/models, p. ex. anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "No s'han pogut aplicar els canvis"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Voleu suprimir la vostra clau d'API?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "L'agent tornarà a usar el proveïdor per defecte de Mixar."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Es cobraran crèdits de Mixar per a les futures sol·licituds de l'agent."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "L'agent de Mixar ara s'executa amb el vostre proveïdor — no es cobren crèdits de Mixar."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Clau d'API suprimida"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "L'agent torna a usar el proveïdor per defecte de Mixar."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Es tornen a cobrar crèdits de Mixar per a les sol·licituds de l'agent."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Tornar-ho a provar"
 
-msgid "Save & Activate"
-msgstr "Desar i activar"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Mantenir la meva clau"
-
-msgid "Remove API Key"
-msgstr "Suprimir clau d'API"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Desempaquetant l'entorn d'execució d'IA local…"
@@ -1790,14 +1793,14 @@ msgstr "Usa la vostra pròpia clau d'API per a l'agent de Mixar. Mentre estigui 
 msgid "Validate with the provider and save your API key"
 msgstr "Valida amb el proveïdor i desa la vostra clau d'API"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Trieu un model per a aquest proveïdor i introduïu una clau d'API."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Cal l'identificador del model i la clau d'API."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Ha fallat el desament."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Suprimir"
@@ -1811,8 +1814,8 @@ msgstr "Cancel·la el procés de supressió i torna al diàleg principal"
 msgid "Delete the stored API key server-side"
 msgstr "Elimina la clau d'API desada al servidor"
 
-msgid "Remove failed."
-msgstr "Ha fallat la supressió."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Refrescar estat BYOK"
@@ -19602,7 +19605,70 @@ msgstr "ID d'usuari per iniciar la sessió al xat de Mixie"
 msgid "Agent expects: {formats}"
 msgstr "L'agent espera: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"

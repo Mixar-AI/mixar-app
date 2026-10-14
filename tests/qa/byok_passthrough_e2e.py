@@ -9,20 +9,25 @@ PR's branch, with the QA account's legacy rows or none. Steps:
 
 1. Boot: the mirror agrees with the server; if BYOK is active but this device
    holds no record, `byok_device_key_missing` is True.
-2. Keyless chat under active BYOK → the 409 bubble (server message + the
-   settings hint), no turn runs, the pill says "key needed".
+2. Keyless chat under active BYOK → the 409 card: ONE desktop-owned line
+   ("Enter your OpenAI API key to continue", never the server's prose),
+   no turn runs, the pill says "key needed".
 3. Save an OpenAI key through the dialog operator (`QA_BYOK_OPENAI_KEY`):
    SAVED, record in the store, masked preview on the server, pill clear.
 4. Chat → the agent answers; the turn ran on the user's key (sealed to the
    backend's transport key in transit). Then the sealer is bypassed for one
    turn: a PLAINTEXT `byok_key` is refused with the 400 `byok_key_unsealed`
    bubble, the pill stays clear, and the next sealed turn answers again.
-5. Second device: drop the record → chat → 409 bubble, pill "key needed";
+5. Second device: drop the record → chat → 409 card, pill "key needed";
    an `input` abort is still sent (server-exempt, never refused client-side).
+   With `QA_BYOK_SPEND_CREDITS=1` the card's "Use Mixar credits instead" is
+   clicked: the key is removed and the refused message is resent on platform
+   credits (one agent turn is charged) — the user never retypes it.
 6. Foreign-provider record (the account was switched elsewhere) → not sent,
    409, pill "key needed"; restoring it clears the pill.
-7. Cold-start window (mirror not loaded): the send goes out keyless and the
-   409 refreshes the mirror instead of flipping the pill blindly.
+7. Cold-start window (mirror not loaded): the send goes out keyless, the
+   409 shows NOTHING, refreshes the mirror (never flipping the pill blindly)
+   and resends the message once the fetch lands — the agent answers it.
 8. A device-store write that fails after the 200 is an ERROR carrying the
    server state, not a SAVED recap.
 9. Remove through the dialog: rows gone, record gone, mirror inactive.
@@ -46,7 +51,11 @@ from lib import QA, ScenarioFail, run_scenario  # noqa: E402
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/byok-passthrough'))
 KEY = os.environ.get('QA_BYOK_OPENAI_KEY', '')
 MODEL = os.environ.get('QA_BYOK_OPENAI_MODEL', 'gpt-5-mini')
-SETTINGS_HINT = 'AI Provider Settings'
+SPEND_CREDITS = os.environ.get('QA_BYOK_SPEND_CREDITS', '') == '1'
+CARD_LINE = 'Enter your OpenAI API key to continue'
+OLD_PROSE = ('did not send', 'AI Provider Settings', 'on this device', 'BYOK')
+PONG = ("'pong' in ([m.text for m in drv.main_window().scene.mixie_chat_messages "
+        "if m.sender == 'AGENT'] or [''])[-1].lower()")
 
 STATE = """
 from mixar.modules.byok.core import credential_state, key_store
@@ -86,10 +95,33 @@ def chat(qa, text, timeout=240):
 def expect_409(qa, text, why):
     s = chat(qa, text)
     msg = last_agent(s)
-    if 'did not send' not in msg or SETTINGS_HINT not in msg:
-        raise ScenarioFail(f'{why}: expected the byok_key_required bubble, got {msg[:120]!r}')
+    if msg != CARD_LINE or any(old in msg for old in OLD_PROSE):
+        raise ScenarioFail(f'{why}: expected the one-line 409 card {CARD_LINE!r}, got {msg[:160]!r}')
+    buttons = qa.eval("scene = drv.main_window().scene; "
+                      "result = [a.label for a in scene.mixie_chat_messages[-1].action_items]")
+    if buttons[:2] != ['Enter key', 'Use Mixar credits instead']:
+        raise ScenarioFail(f'{why}: card buttons {buttons!r}')
     if not s['mirror']['byok_device_key_missing']:
         raise ScenarioFail(f'{why}: pill did not flip to "key needed"')
+    return s
+
+
+def use_credits_resends(qa):
+    """Click the card's second button; the key is removed server-side and
+    the refused message goes out again on platform credits."""
+    qa.eval("""
+from mixar.modules.space_mixie_chat.core import byok_card
+scene = drv.main_window().scene
+card = [m for m in scene.mixie_chat_messages if m.bubble_id.startswith(byok_card.BUBBLE_PREFIX)][-1]
+result = byok_card.handle_action(scene, card.bubble_id, byok_card.ACTION_USE_CREDITS)
+""")
+    qa.wait(PONG, timeout=240)
+    qa.wait(IDLE, timeout=60)
+    s = state(qa)
+    if s['mirror']['byok_is_active'] or s['record'] is not None:
+        raise ScenarioFail(f'use credits: active={s["mirror"]["byok_is_active"]} record={s["record"]}')
+    if any(m.startswith('Enter your') for who, m in s['messages'] if who == 'AGENT'):
+        raise ScenarioFail('use credits: the card stayed after the resend')
     return s
 
 
@@ -165,6 +197,11 @@ result = h.start_input_stream(session_id=get_session_manager().get_session_id(sc
     time.sleep(2)
     if state(qa)['busy']:
         raise ScenarioFail('abort left the session busy')
+    if SPEND_CREDITS:
+        qa.step('use Mixar credits instead: key removed, message resent', use_credits_resends, qa)
+        qa.snap(str(OUT / 'byok-use-credits-resent.png'))
+    else:
+        notes['use_credits_step'] = 'skipped (QA_BYOK_SPEND_CREDITS not set)'
 
     qa.step('re-save (key-only re-entry on this device)', save_openai, qa)
     qa.step('foreign-provider record is not sent', qa.eval,
@@ -176,8 +213,15 @@ result = h.start_input_stream(session_id=get_session_manager().get_session_id(sc
     qa.step('cold-start window: mirror unloaded', qa.eval,
             "from mixar.modules.byok.core import credential_state; "
             "credential_state._state = dict(credential_state._state, byok_state_loaded=False, byok_is_active=False); result = True")
-    s = chat(qa, 'Say pong (cold).')
-    if 'did not send' not in last_agent(s) or not s['mirror']['byok_state_loaded'] or s['mirror']['byok_device_key_missing']:
+    # The 409 shows nothing; once the refreshed mirror lands the message is
+    # resent with this device's key and the agent answers it.
+    chat(qa, 'Say pong (cold).')
+    qa.wait(PONG, timeout=240)
+    qa.wait(IDLE, timeout=60)
+    s = state(qa)
+    if any(m == CARD_LINE for who, m in s['messages'] if who == 'AGENT'):
+        raise ScenarioFail('cold start: the 409 card must not show before the fetch lands')
+    if not s['mirror']['byok_state_loaded'] or s['mirror']['byok_device_key_missing']:
         raise ScenarioFail('cold start: the 409 must refresh the mirror, not flip the pill')
 
     qa.step('device-store write failure is an ERROR with the server state', qa.eval,

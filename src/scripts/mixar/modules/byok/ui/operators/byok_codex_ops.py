@@ -23,8 +23,9 @@ import os
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import iface_, n_
 
-from ...core import byok_client, codex_auth, model_suggestions
+from ...core import byok_client, codex_auth, key_prompt, model_suggestions
 from . import byok_dialog_ui
+from .byok_state_ops import ensure_dialog_redraw_pump
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,8 @@ def draw_codex_fields(body, wm, key_only=False) -> None:
 
     byok_dialog_ui.field_label(body, n_("Codex sign-in file (empty = default)"))
     # FILE_PATH subtype: Blender draws the browse button itself.
-    byok_dialog_ui.field_input(body, wm, 'byok_form_codex_path')
+    byok_dialog_ui.field_input(body, wm, 'byok_form_codex_path',
+                               activate=key_prompt.focus_is(key_prompt.FOCUS_CODEX_PATH))
     text, kind = _path_status(wm.byok_form_codex_path or "")
     byok_dialog_ui.card_label(body, text, kind)
     body.separator(factor=0.5)
@@ -93,6 +95,7 @@ def execute_codex(op, wm, on_done):
 
     wm.byok_dialog_state = 'SAVING'
     wm.byok_last_error = ''
+    ensure_dialog_redraw_pump()
 
     byok_client.save_credentials(
         provider='codex',

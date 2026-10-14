@@ -114,6 +114,13 @@ class TurnTransport:
                 processor = get_event_processor()
                 processor._clear_loader_bubbles(target)
                 get_session_manager().set_state(target, previous_state)
+                from .byok_notice import byok_error_code
+                if byok_error_code(result, result.get('data') or {}):
+                    # A refusal over the user's own key: keep the command so
+                    # the key-missing card can resend it (new id) once the
+                    # key is entered or the account switches to credits.
+                    from . import byok_resend
+                    byok_resend.remember(payload['session_id'], command_id, method, payload, joining)
                 processor.handle_command_error(result, target)
             self._running = False
 

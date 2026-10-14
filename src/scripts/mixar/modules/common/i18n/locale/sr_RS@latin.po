@@ -1839,15 +1839,14 @@ msgstr "Prilagođeni lokalni server"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Usmerite Mixar na OpenAI-kompatibilan server koji već pokrećete (Ollama, LM Studio, llama.cpp, ...)"
 
-# derived
-msgid "Invalid form data — please reach out to support."
-msgstr "Pogrešni podaci obrasca — obratite se podršci."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 # derived
 msgid "Something went wrong on our end. Please try again."
 msgstr "Nešto je pošlo naopako na našoj strani. Pokušajte ponovo."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -2065,13 +2064,14 @@ msgstr "Koristi vašu ChatGPT pretplatu — Mixar krediti se ne naplaćuju."
 msgid "Choose a Codex model."
 msgstr ""
 
-# derived
 msgid "Removing your key…"
-msgstr "Uklanjanje vašeg ključa…"
+msgstr ""
 
-# derived
-msgid "Validating with provider…"
-msgstr "Provera kod dobavljača…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 # derived
 msgid "AI Provider Settings"
@@ -2087,9 +2087,11 @@ msgstr "Aktivno"
 msgid "Not configured"
 msgstr "Nije podešeno"
 
-# derived
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Pokrećite Mixar agenta preko sopstvenog dobavljača — Mixar krediti se ne naplaćuju dok je aktivno."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 # derived
 msgid "Current Configuration"
@@ -2115,9 +2117,8 @@ msgstr "Bezbedno sačuvano"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model samo za tekst — ćaskanje radi; 3D zadaci se izvršavaju bez vizuelne povratne informacije."
 
-# derived
-msgid "Remove API Key…"
-msgstr "Ukloni API ključ…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -2125,77 +2126,62 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 # derived
 msgid "Provider Setup"
 msgstr "Podešavanje dobavljača"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-# derived
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Izaberite model koji podržava pozivanje alata / funkcija — agentu je to potrebno."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 # derived
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bilo koja oznaka sa openrouter.ai/models, npr. anthropic/claude-opus-4.8."
 
-# derived
-msgid "Couldn't apply your changes"
-msgstr "Nije moguće primeniti vaše izmene"
+msgid "Couldn't save"
+msgstr ""
 
-# derived
-msgid "Remove your API key?"
-msgstr "Ukloniti vaš API ključ?"
+msgid "Remove your key?"
+msgstr ""
 
-# derived
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent će ponovo koristiti Mixar-ov podrazumevani dobavljač."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-# derived
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Mixar krediti će se naplaćivati za buduće zahteve agenta."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-# derived
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agent sada radi preko vašeg dobavljača — Mixar krediti se ne naplaćuju."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-# derived
-msgid "API key removed"
-msgstr "API ključ je uklonjen"
+msgid "Key removed"
+msgstr ""
 
-# derived
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent je ponovo na Mixar-ovom podrazumevanom dobavljaču."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-# derived
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Mixar krediti se ponovo naplaćuju za zahteve agenta."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 # derived
 msgid "Try Again"
 msgstr "Pokušaj ponovo"
 
-# derived
-msgid "Save & Activate"
-msgstr "Sačuvaj i aktiviraj"
+msgid "Keep my key"
+msgstr ""
 
-# derived
-msgid "Keep My Key"
-msgstr "Zadrži moj ključ"
-
-# derived
-msgid "Remove API Key"
-msgstr "Ukloni API ključ"
+msgid "Remove key"
+msgstr ""
 
 # derived
 msgid "Unpacking the local AI runtime…"
@@ -2284,17 +2270,14 @@ msgstr "Koristite sopstveni API ključ za Mixar agenta. Dok je aktivno, Mixar kr
 msgid "Validate with the provider and save your API key"
 msgstr "Proverava kod dobavljača i čuva vaš API ključ"
 
-# derived
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Izaberite model za ovog dobavljača i unesite API ključ."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-# derived
-msgid "Model slug and API key are required."
-msgstr "Oznaka modela i API ključ su obavezni."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-# derived
-msgid "Save failed."
-msgstr "Čuvanje nije uspelo."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Ukloni"
@@ -2311,9 +2294,8 @@ msgstr "Odustaje od toka uklanjanja i vraća se u glavni dijalog"
 msgid "Delete the stored API key server-side"
 msgstr "Briše sačuvani API ključ na serveru"
 
-# derived
-msgid "Remove failed."
-msgstr "Uklanjanje nije uspelo."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 # derived
 msgid "Refresh BYOK State"
@@ -25291,7 +25273,70 @@ msgstr "ID korisnika za prijavu u ćaskanje Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očekuje: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 # derived

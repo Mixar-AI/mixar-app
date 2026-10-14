@@ -231,6 +231,25 @@ def _refresh_token_digest(token):
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+# Namespace for the deterministic refresh idempotency key (any fixed UUID).
+_REFRESH_IDEMPOTENCY_NAMESPACE = uuid.UUID("7b3e0c4a-6d21-5f98-9c4a-0f6a2b1d8e55")
+
+
+def _refresh_idempotency_key(token):
+    """A deterministic idempotency key for refreshing ``token``.
+
+    Keyed on the refresh token so that TWO Mixar instances sharing the OS
+    keychain compute the SAME key when they race to refresh the same token.
+    The backend then coordinates them (``begin_refresh_token_rotation`` →
+    ``wait_for_refresh_token_outcome``): one rotates, the other waits for and
+    receives the same new pair, instead of the loser getting a 401 reuse and
+    clearing the shared credentials (which logged both instances out). A
+    UUIDv5 (SHA-1 of the namespace + token) is a valid, non-reversible key the
+    backend accepts; the token cannot be recovered from it.
+    """
+    return str(uuid.uuid5(_REFRESH_IDEMPOTENCY_NAMESPACE, token))
+
+
 def _load_persisted_refresh_attempt():
     """Return ``(storage_available, attempt_or_none)`` from safe storage.
 
@@ -269,7 +288,7 @@ def _load_persisted_refresh_attempt():
             and isinstance(idempotency_key, str)
             and len(digest) == 64
             and int(digest, 16) >= 0
-            and parsed_key.version == 4
+            and parsed_key.version in (4, 5)
             and str(parsed_key) == idempotency_key
         ):
             attempt = {
@@ -459,6 +478,14 @@ def _get_or_create_refresh_attempt_locked(refresh_token):
         _pending_refresh = {
             "refresh_token": refresh_token,
             "refresh_token_digest": digest,
+            # Replay the marker's OWN key, never a recomputed one. This branch
+            # recovers an ambiguous (lost-response) attempt, whose whole purpose
+            # is to resend the identical Idempotency-Key so the backend returns
+            # the same outcome instead of reading a rotated token as reuse. A
+            # fresh attempt already computes the deterministic key, so two new
+            # instances still converge; recomputing here would instead send a
+            # different key for a marker an older build wrote (random uuid4) and
+            # force a logout across the upgrade boundary.
             "idempotency_key": persisted["idempotency_key"],
         }
         return _pending_refresh
@@ -470,7 +497,9 @@ def _get_or_create_refresh_attempt_locked(refresh_token):
         _pending_refresh = {
             "refresh_token": refresh_token,
             "refresh_token_digest": digest,
-            "idempotency_key": str(uuid.uuid4()),
+            # Deterministic per token so a second instance racing on the same
+            # token sends the same key and the backend coordinates them.
+            "idempotency_key": _refresh_idempotency_key(refresh_token),
         }
 
     # Safe-storage persistence happens before requests.post. If it fails, the

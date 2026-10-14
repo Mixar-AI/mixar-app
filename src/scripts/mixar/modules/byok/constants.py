@@ -91,12 +91,22 @@ BYOK_TURN_ACCOUNT_FIELD = "byok_account_id"
 # makes no model call): sent at once, no store read, no Codex refresh.
 BYOK_TURN_ABORT_ACTION = "abort"
 # Command error code the server answers with when BYOK is active and the
-# command carried no key (409). The client shows the message and points at
-# AI Provider Settings — never retries on its own.
+# command carried no key (409). The detail also names the account's
+# `provider` and `model`; the chat shows a desktop-owned card
+# (`space_mixie_chat/core/byok_card.py`) whose actions resend the message.
 BYOK_KEY_REQUIRED_CODE = "byok_key_required"
 # Client-side pre-send refusals share the command-error path under these codes.
 BYOK_CODEX_EXPIRED_CODE = "byok_codex_expired"
 BYOK_CODEX_REFRESH_FAILED_CODE = "byok_codex_refresh_failed"
+# Display names for the card line ("Enter your OpenAI API key to continue");
+# any other provider id is shown capitalised.
+BYOK_PROVIDER_DISPLAY_NAMES = {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "gemini": "Gemini",
+    "google": "Gemini",
+    "openrouter": "OpenRouter",
+}
 # Credential-store entry name prefix; the Mixar user id is appended so two
 # accounts on one machine never share a key.
 BYOK_KEY_STORE_PREFIX = "BYOK"

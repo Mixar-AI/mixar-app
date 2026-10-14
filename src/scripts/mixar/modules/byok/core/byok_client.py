@@ -36,11 +36,10 @@ logger = get_logger(__name__)
 # APIResponse → tri-tuple translation
 # ---------------------------------------------------------------------------
 
-_VALIDATION_ERROR_MSG = n_("Invalid form data — please reach out to support.")
+_VALIDATION_ERROR_MSG = n_("Something is wrong with this form. Please contact support.")
 _GENERIC_SERVER_ERROR_MSG = n_("Something went wrong on our end. Please try again.")
 _LOCAL_STORE_FAILED_MSG = n_(
-    "Your key was validated and saved to your account, but it could not be "
-    "stored on this device (the credential store refused the write). Enter it "
+    "Your key works, but Mixar could not save it on this computer. Enter it "
     "again to retry."
 )
 
