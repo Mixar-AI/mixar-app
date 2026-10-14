@@ -30,6 +30,7 @@ import bpy
 
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
+from .export_extras_filter import strip_private_extras
 from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
     active_mixar_nodes,
@@ -260,6 +261,10 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
                     )
         if 'FINISHED' not in status:
             raise RuntimeError(f"Blender exporter returned {sorted(status)}")
+        # Privacy: custom-property extras would carry Mixar's registered
+        # scene state (chat draft, transcript…). A failed strip fails the export.
+        extras_stripped = (strip_private_extras(filepath, fmt)
+                           if fmt in ("glb", "gltf") and kwargs.get("export_extras") else 0)
         if fmt in STATIC_WARNINGS:
             warning = STATIC_WARNINGS[fmt]
             clips = []
@@ -301,6 +306,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             "clips_missing": clips_missing,
             "preset": preset_report(use_case, fmt, kwargs, anim_mode),
             "textures_folder": textures_folder,
+            "extras_stripped": extras_stripped,
             "verification": verification,
             "duration_ms": int((time.perf_counter() - started) * 1000),
         }
@@ -312,7 +318,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             "verification_checked": bool(verification.get("checked")),
             "verification_passed": bool(verification.get("passed")),
             "issue_count": len(verification.get("issues") or []),
-            "file_size_kb": int(size // 1024),
+            "file_size_kb": int(size // 1024), "extras_stripped": extras_stripped,
         })
         return result
     except Exception as exc:
