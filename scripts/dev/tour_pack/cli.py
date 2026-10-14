@@ -5,10 +5,13 @@
 """Build the onboarding tour's language packs.
 
     <embedded python> scripts/dev/tour_pack/cli.py --media ~/Work/tour-media \\
-        --out dist/tour-packs --pack-version 1 [--languages french german]
+        --out dist/tour-packs --pack-version 2 [--languages french german] \\
+        [--crop crop=1418:1064:11:8]
 
 Inputs (never in the repo): ``<media>/raw/<english_name>.mp4`` for the raw
-English take and every dub, ``<media>/srt/<english_name>.srt``. Work files
+English take and every dub, ``<media>/srt/<english_name>.srt``. When the
+dubs are cut from the same edit the app ships, ``raw/english.mp4`` is the
+bundled ``founder.mp4`` itself (the cut list is then the identity). Work files
 (mono WAVs, frame tracks) go to ``<media>/work``. Outputs:
 
     <out>/<pack_version>/<code>/part-<k>.mp4, timing.json, plan.json
@@ -60,11 +63,12 @@ def wav_for(work: str, name: str, src: str) -> str:
     return out
 
 
-def track_for(work: str, name: str, src: str) -> str:
+def track_for(work: str, name: str, src: str, crop: str = "") -> str:
     out = os.path.join(work, "frames", f"{name}.gray")
     if not os.path.isfile(out):
+        pre = f"{crop}," if crop else ""
         sh(["ffmpeg", "-v", "error", "-y", "-i", src, "-an", "-vf",
-            f"fps={warp_mod.FPS},scale={warp_mod.W}:{warp_mod.H}:flags=area,format=gray",
+            f"{pre}fps={warp_mod.FPS},scale={warp_mod.W}:{warp_mod.H}:flags=area,format=gray",
             "-f", "rawvideo", out])
     return out
 
@@ -143,11 +147,11 @@ def reconcile(timing: dict, planned: list, actual: list, tour) -> None:
 
 def build_language(code: str, media: str, out_root: str, pack_version: int, founder,
                    card_raw_en: int, english_mp4: str, english_dur: int, tour, work: str,
-                   crf: int, preset: str) -> dict:
+                   crf: int, preset: str, crop: str = "") -> dict:
     stem = LANGS[code]
     src = os.path.join(media, "raw", f"{stem}.mp4")
     fps, dur = probe(src)
-    dub = plan.Dub(code, wav_for(work, stem, src), track_for(work, stem, src),
+    dub = plan.Dub(code, wav_for(work, stem, src), track_for(work, stem, src, crop),
                    track_for(work, "english", english_mp4), fps, dur)
     srt_src = os.path.join(media, "srt", f"{stem}.srt")
     if not os.path.isfile(srt_src):
@@ -164,7 +168,7 @@ def build_language(code: str, media: str, out_root: str, pack_version: int, foun
     print(f"[{code}] warp cost {dub.warp_cost:.4f}, {len(runs)} runs, {total} ms; rendering…",
           flush=True)
     render.render(src, english_mp4, runs, card_raw_en, english_dur, acts, rendered,
-                  crf=crf, preset=preset, source_fps=fps)
+                  crf=crf, preset=preset, source_fps=fps, crop=crop)
     real_total = render.probe_duration_ms(rendered)
     if abs(real_total - total) > 120:
         print(f"[{code}] WARNING rendered {real_total} ms vs planned {total} ms", flush=True)
@@ -220,6 +224,9 @@ def main() -> None:
     ap.add_argument("--languages", nargs="*", default=sorted(LANGS))
     ap.add_argument("--crf", type=int, default=22)
     ap.add_argument("--preset", default="medium")
+    ap.add_argument("--crop", default="",
+                    help="ffmpeg crop filter applied to every dub before scaling, e.g. "
+                         "crop=1418:1064:11:8 for the 1440x1080 takes' letterbox bars")
     args = ap.parse_args()
 
     media = os.path.expanduser(args.media)
@@ -230,7 +237,12 @@ def main() -> None:
     tour = script_access.load_tour()
     card_raw_en = plan.detect_card_start(track_for(work, "english", english_mp4),
                                          after_ms=int(founder.to_raw(tour.beats[-1].enter_ms)))
-    print(f"English: {len(founder.runs)} kept runs, logo card from raw {card_raw_en} ms", flush=True)
+    if english_dur - card_raw_en < render.MIN_CARD_MS:
+        card_raw_en = english_dur          # the take ends on the presenter: no card
+        print(f"English: {len(founder.runs)} kept runs, no logo card", flush=True)
+    else:
+        print(f"English: {len(founder.runs)} kept runs, logo card from raw {card_raw_en} ms",
+              flush=True)
 
     manifest_path = os.path.join(args.out, "manifest.json")
     manifest = {"pack_version": args.pack_version, "script_hash": plan.script_hash(tour),
@@ -246,7 +258,7 @@ def main() -> None:
             raise SystemExit(f"unknown language {lang!r}")
         manifest["languages"][code] = build_language(
             code, media, args.out, args.pack_version, founder, card_raw_en, english_mp4,
-            english_dur, tour, work, args.crf, args.preset)
+            english_dur, tour, work, args.crf, args.preset, args.crop)
         os.makedirs(args.out, exist_ok=True)
         render.write_json(manifest_path, manifest)
         # A copy inside the version folder makes that folder usable as the

@@ -35,7 +35,7 @@ VIDEO_FPS_FALLBACK = 24.0
 # ---------------------------------------------------------------------------
 # Bumped with every re-cut of the English take or change to the beat table;
 # a pack built for another version is never played.
-TOUR_PACK_VERSION = 1
+TOUR_PACK_VERSION = 2              # 2: the 4:3 take of 2026-10-14
 # Public manifest on the releases CDN (no auth: the first-time splash
 # starts the download before login). Override for QA/staging.
 PACKS_MANIFEST_URL = "https://cdn.mixar.app/tour-packs/manifest.json"
@@ -109,7 +109,7 @@ CARD_VARIANTS = {
     "hero": 560,
     "half": 400,
 }
-CARD_ASPECT = 16.0 / 9.0
+CARD_ASPECT = 4.0 / 3.0            # the founder take is 1440x1080 (shipped 960x720)
 CARD_MARGIN = 28
 CARD_CONTROLS_H = 28             # inner controls strip, bottom of the video
 # Keep CARD_RADIUS <= 2.8 * CARD_PAD: the video quad has square corners

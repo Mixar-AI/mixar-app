@@ -38,6 +38,9 @@ SNAP_MS = 600          # how far a beat boundary may move to meet a dub speech e
 NEAR_MS = 400          # how close a founder time must be to an English speech edge to count as one
 THRESHOLD_DB = -40.0
 MIN_GAP_MS = 250
+FOUNDER_MIN_SPEECH_MS = 300
+FINE_GAP_MS = 100      # segmentation for the pauses after gated lines
+EDGE_REACH_MS = 1500   # how far a gated line's edges may move to meet the voice
 FADE_MS = 25
 
 
@@ -64,7 +67,10 @@ class Founder:
 
     def __init__(self, founder_wav: str, english_wav: str):
         runs, _ = cutlist.recover(founder_wav, english_wav, step_ms=100)
-        self.speech = audio.analyse(founder_wav, threshold_db=THRESHOLD_DB, min_gap_ms=MIN_GAP_MS)
+        # A breath before the first word is not a line onset (the 2026-10-14
+        # take opens on one at 40 ms): ignore runs shorter than a word.
+        self.speech = audio.analyse(founder_wav, threshold_db=THRESHOLD_DB, min_gap_ms=MIN_GAP_MS,
+                                    min_speech_ms=FOUNDER_MIN_SPEECH_MS)
         self.duration_ms = runs[-1].edited_end_ms
         self.runs = self._snap_cuts_to_pauses(runs)
 
@@ -121,6 +127,10 @@ class Dub:
         self.duration_ms = duration_ms
         self.warp, self.warp_cost = warp_mod.align(english_track, track)
         self.speech = audio.analyse(wav, threshold_db=THRESHOLD_DB, min_gap_ms=MIN_GAP_MS)
+        # Short pauses kept apart: a dub that runs on 250 ms after a line
+        # the tour waits on must still show that pause (it gets a freeze).
+        self.fine = audio.analyse(wav, threshold_db=THRESHOLD_DB, min_gap_ms=FINE_GAP_MS,
+                                  min_speech_ms=60)
         samples, rate = audio.read_wav(wav)
         self.db = audio.rms_db(samples, rate)
 
@@ -132,6 +142,24 @@ class Dub:
             if d < best_d:
                 best, best_d = edge, d
         return best
+
+    def spoken_end(self, ce: float) -> int:
+        """Where the speech around a cue end really stops: the end of the
+        fine segment the cue end falls in (cue times are tidy, the voice
+        often runs on), else the last end before it in a pause."""
+        for sg in self.fine:
+            if sg.start_ms <= ce < sg.end_ms and sg.end_ms - ce <= EDGE_REACH_MS:
+                return sg.end_ms
+        before = [sg.end_ms for sg in self.fine if ce - EDGE_REACH_MS <= sg.end_ms <= ce]
+        return max(before) if before else int(ce)
+
+    def spoken_onset(self, cs: float) -> int:
+        """Where the speech after a cue start really begins: the next fine
+        onset when the cue starts in a pause, else the cue start."""
+        if any(sg.start_ms <= cs < sg.end_ms for sg in self.fine):
+            return int(cs)
+        after = [sg.start_ms for sg in self.fine if cs < sg.start_ms <= cs + EDGE_REACH_MS]
+        return min(after) if after else int(cs)
 
     def last_speech_end(self) -> int:
         return self.speech[-1].end_ms
@@ -272,12 +300,21 @@ def plan_dub(tour, founder: Founder, dub: Dub, cues: list, card_start_raw_en_ms:
     assigned = assign_cues(tour, founder, dub, cues)
     beats = tour.beats
     lines = []      # per beat: (onset_d, end_d) in raw dub time
+    after_gate = False
     for b in beats:
         ids = assigned[b.id]
         cs = cues[ids[0]][0]
         ce = cues[ids[-1]][1]
         onset = dub.speech_edge_near(cs, "start", within=400) or cs
         end = dub.speech_edge_near(ce, "end", within=400) or ce
+        # The tour pauses after a gated line: its end and the next line's
+        # start must be the voice's, or the pause lands on a word.
+        if after_gate:
+            # Contiguous cues put this cue's start on the gated line's tail.
+            onset = dub.spoken_onset(max(cs, lines[-1][1] + 1))
+        if b.gate is not None:
+            end = dub.spoken_end(ce)
+        after_gate = b.gate is not None
         if lines and onset < lines[-1][1]:
             onset = lines[-1][1]
         if end <= onset:
@@ -293,7 +330,7 @@ def plan_dub(tour, founder: Founder, dub: Dub, cues: list, card_start_raw_en_ms:
     start = max(0, lines[0][0] - first_lead)
     runs = []
     cursor = _snap_ms(start, dub.fps)
-    speech = [sg for sg in dub.speech if sg.end_ms > start]
+    speech = [sg for sg in dub.fine if sg.end_ms > start]
     last_end_needed = lines[-1][1]
     # Pauses to enforce after each beat's line end.
     want_after = {}

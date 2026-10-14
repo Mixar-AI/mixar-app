@@ -5,7 +5,7 @@
 that language from its parts; a missing pack plays English with the chosen
 language's subtitles.
 
-QA_HARNESS=/path/to/mixar-qa-harness TOUR_PACK_DIR=<repo>/dist/tour-packs/1 \\
+QA_HARNESS=/path/to/mixar-qa-harness TOUR_PACK_DIR=<repo>/dist/tour-packs/2 \\
     python3 tests/qa/onboarding_tour_lang_e2e.py
 Screenshots go to QA_SCENARIO_OUT (default /tmp/onboarding-tour-lang).
 """
@@ -67,7 +67,7 @@ def localized(qa):
     kinds = qa.eval(SETUP + "s = current(); result = json.dumps([s.video.__class__.__name__, s.clock.__class__.__name__, len(s.video.parts), s.tour.beats[1].enter_ms])")
     video_cls, clock_cls, nparts, enter1 = json.loads(kinds)
     assert video_cls == 'PartsMovie' and nparts == 8, kinds
-    assert enter1 != 6610, 'the French beat table must differ from the English one'
+    assert enter1 != 6090, 'the French beat table must differ from the English one'
     # Let the runner cross the first act boundary (part-0 -> part-1) and draw.
     qa.eval(SETUP + "current().runner._jump('viewport'); current().runner.tick(); result=True")
     qa.wait("__import__('json').loads(bpy.data.window_managers[0].mixar_tour_state)['beat'] == 'viewport'", timeout=10)
@@ -75,7 +75,7 @@ def localized(qa):
     opened = json.loads(qa.eval(SETUP + "s = current(); result = json.dumps(sorted(s.video._open))"))
     assert 1 in opened, f'part-1 must be open while the viewport beat plays: {opened}'
     shot = snapshot(qa, 'french-viewport')
-    # Jump to the last beat: part-7 (the appended logo card) must open.
+    # Jump to the last beat: part-7 (the outro) must open.
     qa.eval(SETUP + "current().runner._jump('outro'); current().runner.tick(); result=True")
     qa.eval("def settle():\n yield .8\n return True\nresult=settle()")
     opened = json.loads(qa.eval(SETUP + "s = current(); result = json.dumps(sorted(s.video._open))"))

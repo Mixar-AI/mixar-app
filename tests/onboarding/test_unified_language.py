@@ -64,7 +64,7 @@ def test_registration_is_synchronous_and_idempotent(monkeypatch):
 def test_every_choice_has_bundled_valid_subtitles(code):
     subs = srt.load(code)
     assert subs and subs.cues, code
-    assert all(c.text.strip() and 0 <= c.start_ms < c.end_ms <= 137300 for c in subs.cues)
+    assert all(c.text.strip() and 0 <= c.start_ms < c.end_ms <= 149200 for c in subs.cues)
     assert all(a.end_ms <= b.start_ms for a, b in zip(subs.cues, subs.cues[1:])), code
 
 
@@ -91,7 +91,7 @@ def test_new_tracks_share_english_cues_and_do_not_bridge_interactive_pauses():
         for beat in MIXAR_INTRO.beats:
             if beat.gate:
                 assert subs.text_at(beat.clip_end_ms) == "", (code, beat.id)
-        assert subs.text_at(130239) and not subs.text_at(130240)
+        assert subs.text_at(148389) and not subs.text_at(148390)
 
 
 def test_visual_rtl_wrap_starts_at_right_edge():
