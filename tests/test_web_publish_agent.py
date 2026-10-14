@@ -34,9 +34,11 @@ _STATUS_KEYS = {"status", "progress", "share_url", "slug", "error", "warning"}
 
 @pytest.fixture(autouse=True)
 def _fresh_state(monkeypatch):
-    from mixar.modules.web_publish.core import publish_state
+    from mixar.modules.web_publish.core import links, publish_state
 
     monkeypatch.setattr(publish_state, "_state", publish_state.PublishState())
+    monkeypatch.setattr(links, "trusted_hosts",
+                        lambda api_url=None: ("api.mixar.app", "mixar.app"))
     yield
 
 
@@ -177,10 +179,10 @@ def test_publish_status_shapes_across_the_lifecycle():
     assert out["warning"].startswith("1 area light")
 
     state.set_result(PublishResult(scene_id="id", slug="loft", revision=1,
-                                   share_url="https://api/s/loft", viewer_url="https://v/s/loft"))
+                                   share_url="https://api.mixar.app/s/loft", viewer_url="https://scenes.mixar.app/s/loft"))
     ready = agent_api.publish_status("p1")
     assert ready["status"] == "ready" and ready["progress"] == 1.0
-    assert ready["share_url"] == "https://api/s/loft" and ready["slug"] == "loft"
+    assert ready["share_url"] == "https://api.mixar.app/s/loft" and ready["slug"] == "loft"
     # Dismissing the outcome in the panel never hides it from a late poll.
     state.reset()
     assert agent_api.publish_status("p1")["status"] == "ready"
@@ -398,11 +400,11 @@ def test_mirror_files_the_result_on_the_published_scene_not_the_shown_one(monkey
     assert pipeline._mirror() is not None  # busy: keep polling
     assert wm.mixar_web_publish_status == "EXPORTING" and wm.mixar_web_publish_scene == "Loft"
     state.set_result(PublishResult(scene_id="id1", slug="loft", revision=2,
-                                   share_url="https://api/s/loft"))
+                                   share_url="https://api.mixar.app/s/loft"))
     assert pipeline._mirror() is None  # terminal: stop
     assert wm.mixar_web_publish_status == "DONE"
     assert (published.slug, published.revision, published.share_url) == \
-        ("loft", 2, "https://api/s/loft")
+        ("loft", 2, "https://api.mixar.app/s/loft")
     assert shown.slug == ""
     published.slug = "edited"
     pipeline._mirror()  # applied once per outcome

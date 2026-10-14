@@ -16,6 +16,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
+from mixar.modules.web_publish.core.links import is_safe_share_link
 from mixar.modules.web_publish.core.publish_state import (
     TERMINAL_STATUSES,
     format_message,
@@ -28,6 +29,14 @@ _logger = get_logger(__name__)
 def _props(context):
     scene = getattr(context, "scene", None)
     return getattr(scene, "mixar_web_publish", None) if scene else None
+
+
+def _safe_link(context) -> str:
+    """The scene's link when it is https on a trusted host (a .blend is
+    untrusted input), else ""."""
+    props = _props(context)
+    link = props.link if props is not None and props.is_published else ""
+    return link if link and is_safe_share_link(link) else ""
 
 
 class MIXAR_OT_web_publish(bpy.types.Operator):
@@ -86,11 +95,14 @@ class MIXAR_OT_web_publish_copy_link(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context) -> bool:
-        props = _props(context)
-        return bool(props and props.is_published and props.link)
+        return bool(_safe_link(context))
 
     def execute(self, context):
-        context.window_manager.clipboard = _props(context).link
+        link = _safe_link(context)
+        if not link:
+            self.report({"ERROR"}, "Invalid link")
+            return {"CANCELLED"}
+        context.window_manager.clipboard = link
         self.report({"INFO"}, "Link copied to clipboard")
         return {"FINISHED"}
 
@@ -104,11 +116,14 @@ class MIXAR_OT_web_publish_open(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context) -> bool:
-        props = _props(context)
-        return bool(props and props.is_published and props.link)
+        return bool(_safe_link(context))
 
     def execute(self, context):
-        bpy.ops.wm.url_open(url=_props(context).link)
+        link = _safe_link(context)
+        if not link:
+            self.report({"ERROR"}, "Invalid link")
+            return {"CANCELLED"}
+        bpy.ops.wm.url_open(url=link)
         return {"FINISHED"}
 
 
