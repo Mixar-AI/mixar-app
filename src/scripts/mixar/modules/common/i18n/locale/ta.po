@@ -5714,9 +5714,6 @@ msgstr "அமைப்புப் பதிவிறக்கத்தின�
 msgid "Failed to apply textures to any object"
 msgstr "எந்தப் பொருளிலும் அமைப்புகளை இட முடியவில்லை"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "லுக்டேவ் 360: PBR அமைப்புகளை இடு"
-
 msgid "Both refined and guide masks are required"
 msgstr "செம்மைப்படுத்திய முகமூடியும் வழிகாட்டி முகமூடியும் இரண்டும் தேவை"
 
@@ -5798,6 +5795,12 @@ msgstr "பாத்திரத்தைப் பொருத்து"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "உருவாக்கிய பகுதிகளை ரிக் செய்த அல்லது சாதாரண உடலில், உள்ளகமாக இணைக்கிறது"
 
+msgid "Use Image Style Only"
+msgstr "படப் பாணியை மட்டும் பயன்படுத்து"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "இயக்கினால், படத்தின் கலைப் பாணி மட்டும் மாற்றப்படும் (ப்ராம்ப்ட் இன்னும் பொருந்தும்). அணைத்தால், படம் அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும்"
+
 msgid "Enter a prompt in the image node"
 msgstr "பட முனையில் ஒரு ப்ராம்ப்ட்டை உள்ளிடுங்கள்"
 
@@ -5823,7 +5826,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "உருவாக்க அட்டவணையில் மாதிரி உருவாக்கம் கிடைக்கவில்லை"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "இந்த மாதிரி உருவாக்கப் பயன்முறையை அனுமான முனைகள் இன்னும் ஆதரிக்கவில்லை"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "இயக்கப்பட்ட 3D உருவாக்க மாதிரி எதுவும் இல்லை"
@@ -6346,9 +6349,6 @@ msgstr "உலகத்தைப் பதிவிறக்க/மாற்ற 
 
 msgid "World imported but produced no objects"
 msgstr "உலகம் இறக்குமதி செய்யப்பட்டது ஆனால் பொருள்கள் எதுவும் வரவில்லை"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: உலகத்தை இறக்குமதி செய்"
 
 msgid "Failed to import world: {error}"
 msgstr "உலகத்தை இறக்குமதி செய்ய முடியவில்லை: {error}"
@@ -8013,12 +8013,6 @@ msgstr "பாணி மாற்றப் படம் - உருவாகு�
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "குறிப்புப் படம் - அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும் (ப்ராம்ப்ட் புறக்கணிக்கப்படும்)"
-
-msgid "Use Image Style Only"
-msgstr "படப் பாணியை மட்டும் பயன்படுத்து"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "இயக்கினால், படத்தின் கலைப் பாணி மட்டும் மாற்றப்படும் (ப்ராம்ப்ட் இன்னும் பொருந்தும்). அணைத்தால், படம் அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும்"
 
 msgid "Output texture resolution in pixels"
 msgstr "வெளியீட்டு அமைப்புத் தெளிவுத்திறன், படப்புள்ளிகளில்"
@@ -10902,9 +10896,6 @@ msgstr "உருவாக்கிய மூலப்பொருள் பத�
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "மூலப்பொருள் உருவாக்கப்பட்டது, ஆனால் இட முடியவில்லை: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "செயல்முறை மூலப்பொருளை உருவாக்கு"
 
 msgid "Material generation failed"
 msgstr "மூலப்பொருள் உருவாக்கம் தோல்வியடைந்தது"
@@ -20133,8 +20124,8 @@ msgstr "உள்நுழைவு தோல்வி"
 msgid "Sign in with your Mixar account"
 msgstr "உங்கள் Mixar கணக்கில் உள்நுழையவும்"
 
-msgid "Waiting for browser..."
-msgstr "உலாவிக்காகக் காத்திருக்கிறது..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "உலாவியில் உள்நுழை"
@@ -21247,6 +21238,12 @@ msgstr "முந்தைய பணி தொடர்கிறது..."
 msgid "Could not resume the previous task"
 msgstr "முந்தைய பணியைத் தொடர முடியவில்லை"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21266,6 +21263,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24415,6 +24415,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "புதிய Mixar பதிப்பால் சேமித்த கோப்பு (%d.%d), சில தரவு இழக்கப்படலாம்"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "கோப்பு புதிய பதிப்பால் சேமிக்கப்பட்டது, அதை Mixar %s அல்லது அதற்குப் பின் திறக்கவும்"
 
@@ -24993,6 +25050,12 @@ msgstr "மூடிய எண்ணிக்கை"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "மூடிய முகவர் குமிழிச் சாளரங்களின் எண்ணிக்கை"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "முகவர் குமிழிச் சாளர அளவை அமை"
@@ -26833,6 +26896,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "பணியிடப் பணி அடையாளம்"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28076,6 +28160,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

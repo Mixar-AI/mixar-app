@@ -5714,9 +5714,6 @@ msgstr "{error} :ﺖﻓﺎﺑ ﯼﺮﯿﮔﺭﺎﺑ ﻡﺎﮕﻨﻫ ﻩﺮﻈﺘ
 msgid "Failed to apply textures to any object"
 msgstr "ﺪﺸﻧ ﻖﻓﻮﻣ ﯼﺍ‌ﺊﺷ ﭻﯿﻫ ﯼﻭﺭ ﺖﻓﺎﺑ ﻝﺎﻤﻋﺍ"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "PBR ﯼﺎﻫ‌ﺖﻓﺎﺑ ﻝﺎﻤﻋﺍ :360 ﻭﺩ‌ﮎﻮﻟ"
-
 msgid "Both refined and guide masks are required"
 msgstr "ﺖﺳﺍ ﻡﺯﻻ﻿ ﺎﻤﻨﻫﺍﺭ ﮏﺳﺎﻣ ﻢﻫ ﻭ ﻩﺪﺷ‌ﺶﯾﻻ﻿ﺎﭘ ﮏﺳﺎﻣ ﻢﻫ"
 
@@ -5798,6 +5795,12 @@ msgstr "ﺖﯿﺼﺨﺷ ﻥﺩﺮﮐ ﻢﻫﺮﺳ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻞﺻﻭ ﻩﺩﺎﺳ ﺎﯾ ﻩﺪﺷ‌ﮓﯾﺭ ﻥﺪﺑ ﮏﯾ ﻪﺑ ﯽﻠﺤﻣ ﺕﺭﻮﺻ‌ﻪﺑ ﺍﺭ ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌ﻪﻌﻄﻗ"
 
+msgid "Use Image Style Only"
+msgstr "ﺮﯾﻮﺼﺗ ﮏﺒﺳ ﻂﻘﻓ"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ ﺮﯾﻮﺼﺗ ،ﺖﺳﺍ ﻝﺎﻌﻓﺮﯿﻏ ﯽﺘﻗﻭ .(ﺩﻮﺷ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻥﺎﻨﭽﻤﻫ ﺖﭙﻣﺍﺮﭘ) ﺩﻮﺷ‌ﯽﻣ ﻞﻘﺘﻨﻣ ﺮﯾﻮﺼﺗ ﯼﺮﻨﻫ ﮏﺒﺳ ﻂﻘﻓ ،ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ"
+
 msgid "Enter a prompt in the image node"
 msgstr "ﺪﯿﻨﮐ ﺩﺭﺍﻭ ﺖﭙﻣﺍﺮﭘ ﮏﯾ ﺮﯾﻮﺼﺗ ﻩﺮﮔ ﺭﺩ"
 
@@ -5823,7 +5826,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﺪﯿﻟﻮﺗ ﺖﺳﺮﻬﻓ ﺭﺩ ﻝﺪﻣ ﺪﯿﻟﻮﺗ"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ﺩﻮﺷ‌ﯽﻤﻧ ﯽﻧﺎﺒﯿﺘﺸﭘ ﺝﺎﺘﻨﺘﺳﺍ ﯼﺎﻫ‌ﻩﺮﮔ ﺭﺩ ﺯﻮﻨﻫ ﻝﺪﻣ ﺪﯿﻟﻮﺗ ﺖﻟﺎﺣ ﻦﯾﺍ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯽﻟﺎﻌﻓ ﯼﺪﻌﺑ‌ﻪﺳ ﺪﯿﻟﻮﺗ ﻝﺪﻣ"
@@ -6346,9 +6349,6 @@ msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻥﺎﻬﺟ ﻞﯾﺪﺒﺗ/ﯼ�
 
 msgid "World imported but produced no objects"
 msgstr "ﺖﺧﺎﺴﻧ ﯼﺍ‌ﺊﺷ ﺎﻣﺍ ﺪﺷ ﺩﺭﺍﻭ ﻥﺎﻬﺟ"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: ﻥﺎﻬﺟ ﻥﺩﺮﮐ ﺩﺭﺍﻭ"
 
 msgid "Failed to import world: {error}"
 msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻥﺎﻬﺟ ﻥﺩﺮﮐ ﺩﺭﺍﻭ"
@@ -8013,12 +8013,6 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "(ﺩﻮﺷ‌ﯽﻣ ﻪﺘﻓﺮﮔ ﻩﺪﯾﺩﺎﻧ ﺖﭙﻣﺍﺮﭘ) ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ - ﻊﺟﺮﻣ ﺮﯾﻮﺼﺗ"
-
-msgid "Use Image Style Only"
-msgstr "ﺮﯾﻮﺼﺗ ﮏﺒﺳ ﻂﻘﻓ"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﯾﺍﺪﻫ ﺍﺭ ﺖﻓﺎﺑ ﺪﯿﻟﻮﺗ ﺎًﻤﯿﻘﺘﺴﻣ ﺮﯾﻮﺼﺗ ،ﺖﺳﺍ ﻝﺎﻌﻓﺮﯿﻏ ﯽﺘﻗﻭ .(ﺩﻮﺷ‌ﯽﻣ ﻝﺎﻤﻋﺍ ﻥﺎﻨﭽﻤﻫ ﺖﭙﻣﺍﺮﭘ) ﺩﻮﺷ‌ﯽﻣ ﻞﻘﺘﻨﻣ ﺮﯾﻮﺼﺗ ﯼﺮﻨﻫ ﮏﺒﺳ ﻂﻘﻓ ،ﺖﺳﺍ ﻝﺎﻌﻓ ﯽﺘﻗﻭ"
 
 msgid "Output texture resolution in pixels"
 msgstr "ﻞﺴﮑﯿﭘ ﻪﺑ ﯽﺟﻭﺮﺧ ﺖﻓﺎﺑ ﺡﻮﺿﻭ"
@@ -10902,9 +10896,6 @@ msgstr "ﺖﺷﺍﺪﻧ ﺖﭙﯾﺮﮑﺳﺍ ﻩﺪﺷﺪﯿﻟﻮﺗ ﻩﺩﺎ
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "{result} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻥﺁ ﻝﺎﻤﻋﺍ ﺎﻣﺍ ﺪﺷ ﺪﯿﻟﻮﺗ ﻩﺩﺎﻣ"
-
-msgid "Generate Procedural Material"
-msgstr "ﯼﺍ‌ﻪﯾﻭﺭ ﻩﺩﺎﻣ ﺪﯿﻟﻮﺗ"
 
 msgid "Material generation failed"
 msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻩﺩﺎﻣ ﺪﯿﻟﻮﺗ"
@@ -20133,8 +20124,8 @@ msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺩﻭﺭﻭ"
 msgid "Sign in with your Mixar account"
 msgstr "ﺪﯾﻮﺷ ﺩﺭﺍﻭ Mixar ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ ﺎﺑ"
 
-msgid "Waiting for browser..."
-msgstr "...ﺮﮔﺭﻭﺮﻣ ﺭﺎﻈﺘﻧﺍ ﺭﺩ"
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﺮﮔﺭﻭﺮﻣ ﺎﺑ ﺩﻭﺭﻭ"
@@ -21247,6 +21238,12 @@ msgstr "...ﯽﻠﺒﻗ ﺭﺎﮐ ﯼﺮﯿﮔﺮﺳﺯﺍ ﻝﺎﺣ ﺭﺩ"
 msgid "Could not resume the previous task"
 msgstr "ﺪﺸﻧ ﻦﮑﻤﻣ ﯽﻠﺒﻗ ﺭﺎﮐ ﯼﺮﯿﮔﺮﺳﺯﺍ"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21266,6 +21263,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24415,6 +24415,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "ﺩﻭﺮﺑ ﺖﺳﺩ ﺯﺍ ﺎﻫ‌ﻩﺩﺍﺩ ﺯﺍ ﯽﺸﺨﺑ ﺖﺳﺍ ﻦﮑﻤﻣ ،(%d.%d) ﺖﺳﺍ ﻩﺪﺷ ﻩﺮﯿﺧﺫ Mixar ﺮﺗﺪﯾﺪﺟ ﻪﺨﺴﻧ ﺎﺑ ﻞﯾﺎﻓ"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "ﺪﯿﻨﮐ ﺯﺎﺑ ﺮﺗﺪﯾﺪﺟ ﺎﯾ Mixar %s ﺎﺑ ﺍﺭ ﻥﺁ ؛ﺖﺳﺍ ﻩﺪﺷ ﻩﺮﯿﺧﺫ ﯼﺮﺗﺪﯾﺪﺟ ﻪﺨﺴﻧ ﺎﺑ ﻞﯾﺎﻓ"
 
@@ -24993,6 +25050,12 @@ msgstr "ﻩﺪﺷ‌ﻪﺘﺴﺑ ﺩﺍﺪﻌﺗ"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "ﺪﻧﺪﺷ ﻪﺘﺴﺑ ﻪﮐ ﻞﻣﺎﻋ ﺏﺎﺒﺣ ﯼﺎﻫ‌ﻩﺮﺠﻨﭘ ﺩﺍﺪﻌﺗ"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "ﻞﻣﺎﻋ ﺏﺎﺒﺣ ﻩﺮﺠﻨﭘ ﻩﺯﺍﺪﻧﺍ ﻢﯿﻈﻨﺗ"
@@ -26833,6 +26896,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "ﯼﺭﺎﮐ ﯼﺎﻀﻓ ﺭﺎﮐ ﺖﯾﻮﻫ"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28076,6 +28160,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

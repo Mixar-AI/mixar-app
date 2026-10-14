@@ -5714,9 +5714,6 @@ msgstr "テクスチャのダウンロード中に予期しないエラーが発
 msgid "Failed to apply textures to any object"
 msgstr "どのオブジェクトにもテクスチャを適用できませんでした"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBRテクスチャを適用"
-
 msgid "Both refined and guide masks are required"
 msgstr "改良マスクとガイドマスクの両方が必要です"
 
@@ -5798,6 +5795,12 @@ msgstr "キャラクターをアセンブル"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "生成されたパーツを、リグ付きまたはリグなしの体にローカルで取り付けます"
 
+msgid "Use Image Style Only"
+msgstr "画像のスタイルのみを使用"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "有効にすると、画像の芸術的なスタイルのみが転送されます（プロンプトは引き続き適用）。無効にすると、画像がテクスチャ生成を直接駆動します"
+
 msgid "Enter a prompt in the image node"
 msgstr "画像ノードにプロンプトを入力してください"
 
@@ -5823,7 +5826,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "生成カタログでモデル生成を利用できません"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "このモデル生成モードは推論ノードでまだサポートされていません"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "有効な3D生成モデルがありません"
@@ -6346,9 +6349,6 @@ msgstr "ワールドのダウンロード/変換に失敗しました: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "ワールドはインポートされましたが、オブジェクトが生成されませんでした"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: ワールドをインポート"
 
 msgid "Failed to import world: {error}"
 msgstr "ワールドのインポートに失敗しました: {error}"
@@ -8013,12 +8013,6 @@ msgstr "スタイル転送画像 - 生成テクスチャに芸術的なスタイ
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "参照画像 - テクスチャ生成を直接駆動します（プロンプトは無視）"
-
-msgid "Use Image Style Only"
-msgstr "画像のスタイルのみを使用"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "有効にすると、画像の芸術的なスタイルのみが転送されます（プロンプトは引き続き適用）。無効にすると、画像がテクスチャ生成を直接駆動します"
 
 msgid "Output texture resolution in pixels"
 msgstr "出力テクスチャの解像度（ピクセル）"
@@ -10902,9 +10896,6 @@ msgstr "生成されたマテリアルのレスポンスにスクリプトが含
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "マテリアルを生成しましたが、適用に失敗しました: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "プロシージャルマテリアルを生成"
 
 msgid "Material generation failed"
 msgstr "マテリアルの生成に失敗しました"
@@ -20137,8 +20128,8 @@ msgstr "ログインに失敗しました"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar アカウントでサインイン"
 
-msgid "Waiting for browser..."
-msgstr "ブラウザーを待機中..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ブラウザーでログイン"
@@ -21251,6 +21242,12 @@ msgstr "前のタスクを再開中..."
 msgid "Could not resume the previous task"
 msgstr "前のタスクを再開できませんでした"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21270,6 +21267,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24419,6 +24419,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "新しいバージョンのMixar（%d.%d）で保存されたファイルです。一部のデータが失われる可能性があります"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "このファイルは新しいバージョンで保存されています。Mixar %s 以降で開いてください"
 
@@ -24997,6 +25054,12 @@ msgstr "閉じた数"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "閉じたエージェントバブルウィンドウの数"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "エージェントバブルのウィンドウサイズを設定"
@@ -26837,6 +26900,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "ワークスペースのタスク識別子"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28080,6 +28164,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

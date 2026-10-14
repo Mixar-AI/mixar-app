@@ -5714,9 +5714,6 @@ msgstr "Error inesperado durante la descarga de texturas: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "No se pudieron aplicar las texturas a ningún objeto"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: aplicar texturas PBR"
-
 msgid "Both refined and guide masks are required"
 msgstr "Se requieren tanto la máscara refinada como la máscara guía"
 
@@ -5798,6 +5795,12 @@ msgstr "Ensamblar personaje"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Une localmente las partes generadas a un cuerpo con o sin rig"
 
+msgid "Use Image Style Only"
+msgstr "Usar solo el estilo de la imagen"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Si está habilitado, solo se transfiere el estilo artístico de la imagen (el prompt sigue aplicándose). Si está deshabilitado, la imagen dirige directamente la generación de texturas"
+
 msgid "Enter a prompt in the image node"
 msgstr "Introduce un prompt en el nodo de imagen"
 
@@ -5823,7 +5826,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generación de modelos no está disponible en el catálogo de generación"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Este modo de Generación de modelos aún no es compatible con los nodos de inferencia"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "No hay ningún modelo de generación 3D habilitado disponible"
@@ -6346,9 +6349,6 @@ msgstr "No se pudo descargar/convertir el mundo: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "El mundo se importó pero no produjo objetos"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: importar mundo"
 
 msgid "Failed to import world: {error}"
 msgstr "No se pudo importar el mundo: {error}"
@@ -8013,12 +8013,6 @@ msgstr "Imagen de transferencia de estilo - aplica un estilo artístico a las te
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Imagen de referencia - dirige directamente la generación de texturas (se ignora el prompt)"
-
-msgid "Use Image Style Only"
-msgstr "Usar solo el estilo de la imagen"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Si está habilitado, solo se transfiere el estilo artístico de la imagen (el prompt sigue aplicándose). Si está deshabilitado, la imagen dirige directamente la generación de texturas"
 
 msgid "Output texture resolution in pixels"
 msgstr "Resolución de la textura de salida en píxeles"
@@ -10902,9 +10896,6 @@ msgstr "La respuesta del material generado no incluía un script"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Se generó el material, pero no se pudo aplicar: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Generar material procedimental"
 
 msgid "Material generation failed"
 msgstr "Error en la generación del material"
@@ -20133,8 +20124,8 @@ msgstr "Error al iniciar sesión"
 msgid "Sign in with your Mixar account"
 msgstr "Inicie sesión con su cuenta de Mixar"
 
-msgid "Waiting for browser..."
-msgstr "Esperando al navegador..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Iniciar sesión con el navegador"
@@ -21247,6 +21238,12 @@ msgstr "Reanudando la tarea anterior..."
 msgid "Could not resume the previous task"
 msgstr "No se pudo reanudar la tarea anterior"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21266,6 +21263,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24415,6 +24415,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Archivo guardado con una versión más reciente de Mixar (%d.%d); es posible que se pierdan algunos datos"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "El archivo se guardó con una versión más reciente; ábrelo con Mixar %s o posterior"
 
@@ -24993,6 +25050,12 @@ msgstr "Ventanas cerradas"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Cantidad de ventanas de la burbuja del agente cerradas"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Definir tamaño de la ventana de la burbuja del agente"
@@ -26833,6 +26896,27 @@ msgstr ""
 msgid "Workspace task identity"
 msgstr "Identidad de la tarea del espacio de trabajo"
 
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
+
 msgid "Image '%s' is not a movie"
 msgstr ""
 
@@ -28076,6 +28160,30 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
 msgstr ""
 
 msgid "Invalid UI event value"

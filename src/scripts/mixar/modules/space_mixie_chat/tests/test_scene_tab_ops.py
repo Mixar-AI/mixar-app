@@ -305,6 +305,19 @@ def test_manual_rename_keeps_identity_chat_and_order(rig):
     assert b.get('mixar_scene_name_manual') is True
 
 
+def test_rename_pushes_one_undo_step_for_the_renamed_tab(rig, monkeypatch):
+    """Seed 2 of the bonkers campaign: a rename without a step vanished on the
+    tab's next undo and redo could not bring it back."""
+    from mixar.modules.common.utils import undo as undo_mod
+    pushes = []
+    monkeypatch.setattr(undo_mod, "push_undo_step", lambda message, scene=None: pushes.append((message, scene)) or True)
+    b = ops.new_scene_tab("B")
+    assert edit.rename_scene_tab(b, "Lamp") == (True, '')
+    assert pushes == [("Rename tab: Lamp", b)]
+    assert edit.rename_scene_tab(b, "Lamp") == (True, '')        # no change, no step
+    assert len(pushes) == 1
+
+
 def test_rename_refuses_empty_and_running_scene(rig):
     assert edit.rename_scene_tab(rig.a, ' ')[0] is False
     SessionManager.set_state(rig.a, SessionState.BUSY)
@@ -384,3 +397,43 @@ def test_batch_subset_leaves_unselected_scene_and_reports_partial_failure(rig, m
     monkeypatch.setattr(ops, 'close_scene_tab', close)
     assert edit.close_scene_tabs(_ids(b, c)) == (1, 'Cannot remove')
     assert rig.a in rig.scenes and c in rig.scenes
+
+
+def _mode_scene(mode="EDIT", session_id=""):
+    ob = SimpleNamespace(name="Cube", mode=mode)
+    scene = _tab_scene("ModeTab", session_id=session_id)
+    scene.objects = [ob]
+    scene.view_layers = [SimpleNamespace(objects=SimpleNamespace(active=ob))]
+    return scene, ob
+
+
+def test_leaving_a_tab_in_edit_mode_returns_it_to_object_mode_as_its_own_step(monkeypatch):
+    """Design simplification (2026-10-03): only the shown tab may be in edit, sculpt
+    or paint mode, so no other tab's undo can meet unflushed mode data."""
+    scene, ob = _mode_scene("EDIT")
+    fake = MagicMock()
+    fake.context.window_manager.mixar_per_tab_undo = True
+    fake.context.window_manager.windows = [SimpleNamespace(scene=scene)]
+    fake.ops.object.mode_set.side_effect = lambda mode: setattr(ob, "mode", mode)
+    pushes = []
+    monkeypatch.setattr(ops, "bpy", fake)
+    monkeypatch.setattr(ops, "push_undo_step", lambda message, scene=None: pushes.append((message, scene)) or True)
+    monkeypatch.setattr(ops, "_running", lambda s: False)
+    assert ops.leave_modes_for_switch(scene) is True
+    assert ob.mode == "OBJECT"
+    assert pushes == [("Leave Edit Mode", scene)]
+
+
+def test_a_working_tab_or_per_tab_undo_off_keeps_its_mode(monkeypatch):
+    scene, ob = _mode_scene("SCULPT")
+    fake = MagicMock()
+    fake.context.window_manager.mixar_per_tab_undo = True
+    monkeypatch.setattr(ops, "bpy", fake)
+    monkeypatch.setattr(ops, "push_undo_step", lambda *a, **k: True)
+    monkeypatch.setattr(ops, "_running", lambda s: True)          # its agent works
+    assert ops.leave_modes_for_switch(scene) is False
+    monkeypatch.setattr(ops, "_running", lambda s: False)
+    fake.context.window_manager.mixar_per_tab_undo = False         # kill switch
+    assert ops.leave_modes_for_switch(scene) is False
+    assert ob.mode == "SCULPT"
+    fake.ops.object.mode_set.assert_not_called()
