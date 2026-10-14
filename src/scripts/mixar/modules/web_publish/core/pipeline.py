@@ -72,6 +72,14 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
     "error": <untranslated template>, "error_args": {...}}``."""
     scene = context.scene
     props = getattr(scene, "mixar_web_publish", None)
+    if props is None:  # UI discovery has not run (headless worker)
+        from mixar.modules.web_publish.core.registration import ensure_properties
+
+        try:
+            ensure_properties()
+        except Exception as exc:  # noqa: BLE001 - reported as unavailable
+            _logger.warning("web_publish property registration failed: %s", exc)
+        props = getattr(scene, "mixar_web_publish", None)
     if props is None:
         return _refusal(n_("Publish to Web is not available"))
     if not _signed_in():
@@ -182,10 +190,19 @@ def _apply_outcome(scene_name: str, via: str, progress, result) -> None:
     props = getattr(scene, "mixar_web_publish", None) if scene else None
     if props is None or not result.slug:
         return
+    from mixar.modules.web_publish.core.links import is_safe_share_link
+
+    links = {}
+    for name in ("share_url", "viewer_url"):
+        url = getattr(result, name)
+        if url and not is_safe_share_link(url):
+            _logger.warning("web_publish refused to store an untrusted %s", name)
+            url = ""
+        links[name] = url
     props.published_scene_id = result.scene_id
     props.slug = result.slug
-    props.share_url = result.share_url
-    props.viewer_url = result.viewer_url
+    props.share_url = links["share_url"]
+    props.viewer_url = links["viewer_url"]
     props.revision = result.revision
     props.last_published = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
 
