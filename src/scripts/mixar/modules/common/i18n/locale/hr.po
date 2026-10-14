@@ -24094,6 +24094,9 @@ msgstr ""
 msgid "The scene is {size} MB; the publish limit is {limit} MB. Hide heavy objects or reduce texture resolution."
 msgstr ""
 
+msgid "Publish failed ({kind})"
+msgstr ""
+
 msgid "The publish lost its claim before upload"
 msgstr ""
 
@@ -24116,9 +24119,6 @@ msgid "Part upload failed (HTTP {status})"
 msgstr ""
 
 msgid "Storage did not return an ETag"
-msgstr ""
-
-msgid "Publish failed ({kind})"
 msgstr ""
 
 msgid "Reserving your scene link…"
@@ -24182,6 +24182,9 @@ msgid "Copy Link"
 msgstr "Kopiraj poveznicu"
 
 msgid "Copy the public link to this scene's 3D website"
+msgstr ""
+
+msgid "Invalid link"
 msgstr ""
 
 msgid "Link copied to clipboard"
