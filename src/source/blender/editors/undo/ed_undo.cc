@@ -255,6 +255,13 @@ static bool ed_undo_tab_walk_refused(bContext *C,
     if (owner == tab || !WM_jobs_test(wm, &scene, WM_JOB_TYPE_ANY)) {
       continue;
     }
+    /* The preview's private scene is scrubbed of the tab it copies; its name
+     * ("~Mixar agent render") means nothing to the user. */
+    if (BKE_undo_tab_scene_is_internal_render(&scene)) {
+      *r_reason = "Undo waits for the agent's preview render (undoing now would cancel it)";
+      *r_type = RPT_WARNING;
+      return true;
+    }
     std::string name = BKE_undo_tab_scene_name(bmain, owner);
     if (name.empty()) {
       name = scene.id.name + 2;

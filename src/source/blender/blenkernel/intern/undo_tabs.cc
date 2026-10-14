@@ -156,6 +156,11 @@ static bool scene_is_internal_render(const Scene *scene)
          group_int_prop(scene->id.system_properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0;
 }
 
+bool BKE_undo_tab_scene_is_internal_render(const Scene *scene)
+{
+  return scene_is_internal_render(scene);
+}
+
 bool BKE_undo_tab_scene_is_lane(const Scene *scene)
 {
   if (scene_is_internal_render(scene)) {
