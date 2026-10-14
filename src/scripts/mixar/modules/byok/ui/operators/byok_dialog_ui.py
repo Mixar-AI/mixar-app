@@ -32,7 +32,7 @@ from mixar.modules.common.ui.constants import (
     CARD_ROW_HEADING,
 )
 
-from mixar.modules.common.i18n import iface_, n_, rpt_
+from mixar.modules.common.i18n import n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
 
@@ -52,8 +52,8 @@ OP_SAVE = "mixar_byok.save"
 OP_REQUEST_REMOVE = "mixar_byok.request_remove"
 OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
 OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
-OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
-OP_CODEX_PASTE = "mixar_byok.codex_paste"
+# The Codex browse operator lives in byok_codex_ops (with the branch's
+# drawing), the Local ones in byok_local_ops.
 
 
 # ---------------------------------------------------------------------------
@@ -222,10 +222,16 @@ def draw_dialog(layout, wm):
 
     # IDLE / SAVING / ERROR — the form states. A failed save or remove
     # leaves the stored key in place, so the active config stays visible.
+    key_missing = _device_key_missing(wm)
     if wm.byok_is_active:
         _draw_current_config(col, wm, with_remove=(state == 'IDLE'))
         col.separator(factor=0.6)
-    _draw_form(col, wm, disabled=(state == 'SAVING'))
+    if key_missing:
+        # Active for the account, but this device holds no key (the server
+        # keeps metadata only): ask for the key, keep provider/model as saved.
+        _draw_device_key_notice(col, wm)
+        col.separator(factor=0.6)
+    _draw_form(col, wm, disabled=(state == 'SAVING'), key_only=key_missing)
     if state == 'ERROR' and wm.byok_last_error:
         _draw_error(col, wm)
 
@@ -244,7 +250,11 @@ def _draw_header(col, wm, state):
     pill = row.row()
     pill.scale_y = HEADER_SCALE_Y
     active = wm.byok_is_active and state != 'REMOVED'
-    card_label(pill, n_("Active") if active else n_("Not configured"), 'PILL')
+    if active and _device_key_missing(wm):
+        pill_text = n_("Key needed on this device")
+    else:
+        pill_text = n_("Active") if active else n_("Not configured")
+    card_label(pill, pill_text, 'PILL')
 
     card_label(
         col,
@@ -294,7 +304,31 @@ def _value_row(col, label, value):
     row.label(text=value)
 
 
-def _draw_form(col, wm, disabled):
+def _device_key_missing(wm) -> bool:
+    """Active server-side, but this device holds no usable key (the server
+    keeps metadata only — see core/key_store). Absent on older mirrors."""
+    return bool(wm.byok_is_active and getattr(wm, 'byok_device_key_missing', False))
+
+
+def _draw_device_key_notice(col, wm):
+    box = section(col)
+    bcol = box.column()
+    if model_suggestions.is_codex(wm.byok_current_provider):
+        card_label(bcol, n_("Codex sign-in needed on this device"), 'DANGER')
+        bcol.separator(factor=0.25)
+        card_label(bcol, n_("Run  codex login  on this computer, then save below."), 'MUTED')
+    else:
+        card_label(bcol, n_("Your API key is needed on this device"), 'DANGER')
+        bcol.separator(factor=0.25)
+        card_label(bcol, n_("Enter the key below — provider and model stay as saved."), 'MUTED')
+    card_label(
+        bcol,
+        n_("Mixar keeps your key only on this computer and sends it with each request."),
+        'MUTED',
+    )
+
+
+def _draw_form(col, wm, disabled, key_only=False):
     box = section(col)
     bcol = box.column()
     section_title(bcol, n_("Provider Setup"))
@@ -303,39 +337,51 @@ def _draw_form(col, wm, disabled):
     body.enabled = not disabled
     body.separator(factor=0.45)
 
-    field_label(body, n_("Provider"))
-    field_dropdown(body, wm, 'byok_form_provider')
+    provider_col = body.column()
+    provider_col.enabled = not key_only
+    field_label(provider_col, n_("Provider"))
+    field_dropdown(provider_col, wm, 'byok_form_provider')
     body.separator(factor=0.45)
 
     if model_suggestions.is_openrouter(wm.byok_form_provider):
-        _draw_openrouter_fields(body, wm)
+        _draw_openrouter_fields(body, wm, key_only)
     elif model_suggestions.is_codex(wm.byok_form_provider):
-        _draw_codex_fields(body, wm)
+        from . import byok_codex_ops
+        byok_codex_ops.draw_codex_fields(body, wm, key_only)
     elif model_suggestions.is_local(wm.byok_form_provider):
         from . import byok_local_ops
         byok_local_ops.draw_local_fields(body, wm)
     else:
-        _draw_cloud_fields(body, wm)
+        _draw_cloud_fields(body, wm, key_only)
 
 
-def _draw_cloud_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
+def _model_column(body, key_only):
+    """The model row — locked in the key-only state (kept as saved)."""
+    col = body.column()
+    col.enabled = not key_only
+    return col
+
+
+def _draw_cloud_fields(body, wm, key_only=False):
+    model_col = _model_column(body, key_only)
+    field_label(model_col, n_("Model"))
+    field_dropdown(model_col, wm, 'byok_form_model')
     body.separator(factor=0.45)
     field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
     body.separator(factor=0.5)
     card_label(
         body,
-        n_("Stored encrypted, used only for Mixar agent requests — only a "
-           "masked preview is shown after saving."),
+        n_("Kept in this computer's credential store and sent with each agent "
+           "request — only a masked preview is shown after saving."),
         'MUTED',
     )
 
 
-def _draw_openrouter_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_input(body, wm, 'byok_form_openrouter_model')
+def _draw_openrouter_fields(body, wm, key_only=False):
+    model_col = _model_column(body, key_only)
+    field_label(model_col, n_("Model"))
+    field_input(model_col, wm, 'byok_form_openrouter_model')
     body.separator(factor=0.45)
     field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
@@ -350,36 +396,6 @@ def _draw_openrouter_fields(body, wm):
         n_("Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."),
         'MUTED',
     )
-
-
-def _draw_codex_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
-
-    load_row = body.row()
-    load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
-    body.separator(factor=0.35)
-
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
-
-    n = len(wm.byok_form_codex_bundle or "")
-    card_label(
-        body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
-        'MUTED',
-    )
-    body.separator(factor=0.5)
-    for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
-        n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
-    ):
-        card_label(body, line, 'MUTED')
 
 
 def _draw_error(col, wm):

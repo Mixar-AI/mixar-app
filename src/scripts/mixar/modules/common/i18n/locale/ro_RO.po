@@ -1439,6 +1439,33 @@ msgstr "Date de formular nevalide — contactați asistența."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Ceva nu a mers bine la noi. Încercați din nou."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Se citește catalogul de modele locale"
 
@@ -1562,6 +1589,30 @@ msgstr "Modelul nu a putut fi schimbat"
 msgid "Could not reset model"
 msgstr "Modelul nu a putut fi resetat"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Folosește abonamentul dvs. ChatGPT — creditele Mixar nu se consumă."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Se elimină cheia dvs.…"
 
@@ -1570,6 +1621,9 @@ msgstr "Se validează la furnizor…"
 
 msgid "AI Provider Settings"
 msgstr "Setări furnizor AI"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Activ"
@@ -1601,38 +1655,32 @@ msgstr "Model doar text — chatul funcționează; sarcinile 3D rulează fără 
 msgid "Remove API Key…"
 msgstr "Eliminare cheie API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Configurare furnizor"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Stocată criptat, folosită doar pentru cererile agentului Mixar — după salvare se arată doar o previzualizare mascată."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Alegeți un model care acceptă apeluri de instrumente sau funcții — agentul are nevoie de ele."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Orice slug de pe openrouter.ai/models, de ex. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Încărcare din ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…sau lipiți-l manual"
-
-msgid "{count} characters pasted"
-msgstr "Caractere lipite: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Gol — lipiți auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Rulați  codex login  în terminal, apoi încărcați sau lipiți tot conținutul"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "Conținutul lui ~/.codex/auth.json (butonul de lipire citește clipboardul)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Folosește abonamentul dvs. ChatGPT — creditele Mixar nu se consumă."
 
 msgid "Couldn't apply your changes"
 msgstr "Modificările nu au putut fi aplicate"
@@ -1742,41 +1790,8 @@ msgstr "Alegeți un model pentru acest furnizor și introduceți o cheie API."
 msgid "Model slug and API key are required."
 msgstr "Slug-ul modelului și cheia API sunt obligatorii."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Alegeți un model Codex și încărcați pachetul auth.json."
-
 msgid "Save failed."
 msgstr "Salvarea a eșuat."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Citește ~/.codex/auth.json de pe acest calculator în câmp"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nu a fost găsit — rulați mai întâi `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json nu a putut fi citit"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json este gol"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json este prea mare pentru acest câmp și a fost trunchiat — nu se va salva corect"
-
-msgid "Loaded auth.json"
-msgstr "auth.json încărcat"
-
-msgid "Paste auth.json"
-msgstr "Lipire auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Lipește ~/.codex/auth.json din clipboard în câmp"
-
-msgid "Clipboard is empty"
-msgstr "Clipboardul este gol"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json lipit este prea mare pentru acest câmp și a fost trunchiat — nu se va salva corect"
 
 msgid "Remove"
 msgstr "Eliminare"
@@ -1850,11 +1865,11 @@ msgstr "Cheia API este stocată criptat și folosită doar pentru cererile agent
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Orice slug de model de pe openrouter.ai/models (de ex. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Conținutul lui ~/.codex/auth.json (rulați mai întâi `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Mod local"
@@ -19589,6 +19604,9 @@ msgstr "ID utilizator pentru autentificarea în chatul Mixie"
 
 msgid "Agent expects: {formats}"
 msgstr "Agentul așteaptă: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Oprit*"

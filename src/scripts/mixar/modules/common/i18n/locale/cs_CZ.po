@@ -1439,6 +1439,33 @@ msgstr "Neplatná data formuláře — obraťte se prosím na podporu."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Na naší straně došlo k chybě. Zkuste to prosím znovu."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Načítání katalogu lokálních modelů"
 
@@ -1562,6 +1589,30 @@ msgstr "Model nelze změnit"
 msgid "Could not reset model"
 msgstr "Model nelze obnovit"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Využívá vaše předplatné ChatGPT — kredity Mixar se neúčtují."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Odstraňování vašeho klíče…"
 
@@ -1570,6 +1621,9 @@ msgstr "Ověřování u poskytovatele…"
 
 msgid "AI Provider Settings"
 msgstr "Nastavení poskytovatele AI"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktivní"
@@ -1601,38 +1655,32 @@ msgstr "Pouze textový model — chat funguje; 3D úkoly běží bez vizuální 
 msgid "Remove API Key…"
 msgstr "Odstranit klíč API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Nastavení poskytovatele"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Ukládá se šifrovaně a používá se pouze pro požadavky agenta Mixar — po uložení se zobrazí jen maskovaný náhled."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Zvolte model, který podporuje volání nástrojů / funkcí — agent to potřebuje."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Libovolný identifikátor z openrouter.ai/models, např. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Načíst z ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…nebo jej vložte ručně"
-
-msgid "{count} characters pasted"
-msgstr "Vložené znaky: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Prázdné — vložte svůj auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Spusťte  codex login  v terminálu, poté načtěte nebo vložte celý"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "obsah ~/.codex/auth.json (tlačítko vložení čte vaši schránku)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Využívá vaše předplatné ChatGPT — kredity Mixar se neúčtují."
 
 msgid "Couldn't apply your changes"
 msgstr "Změny nelze použít"
@@ -1742,41 +1790,8 @@ msgstr "Zvolte model tohoto poskytovatele a zadejte klíč API."
 msgid "Model slug and API key are required."
 msgstr "Identifikátor modelu a klíč API jsou povinné."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Zvolte model Codex a načtěte svůj soubor auth.json."
-
 msgid "Save failed."
 msgstr "Uložení selhalo."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Načte ~/.codex/auth.json z tohoto počítače do pole"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nebyl nalezen — nejprve spusťte `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nelze načíst ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json je prázdný"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json je pro toto pole příliš velký a byl zkrácen — neuloží se správně"
-
-msgid "Loaded auth.json"
-msgstr "auth.json načten"
-
-msgid "Paste auth.json"
-msgstr "Vložit auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Vloží váš ~/.codex/auth.json ze schránky do pole"
-
-msgid "Clipboard is empty"
-msgstr "Schránka je prázdná"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Vložený auth.json je pro toto pole příliš velký a byl zkrácen — neuloží se správně"
 
 msgid "Remove"
 msgstr "Odstranit"
@@ -1850,11 +1865,11 @@ msgstr "Váš klíč API se ukládá šifrovaně a používá se pouze pro poža
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Libovolný identifikátor modelu z openrouter.ai/models (např. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Obsah ~/.codex/auth.json (nejprve spusťte `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Lokální režim"
@@ -19589,6 +19604,9 @@ msgstr "ID uživatele pro přihlášení do chatu Mixie"
 
 msgid "Agent expects: {formats}"
 msgstr "Agent očekává: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Zastaveno*"

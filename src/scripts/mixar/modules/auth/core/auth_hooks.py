@@ -142,3 +142,12 @@ def invalidate_agent_settings():
         preference_state.clear()
     except Exception as e:
         logger.warning(f"Agent model preference clear failed: {e}")
+    try:
+        # The stored key stays (it is the user's own, on their own machine);
+        # only the cached user scope is dropped so the next account reads its
+        # own entry.
+        from mixar.modules.byok.core import key_store
+
+        key_store.forget_user()
+    except Exception as e:
+        logger.warning(f"BYOK key store scope clear failed: {e}")

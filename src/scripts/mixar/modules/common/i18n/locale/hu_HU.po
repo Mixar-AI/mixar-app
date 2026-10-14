@@ -1439,6 +1439,33 @@ msgstr "Érvénytelen űrlapadatok – forduljon az ügyfélszolgálathoz."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Hiba történt a mi oldalunkon. Próbálja újra."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "A lokális modellkatalógus beolvasása"
 
@@ -1562,6 +1589,30 @@ msgstr "Nem sikerült modellt váltani"
 msgid "Could not reset model"
 msgstr "Nem sikerült alaphelyzetbe állítani a modellt"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "A kulcs eltávolítása…"
 
@@ -1570,6 +1621,9 @@ msgstr "Ellenőrzés a szolgáltatónál…"
 
 msgid "AI Provider Settings"
 msgstr "MI-szolgáltató beállításai"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktív"
@@ -1601,38 +1655,32 @@ msgstr "Csak szöveges modell – a csevegés működik; a 3D-feladatok vizuáli
 msgid "Remove API Key…"
 msgstr "API-kulcs eltávolítása…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Szolgáltató beállítása"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Titkosítva tárolva, csak a Mixar ügynök kéréseihez használva – mentés után csak maszkolt előnézet látható."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Válasszon eszköz-/függvényhívást támogató modellt – az ügynöknek szüksége van rá."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bármely azonosító az openrouter.ai/models oldalról, pl. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Betöltés innen: ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…vagy illessze be kézzel"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter beillesztve"
-
-msgid "Empty — paste your auth.json"
-msgstr "Üres – illessze be az auth.json fájlját"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Futtassa a  codex login  parancsot a terminálban, majd töltse be vagy illessze be a"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json teljes tartalmát (a beillesztés gomb a vágólapról olvas)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
 
 msgid "Couldn't apply your changes"
 msgstr "Nem sikerült alkalmazni a módosításokat"
@@ -1742,41 +1790,8 @@ msgstr "Válasszon modellt ehhez a szolgáltatóhoz, és adjon meg egy API-kulcs
 msgid "Model slug and API key are required."
 msgstr "A modellazonosító és az API-kulcs megadása kötelező."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Válasszon egy Codex-modellt, és töltse be az auth.json csomagját."
-
 msgid "Save failed."
 msgstr "A mentés sikertelen."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "A ~/.codex/auth.json beolvasása erről a gépről a mezőbe"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "A ~/.codex/auth.json nem található – előbb futtassa a `codex login` parancsot"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nem sikerült beolvasni: ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "A ~/.codex/auth.json üres"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Az auth.json túl nagy ehhez a mezőhöz, ezért csonkolva lett – nem fog megfelelően mentődni"
-
-msgid "Loaded auth.json"
-msgstr "auth.json betöltve"
-
-msgid "Paste auth.json"
-msgstr "auth.json beillesztése"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "A ~/.codex/auth.json beillesztése a vágólapról a mezőbe"
-
-msgid "Clipboard is empty"
-msgstr "A vágólap üres"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "A beillesztett auth.json túl nagy ehhez a mezőhöz, ezért csonkolva lett – nem fog megfelelően mentődni"
 
 msgid "Remove"
 msgstr "Eltávolítás"
@@ -1850,11 +1865,11 @@ msgstr "Az API-kulcs titkosítva tárolódik, és csak a Mixar ügynökkérései
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bármely modellazonosító az openrouter.ai/models oldalról (pl. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "A ~/.codex/auth.json tartalma (előbb futtassa a `codex login` parancsot)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Lokális mód"
@@ -19589,6 +19604,9 @@ msgstr "Felhasználói azonosító a Mixie Chat bejelentkezéshez"
 
 msgid "Agent expects: {formats}"
 msgstr "Az ügynök ezeket várja: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Leállítva*"

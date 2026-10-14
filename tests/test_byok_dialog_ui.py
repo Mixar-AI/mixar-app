@@ -143,7 +143,7 @@ def _wm(state='IDLE', **extra):
         byok_form_model='NONE',
         byok_form_api_key='',
         byok_form_openrouter_model='',
-        byok_form_codex_bundle='',
+        byok_form_codex_path='',
         byok_form_local_mode='MANAGED',
         byok_form_local_model='NONE',
         byok_form_local_detected='NONE',
@@ -235,7 +235,7 @@ def test_all_provider_branches_render_in_both_modes():
     for provider, extra in (
         ('anthropic', {}),
         ('openrouter', {'byok_form_openrouter_model': 'a/b'}),
-        ('codex', {'byok_form_codex_bundle': 'x' * 10}),
+        ('codex', {'byok_form_codex_path': ''}),
         ('local', {'byok_form_local_mode': 'MANAGED'}),
         ('local', {'byok_form_local_mode': 'CUSTOM'}),
     ):

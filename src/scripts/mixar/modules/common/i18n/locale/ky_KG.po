@@ -1439,6 +1439,33 @@ msgstr "Форманын маалыматы жараксыз — колдоо к
 msgid "Something went wrong on our end. Please try again."
 msgstr "Биздин тарапта ката кетти. Кайра аракет кылыңыз."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Жергиликтүү модель каталогу окулууда"
 
@@ -1562,6 +1589,30 @@ msgstr "Моделди өзгөртүү мүмкүн болгон жок"
 msgid "Could not reset model"
 msgstr "Моделди кайра коюу мүмкүн болгон жок"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "ChatGPT жазылууңузду колдонот — Mixar кредиттери алынбайт."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Ачкычыңыз өчүрүлүүдө…"
 
@@ -1570,6 +1621,9 @@ msgstr "Провайдер менен текшерүүдө…"
 
 msgid "AI Provider Settings"
 msgstr "ЖИ провайдеринин ырастоолору"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Активдүү"
@@ -1601,38 +1655,32 @@ msgstr "Текст гана модели — чат иштейт; 3D тапшы�
 msgid "Remove API Key…"
 msgstr "API ачкычын өчүрүү…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Провайдерди орнотуу"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Шифрленип сакталат, Mixar агентинин сурамдары үчүн гана колдонулат — сактагандан кийин жашырылган алдын ала көрүнүш гана көрсөтүлөт."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Аспап / функция чакырууну колдогон моделди тандаңыз — агентке ал керек."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models сайтынан каалаган slug, мисалы anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json файлынан жүктөө"
-
-msgid "…or paste it manually"
-msgstr "…же кол менен коюу"
-
-msgid "{count} characters pasted"
-msgstr "{count} символ коюлду"
-
-msgid "Empty — paste your auth.json"
-msgstr "Бош — auth.json файлын коюңуз"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Терминалда  codex login  иштетиңиз, андан соң толук мазмунун жүктөңүз же коюңуз."
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json файлынын мазмуну (коюу баскычы алмашуу буферин окуйт)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPT жазылууңузду колдонот — Mixar кредиттери алынбайт."
 
 msgid "Couldn't apply your changes"
 msgstr "Өзгөртүүлөрүңүз колдонулган жок"
@@ -1742,41 +1790,8 @@ msgstr "Бул провайдер үчүн моделди тандап, API ач
 msgid "Model slug and API key are required."
 msgstr "Моделдин slug'ы жана API ачкычы талап кылынат."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codex моделин тандап, auth.json топтомун жүктөңүз."
-
 msgid "Save failed."
 msgstr "Сактоо ишке ашкан жок."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Бул компьютердеги ~/.codex/auth.json файлын талаага окуйт"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json табылган жок — адегенде `codex login` иштетиңиз"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json окуу мүмкүн болгон жок"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json бош"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json бул талаа үчүн өтө чоң жана кыскартылды — туура сакталбайт"
-
-msgid "Loaded auth.json"
-msgstr "auth.json жүктөлдү"
-
-msgid "Paste auth.json"
-msgstr "auth.json коюу"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Алмашуу буфериндеги ~/.codex/auth.json файлын талаага коюңуз"
-
-msgid "Clipboard is empty"
-msgstr "Алмашуу буфери бош"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Коюлган auth.json бул талаа үчүн өтө чоң жана кыскартылды — туура сакталбайт"
 
 msgid "Remove"
 msgstr "Өчүрүү"
@@ -1850,11 +1865,11 @@ msgstr "API ачкычыңыз шифрленип сакталат жана Mixa
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models сайтынан каалаган модель slug'ы (мисалы anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json мазмуну (адегенде `codex login` иштетиңиз)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Жергиликтүү режим"
@@ -19589,6 +19604,9 @@ msgstr "Mixie маегине кирүү үчүн колдонуучу ID"
 
 msgid "Agent expects: {formats}"
 msgstr "Агент күтөт: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Токтотулду*"

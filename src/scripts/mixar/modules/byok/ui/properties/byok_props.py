@@ -116,7 +116,6 @@ def wipe_transient_secrets(wm) -> None:
         return
     for attr in (
         'byok_form_api_key',
-        'byok_form_codex_bundle',
         'byok_form_local_custom_key',
     ):
         try:
@@ -130,7 +129,7 @@ _WM_ATTRS = (
     'byok_form_model',
     'byok_form_api_key',
     'byok_form_openrouter_model',
-    'byok_form_codex_bundle',
+    'byok_form_codex_path',
     'byok_form_local_mode',
     'byok_form_local_model',
     'byok_form_local_detected',
@@ -142,6 +141,7 @@ _WM_ATTRS = (
     'byok_current_model',
     'byok_current_supports_vision',
     'byok_key_preview',
+    'byok_device_key_missing',
     'byok_dialog_state',
     'byok_last_error',
 )
@@ -187,16 +187,16 @@ def register():
     )
 
     # --- Codex form field (shown when provider == 'codex') ---
-    # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
-    # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
-    # count confirm it landed). The model uses the shared catalog-backed
-    # byok_form_model dropdown (served from the "openai" catalog group).
-    WM.byok_form_codex_bundle = StringProperty(
-        name="Codex auth.json",
-        description="Contents of ~/.codex/auth.json (run `codex login` first)",
-        maxlen=16384,
+    # A PATH, not the tokens: Mixar reads the Codex CLI's own sign-in file
+    # at use time (empty = $CODEX_HOME/auth.json, else ~/.codex/auth.json).
+    # The model uses the shared catalog-backed byok_form_model dropdown
+    # (served from the "openai" catalog group).
+    WM.byok_form_codex_path = StringProperty(
+        name="Codex sign-in file",
+        description="Path to the Codex CLI's auth.json (leave empty for the default location)",
+        maxlen=1024,
         default='',
-        subtype='PASSWORD',
+        subtype='FILE_PATH',
         options={'SKIP_SAVE'},
     )
 
@@ -251,6 +251,14 @@ def register():
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
     WM.byok_key_preview = StringProperty(default='')
+    # The server holds metadata only; the key lives in this device's
+    # credential store. True = active server-side but nothing usable here
+    # (upgrade / second machine / expired Codex sign-in) — the dialog asks
+    # for the key only. Mirrored from core/credential_state.
+    WM.byok_device_key_missing = BoolProperty(
+        name="Key needed on this device",
+        default=False,
+    )
 
     # --- Dialog state machine ---
     WM.byok_dialog_state = EnumProperty(

@@ -1439,6 +1439,33 @@ msgstr "Недійсні дані форми — зверніться до пі�
 msgid "Something went wrong on our end. Please try again."
 msgstr "На нашому боці щось пішло не так. Спробуйте ще раз."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Читання каталогу локальних моделей"
 
@@ -1562,6 +1589,30 @@ msgstr "Не вдалося змінити модель"
 msgid "Could not reset model"
 msgstr "Не вдалося скинути модель"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Використовує вашу підписку ChatGPT — кредити Mixar не списуються."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Видалення вашого ключа…"
 
@@ -1570,6 +1621,9 @@ msgstr "Перевірка в постачальника…"
 
 msgid "AI Provider Settings"
 msgstr "Устави постачальника ШІ"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Активний"
@@ -1601,38 +1655,32 @@ msgstr "Лише текстова модель — чат працює; 3D-за�
 msgid "Remove API Key…"
 msgstr "Видалити API-ключ…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Налаштування постачальника"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Зберігається зашифрованим, використовується лише для запитів агента Mixar — після збереження показується тільки замаскований фрагмент."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Виберіть модель, що підтримує виклик інструментів / функцій, — він потрібен агенту."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Будь-який slug з openrouter.ai/models, напр. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Завантажити з ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…або вставте вручну"
-
-msgid "{count} characters pasted"
-msgstr "Вставлено символів: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Порожньо — вставте свій auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Виконайте  codex login  у терміналі, потім завантажте або вставте весь"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "вміст ~/.codex/auth.json (кнопка вставлення читає ваш буфер обміну)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Використовує вашу підписку ChatGPT — кредити Mixar не списуються."
 
 msgid "Couldn't apply your changes"
 msgstr "Не вдалося застосувати зміни"
@@ -1742,41 +1790,8 @@ msgstr "Виберіть модель для цього постачальник
 msgid "Model slug and API key are required."
 msgstr "Потрібні slug моделі та API-ключ."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Виберіть модель Codex і завантажте свій пакет auth.json."
-
 msgid "Save failed."
 msgstr "Не вдалося зберегти."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Прочитати ~/.codex/auth.json з цього комп'ютера в поле"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json не знайдено — спершу виконайте `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Не вдалося прочитати ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json порожній"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json завеликий для цього поля й був обрізаний — він не збережеться правильно"
-
-msgid "Loaded auth.json"
-msgstr "auth.json завантажено"
-
-msgid "Paste auth.json"
-msgstr "Вставити auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Вставити ваш ~/.codex/auth.json з буфера обміну в поле"
-
-msgid "Clipboard is empty"
-msgstr "Буфер обміну порожній"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Вставлений auth.json завеликий для цього поля й був обрізаний — він не збережеться правильно"
 
 msgid "Remove"
 msgstr "Видалити"
@@ -1850,11 +1865,11 @@ msgstr "Ваш API-ключ зберігається зашифрованим і
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Будь-який slug моделі з openrouter.ai/models (напр. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Вміст ~/.codex/auth.json (спершу виконайте `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Локальний режим"
@@ -19589,6 +19604,9 @@ msgstr "ID користувача для входу в чат Mixie"
 
 msgid "Agent expects: {formats}"
 msgstr "Агент очікує: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Зупинено*"

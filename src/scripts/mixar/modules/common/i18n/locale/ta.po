@@ -1439,6 +1439,33 @@ msgstr "படிவத் தரவு தவறானது — ஆதரவ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "எங்கள் பக்கத்தில் ஏதோ தவறு நேர்ந்தது. மீண்டும் முயலுங்கள்."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "உள்ளக மாதிரி அட்டவணையைப் படிக்கிறது"
 
@@ -1562,6 +1589,30 @@ msgstr "மாதிரியை மாற்ற முடியவில்ல�
 msgid "Could not reset model"
 msgstr "மாதிரியை மீட்டமைக்க முடியவில்லை"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "உங்கள் விசையை அகற்றுகிறது…"
 
@@ -1570,6 +1621,9 @@ msgstr "வழங்குநரிடம் சரிபார்க்கி�
 
 msgid "AI Provider Settings"
 msgstr "AI வழங்குநர் அமைப்புகள்"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "செயலில்"
@@ -1601,38 +1655,32 @@ msgstr "உரை மட்டும் மாதிரி — அரட்ட�
 msgid "Remove API Key…"
 msgstr "API விசையை அகற்று…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "வழங்குநர் அமைப்பு"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-இலிருந்து ஏற்று"
-
-msgid "…or paste it manually"
-msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
-
-msgid "{count} characters pasted"
-msgstr "ஒட்டிய எழுத்துகள்: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "காலி — உங்கள் auth.json-ஐ ஒட்டுங்கள்"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "உங்கள் முனையத்தில்  codex login  இயக்கி, முழுவதையும் ஏற்றுங்கள் அல்லது ஒட்டுங்கள்"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (ஒட்டு பொத்தான் உங்கள் இடைநிலைப் பலகையைப் படிக்கும்)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
 
 msgid "Couldn't apply your changes"
 msgstr "உங்கள் மாற்றங்களைப் பயன்படுத்த முடியவில்லை"
@@ -1742,41 +1790,8 @@ msgstr "இந்த வழங்குநருக்கு ஒரு மாத
 msgid "Model slug and API key are required."
 msgstr "மாதிரி ஸ்லக்கும் API விசையும் தேவை."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "ஒரு Codex மாதிரியைத் தேர்ந்தெடுத்து உங்கள் auth.json தொகுப்பை ஏற்றுங்கள்."
-
 msgid "Save failed."
 msgstr "சேமிப்பு தோல்வி."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "இந்த இயந்திரத்திலிருந்து ~/.codex/auth.json-ஐ புலத்துக்குள் படிக்கிறது"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json இல்லை — முதலில் `codex login` இயக்குங்கள்"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ஐ படிக்க முடியவில்லை"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json காலியாக உள்ளது"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ஏற்றப்பட்டது"
-
-msgid "Paste auth.json"
-msgstr "auth.json-ஐ ஒட்டு"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "இடைநிலைப் பலகையிலிருந்து உங்கள் ~/.codex/auth.json-ஐ புலத்துக்குள் ஒட்டுகிறது"
-
-msgid "Clipboard is empty"
-msgstr "கிளிப்போர்டு காலியாக உள்ளது"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ஒட்டிய auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
 
 msgid "Remove"
 msgstr "அகற்று"
@@ -1850,11 +1865,11 @@ msgstr "உங்கள் API விசை மறைகுறியாக்க
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் மாதிரி ஸ்லக் (எ.கா. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (முதலில் `codex login` இயக்குங்கள்)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "உள்ளகப் பயன்முறை"
@@ -19589,6 +19604,9 @@ msgstr "Mixie அரட்டை உள்நுழைவுக்கான ப�
 
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*நிறுத்தப்பட்டது*"

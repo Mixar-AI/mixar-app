@@ -1439,6 +1439,33 @@ msgstr "表單資料無效——請聯絡支援團隊。"
 msgid "Something went wrong on our end. Please try again."
 msgstr "我們這邊發生問題，請再試一次。"
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "正在讀取本機模型目錄"
 
@@ -1562,6 +1589,30 @@ msgstr "無法變更模型"
 msgid "Could not reset model"
 msgstr "無法重設模型"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "正在移除你的金鑰…"
 
@@ -1570,6 +1621,9 @@ msgstr "正在向供應商驗證…"
 
 msgid "AI Provider Settings"
 msgstr "AI 供應商設定"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "作用中"
@@ -1601,38 +1655,32 @@ msgstr "純文字模型——聊天可正常運作；3D 任務將在沒有視覺
 msgid "Remove API Key…"
 msgstr "移除 API 金鑰…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "供應商設定"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "加密儲存，僅用於 Mixar 智慧代理要求——儲存後只會顯示遮蔽的預覽。"
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "請選擇支援工具 / 函式呼叫的模型——智慧代理需要此功能。"
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "從 ~/.codex/auth.json 載入"
-
-msgid "…or paste it manually"
-msgstr "…或手動貼上"
-
-msgid "{count} characters pasted"
-msgstr "已貼上 {count} 個字元"
-
-msgid "Empty — paste your auth.json"
-msgstr "空白——請貼上你的 auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "在終端機中執行  codex login  ，然後載入或貼上完整的"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json 內容（貼上按鈕會讀取你的剪貼簿）。"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
 
 msgid "Couldn't apply your changes"
 msgstr "無法套用你的變更"
@@ -1742,41 +1790,8 @@ msgstr "請為此供應商選擇模型並輸入 API 金鑰。"
 msgid "Model slug and API key are required."
 msgstr "必須填寫模型代號和 API 金鑰。"
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "請選擇 Codex 模型並載入你的 auth.json 檔案。"
-
 msgid "Save failed."
 msgstr "儲存失敗。"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "找不到 ~/.codex/auth.json——請先執行 `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "無法讀取 ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json 是空的"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
-
-msgid "Loaded auth.json"
-msgstr "已載入 auth.json"
-
-msgid "Paste auth.json"
-msgstr "貼上 auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "從剪貼簿將你的 ~/.codex/auth.json 貼上至欄位"
-
-msgid "Clipboard is empty"
-msgstr "剪貼簿為空白"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼上的 auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
 
 msgid "Remove"
 msgstr "移除"
@@ -1850,11 +1865,11 @@ msgstr "你的 API 金鑰會加密儲存，且僅用於 Mixar 智慧代理要求
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models 中的任何模型代號（例如 anthropic/claude-opus-4.8）"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json 的內容（請先執行 `codex login`）"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "本機模式"
@@ -19589,6 +19604,9 @@ msgstr "Mixie 聊天登入用的使用者 ID"
 
 msgid "Agent expects: {formats}"
 msgstr "智慧代理預期的格式：{formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*已停止*"

@@ -1439,6 +1439,33 @@ msgstr "Data formulir tidak valid — silakan hubungi dukungan."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Terjadi kesalahan di pihak kami. Silakan coba lagi."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Membaca katalog model lokal"
 
@@ -1562,6 +1589,30 @@ msgstr "Tidak dapat mengganti model"
 msgid "Could not reset model"
 msgstr "Tidak dapat menyetel ulang model"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Menggunakan langganan ChatGPT Anda — kredit Mixar tidak dikenakan."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Menghapus kunci Anda…"
 
@@ -1570,6 +1621,9 @@ msgstr "Memvalidasi dengan penyedia…"
 
 msgid "AI Provider Settings"
 msgstr "Pengaturan Penyedia AI"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktif"
@@ -1601,38 +1655,32 @@ msgstr "Model khusus teks — obrolan berfungsi; tugas 3D berjalan tanpa umpan b
 msgid "Remove API Key…"
 msgstr "Hapus Kunci API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Penyiapan Penyedia"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Disimpan terenkripsi, hanya digunakan untuk permintaan agen Mixar — hanya pratinjau tersamar yang ditampilkan setelah disimpan."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Pilih model yang mendukung pemanggilan tool / fungsi — agen memerlukannya."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Muat dari ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…atau tempel secara manual"
-
-msgid "{count} characters pasted"
-msgstr "{count} karakter ditempel"
-
-msgid "Empty — paste your auth.json"
-msgstr "Kosong — tempel auth.json Anda"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Jalankan  codex login  di terminal Anda, lalu muat atau tempel seluruh"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "isi ~/.codex/auth.json (tombol tempel membaca papan klip Anda)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Menggunakan langganan ChatGPT Anda — kredit Mixar tidak dikenakan."
 
 msgid "Couldn't apply your changes"
 msgstr "Tidak dapat menerapkan perubahan Anda"
@@ -1742,41 +1790,8 @@ msgstr "Pilih model untuk penyedia ini dan masukkan kunci API."
 msgid "Model slug and API key are required."
 msgstr "Slug model dan kunci API wajib diisi."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Pilih model Codex dan muat bundel auth.json Anda."
-
 msgid "Save failed."
 msgstr "Gagal menyimpan."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Membaca ~/.codex/auth.json dari mesin ini ke dalam kolom"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json tidak ditemukan — jalankan `codex login` terlebih dahulu"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Tidak dapat membaca ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json kosong"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json terlalu besar untuk kolom ini dan telah dipotong — tidak akan tersimpan dengan benar"
-
-msgid "Loaded auth.json"
-msgstr "auth.json dimuat"
-
-msgid "Paste auth.json"
-msgstr "Tempel auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Menempelkan ~/.codex/auth.json Anda dari papan klip ke dalam kolom"
-
-msgid "Clipboard is empty"
-msgstr "Papan klip kosong"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json yang ditempel terlalu besar untuk kolom ini dan telah dipotong — tidak akan tersimpan dengan benar"
 
 msgid "Remove"
 msgstr "Hapus"
@@ -1850,11 +1865,11 @@ msgstr "Kunci API Anda disimpan terenkripsi dan hanya digunakan untuk permintaan
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Slug model apa pun dari openrouter.ai/models (mis. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Isi ~/.codex/auth.json (jalankan `codex login` terlebih dahulu)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Mode lokal"
@@ -19589,6 +19604,9 @@ msgstr "ID pengguna untuk masuk ke Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Agen mengharapkan: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Dihentikan*"

@@ -1439,6 +1439,33 @@ msgstr "Netinkami formos duomenys — susisiekite su pagalba."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Mūsų pusėje įvyko klaida. Bandykite dar kartą."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Skaitomas vietinių modelių katalogas"
 
@@ -1562,6 +1589,30 @@ msgstr "Modelio pakeisti nepavyko"
 msgid "Could not reset model"
 msgstr "Modelio atkurti nepavyko"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Naudoja jūsų ChatGPT prenumeratą — Mixar kreditai neskaičiuojami."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Šalinamas jūsų raktas…"
 
@@ -1570,6 +1621,9 @@ msgstr "Tikrinama pas teikėją…"
 
 msgid "AI Provider Settings"
 msgstr "DI teikėjo nustatymai"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktyvus"
@@ -1601,38 +1655,32 @@ msgstr "Tik tekstinis modelis — pokalbiai veikia; 3D užduotys vykdomos be vai
 msgid "Remove API Key…"
 msgstr "Pašalinti API raktą…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Teikėjo sąranka"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Saugoma šifruotai, naudojama tik Mixar agento užklausoms — išsaugojus rodoma tik užmaskuota peržiūra."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Pasirinkite modelį, kuris palaiko įrankių / funkcijų iškvietimą — agentui to reikia."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bet kuris identifikatorius iš openrouter.ai/models, pvz. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Įkelti iš ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…arba įklijuokite rankiniu būdu"
-
-msgid "{count} characters pasted"
-msgstr "Įklijuota simbolių: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Tuščia — įklijuokite auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Terminale paleiskite  codex login , tada įkelkite arba įklijuokite visą"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "failo ~/.codex/auth.json turinį (įklijavimo mygtukas skaito iškarpinę)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Naudoja jūsų ChatGPT prenumeratą — Mixar kreditai neskaičiuojami."
 
 msgid "Couldn't apply your changes"
 msgstr "Nepavyko pritaikyti jūsų pakeitimų"
@@ -1742,41 +1790,8 @@ msgstr "Pasirinkite šio teikėjo modelį ir įveskite API raktą."
 msgid "Model slug and API key are required."
 msgstr "Modelio identifikatorius ir API raktas būtini."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Pasirinkite Codex modelį ir įkelkite auth.json rinkinį."
-
 msgid "Save failed."
 msgstr "Išsaugoti nepavyko."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Į lauką įskaito ~/.codex/auth.json iš šio kompiuterio"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nerastas — pirmiausia paleiskite `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Nepavyko perskaityti ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json tuščias"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json per didelis šiam laukui ir buvo sutrumpintas — jis nebus išsaugotas teisingai"
-
-msgid "Loaded auth.json"
-msgstr "auth.json įkeltas"
-
-msgid "Paste auth.json"
-msgstr "Įklijuoti auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Į lauką įklijuoja jūsų ~/.codex/auth.json iš iškarpinės"
-
-msgid "Clipboard is empty"
-msgstr "Iškarpinė tuščia"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Įklijuotas auth.json per didelis šiam laukui ir buvo sutrumpintas — jis nebus išsaugotas teisingai"
 
 msgid "Remove"
 msgstr "Pašalinti"
@@ -1850,11 +1865,11 @@ msgstr "Jūsų API raktas saugomas šifruotas ir naudojamas tik Mixar agento už
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bet kuris modelio identifikatorius iš openrouter.ai/models (pvz., anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Failo ~/.codex/auth.json turinys (pirmiausia paleiskite `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Vietinė veiksena"
@@ -19589,6 +19604,9 @@ msgstr "Naudotojo ID prisijungimui prie „Mixie“ pokalbio"
 
 msgid "Agent expects: {formats}"
 msgstr "Agentas tikisi: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Sustabdyta*"

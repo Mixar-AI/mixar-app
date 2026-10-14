@@ -38,6 +38,11 @@ logger = get_logger(__name__)
 
 _VALIDATION_ERROR_MSG = n_("Invalid form data — please reach out to support.")
 _GENERIC_SERVER_ERROR_MSG = n_("Something went wrong on our end. Please try again.")
+_LOCAL_STORE_FAILED_MSG = n_(
+    "Your key was validated and saved to your account, but it could not be "
+    "stored on this device (the credential store refused the write). Enter it "
+    "again to retry."
+)
 
 
 def _translate(response: APIResponse) -> tuple[bool, Optional[Any], Optional[str]]:
@@ -168,22 +173,38 @@ def save_credentials(
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
     base_url: Optional[str] = None,
     supports_vision: Optional[bool] = None,
+    account_id: Optional[str] = None,
+    codex_auth_path: Optional[str] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+    """PUT /agent/byok — validate + register BYOK config. ≤ 15 s.
 
     ``base_url`` / ``supports_vision`` are forwarded only when provided
-    (the "local" provider's relay-target registration).
+    (the "local" provider's relay-target registration); ``account_id`` only
+    for Codex. ``codex_auth_path`` (Codex) is NEVER sent — it is the
+    reference this device keeps to the Codex CLI's sign-in file; the tokens
+    themselves stay in that file.
+
+    On 200 the key material is written to this device's credential store
+    (`key_store`) — still on the worker thread, before the callback — so the
+    next turn can carry it. The server keeps metadata only. A store write
+    that fails is reported as an ERROR (with the server's state attached, so
+    the card still shows the truth): the account is BYOK-active and this
+    device cannot sign a turn, which a "Saved" recap would hide until the
+    next message's 409.
     """
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
                 provider=provider, model=model, api_key=api_key,
                 base_url=base_url, supports_vision=supports_vision,
+                account_id=account_id,
             )
             success, data, err = _translate(response)
         except Exception as e:
             logger.warning("BYOK save_credentials failed: %s", e)
             success, data, err = _translate_exception(e)
+        if success and not _store_local_key(provider, api_key, codex_auth_path):
+            success, err = False, _LOCAL_STORE_FAILED_MSG
         _schedule_on_main(on_done, success, data, err)
 
     threading.Thread(
@@ -207,6 +228,7 @@ def delete_credentials(
                     value = data.get("removed", 0)
                     if isinstance(value, int):
                         removed = value
+                _forget_local_key()
                 _schedule_on_main(on_done, True, removed, None)
             else:
                 _schedule_on_main(on_done, False, 0, err)
@@ -218,3 +240,31 @@ def delete_credentials(
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKDelete"
     ).start()
+
+
+# ---------------------------------------------------------------------------
+# This device's copy of the key (worker thread; the store blocks)
+# ---------------------------------------------------------------------------
+
+def _store_local_key(provider, api_key, codex_auth_path) -> bool:
+    """True when the record is in this device's store (Codex: the file
+    reference only — never the tokens)."""
+    try:
+        from . import key_store
+
+        record = key_store.make_record(provider, api_key, auth_path=codex_auth_path)
+        if key_store.save(record):
+            return True
+        logger.warning("BYOK key was validated but could not be stored on this device")
+    except Exception as e:  # noqa: BLE001 — the server state is already saved
+        logger.warning("BYOK local key store write failed: %s", type(e).__name__)
+    return False
+
+
+def _forget_local_key() -> None:
+    try:
+        from . import key_store
+
+        key_store.delete()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("BYOK local key store delete failed: %s", type(e).__name__)

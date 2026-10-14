@@ -1439,6 +1439,33 @@ msgstr "フォームデータが無効です — サポートにお問い合わ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "サーバー側で問題が発生しました。もう一度お試しください。"
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ローカルモデルカタログを読み込み中"
 
@@ -1562,6 +1589,30 @@ msgstr "モデルを変更できませんでした"
 msgid "Could not reset model"
 msgstr "モデルをリセットできませんでした"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "ChatGPTサブスクリプションを使用します — Mixarクレジットは消費されません。"
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "キーを削除中…"
 
@@ -1570,6 +1621,9 @@ msgstr "プロバイダーで検証中…"
 
 msgid "AI Provider Settings"
 msgstr "AIプロバイダー設定"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "アクティブ"
@@ -1601,38 +1655,32 @@ msgstr "テキスト専用モデル — チャットは使えますが、3Dタ�
 msgid "Remove API Key…"
 msgstr "APIキーを削除…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "プロバイダーの設定"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "暗号化して保存され、Mixarエージェントのリクエストにのみ使用されます — 保存後はマスクされたプレビューのみ表示されます。"
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "ツール/関数呼び出しに対応したモデルを選択してください — エージェントに必要です。"
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-opus-4.8）。"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json から読み込む"
-
-msgid "…or paste it manually"
-msgstr "…または手動で貼り付け"
-
-msgid "{count} characters pasted"
-msgstr "{count}文字を貼り付けました"
-
-msgid "Empty — paste your auth.json"
-msgstr "空です — auth.json を貼り付けてください"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ターミナルで  codex login  を実行し、読み込みまたは貼り付けで"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json の内容全体を入力してください（貼り付けボタンはクリップボードを読み取ります）。"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPTサブスクリプションを使用します — Mixarクレジットは消費されません。"
 
 msgid "Couldn't apply your changes"
 msgstr "変更を適用できませんでした"
@@ -1742,41 +1790,8 @@ msgstr "このプロバイダーのモデルを選択し、APIキーを入力し
 msgid "Model slug and API key are required."
 msgstr "モデルのスラッグとAPIキーは必須です。"
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codexモデルを選択し、auth.json バンドルを読み込んでください。"
-
 msgid "Save failed."
 msgstr "保存に失敗しました。"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "このマシンの ~/.codex/auth.json をフィールドに読み込みます"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json が見つかりません — 先に `codex login` を実行してください"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json を読み取れませんでした"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json が空です"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
-
-msgid "Loaded auth.json"
-msgstr "auth.json を読み込みました"
-
-msgid "Paste auth.json"
-msgstr "auth.json を貼り付け"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "クリップボードの ~/.codex/auth.json をフィールドに貼り付けます"
-
-msgid "Clipboard is empty"
-msgstr "クリップボードが空です"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼り付けた auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
 
 msgid "Remove"
 msgstr "削除"
@@ -1850,11 +1865,11 @@ msgstr "APIキーは暗号化して保存され、Mixarエージェントのリ�
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models の任意のモデルスラッグ（例: anthropic/claude-opus-4.8）"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json の内容（先に `codex login` を実行してください）"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ローカルモード"
@@ -19593,6 +19608,9 @@ msgstr "Mixie Chat ログイン用のユーザー ID"
 
 msgid "Agent expects: {formats}"
 msgstr "エージェントが受け付ける形式: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*停止しました*"

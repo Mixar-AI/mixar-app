@@ -1439,6 +1439,33 @@ msgstr "۔ﮟﯾﺮﮐ ﮧﻄﺑﺍﺭ ﮯﺳ ﺖﻧﻭﺎﻌﻣ ﻡﺮﮐ ﮦ�
 msgid "Something went wrong on our end. Please try again."
 msgstr "۔ﮟﯾﺮﮐ ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ ﻡﺮﮐ ﮦﺍﺮﺑ ۔ﺎﯿﮔ ﻮﮨ ﻂﻠﻏ ﮫﭽﮐ ﻑﺮﻃ ﯼﺭﺎﻤﮨ"
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ﮯﮨ ﺎﮨﺭ ﺎﺟ ﺎﮬﮍﭘ ﮒﻼ﻿ﭩﯿﮐ ﻝﮈﺎﻣ ﯽﻣﺎﻘﻣ"
 
@@ -1562,6 +1589,30 @@ msgstr "ﺎﮑﺳ ﻝﺪﺑ ﮟﯿﮩﻧ ﻝﮈﺎﻣ"
 msgid "Could not reset model"
 msgstr "ﺎﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﺐﯿﺗﺮﺗ ﮦﺭﺎﺑﻭﺩ ﻝﮈﺎﻣ"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "۔ﮯﺘﭩﮐ ﮟﯿﮩﻧ ﺲﭨﮉﯾﺮﮐ Mixar — ﮯﮨ ﺎﺗﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﻦﺸﭘﺮﮑﺴﺒﺳ ChatGPT ﯽﮐ ﭖﺁ"
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "…ﮯﮨ ﯽﮨﺭ ﺎﺟ ﯽﺋﺎﭩﮨ ﺪﯿﻠﮐ ﯽﮐ ﭖﺁ"
 
@@ -1570,6 +1621,9 @@ msgstr "…ﮯﮨ ﯽﮨﺭ ﻮﮨ ﻖﯾﺪﺼﺗ ﮯﺳ ﮦﺪﻨﻨﮐ ﻢﮨ
 
 msgid "AI Provider Settings"
 msgstr "AI ﺕﺎﺒﯿﺗﺮﺗ ﮦﺪﻨﻨﮐ ﻢﮨﺍﺮﻓ"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "ﻝﺎﻌﻓ"
@@ -1601,38 +1655,32 @@ msgstr "۔ﮟﯿﮨ ﮯﺘﻠﭼ ﺮﯿﻐﺑ ﮯﮐ ﺕﺍﺮﺛﺎﺗ ﯼﺮ�
 msgid "Remove API Key…"
 msgstr "API ﮟﯿﺋﺎﭩﮨ ﺪﯿﻠﮐ…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "ﭖﺍ ﭧﯿﺳ ﮦﺪﻨﻨﮐ ﻢﮨﺍﺮﻓ"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "۔ﮯﮨ ﺎﺘﮭﮐﺩ ﻮﯾﻮﯾﺮﭘ ﺍﻮﮨ ﺎﭙﮭﭼ ﻑﺮﺻ ﺪﻌﺑ ﮯﮐ ﮯﻧﺮﮐ ﻅﻮﻔﺤﻣ — ﮯﯿﻟ ﮯﮐ ﮞﻮﺘﺳﺍﻮﺧﺭﺩ ﭧﻨﺠﯾﺍ Mixar ﻑﺮﺻ ،ﻅﻮﻔﺤﻣ ﮧﯿﻔﺧ"
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "۔ﮯﮨ ﺕﺭﻭﺮﺿ ﯽﮐ ﺱﺍ ﻮﮐ ﭧﻨﺠﯾﺍ — ﮮﺮﮐ ﭦﺭﻮﭙﺳ ﮓﻨﻟﺎﮐ ﻦﺸﮑﻨﻓ / ﻝﻮﭨ ﻮﺟ ﮟﯿﻨﭼ ﻝﮈﺎﻣ ﺎﺴﯾﺍ"
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models ﻼً﻿ﺜﻣ ،ﮓﻠﺳ ﯽﮭﺑ ﯽﺋﻮﮐ ﮯﺳ anthropic/claude-opus-4.8۔"
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json ﮟﯾﺮﮐ ﮈﻮﻟ ﮯﺳ"
-
-msgid "…or paste it manually"
-msgstr "ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ ﺮﭘ ﺭﻮﻃ ﯽﺘﺳﺩ ﮯﺳﺍ ﺎﯾ…"
-
-msgid "{count} characters pasted"
-msgstr "{count} :ﮯﺋﻮﮨ ﮞﺎﭙﺴﭼ ﻑﻭﺮﺣ"
-
-msgid "Empty — paste your auth.json"
-msgstr "ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ auth.json ﺎﻨﭘﺍ — ﯽﻟﺎﺧ"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ ﺎﯾ ﮈﻮﻟ ﺩﺍﻮﻣ ﻞﻤﮑﻣ ﺮﮭﭘ ،ﮟﯿﺋﻼ﻿ﭼ  codex login  ﮟﯿﻣ ﻞﻨﯿﻣﺮﭨ ﮯﻨﭘﺍ"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json ۔(ﮯﮨ ﺎﺘﮬﮍﭘ ﮈﺭﻮﺑ ﭗﻠﮐ ﺎﮐ ﭖﺁ ﻦﭩﺑ ﮞﺎﭙﺴﭼ) ﺕﺎﺟﺭﺪﻨﻣ ﮯﮐ"
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "۔ﮯﺘﭩﮐ ﮟﯿﮩﻧ ﺲﭨﮉﯾﺮﮐ Mixar — ﮯﮨ ﺎﺗﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﻦﺸﭘﺮﮑﺴﺒﺳ ChatGPT ﯽﮐ ﭖﺁ"
 
 msgid "Couldn't apply your changes"
 msgstr "ﮟﯿﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻮﮔﻻ﻿ ﮞﺎﯿﻠﯾﺪﺒﺗ ﯽﮐ ﭖﺁ"
@@ -1742,41 +1790,8 @@ msgstr "۔ﮟﯾﺮﮐ ﺝﺭﺩ ﺪﯿﻠﮐ API ﺭﻭﺍ ﮟﯿﻨﭼ ﻝﮈ�
 msgid "Model slug and API key are required."
 msgstr "۔ﮟﯿﮨ ﯼﺭﻭﺮﺿ ﺪﯿﻠﮐ API ﺭﻭﺍ ﮓﻠﺳ ﻝﮈﺎﻣ"
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codex ﺎﻨﭘﺍ ﺭﻭﺍ ﮟﯿﻨﭼ ﻝﮈﺎﻣ auth.json ۔ﮟﯾﺮﮐ ﮈﻮﻟ ﻝﮉﻨﺑ"
-
 msgid "Save failed."
 msgstr "۔ﻡﺎﮐﺎﻧ ﺎﻧﺮﮐ ﻅﻮﻔﺤﻣ"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "ﮟﯿﮬﮍﭘ ﮟﯿﻣ ﮯﻧﺎﺧ codex/auth.json./~ ﮯﺳ ﻦﯿﺸﻣ ﺱﺍ"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json ﮯﻠﮩﭘ — ﻼ﻿ﻣ ﮟﯿﮩﻧ `codex login` ﮟﯿﺋﻼ﻿ﭼ"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json ﺎﮑﺳ ﺎﺟ ﺎﮬﮍﭘ ﮟﯿﮩﻧ"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ﮯﮨ ﯽﻟﺎﺧ"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ﺎﮔﻮﮨ ﮟﯿﮩﻧ ﻅﻮﻔﺤﻣ ﺖﺳﺭﺩ ﮧﯾ — ﺎﯿﮔ ﺎﯾﺩ ﭦﺎﮐ ﺭﻭﺍ ﮯﮨ ﺍﮍﺑ ﺖﮩﺑ ﮯﯿﻟ ﮯﮐ ﮯﻧﺎﺧ ﺱﺍ"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ﺎﯿﮔ ﻮﮨ ﮈﻮﻟ"
-
-msgid "Paste auth.json"
-msgstr "auth.json ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ ﮟﯿﻣ ﮯﻧﺎﺧ codex/auth.json./~ ﺎﻨﭘﺍ ﮯﺳ ﮈﺭﻮﺑ ﭗﻠﮐ"
-
-msgid "Clipboard is empty"
-msgstr "ﮯﮨ ﯽﻟﺎﺧ ﮈﺭﻮﺑ ﭗﻠﮐ"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ﺎﮔﻮﮨ ﮟﯿﮩﻧ ﻅﻮﻔﺤﻣ ﺖﺳﺭﺩ ﮧﯾ — ﺎﯿﮔ ﺎﯾﺩ ﭦﺎﮐ ﺭﻭﺍ ﮯﮨ ﺍﮍﺑ ﺖﮩﺑ ﮯﯿﻟ ﮯﮐ ﮯﻧﺎﺧ ﺱﺍ auth.json ﺎﯿﮔ ﺎﯿﮐ ﮞﺎﭙﺴﭼ"
 
 msgid "Remove"
 msgstr "ﮟﯾﺩ ﺎﭩﮨ"
@@ -1850,11 +1865,11 @@ msgstr "۔ﮯﮨ ﺎﺘﮭﮐﺩ ﻮﯾﻮﯾﺮﭘ ﺍﻮﮨ ﺎﭙﮭﭼ ﻑ�
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models ﻼً﻿ﺜﻣ) ﮓﻠﺳ ﻝﮈﺎﻣ ﯽﮭﺑ ﯽﺋﻮﮐ ﮯﺳ anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json ﮯﻠﮩﭘ) ﺕﺎﺟﺭﺪﻨﻣ ﮯﮐ `codex login` ﮟﯿﺋﻼ﻿ﭼ)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ﮈﻮﻣ ﯽﻣﺎﻘﻣ"
@@ -19589,6 +19604,9 @@ msgstr "Mixie ﻑﺭﺎﺻ ﮯﯿﻟ ﮯﮐ ﻥﺍ ﻦﺋﺎﺳ ﭧﯿﭼ ID"
 
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ﻊﻗﻮﺗ ﯽﮐ ﭧﻨﺠﯾﺍ"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*ﺎﯿﮔ ﮎﺭ*"

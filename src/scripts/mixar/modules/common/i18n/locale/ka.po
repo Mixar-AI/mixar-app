@@ -1439,6 +1439,33 @@ msgstr "ფორმის მონაცემები უვარგის�
 msgid "Something went wrong on our end. Please try again."
 msgstr "ჩვენს მხარეს რაღაც არასწორად წავიდა. გთხოვთ, სცადოთ ხელახლა."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "ლოკალური მოდელების კატალოგის კითხვა"
 
@@ -1562,6 +1589,30 @@ msgstr "მოდელის შეცვლა ვერ მოხერხდ
 msgid "Could not reset model"
 msgstr "მოდელის პირველსახის დაბრუნება ვერ მოხერხდა"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "იყენებს თქვენს ChatGPT-ის გამოწერას — Mixar-ის კრედიტები არ იხარჯება."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "თქვენი გასაღები იცილება…"
 
@@ -1570,6 +1621,9 @@ msgstr "შემოწმება პროვაიდერთან…"
 
 msgid "AI Provider Settings"
 msgstr "AI პროვაიდერის ანაწყობები"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "აქტიური"
@@ -1601,38 +1655,32 @@ msgstr "მხოლოდ ტექსტის მოდელი — ჩა�
 msgid "Remove API Key…"
 msgstr "API გასაღების მოცილება…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "პროვაიდერის მომზადება"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "ინახება დაშიფრულად და გამოიყენება მხოლოდ Mixar-ის აგენტის მოთხოვნებისთვის — შენახვის შემდეგ მხოლოდ შენიღბული გადახედვა ჩანს."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "აირჩიეთ მოდელი, რომელსაც ხელსაწყოს / ფუნქციის გამოძახება შეუძლია — აგენტს ეს სჭირდება."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "ნებისმიერი სლაგი openrouter.ai/models-დან, მაგ. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "ჩატვირთვა ~/.codex/auth.json-დან"
-
-msgid "…or paste it manually"
-msgstr "…ან ჩასვით ხელით"
-
-msgid "{count} characters pasted"
-msgstr "ჩასმულია {count} სიმბოლო"
-
-msgid "Empty — paste your auth.json"
-msgstr "ცარიელია — ჩასვით თქვენი auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ტერმინალში გაუშვით codex login, შემდეგ ჩატვირთეთ ან ჩასვით სრული ფაილი"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-ის შიგთავსი (ჩასმის ღილაკი გაცვლის ბუფერს კითხულობს)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "იყენებს თქვენს ChatGPT-ის გამოწერას — Mixar-ის კრედიტები არ იხარჯება."
 
 msgid "Couldn't apply your changes"
 msgstr "ცვლილებების გამოყენება ვერ მოხერხდა"
@@ -1742,41 +1790,8 @@ msgstr "აირჩიეთ მოდელი ამ პროვაიდე
 msgid "Model slug and API key are required."
 msgstr "მოდელის სლაგი და API გასაღები აუცილებელია."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "აირჩიეთ Codex-ის მოდელი და ჩატვირთეთ თქვენი auth.json-ის პაკეტი."
-
 msgid "Save failed."
 msgstr "შენახვა ჩავარდა."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "კითხულობს ~/.codex/auth.json-ს ამ მანქანიდან ველში"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json ვერ მოიძებნა — ჯერ გაუშვით `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ის წაკითხვა ვერ მოხერხდა"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ცარიელია"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ამ ველისთვის ზედმეტად დიდია და შეიკვეცა — სწორად არ შეინახება"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ჩატვირთულია"
-
-msgid "Paste auth.json"
-msgstr "auth.json-ის ჩასმა"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "სვამს თქვენს ~/.codex/auth.json-ს გაცვლის ბუფერიდან ველში"
-
-msgid "Clipboard is empty"
-msgstr "გაცვლის ბუფერი ცარიელია"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ჩასმული auth.json ამ ველისთვის ზედმეტად დიდია და შეიკვეცა — სწორად არ შეინახება"
 
 msgid "Remove"
 msgstr "მოცილება"
@@ -1850,11 +1865,11 @@ msgstr "თქვენი API გასაღები ინახება �
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "ნებისმიერი მოდელის სლაგი openrouter.ai/models-დან (მაგ. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-ის შიგთავსი (ჯერ გაუშვით `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ლოკალური რეჟიმი"
@@ -19589,6 +19604,9 @@ msgstr "მომხმარებლის ID Mixie-ს ჩატში შე
 
 msgid "Agent expects: {formats}"
 msgstr "აგენტი ელოდება: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*გაჩერებულია*"

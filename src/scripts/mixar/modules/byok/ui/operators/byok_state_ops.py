@@ -48,9 +48,9 @@ def _redraw_mixie_chat_areas():
         logger.debug("BYOK area redraw failed: %s", e)
 
 
-def _clear_cached_state(wm=None):
+def _clear_cached_state(wm=None, *, loaded=False):
     """Reset the cached BYOK display state to defaults."""
-    credential_state.clear(wm)
+    credential_state.clear(wm, loaded=loaded)
 
 
 def _apply_cached_state(wm, data, epoch=None):

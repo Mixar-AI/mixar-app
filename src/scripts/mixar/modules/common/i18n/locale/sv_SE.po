@@ -1439,6 +1439,33 @@ msgstr "Ogiltiga formulärdata – kontakta supporten."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Något gick fel hos oss. Försök igen."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Läser den lokala modellkatalogen"
 
@@ -1562,6 +1589,30 @@ msgstr "Kunde inte byta modell"
 msgid "Could not reset model"
 msgstr "Kunde inte återställa modellen"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Använder din ChatGPT-prenumeration – inga Mixar-krediter debiteras."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Tar bort din nyckel…"
 
@@ -1570,6 +1621,9 @@ msgstr "Validerar hos leverantören…"
 
 msgid "AI Provider Settings"
 msgstr "Inställningar för AI-leverantör"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktiv"
@@ -1601,38 +1655,32 @@ msgstr "Modell med endast text – chatten fungerar; 3D-uppgifter körs utan vis
 msgid "Remove API Key…"
 msgstr "Ta bort API-nyckel…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Leverantörskonfiguration"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Lagras krypterad och används endast för Mixar-agentens förfrågningar – endast en maskerad förhandsvisning visas efter sparandet."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Välj en modell som stöder verktygs-/funktionsanrop – agenten behöver det."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Valfri slug från openrouter.ai/models, t.ex. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Läs in från ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…eller klistra in den manuellt"
-
-msgid "{count} characters pasted"
-msgstr "{count} tecken inklistrade"
-
-msgid "Empty — paste your auth.json"
-msgstr "Tomt – klistra in din auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Kör  codex login  i terminalen och läs sedan in eller klistra in hela"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "innehållet i ~/.codex/auth.json (klistra in-knappen läser ditt urklipp)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Använder din ChatGPT-prenumeration – inga Mixar-krediter debiteras."
 
 msgid "Couldn't apply your changes"
 msgstr "Det gick inte att tillämpa dina ändringar"
@@ -1742,41 +1790,8 @@ msgstr "Välj en modell för den här leverantören och ange en API-nyckel."
 msgid "Model slug and API key are required."
 msgstr "Modell-slug och API-nyckel krävs."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Välj en Codex-modell och läs in ditt auth.json-paket."
-
 msgid "Save failed."
 msgstr "Det gick inte att spara."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Läser in ~/.codex/auth.json från den här datorn i fältet"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json hittades inte – kör `codex login` först"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Kunde inte läsa ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json är tom"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json är för stor för det här fältet och kortades av – den kommer inte att sparas korrekt"
-
-msgid "Loaded auth.json"
-msgstr "Läste in auth.json"
-
-msgid "Paste auth.json"
-msgstr "Klistra in auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Klistrar in din ~/.codex/auth.json från urklipp i fältet"
-
-msgid "Clipboard is empty"
-msgstr "Urklipp är tomt"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Den inklistrade auth.json är för stor för det här fältet och kortades av – den kommer inte att sparas korrekt"
 
 msgid "Remove"
 msgstr "Ta bort"
@@ -1850,11 +1865,11 @@ msgstr "Din API-nyckel lagras krypterad och används endast för Mixar-agentens 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Valfri modell-slug från openrouter.ai/models (t.ex. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Innehållet i ~/.codex/auth.json (kör `codex login` först)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Lokalt läge"
@@ -19589,6 +19604,9 @@ msgstr "Användar-ID för inloggning i Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Agenten förväntar sig: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Stoppad*"

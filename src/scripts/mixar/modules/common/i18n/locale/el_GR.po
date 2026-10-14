@@ -1439,6 +1439,33 @@ msgstr "Μη έγκυρα δεδομένα φόρμας — επικοινωνή
 msgid "Something went wrong on our end. Please try again."
 msgstr "Κάτι πήγε στραβά από την πλευρά μας. Δοκιμάστε ξανά."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Ανάγνωση του καταλόγου τοπικών μοντέλων"
 
@@ -1562,6 +1589,30 @@ msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
 msgid "Could not reset model"
 msgstr "Δεν ήταν δυνατή η επαναφορά μοντέλου"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Χρησιμοποιεί τη συνδρομή ChatGPT σας — οι πιστώσεις Mixar δεν χρεώνονται."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Αφαίρεση του κλειδιού σας…"
 
@@ -1570,6 +1621,9 @@ msgstr "Επικύρωση με τον πάροχο…"
 
 msgid "AI Provider Settings"
 msgstr "Ρυθμίσεις παρόχου ΤΝ"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Ενεργό"
@@ -1601,38 +1655,32 @@ msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λε�
 msgid "Remove API Key…"
 msgstr "Αφαίρεση κλειδιού API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Ρύθμιση παρόχου"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar — μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση εργαλείων / συναρτήσεων — ο πράκτορας το χρειάζεται."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Φόρτωση από το ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…ή επικολλήστε το χειροκίνητα"
-
-msgid "{count} characters pasted"
-msgstr "Επικολλήθηκαν χαρακτήρες: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Κενό — επικολλήστε το auth.json σας"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Εκτελέστε  codex login  στο τερματικό και μετά φορτώστε ή επικολλήστε ολόκληρο το"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "περιεχόμενο του ~/.codex/auth.json (το κουμπί επικόλλησης διαβάζει το πρόχειρο)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Χρησιμοποιεί τη συνδρομή ChatGPT σας — οι πιστώσεις Mixar δεν χρεώνονται."
 
 msgid "Couldn't apply your changes"
 msgstr "Δεν ήταν δυνατή η εφαρμογή των αλλαγών σας"
@@ -1742,41 +1790,8 @@ msgstr "Επιλέξτε ένα μοντέλο για αυτόν τον πάρο
 msgid "Model slug and API key are required."
 msgstr "Απαιτούνται το αναγνωριστικό μοντέλου και το κλειδί API."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Επιλέξτε ένα μοντέλο Codex και φορτώστε το πακέτο auth.json σας."
-
 msgid "Save failed."
 msgstr "Η αποθήκευση απέτυχε."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Διαβάζει το ~/.codex/auth.json από αυτό το μηχάνημα στο πεδίο"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Το ~/.codex/auth.json δεν βρέθηκε — εκτελέστε πρώτα `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Δεν ήταν δυνατή η ανάγνωση του ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "Το ~/.codex/auth.json είναι κενό"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Το auth.json είναι πολύ μεγάλο για αυτό το πεδίο και περικόπηκε — δεν θα αποθηκευτεί σωστά"
-
-msgid "Loaded auth.json"
-msgstr "Φορτώθηκε το auth.json"
-
-msgid "Paste auth.json"
-msgstr "Επικόλληση auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Επικολλά το ~/.codex/auth.json από το πρόχειρο στο πεδίο"
-
-msgid "Clipboard is empty"
-msgstr "Το πρόχειρο είναι κενό"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Το επικολλημένο auth.json είναι πολύ μεγάλο για αυτό το πεδίο και περικόπηκε — δεν θα αποθηκευτεί σωστά"
 
 msgid "Remove"
 msgstr "Remove"
@@ -1850,11 +1865,11 @@ msgstr "Το κλειδί API σας αποθηκεύεται κρυπτογρα
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Οποιοδήποτε slug μοντέλου από το openrouter.ai/models (π.χ. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json του Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Περιεχόμενο του ~/.codex/auth.json (εκτελέστε πρώτα `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Τοπική κατάσταση"
@@ -19589,6 +19604,9 @@ msgstr "Αναγνωριστικό χρήστη για σύνδεση στη σ�
 
 msgid "Agent expects: {formats}"
 msgstr "Ο πράκτορας αναμένει: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Διακόπηκε*"

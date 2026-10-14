@@ -1439,6 +1439,33 @@ msgstr "Neveljavni podatki obrazca — obrnite se na podporo."
 msgid "Something went wrong on our end. Please try again."
 msgstr "Na naši strani je šlo nekaj narobe. Poskusite znova."
 
+msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
+
 msgid "Reading the local model catalog"
 msgstr "Branje kataloga krajevnih modelov"
 
@@ -1562,6 +1589,30 @@ msgstr "Modela ni bilo mogoče spremeniti"
 msgid "Could not reset model"
 msgstr "Modela ni bilo mogoče ponastaviti"
 
+msgid "Sign-in found: {path}"
+msgstr ""
+
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Uporablja vašo naročnino ChatGPT — krediti Mixar se ne zaračunajo."
+
+msgid "Choose a Codex model."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr "Odstranjevanje vašega ključa…"
 
@@ -1570,6 +1621,9 @@ msgstr "Preverjanje pri ponudniku…"
 
 msgid "AI Provider Settings"
 msgstr "Nastavitve ponudnika AI"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Aktivno"
@@ -1601,38 +1655,32 @@ msgstr "Model samo za besedilo — klepet deluje; opravila 3D tečejo brez vidne
 msgid "Remove API Key…"
 msgstr "Odstrani ključ API…"
 
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Your API key is needed on this device"
+msgstr ""
+
+msgid "Enter the key below — provider and model stay as saved."
+msgstr ""
+
+msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgstr ""
+
 msgid "Provider Setup"
 msgstr "Nastavitev ponudnika"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Shranjeno šifrirano, uporabljeno le za zahteve agenta Mixar — po shranjevanju je prikazan le zamaskiran predogled."
+msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgstr ""
 
 msgid "Pick a model that supports tool / function calling — the agent needs it."
 msgstr "Izberite model, ki podpira klicanje orodij / funkcij — agent ga potrebuje."
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.8."
-
-msgid "Load from ~/.codex/auth.json"
-msgstr "Naloži iz ~/.codex/auth.json"
-
-msgid "…or paste it manually"
-msgstr "…ali prilepite ročno"
-
-msgid "{count} characters pasted"
-msgstr "Prilepljeni znaki: {count}"
-
-msgid "Empty — paste your auth.json"
-msgstr "Prazno — prilepite svoj auth.json"
-
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "V terminalu zaženite  codex login , nato naložite ali prilepite celotno"
-
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "vsebino ~/.codex/auth.json (gumb za lepljenje prebere vaše odložišče)."
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Uporablja vašo naročnino ChatGPT — krediti Mixar se ne zaračunajo."
 
 msgid "Couldn't apply your changes"
 msgstr "Vaših sprememb ni bilo mogoče uveljaviti"
@@ -1742,41 +1790,8 @@ msgstr "Izberite model za tega ponudnika in vnesite ključ API."
 msgid "Model slug and API key are required."
 msgstr "Oznaka modela in ključ API sta obvezna."
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Izberite model Codex in naložite sveženj auth.json."
-
 msgid "Save failed."
 msgstr "Shranjevanje ni uspelo."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Prebere ~/.codex/auth.json s tega računalnika v polje"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json ni najden — najprej zaženite `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json ni bilo mogoče prebrati"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json je prazen"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json je za to polje prevelik in je bil odrezan — ne bo se pravilno shranil"
-
-msgid "Loaded auth.json"
-msgstr "auth.json je naložen"
-
-msgid "Paste auth.json"
-msgstr "Prilepi auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Prilepi ~/.codex/auth.json z odložišča v polje"
-
-msgid "Clipboard is empty"
-msgstr "Odložišče je prazno"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Prilepljeni auth.json je za to polje prevelik in je bil odrezan — ne bo se pravilno shranil"
 
 msgid "Remove"
 msgstr "Odstrani"
@@ -1850,11 +1865,11 @@ msgstr "Vaš ključ API je shranjen šifrirano in se uporablja le za zahteve age
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Katera koli oznaka modela z openrouter.ai/models (npr. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json za Codex"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Vsebina ~/.codex/auth.json (najprej zaženite `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Krajevni način"
@@ -19589,6 +19604,9 @@ msgstr "ID uporabnika za prijavo v klepet Mixie"
 
 msgid "Agent expects: {formats}"
 msgstr "Agent pričakuje: {formats}"
+
+msgid "Your API key is needed on this device."
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Ustavljeno*"
