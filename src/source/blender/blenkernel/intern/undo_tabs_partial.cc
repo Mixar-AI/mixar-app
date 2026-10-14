@@ -89,6 +89,10 @@ struct WalkSource {
   const UndoStep *step = nullptr;
   /** The tab whose walk it was (#UNDO_TAB_DOCUMENT for a whole-document walk). */
   uint32_t tab = UNDO_TAB_DOCUMENT;
+  /** The name the datablock had once read back: the reader gives it a ``.00N``
+   * suffix when another datablock holds its name by then. That rename is the
+   * walk's, not a change of the tab that pushes next. */
+  std::string name;
 };
 
 struct WalkRestored {
@@ -111,8 +115,18 @@ void BKE_undo_tabs_walk_restored_note(const UndoStep *source)
     g_walk_restored.ids.clear();
     return;
   }
+  Map<uint32_t, std::string> names;
+  if (G_MAIN != nullptr && !g_partial.reread.is_empty()) {
+    ID *id;
+    FOREACH_MAIN_ID_BEGIN (G_MAIN, id) {
+      if (g_partial.reread.contains(id->session_uid)) {
+        names.add(id->session_uid, id->name);
+      }
+    }
+    FOREACH_MAIN_ID_END;
+  }
   for (const uint32_t uid : g_partial.reread) {
-    g_walk_restored.ids.add_overwrite(uid, {source, g_partial.tab});
+    g_walk_restored.ids.add_overwrite(uid, {source, g_partial.tab, names.lookup_default(uid, "")});
   }
 }
 
@@ -178,7 +192,13 @@ static IdChunks memfile_id_chunks(const MemFile *memfile, const Set<uint32_t> &u
 /** Where the ID struct starts in an ID's first chunk: after its block header,
  * #LargeBHead8 (32 bytes) or the legacy #SmallBHead8 (24) depending on a
  * preference. Told apart by finding the datablock's name where the ID struct
- * keeps it; -1 when neither matches (a rename: a real change anyway). */
+ * keeps it, else a name of its type there: a step written under another name
+ * (renamed since, or given a ``.00N`` suffix when a walk read it back while
+ * another datablock held its name) is the same datablock. Matching only the
+ * live name read every such pair of steps as a change, credited to whichever
+ * tab pushed (the invariant test's liveness seed 23594: a tab could not take
+ * back its own link of an object another tab had sent, deleted and restored).
+ * -1 when neither header fits. */
 static int64_t chunk_id_offset(const MemFileChunk *chunk, const char *id_name)
 {
   for (const int64_t header : {int64_t(32), int64_t(24)}) {
@@ -189,7 +209,29 @@ static int64_t chunk_id_offset(const MemFileChunk *chunk, const char *id_name)
       return header;
     }
   }
+  for (const int64_t header : {int64_t(32), int64_t(24)}) {
+    const int64_t at = header + int64_t(offsetof(ID, name));
+    if (at + int64_t(sizeof(ID::name)) > int64_t(chunk->size)) {
+      continue;
+    }
+    const char *p = chunk->buf + at;
+    if (p[0] == id_name[0] && p[1] == id_name[1] && p[2] != '\0' &&
+        memchr(p, 0, sizeof(ID::name)) != nullptr)
+    {
+      return header;
+    }
+  }
   return -1;
+}
+
+/** The name an ID's first chunk was written with ("" when it cannot be found). */
+static std::string chunk_id_name(const MemFileChunk *chunk, const char *id_name)
+{
+  const int64_t header = chunk_id_offset(chunk, id_name);
+  if (header < 0) {
+    return "";
+  }
+  return std::string(chunk->buf + header + offsetof(ID, name));
 }
 
 /** ID struct addresses in one memfile, to the datablock's session_uid: what an ID
@@ -569,7 +611,8 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
                             const Vector<const MemFileChunk *> *b,
                             const ID *id,
                             const IdAddresses &ids_a,
-                            const IdAddresses &ids_b)
+                            const IdAddresses &ids_b,
+                            const bool ignore_name = false)
 {
   if (a == nullptr || b == nullptr) {
     return a == b;
@@ -725,6 +768,10 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
     if (i == 0) {
       mask_id_struct(da, id_code);
       mask_id_struct(db, id_code);
+      if (ignore_name && x.len >= int64_t(offsetof(ID, name) + sizeof(ID::name))) {
+        memset(da.data() + offsetof(ID, name), 0, sizeof(ID::name));
+        memset(db.data() + offsetof(ID, name), 0, sizeof(ID::name));
+      }
     }
     else if (x.sdna > 0 && struct_is_id(x.sdna)) {
       mask_id_tags(da);
@@ -861,6 +908,28 @@ static bool steps_id_equal(const UndoStep *a, const UndoStep *b, const uint32_t 
   return equal;
 }
 
+/** The datablock differs from the step a walk read it from only by the name the
+ * reader gave it (#WalkSource::name), and still has that name: no change since
+ * the walk. */
+static bool renamed_by_read(const WalkSource &walked, const UndoStep *us, const uint32_t uid, const ID *id)
+{
+  if (walked.name.empty()) {
+    return false;
+  }
+  const StepIndex &iw = step_index_of(walked.step);
+  const StepIndex &iu = step_index_of(us);
+  const Vector<const MemFileChunk *> *cw = iw.chunks.lookup_ptr(uid);
+  const Vector<const MemFileChunk *> *cu = iu.chunks.lookup_ptr(uid);
+  if (cw == nullptr || cu == nullptr || cw->is_empty() || cu->is_empty()) {
+    return false;
+  }
+  const char *code = walked.name.c_str();
+  if (chunk_id_name((*cu)[0], code) != walked.name || chunk_id_name((*cw)[0], code) == walked.name) {
+    return false;
+  }
+  return id_chunks_equal(cw, cu, id, iw.ids, iu.ids, true);
+}
+
 struct IdChange {
   int index;
   uint32_t author;
@@ -958,7 +1027,8 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
         bool changed;
         const ID *id = watched.lookup(uid);
         if (walked.step != nullptr) {
-          changed = !steps_id_equal(walked.step, us, uid, id);
+          changed = !steps_id_equal(walked.step, us, uid, id) &&
+                    !renamed_by_read(walked, us, uid, id);
           /* The walk's own change (it re-read another version than the previous
            * memfile held) is the walking tab's: a tab's undo that took back its
            * own recolour of a shared material is a change to that material. */
