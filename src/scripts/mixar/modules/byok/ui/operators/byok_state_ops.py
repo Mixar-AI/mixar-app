@@ -48,6 +48,50 @@ def _redraw_mixie_chat_areas():
         logger.debug("BYOK area redraw failed: %s", e)
 
 
+# ---------------------------------------------------------------------------
+# Transient-state redraw pump
+# ---------------------------------------------------------------------------
+#
+# The save / remove runs on a worker thread and flips `byok_dialog_state` to
+# SAVED / ERROR from a zero-delay timer. The dialog is an `invoke_props_dialog`
+# popup, and a single `tag_redraw` does not reliably repaint a popup block, so
+# the flip is invisible until the user moves the mouse over the dialog — the
+# save looks stuck on "Validating with provider…" long after it landed. While a
+# save / remove is in flight we therefore keep nudging a redraw on a short
+# repeating timer; it stops itself the moment the state settles (one final
+# paint for the settled frame). Registered idempotently so repeated saves do
+# not stack timers.
+
+_PUMP_INTERVAL_S = 0.12
+_TRANSIENT_STATES = ('SAVING', 'REMOVING')
+
+
+def _pump_tick(state):
+    """One pump step: repaint, then the next interval while a save/remove is in
+    flight, else a final repaint and None (unregister). Pure of `bpy` for tests."""
+    _redraw_mixie_chat_areas()
+    return _PUMP_INTERVAL_S if state in _TRANSIENT_STATES else None
+
+
+def _dialog_redraw_pump():
+    try:
+        state = getattr(bpy.context.window_manager, 'byok_dialog_state', '')
+    except Exception:  # noqa: BLE001 — no window manager (shutdown): stop
+        return None
+    return _pump_tick(state)
+
+
+def ensure_dialog_redraw_pump():
+    """Start the redraw pump if it is not already running. Call right after
+    setting `byok_dialog_state` to SAVING / REMOVING so the SAVED / ERROR flip
+    shows without the user touching the dialog."""
+    try:
+        if not bpy.app.timers.is_registered(_dialog_redraw_pump):
+            bpy.app.timers.register(_dialog_redraw_pump, first_interval=0.0)
+    except Exception as e:  # noqa: BLE001 — timers unavailable in a headless test
+        logger.debug("BYOK redraw pump not started: %s", e)
+
+
 def _clear_cached_state(wm=None, *, loaded=False):
     """Reset the cached BYOK display state to defaults."""
     credential_state.clear(wm, loaded=loaded)

@@ -89,7 +89,7 @@ class FakeLayout:
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE'):
+    def operator(self, op, text="", icon='NONE', emboss=True, **_kw):
         self._log.append(f"op:{op}")
         return SimpleNamespace()
 
@@ -447,3 +447,14 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+def test_the_header_links_to_the_published_byok_guide():
+    """The Guide button opens the BYOK section of the docs. The anchor id must
+    match the frontend section (mixie-frontend src/pages/docsByok.ts →
+    YOUR_OWN_PROVIDER_SECTION id 'your-own-provider'); a drift breaks the link."""
+    assert byok_dialog_ui.BYOK_GUIDE_URL == "https://www.mixar.app/docs#your-own-provider"
+    source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+              / "byok_dialog_ui.py").read_text(encoding="utf-8")
+    header = source[source.index("def _draw_header("):source.index("def ", source.index("def _draw_header(") + 1)]
+    assert 'operator("wm.url_open"' in header and "BYOK_GUIDE_URL" in header

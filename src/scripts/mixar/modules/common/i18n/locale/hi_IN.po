@@ -1433,13 +1433,13 @@ msgstr "कस्टम स्थानीय सर्वर"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Mixar को आपके द्वारा पहले से चलाए जा रहे किसी OpenAI-संगत सर्वर से जोड़ता है (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "अमान्य फ़ॉर्म डेटा — कृपया सहायता से संपर्क करें।"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "हमारी ओर से कुछ गड़बड़ हो गई। कृपया पुनः प्रयास करें।"
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1620,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "आपकी कुंजी हटाई जा रही है…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "प्रदाता से सत्यापन हो रहा है…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "AI प्रदाता सेटिंग्स"
@@ -1637,8 +1640,11 @@ msgstr "सक्रिय"
 msgid "Not configured"
 msgstr "कॉन्फ़िगर नहीं"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixar एजेंट को अपने प्रदाता पर चलाएँ — सक्रिय रहने के दौरान Mixar क्रेडिट नहीं काटे जाते।"
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "वर्तमान कॉन्फ़िगरेशन"
@@ -1658,8 +1664,8 @@ msgstr "सुरक्षित रूप से संग्रहीत"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "केवल-पाठ मॉडल — चैट काम करता है; 3D कार्य दृश्य प्रतिक्रिया के बिना चलते हैं।"
 
-msgid "Remove API Key…"
-msgstr "API कुंजी हटाएँ…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1667,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "प्रदाता सेटअप"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ऐसा मॉडल चुनें जो टूल / फ़ंक्शन कॉलिंग का समर्थन करता हो — एजेंट को इसकी आवश्यकता है।"
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
 
-msgid "Couldn't apply your changes"
-msgstr "आपके परिवर्तन लागू नहीं किए जा सके"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "अपनी API कुंजी हटाएँ?"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता का उपयोग करेगा।"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "आगे के एजेंट अनुरोधों के लिए Mixar क्रेडिट काटे जाएँगे।"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar एजेंट अब आपके प्रदाता पर चलता है — Mixar क्रेडिट नहीं काटे जाते।"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API कुंजी हटाई गई"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "एजेंट फिर से Mixar के मूलभूत प्रदाता पर है।"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "एजेंट अनुरोधों के लिए फिर से Mixar क्रेडिट काटे जाते हैं।"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "पुनः प्रयास करें"
 
-msgid "Save & Activate"
-msgstr "सहेजें और सक्रिय करें"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "मेरी कुंजी रखें"
-
-msgid "Remove API Key"
-msgstr "API कुंजी हटाएँ"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "स्थानीय AI रनटाइम अनपैक हो रहा है…"
@@ -1790,14 +1793,14 @@ msgstr "Mixar एजेंट के लिए आपकी अपनी API क
 msgid "Validate with the provider and save your API key"
 msgstr "प्रदाता से सत्यापन करके आपकी API कुंजी सहेजता है"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "इस प्रदाता के लिए एक मॉडल चुनें और API कुंजी दर्ज करें।"
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "मॉडल स्लग और API कुंजी आवश्यक हैं।"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "सहेजना विफल रहा।"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "हटाएँ"
@@ -1811,8 +1814,8 @@ msgstr "हटाने का क्रम रद्द करके मुख�
 msgid "Delete the stored API key server-side"
 msgstr "सर्वर पर संग्रहीत API कुंजी मिटाता है"
 
-msgid "Remove failed."
-msgstr "हटाना विफल रहा।"
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK स्थिति ताज़ा करें"
@@ -19602,7 +19605,70 @@ msgstr "Mixie चैट लॉगिन के लिए प्रयोक्�
 msgid "Agent expects: {formats}"
 msgstr "एजेंट को अपेक्षित: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"

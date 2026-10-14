@@ -1433,13 +1433,13 @@ msgstr "Προσαρμοσμένος τοπικός διακομιστής"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Στρέψτε το Mixar σε έναν διακομιστή συμβατό με OpenAI που ήδη εκτελείτε (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Μη έγκυρα δεδομένα φόρμας — επικοινωνήστε με την υποστήριξη."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Κάτι πήγε στραβά από την πλευρά μας. Δοκιμάστε ξανά."
 
-msgid "Your key was validated and saved to your account, but it could not be stored on this device (the credential store refused the write). Enter it again to retry."
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1620,10 +1620,13 @@ msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Removing your key…"
-msgstr "Αφαίρεση του κλειδιού σας…"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Επικύρωση με τον πάροχο…"
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Ρυθμίσεις παρόχου ΤΝ"
@@ -1637,8 +1640,11 @@ msgstr "Ενεργό"
 msgid "Not configured"
 msgstr "Δεν έχει ρυθμιστεί"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Εκτελέστε τον πράκτορα Mixar στον δικό σας πάροχο — οι πιστώσεις Mixar δεν χρεώνονται όσο είναι ενεργό."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Τρέχουσα ρύθμιση"
@@ -1658,8 +1664,8 @@ msgstr "Αποθηκευμένο με ασφάλεια"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λειτουργεί· οι εργασίες 3D εκτελούνται χωρίς οπτική ανατροφοδότηση."
 
-msgid "Remove API Key…"
-msgstr "Αφαίρεση κλειδιού API…"
+msgid "Remove key…"
+msgstr ""
 
 msgid "Codex sign-in needed on this device"
 msgstr ""
@@ -1667,62 +1673,59 @@ msgstr ""
 msgid "Run  codex login  on this computer, then save below."
 msgstr ""
 
-msgid "Your API key is needed on this device"
+msgid "Enter your API key to continue"
 msgstr ""
 
-msgid "Enter the key below — provider and model stay as saved."
+msgid "Your provider and model are already set — just paste the key."
 msgstr ""
 
-msgid "Mixar keeps your key only on this computer and sends it with each request."
+msgid "Your key is stored only on this computer. Mixar never keeps it."
 msgstr ""
 
 msgid "Provider Setup"
 msgstr "Ρύθμιση παρόχου"
 
-msgid "Kept in this computer's credential store and sent with each agent request — only a masked preview is shown after saving."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
 msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση εργαλείων / συναρτήσεων — ο πράκτορας το χρειάζεται."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
 
-msgid "Couldn't apply your changes"
-msgstr "Δεν ήταν δυνατή η εφαρμογή των αλλαγών σας"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Αφαίρεση του κλειδιού API σας;"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Ο πράκτορας θα χρησιμοποιήσει ξανά τον προεπιλεγμένο πάροχο του Mixar."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Οι πιστώσεις Mixar θα χρεώνονται για μελλοντικά αιτήματα του πράκτορα."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Ο πράκτορας Mixar εκτελείται πλέον στον πάροχό σας — οι πιστώσεις Mixar δεν χρεώνονται."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Το κλειδί API αφαιρέθηκε"
+msgid "Key removed"
+msgstr ""
 
-msgid "The agent is back on Mixar's default provider."
-msgstr "Ο πράκτορας επέστρεψε στον προεπιλεγμένο πάροχο του Mixar."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Οι πιστώσεις Mixar χρεώνονται ξανά για αιτήματα του πράκτορα."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Δοκιμή ξανά"
 
-msgid "Save & Activate"
-msgstr "Αποθήκευση και ενεργοποίηση"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Διατήρηση του κλειδιού μου"
-
-msgid "Remove API Key"
-msgstr "Αφαίρεση κλειδιού API"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Αποσυμπίεση του τοπικού περιβάλλοντος ΤΝ…"
@@ -1790,14 +1793,14 @@ msgstr "Χρησιμοποιήστε το δικό σας κλειδί API γι�
 msgid "Validate with the provider and save your API key"
 msgstr "Επικυρώνει με τον πάροχο και αποθηκεύει το κλειδί API σας"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Επιλέξτε ένα μοντέλο για αυτόν τον πάροχο και εισαγάγετε ένα κλειδί API."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Απαιτούνται το αναγνωριστικό μοντέλου και το κλειδί API."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Η αποθήκευση απέτυχε."
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Remove"
@@ -1811,8 +1814,8 @@ msgstr "Ακυρώνει τη ροή αφαίρεσης και επιστρέφ�
 msgid "Delete the stored API key server-side"
 msgstr "Διαγράφει το αποθηκευμένο κλειδί API στην πλευρά του διακομιστή"
 
-msgid "Remove failed."
-msgstr "Η αφαίρεση απέτυχε."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Ανανέωση κατάστασης BYOK"
@@ -19602,7 +19605,70 @@ msgstr "Αναγνωριστικό χρήστη για σύνδεση στη σ�
 msgid "Agent expects: {formats}"
 msgstr "Ο πράκτορας αναμένει: {formats}"
 
-msgid "Your API key is needed on this device."
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
 msgstr ""
 
 msgid "*Stopped*"

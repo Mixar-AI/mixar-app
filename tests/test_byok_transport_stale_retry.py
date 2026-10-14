@@ -279,7 +279,10 @@ def test_a_save_logs_neither_the_plaintext_nor_an_envelope(monkeypatch, caplog, 
 
 # --- the chat line ----------------------------------------------------------------------------
 
-def test_transport_refusals_show_a_retry_line_and_never_flip_the_device_key_card(monkeypatch):
+def test_transport_refusals_are_a_retry_card_and_never_flip_the_device_key_card(monkeypatch):
+    """A sealed-transport refusal becomes a Try-again (resend) card: the key on
+    this device is fine, so it carries the server line, a resend action and no
+    provider prefill, and never touches the device-key settings card."""
     touched = []
     monkeypatch.setattr(credential_state, "set_device_key_missing", touched.append)
     monkeypatch.setattr(credential_state, "refresh", lambda: touched.append("refresh"))
@@ -287,10 +290,14 @@ def test_transport_refusals_show_a_retry_line_and_never_flip_the_device_key_card
     for code, status in ((BYOK_TRANSPORT_KEY_STALE_CODE, 409), (BYOK_TRANSPORT_UNAVAILABLE_CODE, 503),
                          (BYOK_TRANSPORT_UNREACHABLE_CODE, None)):
         data = {"status_code": status, "code": code, "message": "server line"}
-        text = byok_notice.byok_error_message({"message": "server line", "data": data}, data, status)
-        assert text.startswith("server line") and "try again" in text and "AI Provider Settings" not in text
-    text = byok_notice.byok_error_message({"message": "not sealed. Update Mixar and try again."},
-                                          {"status_code": 400, "code": BYOK_KEY_UNSEALED_CODE}, 400)
-    assert text == "not sealed. Update Mixar and try again."
-    assert "Update Mixar" in byok_notice.byok_error_message({}, {"code": BYOK_KEY_UNSEALED_CODE}, 400)
+        card = byok_notice.refusal_card({"message": "server line", "data": data}, data)
+        assert card.code == code and card.line == "server line"
+        assert card.primary_action == byok_notice.ACTION_RESEND and card.primary_label == "Try again"
+        assert not card.provider and "AI Provider Settings" not in card.line
+    card = byok_notice.refusal_card({"message": "not sealed. Update Mixar and try again."},
+                                    {"status_code": 400, "code": BYOK_KEY_UNSEALED_CODE})
+    assert card.line == "not sealed. Update Mixar and try again."
+    assert card.primary_action == byok_notice.ACTION_RESEND
+    fallback = byok_notice.refusal_card({}, {"code": BYOK_KEY_UNSEALED_CODE})
+    assert "Update Mixar" in fallback.line
     assert touched == []

@@ -65,3 +65,23 @@ def test_unavailable_store_is_reported_not_treated_as_absent(monkeypatch):
     credential_store.invalidate_cache()
     assert auth._load_persisted_refresh_attempt() == (False, None)
     credential_store.invalidate_cache()
+
+
+def test_the_refresh_idempotency_key_is_deterministic_per_token(monkeypatch):
+    """Option B: two Mixar instances sharing the keychain compute the SAME key
+    for the same refresh token, so the backend coordinates their refresh and
+    neither is rejected (which would clear the shared credentials)."""
+    assert auth._refresh_idempotency_key("rt-abc") == auth._refresh_idempotency_key("rt-abc")
+    assert auth._refresh_idempotency_key("rt-abc") != auth._refresh_idempotency_key("rt-xyz")
+    assert uuid.UUID(auth._refresh_idempotency_key("rt-abc")).version == 5  # valid, backend-accepted
+
+
+def test_a_deterministic_v5_marker_round_trips_and_is_accepted(monkeypatch):
+    """The v5 key Option B now writes is a valid marker (the validation was
+    relaxed from v4-only to v4/v5; an older build's v4 marker still loads)."""
+    _store(monkeypatch)
+    v5 = auth._refresh_idempotency_key("rt-abc")
+    attempt = {"refresh_token_digest": "c" * 64, "idempotency_key": v5}
+    assert auth._persist_refresh_attempt(attempt)
+    assert auth._load_persisted_refresh_attempt() == (True, attempt)
+    credential_store.invalidate_cache()
