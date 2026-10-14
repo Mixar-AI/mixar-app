@@ -71,7 +71,6 @@ class UpdateStateManager:
         self._downloaded_bytes: int = 0
         self._total_bytes: int = 0
         self._signature_verified: bool = False
-        self._signer_thumbprint: str = ""
         self._install_requested: bool = False
 
     # ------------------------------------------------------------------
@@ -147,13 +146,6 @@ class UpdateStateManager:
             return self._signature_verified
 
     @property
-    def signer_thumbprint(self) -> str:
-        """Certificate thumbprint of the staged installer's verified signer
-        (Windows; empty when unverified). The helper pins it."""
-        with self._lock:
-            return self._signer_thumbprint
-
-    @property
     def install_requested(self) -> bool:
         """The user asked to restart before the download had finished."""
         with self._lock:
@@ -190,14 +182,11 @@ class UpdateStateManager:
             self._downloaded_bytes = transferred
             self._total_bytes = total
 
-    def set_ready(
-        self, installer_path: str, signature_verified: bool, signer_thumbprint: str = "",
-    ) -> None:
+    def set_ready(self, installer_path: str, signature_verified: bool) -> None:
         with self._lock:
             self._install_state = InstallState.READY
             self._installer_path = installer_path
             self._signature_verified = signature_verified
-            self._signer_thumbprint = signer_thumbprint if signature_verified else ""
             self._install_error = ""
 
     def set_installing(self) -> None:

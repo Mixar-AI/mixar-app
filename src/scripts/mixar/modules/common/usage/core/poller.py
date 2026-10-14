@@ -218,12 +218,9 @@ def _start_fetch() -> None:
 
 
 def _is_logged_in() -> bool:
-    """A signed-in ACCOUNT: a guest has no wallet and the status route
-    answers it 403, so the meter stays empty until the sign-in."""
     try:
-        wm = bpy.context.window_manager
-        return bool(getattr(wm, "mixie_chat_is_logged_in", False)) and not bool(
-            getattr(wm, "mixie_chat_is_guest", False)
+        return bool(
+            getattr(bpy.context.window_manager, "mixie_chat_is_logged_in", False)
         )
     except Exception:  # noqa: BLE001 — no window manager yet
         return False

@@ -11,15 +11,10 @@ failure after resources were acquired runs ``stop`` so no draw handler,
 clock or texture outlives a failed start. ``stop`` is idempotent and
 never raises; it distinguishes deliberate endings (``completed``,
 ``exited`` → mark seen, run the completion cleanup that leaves the
-moodboard open) from interruptions (``quit``, ``window-closed``,
-``cancelled``, ``host-closed``, ``error``, ``file-loaded`` → restore the
-pre-tour state; the reasons are ``telemetry.STOP_*``). The seen flag is
+moodboard open) from interruptions (``cancelled``, ``host-closed``,
+``error``, ``file-loaded`` → restore the pre-tour state). The seen flag is
 also written as soon as the first beat is over, so a user who quits midway
 is not shown the tour again on the next launch.
-
-Blender has no "quitting" flag, so ``note_app_exiting`` (an ``exit_pre``
-handler, ``ui/properties/tour_props.py``) records it: the modal's
-``cancel`` then reports ``quit`` rather than ``window-closed``.
 """
 
 import time
@@ -59,21 +54,6 @@ FALLBACK_TICK_INTERVAL_S = 1.0 / 30.0
 
 # Endings the user chose or reached: the tour has been seen.
 DELIBERATE_ENDINGS = ("completed", "exited")
-
-_app_exiting = False
-
-
-def note_app_exiting() -> None:
-    """The app is quitting (``exit_pre``): a modal cancel from now on is a quit."""
-    global _app_exiting
-    _app_exiting = True
-
-
-def cancel_reason() -> str:
-    """Stop reason for a cancelled modal: ``quit`` once the app is exiting,
-    otherwise its window closed."""
-    from . import telemetry
-    return telemetry.STOP_QUIT if _app_exiting else telemetry.STOP_WINDOW_CLOSED
 
 
 def _subtitles_for(language: str, narration: str):
@@ -219,9 +199,7 @@ class SessionLifecycleMixin:
         t = _telemetry()
         if t is not None:
             try:
-                t.started(self.tour.id, self.language, self.narration,
-                          tour_run_id=self.tour_run_id,
-                          start_source=getattr(self, "start_source", ""))
+                t.started(self.tour.id, self.language, self.narration)
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s started (rate=%.2f silent=%s narration=%s)",
@@ -248,24 +226,18 @@ class SessionLifecycleMixin:
 
     # -- stop ------------------------------------------------------------
 
-    def stop(self, reason: str = "stopped", *, defer_ui: bool = False) -> None:
-        """End the tour. ``defer_ui`` (from ``load_pre``): do only the
-        synchronous, non-operator teardown now — draw handlers, clock and
-        video (the movie Image is about to be freed), runner, publish,
-        telemetry — and leave the operator-driven transient reset and UI
-        restore to ``deferred_restore`` after the load."""
+    def stop(self, reason: str = "stopped") -> None:
         from . import session as session_mod
         if not self.running:
             return
         self.running = False
         beat_id = self.runner.beat.id if (self.runner and self.runner.beat) else ""
         self._remove_draw_handlers()
-        if not defer_ui:
-            try:
-                from . import actions_extra
-                actions_extra.reset_transients()
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("Tour: transient reset skipped: %s", exc)
+        try:
+            from . import actions_extra
+            actions_extra.reset_transients()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Tour: transient reset skipped: %s", exc)
         try:
             if self.runner is not None and self.runner.status != STATUS_ENDED:
                 self.runner.status = STATUS_ENDED
@@ -281,12 +253,6 @@ class SessionLifecycleMixin:
         if reason in DELIBERATE_ENDINGS:
             self._mark_seen()
             self._safe_action("tour_cleanup", {})
-        elif defer_ui:
-            try:
-                from . import deferred_restore
-                deferred_restore.schedule(getattr(self, "_pre_tour_state", None))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("Tour: deferred restore not scheduled: %s", exc)
         elif reason != "start-failed":
             snap = getattr(self, "_pre_tour_state", None)
             if snap is not None and hasattr(actions, "restore_state"):
@@ -302,10 +268,7 @@ class SessionLifecycleMixin:
         if t is not None:
             try:
                 elapsed = time.monotonic() - getattr(self, "_started_wall", time.monotonic())
-                t.finished(self.tour.id, reason, beat_id, elapsed,
-                           tour_run_id=self.tour_run_id,
-                           step_index=self.runner.index if self.runner else -1,
-                           start_source=getattr(self, "start_source", ""))
+                t.finished(self.tour.id, reason, beat_id, elapsed)
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s stopped: %s", self.tour.id, reason)
@@ -331,8 +294,8 @@ class SessionLifecycleMixin:
 
     def _mark_seen(self) -> None:
         try:
-            from mixar.modules.onboarding.core import mark_seen
-            mark_seen()
+            from mixar.modules.onboarding.core import mark_current_user_seen
+            mark_current_user_seen()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Tour: could not mark the tour seen: %s", exc)
 

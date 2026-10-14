@@ -13,10 +13,9 @@ MAX_SCENES = 32  # scene tabs in one document, counting the user's own
 
 
 class UIError(Exception):
-    def __init__(self, code, message, extra=None):
+    def __init__(self, code, message):
         super().__init__(message)
         self.code = code
-        self.extra = extra or {}  # Structured recovery fields beside the message.
 
     def result(self):
-        return {"error_type": self.code, "error": str(self), **self.extra}
+        return {"error_type": self.code, "error": str(self)}

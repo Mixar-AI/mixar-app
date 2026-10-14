@@ -7,12 +7,10 @@
 The agent chat has no video content part on the wire, so a selected movie
 tile cannot be mirrored into ``pending_attachments`` like a still. Instead the
 same poll tick that reconciles stills mirrors the board's video selection onto
-the context-file chips: every currently selected video — a loaded tile, a
-clip inside a selected frame, or the result of a selected Video Gen / Video
-Upscale node — is attached (``context_folder.core.files.attach_file``,
-idempotent) so the agent can sample its frames through
-``context_folder.view_video``, and a chip THIS hook created
-(``origin == "moodboard"``) is detached once its tile (or node) is deselected —
+the context-file chips: every currently selected video is attached
+(``context_folder.core.files.attach_file``, idempotent) so the agent can
+sample its frames through ``context_folder.view_video``, and a chip THIS hook
+created (``origin == "moodboard"``) is detached once its tile is deselected —
 the same follow-the-selection rule the image pills obey. Chips from the
 picker, an OS drop or From Blend (any other ``origin``) are never auto-removed.
 """
@@ -22,11 +20,7 @@ from __future__ import annotations
 import os
 
 from mixar.config.logging_config import get_logger
-from .media_utils import (
-    describe_moodboard_media,
-    is_video_item,
-    selected_exportable_media_entries,
-)
+from .media_utils import describe_moodboard_media, is_video_item
 
 _logger = get_logger(__name__)
 
@@ -35,36 +29,20 @@ MOODBOARD_ORIGIN = "moodboard"
 
 
 def selected_video_items(scene) -> list:
-    """Every selected board video, in board order, without duplicates.
-
-    Three ways a clip counts as selected, matching what the user sees:
-
-    * its own tile is selected (a loaded video);
-    * it is the embedded result of a selected Video Gen / Video Upscale node —
-      ``node_graph.connect_video_result`` pins such an item's ``selected`` to
-      False and a click selects the owning node instead, so only the shared
-      ``media_utils.selected_exportable_media`` walk reaches it;
-    * it sits inside a selected frame (the same rule stills follow), which
-      the shared walk does not cover.
-    """
+    """Every selected board item that points at a movie datablock, including
+    the movies inside a selected frame (the same rule stills follow)."""
     images_attr = getattr(scene, "mixie_moodboard_images", None)
     if images_attr is None:
         return []
-    picked = {
-        index for index, item in selected_exportable_media_entries(scene)
-        if is_video_item(item)
-    }
     frame_ids = {
         frame.frame_id
         for frame in getattr(scene, "mixie_moodboard_frames", ()) or ()
         if getattr(frame, "selected", False) and getattr(frame, "frame_id", "")
     }
-    # One board-order walk: indices dedupe (RNA wrappers are rebuilt on every
-    # collection access, so identity cannot) and keep the order stable.
     return [
-        item for index, item in enumerate(images_attr)
+        item for item in images_attr
         if is_video_item(item)
-        and (index in picked
+        and (getattr(item, "selected", False)
              or (frame_ids and getattr(item, "frame_id", "") in frame_ids))
     ]
 

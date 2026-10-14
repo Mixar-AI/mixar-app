@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """No-credit Video-only references: native pickers, tabs, removal and Send.
 
-Run on an isolated Dev QA app with a synthetic local generation catalog.
-Requires ffmpeg for a disposable movie fixture. QA_HARNESS, MIXAR_QA_PORT and
+Run on an isolated offline Dev QA app with a cached generation catalog.
+Requires ffmpeg for a disposable movie fixture. QA_CATALOG_FIXTURE can point
+to a previously cached catalog JSON for offline Splat/Video controls. QA_HARNESS, MIXAR_QA_PORT and
 QA_SCENARIO_OUT select the harness, app and local-only evidence directory.
 Only the chat transport is probed; no generation or backend request is sent.
 """
@@ -102,8 +103,6 @@ def non_video_mode(qa, out, mode, movie):
 
 def restored_draft(qa, out, movie):
     tab(qa, 'AGENT')
-    readiness = qa.eval(f'from mixar.modules.space_mixie_chat.core.composer_send import can_send; result=can_send({SCENE})')
-    assert readiness[0], ('probe connection must allow a clean draft before video guards', readiness)
     qa.cmd('set_text', widget={'area_type':'AGENT_BUBBLE','prop':'mixie_chat_input'},
            text='Keep this draft while I remove the video', enter=False)
     for source, path in [('BLEND_DATA', movie.name), ('FILE', str(movie))]:
@@ -122,8 +121,7 @@ def restored_draft(qa, out, movie):
         capture(qa, out, 'blocked-'+source.lower())
         qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_remove_attachment')
         qa.wait(f'not {SCENE}.mixie_chat_pending_attachments', timeout=5)
-    readiness = qa.eval(f'from mixar.modules.space_mixie_chat.core.composer_send import can_send; result=can_send({SCENE})')
-    assert readiness[0], ('draft remained blocked after removing video', readiness)
+    assert qa.eval(f'from mixar.modules.space_mixie_chat.core.composer_send import can_send; result=can_send({SCENE})[0]') is True
 
 
 def from_blend_context_file(qa, movie):
@@ -141,12 +139,6 @@ def from_blend_context_file(qa, movie):
     qa.wait(f'not {SCENE}.mixie_context_files', timeout=5)
 
 
-from catalog_fixture import with_catalog_fixture
-from offline_transport_fixture import with_offline_transport
-
-
-@with_offline_transport
-@with_catalog_fixture
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/video-reference-modes')).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -161,21 +153,18 @@ def run(qa):
     qa.wait("bpy.types.Operator.bl_rna_get_subclass_py('MIXAR_OT_pane_video_upload_reference') is not None",
             timeout=30)
     qa.eval("import os, sys\nassert os.environ.get('MIXAR_QA')=='1'\n"
+            "from mixar.config import get_config\n"
+            "assert get_config()['backend_url'].startswith('http://127.0.0.1:')\n"
             f"assert not {SCENE}.mixie_moodboard_images, 'Use a fresh isolated QA scene'\n"
             f"sys.path.insert(0,{str(Path(__file__).resolve().parent)!r})\n"
-            # Process-only: park the real reconnect worker before synthetic readiness.
-            # Otherwise the offline fence disconnects it and late callbacks set OFFLINE.
-            "from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager\n"
-            "get_connection_manager().disconnect(update_session_state=False)\n"
-            "import chat_send_probe as probe\nprobe.install()\n"
-            "assert probe.originals, 'No isolated send transport installed'\nresult=True")
+            "import chat_send_probe as probe\nprobe.install()\nresult=True")
     try:
-        qa.step('splat_catalog_native_schema', qa.eval,
-                "from mixar.modules.common.generation_params.core.engine import get_param_group\n"
-                "group=get_param_group('world_labs','qa-world_labs')\n"
-                "assert group is not None, 'missing Splat parameter group'\n"
-                "assert all(group.bl_rna.properties[p].type=='ENUM' for p in ('p_mode','p_lod'))\n"
-                "result={'mode':group.p_mode,'lod':group.p_lod}")
+        catalog_path = os.environ.get('QA_CATALOG_FIXTURE')
+        qa.eval("from mixar.bootstrap import generation_catalog_cache as c\n"
+                "from mixar.bootstrap.generation_catalog import storage, consumers\n"
+                + (f"import json\nstorage.save(None,json.load(open({catalog_path!r}))['data'])\n"
+                   "assert c._load_from_disk()\n" if catalog_path else "assert c.is_loaded()\n")
+                + "consumers.notify_catalog_swapped()\nresult=True")
         tab(qa, 'VIDEO')
         qa.step('video-native-picker-and-import', picker, qa, out, VIDEO_UPLOAD, movie, video=True)
         qa.wait(f'{movie.name!r} in [w["text"] for w in drv.find(surface="reference_preview")]', timeout=8)
@@ -207,12 +196,9 @@ def run(qa):
         qa.wait(f'not {SCENE}.mixie_context_files', timeout=5)
         qa.step('agent-from-blend-attaches-context-file', from_blend_context_file, qa, movie)
         qa.step('restored-video-drafts-cannot-send', restored_draft, qa, out, movie)
-        recorded_submissions = qa.eval('import chat_send_probe as probe; result=len(probe.calls)')
-        assert recorded_submissions == 0
+        assert qa.eval('import chat_send_probe as probe; result=len(probe.calls)') == 0
         verdict = {'video_picker':True,'video_preview':True,'non_video_modes':list(OTHER_UPLOADS),
-                   'movie_removal':True,'agent_send_guard':True,
-                   'recorded_chat_submissions':recorded_submissions,
-                   'provider_execution':'not exercised; queue and external writes blocked'}
+                   'movie_removal':True,'agent_send_guard':True,'backend_calls':0}
         (out/'verdict.json').write_text(json.dumps(verdict, indent=2)+'\n')
         return verdict
     finally:

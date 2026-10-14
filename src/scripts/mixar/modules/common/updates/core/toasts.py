@@ -113,12 +113,6 @@ def push_update_available_toast(info) -> None:
         tag_topbar_redraw()
         return None
 
-    from .install_gate import is_waiting
-
-    if install_state is InstallState.READY and is_waiting():
-        push_background_wait_toast()
-        return None
-
     forced = is_forced(info)
     # IDLE counts when the release ships a verifiable installer and nothing
     # has ruled self-install out — that is the state after a cancelled
@@ -275,104 +269,95 @@ def push_check_failed_toast() -> None:
     )
 
 
-def push_close_apps_toast(apps) -> None:
-    """Restart & Update found programs the user must close first.
-
-    Installing over them would end in "restart Windows" at best and the old
-    build relaunching at worst, so nothing was started; the user closes them
-    and clicks again. *apps* are ``(kind, name, ...)`` holders from
-    ``win_processes`` (the user-closable kinds); each line is shown once.
-    """
-    from ...notifications.store import NotificationAction, get_notification_store
-    from ..constants import UPDATE_NOTIFICATION_ID
-    from . import win_processes
-
-    lines = []
-    for kind, name, *_ in apps:
-        if kind == win_processes.MIXAR_WINDOW:
-            line = rpt_("Another Mixar window")
-        elif kind == win_processes.CONNECTOR and name:
-            line = rpt_("{app} (using the Mixar connector)").format(app=name)
-        elif kind == win_processes.CONNECTOR:
-            line = rpt_("An AI app using the Mixar connector")
-        else:
-            line = name
-        if line not in lines:
-            lines.append(line)
-
-    get_notification_store().push(
-        type_str="warning",
-        title=n_("Close other apps to update"),
-        body=(
-            rpt_("Windows can't replace Mixar's files while these are using them:")
-            + "".join(f"\n• {line}" for line in lines)
-            + "\n" + rpt_("Close them, then click Restart & Update.")
-        ),
-        priority="normal",
-        actions=[NotificationAction(
-            label=n_("Restart & Update"), operator="mixar.restart_to_update",
-            style="primary",
-        )],
-        ttl_ms=0,
-        id=UPDATE_NOTIFICATION_ID,
-        dismissible=True,
-    )
-    tag_topbar_redraw()
-
-
-def push_background_wait_toast() -> None:
-    """Restart & Update is waiting for Mixar's own background work.
-
-    Mixar stays usable meanwhile and the update continues by itself
-    (``install_gate``). Not dismissible: a hidden wait would end in a quit
-    the user never saw coming, so Cancel is the way out.
-    """
-    from ...notifications.store import NotificationAction, get_notification_store
-    from ..constants import OP_CANCEL_UPDATE_WAIT, UPDATE_NOTIFICATION_ID
-
-    get_notification_store().push(
-        type_str="update",
-        title=n_("Finishing background work"),
-        body=n_("The update starts automatically when Mixar's background tasks finish."),
-        priority="normal",
-        actions=[NotificationAction(
-            label=n_("Cancel"), operator=OP_CANCEL_UPDATE_WAIT, style="secondary",
-        )],
-        ttl_ms=0,
-        id=UPDATE_NOTIFICATION_ID,
-        dismissible=False,
-    )
-    tag_topbar_redraw()
-
-
-def push_finishing_update_toast() -> None:
-    """This launch found an update still being installed and is quitting.
-
-    No actions: the app closes a few seconds later, and the helper opens
-    the updated Mixar when it is done.
-    """
-    from ...notifications.store import get_notification_store
-    from ..constants import UPDATE_NOTIFICATION_ID
-
-    get_notification_store().push(
-        type_str="update",
-        title=n_("Mixar is finishing an update"),
-        body=n_("It will reopen automatically when it's done."),
-        priority="normal",
-        ttl_ms=0,
-        id=UPDATE_NOTIFICATION_ID,
-        dismissible=False,
-    )
-
-
 def report_previous_update_result() -> None:
     """Tell the user what happened to an update we started last session.
 
-    Called once at startup; the logic lives in :mod:`result_report`.
+    Called once at startup.  An install that failed after the app quit is
+    otherwise completely silent: the user clicked "Restart & Update", the
+    app came back, and nothing changed.
     """
-    from .result_report import report_previous_update_result as _report
+    from .install_flow import read_previous_result
+    from .installer import result_is_success
+    from .update_checker import get_runtime_version
 
-    _report()
+    try:
+        result = read_previous_result()
+    except Exception:  # noqa: BLE001 - startup must never fail on this
+        logger.debug("Could not read the previous update result", exc_info=True)
+        return
+
+    if not result:
+        return
+
+    target = result.get("version", "")
+    running = get_runtime_version() or ""
+
+    _capture_result(result, target, running)
+
+    if result_is_success(result):
+        if target and running and target != running:
+            # The installer reported success but we booted the old build:
+            # on Windows this is what a relaunch of a stale path looks like.
+            _push_update_outcome_toast(
+                "error",
+                n_("Update didn't take effect"),
+                rpt_("Mixar {target} was installed but version {running} started. "
+                     "Reinstall from the downloads page.").format(target=target, running=running),
+            )
+            return
+        _push_update_outcome_toast(
+            "success",
+            rpt_("Updated to Mixar {version}").format(version=target or running),
+            n_("The update was installed successfully."),
+            ttl_ms=8000,
+        )
+        return
+
+    if target:
+        body = rpt_("{reason} You can download {version} from the downloads page.").format(
+            reason=_failure_reason(result), version=target)
+    else:
+        body = rpt_("{reason} You can download the update from the downloads page.").format(
+            reason=_failure_reason(result))
+    _push_update_outcome_toast("error", n_("Update was not installed"), body)
+
+
+def _capture_result(result, target, running) -> None:
+    """Close the update funnel: what actually happened on the user's machine."""
+    from .installer import result_is_success
+
+    if result_is_success(result):
+        outcome = "success"
+        if target and running and target != running:
+            outcome = "no_effect"
+    else:
+        outcome = "failed"
+
+    try:
+        from ...analytics.update_events import capture_update_result
+
+        capture_update_result(target, outcome, result.get("stage", ""))
+    except Exception:  # noqa: BLE001 - telemetry is fail-open
+        logger.debug("Update result telemetry failed", exc_info=True)
+
+
+def _failure_reason(result) -> str:
+    """One human sentence for a helper failure record."""
+    stage = result.get("stage", "")
+    code = result.get("exit", "")
+    if stage == "wait":
+        return rpt_("Mixar was still running when the installer tried to start.")
+    if stage == "verify":
+        return rpt_("The downloaded installer failed its signature check.")
+    if stage in ("mount", "unpack"):
+        return rpt_("The downloaded installer could not be opened.")
+    if stage in ("copy", "swap"):
+        return rpt_("Mixar could not be replaced on disk.")
+    if code == "1602":
+        return rpt_("The installation was cancelled.")
+    if code == "1603":
+        return rpt_("Windows Installer reported a fatal error.")
+    return rpt_("The installer did not finish.")
 
 
 def _push_update_outcome_toast(type_str, title, body, ttl_ms=0) -> None:

@@ -10,14 +10,13 @@ Platform-neutral answers to three questions:
 1. *Can this copy of Mixar update itself?* (:func:`check_eligibility`)
 2. *Apply the staged installer and restart.* (:func:`begin_install`)
 3. *What happened to the update we started last time?*
-   (:func:`consume_result`, then :func:`classify_result`)
+   (:func:`consume_result`)
 
 Everything that differs per OS lives in :mod:`win_installer` and
 :mod:`mac_installer`; this module decides which to call and never touches
 the UI.
 """
 
-import ntpath
 import os
 import sys
 
@@ -91,10 +90,7 @@ def check_eligibility(update_info) -> Eligibility:
     )
 
 
-def begin_install(
-    *, installer_path, staging_dir, version, eligibility, verified,
-    signer_thumbprint="", from_version="", attempt_id="",
-):
+def begin_install(*, installer_path, staging_dir, version, eligibility, verified):
     """Spawn the detached helper that installs *installer_path*.
 
     Call this immediately before quitting: the helper waits for this
@@ -104,10 +100,6 @@ def begin_install(
         verified: True when the staged installer's signature was checked
             in-app.  The helper re-checks only in that case, so an
             unsigned local build still updates.
-        signer_thumbprint: the certificate that check accepted (Windows);
-            the helper's re-check requires exactly it.
-        from_version / attempt_id: echoed into the helper's result file so
-            the next launch can report which attempt it was (Windows).
 
     Returns:
         The helper's ``subprocess.Popen`` — the caller keeps it so a quit
@@ -129,10 +121,6 @@ def begin_install(
             version=version,
             relaunch_candidates=location.relaunch_candidates,
             require_signature=verified,
-            signer_thumbprint=signer_thumbprint,
-            install_dir=location.target,
-            from_version=from_version,
-            attempt_id=attempt_id,
         )
 
     if sys.platform == "darwin":
@@ -167,9 +155,7 @@ def consume_result(staging_dir):
     result = {}
     for line in raw.splitlines():
         key, _, value = line.partition("=")
-        # Windows PowerShell 5.1's Add-Content -Encoding UTF8 can write a BOM
-        # where it starts appending after cmd's lines.
-        key = key.strip().lstrip("﻿")
+        key = key.strip()
         if key:
             result[key] = value.strip()
 
@@ -184,79 +170,12 @@ def consume_result(staging_dir):
     return result
 
 
-# Where the helper stopped before running an installer -> failure_reason.
-_STAGE_REASONS = {"locked": "locked", "wait": "timeout", "verify": "signature"}
-# Windows Installer exit codes worth telling apart; any other is msi_error.
-_EXIT_REASONS = {"1602": "uac_declined", "1618": "another_install"}
+def result_is_success(result) -> bool:
+    """True when the helper reported a completed install.
 
-
-def _same_version(left, right) -> bool:
-    """``3.4`` equals ``3.4.0``; anything unparsable compares as text."""
-    def key(value):
-        parts = [int(part) for part in str(value).strip().split(".")]
-        while len(parts) > 1 and parts[-1] == 0:
-            parts.pop()
-        return parts
-
-    if not left or not right:
-        return False
-    try:
-        return key(left) == key(right)
-    except ValueError:
-        return str(left).strip() == str(right).strip()
-
-
-def classify_result(result, running_version, running_binary=""):
-    """What the helper's *result* means, judged from the relaunched app.
-
-    Returns ``{"outcome", "failure_reason", "relaunch_matched"}``:
-
-    - ``success`` — the installer finished AND this process runs the
-      target version. An unknown running version is not proof.
-    - ``pending_reboot`` — 3010: Windows replaces some files only at the
-      next restart (``files_pending_reboot`` when the old build is what
-      came back).
-    - ``no_effect`` — the installer said 0 but another version runs:
-      ``msi_not_upgraded`` (the registry still lists another version),
-      ``old_copy_relaunched`` (this binary is outside the registered
-      install), ``running_version_unknown`` or ``unknown``.
-    - ``failed`` — ``locked``, ``timeout``, ``signature``, ``uac_declined``
-      (1602), ``another_install`` (1618), ``msi_error`` (1603/other), or
-      the macOS stage that failed.
-
-    ``relaunch_matched`` is None unless the helper recorded the registered
-    install location (Windows helper v2+).
+    ``3010`` is Windows Installer's "succeeded, wants a reboot" — the new
+    version is on disk and running, so it counts.
     """
-    target = result.get("version", "")
-    stage = result.get("stage", "")
-    code = result.get("exit", "")
-    location = result.get("install_location", "")
-    installed = result.get("installed_version", "")
-
-    relaunch_matched = None
-    if location and running_binary:
-        relaunch_matched = app_paths.is_within(ntpath.dirname(running_binary), location)
-
-    def verdict(outcome, reason=""):
-        return {
-            "outcome": outcome, "failure_reason": reason,
-            "relaunch_matched": relaunch_matched,
-        }
-
-    if stage != "install":
-        return verdict("failed", _STAGE_REASONS.get(stage, stage or "unknown"))
-    if code not in ("0", "3010"):
-        return verdict("failed", _EXIT_REASONS.get(code, "msi_error"))
-
-    took_effect = _same_version(running_version, target)
-    if code == "3010":
-        return verdict("pending_reboot", "" if took_effect else "files_pending_reboot")
-    if took_effect:
-        return verdict("success")
-    if installed and not _same_version(installed, target):
-        return verdict("no_effect", "msi_not_upgraded")
-    if relaunch_matched is False:
-        return verdict("no_effect", "old_copy_relaunched")
-    if not running_version:
-        return verdict("no_effect", "running_version_unknown")
-    return verdict("no_effect", "unknown")
+    if not result or result.get("stage") != "install":
+        return False
+    return result.get("exit") in ("0", "3010")

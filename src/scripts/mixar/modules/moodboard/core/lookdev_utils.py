@@ -125,14 +125,9 @@ def optimize_depth_file_size(
     return depth_filepath
 
 
-# Image-format fields the depth render overrides, media_type first because
-# Blender filters the valid file_format values by it.
-_IMAGE_SETTING_NAMES = ("media_type", "file_format", "color_mode", "color_depth", "compression")
-
-
 def _restore_render_settings(scene, engine, view_transform, look, film_transparent, use_compositing,
                               use_nodes, resolution_x, resolution_y, percentage, filepath,
-                              taa_samples, taa_reprojection, image_settings=None):
+                              taa_samples, taa_reprojection):
     """Restore original render settings."""
     scene.render.engine = engine
     scene.view_settings.view_transform = view_transform
@@ -144,13 +139,6 @@ def _restore_render_settings(scene, engine, view_transform, look, film_transpare
     scene.render.resolution_y = resolution_y
     scene.render.resolution_percentage = percentage
     scene.render.filepath = filepath
-    # Blender filters file_format by media_type, so the snapshot (ordered
-    # media_type first) must be written back in that order.
-    for name, value in (image_settings or {}).items():
-        try:
-            setattr(scene.render.image_settings, name, value)
-        except (AttributeError, TypeError, ValueError):
-            logger.warning("[Lookdev] Could not restore image setting %s", name)
 
     if hasattr(scene, 'eevee'):
         if taa_samples is not None:
@@ -230,11 +218,6 @@ def prepare_depth_render(fast_mode: bool = False) -> tuple:
     original_resolution_y = scene.render.resolution_y
     original_percentage = scene.render.resolution_percentage
     original_filepath = scene.render.filepath
-    original_image_settings = {
-        name: getattr(scene.render.image_settings, name)
-        for name in _IMAGE_SETTING_NAMES
-        if hasattr(scene.render.image_settings, name)
-    }
 
     # Store original EEVEE TAA settings
     original_taa_samples = scene.eevee.taa_render_samples if hasattr(scene, 'eevee') else None
@@ -261,11 +244,6 @@ def prepare_depth_render(fast_mode: bool = False) -> tuple:
 
     if not mesh_objects:
         logger.warning("[Lookdev] No visible mesh objects found")
-        _restore_render_settings(scene, original_engine, original_view_transform, original_look,
-                                 original_film_transparent, original_use_compositing, original_use_nodes,
-                                 original_resolution_x, original_resolution_y, original_percentage,
-                                 original_filepath, original_taa_samples, original_taa_reprojection,
-                                 original_image_settings)
         return None, False
 
     # Calculate Z-depth range from camera (matching Blender's Z-buffer depth pass)
@@ -393,15 +371,11 @@ def prepare_depth_render(fast_mode: bool = False) -> tuple:
         _restore_render_settings(scene, original_engine, original_view_transform, original_look,
                                  original_film_transparent, original_use_compositing, original_use_nodes,
                                  original_resolution_x, original_resolution_y, original_percentage,
-                                 original_filepath, original_taa_samples, original_taa_reprojection,
-                                 original_image_settings)
+                                 original_filepath, original_taa_samples, original_taa_reprojection)
         _cleanup_temp_compositor(node_tree)
         return None, False
 
-    # Configure render settings. media_type BEFORE file_format: on Blender 5 a
-    # scene whose output is video (FFMPEG) rejects PNG outright.
-    if hasattr(scene.render.image_settings, 'media_type'):
-        scene.render.image_settings.media_type = 'IMAGE'
+    # Configure render settings
     scene.render.image_settings.file_format = 'PNG'
     scene.render.image_settings.color_mode = 'RGB'
     scene.render.image_settings.color_depth = '16'  # 16-bit for better depth precision
@@ -436,8 +410,7 @@ def prepare_depth_render(fast_mode: bool = False) -> tuple:
         _restore_render_settings(scene, original_engine, original_view_transform, original_look,
                                  original_film_transparent, original_use_compositing, original_use_nodes,
                                  original_resolution_x, original_resolution_y, original_percentage,
-                                 original_filepath, original_taa_samples, original_taa_reprojection,
-                                 original_image_settings)
+                                 original_filepath, original_taa_samples, original_taa_reprojection)
         _cleanup_temp_compositor(node_tree)
         return None, False
 
@@ -450,7 +423,6 @@ def prepare_depth_render(fast_mode: bool = False) -> tuple:
     _restore_render_settings(scene, original_engine, original_view_transform, original_look,
                              original_film_transparent, original_use_compositing, original_use_nodes,
                              original_resolution_x, original_resolution_y, original_percentage,
-                             original_filepath, original_taa_samples, original_taa_reprojection,
-                             original_image_settings)
+                             original_filepath, original_taa_samples, original_taa_reprojection)
 
     return depth_filepath, True

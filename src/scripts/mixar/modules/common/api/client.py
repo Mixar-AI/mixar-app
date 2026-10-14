@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import requests
 from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
@@ -40,7 +41,6 @@ from .exceptions import (
     ConnectionError,
     HTTPClientError,
     InsufficientCreditsError,
-    LoginRequiredError,
     NotFoundError,
     RateLimitError,
     ServerError,
@@ -55,7 +55,6 @@ from .request_queue import (
     get_request_queues,
 )
 from .response import APIResponse
-from .retry_policy import build_retry, rate_limit_message, retry_after_seconds
 
 
 _logger = get_logger(__name__)
@@ -132,9 +131,30 @@ class HTTPClient:
         """Create a requests session with retry configuration."""
         session = requests.Session()
 
-        # 5xx only, exponential backoff, never a server-dictated sleep
-        # (Retry-After ignored, so a 429 returns at once) — see retry_policy.
-        retry_strategy = build_retry(self._retry_count, self._retry_delay)
+        # Configure retry strategy.
+        # POST is included so transient 5xx responses on enqueue and other
+        # POST endpoints are retried. The job-queue enqueue is safe
+        # to retry because it carries an idempotency key; other POST callers
+        # should ensure their endpoints are idempotent or guard against
+        # duplicate work themselves.
+        #
+        # retry_count=0 means "hand me the 5xx, don't retry it" — for endpoints
+        # that are expensive, metered or non-idempotent. It must clear
+        # status_forcelist rather than just zeroing `total`: urllib3 counts a
+        # forced-status response as a retry attempt, so Retry(total=0,
+        # status_forcelist=[500]) still raises MaxRetryError("too many 500
+        # error responses") instead of returning the response, and the server's
+        # actual error never reaches the caller.
+        if self._retry_count <= 0:
+            retry_strategy = Retry(total=0, status_forcelist=[],
+                                   raise_on_status=False)
+        else:
+            retry_strategy = Retry(
+                total=self._retry_count,
+                backoff_factor=self._retry_delay,
+                status_forcelist=[500, 502, 503, 504],
+                allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            )
 
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
@@ -246,27 +266,15 @@ class HTTPClient:
                 **error_kwargs,
             )
         elif status == 403:
-            # A guest on a signed-in-only route: a typed refusal with its
-            # own CTA, never the permission error and never a refresh.
-            from mixar.modules.auth.core.guest import login_required_fields
-
-            refusal = login_required_fields(data)
-            if refusal:
-                error_kwargs["message"] = refusal["message"] or message
-                return LoginRequiredError(
-                    cta=refusal["cta"],
-                    action_label=refusal["action_label"] or None,
-                    **error_kwargs,
-                )
             return AuthorizationError(**error_kwargs)
         elif status == 404:
             return NotFoundError(**error_kwargs)
         elif status in (400, 422):
             return ValidationError(**error_kwargs)
         elif status == 429:
-            error_kwargs["message"] = rate_limit_message(data, message)
+            retry_after = response.headers.get("Retry-After")
             return RateLimitError(
-                retry_after=retry_after_seconds(response.headers, data),
+                retry_after=float(retry_after) if retry_after else None,
                 **error_kwargs,
             )
         elif 500 <= status < 600:

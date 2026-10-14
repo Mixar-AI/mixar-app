@@ -85,52 +85,6 @@ def test_starting_ends_when_the_app_is_up_or_the_launch_fails(tmp_path, monkeypa
     assert not installation.start_app() and not installation.start_in_progress()
 
 
-def test_an_update_in_progress_defers_the_cold_start_to_its_helper(tmp_path, monkeypatch):
-    """Restart & Update quits Mixar and its helper relaunches it. A connector
-    an AI app starts meanwhile must report "starting", not launch the old or
-    half-replaced binary; the relaunched app's relay ends the window."""
-    import os
-    import time
-    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
-    calls = []
-    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: calls.append(a) or _LAUNCHED)
-    installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
-
-    installation.mark_updating()
-    assert installation.updating() and installation.start_in_progress()
-    assert not installation.start_app() and calls == []
-
-    installation.started()  # The relaunched app published its relay.
-    assert not installation.updating() and not installation.start_in_progress()
-    assert installation.start_app() and len(calls) == 1
-
-    installation.started()
-    installation.mark_updating()
-    installation.clear_updating()  # The quit was aborted; Mixar is still running.
-    assert not installation.updating()
-
-    installation.mark_updating()  # A helper that died must not hold the cold start forever.
-    marker = installation.directory() / "updating"
-    long_ago = time.time() - installation.UPDATING_SECONDS - 1
-    os.utime(marker, (long_ago, long_ago))
-    assert not installation.updating() and not installation.start_in_progress()
-
-
-def test_a_launch_that_quits_again_keeps_the_updating_marker(monkeypatch, tmp_path):
-    """A Mixar opened by hand mid-install publishes its relay before it
-    quits: that must not read as the relaunch and free the cold start."""
-    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
-    monkeypatch.setattr(installation, "_keep_updating", False)
-    installation.mark_updating()
-    (installation.directory() / "starting").touch()
-
-    installation.keep_updating()
-    installation.started()
-
-    assert installation.updating() and installation.start_in_progress()
-    assert not (installation.directory() / "starting").exists()
-
-
 def test_publishing_the_relay_ends_starting():
     source = (Path(installation.__file__).with_name("relay.py")).read_text()
     start = source[source.index("    def start(self):"):source.index("    def stop(self):")]

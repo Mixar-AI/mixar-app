@@ -21,16 +21,9 @@ def _modules():
     return chat_sync, chat_sync_videos
 
 
-def _item(name, path, *, selected=True, movie=True, frame_id="", embedded_node_id=""):
+def _item(name, path, *, selected=True, movie=True, frame_id=""):
     image = SimpleNamespace(name=name, source="MOVIE" if movie else "FILE", filepath=path)
-    return SimpleNamespace(image=image, selected=selected, frame_id=frame_id,
-                           embedded_node_id=embedded_node_id)
-
-
-def _node(node_id, image, *, selected=True):
-    """Fake Video Gen / Upscale action node holding its embedded result."""
-    return SimpleNamespace(node_id=node_id, selected=selected, preview_image=image,
-                           action_type="VIDEO_GEN")
+    return SimpleNamespace(image=image, selected=selected, frame_id=frame_id)
 
 
 class _Rows(list):
@@ -65,7 +58,6 @@ def test_selected_videos_include_frame_members_and_skip_stills_and_idle_clips(tm
             _item("still", str(tmp_path / "still.png"), movie=False),
         ],
         mixie_moodboard_frames=[SimpleNamespace(selected=True, frame_id="f1")],
-        mixie_moodboard_action_nodes=[],
     )
     assert chat_sync_videos.selected_video_names(scene) == ("clip", "framed")
     # Stills stay out of the video hook and videos stay out of the pill list.
@@ -84,8 +76,7 @@ def test_video_chips_follow_the_board_selection_and_spare_picker_chips(tmp_path,
              _item("gone", str(tmp_path / "gone.mp4")),
              _item("mine", str(tmp_path / "mine.mp4"), selected=False)]
     scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id="",
-                            mixie_moodboard_images=items, mixie_moodboard_frames=[],
-                            mixie_moodboard_action_nodes=[])
+                            mixie_moodboard_images=items, mixie_moodboard_frames=[])
     # A chip the user attached through the picker for a board video.
     assert attach_file(scene, str(tmp_path / "mine.mp4"))["success"]
 
@@ -124,58 +115,8 @@ def test_a_refused_attach_is_logged_not_raised(tmp_path, registry, monkeypatch, 
     scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id="",
                             mixie_moodboard_images=[_item("a", str(tmp_path / "a.mp4")),
                                                     _item("b", str(tmp_path / "b.mp4"))],
-                            mixie_moodboard_frames=[], mixie_moodboard_action_nodes=[])
+                            mixie_moodboard_frames=[])
     with caplog.at_level(logging.INFO, logger=chat_sync_videos._logger.name):
         assert chat_sync_videos.sync_selected_videos(scene) == (1, 0)
     assert len(scene.mixie_context_files) == 1
     assert any("not attached as context" in record.getMessage() for record in caplog.records)
-
-
-def test_a_selected_video_node_result_is_a_selected_video_but_never_a_pill(tmp_path):
-    """A Video Gen / Upscale result is an EMBEDDED item whose own ``selected``
-    stays False (node_graph.connect_video_result); the click selects its
-    owning node. The clip must still count as selected — once — without
-    becoming a still pill."""
-    chat_sync, chat_sync_videos = _modules()
-    generated = _item("gen", str(tmp_path / "gen.mp4"), selected=False,
-                      embedded_node_id="n1", frame_id="f1")
-    other = _item("other", str(tmp_path / "other.mp4"), selected=False,
-                  embedded_node_id="n2")
-    scene = SimpleNamespace(
-        mixie_moodboard_images=[_item("clip", str(tmp_path / "clip.mp4")), generated, other],
-        # The generated clip also sits in a selected frame: still one entry.
-        mixie_moodboard_frames=[SimpleNamespace(selected=True, frame_id="f1")],
-        mixie_moodboard_action_nodes=[_node("n1", generated.image),
-                                      _node("n2", other.image, selected=False)],
-    )
-    assert [item.image.name for item in chat_sync_videos.selected_video_items(scene)] == [
-        "clip", "gen"]
-    assert chat_sync._compute_selection_signature(scene)[2] == ("clip", "gen")
-    # The node's MOVIE preview never becomes a pill.
-    assert chat_sync._collect_selected_image_names(scene) == []
-
-    # Node ownership alone admits it (no frame, item.selected still False)...
-    scene.mixie_moodboard_frames[0].selected = False
-    assert chat_sync_videos.selected_video_names(scene) == ("clip", "gen")
-    # ...and deselecting the node drops it.
-    scene.mixie_moodboard_action_nodes[0].selected = False
-    assert chat_sync_videos.selected_video_names(scene) == ("clip",)
-
-
-def test_a_video_node_chip_follows_the_node_selection(tmp_path, registry):
-    _, chat_sync_videos = _modules()
-    (tmp_path / "gen.mp4").write_bytes(b"x")
-    generated = _item("gen", str(tmp_path / "gen.mp4"), selected=False, embedded_node_id="n1")
-    node = _node("n1", generated.image)
-    scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id="",
-                            mixie_moodboard_images=[generated], mixie_moodboard_frames=[],
-                            mixie_moodboard_action_nodes=[node])
-
-    assert chat_sync_videos.sync_selected_videos(scene) == (1, 0)
-    assert [(row.name, row.origin) for row in scene.mixie_context_files] == [
-        ("gen.mp4", "moodboard")]
-    assert chat_sync_videos.sync_selected_videos(scene) == (0, 0)
-
-    node.selected = False
-    assert chat_sync_videos.sync_selected_videos(scene) == (0, 1)
-    assert list(scene.mixie_context_files) == []

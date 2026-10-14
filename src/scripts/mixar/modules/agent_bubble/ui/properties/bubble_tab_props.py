@@ -59,10 +59,7 @@ def _redraw_bubbles(_self, context):
     except Exception:
         pass
     for window in wm.windows:
-        screen = window.screen
-        if screen is None:
-            continue
-        for area in screen.areas:
+        for area in window.screen.areas:
             if area.type == 'AGENT_BUBBLE':
                 area.tag_redraw()
 

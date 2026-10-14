@@ -19,9 +19,7 @@
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 #include "BKE_undo_system.hh"
-#include "BKE_undo_tabs.hh"
 
-#include "ED_mixar_undo.hh"
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
 
@@ -106,8 +104,6 @@ static void topbar_operatortypes()
   /* Mixar: the whole-window out-of-credits banner. The top bar is the one
    * space every main window has, so it hosts the registration. */
   ED_mixar_credits_banner_register();
-  /* Mixar per-tab undo (M4): Edit > Undo Whole Document. */
-  WM_operatortype_append(ED_OT_undo_whole_document);
 }
 
 static void topbar_keymap(wmKeyConfig * /*keyconf*/) {}
@@ -241,27 +237,11 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
     return;
   }
 
-  /* Mixar per-tab undo: under the flag the menu of a tab's window lists that
-   * tab's steps only. A document step ("Original", a file load) is not a
-   * per-tab jump target (BKE_undosys_tab_step_load refuses it), so listing it
-   * was a row that always failed (review 2026-09-30, finding 5). A window on
-   * no tab lists everything. */
-  const bool per_tab = BKE_undo_tabs_enabled();
-  /* The window's tab, as the undo operators read it (review 2026-10-01). */
-  wmWindow *menu_win = CTX_wm_window(C);
-  const uint32_t current_tab = (per_tab && menu_win && menu_win->scene &&
-                                !BKE_undo_tab_scene_is_lane(menu_win->scene)) ?
-                                   BKE_undo_tab_uid_for_scene(CTX_data_main(C), menu_win->scene) :
-                                   UNDO_TAB_DOCUMENT;
-  auto step_hidden = [&](const UndoStep &us) {
-    return per_tab && current_tab != UNDO_TAB_DOCUMENT && us.mixar_tab_uid != current_tab;
-  };
-
   int undo_step_count = 0;
   int undo_step_count_all = 0;
   for (UndoStep &us : wm->runtime->undo_stack->steps.items_reversed()) {
     undo_step_count_all += 1;
-    if (us.skip || step_hidden(us)) {
+    if (us.skip) {
       continue;
     }
     undo_step_count += 1;
@@ -279,18 +259,13 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
   for (UndoStep *us = static_cast<UndoStep *>(wm->runtime->undo_stack->steps.last); us;
        us = us->prev, i--)
   {
-    if (us->skip || step_hidden(*us)) {
+    if (us->skip) {
       continue;
     }
     if (!(undo_step_count % col_size)) {
       column = &split.column(false);
     }
-    /* Mixar per-tab undo: the marker is the tab's cursor, the step this tab
-     * currently reflects, not the document's active step. */
-    const UndoStep *active_step = (current_tab != UNDO_TAB_DOCUMENT) ?
-                                      BKE_undosys_tab_cursor(wm->runtime->undo_stack, current_tab) :
-                                      wm->runtime->undo_stack->step_active;
-    const bool is_active = (us == active_step);
+    const bool is_active = (us == wm->runtime->undo_stack->step_active);
     ui::Layout &row = column->row(false);
     row.enabled_set(!is_active);
     PointerRNA op_ptr = row.op("ED_OT_undo_history",

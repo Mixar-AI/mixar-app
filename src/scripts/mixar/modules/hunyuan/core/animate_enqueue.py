@@ -18,8 +18,8 @@ Two job kinds behind the Animate moodboard tab:
 
 * **Animate** (``tripo_retarget``): no file upload — the payload carries
   the ``rig_job_id`` read from a previously imported rigged object plus
-  the catalog params (preset list, in-place). The result is a clip-only
-  GLB whose actions ``animation_merge`` moves onto that same rig.
+  the catalog params (animation preset, in-place). The result GLB comes
+  back with the animation baked in and imports as a new animated copy.
 """
 
 import base64 as _b64
@@ -30,15 +30,11 @@ from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
 from mixar.modules.common.i18n import n_, rpt_
 from ..constants import (
     ANIMATE_IMPORT_OPTIONS,
-    ANIMATE_PRESETS_PARAM,
     ANIMATE_RIG_JOB_PROP,
     ANIMATE_RIG_SERVICE,
-    ANIMATE_RIG_SKELETON_PROP,
     ANIMATE_RETARGET_SERVICE,
     MAX_FILE_SIZE_ANIMATE_RIG,
 )
-from .animate_presets import clip_name
-from .animation_merge import merge_hook
 
 logger = get_logger(__name__)
 
@@ -63,22 +59,17 @@ def show_armatures_in_front(object_names: str) -> None:
             obj.show_in_front = True
 
 
-def stamp_rig_import(job, object_names: str) -> None:
-    """Stamp every imported object with the rig job id and the rig's skeleton,
-    and show the rig In Front.
+def _rig_on_imported(job, object_names: str) -> None:
+    """Stamp every imported object with the rig job id and show the rig
+    In Front.
 
     The rigged GLB imports as an armature with the skinned mesh parented
     under it; stamping ALL of them means the user can select any part of
-    the import and the retarget still finds the link. The skeleton
-    (``rig_skeleton`` beside ``result_files`` in the job result, kept on
-    ``job.result_data``) is what the retarget presets are filtered by.
-    Every Auto Rig entry point — the sidebar/agent ``enqueue_rig_jobs`` and
-    the Moodboard Auto Rig card — lands through this one function.
+    the import and the retarget operator still finds the link.
     """
     import bpy
 
     names = [n.strip() for n in object_names.split(",") if n.strip()]
-    skeleton = str((getattr(job, "result_data", None) or {}).get("rig_skeleton") or "")
     stamped = 0
     for name in names:
         obj = bpy.data.objects.get(name)
@@ -86,56 +77,45 @@ def stamp_rig_import(job, object_names: str) -> None:
             continue
         try:
             obj[ANIMATE_RIG_JOB_PROP] = str(job.backend_job_id)
-            if skeleton:
-                obj[ANIMATE_RIG_SKELETON_PROP] = skeleton
             stamped += 1
         except Exception as e:
             logger.warning("[Animate] Could not stamp %s: %s", name, e)
     show_armatures_in_front(object_names)
     logger.info(
-        "[Animate] Rig imported: stamped %d object(s) with job %s (%s)",
-        stamped, job.backend_job_id, skeleton or "skeleton unknown",
+        "[Animate] Rig imported: stamped %d object(s) with job %s",
+        stamped, job.backend_job_id,
     )
 
 
+def _animate_on_imported(job, object_names: str) -> None:
+    """Show the animated copy's armature In Front, like the rig."""
+    show_armatures_in_front(object_names)
+
+
 # ---------------------------------------------------------------------------
-# Rig-link discovery (used by the Animate card and the agent operator)
+# Rig-link discovery (used by the operator and the drawer)
 # ---------------------------------------------------------------------------
-
-
-def _find_rig_prop(obj, prop: str) -> str:
-    """A rig stamp on ``obj``, its ancestors, or (for a mesh) its armature-
-    modifier target. Empty string when the object isn't part of an Auto Rig
-    import."""
-    def stamp(target) -> str:
-        getter = getattr(target, "get", None)  # ID properties; absent on a non-ID
-        return str(getter(prop, "") or "") if getter else ""
-
-    seen = set()
-    current = obj
-    while current is not None and getattr(current, "name", None) not in seen:
-        seen.add(getattr(current, "name", None))
-        value = stamp(current)
-        if value:
-            return value
-        current = getattr(current, "parent", None)
-    if obj is not None and getattr(obj, "type", None) == 'MESH':
-        for mod in getattr(obj, "modifiers", None) or ():
-            if mod.type == 'ARMATURE' and mod.object is not None:
-                value = stamp(mod.object)
-                if value:
-                    return value
-    return ""
 
 
 def find_rig_job_id(obj) -> str:
-    """OUR queue job id of the Auto Rig that produced ``obj`` ("" if none)."""
-    return _find_rig_prop(obj, ANIMATE_RIG_JOB_PROP)
-
-
-def find_rig_skeleton(obj) -> str:
-    """The rig's skeleton ("biped", ...) when the rig job reported one."""
-    return _find_rig_prop(obj, ANIMATE_RIG_SKELETON_PROP)
+    """Return the rig job id linked to ``obj``, searching the object, its
+    ancestors, and (for a mesh) its armature-modifier target. Empty string
+    when the object isn't part of an Auto Rig import."""
+    seen = set()
+    current = obj
+    while current is not None and current.name not in seen:
+        seen.add(current.name)
+        value = current.get(ANIMATE_RIG_JOB_PROP, "")
+        if value:
+            return str(value)
+        current = current.parent
+    if obj is not None and getattr(obj, "type", None) == 'MESH':
+        for mod in getattr(obj, "modifiers", []):
+            if mod.type == 'ARMATURE' and mod.object is not None:
+                value = mod.object.get(ANIMATE_RIG_JOB_PROP, "")
+                if value:
+                    return str(value)
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +252,7 @@ def enqueue_rig_jobs(
         payload=payload,
         label=label,
         fail_message=n_("Auto Rig failed"),
-        on_imported=stamp_rig_import,
+        on_imported=_rig_on_imported,
         import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
     )
@@ -286,17 +266,12 @@ def enqueue_retarget_job(
     model: str,
     params: dict,
     label: str,
-    rig_name: str = "",
-    graph_node_id: str = "",
-    on_merged=None,
 ):
-    """Enqueue one retarget job for a rigged import (Animate card and agent).
+    """Enqueue one retarget job for a rigged import.
 
-    ``params`` are the catalog's (``animations`` preset list, in-place); the
-    payload adds ``input_name`` and the rig job id. The result's clips are
-    merged onto the rig stamped with that id (``rig_name`` is the fallback
-    lookup); ``on_merged(job, character_names)`` runs after a successful
-    merge, before the job records those names as its result.
+    The animated GLB imports as a NEW copy (armature + mesh + baked
+    action) beside the rigged one, so re-animating with a different
+    preset never destroys the previous result.
     """
     from mixar.modules.common.generation_params import assemble_payload
 
@@ -309,18 +284,17 @@ def enqueue_retarget_job(
         },
         model,
     )
-    clips = ", ".join(clip_name(preset) for preset in params.get(ANIMATE_PRESETS_PARAM) or ())
+    animation = str(params.get("animation") or "animation")
+    short = animation.rsplit(":", 1)[-1]
     return enqueue_generation(
         kind="glb",
         feature_key=FEATURE_ANIMATE,
         job_type=service_key or ANIMATE_RETARGET_SERVICE,
         model=model,
         payload=payload,
-        label=f"{label} ({clips})",
-        display_label=label,
-        graph_node_id=graph_node_id,
+        label=f"{label} ({short})",
         fail_message=n_("Animate failed"),
-        on_imported=merge_hook(str(rig_job_id), rig_name, on_merged),
+        on_imported=_animate_on_imported,
         import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
     )

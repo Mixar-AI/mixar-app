@@ -84,27 +84,20 @@ struct AgentIslandState {
    * switch thumb sits on the ON side. */
   bool auto_mode;
 
-  /* The model chip, mirrored onto the WindowManager by the Python half
-   * (byok/core/picker_mirror.py). `model_available` is false until those
-   * properties are registered — the chip is then not laid out or drawn at
-   * all, rather than opening a card with nothing in it. */
+  /* Hosted agent model pick, mirrored onto the WindowManager by the Python
+   * half (byok). `model_available` is false until those properties are
+   * registered — the chip is then not laid out or drawn at all, rather than
+   * offering a menu that does not exist yet. `model_byok_active` means the
+   * user's own API key overrides the hosted pick, so the chip is inert. */
   bool model_available;
+  bool model_byok_active;
+  char model_label[96];
 
   /* Refine / Revert of the composer draft (scene.mixie_chat_prompt_refined /
    * _refining, moodboard/core/prompt_refine_chat.py). Refined adds Revert
    * beside Refine; refining greys Refine out until the answer lands. */
   bool prompt_refined;
   bool prompt_refining;
-
-  /* The model chip (wm.mixar_agent_*; core/picker.py decides, the C++ only
-   * draws): who answers — "MIXIE" | "KEY" | "LOCAL" — its badge word and the
-   * model name as drawn, and the chip's state: "OK" | "KEY_NEEDED" | "BUSY"
-   * (busy: a switch, pause or resume is being saved; the name dims). Read by
-   * `agent_ui_provider_gather`; the chip opens the model card (agent_ui_model_card.hh). */
-  char model_source[8];
-  char model_source_label[32];
-  char model_chip_name[96];
-  char model_chip_state[16];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

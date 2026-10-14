@@ -327,7 +327,7 @@ def test_update_events_carry_versions_and_outcomes_only():
 
     payloads = [call.args[1] for call in captured.call_args_list]
     assert set(payloads[0]) == {"target_version", "outcome"}
-    assert set(payloads[1]) == {"target_version", "signature_verified", "attempt_id"}
+    assert set(payloads[1]) == {"target_version", "signature_verified"}
     assert set(payloads[2]) == {"target_version", "outcome", "stage"}
 
 
@@ -659,13 +659,15 @@ INSTALL_FLOW_SRC = (
 
 def test_after_download_invokes_the_restart_prompt_with_a_window():
     source = INSTALL_FLOW_SRC.read_text(encoding="utf-8")
-    after = source[source.index("def _after_download"):].split("\n\n\n")[0]
-    prompt = source[source.index("def open_restart_prompt"):].split("\n\n\n")[0]
+    after = source[source.index("def _after_download"):]
+    after = after[:after.index("\n\n\n")]
 
-    assert 'bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")' in prompt
+    assert 'bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")' in after
     # Timer contexts carry no window; a dialog needs one borrowed in.
-    assert "temp_override" in prompt
-    assert "window_manager.windows" in prompt
+    assert "temp_override" in after
+    assert "window_manager.windows" in after
     # The request is consumed BEFORE the invoke, so a failed invoke can be
     # retried from the toast/badge instead of auto-firing on every tick.
-    assert after.index("set_install_requested(False)") < after.index("open_restart_prompt()")
+    assert after.index("set_install_requested(False)") < after.index(
+        "restart_to_update"
+    )

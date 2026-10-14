@@ -24,12 +24,10 @@ def get_client():
     return client
 
 
-def call(method, params, callback, expect_ack=False):
+def call(method, params, callback):
     """Nonblocking RPC. Callback executes off the main thread exactly once."""
     client = get_client()
     try:
-        if expect_ack:
-            return client.send_request(method, params, on_result=callback, expect_ack=True)
         return client.send_request(method, params, on_result=callback)
     except ValueError as exc:
         raise AgentRPCError(str(exc), 413) from exc
@@ -39,9 +37,7 @@ def call(method, params, callback, expect_ack=False):
 
 def command(method, payload, callback, command_id=None):
     command_id = command_id or str(uuid.uuid4())
-    # The server answers a command at once; a long silence probes the path early.
-    call('agent.' + method, {'command_id': command_id, 'payload': payload}, callback,
-         expect_ack=True)
+    call('agent.' + method, {'command_id': command_id, 'payload': payload}, callback)
     return command_id
 
 

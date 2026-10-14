@@ -25,23 +25,19 @@ Design notes:
   the user launched.
 - **Relaunch happens on every exit path**, including a failed mount or a
   refused signature: the user must never be left with no application.
-- **The update-in-progress marker goes right before the relaunch**
-  (and on the timeout): until then a Mixar opened by hand quits rather
-  than run the old binary over a bundle being swapped.
 - **``ditto`` does the copying** because it preserves the extended
   attributes and resource forks that the code signature covers; ``cp -R``
   can invalidate the signature and produce "app is damaged".
 """
 
 import os
-import posixpath
 import shlex
 import stat
 import subprocess
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import HELPER_LOG_NAME, HELPER_MARKER_NAME, HELPER_WAIT_FOR_EXIT_S
+from ..constants import HELPER_LOG_NAME, HELPER_WAIT_FOR_EXIT_S
 from .staging import result_path
 
 logger = get_logger(__name__)
@@ -54,7 +50,6 @@ LOG={log}
 INSTALLER={installer}
 TARGET={target}
 RESULT={result}
-MARKER={marker}
 PID={pid}
 VERSION={version}
 EXPECTED_TEAM={team}
@@ -84,8 +79,6 @@ cleanup() {{
 }}
 
 relaunch() {{
-    # First: the Mixar about to open must not find the marker naming us.
-    rm -f "$MARKER"
     if [ -d "$TARGET" ]; then
         log "relaunching $TARGET"
         /usr/bin/open "$TARGET" >>"$LOG" 2>&1
@@ -110,7 +103,6 @@ while kill -0 "$PID" 2>/dev/null; do
     if [ "$waited" -ge "$WAIT_SECONDS" ]; then
         log "Mixar (pid $PID) still running after ${{WAIT_SECONDS}}s - aborting"
         record wait timeout
-        rm -f "$MARKER"
         exit 2
     fi
     sleep 1
@@ -197,10 +189,6 @@ def build_script(
         installer=shlex.quote(installer_path),
         target=shlex.quote(target_bundle),
         result=shlex.quote(result_path(staging_dir)),
-        # The script is POSIX shell: join the POSIX way even when the text is
-        # generated elsewhere (the Windows test run would otherwise embed a
-        # backslash).
-        marker=shlex.quote(posixpath.join(staging_dir, HELPER_MARKER_NAME)),
         pid=int(pid),
         version=shlex.quote(version),
         team=shlex.quote(expected_team or ""),

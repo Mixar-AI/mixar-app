@@ -86,10 +86,8 @@ bool mixie_chat_layout_text_rect(const MessageLayoutData *layout, rctf *r_rect)
   r_rect->xmax = r_rect->xmin + layout->content_width;
 
   if (layout->is_markdown_content) {
-    /* Markdown content draws top-down from the bubble's top padding,
-     * below any attachments so the thumbnail keeps the text column. */
-    r_rect->ymax = layout->y_pos + layout->bubble_height - layout->style.v_padding -
-                   layout->attachments_height;
+    /* Markdown content draws top-down from the bubble's top padding. */
+    r_rect->ymax = layout->y_pos + layout->bubble_height - layout->style.v_padding;
     r_rect->ymin = r_rect->ymax - layout->text_height;
   }
   else {

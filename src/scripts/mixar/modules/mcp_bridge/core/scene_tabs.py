@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Scene tabs for MCP clients, created, switched and closed the way the Scenes drawer does.
+"""Scene tabs for MCP clients, created and switched the way the Scenes drawer does.
 
 Main thread only (the UI-control pump runs these). A tab made here is the same
 as one from "+ New scene": ready while connected, the signed-in account, the
@@ -72,26 +72,6 @@ def _gate():
                                  "paint stroke); ask them to finish or cancel it, then try again")
 
 
-def _refresh_drawer():
-    from mixar.modules.space_mixie_chat.ui.properties.scene_tabs_props import refresh_scene_tabs
-    refresh_scene_tabs()
-
-
-def _working(scene) -> bool:
-    """Mixie's turn or run in that tab (what the drawer would stop on close)."""
-    from mixar.modules.space_mixie_chat.constants import SessionState
-    session = _session()
-    return (session.get_state(scene) in (SessionState.BUSY, SessionState.MODIFYING,
-                                         SessionState.AWAITING_INPUT)
-            or bool(session.run_open(scene)))
-
-
-def _content(scene) -> list:
-    """What closing would lose: every object but the camera and light a tab
-    starts with. The chat is not lost — closing archives it to History."""
-    return [obj for obj in scene.objects if getattr(obj, "type", "") not in ("CAMERA", "LIGHT")]
-
-
 def _target(session: str):
     matches = [scene for scene in _ops().real_scenes() if getattr(scene, "mixie_session_id", "") == session]
     if len(matches) != 1:
@@ -99,49 +79,14 @@ def _target(session: str):
     return matches[0]
 
 
-def _refuse_at_limit():
-    """Final, and names the way out: a scripted client that retried this
-    refusal spun on it for minutes."""
-    shown, count = _shown(), len(_ops().real_scenes())
-    reuse = [_entry(scene, shown) for scene in _ops().ordered_tabs()]
-    reuse.sort(key=lambda entry: entry["state"] != "idle")  # Idle tabs first; stable otherwise.
-    raise UIError("scene_limit",
-                  f"Mixar has {count} scene tabs (limit {MAX_SCENES}). Do not retry mixar_scene_new: switch to "
-                  "an existing tab with mixar_scene_switch (sessions in reuse), close one you no longer need "
-                  "with mixar_scene_close (ask the user first if it holds their work), or ask the user to "
-                  "close tabs in Mixar's Scenes drawer",
-                  {"retryable": False, "scene_count": count, "max_scenes": MAX_SCENES, "reuse": reuse})
-
-
 def preflight(name: str, args: dict) -> None:
     """Every refusal happens before the call is claimed, so a refused call has
     a clean "failed" receipt instead of an uncertain one."""
     _gate()
     if name == "mixar_scene_new" and len(_ops().real_scenes()) >= MAX_SCENES:
-        _refuse_at_limit()
+        raise UIError("scene_limit", f"Mixar already has {MAX_SCENES} scene tabs; reuse or close one")
     if name == "mixar_scene_switch":
         _target(args["session"])
-    if name == "mixar_scene_close":
-        _closable(args)
-
-
-def _closable(args: dict):
-    """A tab an AI app may close: not the last, nobody working in it, and its
-    objects discarded only with consent (the mixar_project_open convention)."""
-    from . import lease
-    scene = _target(args["session"])
-    if len(_ops().real_scenes()) <= 1:
-        raise UIError("last_scene", "This is the only scene tab; Mixar keeps at least one open")
-    if _working(scene) or lease.held(args["session"]):
-        raise UIError("scene_busy", "An agent (Mixie, or another AI app connection) is working in that tab, "
-                                    "so it was not closed. Wait for it to finish, or ask the user to stop it")
-    content = _content(scene)
-    if content and args.get("contents", "refuse") != "discard":
-        raise UIError("scene_has_content",
-                      f"That tab holds {len(content)} object(s) that closing would delete. Ask the user whether "
-                      "to discard them, then call again with contents='discard'. Only a tab holding nothing but "
-                      "work you made in this conversation may be discarded without asking")
-    return scene
 
 
 def list_scenes() -> dict:
@@ -164,18 +109,3 @@ def switch_scene(session: str) -> dict:
     from mixar.modules.space_mixie_chat.core.scene_identity import adopt_scene
     adopt_scene(scene)
     return _entry(scene, _shown())
-
-
-def close_scene(session: str, contents: str = "refuse") -> dict:
-    """Close a tab the drawer's way — its chat archived to History, its worker
-    lanes swept, windows showing it moved to a neighbour. Returns the tab now
-    shown, plus the closed one."""
-    preflight("mixar_scene_close", {"session": session, "contents": contents})
-    scene = _target(session)
-    name = scene.name
-    closed, reason = _ops().close_scene_tab(scene)
-    if not closed:
-        raise UIError("close_failed", reason or "Mixar could not close that tab")
-    _refresh_drawer()
-    shown = _shown()
-    return {**_entry(shown, shown), "closed": {"name": name, "session": session}}

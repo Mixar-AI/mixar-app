@@ -274,7 +274,6 @@ SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
 # (SCENE_SEGMENT_API_TIMEOUT) and answers with the upstream error when that
 # expires; a client timeout equal to it fires first and hides that answer.
 SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS = 135.0
-SCENE_SEGMENT_CREDITS_ERROR = "insufficient_credits"  # 402 marker, like "expired"
 
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.
@@ -443,7 +442,6 @@ NODE_TEMPLATES = (
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', 'retopology'),
     ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', 'mesh_segmentation'),
     ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', 'animate'),
-    ('ANIMATE', n_("Animate"), 'ACTION', 'animation'),
     ('MESH_REFERENCE', n_("Add Mesh"), 'OUTLINER_OB_MESH', None),
     ('CHARACTER_PARTS', n_("Character Parts"), 'OUTLINER_OB_ARMATURE', 'character_parts'),
     ('CHARACTER_SHEET_3D', n_("Character Sheet to 3D"), 'COMMUNITY', 'model_gen'),

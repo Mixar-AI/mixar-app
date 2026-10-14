@@ -17,7 +17,7 @@ Users see friendly labels; the IDs are what get sent to the server.
 """
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, StringProperty
 
 from ...constants import (
     BYOK_API_KEY_MAX_LENGTH,
@@ -45,67 +45,16 @@ def _model_items(self, context):
     """EnumProperty items callback — model list filtered to the
     currently-selected provider. Returns a "No models available"
     sentinel when the provider has no cached models so the dropdown
-    is never blank. `self` is the WindowManager.
+    is never blank.
     """
-    return get_model_items(getattr(self, 'byok_form_provider', '') or '')
-
-
-# The provider / model picks are stored as IDENTIFIERS (the hidden `*_id`
-# strings), not as Blender's enum number: with 3-tuple items that number is the
-# list index, so a pick made while the catalog loads — or before a refresh
-# reorders it — would silently become whichever item now sits at that index.
-# get → the stored id's index in the CURRENT list (0, the first item, when
-# unset or no longer listed); set → store the chosen item's identifier.
-
-def _index_of(items, identifier) -> int:
-    for index, item in enumerate(items):
-        if item[0] == identifier:
-            return index
-    return 0
-
-
-def _identifier_at(items, index) -> str:
-    return items[index][0] if 0 <= index < len(items) else ''
-
-
-def _provider_get(self):
-    return _index_of(get_provider_items(), self.byok_form_provider_id)
-
-
-def _provider_set(self, value):
-    self.byok_form_provider_id = _identifier_at(get_provider_items(), value)
-    # Run here rather than as `update=`: the reset must follow every write,
-    # including assignments from Python (the dialog prefill).
-    _provider_changed(self, None)
-
-
-def _model_get(self):
-    return _index_of(_model_items(self, None), self.byok_form_model_id)
-
-
-def _model_set(self, value):
-    self.byok_form_model_id = _identifier_at(_model_items(self, None), value)
-
-
-def _remembered_model(wm, provider):
-    """The model this account already uses with ``provider``: the key in use,
-    else a paused key's model. "" when the provider has none."""
-    if getattr(wm, 'byok_is_active', False) and getattr(wm, 'byok_current_provider', '') == provider:
-        return getattr(wm, 'byok_current_model', '') or ''
-    try:
-        from ...core import credential_state
-        paused_provider, paused_model = credential_state.resume_target()
-    except Exception:
-        return ''
-    return paused_model if paused_provider == provider else ''
+    provider = getattr(context.window_manager, 'byok_form_provider', '') or ''
+    return get_model_items(provider)
 
 
 def _provider_changed(self, context):
     """When the user picks a different provider, reset the model
     selection so we don't end up with a model that doesn't belong to
     the new provider (which would be an invalid combo at save time).
-    Coming back to the provider in use (or a paused key's) selects the model
-    it runs, not the first in the list.
     """
     try:
         wm = context.window_manager if context is not None else self
@@ -114,11 +63,7 @@ def _provider_changed(self, context):
         # Dynamic EnumProperties reject identifiers absent from their current
         # item callback.  Select the first real model for the new provider, or
         # the NONE sentinel only when that is what the callback exposes.
-        remembered = _remembered_model(wm, provider)
-        if remembered and any(item[0] == remembered for item in items):
-            wm.byok_form_model = remembered
-        else:
-            wm.byok_form_model = items[0][0] if items else 'NONE'
+        wm.byok_form_model = items[0][0] if items else 'NONE'
         if is_local(provider):
             # Build the managed-model item cache (RAM fit + downloaded state)
             # and kick a background probe for user-run local apps, so the
@@ -171,6 +116,7 @@ def wipe_transient_secrets(wm) -> None:
         return
     for attr in (
         'byok_form_api_key',
+        'byok_form_codex_bundle',
         'byok_form_local_custom_key',
     ):
         try:
@@ -182,11 +128,9 @@ def wipe_transient_secrets(wm) -> None:
 _WM_ATTRS = (
     'byok_form_provider',
     'byok_form_model',
-    'byok_form_provider_id',
-    'byok_form_model_id',
     'byok_form_api_key',
     'byok_form_openrouter_model',
-    'byok_form_codex_path',
+    'byok_form_codex_bundle',
     'byok_form_local_mode',
     'byok_form_local_model',
     'byok_form_local_detected',
@@ -197,10 +141,7 @@ _WM_ATTRS = (
     'byok_current_provider',
     'byok_current_model',
     'byok_current_supports_vision',
-    'byok_local_context_window',
     'byok_key_preview',
-    'byok_device_key_missing',
-    'byok_key_resumable',
     'byok_dialog_state',
     'byok_last_error',
 )
@@ -211,26 +152,19 @@ def register():
 
     # --- Form fields (what the user picks / types into the dialog) ---
     # Both provider and model use dynamic EnumProperty callbacks so the
-    # lists can change without re-registering the properties. The pick lives
-    # in the hidden `*_id` strings (see `_provider_get`); unset, the dropdown
-    # shows the list's first item. Runtime-only: nothing goes into a .blend.
-    WM.byok_form_provider_id = StringProperty(default='', options={'SKIP_SAVE'})
-    WM.byok_form_model_id = StringProperty(default='', options={'SKIP_SAVE'})
+    # lists can change without re-registering the properties. NOTE: when
+    # items is a callback, EnumProperty does not accept a string default
+    # — whichever item is index 0 in the cache becomes the default.
     WM.byok_form_provider = EnumProperty(
         name="Provider",
         description="LLM provider",
         items=_provider_items,
-        get=_provider_get,
-        set=_provider_set,
-        options={'SKIP_SAVE'},
+        update=_provider_changed,
     )
     WM.byok_form_model = EnumProperty(
         name="Model",
         description="Model to use with the selected provider",
         items=_model_items,
-        get=_model_get,
-        set=_model_set,
-        options={'SKIP_SAVE'},
     )
     WM.byok_form_api_key = StringProperty(
         name="API Key",
@@ -253,16 +187,16 @@ def register():
     )
 
     # --- Codex form field (shown when provider == 'codex') ---
-    # A PATH, not the tokens: Mixar reads the Codex CLI's own sign-in file
-    # at use time (empty = $CODEX_HOME/auth.json, else ~/.codex/auth.json).
-    # The model uses the shared catalog-backed byok_form_model dropdown
-    # (served from the "openai" catalog group).
-    WM.byok_form_codex_path = StringProperty(
-        name="Codex sign-in file",
-        description="Path to the Codex CLI's auth.json (leave empty for the default location)",
-        maxlen=1024,
+    # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
+    # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
+    # count confirm it landed). The model uses the shared catalog-backed
+    # byok_form_model dropdown (served from the "openai" catalog group).
+    WM.byok_form_codex_bundle = StringProperty(
+        name="Codex auth.json",
+        description="Contents of ~/.codex/auth.json (run `codex login` first)",
+        maxlen=16384,
         default='',
-        subtype='FILE_PATH',
+        subtype='PASSWORD',
         options={'SKIP_SAVE'},
     )
 
@@ -316,29 +250,7 @@ def register():
     # OpenRouter models) run chat fine but skip 3D visual feedback, so the
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
-    # The custom local server's context window read at its last Save (0 =
-    # unknown). Below context_probe.AGENT_MIN_CONTEXT the SAVED recap warns:
-    # the agent's replies would be cut off before they answer.
-    WM.byok_local_context_window = IntProperty(default=0, min=0)
     WM.byok_key_preview = StringProperty(default='')
-    # The server holds metadata only; the key lives in this device's
-    # credential store. True = active server-side but nothing usable here
-    # (upgrade / second machine / expired Codex sign-in) — the dialog asks
-    # for the key only. Mirrored from core/credential_state.
-    WM.byok_device_key_missing = BoolProperty(
-        name="Key needed on this device",
-        default=False,
-    )
-    # The server holds nothing for a PAUSED key, but this computer does: the
-    # island's Mixie half deleted the server rows and kept the key record,
-    # and the model card's key tab re-sends it. True while inactive and such a record is
-    # here (derived off-thread by core/credential_state); the dialog names
-    # it and offers Use my key / Forget saved key.
-    WM.byok_key_resumable = BoolProperty(
-        name="Saved key paused",
-        description="Your API key is saved on this computer and paused; Mixie is answering",
-        default=False,
-    )
 
     # --- Dialog state machine ---
     WM.byok_dialog_state = EnumProperty(

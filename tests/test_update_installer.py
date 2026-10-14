@@ -204,9 +204,7 @@ def _windows_script(**overrides):
 def test_windows_helper_waits_for_the_app_to_exit():
     script = _windows_script()
 
-    # Unquoted on both sides of the pipe: SYS32 never needs quotes, and a
-    # mis-parsed pipe would read as "exited" and install over the app.
-    assert '%SYS32%\\tasklist.exe /NH /FO CSV /FI "PID eq %PID%" 2>nul | %SYS32%\\find.exe' in script
+    assert 'tasklist /NH /FO CSV /FI "PID eq %PID%"' in script
     assert "goto waitloop" in script
     # A user who cancels the quit must not be updated out from under them.
     assert ":timeout" in script
@@ -252,17 +250,16 @@ def test_windows_helper_signature_recheck_fails_closed():
     assert 'goto signature_ok' not in verify.replace(
         'if "%ERRORLEVEL%"=="0" goto signature_ok', "")
     # A refusal still relaunches the app and records why.
-    assert "call :result verify signature" in verify
-    assert "goto finish" in verify
+    assert "stage=verify" in verify
+    assert "goto relaunchonly" in verify
 
 
 def test_windows_helper_writes_a_result_for_the_relaunched_app():
     script = _windows_script()
 
     assert "update-result.txt" in script
-    assert "call :result install %INSTALL_EXIT%" in script
-    assert ">>\"%RESULT%\" echo stage=%~1" in script
-    assert ">>\"%RESULT%\" echo exit=%~2" in script
+    assert "stage=install" in script
+    assert "exit=%INSTALL_EXIT%" in script
 
 
 def test_windows_helper_refuses_paths_that_break_batch_quoting(tmp_path):
@@ -359,10 +356,25 @@ def test_consume_result_reads_and_clears(tmp_path):
     result = installer.consume_result(str(tmp_path))
 
     assert result == {"version": "3.4.0", "stage": "install", "exit": "0"}
-    assert installer.classify_result(result, "3.4.0")["outcome"] == "success"
+    assert installer.result_is_success(result) is True
     # Cleared on read: a one-off failure must not be reported forever.
     assert not result_file.exists()
     assert installer.consume_result(str(tmp_path)) is None
+
+
+def test_reboot_required_counts_as_success():
+    assert installer.result_is_success(
+        {"version": "3.4.0", "stage": "install", "exit": "3010"},
+    ) is True
+
+
+def test_cancelled_and_aborted_installs_are_failures():
+    assert installer.result_is_success(
+        {"version": "3.4.0", "stage": "install", "exit": "1602"},
+    ) is False
+    assert installer.result_is_success(
+        {"version": "3.4.0", "stage": "wait", "exit": "timeout"},
+    ) is False
 
 
 # ---------------------------------------------------------------------------

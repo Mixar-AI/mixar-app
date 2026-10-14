@@ -6,47 +6,36 @@
 
 from __future__ import annotations
 
-import os
-
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.paint.procedural_materials import material_registry, server_catalog
+from mixar.modules.paint.procedural_materials import material_registry
 
 from ._common import _resolve_mesh_objects
 
 logger = get_logger(__name__)
 
 
-def _ensure_registry_loaded() -> str:
-    """Register the user's generated materials and make sure the backend
-    library is (being) fetched. Returns the server catalog status.
+def _ensure_registry_loaded() -> None:
+    """Make sure the user's own AI-generated materials are registered.
 
-    The library comes from the backend catalog; a user who logged in after
-    launch had no token when the paint UI registered, so this (re)starts the
-    fetch whenever no server-sourced material is registered. Never blocks on
-    the network: a ``loading`` status tells the agent to retry shortly.
+    The library itself comes from the backend catalog (fetched when the paint
+    UI registers); no material scripts ship with the app, so the only local
+    source is the user's generated-material catalog.
     """
+    if material_registry.get_all_materials():
+        return
     try:
         material_registry.load_matgen_materials()
     except Exception:
         logger.warning("Failed to load generated procedural materials", exc_info=True)
-    try:
-        if any(server_catalog.is_server_material(m) for m in material_registry.get_all_materials()):
-            return server_catalog.catalog_status()
-        return server_catalog.ensure_server_catalog()
-    except Exception:
-        logger.warning("Failed to start the procedural material catalog", exc_info=True)
-        return server_catalog.FAILED
 
 
 def _material_summary(material) -> dict:
-    server = server_catalog.is_server_material(material)
     ready = bool(
-        bpy.data.node_groups.get(material.node_group_name)
-        or material.script
-        or (material.script_path and os.path.exists(material.script_path))
-        or (server and server_catalog.is_script_available(material.material_id))
+        material.script
+        or material.script_path
+        or bpy.data.node_groups.get(material.node_group_name)
     )
     return {
         "material_id": material.material_id,
@@ -54,9 +43,6 @@ def _material_summary(material) -> dict:
         "category": material.category,
         "node_group_name": material.node_group_name,
         "ready": ready,
-        "source": "server" if server else "local",
-        # A not-ready server material can still be added: the add downloads it.
-        "downloadable": server,
     }
 
 
@@ -92,7 +78,7 @@ def find_procedural_material(material_id: str = "", material_name: str = ""):
 
 def list_procedural_materials(query: str = "", category: str = "", limit: int = 20) -> dict:
     """Return procedural materials available to the layer stack."""
-    catalog_status = _ensure_registry_loaded()
+    _ensure_registry_loaded()
     query_l = (query or "").strip().lower()
     category_l = (category or "").strip().lower()
     limit = max(1, min(int(limit or 20), 100))
@@ -119,7 +105,6 @@ def list_procedural_materials(query: str = "", category: str = "", limit: int = 
         "returned": min(total, limit),
         "categories": material_registry.get_categories(),
         "materials": [_material_summary(material) for material in materials[:limit]],
-        "catalog_status": catalog_status,
     }
 
 

@@ -57,29 +57,6 @@ def clear_agent_ref(context=None) -> None:
         pass
 
 
-def _read_agent_ref(context, clear: bool) -> dict:
-    raw = ""
-    try:
-        wm = context.window_manager
-        raw = wm.get(_REF_KEY, "") or ""
-        if clear and _REF_KEY in wm.keys():
-            del wm[_REF_KEY]
-    except Exception:
-        return {}
-
-    if not raw:
-        return {}
-    try:
-        import json
-
-        ref = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception:
-        return {}
-    if not isinstance(ref, dict) or not ref.get("generation_id"):
-        return {}
-    return {str(k): v for k, v in ref.items()}
-
-
 def take_agent_ref(context) -> dict:
     """Read, CLEAR and return the agent's generation ref for this enqueue.
 
@@ -95,15 +72,26 @@ def take_agent_ref(context) -> dict:
     unreadable/unparseable/not-an-object yields ``{}`` (reporting is
     best-effort — it can never block an enqueue).
     """
-    return _read_agent_ref(context, clear=True)
+    raw = ""
+    try:
+        wm = context.window_manager
+        raw = wm.get(_REF_KEY, "") or ""
+        if _REF_KEY in wm.keys():
+            del wm[_REF_KEY]
+    except Exception:
+        return {}
 
+    if not raw:
+        return {}
+    try:
+        import json
 
-def peek_agent_ref(context) -> dict:
-    """The ref ``take_agent_ref`` will claim, left in place for the enqueue.
-
-    For an operator that must judge its input against the job's session (its
-    scene) before it enqueues."""
-    return _read_agent_ref(context, clear=False)
+        ref = json.loads(raw) if isinstance(raw, str) else raw
+    except Exception:
+        return {}
+    if not isinstance(ref, dict) or not ref.get("generation_id"):
+        return {}
+    return {str(k): v for k, v in ref.items()}
 
 
 def take_job_origin(context) -> str:

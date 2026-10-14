@@ -21,7 +21,6 @@ Both checks shell out to the platform tools (``Get-AuthenticodeSignature``
 :data:`UNVERIFIED`, never as a failure.
 """
 
-import ntpath
 import os
 import subprocess
 import sys
@@ -59,14 +58,11 @@ def _run(argv):
 # Windows — Authenticode
 # ============================================================================
 
-# A str.format template: PowerShell's own braces are doubled. (Single ones
-# made every check raise KeyError, so Windows never got past UNVERIFIED.)
 _PS_SIGNER = (
     "$ErrorActionPreference='Stop';"
     "$s=Get-AuthenticodeSignature -LiteralPath {path};"
     "Write-Output $s.Status;"
-    "if($s.SignerCertificate){{Write-Output $s.SignerCertificate.Subject;"
-    "Write-Output $s.SignerCertificate.Thumbprint}}"
+    "if($s.SignerCertificate){Write-Output $s.SignerCertificate.Subject}"
 )
 
 
@@ -75,16 +71,10 @@ def _ps_quote(path):
     return "'" + str(path).replace("'", "''") + "'"
 
 
-def _powershell():
-    from .app_paths import windows_system_dir
-
-    return ntpath.join(windows_system_dir(), "WindowsPowerShell", "v1.0", "powershell.exe")
-
-
 def _authenticode(path):
-    """Return (status, signer_subject, signer_thumbprint) for *path*, or None."""
+    """Return (status, signer_subject) for *path*, or None if unavailable."""
     result = _run([
-        _powershell(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
         "-Command", _PS_SIGNER.format(path=_ps_quote(path)),
     ])
     if result is None:
@@ -96,8 +86,7 @@ def _authenticode(path):
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     if not lines:
         return None
-    lines += ["", ""]
-    return lines[0], lines[1], lines[2]
+    return lines[0], (lines[1] if len(lines) > 1 else "")
 
 
 def _verify_windows(installer_path, running_binary):
@@ -105,25 +94,22 @@ def _verify_windows(installer_path, running_binary):
     staged = _authenticode(installer_path)
 
     if staged is None:
-        return UNVERIFIED, "Authenticode check unavailable", ""
+        return UNVERIFIED, "Authenticode check unavailable"
 
-    status, subject, thumbprint = staged
+    status, subject = staged
     if status != "Valid":
         if running is None or running[0] != "Valid":
             # An unsigned dev build updating to an unsigned dev installer
             # is a legitimate local workflow; only refuse when the running
             # app proves releases are supposed to be signed.
-            return UNVERIFIED, f"Installer signature status: {status}", ""
-        return REJECTED, f"Installer is not validly signed ({status})", ""
+            return UNVERIFIED, f"Installer signature status: {status}"
+        return REJECTED, f"Installer is not validly signed ({status})"
 
     if running and running[0] == "Valid" and running[1] and subject:
         if running[1] != subject:
-            return REJECTED, "Installer was signed by a different publisher", ""
+            return REJECTED, "Installer was signed by a different publisher"
 
-    # The subject matched the running app's; the helper pins this exact
-    # certificate, so a file swapped in the shared staging directory after
-    # this check fails its re-verify even when validly signed by someone else.
-    return VERIFIED, subject, thumbprint
+    return VERIFIED, subject
 
 
 # ============================================================================
@@ -185,19 +171,17 @@ def verify_installer(installer_path, bundle_path="", running_binary=""):
             this module stays free of ``bpy``.
 
     Returns:
-        ``(VERIFIED | UNVERIFIED | REJECTED, detail, signer_thumbprint)``.
-        Only ``REJECTED`` must block the install; ``UNVERIFIED`` means no
-        verdict was available and the checksum stands alone.
-        ``signer_thumbprint`` is the verified Authenticode certificate's
-        (Windows ``VERIFIED`` only, else ``""``).
+        ``(VERIFIED | UNVERIFIED | REJECTED, detail)``.  Only ``REJECTED``
+        must block the install; ``UNVERIFIED`` means no verdict was
+        available and the checksum stands alone.
     """
     try:
         if os.name == "nt":
             return _verify_windows(installer_path, running_binary)
         if sys.platform == "darwin":
-            return (*_verify_macos(installer_path, bundle_path), "")
+            return _verify_macos(installer_path, bundle_path)
     except Exception as e:  # noqa: BLE001 - verification must never crash
         logger.error("Installer verification error: %s", e, exc_info=True)
-        return UNVERIFIED, "Verification error", ""
+        return UNVERIFIED, "Verification error"
 
-    return UNVERIFIED, "No signature verification on this platform", ""
+    return UNVERIFIED, "No signature verification on this platform"

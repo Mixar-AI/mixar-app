@@ -62,6 +62,7 @@
 
 #include "GPU_context.hh"
 #include "GPU_immediate.hh"
+#include <cmath>
 #include "GPU_shader_builtin.hh"
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
@@ -72,7 +73,6 @@
 #include "WM_types.hh"
 
 #include "view3d_scenes_drawer.hh"
-#include "view3d_scenes_drawer_srgb.hh"
 
 namespace blender {
 
@@ -96,8 +96,6 @@ struct SnapshotStore {
   std::string filepath;
   std::unordered_map<std::string, SnapshotEntry> by_scene;
   uint64_t next_generation = 1;
-  /** Bumped by a file load; region copies of an older epoch are dropped. */
-  uint64_t epoch = 1;
 };
 
 static SnapshotStore g_store;
@@ -125,21 +123,11 @@ bool view3d_scenes_drawer_snapshots_enabled()
   return snapshots_enabled_env() && !g_disabled;
 }
 
-void view3d_scenes_drawer_snapshot_store_reset()
-{
-  g_store.by_scene.clear();
-  g_store.bmain = nullptr;
-  g_store.filepath.clear();
-  g_store.epoch++;
-}
-
 static void store_sync_main(const Main *bmain)
 {
   if (bmain == nullptr) {
     return;
   }
-  /* Clear only, no epoch bump: global undo re-allocates Main and Save As
-   * changes the path, and neither may blank the cards regions still hold. */
   if (g_store.bmain != bmain || g_store.filepath != bmain->filepath) {
     g_store.by_scene.clear();
     g_store.bmain = bmain;
@@ -226,6 +214,29 @@ bool view3d_scenes_drawer_snapshot_blocked(const bContext *C)
 /** \name Capture
  * \{ */
 
+/** Encode one linear channel for display (sRGB piecewise curve). */
+static inline float srgb_encode(const float v)
+{
+  const float c = std::clamp(v, 0.0f, 1.0f);
+  return c <= 0.0031308f ? c * 12.92f : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f;
+}
+
+/** The overlay texture is sRGB-encoded storage read back raw: decode a byte
+ * to linear the way sampling it in a shader would. */
+static float srgb_decode_byte(const unsigned char b)
+{
+  static float lut[256];
+  static bool ready = false;
+  if (!ready) {
+    for (int i = 0; i < 256; i++) {
+      const float c = float(i) / 255.0f;
+      lut[i] = c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f);
+    }
+    ready = true;
+  }
+  return lut[b];
+}
+
 /** Copy the host viewport's finished frame to the CPU and box-resample it to
  * the thumb: the scene layer (linear float) with the premultiplied overlay
  * layer over it, averaged in linear light and then encoded for display, the
@@ -298,9 +309,9 @@ static bool snapshot_read_viewport(GPUViewport *viewport,
           rgb[2] += sp[2];
           if (over) {
             const unsigned char *op = over + (row + size_t(sx)) * 4;
-            ov[0] += view3d_scenes_drawer::srgb_decode_byte(op[0]);
-            ov[1] += view3d_scenes_drawer::srgb_decode_byte(op[1]);
-            ov[2] += view3d_scenes_drawer::srgb_decode_byte(op[2]);
+            ov[0] += srgb_decode_byte(op[0]);
+            ov[1] += srgb_decode_byte(op[1]);
+            ov[2] += srgb_decode_byte(op[2]);
             ov[3] += float(op[3]) / 255.0f;
           }
           count++;
@@ -315,7 +326,7 @@ static bool snapshot_read_viewport(GPUViewport *viewport,
       for (int c = 0; c < 3; c++) {
         /* Premultiplied overlay over the scene, in linear light. */
         const float lin = rgb[c] * inv * (1.0f - alpha) + ov[c] * inv;
-        out[c] = uchar(view3d_scenes_drawer::srgb_encode(lin) * 255.0f + 0.5f);
+        out[c] = uchar(srgb_encode(lin) * 255.0f + 0.5f);
       }
       out[3] = 255;
     }
@@ -367,15 +378,10 @@ bool view3d_scenes_drawer_snapshot_capture(const bContext *C,
     /* Not drawn yet (or mid-resize): nothing to copy, and nothing to do. */
     return false;
   }
-  /* The viewport's textures belong to the context of the window that OWNS
-   * `host_region` — not the context's window: the island and pill windows are
-   * often the drawable one when a timer runs, and a caller need not override. */
+  /* The viewport's textures belong to the host window's context; the island
+   * and pill windows are often the drawable one when a timer runs. */
   const wmWindowManager *wm = CTX_wm_manager(C);
-  wmWindow *host_win = view3d_scenes_drawer_region_window(wm, host_region);
-  if (host_win == nullptr) {
-    return false;
-  }
-  const bool switched = Mixar_window_gpu_context_push(wm, host_win);
+  const bool switched = Mixar_window_gpu_context_push(wm, CTX_wm_window(C));
   std::vector<unsigned char> pixels;
   const bool ok = snapshot_read_viewport(viewport, thumb_w, thumb_h, pixels);
   if (switched) {
@@ -415,11 +421,6 @@ void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &t,
                                      const std::string &scene_name,
                                      const rcti &rect)
 {
-  if (t.epoch != g_store.epoch) {
-    /* The store was emptied (a file load): this copy shows a scene that is gone. */
-    view3d_scenes_drawer_thumb_free(t);
-    t.epoch = g_store.epoch;
-  }
   /* Pull the store's latest picture into this region's copy. The store owns
    * the pixels across region rebuilds; the texture belongs to the region. */
   auto found = g_store.by_scene.find(scene_name);

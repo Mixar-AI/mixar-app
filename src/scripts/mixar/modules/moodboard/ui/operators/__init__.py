@@ -10,7 +10,6 @@ Collection of operators for moodboard UI interactions.
 """
 
 from . import (
-    agent_animate_ops,
     agent_auto_rig_ops,
     agent_segment_ops,
     agent_video_gen_ops,
@@ -41,7 +40,6 @@ from . import (
 # `mixie.agent_auto_rig` was never registered and every agent auto-rig enqueue
 # failed with "operator not found". Listed now alongside agent_segment_ops.
 modules = (
-    agent_animate_ops,
     agent_auto_rig_ops,
     agent_segment_ops,
     agent_video_gen_ops,

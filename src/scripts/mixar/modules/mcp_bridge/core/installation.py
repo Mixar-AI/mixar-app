@@ -57,12 +57,6 @@ def provision(python, script, executable, enabled=True):
 # so a quit or crashed app is not "starting" for the rest of the window.
 STARTING_SECONDS = 180
 OPEN_WAIT_SECONDS = 5
-# Restart & Update writes the "updating" marker before the app quits: its
-# helper replaces the files and relaunches Mixar itself, so a connector that
-# finds no app meanwhile must wait rather than launch the old (or half
-# replaced) binary. The relaunched app removes the marker when it publishes
-# its relay; the bound keeps a helper that died from holding the cold start.
-UPDATING_SECONDS = 900
 
 
 def disabled():
@@ -79,77 +73,24 @@ def disabled():
     return isinstance(info, dict) and info.get("version") == 1 and info.get("enabled") is False
 
 
-# Set by a launch that found an update being installed and is quitting
-# again: its relay must not end the update's window (see keep_updating).
-_keep_updating = False
-
-
-def keep_updating():
-    """This Mixar is not the one the update brings back: leave the marker.
-
-    A Mixar opened by hand while the helper installs says so and quits a
-    few seconds later — but its relay publishes first, and started() would
-    otherwise take that for the relaunch and let a connector cold-start
-    the old or half-replaced binary. Called before the relay's first tick.
-    """
-    global _keep_updating
-    _keep_updating = True
-
-
 def started():
-    """A launched Mixar is up (its relay is published), or the launch failed.
-
-    Also ends an update's "updating" window: the relaunched app is this one
-    — unless keep_updating() said it is a launch that is quitting again.
-    """
-    names = ("starting",) if _keep_updating else ("starting", "updating")
-    for name in names:
-        try:
-            (directory() / name).unlink()
-        except OSError:
-            pass
-
-
-def _fresh(name, seconds):
+    """A launched Mixar is up (its relay is published), or the launch failed."""
     try:
-        return time.time()-(directory() / name).stat().st_mtime <= seconds
-    except OSError:
-        return False
-
-
-def updating():
-    """Restart & Update is replacing Mixar (within the last UPDATING_SECONDS);
-    its helper brings the app back, so nothing else may launch one."""
-    return _fresh("updating", UPDATING_SECONDS)
-
-
-def mark_updating():
-    """Called by Restart & Update right before the app quits to be replaced."""
-    root = directory()
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    marker = root / "updating"
-    marker.touch()
-    os.utime(marker)
-
-
-def clear_updating():
-    """The update did not go ahead after all (the quit was aborted)."""
-    try:
-        (directory() / "updating").unlink()
+        (directory() / "starting").unlink()
     except OSError:
         pass
 
 
 def start_in_progress():
-    """An MCP host started Mixar within the last STARTING_SECONDS, or an
-    update is replacing it and will relaunch it."""
-    return _fresh("starting", STARTING_SECONDS) or updating()
+    """An MCP host started Mixar within the last STARTING_SECONDS."""
+    try:
+        return time.time()-(directory() / "starting").stat().st_mtime <= STARTING_SECONDS
+    except OSError:
+        return False
 
 
 def start_app():
     """At most one cold start across simultaneous MCP hosts; no repeated resurrection."""
-    if updating():
-        return False  # the update helper relaunches Mixar itself
     root = directory()
     try:
         info = json.loads((root / "installation.json").read_text())

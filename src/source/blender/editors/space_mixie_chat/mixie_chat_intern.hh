@@ -292,7 +292,7 @@ void chat_ui_get_toggle_label_color(float out_color[4]);
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name UI Widgets (mixie_chat_ui_widgets.cc, mixie_chat_ui_attachments.cc)
+/** \name UI Widgets (mixie_chat_ui_widgets.cc)
  * \{ */
 
 /* Chat bubble. `glass` draws the bed as a MIXAR_GLASS_CHAT pane instead of the
@@ -474,16 +474,11 @@ bool mixie_chat_handle_code_copy_click(bContext *C,
                                        float mouse_x,
                                        float mouse_y);
 
-/* Image attachment (mixie_chat_ui_attachments.cc). `x` is the left edge of
- * the thumbnail — pass the same inset as the bubble text
- * (`bubble_x + h_padding`). `y` is the top of the attachment slot.
- * `available_width` / `max_width` is the text column so layout and draw
- * share one aspect-fit box. */
+/* Image attachment */
 float chat_ui_calc_image_attachment_height(Main *bmain,
                                            const char *image_path,
                                            int image_source,
-                                           const ChatImageStyle *style,
-                                           float available_width);
+                                           const ChatImageStyle *style);
 float chat_ui_draw_image_attachment(Main *bmain,
                                     const char *image_path,
                                     int image_source,

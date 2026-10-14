@@ -217,30 +217,17 @@ result=click()
 
 
 def view_controls(qa):
-    def shading_popover():
-        # The header now has render, shading and gizmo popovers. Select the
-        # native trigger immediately after the shading enum, not the first
-        # arbitrary Popover button (which opens render settings).
-        qa.eval(f"""
-def open_shading():
-    edge = max(b['rect'][2] for b in drv.find(prop='type', **{HEADER!r}))
-    triggers = [b for b in drv.find(but_type='Popover', **{HEADER!r}) if b['rect'][0] >= edge]
-    yield from drv.click_steps(min(triggers, key=lambda b:b['rect'][0]))
-    yield .2
-    return True
-result=open_shading()
-""")
     before = qa.eval(SETUP + "result=view.shading.show_xray")
     qa.click(**HEADER, prop="show_xray")
     assert qa.eval(SETUP + "result=view.shading.show_xray") != before
     qa.click(**HEADER, prop="show_xray")
     assert qa.eval(SETUP + "result=view.shading.show_xray") == before
     before = qa.eval(SETUP + "result=view.overlay.show_floor")
-    shading_popover()
+    qa.click(**HEADER, but_type="Popover")
     qa.click(popup=True, op="MIXAR_OT_zen_toggle_guides")
     qa.press("ESC")
     assert qa.eval(SETUP + "result=view.overlay.show_floor") != before
-    shading_popover()
+    qa.click(**HEADER, but_type="Popover")
     qa.click(popup=True, op="MIXAR_OT_zen_toggle_guides")
     qa.press("ESC")
     assert qa.eval(SETUP + "result=view.overlay.show_floor") == before
@@ -323,31 +310,16 @@ def compact(qa):
     saved = qa.eval("result=bpy.context.preferences.view.ui_scale")
     qa.eval(f"bpy.context.preferences.view.ui_scale={saved * 1.5!r}; result=True")
     try:
-        qa.wait("bool(drv.find(but_type='Popover', area_type='VIEW_3D', region_type='HEADER'))", timeout=8)
+        qa.wait("bool(drv.find(text='Render Settings', region_type='HEADER'))", timeout=8)
         snap(qa, "toolbar-compact")
-        # Adaptive narrow tiers use an icon-only render trigger.
-        qa.click(**HEADER, but_type="Popover")
+        qa.click(**HEADER, text="Render Settings")
         qa.cmd("set_text", widget={"popup": True, "prop": "taa_render_samples"}, text="24")
         assert qa.eval(SETUP + "result=scene.eevee.taa_render_samples") == 24
         snap(qa, "compact-render-settings")
         qa.press("ESC")
-        def toggle_sky():
-            if qa.find(**HEADER, op="MIXAR_OT_zen_set_sky")['total']:
-                qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
-            else:
-                qa.eval(f"""
-def open_controls():
-    buttons=drv.find(but_type='Popover', **{HEADER!r})
-    yield from drv.click_steps(max(buttons, key=lambda b:b['rect'][0]))
-    yield .2
-    return True
-result=open_controls()
-""")
-                qa.click(popup=True, op="MIXAR_OT_zen_set_sky")
-                qa.press('ESC')
-        toggle_sky()
+        qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
         assert qa.eval(SETUP + "result=scene.world == scene.mixar_zen_sky.sky_world")
-        toggle_sky()
+        qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
         return {"scale": saved * 1.5, "render_samples": 24, "sky": True}
     finally:
         qa.eval(f"bpy.context.preferences.view.ui_scale={saved!r}; result=True")

@@ -8,10 +8,7 @@ from bpy.props import FloatProperty
 
 def _redraw(_self, context):
     for window in context.window_manager.windows:
-        screen = window.screen
-        if screen is None:
-            continue
-        for area in screen.areas:
+        for area in window.screen.areas:
             if area.type == 'AGENT_BUBBLE':
                 area.tag_redraw()
                 for region in area.regions:

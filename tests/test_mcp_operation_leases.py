@@ -78,10 +78,7 @@ def test_acquires_idle_scene_marks_visible_busy_and_repeated_begin_does_not_exte
 def test_overlapping_calls_refused_only_on_the_owned_scene(env):
     p = params(env.first)
     assert lease.begin_operation(p)["success"]
-    refused = lease.begin_operation(params(env.first))
-    # An AI app's lease (its tab is BUSY too) is named as such: the backend waits
-    # for it instead of failing a parallel call; a Mixie turn says "agent".
-    assert (refused["error_type"], refused["holder"]) == ("scene_busy", "mcp")
+    assert lease.begin_operation(params(env.first))["error_type"] == "scene_busy"
     assert lease.begin_operation(params(env.second))["success"]
     assert lease.end_operation(params(env.first))["error_type"] == "operation_conflict"
     assert lease.authorize_script(p["session_id"], context(p)) is None
@@ -91,8 +88,7 @@ def test_overlapping_calls_refused_only_on_the_owned_scene(env):
     ("MODIFYING", False), ("CONNECTING", False), ("IDLE", True)])
 def test_chat_and_worker_runs_cannot_be_taken_over(env, state, open_run):
     env.first.mixie_chat_state, env.first.mixie_run_open = state, open_run
-    refused = lease.begin_operation(params(env.first))
-    assert (refused["error_type"], refused["holder"]) == ("scene_busy", "agent")
+    assert lease.begin_operation(params(env.first))["error_type"] == "scene_busy"
     assert env.first.mixie_chat_state == state
 
 

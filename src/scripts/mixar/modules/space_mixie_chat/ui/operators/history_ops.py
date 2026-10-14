@@ -190,7 +190,7 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
         cleanup_event_queue_for_scene(scene_name)
         flush_executor_queue(session_id=old_session_id)
         if old_session_id:
-            send_cancel_request_async(old_session_id, 'session_switch')
+            send_cancel_request_async(old_session_id)
 
         # Save the outgoing chat before replacing it — switching must
         # never lose anything. Best-effort, same as New Chat.

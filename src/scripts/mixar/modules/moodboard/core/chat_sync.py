@@ -128,9 +128,7 @@ def _collect_selected_image_names(scene) -> list[str]:
     # and clicking a node flips `node.selected` instead of any media item's
     # flag. Without this, a selected generated node — unlike a selected upload —
     # never reaches the agent. Videos/3D previews are skipped (attachments are
-    # still-image-only, and model nodes carry a preview_object, not an image):
-    # a selected Video Gen / Upscale node's clip attaches as a context-file
-    # chip through chat_sync_videos.selected_video_items instead.
+    # still-image-only, and model nodes carry a preview_object, not an image).
     nodes_attr = getattr(scene, "mixie_moodboard_action_nodes", None)
     if nodes_attr is not None:
         for node in nodes_attr:

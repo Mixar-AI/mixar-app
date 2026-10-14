@@ -255,10 +255,6 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
     source_action = getattr(action_node_by_id(scene, from_node_id), 'action_type', '')
     if target.action_type == source_action == 'ASSEMBLE':
         raise ValueError(rpt_("An Assemble card cannot feed another Assemble card"))
-    if target.action_type == 'ANIMATE':
-        from .animate_node import require_rig_source
-
-        require_rig_source(scene, from_node_id)
     accepted = {item for item in socket.accepted_types.split(",") if item}
     if source_type not in accepted:
         raise ValueError(rpt_("This input does not accept {kind} nodes").format(
@@ -418,13 +414,9 @@ _ACCEPTED_SOURCE_TYPES = {
     'MESH_SEGMENT': {'MESH'},
     'AUTO_RIG': {'MESH'},
     'ASSEMBLE': {'MESH'},
-    # A MESH that carries a rig: an Auto Rig / Animate card, or a rigged
-    # import. ``connect_nodes`` enforces the rig part.
-    'ANIMATE': {'MESH'},
 }
 
-MESH_FEATURE_ACTIONS = frozenset(
-    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE'})
+MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE'})
 
 
 def _graph_node_by_id(scene, node_id: str):

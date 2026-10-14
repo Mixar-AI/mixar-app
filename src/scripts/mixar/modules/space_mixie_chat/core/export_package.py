@@ -8,9 +8,6 @@ lower-resolution texture tiers, a ``.blend`` source and a README.
 
 Exports run on temporary copies (transforms and modifiers applied, parents
 flattened, optionally joined), so the user's objects are never changed.
-Mixar paint slots on the copies are swapped to their baked Principled/image
-materials (``export_materials``) for the whole package; an unbaked stack
-still ships untextured.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
 never an absolute local path. The written main file is verified with
@@ -25,14 +22,10 @@ import json
 import os
 import re
 import time
-from contextlib import ExitStack
 
 import bpy
 
-from .export_verification_status import verification_status, verification_warning
-
 from .export_clips import animation_kwargs, clip_selection, select_clips
-from .export_materials import temporary_export_materials
 from .export_verify import file_clip_names, verify_export
 
 FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
@@ -382,12 +375,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     verification = None
     clips, clips_missing = select_clips(armatures, animations)
     col, copies, renamed = _copies(meshes, join)
-    swap = ExitStack()
     try:
-        # Mixar paint slots on the COPIES become their baked Principled/image
-        # materials first, so the file, textures/, tiers, the .blend source
-        # and the manifest all describe what an exporter can read.
-        swap.enter_context(temporary_export_materials(copies))
         mats = []
         for c in copies:
             for s in c.material_slots:
@@ -435,7 +423,6 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         })
         if verification.get("checked") and verification.get("animations") and animations is None:
             clips = file_clip_names(clips, verification["animations"])
-        warning = " ".join(filter(None, (warning, verification_warning(verification))))
         check = verification if fmt == "glb" else None
         tris = sum(sum(len(p.vertices) - 2 for p in c.data.polygons) for c in copies)
         dims = [round(x, 4) for x in _bounds(copies)]
@@ -459,7 +446,6 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             files.append("manifest.json")
         success = True
     finally:
-        swap.close()
         _cleanup(col, renamed)
         for o in scene.objects:
             o.select_set(o.name in prev_sel)
@@ -470,14 +456,11 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    use_case="package", destination_kind=where,
                    mesh_count=len(copies), armature_count=len(armatures),
                    clip_count=len(clips), duration_ms=duration_ms,
-                   delivery_status=verification_status(verification),
                    verification_checked=bool(verification and verification.get("checked")),
                    verification_passed=bool(verification and verification.get("passed")),
                    issue_count=len((verification or {}).get("issues") or []),
                    file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024))
-    return {"delivery_status": verification_status(verification),
-            "warning": verification_warning(verification), "destination": where,
-            "folder": os.path.basename(root), "files": files,
+    return {"destination": where, "folder": os.path.basename(root), "files": files,
             "replaced_previous_files": replaced,
             "main_file": stem + ext, "glb_check": check, "verification": verification,
             "triangles": tris, "dimensions_m": dims, "textures": len(tex), "tiers": tiers,

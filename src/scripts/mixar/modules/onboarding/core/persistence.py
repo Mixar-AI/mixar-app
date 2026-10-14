@@ -6,31 +6,24 @@
 """
 Onboarding persistence
 
-Tracks whether this device has already seen the onboarding tour — got past
-its first step, or finished or exited it. Stored as a JSON file in Mixar's
-user-data dir so the flag survives restarts.
+Tracks which users (by email) have already seen the onboarding tour —
+got past its first step, or finished or exited it. Stored as a JSON file in Mixar's user-data dir so
+the flag survives Blender restarts and is per-machine, per-account.
 
-The flag is per device, not per account: a guest's identity is a fresh
-placeholder email, so a per-email list could never dedupe it and the tour
-kept coming back. Files written before this keyed the flag by email
-(``users_seen``); any entry there means the device has seen it.
-
-The file is replaced atomically (``common/utils/atomic_json``). A read or
-parse failure counts as "not seen" (the tour fails open) and a write
-failure leaves the flag unwritten (the next deliberate ending tries again);
-either is reported once per process as ``onboarding.seen_state_error``
-with the exception's type name only — never the path or its message.
+The seen-list is the gate for whether the tour opens — a user
+appears in this file once the tour has moved past its first step
+(or they exited it), and from then on they never see the tour again
+on this machine. Different users on the same machine each see the
+tour exactly once.
 """
 
 import json
 import os
 import threading
-from pathlib import Path
 
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.utils.atomic_json import write_json_atomic
 
 logger = get_logger(__name__)
 
@@ -56,50 +49,60 @@ def _seen_path() -> str:
     return os.path.join(_data_dir(), _FILENAME)
 
 
-def _report(op: str, exc: BaseException) -> None:
-    try:
-        from mixar.modules.onboarding.core.tour import telemetry
-        telemetry.seen_state_error(op, exc)
-    except Exception:  # noqa: BLE001 - telemetry is fail-open
-        pass
-
-
-def _read() -> dict:
+def _load_seen() -> set:
+    """Return the set of emails that have already completed or
+    skipped the onboarding tour."""
     path = _seen_path()
     if not os.path.isfile(path):
-        return {}
+        return set()
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = json.load(fh)
         if not isinstance(data, dict):
-            raise ValueError("seen file is not a JSON object")
+            return set()
+        users = data.get("users_seen", [])
+        if not isinstance(users, list):
+            return set()
+        return {str(u).strip().lower() for u in users if u}
     except Exception as exc:
         logger.warning("Onboarding persistence: read failed: %s", exc)
-        _report("read", exc)
-        return {}
-    return data
+        return set()
 
 
-def has_device_seen_onboarding() -> bool:
-    """True once anyone on this device has seen the tour."""
-    with _LOCK:
-        data = _read()
-    if data.get("seen") is True:
-        return True
-    legacy = data.get("users_seen")
-    return isinstance(legacy, list) and any(legacy)
-
-
-def mark_device_seen_onboarding() -> None:
-    """Record that this device has seen the tour. Idempotent."""
+def _save_seen(emails: set) -> None:
+    """Write the seen-emails set back to disk. Creates the parent
+    dir if it doesn't exist."""
     path = _seen_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        payload = {"users_seen": sorted(emails)}
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+    except Exception as exc:
+        logger.warning("Onboarding persistence: write failed: %s", exc)
+
+
+def has_user_seen_onboarding(email: str) -> bool:
+    """True if ``email`` has already completed or skipped the tour
+    on this machine."""
+    if not email:
+        return True  # No identity → don't show.
+    key = email.strip().lower()
     with _LOCK:
-        if _read().get("seen") is True:
+        seen = _load_seen()
+    return key in seen
+
+
+def mark_user_seen_onboarding(email: str) -> None:
+    """Record ``email`` as having completed or skipped the tour.
+    Idempotent — calling twice is harmless."""
+    if not email:
+        return
+    key = email.strip().lower()
+    with _LOCK:
+        seen = _load_seen()
+        if key in seen:
             return
-        try:
-            write_json_atomic(Path(path), {"seen": True})
-        except Exception as exc:
-            logger.warning("Onboarding persistence: write failed: %s", exc)
-            _report("write", exc)
-            return
-    logger.info("Onboarding: marked this device as seen")
+        seen.add(key)
+        _save_seen(seen)
+    logger.info("Onboarding: marked user as seen (%s)", key)

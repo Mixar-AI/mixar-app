@@ -24,8 +24,6 @@ set(SRC
   agent_bubble_reference_items.cc
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
-  agent_bubble_linux_interaction.cc
-  agent_bubble_resize_edges.hh
   agent_bubble_pill_voice.cc
   agent_ui_asset_picker.cc
   agent_ui_asset_picker_detail.cc
@@ -34,13 +32,6 @@ set(SRC
   agent_ui_draw_primitives.hh
   agent_ui_controls_paint.cc
   agent_ui_refine_paint.cc
-  agent_ui_model_card.cc
-  agent_ui_model_card_data.cc
-  agent_ui_model_card_draw.cc
-  agent_ui_model_card_layout.cc
-  agent_ui_model_card_qa.cc
-  agent_ui_provider.cc
-  agent_ui_provider_chevron.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_layout.cc
@@ -83,9 +74,6 @@ set(SRC
   agent_ui_asset_picker_intern.hh
   agent_ui_asset_picker_layout.hh
   agent_ui_draw.hh
-  agent_ui_model_card.hh
-  agent_ui_model_card_intern.hh
-  agent_ui_provider.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh

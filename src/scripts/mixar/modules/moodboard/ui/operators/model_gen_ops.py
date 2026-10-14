@@ -22,7 +22,6 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.moodboard.core.model_gen_inputs import tab_input_images
-from mixar.modules.common.utils.generation_dispatch import record_reason
 
 logger = get_logger(__name__)
 
@@ -124,7 +123,6 @@ class MIXIE_OT_model_gen_generate(Operator):
             result = build_active_group_payload(
                 context.scene, image, service_key, model)
         except ValueError as e:
-            record_reason("invalid_multi_view")
             self.report({"ERROR"}, str(e))
             return False
         if result is None:
@@ -141,14 +139,12 @@ class MIXIE_OT_model_gen_generate(Operator):
         sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
         tab = getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
         if tab is None:
-            record_reason("tab_unavailable")
             self.report({"ERROR"}, "Model Gen tab not available")
             return {"CANCELLED"}
 
         # --- Resolve mode (service) and model slug from the catalog ---
         service_key = resolve_service_key("model_gen", getattr(tab, "mode", ""))
         if not service_key:
-            record_reason("catalog_unavailable")
             self.report({"ERROR"}, "Please wait for the catalog to load")
             return {"CANCELLED"}
 
@@ -162,7 +158,6 @@ class MIXIE_OT_model_gen_generate(Operator):
             except Exception:
                 model = ""
         if not model or model in _PLACEHOLDERS:
-            record_reason("model_unavailable")
             self.report({"ERROR"}, "Please wait for models to load")
             return {"CANCELLED"}
 
@@ -216,7 +211,6 @@ class MIXIE_OT_model_gen_generate(Operator):
             pass  # the input image plus its companion views are the input
         elif service_key == "image_to_3d" or supports_mv:
             if not (image or prompt):
-                record_reason("missing_input")
                 self.report(
                     {"ERROR"},
                     "Provide at least one of: prompt, image, or multiple views",
@@ -224,12 +218,10 @@ class MIXIE_OT_model_gen_generate(Operator):
                 return None
         elif service_key == "hunyuan_rapid":
             if not (image or prompt):
-                record_reason("missing_input")
                 self.report({"ERROR"}, "Provide either a prompt or an image")
                 return None
         else:
             if not image:
-                record_reason("missing_image")
                 self.report({"ERROR"}, "Please add an input image")
                 return None
 
@@ -244,15 +236,11 @@ class MIXIE_OT_model_gen_generate(Operator):
                 else:
                     image_bytes = compress_image_for_upload(image)
             except Exception as e:
-                record_reason("image_processing_failed")
                 self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return None
-            if not image_bytes:
-                record_reason("image_processing_failed")
-                self.report({"ERROR"}, "The input image has no readable pixels. Reload it and try again.")
-                return None
-            payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
-            payload["image_filename"] = "image.png"
+            if image_bytes:
+                payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
+                payload["image_filename"] = "image.png"
 
         # --- Catalog params -> wire payload (per-service assembler) ---
         params = {}
@@ -306,11 +294,9 @@ class MIXIE_OT_model_gen_generate(Operator):
                 **route,
             )
             if not job:
-                record_reason("duplicate_job")
                 self.report({"ERROR"}, "A duplicate generation is already queued")
                 return None
         except Exception as e:
-            record_reason("enqueue_failed")
             self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return None
 

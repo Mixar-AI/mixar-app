@@ -32,7 +32,7 @@ def local_request(record, method, path, body=None, headers=None, timeout=610):
             "Authorization": "Bearer " + record["token"],
             "Content-Type": "application/json", **(headers or {})})
         response = connection.getresponse()
-        data = _DISCOVERY.read_body(response, MAX_MESSAGE_BYTES)
+        data = response.read(MAX_MESSAGE_BYTES + 1)
         if len(data) > MAX_MESSAGE_BYTES:
             raise ValueError("MCP response exceeds the transport limit")
         return response.status, data
@@ -54,7 +54,7 @@ def discover(instance_id=None):
         except (OSError, ValueError, http.client.HTTPException):
             continue
     if not candidates:
-        raise RuntimeError("Open Mixar, sign in, then use the profile menu > Connect MCP to enable MCP.")
+        raise RuntimeError("Open Mixar, sign in, then use the profile menu > Connect AI Apps (MCP) to enable MCP.")
     if len(candidates) != 1:
         ids = ", ".join(item["instance_id"] for item in candidates)
         raise RuntimeError("Several Mixar windows are available; use --instance with one of: " + ids)
@@ -79,10 +79,8 @@ class StdioBridge:
         try:
             if not isinstance(request, dict) or request.get("jsonrpc") != "2.0":
                 raise ValueError("Expected one JSON-RPC 2.0 object")
-            # A local copy: another worker may forget self.record meanwhile.
-            record = self.record
-            if record is None:
-                record = self.record = discover(self.instance_id)
+            if self.record is None:
+                self.record = discover(self.instance_id)
             params = request.get("params") or {}
             if request.get("method") == "tools/call":
                 meta = params.get("_meta", {})
@@ -90,23 +88,12 @@ class StdioBridge:
             headers = {}
             if self.protocol_version:
                 headers["MCP-Protocol-Version"] = self.protocol_version
-            target_session = self.session_id or record.get("session_id")
+            target_session = self.session_id or self.record.get("session_id")
             if target_session:
                 headers["X-Mixar-Session-Id"] = target_session
             if request.get("method") == "tools/call":
                 headers["X-Mixar-Call-Id"] = call_id
-            try:
-                status, body = local_request(record, "POST", "/mcp", json.dumps(request).encode(), headers)
-            except (OSError, http.client.HTTPException) as exc:
-                # The desktop went away (quit, crashed, restarted for an update):
-                # its port and token are stale. Forget them so the next request
-                # discovers the Mixar that is running now instead of failing
-                # forever. A timeout is a desktop still busy, not one that is
-                # gone; the protocol version belongs to the client's session
-                # (it never re-sends initialize) and is kept for the new desktop.
-                if not isinstance(exc, TimeoutError) and self.record is record:
-                    self.record = None
-                raise
+            status, body = local_request(self.record, "POST", "/mcp", json.dumps(request).encode(), headers)
             if "id" not in request:
                 return
             if not 200 <= status < 300:

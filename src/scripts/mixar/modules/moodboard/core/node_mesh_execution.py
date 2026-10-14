@@ -15,7 +15,6 @@ from mixar.modules.hunyuan.constants import ANIMATE_IMPORT_OPTIONS
 from .media_utils import is_still_item
 from .node_graph import action_node_by_id, input_media_items
 from .node_job_bridge import ensure_graph_listener
-from .node_client_params import PBR_STYLE_ONLY_PARAM
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 from .mesh_sources import mesh_input_objects
 
@@ -64,9 +63,8 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     (pose kept) and its material/images cleaned up + packed map split, then the
     node binds to the FINAL name.
 
-    When *armature_in_front* is set (Auto Rig), the import lands exactly like
-    every other Auto Rig import: stamped with the rig job id and skeleton
-    (the Animate card and the agent read them back) and shown In Front.
+    When *armature_in_front* is set (Auto Rig), the imported armature is shown
+    In Front, like every other Auto Rig import.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -79,9 +77,10 @@ def _mesh_result_hook(scene_name: str, node_id: str,
 
         result = object_names
         if armature_in_front:
-            from mixar.modules.hunyuan.core.animate_enqueue import stamp_rig_import
-
-            stamp_rig_import(job, object_names)
+            from mixar.modules.hunyuan.core.animate_enqueue import (
+                show_armatures_in_front,
+            )
+            show_armatures_in_front(object_names)
         if texture_finalize:
             try:
                 from mixar.modules.common.job_queue.core.model_io import (
@@ -108,18 +107,14 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     return _hook
 
 
-def _attach_pbr_reference_images(scene, node, payload, operator, *,
-                                 style_only=False, prompt=""):
+def _attach_pbr_reference_images(scene, node, payload, operator):
     """Attach connected reference image(s) to a PBR texture payload.
 
     Mirrors ``enqueue_pbr_texture_job``'s guidance precedence: exactly four
     connected images become Tripo's turnaround views (by input order); one to
-    three become a single reference image (the first) -- sent as
-    ``style_ref_image_bytes_b64`` when *style_only* is set AND a *prompt*
-    guides the texture, else as the direct ``reference_image_bytes_b64``, the
-    same rule as the sidebar. The mesh input is resolved separately and never
-    appears here (``input_media_items`` yields only still images, not mesh
-    nodes).
+    three become a single reference image (the first). The mesh input is
+    resolved separately and never appears here (``input_media_items`` yields
+    only still images, not mesh nodes).
     """
     from mixar.modules.common.utils.image_utils import compress_image_for_upload
 
@@ -141,11 +136,9 @@ def _attach_pbr_reference_images(scene, node, payload, operator, *,
             "PBR uses the first connected reference; connect exactly four for "
             "turnaround views",
         )
-    encoded = base64.b64encode(compress_image_for_upload(images[0])).decode()
-    if style_only and prompt:
-        payload["style_ref_image_bytes_b64"] = encoded
-    else:
-        payload["reference_image_bytes_b64"] = encoded
+    payload["reference_image_bytes_b64"] = base64.b64encode(
+        compress_image_for_upload(images[0])
+    ).decode()
 
 
 @contextmanager
@@ -225,16 +218,10 @@ def _run_mesh_feature(context, node, operator):
         "file_bytes_b64": base64.b64encode(file_bytes).decode(),
         "file_filename": filename,
     }
+    if node.action_type == 'PBR_GEN':
+        _attach_pbr_reference_images(context.scene, node, payload, operator)
     params = collect_node_params(node)
     prompt = node.prompt.strip()
-    # Client-side toggle, not a model parameter: it picks the payload key the
-    # reference travels under and must not be forwarded to the backend.
-    style_only = bool(params.pop(PBR_STYLE_ONLY_PARAM, False))
-    if node.action_type == 'PBR_GEN':
-        _attach_pbr_reference_images(
-            context.scene, node, payload, operator,
-            style_only=style_only, prompt=prompt,
-        )
     if prompt:
         params["prompt"] = prompt
     payload = assemble_payload(service_key, params, payload, model)

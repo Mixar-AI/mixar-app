@@ -169,15 +169,8 @@ class MIXAR_OT_restart_to_update(bpy.types.Operator):
 
         started, message = apply_and_restart()
         if not started:
-            from ..core.install_flow import BLOCKED_BY_OTHER_APPS, WAITING_FOR_BACKGROUND
             from ..core.toasts import refresh_update_toast
 
-            if message in (BLOCKED_BY_OTHER_APPS, WAITING_FOR_BACKGROUND):
-                # The toast naming the apps (or the background wait) is up;
-                # refreshing would replace it.
-                waiting = message == WAITING_FOR_BACKGROUND
-                self.report({"INFO"} if waiting else {"WARNING"}, message)
-                return {"FINISHED"} if waiting else {"CANCELLED"}
             refresh_update_toast()
             self.report({"ERROR"}, message or "Could not start the update")
             return {"CANCELLED"}
@@ -216,20 +209,6 @@ class MIXAR_OT_cancel_update_download(bpy.types.Operator):
             push_update_available_toast(info)
         else:
             refresh_update_toast()
-        return {"FINISHED"}
-
-
-class MIXAR_OT_cancel_update_wait(bpy.types.Operator):
-    """Stop waiting for Mixar's background tasks; the update stays ready"""
-
-    bl_idname = "mixar.cancel_update_wait"
-    bl_label = "Cancel"
-    bl_options = {"INTERNAL"}
-
-    def execute(self, context):
-        from ..core.install_gate import cancel_wait
-
-        cancel_wait()
         return {"FINISHED"}
 
 
@@ -342,7 +321,6 @@ class MIXAR_OT_open_changelog(bpy.types.Operator):
 classes = (
     MIXAR_OT_restart_to_update,
     MIXAR_OT_cancel_update_download,
-    MIXAR_OT_cancel_update_wait,
     MIXAR_OT_open_downloads_page,
     MIXAR_OT_check_for_updates,
     MIXAR_OT_show_update_toast,

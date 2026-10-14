@@ -279,8 +279,7 @@ if [[ -n "$PYTHON_BIN" ]]; then
     fi
     "$PYTHON_BIN" "$ROOT_DIR/scripts/check_python_runtime.py"
 else
-    echo "Error: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin" >&2
-    exit 1
+    echo "Warning: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin"
 fi
 
 # Re-sign the dev build with a stable identity so macOS Keychain "Always
@@ -294,8 +293,4 @@ fi
 # Done
 echo "=== Build Complete ==="
 echo "Python packages installed from: $REQUIREMENTS_FILE"
-if [[ "$PLATFORM" == "macOS" ]]; then
-    echo "Run Mixar using: $BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
-else
-    echo "Run Mixar using: $BUILD_ENV_DIR/bin/mixar"
-fi
+echo "Run Mixar using: $BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"

@@ -22,10 +22,7 @@ class MIXAR_OT_pane_remove_reference(bpy.types.Operator):
             return {'CANCELLED'}
         context.window_manager.mixar_reference_scroll = 0
         for window in context.window_manager.windows:
-            screen = window.screen
-            if screen is None:
-                continue
-            for area in screen.areas:
+            for area in window.screen.areas:
                 area.tag_redraw()
         return {'FINISHED'}
 

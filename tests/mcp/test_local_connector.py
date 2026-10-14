@@ -9,7 +9,6 @@ from pathlib import Path
 import subprocess
 import sys
 import uuid
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -172,70 +171,6 @@ def test_stdio_unknown_outcome_does_not_retry(relay, monkeypatch):
     assert str(uuid.UUID(detail["request_id"])) == detail["retry_meta"]["mixar/request-id"]
 
 
-def test_stdio_forgets_a_desktop_that_went_away(relay, monkeypatch):
-    """After Mixar restarts (an update), the cached port and token are stale:
-    the next request must discover the running app, not fail forever."""
-    server, context, calls = relay
-    bridge = launcher.StdioBridge()
-    bridge.record = {"port": 1, "token": "stale", "instance_id": "gone", "session_id": "x"}
-    bridge.protocol_version = "2025-06-18"
-    responses = []
-    monkeypatch.setattr(bridge, "respond", responses.append)
-
-    bridge.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
-
-    assert "error" in responses[0]
-    assert bridge.record is None
-    # The client never re-sends initialize: its negotiated version must
-    # reach the new desktop on every later request.
-    assert bridge.protocol_version == "2025-06-18"
-    bridge.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
-    assert "result" in responses[1]
-    assert bridge.record["session_id"] == context["session_id"]
-    _request, _snapshot, headers = calls[-1]
-    assert headers["MCP-Protocol-Version"] == "2025-06-18"
-
-
-def test_stdio_keeps_a_desktop_that_is_only_slow(relay, monkeypatch):
-    """A tool call that times out is a desktop still busy, not one that
-    went away: the record (port, token) stays."""
-    server, _context, _ = relay
-    bridge = launcher.StdioBridge()
-    bridge.record = stale = {**record(server), "instance_id": "x", "session_id": "y"}
-    responses = []
-    monkeypatch.setattr(bridge, "respond", responses.append)
-    monkeypatch.setattr(launcher, "local_request",
-                        MagicMock(side_effect=TimeoutError("timed out")))
-
-    bridge.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
-
-    assert "error" in responses[0]
-    assert bridge.record is stale
-
-
-def test_stdio_reset_never_forgets_a_record_another_worker_found(relay, monkeypatch):
-    """Worker A fails on the stale record while worker B already discovered
-    the new desktop: A must not wipe B's record."""
-    server, _context, _ = relay
-    bridge = launcher.StdioBridge()
-    old = {"port": 1, "token": "stale", "instance_id": "gone", "session_id": "x"}
-    fresh = {**record(server), "instance_id": "new", "session_id": "y"}
-    bridge.record = old
-    responses = []
-    monkeypatch.setattr(bridge, "respond", responses.append)
-
-    def failing(record_used, *args, **kwargs):
-        bridge.record = fresh  # another worker rediscovered meanwhile
-        raise ConnectionRefusedError()
-
-    monkeypatch.setattr(launcher, "local_request", failing)
-
-    bridge.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
-
-    assert "error" in responses[0]
-    assert bridge.record is fresh
-
-
 def test_setup_json_and_toml_escape_install_paths(monkeypatch):
     from mixar.modules.mcp_bridge.core.setup import connection_config
     monkeypatch.setattr(sys, "platform", "win32")
@@ -257,11 +192,6 @@ def test_the_dialog_copies_one_standard_config_and_links_the_guide(monkeypatch):
     assert server["command"].startswith(root) and set(server) == {"command", "args"}
     assert SETUP_GUIDE_URL == "https://www.mixar.app/docs#connect-ai-apps"
     from pathlib import Path
-    operators = Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators"
-    dialog = (operators / "connect.py").read_text()
-    assert "default='JSON'" in dialog  # copy_mcp_setup's default client
-    # The sheet's "Other app" foot offers the standard JSON first, and its
-    # sidebar links the guide.
-    from mixar.modules.mcp_bridge.core import app_configs
-    assert app_configs.FORMATS[0] == "JSON"
-    assert "GUIDE_URL = SETUP_GUIDE_URL" in (operators / "connect_sheet_ui.py").read_text()
+    dialog = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
+    assert 'text="Copy MCP Config"' in dialog and 'text="Setup Guide"' in dialog
+    assert "default='JSON'" in dialog
