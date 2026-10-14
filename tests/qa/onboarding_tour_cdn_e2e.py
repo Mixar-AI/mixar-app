@@ -8,8 +8,9 @@ French. cdn.mixar.app answers urllib's default user agent with a 403
 (Cloudflare 1010), which silently left every dub on English + subtitles.
 
 QA_HARNESS=/path/to/mixar-qa-harness python3 tests/qa/onboarding_tour_cdn_e2e.py
-Before the live manifest says this build's pack version, point the app at
-the staged one (its part URLs are the uploaded CDN files):
+The app reads tour-packs/<TOUR_PACK_VERSION>/manifest.json. To test packs
+whose manifest is not uploaded yet, point it at the staged one (its part
+URLs must already be on the CDN):
     TOUR_MANIFEST_URL=file://<repo>/dist/tour-packs/manifest.json
 Screenshots go to QA_SCENARIO_OUT (default /tmp/onboarding-tour-cdn).
 """

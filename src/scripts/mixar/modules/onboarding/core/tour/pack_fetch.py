@@ -74,6 +74,12 @@ def fetch_manifest(root: str) -> Optional[dict]:
             data = json.loads(resp.read().decode("utf-8"))
         if not isinstance(data, dict):
             raise ValueError("manifest is not an object")
+        if data.get("pack_version") != config.TOUR_PACK_VERSION:
+            # Never cache another version's manifest: it would hide the
+            # packs this client already installed.
+            logger.warning("tour pack manifest %s is version %r, expected %r", url,
+                           data.get("pack_version"), config.TOUR_PACK_VERSION)
+            return packs.read_manifest(root)
         os.makedirs(root, exist_ok=True)
         tmp = packs.manifest_path(root) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:

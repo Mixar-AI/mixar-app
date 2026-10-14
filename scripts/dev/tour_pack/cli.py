@@ -15,7 +15,10 @@ bundled ``founder.mp4`` itself (the cut list is then the identity). Work files
 (mono WAVs, frame tracks) go to ``<media>/work``. Outputs:
 
     <out>/<pack_version>/<code>/part-<k>.mp4, timing.json, plan.json
-    <out>/manifest.json                     (all languages built so far)
+    <out>/<pack_version>/manifest.json      (all languages built so far; the
+                                             client reads this one, so upload
+                                             the whole <pack_version>/ folder)
+    <out>/manifest.json                     (the same, read back by the next build)
     src/scripts/mixar/modules/onboarding/assets/tour/subtitles/<code>.srt
 """
 
@@ -29,6 +32,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import pack_subtitles  # noqa: E402
 import plan  # noqa: E402
 import render  # noqa: E402
 import script_access  # noqa: E402
@@ -64,7 +68,10 @@ def wav_for(work: str, name: str, src: str) -> str:
 
 
 def track_for(work: str, name: str, src: str, crop: str = "") -> str:
-    out = os.path.join(work, "frames", f"{name}.gray")
+    # The crop is part of the cache key: a track cut with another crop
+    # would align the warp on different frames.
+    tag = "-" + re.sub(r"[^0-9a-z]+", "_", crop.lower()).strip("_") if crop else ""
+    out = os.path.join(work, "frames", f"{name}{tag}.gray")
     if not os.path.isfile(out):
         pre = f"{crop}," if crop else ""
         sh(["ffmpeg", "-v", "error", "-y", "-i", src, "-an", "-vf",
@@ -80,42 +87,6 @@ def probe(src: str) -> tuple:
     data = json.loads(out)
     num, den = data["streams"][0]["r_frame_rate"].split("/")
     return float(num) / float(den), int(round(float(data["format"]["duration"]) * 1000))
-
-
-_SRT_TIME = re.compile(r"(\d+):(\d+):(\d+)[,.](\d+)")
-
-
-def _srt_ms(m) -> int:
-    h, mi, s, f = m.groups()
-    return ((int(h) * 60 + int(mi)) * 60 + int(s)) * 1000 + int((f + "000")[:3])
-
-
-def _fmt(ms: int) -> str:
-    ms = max(0, int(ms))
-    return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
-
-
-def retime_srt(src: str, dst: str, to_founder) -> int:
-    """Rewrite cue times through ``to_founder(raw_dub_ms) -> founder_ms``;
-    cues that collapse into a cut are dropped. Returns the cue count."""
-    with open(src, "r", encoding="utf-8-sig") as fh:
-        text = fh.read().replace("\r\n", "\n")
-    blocks, kept = re.split(r"\n\s*\n", text.strip()), []
-    for block in blocks:
-        lines = [ln for ln in block.split("\n") if ln.strip()]
-        ti = next((i for i, ln in enumerate(lines) if "-->" in ln), None)
-        if ti is None:
-            continue
-        times = list(_SRT_TIME.finditer(lines[ti]))
-        if len(times) < 2:
-            continue
-        a, b = to_founder(_srt_ms(times[0])), to_founder(_srt_ms(times[1]))
-        if b - a < 300:
-            continue
-        kept.append(f"{len(kept) + 1}\n{_fmt(a)} --> {_fmt(b)}\n" + "\n".join(lines[ti + 1:]))
-    with open(dst, "w", encoding="utf-8") as fh:
-        fh.write("\n\n".join(kept) + "\n")
-    return len(kept)
 
 
 def reconcile(timing: dict, planned: list, actual: list, tour) -> None:
@@ -156,7 +127,7 @@ def build_language(code: str, media: str, out_root: str, pack_version: int, foun
     srt_src = os.path.join(media, "srt", f"{stem}.srt")
     if not os.path.isfile(srt_src):
         raise SystemExit(f"[{code}] {srt_src} is required: the cues are the dub's line structure")
-    cues = plan.read_srt_cues(srt_src)
+    cues = pack_subtitles.read_srt_cues(srt_src)
     runs, fn, total, to_founder, lines = plan.plan_dub(tour, founder, dub, cues, card_raw_en)
     timing = plan.build_timing(tour, fn, total, code, pack_version)
     acts = plan.act_boundaries(tour, timing)
@@ -204,7 +175,8 @@ def build_language(code: str, media: str, out_root: str, pack_version: int, foun
         "gates_peak_db": gates, "source_fps": fps, "source_duration_ms": dur})
 
     os.makedirs(SUBTITLES_DIR, exist_ok=True)
-    n = retime_srt(srt_src, os.path.join(SUBTITLES_DIR, f"{code}.srt"), to_founder)
+    n = pack_subtitles.retime_srt(srt_src, os.path.join(SUBTITLES_DIR, f"{code}.srt"),
+                                  to_founder, pack_subtitles.gates_of(tour))
     print(f"[{code}] subtitles: {n} cues re-timed to the English edit", flush=True)
 
     entry = render.manifest_entry(code, parts, acts, real_total, f"{CDN_BASE}/{pack_version}")

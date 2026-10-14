@@ -94,6 +94,18 @@ def test_new_tracks_share_english_cues_and_do_not_bridge_interactive_pauses():
         assert subs.text_at(148389) and not subs.text_at(148390)
 
 
+@pytest.mark.parametrize("code", language.CODES)
+def test_no_track_shows_the_next_line_during_a_gated_pause(code):
+    """English playback freezes at a gate's clip end, so the cue covering it
+    stays up for the whole pause: it must not be the next beat's line. The
+    dub-derived tracks follow the dubs' own line timing and are built by the
+    pack builder (``pack_subtitles.gate_safe``), not from ``en.json``."""
+    subs = srt.load(code)
+    for beat in MIXAR_INTRO.beats:
+        if beat.gate:
+            assert subs.text_at(beat.clip_end_ms) == "", (code, beat.id)
+
+
 def test_visual_rtl_wrap_starts_at_right_edge():
     # Hebrew is stored in visual order for BLF, so its sentence starts at
     # the right. Rows must be taken from that end too.

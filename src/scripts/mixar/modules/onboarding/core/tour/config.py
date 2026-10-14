@@ -37,8 +37,11 @@ VIDEO_FPS_FALLBACK = 24.0
 # a pack built for another version is never played.
 TOUR_PACK_VERSION = 2              # 2: the 4:3 take of 2026-10-14
 # Public manifest on the releases CDN (no auth: the first-time splash
-# starts the download before login). Override for QA/staging.
-PACKS_MANIFEST_URL = "https://cdn.mixar.app/tour-packs/manifest.json"
+# starts the download before login). Override for QA/staging. Versioned:
+# each client reads its own pack version's manifest, so a new version's
+# packs never take the dubs away from an older client (the unversioned
+# tour-packs/manifest.json stays at 1 for clients up to 4.2.3).
+PACKS_MANIFEST_URL = f"https://cdn.mixar.app/tour-packs/{TOUR_PACK_VERSION}/manifest.json"
 ENV_PACKS_MANIFEST_URL = "MIXAR_TOUR_PACKS_URL"
 # QA: a local folder laid out like the cache (``<code>/part-<k>.mp4``,
 # ``<code>/timing.json``, ``manifest.json``) that stands in for cache + CDN.
