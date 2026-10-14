@@ -116,12 +116,16 @@ def _publish(key, value):
 
 
 def _restore(job):
-    for owner, name, original, applied in reversed(job["settings"]):
+    entries = list(reversed(job["settings"]))
+    # Blender filters file_format by media_type: a video scene's FFMPEG is only
+    # accepted once media_type is back to VIDEO, so that entry goes first.
+    entries.sort(key=lambda entry: entry[1] != "media_type")
+    for owner, name, original, applied in entries:
         try:
             # Preserve a user's new setting if it changed while the job ran.
             if getattr(owner, name) == applied:
                 setattr(owner, name, original)
-        except (ReferenceError, RuntimeError, AttributeError):
+        except (ReferenceError, RuntimeError, AttributeError, TypeError):
             pass
     if job.get('inspection') is not None:
         job['inspection'].cleanup()
@@ -359,6 +363,10 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
     downgraded = _downgrade_over_budget(scene, set_value, max_faces, budget_engine)
     _apply_resolution(render, set_value, int(width or 0), int(height or 0))
     set_value(render, "resolution_percentage", 100)
+    # media_type BEFORE file_format: on Blender 5 a scene whose output is video
+    # (FFMPEG) rejects PNG outright.
+    if getattr(render.image_settings, "media_type", "IMAGE") != "IMAGE":
+        set_value(render.image_settings, "media_type", "IMAGE")
     set_value(render.image_settings, "file_format", "PNG")
     engine_id = str(render.engine)
     if engine_id == "CYCLES":

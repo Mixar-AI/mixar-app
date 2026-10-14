@@ -47,7 +47,10 @@ def _is_app_exiting() -> bool:
 def is_agent_bubble_window(window) -> bool:
     """Return True when a Blender window contains the runtime bubble UI."""
     try:
-        return any(area.type == 'AGENT_BUBBLE' for area in window.screen.areas)
+        screen = window.screen
+        return screen is not None and any(
+            area.type == 'AGENT_BUBBLE' for area in screen.areas
+        )
     except ReferenceError:
         return False
 
@@ -90,8 +93,10 @@ def close_restored_agent_bubble_windows() -> int:
             continue
 
         try:
+            # Non-None: is_agent_bubble_window() just found a bubble area on it.
+            screen = window.screen
             area = next(
-                (area for area in window.screen.areas if area.type == 'AGENT_BUBBLE'),
+                (area for area in screen.areas if area.type == 'AGENT_BUBBLE'),
                 None,
             )
             region = None
@@ -100,7 +105,7 @@ def close_restored_agent_bubble_windows() -> int:
                 if region is None and area.regions:
                     region = area.regions[0]
 
-            override = {"window": window, "screen": window.screen}
+            override = {"window": window, "screen": screen}
             if area is not None:
                 override["area"] = area
             if region is not None:

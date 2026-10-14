@@ -107,7 +107,7 @@ class SessionDrawMixin:
             layout = card_ui.compute_card_layout("hero", PLACE_CENTER, self._host_rect,
                                                  self._ui_scale)
             self._card_layout = layout
-            card_ui.draw_card(layout, None, 0.0, False, 1.0, alpha=1.0,
+            card_ui.draw_card(layout, None, 0.0, False, alpha=1.0,
                               ui_scale=self._ui_scale, caption=self.tour.title,
                               loading_text=self._loading_label)
         except Exception as exc:  # noqa: BLE001

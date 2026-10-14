@@ -276,7 +276,7 @@ def stop_scene_tab(scene, sid: str) -> None:
     session.set_run(scene, "", False)
     session.set_state(scene, SessionState.IDLE)
     if sid:
-        send_cancel_request_async(sid)
+        send_cancel_request_async(sid, 'tab_closed')
     slog("tab.close.cancel", scene)
 
 

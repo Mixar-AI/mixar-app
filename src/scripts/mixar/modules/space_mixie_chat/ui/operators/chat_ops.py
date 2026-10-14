@@ -19,6 +19,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
+from mixar.modules.common.analytics.essential_events import capture_agent_message, capture_generate_message
 from mixar.modules.common.i18n import iface_, rpt_
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
@@ -117,11 +118,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Check if Generate mode - delegate to generate_ops
         if scene.mixie_chat_mode == 'GENERATE':
-            capture(EVENT_MESSAGE_SENT, {
-                "mode": "generate",
-                "has_attachments": bool(len(scene.mixie_chat_pending_attachments)),
-                "generate_type": getattr(scene, "mixie_chat_generate_type", "") or None,
-            }, context=context)
+            capture_generate_message(context)
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
@@ -231,18 +228,9 @@ class MIXIE_CHAT_OT_send_message(Operator):
             )
             return {'CANCELLED'}
 
-        capture(EVENT_MESSAGE_SENT, {
-            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
-            "has_attachments": bool(len(pending_attachments)),
-            "is_modify": is_modify,
-            "is_awaiting_input": is_awaiting_input,
-            "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
-            "auto_mode": bool(getattr(scene, "mixie_chat_auto_mode", False)),
-            "model": getattr(scene, "mixie_chat_model", "") or None,
-        }, context=context)
-
         # Dev mode: simulate response without backend
         if DEV_MODE:
+            capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input)
             return self._execute_dev_mode(context, message_text)
 
         connection_manager = get_connection_manager()
@@ -270,6 +258,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 # The words are a complete request on their own; never lose a
                 # message because the marks could not be assembled.
                 logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
+
+        # The finalized outgoing payload determines usage, not merely opening
+        # Sketch or keeping a previously sent drawing in the scene.
+        capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context)
 
         fresh_turn = not (is_modify or is_awaiting_input or interjecting)
         if fresh_turn:

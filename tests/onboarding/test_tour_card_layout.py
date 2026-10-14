@@ -6,8 +6,9 @@
 """The tour's video card lands where the beat says, inside the host.
 
 Contract: the card is the video plus ``CARD_PAD`` on every side — no
-controls band below it; the controls strip sits INSIDE the bottom of the
-video, and ``layout_from_card_rect`` rebuilds the same layout from the card
+controls band below it; the transport (Back, Play/Pause, Next) is a
+cluster in the middle of the video, Skip tour sits in the video's top-right
+corner, and ``layout_from_card_rect`` rebuilds the same layout from the card
 rect alone (the session feeds it the animated rect).
 
 Layout is arithmetic over ``config`` so it runs under the ``bpy``/``gpu``/
@@ -44,16 +45,28 @@ def _center(rect):
 
 
 def _assert_video_only_card(layout, scale=1.0):
-    """No chrome: card == video + pad, controls strip inside the video's bottom."""
+    """No chrome: card == video + pad, transport cluster centred on the video."""
     pad = config.CARD_PAD * scale
     assert layout.card[0] == pytest.approx(layout.video[0] - pad)
     assert layout.card[1] == pytest.approx(layout.video[1] - pad)
     assert layout.card[2] == pytest.approx(layout.video[2] + pad)
     assert layout.card[3] == pytest.approx(layout.video[3] + pad)
     assert _inside(layout.controls, layout.video)
-    assert layout.controls[1] == pytest.approx(layout.video[1])
-    assert layout.controls[0] == pytest.approx(layout.video[0])
-    assert layout.controls[2] == pytest.approx(layout.video[2])
+    assert _center(layout.controls) == pytest.approx(_center(layout.video))
+
+
+BAR_BUTTONS = ("back", "pause", "skip")
+
+
+def _assert_buttons_placed(layout):
+    """Transport in the centre cluster; Skip tour in the top-right."""
+    for name in BAR_BUTTONS:
+        assert _inside(layout.buttons[name], layout.controls), name
+    exit_rect = layout.buttons["exit"]
+    assert _inside(exit_rect, layout.video)
+    assert exit_rect[1] > layout.controls[3]
+    assert _center(exit_rect)[0] > _center(layout.video)[0]
+    assert _center(exit_rect)[1] > _center(layout.video)[1]
 
 
 def test_text_width_is_a_float_under_the_mock():
@@ -69,8 +82,7 @@ def test_every_placement_lands_inside_host_with_margins(variant, placement):
     assert _inside(layout.card, HOST, config.CARD_MARGIN)
     assert _inside(layout.video, layout.card)
     _assert_video_only_card(layout)
-    for rect in layout.buttons.values():
-        assert _inside(rect, layout.controls)
+    _assert_buttons_placed(layout)
     vw = layout.video[2] - layout.video[0]
     vh = layout.video[3] - layout.video[1]
     assert vw == pytest.approx(config.CARD_VARIANTS[variant])
@@ -98,7 +110,7 @@ def test_ui_scale_scales_the_card():
     one = card.compute_card_layout("half", beats.PLACE_TOP_LEFT, big, 1.0)
     two = card.compute_card_layout("half", beats.PLACE_TOP_LEFT, big, 2.0)
     assert (two.video[2] - two.video[0]) == pytest.approx(2 * (one.video[2] - one.video[0]))
-    assert (two.controls[3] - two.controls[1]) == pytest.approx(2 * config.CARD_CONTROLS_H)
+    assert (two.controls[3] - two.controls[1]) == pytest.approx(2 * config.CONTROL_PLAY_D)
     assert two.card[0] == pytest.approx(2 * config.CARD_MARGIN)
     _assert_video_only_card(two, scale=2.0)
 
@@ -108,7 +120,7 @@ def test_card_is_only_pad_larger_than_the_video():
     assert config.CARD_PAD <= 2
     assert (layout.card[3] - layout.card[1]) == pytest.approx(
         (layout.video[3] - layout.video[1]) + 2 * config.CARD_PAD)
-    assert (layout.controls[3] - layout.controls[1]) == pytest.approx(config.CARD_CONTROLS_H)
+    assert (layout.controls[3] - layout.controls[1]) == pytest.approx(config.CONTROL_PLAY_D)
 
 
 @pytest.mark.parametrize("placement", PLACEMENTS)
@@ -131,8 +143,7 @@ def test_layout_from_an_intermediate_rect_keeps_buttons_inside_the_strip():
     layout = card.layout_from_card_rect(mid, 1.0)
     assert layout.card == pytest.approx(mid)
     _assert_video_only_card(layout)
-    for rect in layout.buttons.values():
-        assert _inside(rect, layout.controls)
+    _assert_buttons_placed(layout)
 
 
 def test_video_corners_stay_inside_the_rounded_background():
@@ -189,13 +200,15 @@ def test_hero_shrinks_to_fit_a_tiny_host_keeping_aspect(host):
 
 def test_hit_test_every_button_and_outside():
     layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_LEFT, HOST, 1.0)
-    for name in ("pause", "speed", "skip", "exit"):
+    for name in card.BUTTON_ORDER:
         x, y = _center(layout.buttons[name])
         assert card.hit_test(layout, x, y) == name
-    vx, vy = _center(layout.video)
-    assert card.hit_test(layout, vx, vy) == "card"
-    # The strip between the button groups is still the card (click = pause).
-    sx = (layout.buttons["speed"][2] + layout.buttons["skip"][0]) * 0.5
+    # The centre of the video is Play/Pause; elsewhere the video is the card.
+    assert card.hit_test(layout, *_center(layout.video)) == "pause"
+    vx = layout.video[0] + 20.0
+    assert card.hit_test(layout, vx, _center(layout.video)[1]) == "card"
+    # The video beside the transport is still the card (click = pause).
+    sx = (layout.buttons["skip"][2] + layout.video[2]) * 0.5
     assert card.hit_test(layout, sx, _center(layout.controls)[1]) == "card"
     assert card.hit_test(layout, HOST[2] - 1.0, HOST[3] - 1.0) is None
     assert card.hit_test(layout, layout.card[0] - 1.0, layout.card[1]) is None
@@ -204,9 +217,59 @@ def test_hit_test_every_button_and_outside():
 def test_buttons_do_not_overlap():
     layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
     b = layout.buttons
-    assert b["pause"][2] <= b["speed"][0]
-    assert b["speed"][2] <= b["skip"][0]
-    assert b["skip"][2] <= b["exit"][0]
+    # Back · Play/Pause · Next read left to right; Play/Pause is the
+    # largest, dead centre on the video, the others level with it.
+    assert b["back"][2] <= b["pause"][0]
+    assert b["pause"][2] <= b["skip"][0]
+    assert _center(b["pause"]) == pytest.approx(_center(layout.video))
+    for name in ("back", "skip"):
+        assert _center(b[name])[1] == pytest.approx(_center(layout.video)[1])
+        assert b[name][2] - b[name][0] < b["pause"][2] - b["pause"][0]
+    assert "speed" not in b
+
+
+def test_cluster_shrinks_to_fit_a_tiny_video():
+    layout = card.layout_from_card_rect((0.0, 0.0, 120.0, 70.0), 1.0)
+    for name in BAR_BUTTONS:
+        assert _inside(layout.buttons[name], layout.video), name
+    assert (layout.controls[2] - layout.controls[0]) <= (layout.video[2] - layout.video[0])
+
+
+def test_skip_tour_clears_the_caption_pill():
+    # The longest act caption sits top-left; Skip tour top-right. On the
+    # 4:3 half card the pill shortens itself rather than run under Skip tour.
+    layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
+    skip_left = layout.buttons["exit"][0]
+    for beat in beats.MIXAR_INTRO.beats:
+        rect, text = card.caption_rect(layout.video, beat.label, config.CONTROL_FONT_PX, 1.0,
+                                       clear_right=skip_left)
+        assert text, beat.label
+        assert rect[2] + card.CAPTION_SKIP_GAP <= skip_left + 1e-6, beat.label
+        assert rect[0] == pytest.approx(layout.video[0] + card.CAPTION_INSET)
+
+
+def test_caption_pill_ellipsises_a_long_translation():
+    layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
+    skip_left = layout.buttons["exit"][0]
+    long_label = "Teil 3 · Szenen und der Kinomodus im Detail erklärt"
+    rect, text = card.caption_rect(layout.video, long_label, config.CONTROL_FONT_PX, 1.0,
+                                   clear_right=skip_left)
+    assert text.endswith("\u2026") and len(text) < len(long_label)
+    assert long_label.startswith(text[:-1])
+    assert rect[2] + card.CAPTION_SKIP_GAP <= skip_left + 1e-6
+    # Without a bound the whole label is kept.
+    _rect, whole = card.caption_rect(layout.video, long_label, config.CONTROL_FONT_PX, 1.0)
+    assert whole == long_label
+
+
+def test_fit_text_keeps_what_fits_and_never_exceeds_the_bound():
+    px = config.CONTROL_FONT_PX
+    assert card.fit_text("Welcome", px, 10_000.0) == "Welcome"
+    assert card.fit_text("", px, 50.0) == ""
+    assert card.fit_text("Welcome", px, 0.0) == ""
+    for max_w in (20.0, 40.0, 60.0, 90.0):
+        out = card.fit_text("Part 3 · Scenes and Cinema", px, max_w)
+        assert card._text_width(out, px) <= max_w
 
 
 def test_exit_confirm_is_centred_and_buttons_sit_inside_the_dialog():
@@ -230,7 +293,7 @@ def test_qa_targets_names_and_rects():
     exit_layout = card.compute_exit_confirm_layout(HOST, 1.0)
     targets = card.qa_targets(layout, exit_layout)
     names = [t["name"] for t in targets]
-    assert names == ["tour_pause", "tour_speed", "tour_skip", "tour_exit",
+    assert names == ["tour_back", "tour_pause", "tour_skip", "tour_exit",
                      "tour_confirm_continue", "tour_confirm_exit"]
     by_name = {t["name"]: t["rect"] for t in targets}
     assert by_name["tour_pause"] == [float(v) for v in layout.buttons["pause"]]
@@ -275,13 +338,11 @@ def test_draw_caption_under_returns_its_rect_or_none():
 def test_draw_card_accepts_the_gate_film_and_never_raises():
     layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_LEFT, HOST, 1.0)
     for film in (0.0, 0.5, 1.0, 7.0, -1.0):
-        card.draw_card(layout, None, 0.3, False, 1.0, gate_seconds_left=4.0,
+        card.draw_card(layout, None, 0.3, False, gate_seconds_left=4.0,
                        caption="Part 1 · The viewport", gate_film=film)
+    for hover in card.BUTTON_ORDER:
+        for paused in (False, True):
+            card.draw_card(layout, None, 0.3, paused, hover=hover,
+                           controls_alpha=1.0)
     assert 0.0 < config.GATE_FILM_ALPHA < 0.5
 
-
-def test_format_rate():
-    assert card.format_rate(1.0) == "1×"
-    assert card.format_rate(1.25) == "1.25×"
-    assert card.format_rate(1.5) == "1.5×"
-    assert card.format_rate(2.0) == "2×"

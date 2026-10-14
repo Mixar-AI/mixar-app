@@ -22,13 +22,19 @@ end run
 def save_blender_image_to_png(image, dest_path: str, scene) -> None:
     """Save a Blender image to PNG while restoring render output settings."""
     settings = scene.render.image_settings
+    previous_media_type = getattr(settings, "media_type", None)
     previous_format = settings.file_format
     previous_color_mode = settings.color_mode
     try:
+        # media_type BEFORE file_format: a video-output scene rejects PNG on Blender 5.
+        if previous_media_type is not None:
+            settings.media_type = 'IMAGE'
         settings.file_format = 'PNG'
         settings.color_mode = 'RGBA' if image.channels == 4 else 'RGB'
         image.save_render(dest_path, scene=scene)
     finally:
+        if previous_media_type is not None:
+            settings.media_type = previous_media_type
         settings.file_format = previous_format
         settings.color_mode = previous_color_mode
 

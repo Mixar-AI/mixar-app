@@ -2569,6 +2569,7 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
   if (ghostwin == g_bubble_ghostwin) {
     ++g_bubble_motion_generation;
     g_bubble_minimise_pending = false;
+    g_bubble_grown_for_chat = false;
     g_bubble_seat_valid = false;
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
@@ -2904,11 +2905,6 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   else {
     agent_ui_cat_scheduler_forget(region);
   }
-
-  return;
-  /* Header TH_BACK resolves to ts->header from the Agent Bubble theme,
-   * so no manual override is needed here. */
-  ED_region_header(C, region);
 }
 
 /* Overlay pass — runs on EVERY window composite, drawing straight into the

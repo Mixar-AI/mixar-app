@@ -264,4 +264,5 @@ def repair_after_undo(saved_view: dict[int, str], saved_runs: dict[str, str],
     from ..ui.operators.session_ops import send_cancel_request_async
 
     cancel_orphaned_runs(saved_runs, live_session_ids(scenes),
-                         send_cancel_request_async, get_executor().end_agent_turn)
+                         lambda sid: send_cancel_request_async(sid, 'undo_removed_scene'),
+                         get_executor().end_agent_turn)

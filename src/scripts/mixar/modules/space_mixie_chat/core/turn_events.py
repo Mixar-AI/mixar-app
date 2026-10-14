@@ -35,6 +35,7 @@ _commands = {}
 _blocked = set()
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_ITEMS = 512
+_MAX_ATTACH_FAILURES = 3
 _pump = TurnEventPump(lambda: _drain())
 
 
@@ -47,6 +48,7 @@ class Turn:
     pending: dict = field(default_factory=dict)
     complete: bool = False
     recovering: bool = False
+    attach_failures: int = 0
 
 
 def arm():
@@ -196,22 +198,20 @@ def _consume(method, params):
         # A rendered turn_end is proof of completion even after the journal
         # expires. Replay availability is only relevant to missing delivery.
         if tid and ((turn is not None and turn.complete) or saved.get('complete')):
-            if saved:
+            if saved.get('complete'):  # Never restore a mid-turn state.
                 from .session import get_session_manager
                 session = get_session_manager()
                 session.set_run(scene, saved.get('run_id', ''), bool(saved.get('run_open')))
                 session.set_state(scene, SessionState[saved.get('state', 'IDLE')])
             return
         if not tid:
-            from .session import get_session_manager
             local = [t for t in _turns.values() if t.session_id == sid]
             pending = any(entry[0] == sid for entry in _commands.values())
             completed = local[-1].complete if local else saved.get('complete', False)
-            if (get_session_manager().run_open(scene) and completed and not pending
-                    and not any(not t.complete for t in local)):
-                return  # Between wake-ups; no response is missing locally.
+            if completed and not pending and not any(not t.complete for t in local):
+                return  # Between wake-ups or after the run; nothing is missing locally.
         if not tid or not info.get('replay_available'):
-            _replay_unavailable(scene, Turn(sid, tid or '', ''))
+            _replay_unavailable(scene, _unrecoverable(scene, sid, tid))
             return
         if turn is None:
             _commands.setdefault(tid, (sid, None))
@@ -220,13 +220,13 @@ def _consume(method, params):
             turn = _turns.get(tid)
         if turn is not None and turn.complete:
             saved = turn_cursor.read(scene, sid, tid)
-            if saved:
+            if saved.get('complete'):
                 from .session import get_session_manager
                 session = get_session_manager()
                 session.set_run(scene, saved.get('run_id', ''), bool(saved.get('run_open')))
                 session.set_state(scene, SessionState[saved.get('state', 'IDLE')])
-        elif turn is not None:
-            _request_replay(turn)
+        elif turn is not None and not turn.recovering:
+            _request_replay(turn)  # reconnect() already attached a recovering turn.
         return
     if method in ('agent.command.result', 'agent.command.delivered'):
         command_id = params.get('command_id')
@@ -340,13 +340,35 @@ def _begin_scene_turn(scene, run_id):
     session.set_state(scene, SessionState.BUSY)
 
 
+def _unrecoverable(scene, sid, tid):
+    """The local turn a no-replay verdict settles; a stand-in only when none exists."""
+    if tid:
+        return _turns.get(tid) or Turn(sid, tid, '')
+    local = [turn for turn in _turns.values() if turn.session_id == sid and not turn.complete]
+    for turn in local[:-1]:
+        turn.complete = True
+    if local:
+        return local[-1]
+    saved = turn_cursor.read(scene, sid)
+    return Turn(sid, saved.get('turn_id', ''), saved.get('run_id', ''), cursor=int(saved.get('cursor', -1)))
+
+
 def _request_replay(turn):
     from mixar.modules.common.agent_rpc.client import call
     turn.recovering = True
     def reply(result):
+        data = result.get('data') if isinstance(result, dict) else None
+        if isinstance(data, dict) and data.get('disconnected') and turn.attach_failures < _MAX_ATTACH_FAILURES:
+            # The socket closed before the answer; the next connection
+            # re-attaches from the cursor. Only a verdict ends a live turn.
+            turn.attach_failures += 1
+            turn.recovering = False
+            return
         if not isinstance(result, dict) or result.get('status') == 'unavailable' or result.get('code'):
             handle_turn_notification('agent.turn.event', {'session_id': turn.session_id,
                 'turn_id': turn.turn_id, 'event': {'type': 'resume_unavailable'}})
+        else:
+            turn.attach_failures = 0
     try:
         call('agent.attach', {'session_id': turn.session_id, 'turn_id': turn.turn_id,
                              'after_seq': turn.cursor}, reply)
@@ -367,6 +389,10 @@ def _replay_unavailable(scene, turn):
     add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
                                   'Check the scene before continuing.'))
     turn.complete = True
+    turn.pending.clear()
+    if turn.turn_id:
+        # Later recovery restores this settled state, not the mid-turn cursor.
+        turn_cursor.save(scene, turn)
 
 
 def reconnect(session_ids=None):

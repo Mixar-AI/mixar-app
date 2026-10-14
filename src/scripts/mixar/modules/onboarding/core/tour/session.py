@@ -21,6 +21,7 @@ state ``tick()`` prepared.
 
 import math
 import time
+import uuid
 
 import bpy
 import gpu
@@ -59,6 +60,7 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
     def __init__(self, rate: float = 1.0, silent: bool = False,
                  tour=MIXAR_INTRO):
         self.tour = tour
+        self.tour_run_id = str(uuid.uuid4())
         self.rate = rate
         self.silent = silent
         self.language = "en"     # the user's tour language (set in start())
@@ -298,7 +300,8 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             self.flags["viewport_interacted"] = False
         try:
             from . import telemetry
-            telemetry.step(self.tour.id, beat_id or "", self.runner.index)
+            telemetry.step(self.tour.id, beat_id or "", self.runner.index,
+                           tour_run_id=self.tour_run_id)
         except Exception:  # noqa: BLE001
             pass
 
@@ -468,7 +471,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             card_ui.draw_card(
                 self._card_layout, self._texture, min(1.0, ms / total),
                 self.runner.user_paused and not self.exit_confirm and not self._gated,
-                getattr(self.clock, "rate", 1.0),
                 alpha=self.card_motion.alpha, ui_scale=self._ui_scale,
                 gate_seconds_left=self.runner.gate_seconds_left(),
                 hover=self.hover, caption=beat.label,

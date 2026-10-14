@@ -311,3 +311,119 @@ def test_saved_completed_turn_does_not_require_retained_journal(env, monkeypatch
         'turn_id': 'saved', 'replay_available': False}})
     unavailable.assert_not_called()
     assert env.scene.mixie_run_open and env.scene.mixie_chat_state == 'IDLE'
+
+
+# Prod 2026-10-14 (session 0d16ac16): a reconnect storm settled a live turn as
+# unavailable, then every later recovery restored BUSY from the stale cursor.
+_real_request_replay = events._request_replay
+
+
+class _SavingScene(SimpleNamespace):
+    """A scene that keeps ID properties, so turn_cursor round-trips."""
+    def get(self, key, default=None):
+        return self.__dict__.setdefault('_props', {}).get(key, default)
+
+    def __setitem__(self, key, value):
+        self.__dict__.setdefault('_props', {})[key] = value
+
+
+@pytest.fixture
+def settle(env, monkeypatch, live_bpy):
+    from mixar.modules.space_mixie_chat.core import executor, message_helpers, queue_processor
+    scene = _SavingScene(**vars(env.scene))
+    live_bpy.data.scenes[:] = [scene]
+    events._bindings.clear()
+    events.bind(scene)
+    notices = []
+    monkeypatch.setattr(queue_processor, 'get_event_processor', lambda: MagicMock())
+    monkeypatch.setattr(executor, 'get_executor', lambda: MagicMock())
+    monkeypatch.setattr(message_helpers, 'add_agent_message', lambda s, text: notices.append(text))
+    started()
+    events._drain()
+    scene.mixie_chat_state = 'BUSY'
+    event(0)
+    events._drain()  # The cursor now records the mid-turn state: BUSY, run open.
+    return SimpleNamespace(scene=scene, notices=notices)
+
+
+def recovery(**info):
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': {'turn_id': 'turn', **info}})
+
+
+def assert_settled(env, settle):
+    turn = events._turns['turn']
+    assert turn.complete and not turn.pending
+    assert settle.scene.mixie_chat_state == 'IDLE' and not settle.scene.mixie_run_open
+    assert len(settle.notices) == 1
+
+
+@pytest.mark.parametrize('status', ['running', 'unavailable', 'completed'])
+def test_unavailable_settlement_is_not_undone_by_later_recovery(env, settle, status):
+    events.handle_turn_notification('agent.turn.event', {
+        'session_id': 'sid', 'turn_id': 'turn', 'event': {'type': 'resume_unavailable'}})
+    events._drain()
+    for _ in range(2):  # Every later reconnect asks again.
+        recovery(status=status, replay_available=True, run_id='run')
+    assert_settled(env, settle)
+
+
+@pytest.mark.parametrize('status', ['completed', 'unavailable', 'abandoned'])
+def test_ended_unreplayable_turn_settles_the_real_turn_once(env, settle, status):
+    replays = len(env.replay)
+    for _ in range(2):
+        recovery(status=status, replay_available=False)
+    assert_settled(env, settle)
+    assert len(env.replay) == replays  # A complete turn is never re-attached.
+
+
+def test_expired_journal_after_a_closed_run_posts_nothing(env, settle):
+    event(1, {'type': 'turn_end', 'status': 'completed'})
+    events._drain()
+    settle.scene.mixie_run_open, settle.scene.mixie_chat_state = False, 'IDLE'
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': {'status': 'unavailable'}})
+    assert settle.notices == []
+
+
+@pytest.fixture
+def attach(monkeypatch):
+    from mixar.modules.common.agent_rpc import client
+    replies = []
+    monkeypatch.setattr(client, 'call', lambda method, params, callback: replies.append(callback))
+    turn = events.Turn('sid', 'turn', 'run', cursor=3)
+    return turn, replies
+
+
+def _verdicts():
+    return [item[1]['event']['type'] for lane in events._inbox.values() for item in lane]
+
+
+def test_attach_lost_with_its_socket_retries_on_the_next_connection(attach):
+    turn, replies = attach
+    lost = {'code': -32020, 'data': {'uncertain': True, 'disconnected': True}}
+    for _ in range(events._MAX_ATTACH_FAILURES):
+        _real_request_replay(turn)
+        replies[-1](lost)
+        assert not turn.recovering and not turn.complete and _verdicts() == []
+    _real_request_replay(turn)
+    replies[-1](lost)  # Bounded: a storm that never answers ends the turn.
+    assert _verdicts() == ['resume_unavailable']
+
+
+@pytest.mark.parametrize('result', [
+    {'code': -32020, 'message': 'Request timed out', 'data': {'uncertain': True}},
+    {'status': 'unavailable'}, None,
+])
+def test_attach_timeout_or_refusal_is_a_verdict(attach, result):
+    turn, replies = attach
+    _real_request_replay(turn)
+    replies[-1](result)
+    assert _verdicts() == ['resume_unavailable']
+
+
+def test_attach_answer_resets_the_failure_budget(attach):
+    turn, replies = attach
+    _real_request_replay(turn)
+    replies[-1]({'code': -32020, 'data': {'disconnected': True}})
+    _real_request_replay(turn)
+    replies[-1]({'turn_id': 'turn', 'status': 'running', 'replay_available': True})
+    assert turn.attach_failures == 0 and turn.recovering and _verdicts() == []

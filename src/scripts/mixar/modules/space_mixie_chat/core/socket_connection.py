@@ -33,12 +33,24 @@ class SocketConnection:
     def _run_loop(self) -> None:
         """Main loop running in background thread."""
         while self._running.is_set():
+            self._diag.begin()
             try:
                 if self._do_connect():
                     self._receive_loop()
             except Exception as e:
                 logger.error(f"JSON-RPC run loop error: {e}")
+                self._diag.end('run_loop_error', e)
+            # The receive loop left because someone else dropped the socket
+            # (writer, backpressure, consent) — they recorded why; else say so.
+            self._diag.end('receive_loop_exit')
 
+            # A receive error leaves the socket open; close it so the server
+            # ends this connection now, not at its own liveness timeout.
+            if self._ws is not None:
+                try:
+                    self._ws.shutdown()
+                except Exception:
+                    pass
             from mixar.modules.mcp_bridge.core.lease import invalidate_transport
             invalidate_transport(self)
             if self._reauth_stop:
@@ -59,7 +71,8 @@ class SocketConnection:
                 self._pending_deadlines.clear()
             for callback in callbacks:
                 try:
-                    callback({"code": -32020, "message": "Connection lost; delivery is uncertain", "data": {"uncertain": True}})
+                    callback({"code": -32020, "message": "Connection lost; delivery is uncertain",
+                              "data": {"uncertain": True, "disconnected": True}})
                 except Exception:
                     logger.debug("Disconnected request callback failed", exc_info=True)
 
@@ -112,6 +125,7 @@ class SocketConnection:
                 if refreshed:
                     token = refreshed
                 if self._auth.should_stop(refresh_retryable):
+                    self._diag.end('auth_stopped', failures=self._auth.failure_count)
                     if self._on_disconnected:
                         self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
                     self._running.clear()
@@ -144,6 +158,7 @@ class SocketConnection:
                 self.ws_url, timeout=10, header=headers
             )
             self._connected = True
+            self._diag.phase('handshake')
 
             # Perform handshake. The backoff delay and auth-failure counter
             # are only reset AFTER the handshake succeeds: resetting them on
@@ -152,6 +167,7 @@ class SocketConnection:
             # (failure count wiped each cycle, so max_failures never tripped).
             outcome = self._perform_handshake()
             if outcome != HANDSHAKE_OK:
+                self._diag.end('handshake_failed', outcome=outcome)
                 try:
                     self._ws.close()
                 except Exception:
@@ -189,6 +205,7 @@ class SocketConnection:
             self._liveness_probe_started = None
 
             self._ws.settimeout(10.0)
+            self._diag.phase('connected')
             from .socket_writer import start_writer
             self._writer = start_writer(self)
             from .socket_reauth import start_reauth
@@ -207,6 +224,7 @@ class SocketConnection:
             # 401/403 mean the credentials were rejected; a 502/503 from the
             # load balancer while the backend is down is a plain retry.
             status_code = getattr(e, 'status_code', None)
+            self._diag.end('connect_failed', e, http_status=status_code)
             if status_code in (401, 403):
                 self._auth.record_failure(token)
                 self._current_delay = self._auth.retry_delay(self._current_delay)
@@ -221,6 +239,7 @@ class SocketConnection:
             return False
         except Exception as e:
             logger.warning(f"Connection failed: {e}")
+            self._diag.end('connect_failed', e)
             self._connected = False
             return False
 
@@ -331,6 +350,13 @@ class SocketConnection:
             # assumed to be a 16 GB machine.
             "machine": machine_block(),
         }
+        # How the earlier sockets ended (socket_diagnostics.py); this one's
+        # number lets the server join its own disconnect line to the report.
+        reports = self._diag.pending_reports()
+        if self._diag.current is not None:
+            params["socket_seq"] = self._diag.current.seq
+        if reports:
+            params["connection_reports"] = reports
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:
             params["device_id"] = self._device_id
@@ -361,6 +387,7 @@ class SocketConnection:
             return HANDSHAKE_TRANSIENT
         if outcome == HANDSHAKE_OK:
             logger.info("Handshake successful")
+            self._diag.acknowledge(reports)
         elif outcome == HANDSHAKE_AUTH_FAILED:
             logger.error(f"Handshake rejected: {detail}")
         else:

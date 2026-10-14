@@ -170,6 +170,7 @@ def register():
             type='ESC',
             value='PRESS',
         )
+        kmi_abort.properties.origin = 'escape_key'
         addon_keymaps.append((km_mixie, kmi_abort))
         logger.debug("Registered Escape shortcut for abort")
 

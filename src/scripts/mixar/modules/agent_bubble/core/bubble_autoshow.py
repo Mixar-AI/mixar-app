@@ -37,7 +37,10 @@ def find_target_context():
     """
     wm = bpy.context.window_manager
     for window in wm.windows:
-        for area in window.screen.areas:
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
             if area.type == 'VIEW_3D':
                 region = next(
                     (r for r in area.regions if r.type == 'WINDOW'), None
@@ -45,9 +48,10 @@ def find_target_context():
                 if region is not None:
                     return window, area, region
     for window in wm.windows:
-        if not window.screen.areas:
+        screen = window.screen
+        if screen is None or not screen.areas:
             continue
-        area = window.screen.areas[0]
+        area = screen.areas[0]
         region = next(
             (r for r in area.regions if r.type == 'WINDOW'), None
         )
