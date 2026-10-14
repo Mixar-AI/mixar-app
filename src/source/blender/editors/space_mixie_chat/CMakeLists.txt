@@ -66,6 +66,9 @@ set(SRC
   mixie_chat_slots.cc
   mixie_chat_steps.cc
   mixie_chat_thinking.cc
+  mixie_chat_ui_image.cc
+  mixie_chat_ui_rich_text.cc
+  mixie_chat_ui_rounded_rect.cc
   mixie_chat_ui_primitives.cc
   mixie_chat_ui_theme.cc
   mixie_chat_voice.cc
