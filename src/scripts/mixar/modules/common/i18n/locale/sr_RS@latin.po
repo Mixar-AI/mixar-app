@@ -31053,6 +31053,9 @@ msgstr ""
 msgid "The scene is {size} MB; the publish limit is {limit} MB. Hide heavy objects or reduce texture resolution."
 msgstr ""
 
+msgid "The publish lost its claim before upload"
+msgstr ""
+
 msgid "Sign-in expired. Sign in again and publish."
 msgstr ""
 
