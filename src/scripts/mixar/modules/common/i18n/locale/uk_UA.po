@@ -26089,12 +26089,6 @@ msgstr "Простір наборів текстур"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Керуйте наборами текстур на бічній панелі"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Назад до першого"
 
@@ -28137,12 +28131,6 @@ msgstr "Фільтр розширень файлів"
 
 msgid "Write compressed .mixar file"
 msgstr "Записує стиснутий файл .mixar"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Зберігає як файл .mixar"

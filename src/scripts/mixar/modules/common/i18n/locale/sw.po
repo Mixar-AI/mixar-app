@@ -26089,12 +26089,6 @@ msgstr "Nafasi ya seti za miundo"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Tumia majopo ya upau wa kando kudhibiti seti za miundo"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Rudi mwanzo"
 
@@ -28137,12 +28131,6 @@ msgstr "Kichujio cha kiendelezi cha faili"
 
 msgid "Write compressed .mixar file"
 msgstr "Andika faili ya .mixar iliyobanwa"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Hifadhi kama faili ya .mixar"

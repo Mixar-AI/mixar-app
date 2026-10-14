@@ -23,9 +23,6 @@ Thread rules (docs/render-job-contract.md):
 - Lock Interface and Preferences are never written. Every temporary render
   setting is restored on every exit path, each only if it still holds the
   value we applied (a user's own change during the job wins).
-- The job renders a private copy of the scene (``render_scene.py``): a
-  Rendered viewport follows the scene engine and went black on every switch.
-- Undo settles the job in ``undo_pre`` (``_before_undo``), never later.
 - The engine and the size come from the CALL (the backend's
   ``render_viewport(quality="final", engine=..., width=..., height=...)``);
   the DEVICE never does. ``scene.cycles.device`` is set to ``'GPU'`` for the
@@ -44,7 +41,7 @@ import time
 import bpy
 from bpy.app.handlers import persistent
 
-from . import render_device, render_scene
+from . import render_device
 from mixar.modules.common.render_coordinator import core as render_slot
 
 RESULTS_NS = "mixie_agent_preview"
@@ -125,7 +122,6 @@ def _restore(job):
             pass
     if job.get('inspection') is not None:
         job['inspection'].cleanup()
-    render_scene.remove(job.get('render_scene'))
     # Flush our own writes so they are counted in the revision NOW, before the
     # baseline is taken — otherwise the restore itself reads as a scene change.
     try:
@@ -217,7 +213,6 @@ def _schedule(completed):
     job = _job
     if job is not None:
         job["finishing"] = True
-        job["completed"] = completed
         key = job["key"]
         bpy.app.timers.register(lambda: _finish(key, completed), first_interval=0.1)
 
@@ -243,33 +238,9 @@ def _before_load(_unused, _extra=None):
     _remove_render_handlers()
 
 
-@persistent
-def _sweep_render_scenes(*_args):
-    """Undo, a checkpoint restore or a file saved mid-render can bring back a
-    private render scene after its job ended: remove all but the live one."""
-    try:
-        render_scene.sweep(keep=_job.get('render_scene') if _job is not None else None)
-    except Exception:
-        pass
-
-
-@persistent
-def _before_undo(*_args):
-    """Undo has already killed the job (``WM_jobs_kill_all``) and frees the data
-    only after this handler: settle now, while the copy and rig are still valid.
-    A later ``_finish`` would write through dangling references and crash."""
-    if _job is not None:
-        _finish(_job["key"], _job.get("completed", False))
-
-
 def _install():
     for handlers, callback in ((bpy.app.handlers.depsgraph_update_post, _changed),
-                               (bpy.app.handlers.load_pre, _before_load),
-                               (bpy.app.handlers.load_post, _sweep_render_scenes),
-                               (bpy.app.handlers.undo_pre, _before_undo),
-                               (bpy.app.handlers.redo_pre, _before_undo),
-                               (bpy.app.handlers.undo_post, _sweep_render_scenes),
-                               (bpy.app.handlers.redo_post, _sweep_render_scenes)):
+                               (bpy.app.handlers.load_pre, _before_load)):
         if callback not in handlers:
             handlers.append(callback)
 
@@ -400,14 +371,14 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
         poll(_job["key"])  # recover a lost completion before deciding it is busy
     if _job is not None or render_slot.busy():
         return {"job_id": key, "status": "busy", "error": "another_render_running"}
-    source = context.scene
-    if source is None:
+    scene = context.scene
+    if scene is None:
         return {"job_id": key, "status": "failed", "error": "scene_unavailable"}
-    session = _scene_session(source)
+    session = _scene_session(scene)
     win = context.window or next(iter(context.window_manager.windows), None)
-    if (source.camera is None and inspection is None) or win is None or bpy.app.background:
+    if (scene.camera is None and inspection is None) or win is None or bpy.app.background:
         return {"job_id": key, "status": "failed", "error": "camera_and_window_required",
-                "scene_session": session, "render": _render_info(source)}
+                "scene_session": session, "render": _render_info(scene)}
     reservation = render_slot.acquire("agent-preview:" + key)
     if reservation is None:
         return {"job_id": key, "status": "busy", "error": "another_render_running"}
@@ -417,18 +388,14 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
         settings.append((owner, name, getattr(owner, name), value))
         setattr(owner, name, value)
 
-    job = {"key": key, "scene": source, "settings": settings, "started_at": time.monotonic(),
+    job = {"key": key, "scene": scene, "settings": settings, "started_at": time.monotonic(),
            "revision": _revision, "finishing": False, "scene_session": session, "render": {},
-           "reservation": reservation, "render_scene": None}
+           "reservation": reservation}
     _job = job
-    scene = source
     try:
-        if inspection is not None or render_scene.isolate_final(source):
-            scene = render_scene.create(source, inspection=inspection is not None)
-            job["scene"] = job["render_scene"] = scene
         if inspection is not None:
             from .inspection_preview import Inspection
-            job['inspection'] = Inspection(source, scene, inspection, set_value)
+            job['inspection'] = Inspection(scene, inspection, set_value)
             job['inspection'].prepare(context)
             width, height = int(inspection.get('width', 1024)), int(inspection.get('height', 768))
             engine = ''  # The inspection rig already chose its shading engine.
@@ -452,20 +419,8 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
         display = view.render_display_type
         try:
             view.render_display_type = "NONE"
-            kwargs = {}
-            if scene is not source:
-                # Name the copy through the operator, never the context: bpy.ops
-                # first evaluates the context scene's viewport depsgraph, which for
-                # the copy is a second full evaluation of the user's objects (and
-                # crashed in base-flag evaluation). The context stays on the user's
-                # scene, already evaluated. A single-layer render must name the
-                # copy's own layer, or it takes the window's layer of the user's scene.
-                kwargs["scene"] = scene.name
-                if scene.render.use_single_layer:
-                    layer = scene.view_layers.get(getattr(win.view_layer, "name", ""))
-                    kwargs["layer"] = (layer or scene.view_layers[0]).name
-            with bpy.context.temp_override(window=win, scene=source):
-                ret = bpy.ops.render.render("INVOKE_DEFAULT", write_still=False, **kwargs)
+            with bpy.context.temp_override(window=win, scene=scene):
+                ret = bpy.ops.render.render("INVOKE_DEFAULT", write_still=False)
         finally:
             view.render_display_type = display
         if "RUNNING_MODAL" not in ret:
@@ -493,6 +448,6 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
             'inspection_mode_unsupported', 'inspection_view_unsupported',
             'inspection_focus_not_found', 'inspection_mark_unavailable'} else 'async_render_unavailable'
         value = {"job_id": key, "status": "failed", "error": code,
-                 "scene_session": session, "render": job["render"] or _render_info(source)}
+                 "scene_session": session, "render": job["render"] or _render_info(scene)}
         _publish(key, value)
         return value

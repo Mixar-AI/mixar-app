@@ -32,7 +32,6 @@
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
-#include "view3d_intern.hh"
 #include "view3d_director_cinema.hh"
 #include "view3d_director_cinema_phone.hh"
 #include "view3d_director_minimap.hh"
@@ -331,12 +330,6 @@ void director_overlay_disable_button(ui::Button *button, const bool disabled)
 
 void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 {
-  /* The agent-working halo shares this overlay pass (view3d_agent_halo.cc);
-   * it is independent of the Director state read below. */
-  view3d_agent_halo_overlay_draw(C, region);
-  /* One-shot display shader pre-warm (view3d_display_prewarm.cc). */
-  view3d_display_shader_prewarm(C);
-
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     cinema_release_chat_seat(C);

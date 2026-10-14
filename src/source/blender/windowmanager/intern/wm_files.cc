@@ -151,7 +151,6 @@ extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #include "DEG_depsgraph.hh"
 
 #include "WM_api.hh"
-#include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
 #include "WM_toolsystem.hh"
@@ -196,45 +195,11 @@ static bool wm_window_contains_agent_bubble_space(const wmWindow *win)
   return false;
 }
 
-/**
- * What #wm_agent_bubble_windows_unlink_for_write takes out of the document for one
- * write: the island/pill windows, and each one's own temp layout and screen.
- * Leaving the layouts in wrote two orphan `SPACE_AGENT_BUBBLE` layouts into every
- * checkpoint taken with the island open; a restore kept them (temp layouts survive
- * a local file load) and the next save wrote them into the project. They are now
- * left out of the write too, exactly like the windows.
- */
-struct AgentBubbleWriteStash {
-  std::vector<wmWindow *> windows;
-  struct LayoutLink {
-    WorkSpace *workspace;
-    WorkSpaceLayout *layout;
-    WorkSpaceLayout *prev;
-  };
-  std::vector<LayoutLink> layouts;
-  struct ScreenLink {
-    bScreen *screen;
-    void *prev;
-  };
-  std::vector<ScreenLink> screens;
-};
-
-static bool wm_layout_used_by_other_window(const wmWindowManager *wm, const WorkSpaceLayout *layout)
+static std::vector<wmWindow *> wm_agent_bubble_windows_unlink_for_write(wmWindowManager *wm)
 {
-  for (const wmWindow &win : wm->windows) {
-    if (WM_window_get_active_layout(&win) == layout) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmain,
-                                                                      wmWindowManager *wm)
-{
-  AgentBubbleWriteStash stash;
+  std::vector<wmWindow *> removed_windows;
   if (wm == nullptr) {
-    return stash;
+    return removed_windows;
   }
 
   bool has_non_bubble_window = false;
@@ -246,7 +211,7 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
     }
   }
   if (!has_non_bubble_window) {
-    return stash;
+    return removed_windows;
   }
 
   for (wmWindow &win_iter : wm->windows.items_mutable()) {
@@ -255,51 +220,20 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
       continue;
     }
     BLI_remlink(&wm->windows, win);
-    stash.windows.push_back(win);
+    removed_windows.push_back(win);
   }
 
-  /* After every bubble window is out of the list, so a layout shared by two bubble
-   * windows still counts as unused by the remaining (written) windows. */
-  for (wmWindow *win : stash.windows) {
-    WorkSpace *workspace = WM_window_get_active_workspace(win);
-    WorkSpaceLayout *layout = WM_window_get_active_layout(win);
-    if (workspace == nullptr || layout == nullptr || wm_layout_used_by_other_window(wm, layout)) {
-      continue;
-    }
-    bool seen = false;
-    for (const AgentBubbleWriteStash::LayoutLink &link : stash.layouts) {
-      seen = seen || link.layout == layout;
-    }
-    if (seen || BLI_findindex(&workspace->layouts, layout) == -1) {
-      continue;
-    }
-    stash.layouts.push_back({workspace, layout, layout->prev});
-    BLI_remlink(&workspace->layouts, layout);
-    bScreen *screen = BKE_workspace_layout_screen_get(layout);
-    if (bmain != nullptr && screen != nullptr && BLI_findindex(&bmain->screens, screen) != -1) {
-      stash.screens.push_back({screen, screen->id.prev});
-      BLI_remlink(&bmain->screens, screen);
-    }
-  }
-
-  return stash;
+  return removed_windows;
 }
 
-static void wm_agent_bubble_windows_relink_after_write(Main *bmain,
-                                                       wmWindowManager *wm,
-                                                       const AgentBubbleWriteStash &stash)
+static void wm_agent_bubble_windows_relink_after_write(
+    wmWindowManager *wm, const std::vector<wmWindow *> &removed_windows)
 {
   if (wm == nullptr) {
     return;
   }
-  /* Reverse order, so each `prev` is back in its list before its successor returns. */
-  for (auto it = stash.screens.rbegin(); it != stash.screens.rend(); ++it) {
-    BLI_insertlinkafter(&bmain->screens, it->prev, it->screen);
-  }
-  for (auto it = stash.layouts.rbegin(); it != stash.layouts.rend(); ++it) {
-    BLI_insertlinkafter(&it->workspace->layouts, it->prev, it->layout);
-  }
-  for (wmWindow *win : stash.windows) {
+
+  for (wmWindow *win : removed_windows) {
     BLI_addtail(&wm->windows, win);
   }
 }
@@ -2365,7 +2299,6 @@ static bool wm_file_write(bContext *C,
                           int fileflags,
                           eBLO_WritePathRemap remap_mode,
                           bool use_save_as_copy,
-                          bool use_thumbnail,
                           ReportList *reports)
 {
   Main *bmain = CTX_data_main(C);
@@ -2427,11 +2360,7 @@ static bool wm_file_write(bContext *C,
   /* Don't forget not to return without! */
   WM_cursor_wait(true);
 
-  /* Mixar: `use_thumbnail` is false for turn-checkpoint snapshot copies. The
-   * AUTO preview renders the scene camera through EEVEE at thumbnail size,
-   * which on a production scene costs seconds (measured 7 s of a 7.5 s save on
-   * a 1.2M-polygon file) for a preview nobody browses. */
-  if (use_thumbnail && U.file_preview_type != USER_FILE_PREVIEW_NONE) {
+  if (U.file_preview_type != USER_FILE_PREVIEW_NONE) {
     /* Blend file thumbnail.
      *
      * - Save before exiting edit-mode, otherwise evaluated-mesh for shared data gets corrupted.
@@ -2489,10 +2418,9 @@ static bool wm_file_write(bContext *C,
   blend_write_params.thumb = thumb;
 
   wmWindowManager *wm = CTX_wm_manager(C);
-  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
-                                                                                           wm);
+  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
   const bool success = BLO_write_file(bmain, filepath, fileflags, &blend_write_params, reports);
-  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
+  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
 
   if (success) {
     const bool do_history_file_update = (G.background == false) &&
@@ -2623,10 +2551,9 @@ bool WM_autosave_write(wmWindowManager *wm, Main *bmain, ReportList *reports)
    * went through the live open path — the state behind the reported
    * crash-on-save of recovered autosave files. */
   BlendFileWriteParams params{};
-  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
-                                                                                           wm);
+  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
   const bool success = BLO_write_file(bmain, filepath, fileflags, &params, reports);
-  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
+  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
 
   /* Restart auto-save timer. */
   wm_autosave_timer_end(wm);
@@ -2665,7 +2592,6 @@ void WM_file_autosave_init(wmWindowManager *wm)
 
 void wm_autosave_timer(Main *bmain, wmWindowManager *wm, wmTimer * /*wt*/)
 {
-  Mixar_StallScope stall_scope("autosave", "wm_autosave_timer");
   wm_autosave_timer_end(wm);
 
   /* If a modal operator is running, don't autosave because we might not be in
@@ -2838,11 +2764,10 @@ static wmOperatorStatus wm_homefile_write_exec(bContext *C, wmOperator *op)
   /* Don't apply any path changes to the current blend file. */
   blend_write_params.use_save_as_copy = true;
 
-  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
-                                                                                           wm);
+  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
   const bool success = BLO_write_file(
       bmain, filepath, fileflags, &blend_write_params, op->reports);
-  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
+  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
 
   BKE_callback_exec_string(bmain, "", success ? BKE_CB_EVT_SAVE_POST : BKE_CB_EVT_SAVE_POST_FAIL);
 
@@ -4367,13 +4292,8 @@ static wmOperatorStatus wm_save_as_mainfile_exec(bContext *C, wmOperator *op)
   /* Set compression flag. */
   SET_FLAG_FROM_TEST(fileflags, RNA_boolean_get(op->ptr, "compress"), G_FILE_COMPRESS);
 
-  /* Mixar: only #WM_OT_save_as_mainfile defines `thumbnail` (snapshot copies
-   * pass false); #WM_OT_save_mainfile shares this exec and always renders. */
-  PropertyRNA *thumb_prop = RNA_struct_find_property(op->ptr, "thumbnail");
-  const bool use_thumbnail = thumb_prop ? RNA_property_boolean_get(op->ptr, thumb_prop) : true;
-
   const bool success = wm_file_write(
-      C, filepath, fileflags, remap_mode, use_save_as_copy, use_thumbnail, op->reports);
+      C, filepath, fileflags, remap_mode, use_save_as_copy, op->reports);
 
   if ((op->flag & OP_IS_INVOKE) == 0) {
     /* OP_IS_INVOKE is set when the operator is called from the GUI.
@@ -4500,14 +4420,6 @@ void WM_OT_save_as_mainfile(wmOperatorType *ot)
       "Save Copy",
       "Save a copy of the actual working state but does not make saved file active");
   RNA_def_property_flag(prop, PROP_SKIP_SAVE);
-  /* Mixar: snapshot copies (turn checkpoints) skip the file thumbnail, whose
-   * camera render dominates the save time on heavy scenes. */
-  prop = RNA_def_boolean(ot->srna,
-                         "thumbnail",
-                         true,
-                         "Thumbnail",
-                         "Store a file thumbnail (a camera render or screenshot) in the file");
-  RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
 
   static const EnumPropertyItem save_file_extension_items[] = {
       {0, "MIXAR", 0, "Mixar Files", "Save as .mixar file"},

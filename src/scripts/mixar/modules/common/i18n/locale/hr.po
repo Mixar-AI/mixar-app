@@ -26089,12 +26089,6 @@ msgstr "Prostor skupova tekstura"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Koristite bočne ploče za upravljanje skupovima tekstura"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Natrag na prvo"
 
@@ -28137,12 +28131,6 @@ msgstr "Filtar nastavka datoteke"
 
 msgid "Write compressed .mixar file"
 msgstr "Zapiši komprimiranu .mixar datoteku"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Spremi kao .mixar datoteku"

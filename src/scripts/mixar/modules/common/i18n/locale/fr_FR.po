@@ -26089,12 +26089,6 @@ msgstr "Espace des ensembles de textures"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Utilisez les panneaux de la barre latérale pour gérer les ensembles de textures"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Retour au premier"
 
@@ -28137,12 +28131,6 @@ msgstr "Filtre d’extension de fichier"
 
 msgid "Write compressed .mixar file"
 msgstr "Écrire un fichier .mixar compressé"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Enregistrer en tant que fichier .mixar"

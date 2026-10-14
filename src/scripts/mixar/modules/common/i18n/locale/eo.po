@@ -26089,12 +26089,6 @@ msgstr "Spaco de teksturaroj"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Uzu la flankbretajn panelojn por mastrumi teksturarojn"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Reen al la unua"
 
@@ -28137,12 +28131,6 @@ msgstr "Filtrilo de dosiera finaĵo"
 
 msgid "Write compressed .mixar file"
 msgstr "Skribi kunpremitan .mixar-dosieron"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Konservi kiel .mixar-dosieron"

@@ -31,7 +31,7 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
 
-from ..constants import SessionState, is_internal_scene, is_lane_scene
+from ..constants import SessionState, is_lane_scene
 
 logger = get_logger(__name__)
 
@@ -153,7 +153,6 @@ def _account_source(scene):
     window = getattr(getattr(bpy.context, "window", None), "scene", None)
     for candidate in [window, *bpy.data.scenes]:
         if (candidate is not None and candidate is not scene and not is_lane_scene(candidate)
-                and not is_internal_scene(candidate)
                 and getattr(candidate, "mixie_chat_user_id", "")):
             return candidate
     return None
@@ -172,7 +171,7 @@ def adopt_scene(scene) -> bool:
     """
     from .session import get_session_manager
 
-    if scene is None or is_lane_scene(scene) or is_internal_scene(scene):
+    if scene is None or is_lane_scene(scene):
         return False
     session = get_session_manager()
     if session.get_state(scene) != SessionState.OFFLINE or session.run_open(scene):

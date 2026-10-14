@@ -26089,12 +26089,6 @@ msgstr "Tekstursett-område"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Bruk sidepanelene til å administrere tekstursett"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Tilbake til første"
 
@@ -28137,12 +28131,6 @@ msgstr "Filter for filendelse"
 
 msgid "Write compressed .mixar file"
 msgstr "Skriv komprimert .mixar-fil"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Lagre som .mixar-fil"

@@ -26089,12 +26089,6 @@ msgstr "அமைப்புத் தொகுப்புகள் இடம�
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "அமைப்புத் தொகுப்புகளை நிர்வகிக்க பக்கப்பட்டிப் பேனல்களைப் பயன்படுத்து"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "முதலுக்குத் திரும்பு"
 
@@ -28137,12 +28131,6 @@ msgstr "கோப்பு நீட்டிப்பு வடிகட்ட�
 
 msgid "Write compressed .mixar file"
 msgstr "சுருக்கப்பட்ட .mixar கோப்பை எழுது"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar கோப்பாகச் சேமி"

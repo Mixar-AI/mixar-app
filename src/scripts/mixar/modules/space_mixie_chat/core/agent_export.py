@@ -11,7 +11,9 @@ pops it, exports the resolved meshes (plus the armatures they need) with
 the native exporter under the ``use_case`` preset (``export_presets``) and
 the ``animations`` clip selection (``export_clips``), verifies the written
 file (``export_verify``) and reports a basename only. ``run_export_to`` is
-the picker-less path into a folder KIND (downloads / library / temp).
+the picker-less path into a folder KIND (downloads / library / temp);
+``export_to_path`` is the same pipeline for a caller that owns its
+destination (Publish to Web).
 
 ``inspect_export`` runs the readiness preflight (``export_preflight``) so
 the agent can offer "Fix and Export" (``repair_export``) before the picker.
@@ -79,10 +81,10 @@ def _exporter(fmt: str):
 
 
 def _run_operator(fmt: str, filepath: str, use_case: str, animations,
-                  overrides: dict | None = None) -> tuple[set, dict, str, str]:
+                  overrides: dict | None = None, profile: str = "") -> tuple[set, dict, str, str]:
     """Run the native exporter under the preset; returns
     ``(status, kwargs, animation_mode, warning)``."""
-    kwargs = preset_kwargs(use_case, fmt)
+    kwargs = preset_kwargs(use_case, fmt, profile)
     anim, mode, warning = animation_kwargs(fmt, animations)
     kwargs.update(anim)
     kwargs.update(overrides or {})
@@ -148,11 +150,12 @@ def _images_expected(meshes) -> int:
     return len(images)
 
 
-def _telemetry(context, fmt, spec, *, success, extension="", extra=None, started=None):
+def _telemetry(context, fmt, spec, *, success, extension="", extra=None, started=None,
+               via="agent", tool="export_scene"):
     try:
         from mixar.modules.common.analytics.export_events import capture_export
         properties = {
-            "via": "agent", "tool": "export_scene",
+            "via": via, "tool": tool,
             "scope": str(spec.get("target_scope") or "scene"),
             "use_case": str(spec.get("use_case") or "other"),
             "destination_kind": str(spec.get("destination") or "ask"),
@@ -166,26 +169,40 @@ def _telemetry(context, fmt, spec, *, success, extension="", extra=None, started
         pass
 
 
-def _telemetry_initiated(context, fmt):
+def _telemetry_initiated(context, fmt, via="agent", tool="export_scene"):
     try:
         from mixar.modules.common.analytics.export_events import capture_export_initiated
-        capture_export_initiated(context, fmt, via="agent", tool="export_scene")
+        capture_export_initiated(context, fmt, via=via, tool=tool)
     except Exception:
         pass
 
 
 def run_export(session_id: str, spec: dict) -> dict:
     """Consume the local destination and export while restoring UI state."""
-    started = time.perf_counter()
-    fmt = str(spec.get("format") or "").lower().lstrip(".")
     filepath = pop_destination(session_id)
     if not filepath:
         return {"success": False, "error": "No export destination was selected"}
+    try:
+        return export_to_path(filepath, spec)
+    finally:
+        clear_repair_cache(session_id)
+
+
+def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
+                   tool: str = "export_scene") -> dict:
+    """Export ``spec`` to ``filepath`` (whose extension must match the format)
+    with the shared preset, clip, material-swap and verification pipeline.
+
+    ``spec["profile"]`` names extra preset overrides (``export_presets.PROFILES``,
+    e.g. ``web_publish``). Used by ``run_export`` and by callers that own
+    their destination (``web_publish``); ``via``/``tool`` tag telemetry."""
+    started = time.perf_counter()
+    fmt = str(spec.get("format") or "").lower().lstrip(".")
     extension = EXTENSIONS.get(fmt)
     if extension is None or os.path.splitext(filepath)[1].lower() != extension:
         return {"success": False, "error": "Export destination extension mismatch"}
     context = bpy.context
-    _telemetry_initiated(context, fmt)
+    _telemetry_initiated(context, fmt, via, tool)
 
     active = context.view_layer.objects.active
     selected = list(context.selected_objects)
@@ -239,6 +256,7 @@ def run_export(session_id: str, spec: dict) -> dict:
                                  else stl_kwargs(spec) if stl else None)
                     status, kwargs, anim_mode, warning = _run_operator(
                         fmt, filepath, use_case, animations, overrides,
+                        str(spec.get("profile") or ""),
                     )
         if 'FINISHED' not in status:
             raise RuntimeError(f"Blender exporter returned {sorted(status)}")
@@ -258,7 +276,8 @@ def run_export(session_id: str, spec: dict) -> dict:
             "joined": stl,
             "images_expected": (staged if fmt == "obj" else 0 if stl
                                 else _images_expected(meshes)),
-            "compression": "none",
+            "compression": ("draco" if kwargs.get("export_draco_mesh_compression_enable")
+                            else "none"),
             "stl_scale": kwargs.get("global_scale") if stl else None,
             "lights": scene_objects["lights"] if scene_objects else None,
             "cameras": scene_objects["cameras"] if scene_objects else None,
@@ -287,7 +306,8 @@ def run_export(session_id: str, spec: dict) -> dict:
         }
         if scene_objects is not None:
             result["scene_objects"] = scene_objects
-        _telemetry(context, fmt, spec, success=True, extension=extension, started=started, extra={
+        _telemetry(context, fmt, spec, success=True, extension=extension, started=started,
+                   via=via, tool=tool, extra={
             **counts, "clip_count": len(clips),
             "verification_checked": bool(verification.get("checked")),
             "verification_passed": bool(verification.get("passed")),
@@ -297,11 +317,10 @@ def run_export(session_id: str, spec: dict) -> dict:
         return result
     except Exception as exc:
         _telemetry(context, fmt, spec, success=False, extension=extension, started=started,
-                   extra={**counts, "verification_checked": False,
+                   via=via, tool=tool, extra={**counts, "verification_checked": False,
                           "verification_passed": False, "issue_count": 0})
         return {"success": False, "error": scrub_error(exc)}
     finally:
-        clear_repair_cache(session_id)
         try:
             if bpy.ops.object.select_all.poll():
                 bpy.ops.object.select_all(action='DESELECT')

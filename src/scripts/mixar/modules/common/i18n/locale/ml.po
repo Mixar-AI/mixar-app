@@ -26089,12 +26089,6 @@ msgstr "ടെക്സ്ചർ സെറ്റ് സ്പേസ്"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ടെക്സ്ചർ സെറ്റുകൾ കൈകാര്യം ചെയ്യാൻ സൈഡ്ബാർ പാനലുകൾ ഉപയോഗിക്കുക"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "ആദ്യത്തേതിലേക്ക് മടങ്ങുക"
 
@@ -28137,12 +28131,6 @@ msgstr "ഫയൽ എക്സ്റ്റൻഷൻ ഫിൽറ്റർ"
 
 msgid "Write compressed .mixar file"
 msgstr "കംപ്രസ് ചെയ്ത .mixar ഫയൽ എഴുതുക"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ഫയലായി സംരക്ഷിക്കുക"

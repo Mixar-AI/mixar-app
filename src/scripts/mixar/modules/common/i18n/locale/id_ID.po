@@ -26089,12 +26089,6 @@ msgstr "Ruang Set Tekstur"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Gunakan panel bilah sisi untuk mengelola set tekstur"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Kembali ke awal"
 
@@ -28137,12 +28131,6 @@ msgstr "Filter ekstensi berkas"
 
 msgid "Write compressed .mixar file"
 msgstr "Menulis berkas .mixar terkompresi"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Menyimpan sebagai berkas .mixar"

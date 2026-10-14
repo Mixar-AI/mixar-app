@@ -26089,12 +26089,6 @@ msgstr "Priestor sád textúr"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Sady textúr spravujte pomocou panelov na bočnom paneli"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Späť na prvého"
 
@@ -28137,12 +28131,6 @@ msgstr "Filter prípony súboru"
 
 msgid "Write compressed .mixar file"
 msgstr "Zapísať komprimovaný súbor .mixar"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Uložiť ako súbor .mixar"

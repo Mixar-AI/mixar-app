@@ -26089,12 +26089,6 @@ msgstr "Textursets-Bereich"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Verwenden Sie die Panels der Seitenleiste, um Textursets zu verwalten"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Zurück zum Anfang"
 
@@ -28137,12 +28131,6 @@ msgstr "Filter für Dateiendungen"
 
 msgid "Write compressed .mixar file"
 msgstr "Schreibt eine komprimierte .mixar-Datei"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Als .mixar-Datei speichern"

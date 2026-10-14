@@ -266,10 +266,7 @@ void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
 static void agent_bubble_island_panel_color(float r_rgba[4])
 {
   if (agent_bubble_island_bed_is_transparent()) {
-    float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-    agent_bubble_windows_island_wash(wash);
-#endif
+    const float wash[4] = AGENT_COL_GLASS_WASH;
     r_rgba[0] = wash[0] * wash[3];
     r_rgba[1] = wash[1] * wash[3];
     r_rgba[2] = wash[2] * wash[3];
@@ -887,10 +884,7 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   if (agent_bubble_island_bed_is_transparent()) {
     /* A replacement bed, unlike alpha blending, must premultiply itself. */
-    float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-    agent_bubble_windows_island_wash(wash);
-#endif
+    const float wash[4] = AGENT_COL_GLASS_WASH;
     agent_bubble_replace_frost_wash(&r, wash);
     return;
   }
@@ -1235,10 +1229,6 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
       mixie_chat_history_read_visible(CTX_wm_manager(C)))
   {
-#ifdef WIN32
-    const float transcript_wash[4] = AGENT_COL_GLASS_WASH;
-    agent_bubble_windows_transcript_color(panel_bg, transcript_wash);
-#endif
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
     mixie_chat_clear_bg_override();
@@ -2871,10 +2861,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
   /* Replace the complete region with the premultiplied native-frost wash. */
-  float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-  agent_bubble_windows_island_wash(wash);
-#endif
+  const float wash[4] = AGENT_COL_GLASS_WASH;
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {
     agent_bubble_replace_frost_wash(&region_rect, wash);
@@ -3845,12 +3832,6 @@ static void minimise_anim_finish(void *user_data)
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
-#ifdef __APPLE__
-    /* Detached only now that the fade is over (see mixar_bubble_minimise_exec). */
-    if (g_host_ghostwin != nullptr) {
-      Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
-    }
-#endif
     Mixar_WindowOrderOut(g_bubble_ghostwin);
     Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
   }
@@ -4009,12 +3990,12 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
-   * hides or it will vanish too). The bubble itself stays a child of the
-   * host until minimise_anim_finish: detached now, nothing keeps it above
-   * the host, the host (just clicked) covers it at once and the sink-and-fade
-   * plays unseen — the island blinked out for ~0.3 s before the pill showed. */
+   * hides or it will vanish too). */
   if (g_pill_ghostwin != nullptr) {
     Mixar_WindowDetachFromParent(g_pill_ghostwin, g_bubble_ghostwin);
+  }
+  if (g_host_ghostwin != nullptr) {
+    Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #endif
 

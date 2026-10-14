@@ -26089,12 +26089,6 @@ msgstr "Textúrakészletek tere"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Az oldalsáv paneljeivel kezelheti a textúrakészleteket"
 
-msgid "Agent Halo Redraw"
-msgstr ""
-
-msgid "Advance the agent-working halo animation without re-rendering the viewport"
-msgstr ""
-
 msgid "Back to first"
 msgstr "Vissza az elsőhöz"
 
@@ -28137,12 +28131,6 @@ msgstr "Fájlkiterjesztés-szűrő"
 
 msgid "Write compressed .mixar file"
 msgstr "Tömörített .mixar fájl írása"
-
-msgid "Thumbnail"
-msgstr ""
-
-msgid "Store a file thumbnail (a camera render or screenshot) in the file"
-msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Mentés .mixar fájlként"

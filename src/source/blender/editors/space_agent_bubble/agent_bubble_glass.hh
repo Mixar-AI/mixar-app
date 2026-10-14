@@ -55,11 +55,4 @@ void agent_bubble_glass_request(const bContext *C, void *ghostwin, bool pill);
 void agent_bubble_glass_reset(const void *ghostwin = nullptr);
 void agent_bubble_glass_region_listener(const wmRegionListenerParams *params);
 
-#ifdef WIN32
-/** Shared straight-alpha wash for expanded-island and status-capsule regions. */
-void agent_bubble_windows_island_wash(float wash[4]);
-/** Readable transcript tint, before the live backdrop is composited underneath. */
-void agent_bubble_windows_transcript_color(float r_rgba[4], const float wash[4]);
-#endif
-
 }  // namespace blender
