@@ -322,7 +322,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   /* Edge to edge, as the lens popup's cells: each spans from its own edge to
    * the next one's, so integer division never leaves the last one short. */
   const int cells = int(ARRAY_SIZE(VIDEO_SIZES));
-  const auto cell_x = [width, cells](const int index) { return (width * index) / cells; };
+  const auto cell_x = [width](const int index) { return (width * index) / cells; };
   for (int index = 0; index < cells; index++) {
     const VideoSize &size = VIDEO_SIZES[index];
     ui::Button *cell = ui::uiDefButR(block,

@@ -3041,6 +3041,7 @@ static void legacy_gpencil_sanitize_annotations(Main &bmain)
           case SPACE_SPREADSHEET:
           case SPACE_MIXIE:
           case SPACE_MIXIE_CHAT_DEPRECATED:
+          case SPACE_AGENT_BUBBLE:
           case SPACE_MIXAR_LAYERS:
           case SPACE_MIXAR_PROPERTIES:
           case SPACE_MIXAR_ASSETS:
