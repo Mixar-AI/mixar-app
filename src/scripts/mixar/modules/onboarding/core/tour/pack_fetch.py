@@ -68,11 +68,18 @@ def fetch_manifest(root: str) -> Optional[dict]:
     copy. Returns the manifest dict or None."""
     url = manifest_url()
     try:
-        req = urllib.request.Request(url, headers={"Cache-Control": "max-age=300"})
+        req = urllib.request.Request(url, headers={"Cache-Control": "max-age=300",
+                                                  "User-Agent": dl.user_agent()})
         with urllib.request.urlopen(req, timeout=config.PACK_MANIFEST_TIMEOUT_S) as resp:  # noqa: S310
             data = json.loads(resp.read().decode("utf-8"))
         if not isinstance(data, dict):
             raise ValueError("manifest is not an object")
+        if data.get("pack_version") != config.TOUR_PACK_VERSION:
+            # Never cache another version's manifest: it would hide the
+            # packs this client already installed.
+            logger.warning("tour pack manifest %s is version %r, expected %r", url,
+                           data.get("pack_version"), config.TOUR_PACK_VERSION)
+            return packs.read_manifest(root)
         os.makedirs(root, exist_ok=True)
         tmp = packs.manifest_path(root) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
