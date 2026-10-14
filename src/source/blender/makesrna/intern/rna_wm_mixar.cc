@@ -52,6 +52,7 @@
 
 #include "WM_mixar.hh"
 
+
 #ifdef RNA_RUNTIME
 #  include <algorithm>
 #  include <cstring>
