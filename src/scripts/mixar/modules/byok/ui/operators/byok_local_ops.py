@@ -19,8 +19,9 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
-from ...core import local_provider
+from ...core import key_prompt, local_provider
 from . import byok_dialog_ui
+from .byok_state_ops import ensure_dialog_redraw_pump
 
 logger = get_logger(__name__)
 
@@ -171,7 +172,8 @@ def _draw_custom(body, wm) -> None:
     byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_model')
     body.separator(factor=0.45)
     byok_dialog_ui.field_label(body, n_("API Key (optional)"))
-    byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_key')
+    byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_key',
+                               activate=key_prompt.focus_is(key_prompt.FOCUS_LOCAL_KEY))
     body.separator(factor=0.5)
 
     byok_dialog_ui.card_label(
@@ -202,6 +204,7 @@ def execute_local(op, wm, on_done):
         return {'CANCELLED'}
     wm.byok_dialog_state = 'SAVING'
     wm.byok_last_error = ''
+    ensure_dialog_redraw_pump()
     return {'FINISHED'}
 
 

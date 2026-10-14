@@ -52,6 +52,7 @@
 
 #include "WM_mixar.hh"
 
+
 #ifdef RNA_RUNTIME
 #  include <algorithm>
 #  include <cstring>
@@ -147,6 +148,21 @@ bool Mixar_splash_is_open();
 static bool rna_WindowManager_mixar_splash_open_get(PointerRNA * /*ptr*/)
 {
   return Mixar_splash_is_open();
+}
+
+/* Some Mixar window holds OS focus. ``win->active`` follows GHOST's
+ * WindowActivate / WindowDeactivate on every platform, and switching to
+ * another application deactivates the key window, so "no active window"
+ * means another app is in front. The sign-in autoshow gate reads it. */
+static bool rna_WindowManager_mixar_app_active_get(PointerRNA *ptr)
+{
+  const wmWindowManager *wm = (const wmWindowManager *)ptr->data;
+  for (const wmWindow &win : wm->windows) {
+    if (win.active) {
+      return true;
+    }
+  }
+  return false;
 }
 
 static void rna_Window_mixar_qa_drag_file(
@@ -453,6 +469,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                              "Splash Open",
                              "The startup splash popup is on screen; it closes on a button, "
                              "a click outside it or Escape");
+
+    /* Opening a bubble window activates the app, so the autoshow holds
+     * while the user is in the browser after a sign-in handoff. */
+    prop = RNA_def_property(srna_wm, "mixar_app_active", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_app_active_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "App Active",
+                             "A Mixar window has OS focus; False while another application "
+                             "is in front");
   }
 }
 

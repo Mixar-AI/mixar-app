@@ -230,6 +230,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     formats=getattr(bubble, "import_formats", ""),
                 )
 
+        # Key-missing card (a turn refused over the user's own key): opens AI
+        # Provider Settings, switches to credits or resends — never a value
+        # for the backend (core/byok_card.py).
+        from ...core import byok_card
+        if byok_card.is_card_action(self.action_value):
+            byok_card.handle_action(context.scene, self.bubble_id, self.action_value)
+            return {'FINISHED'}
+
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it

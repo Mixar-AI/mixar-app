@@ -129,14 +129,16 @@ def _streaming_redraw_tick():
         )
         streaming = state in _STREAMING_STATES
         has_bubble = False
+        # Only the island's own areas are tagged. Tagging every VIEW_3D area
+        # and region at 10 Hz for the whole turn was left over from the
+        # popup-on-viewport days: the halo tick and the agent panel's own
+        # timer already redraw the viewport when they have something to show,
+        # and a full redraw of a production scene on every tick made the
+        # viewport sticky for the whole turn.
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
                 if area.type == 'AGENT_BUBBLE':
                     has_bubble = True
-                    area.tag_redraw()
-                    for region in area.regions:
-                        region.tag_redraw()
-                elif streaming and area.type == 'VIEW_3D':
                     area.tag_redraw()
                     for region in area.regions:
                         region.tag_redraw()

@@ -3880,6 +3880,20 @@ extern "C" void Mixar_WindowOrderFrontNoActivate(void *window_handle)
                SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOACTIVATE);
 }
 
+/* Bring Mixar's main window to the foreground after a browser sign-in
+ * succeeded. Best-effort: a minimised window is restored first, and
+ * Mixar_WindowMakeKey carries the AttachThreadInput workaround for a
+ * process that has lost foreground permission. */
+extern "C" void Mixar_AppActivate(void *window_handle)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) return;
+  if (IsIconic(hwnd)) {
+    ShowWindow(hwnd, SW_RESTORE);
+  }
+  Mixar_WindowMakeKey(window_handle);
+}
+
 extern "C" void Mixar_WindowSetParent(void *child_handle, void *parent_handle)
 {
   HWND child = mixar_get_hwnd(child_handle);

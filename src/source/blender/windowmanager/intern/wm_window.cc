@@ -66,6 +66,7 @@
 #include "RNA_enum_types.hh"
 
 #include "WM_api.hh"
+#include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_types.hh"
 #include "wm.hh"
@@ -1288,8 +1289,17 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
   }
 }
 
+/** Stall-log breadcrumb: the window's screen name. The active screen can be null
+ * (upstream: "in rare cases like closing Blender"), so never dereference it blindly. */
+static const char *wm_stall_screen_name(const wmWindow *win)
+{
+  const bScreen *screen = WM_window_get_active_screen(win);
+  return screen ? screen->id.name + 2 : "?";
+}
+
 static void wm_window_ghostwindow_ensure(wmWindowManager *wm, wmWindow *win, bool is_dialog)
 {
+  Mixar_StallScope stall_scope("window_open", wm_stall_screen_name(win));
   bool new_window = false;
   char win_filepath[FILE_MAX];
   win_filepath[0] = '\0';
@@ -1609,7 +1619,10 @@ wmWindow *WM_window_open(bContext *C,
   }
 
   /* Refresh screen dimensions, after the effective window size is known. */
-  ED_screen_refresh(C, wm, win);
+  {
+    Mixar_StallScope stall_scope("screen_refresh", wm_stall_screen_name(win));
+    ED_screen_refresh(C, wm, win);
+  }
 
   if (win->runtime->ghostwin) {
     wm_window_raise(win);
@@ -2186,10 +2199,13 @@ static bool ghost_event_proc(const GHOST_IEvent *ghost_event, GHOST_TUserDataPtr
           /* MACOS and WIN32 don't return to the main-loop while resize. */
           int dummy_sleep_ms = 0;
           g_mixar_resize_dispatch_depth++;
-          wm_window_timers_process(C, &dummy_sleep_ms);
-          wm_event_do_handlers(C);
-          wm_event_do_notifiers(C);
-          wm_draw_update(C);
+          {
+            Mixar_StallScope stall_scope("os_resize", wm_stall_screen_name(win));
+            wm_window_timers_process(C, &dummy_sleep_ms);
+            wm_event_do_handlers(C);
+            wm_event_do_notifiers(C);
+            wm_draw_update(C);
+          }
           g_mixar_resize_dispatch_depth--;
 #endif
         }
@@ -3115,10 +3131,55 @@ bool WM_clipboard_image_set_byte_buffer(ImBuf *ibuf)
 /** \name Progress Bar
  * \{ */
 
+/* Mixar: the job system forwards every progress update to every window, and on
+ * macOS GHOST's #setProgressBar redraws the whole Dock icon (an ICC-converted draw
+ * of the application image) each time. While the agent's preview render ran that
+ * cost 2.5 s of a 30 s main-thread sample. Only forward a value that moved by at
+ * least a percent of the bar, or that is at least 100 ms old. The state is kept
+ * per window: Mixar always has the main, island and pill windows, and one shared
+ * slot alternated between them so nothing was ever skipped. */
+struct ProgressThrottle {
+  const void *ghostwin = nullptr;
+  float value = -1.0f;
+  double time = 0.0;
+};
+static ProgressThrottle g_progress_throttle[8];
+
+static ProgressThrottle &wm_progress_throttle_slot(const void *ghostwin)
+{
+  ProgressThrottle *free_slot = nullptr;
+  for (ProgressThrottle &slot : g_progress_throttle) {
+    if (slot.ghostwin == ghostwin) {
+      return slot;
+    }
+    if (free_slot == nullptr && slot.ghostwin == nullptr) {
+      free_slot = &slot;
+    }
+  }
+  /* More windows than slots: reuse the oldest, which only costs one extra update. */
+  if (free_slot == nullptr) {
+    free_slot = &g_progress_throttle[0];
+    for (ProgressThrottle &slot : g_progress_throttle) {
+      if (slot.time < free_slot->time) {
+        free_slot = &slot;
+      }
+    }
+  }
+  *free_slot = ProgressThrottle{ghostwin, -1.0f, 0.0};
+  return *free_slot;
+}
+
 void WM_progress_set(wmWindow *win, float progress)
 {
   /* In background mode we may have windows, but not actual GHOST windows. */
   if (win->runtime->ghostwin) {
+    const double now = BLI_time_now_seconds();
+    ProgressThrottle &last = wm_progress_throttle_slot(win->runtime->ghostwin);
+    if (std::fabs(progress - last.value) < 0.01f && (now - last.time) < 0.1) {
+      return;
+    }
+    last.value = progress;
+    last.time = now;
     GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
     ghost_window->setProgressBar(progress);
   }
@@ -3127,6 +3188,11 @@ void WM_progress_set(wmWindow *win, float progress)
 void WM_progress_clear(wmWindow *win)
 {
   if (win->runtime->ghostwin) {
+    for (ProgressThrottle &slot : g_progress_throttle) {
+      if (slot.ghostwin == win->runtime->ghostwin) {
+        slot = ProgressThrottle{};
+      }
+    }
     GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
     ghost_window->endProgressBar();
   }

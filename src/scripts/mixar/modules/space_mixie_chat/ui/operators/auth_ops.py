@@ -17,6 +17,14 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
+from mixar.modules.common.utils.app_activate import activate_app
+from mixar.modules.common.utils.sign_in import (
+    begin_sign_in,
+    finish_sign_in,
+    is_current_sign_in,
+    redraw_sign_in_surfaces,
+    sync_pending_flag,
+)
 
 from ....auth.core.auth import (
     clear_credentials,
@@ -161,9 +169,10 @@ def _clear_byok_state_on_logout(wm):
         ('byok_current_model', ''),
         ('byok_current_supports_vision', True),
         ('byok_key_preview', ''),
+        ('byok_device_key_missing', False),
         ('byok_form_api_key', ''),
         ('byok_form_openrouter_model', ''),
-        ('byok_form_codex_bundle', ''),
+        ('byok_form_codex_path', ''),
         ('byok_form_local_custom_base', ''),
         ('byok_form_local_custom_model', ''),
         ('byok_form_local_custom_key', ''),
@@ -400,50 +409,80 @@ def _auth_check_background() -> None:
     _reauthenticate()
 
 
+
 def _reauthenticate() -> None:
     """Daemon thread: the signed-out flow — mark the session expired and run
     the browser sign-in (the pair is already gone)."""
+    global _auth_check_started
+    # Reserve the one in-flight sign-in BEFORE the browser opens: the bubble
+    # autoshow gate reads the reservation itself (common/utils/sign_in.py),
+    # so no main-thread round trip is needed. A sign-in the user already
+    # started owns the browser — never open a second one on our own.
+    attempt = begin_sign_in(supersede=False)
+    sso_thread = threading.current_thread()
+
     def _mark_expired():
         wm = getattr(bpy.context, 'window_manager', None)
         if wm:
             if hasattr(wm, 'mixie_chat_session_expired'):
                 wm.mixie_chat_session_expired = True
-            if hasattr(wm, 'mixie_chat_login_error'):
+            if attempt is not None and hasattr(wm, 'mixie_chat_login_error'):
                 wm.mixie_chat_login_error = ""
             if hasattr(wm, 'mixie_chat_is_guest'):
                 wm.mixie_chat_is_guest = False
+            sync_pending_flag(wm)
+            redraw_sign_in_surfaces(wm)
         guest.mark(False)
+        if attempt is not None:
+            _arm_login_watchdog(attempt[0], sso_thread)
         return None
 
     bpy.app.timers.register(_mark_expired, first_interval=0.0)
+    if attempt is None:
+        logger.info("Session expired while a browser sign-in is already open; not opening another")
+        _auth_check_started = False
+        return
+    attempt_id, cancel = attempt
 
-    # Run SSO on this same background thread (it blocks waiting for browser)
     try:
-        result = guest.sign_in(sso_login)
-    except Exception as e:
-        logger.error("Auto SSO login failed: %s", e)
-        result = {"success": False, "message": str(e)}
+        # Run SSO on this same background thread (it blocks waiting for
+        # browser); guest.sign_in claims the guest this sign-in replaces.
+        try:
+            result = guest.sign_in(lambda: sso_login(cancel=cancel))
+        except Exception as e:
+            logger.error("Auto SSO login failed: %s", e)
+            result = {"success": False, "message": str(e)}
 
-    # Fetch user info on this background thread (not on main thread)
-    user_info = None
-    if result.get("success"):
-        user_info = get_user_info()
+        # Fetch user info on this background thread (not on main thread)
+        user_info = _user_info_after_sso(result)
+    except BaseException:
+        # Never leave this attempt holding the sign-in UI and the autoshow.
+        finish_sign_in(attempt_id, cancel=True)
+        bpy.app.timers.register(_sync_pending_flag_timer, first_interval=0.0)
+        raise
 
     def _apply_sso_result():
         global _auth_check_started
+        current = finish_sign_in(attempt_id)
         wm = getattr(bpy.context, 'window_manager', None)
         if not wm:
             _auth_check_started = False
             return None
         try:
-            if hasattr(wm, 'mixie_chat_is_logging_in'):
-                wm.mixie_chat_is_logging_in = False
+            sync_pending_flag(wm)
 
-            if result.get("success"):
+            if not result.get("success") and not current:
+                # Replaced by a newer sign-in (or released by the watchdog):
+                # that attempt owns the UI now.
+                logger.info("Superseded auto sign-in %s ended: %s", attempt_id, result.get('message'))
+            elif result.get("success"):
                 wm.mixie_chat_is_logged_in = True
                 if hasattr(wm, 'mixie_chat_session_expired'):
                     wm.mixie_chat_session_expired = False
                 wm.mixie_chat_login_error = ""
+                # The user just finished in the browser: land them back in
+                # Mixar. Success only — a cancelled login must not steal focus.
+                activate_app()
 
                 _capture_session_started("sso_relogin")
                 _clear_referral_state(wm)
@@ -465,12 +504,34 @@ def _reauthenticate() -> None:
             logger.warning("SSO result apply failed: %s", e)
         finally:
             _auth_check_started = False
+            redraw_sign_in_surfaces(wm)
         return None
 
     bpy.app.timers.register(_apply_sso_result, first_interval=0.0)
 
 
 _auth_check_started = False
+
+
+def _user_info_after_sso(result: dict):
+    """``/me`` after a successful SSO, on the calling (background) thread.
+
+    Never raises: the caller must always reach the main-thread apply that
+    clears the pending flag, whatever the profile fetch did.
+    """
+    if not result.get("success"):
+        return None
+    try:
+        return get_user_info()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("User info fetch after SSO failed: %s", e)
+        return None
+
+
+def _sync_pending_flag_timer():
+    """Main-thread mirror of the sign-in registry onto the UI flag."""
+    sync_pending_flag(getattr(bpy.context, 'window_manager', None))
+    return None
 
 
 def _auth_check_background_safe() -> None:
@@ -529,7 +590,6 @@ def check_auth_on_startup(_):
 # Grace added to the SSO timeout before the UI watchdog gives up on a login
 # thread that never reported back.
 _LOGIN_WATCHDOG_GRACE_S = 30
-_login_attempt_id = 0
 
 
 def _release_stuck_login(attempt_id, thread):
@@ -539,7 +599,9 @@ def _release_stuck_login(attempt_id, thread):
     it wedged (it did once: a silent peer on the callback socket). Scoped to
     one attempt so a stale timer can never clobber a newer login.
     """
-    if attempt_id != _login_attempt_id or not thread.is_alive():
+    if not is_current_sign_in(attempt_id) or not thread.is_alive():
+        return None
+    if not finish_sign_in(attempt_id, cancel=True):
         return None
     logger.error(
         "SSO login thread still running %ss after its deadline; releasing the UI",
@@ -547,18 +609,23 @@ def _release_stuck_login(attempt_id, thread):
     )
     try:
         wm = bpy.context.window_manager
-        if wm.mixie_chat_is_logging_in:
-            wm.mixie_chat_is_logging_in = False
-            wm.mixie_chat_login_error = rpt_(
-                "Browser login did not complete. Please try again."
-            )
-            for window in wm.windows:
-                for area in window.screen.areas:
-                    if area.type == 'AGENT_BUBBLE':
-                        area.tag_redraw()
+        sync_pending_flag(wm)
+        wm.mixie_chat_login_error = rpt_(
+            "Browser login did not complete. Please try again."
+        )
+        redraw_sign_in_surfaces(wm)
     except Exception as e:
         logger.warning("Login watchdog could not update UI: %s", e)
     return None
+
+
+def _arm_login_watchdog(attempt_id, sso_thread) -> None:
+    """Both sign-in paths (auto SSO and the button) release the UI through
+    the same scoped watchdog; the pending flag must never outlive a login."""
+    bpy.app.timers.register(
+        lambda: _release_stuck_login(attempt_id, sso_thread),
+        first_interval=SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
+    )
 
 
 class MIXIE_CHAT_OT_login(Operator):
@@ -568,44 +635,49 @@ class MIXIE_CHAT_OT_login(Operator):
     bl_description = "Login to Mixie Chat via browser SSO"
 
     def execute(self, context):
-        global _login_attempt_id
         wm = context.window_manager
-        _login_attempt_id += 1
-        attempt_id = _login_attempt_id
+        # Supersede: a click while a sign-in is pending (the user closed the
+        # browser tab, or a startup sign-in is open) cancels it and starts
+        # again, so the button is never a dead end.
+        attempt_id, cancel = begin_sign_in(supersede=True)
 
-        # Set loading state and force redraw
-        wm.mixie_chat_is_logging_in = True
+        # Set loading state and force redraw.
+        sync_pending_flag(wm)
         wm.mixie_chat_login_error = ""
-
-        for area in context.screen.areas:
-            if area.type == 'AGENT_BUBBLE':
-                area.tag_redraw()
+        redraw_sign_in_surfaces(wm)
 
         # Run SSO on a background thread (blocks waiting for browser callback)
         def _sso_thread():
             try:
                 # Claims the guest this sign-in replaces (guest.sign_in).
-                result = guest.sign_in(sso_login)
+                result = guest.sign_in(lambda: sso_login(cancel=cancel))
                 logger.info("SSO login returned: success=%s", result.get("success"))
             except Exception as e:
                 logger.error("SSO login failed with exception: %s", e)
                 result = {"success": False, "message": str(e)}
 
             # Fetch user info on this background thread (not on main thread)
-            user_info = None
-            if result.get("success"):
-                user_info = get_user_info()
+            user_info = _user_info_after_sso(result)
 
             def _apply_result():
+                current = finish_sign_in(attempt_id)
                 try:
                     live_wm = bpy.context.window_manager
-                    live_wm.mixie_chat_is_logging_in = False
+                    sync_pending_flag(live_wm)
 
-                    if result["success"]:
+                    if not result["success"] and not current:
+                        # Replaced by a newer sign-in (or released by the
+                        # watchdog): that attempt owns the UI now.
+                        logger.info("Superseded sign-in %s ended: %s",
+                                    attempt_id, result.get("message"))
+                    elif result["success"]:
                         live_wm.mixie_chat_login_error = ""
                         live_wm.mixie_chat_is_logged_in = True
                         if hasattr(live_wm, 'mixie_chat_session_expired'):
                             live_wm.mixie_chat_session_expired = False
+                        # Land the user back in Mixar from the browser.
+                        # Success only — never on a failed or cancelled login.
+                        activate_app()
                         _capture_session_started("interactive_login")
                         _clear_referral_state(live_wm)
 
@@ -620,11 +692,8 @@ class MIXIE_CHAT_OT_login(Operator):
                         live_wm.mixie_chat_login_error = msg
                         logger.warning("SSO login failed: %s", msg)
 
-                    # Redraw Mixie Chat areas to reflect new auth state
-                    for window in bpy.context.window_manager.windows:
-                        for area in window.screen.areas:
-                            if area.type == 'AGENT_BUBBLE':
-                                area.tag_redraw()
+                    # Redraw every surface that shows the auth state
+                    redraw_sign_in_surfaces(live_wm)
                 except Exception as e:
                     logger.error("SSO result apply failed: %s", e)
                 return None  # Don't repeat
@@ -635,10 +704,7 @@ class MIXIE_CHAT_OT_login(Operator):
             target=_sso_thread, daemon=True, name="MixarSSOLogin"
         )
         sso_thread.start()
-        bpy.app.timers.register(
-            lambda: _release_stuck_login(attempt_id, sso_thread),
-            first_interval=SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
-        )
+        _arm_login_watchdog(attempt_id, sso_thread)
         return {'FINISHED'}
 
 

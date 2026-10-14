@@ -10,8 +10,9 @@
  * Runs before all keymaps, ensuring clicks on toast close/action buttons
  * are captured before Sculpt/Paint/Object mode consumes LEFTMOUSE.
  * Also forwards MOUSEMOVE to the Python hover operator (for button
- * highlight feedback) while toasts are visible — gated by a WM ID
- * property so idle viewports pay no per-event cost.
+ * highlight feedback) while toasts are visible. Every branch is gated by
+ * the WM ID property that mirrors toast visibility, so viewports without a
+ * toast pay no per-event (and no per-click) Python cost.
  */
 
 #include "BKE_context.hh"
@@ -114,7 +115,10 @@ static int view3d_toast_ui_handler(bContext *C, const wmEvent *event, void * /*u
     return WM_UI_HANDLER_CONTINUE;
   }
 
-  if (toast_call_mouse_op(C, event, "notification.toast_click")) {
+  /* Same gate as hover and scroll: without a toast on screen there is nothing
+   * to hit, and the Python operator call (a GIL acquisition that background
+   * transfers and streaming threads compete for) ran on every viewport click. */
+  if (toast_any_visible(C) && toast_call_mouse_op(C, event, "notification.toast_click")) {
     ED_region_tag_redraw(region);
     return WM_UI_HANDLER_BREAK;
   }

@@ -67,11 +67,13 @@ class MIXIE_CHAT_PT_login(Panel):
         col.label(text="Sign in with your Mixar account", icon='USER')
         col.separator()
 
-        # SSO Login button
+        # While the browser owns the sign-in: a plain status line and an
+        # explicit Cancel, never a clickable "waiting" button (a click there
+        # started a second sign-in and orphaned the first tab). Cancel brings
+        # Login with Browser back, so a closed tab is never a dead end.
         if wm.mixie_chat_is_logging_in:
-            row = col.row()
-            row.enabled = False
-            row.operator("mixie_chat.login", text="Waiting for browser...", icon='SORTTIME')
+            col.label(text="Continue in your browser", icon='SORTTIME')
+            col.operator("mixie_chat.cancel_login", text="Cancel")
         else:
             col.operator("mixie_chat.login", text="Login with Browser", icon='URL')
 

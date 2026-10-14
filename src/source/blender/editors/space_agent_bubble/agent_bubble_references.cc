@@ -154,8 +154,12 @@ void agent_bubble_send_button(const bContext * /*C*/,
                                 short(BLI_rctf_size_x(&rect)),
                                 short(BLI_rctf_size_y(&rect)),
                                 tip);
-    if (but) {
-      RNA_boolean_set(ui::button_operator_ptr_ensure(but), "chat", true);
+    /* Python operators register in time-budgeted batches after startup, so
+     * the composer draws before these two exist. The button then has no
+     * operator type and a null property pointer; it gains both on a later
+     * redraw, once the operator is registered. */
+    if (PointerRNA *props = but ? ui::button_operator_ptr_ensure(but) : nullptr) {
+      RNA_boolean_set(props, "chat", true);
     }
     return but;
   };
@@ -293,7 +297,9 @@ void agent_bubble_references_draw(const bContext *C,
                                       int(BLI_rctf_size_x(&visible_image)),
                                       int(BLI_rctf_size_y(&visible_image)),
                                       TIP_("View sketch larger. Add instructions in chat, then Send"));
-      RNA_string_set(ui::button_operator_ptr_ensure(preview), "image_name", path.c_str());
+      if (PointerRNA *props = preview ? ui::button_operator_ptr_ensure(preview) : nullptr) {
+        RNA_string_set(props, "image_name", path.c_str());
+      }
     }
     rctf close = {
         image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
@@ -317,16 +323,18 @@ void agent_bubble_references_draw(const bContext *C,
                                          int(BLI_rctf_size_x(&close)),
                                          int(BLI_rctf_size_y(&close)),
                                          TIP_("Remove reference"));
-      PointerRNA *props = ui::button_operator_ptr_ensure(button);
-      if (file) {
-        RNA_string_set(props, "file_id", path.c_str());
-      }
-      else if (folder) {
-        RNA_string_set(props, "folder_id", path.c_str());
-      }
-      else {
-        RNA_string_set(props, "attachment_path", path.c_str());
-        RNA_string_set(props, "attachment_source", source ? source : "");
+      /* Null until the operator registers; see the composer's Refine / Revert. */
+      if (PointerRNA *props = button ? ui::button_operator_ptr_ensure(button) : nullptr) {
+        if (file) {
+          RNA_string_set(props, "file_id", path.c_str());
+        }
+        else if (folder) {
+          RNA_string_set(props, "folder_id", path.c_str());
+        }
+        else {
+          RNA_string_set(props, "attachment_path", path.c_str());
+          RNA_string_set(props, "attachment_source", source ? source : "");
+        }
       }
       ui::mixar_button_tooltip_owned(
           button,

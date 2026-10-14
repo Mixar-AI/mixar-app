@@ -1433,11 +1433,38 @@ msgstr "Prilagođeni lokalni poslužitelj"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Usmjerite Mixar na poslužitelj kompatibilan s OpenAI koji već pokrećete (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Nevaljani podaci obrasca — obratite se podršci."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Nešto je pošlo po krivu na našoj strani. Pokušajte ponovno."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Čitanje kataloga lokalnih modela"
@@ -1517,6 +1544,12 @@ msgstr "Vaš ključ: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Spremanje modela agenta… Pričekajte prije slanja ili promjene modela."
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "Model agenta"
 
@@ -1565,14 +1598,44 @@ msgstr "Model nije bilo moguće promijeniti"
 msgid "Could not reset model"
 msgstr "Model nije bilo moguće poništiti"
 
-msgid "Removing your key…"
-msgstr "Uklanjanje vašeg ključa…"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Provjera kod pružatelja…"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "Upotrebljava vašu pretplatu na ChatGPT — Mixar krediti se ne troše."
+
+msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "Postavke AI pružatelja"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "Uključeno"
@@ -1580,8 +1643,11 @@ msgstr "Uključeno"
 msgid "Not configured"
 msgstr "Nije konfigurirano"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Pokrenite Mixar agenta na vlastitom pružatelju — Mixar krediti se ne troše dok je to uključeno."
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "Trenutačna konfiguracija"
@@ -1601,77 +1667,68 @@ msgstr "Sigurno pohranjeno"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model samo za tekst — razgovor radi; 3D zadaci idu bez vizualne povratne informacije."
 
-msgid "Remove API Key…"
-msgstr "Ukloni API ključ…"
+msgid "Remove key…"
+msgstr ""
+
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Enter your API key to continue"
+msgstr ""
+
+msgid "Your provider and model are already set — just paste the key."
+msgstr ""
+
+msgid "Your key is stored only on this computer. Mixar never keeps it."
+msgstr ""
 
 msgid "Provider Setup"
 msgstr "Postava pružatelja"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Pohranjeno šifrirano, upotrebljava se samo za zahtjeve Mixar agenta — nakon spremanja prikazuje se samo maskirani pretpregled."
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Odaberite model koji podržava pozivanje alata / funkcija — agentu je to potrebno."
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "Bilo koji slug s openrouter.ai/models, npr. anthropic/claude-opus-4.8."
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Učitaj iz ~/.codex/auth.json"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ili ga zalijepite ručno"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Zalijepljeno znakova: {count}"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Prazno — zalijepite svoj auth.json"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Pokrenite  codex login  u terminalu, zatim učitajte ili zalijepite cijeli"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "sadržaj datoteke ~/.codex/auth.json (gumb za lijepljenje čita međuspremnik)."
+msgid "Key removed"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Upotrebljava vašu pretplatu na ChatGPT — Mixar krediti se ne troše."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Promjene nije bilo moguće primijeniti"
-
-msgid "Remove your API key?"
-msgstr "Ukloniti API ključ?"
-
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agent će opet upotrebljavati Mixarov zadani pružatelj."
-
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Mixar krediti trošit će se za buduće zahtjeve agenta."
-
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar agent sada radi na vašem pružatelju — Mixar krediti se ne troše."
-
-msgid "API key removed"
-msgstr "API ključ uklonjen"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agent je opet na Mixarovu zadanom pružatelju."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Mixar krediti opet se troše za zahtjeve agenta."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "Pokušaj ponovno"
 
-msgid "Save & Activate"
-msgstr "Spremi i aktiviraj"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "Zadrži moj ključ"
-
-msgid "Remove API Key"
-msgstr "Ukloni API ključ"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Raspakiravanje lokalnog AI izvedbenog okruženja…"
@@ -1739,47 +1796,14 @@ msgstr "Upotrijebite vlastiti API ključ za Mixar agenta. Dok je uključen, Mixa
 msgid "Validate with the provider and save your API key"
 msgstr "Provjerite kod pružatelja i spremite API ključ"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Odaberite model za ovog pružatelja i unesite API ključ."
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Slug modela i API ključ su obavezni."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Odaberite Codex model i učitajte svežanj auth.json."
-
-msgid "Save failed."
-msgstr "Spremanje nije uspjelo."
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Čita ~/.codex/auth.json s ovog računala u polje"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json nije pronađen — najprije pokrenite `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json nije bilo moguće pročitati"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json je prazan"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json je prevelik za ovo polje i skraćen je — neće se spremiti ispravno"
-
-msgid "Loaded auth.json"
-msgstr "auth.json učitan"
-
-msgid "Paste auth.json"
-msgstr "Zalijepi auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Lijepi vaš ~/.codex/auth.json iz međuspremnika u polje"
-
-msgid "Clipboard is empty"
-msgstr "Međuspremnik je prazan"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Zalijepljeni auth.json prevelik je za ovo polje i skraćen je — neće se spremiti ispravno"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "Ukloni"
@@ -1793,8 +1817,8 @@ msgstr "Odustaje od tijeka uklanjanja i vraća se na glavni dijalog"
 msgid "Delete the stored API key server-side"
 msgstr "Briše pohranjeni API ključ na poslužitelju"
 
-msgid "Remove failed."
-msgstr "Uklanjanje nije uspjelo."
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Osvježi BYOK stanje"
@@ -1853,11 +1877,11 @@ msgstr "Vaš API ključ pohranjen je šifrirano i upotrebljava se samo za zahtje
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bilo koji slug modela s openrouter.ai/models (npr. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
+msgid "Codex sign-in file"
+msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Sadržaj ~/.codex/auth.json (najprije pokrenite `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Lokalni način"
@@ -5702,9 +5726,6 @@ msgstr "Neočekivana pogreška tijekom preuzimanja teksture: {error}"
 msgid "Failed to apply textures to any object"
 msgstr "Teksture nije bilo moguće primijeniti ni na jedan objekt"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Primijeni PBR teksture"
-
 msgid "Both refined and guide masks are required"
 msgstr "Potrebne su i dorađena i vodeća maska"
 
@@ -5786,6 +5807,12 @@ msgstr "Sastavi lika"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lokalno privija generirane dijelove na rigano ili obično tijelo"
 
+msgid "Use Image Style Only"
+msgstr "Koristi samo stil slike"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Kad je uključeno, prenosi se samo umjetnički stil slike (upit i dalje vrijedi). Kad je isključeno, slika izravno vodi generiranje teksture"
+
 msgid "Enter a prompt in the image node"
 msgstr "Unesite upit u čvoru slike"
 
@@ -5811,7 +5838,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generiranje modela nije dostupno u katalogu generiranja"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Čvorovi zaključivanja još ne podržavaju ovaj način generiranja modela"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Nema dostupnog omogućenog modela 3D generiranja"
@@ -6334,9 +6361,6 @@ msgstr "Svijet nije bilo moguće preuzeti/pretvoriti: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Svijet je uvezen, ali nije dao objekte"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: uvezi svijet"
 
 msgid "Failed to import world: {error}"
 msgstr "Svijet nije bilo moguće uvesti: {error}"
@@ -8001,12 +8025,6 @@ msgstr "Slika prijenosa stila – primjenjuje umjetnički stil na generirane tek
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Referentna slika – izravno vodi generiranje teksture (upit se zanemaruje)"
-
-msgid "Use Image Style Only"
-msgstr "Koristi samo stil slike"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Kad je uključeno, prenosi se samo umjetnički stil slike (upit i dalje vrijedi). Kad je isključeno, slika izravno vodi generiranje teksture"
 
 msgid "Output texture resolution in pixels"
 msgstr "Izlazna razlučivost teksture u pikselima"
@@ -10890,9 +10908,6 @@ msgstr "Odgovor generiranog materijala nije sadržavao skriptu"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Materijal je generiran, ali primjena nije uspjela: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Generiraj proceduralni materijal"
 
 msgid "Material generation failed"
 msgstr "Generiranje materijala nije uspjelo"
@@ -19599,6 +19614,72 @@ msgstr "ID korisnika za prijavu u razgovor Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očekuje: {formats}"
 
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
+
 msgid "*Stopped*"
 msgstr "*Zaustavljeno*"
 
@@ -20148,8 +20229,8 @@ msgstr "Prijava nije uspjela"
 msgid "Sign in with your Mixar account"
 msgstr "Prijavite se Mixar računom"
 
-msgid "Waiting for browser..."
-msgstr "Čekanje preglednika..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prijava preglednikom"
@@ -21265,6 +21346,12 @@ msgstr "Nastavljanje prethodnog zadatka..."
 msgid "Could not resume the previous task"
 msgstr "Prethodni zadatak nije bilo moguće nastaviti"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21284,6 +21371,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24439,6 +24529,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Datoteku je spremila novija verzija Mixara (%d.%d), neki se podaci mogu izgubiti"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Datoteku je spremila novija verzija, otvorite je programom Mixar %s ili novijim"
 
@@ -25017,6 +25164,12 @@ msgstr "Broj zatvorenih"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Broj zatvorenih prozora oblačića agenta"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Postavi veličinu prozora oblačića agenta"
@@ -26137,6 +26290,12 @@ msgstr "Prostor skupova tekstura"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Koristite bočne ploče za upravljanje skupovima tekstura"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Natrag na prvo"
 
@@ -26850,6 +27009,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Identitet zadatka radnog prostora"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -28096,6 +28276,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28179,6 +28383,12 @@ msgstr "Filtar nastavka datoteke"
 
 msgid "Write compressed .mixar file"
 msgstr "Zapiši komprimiranu .mixar datoteku"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Spremi kao .mixar datoteku"

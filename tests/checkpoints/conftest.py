@@ -84,6 +84,10 @@ def tc(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "bpy", bpy)
 
     session = FakeSession()
+    # Records whether every snapshot save ran inside the bubble's keep-open guard.
+    snapshot_guard = MagicMock()
+    snapshot_guard.return_value.__enter__ = MagicMock(return_value=None)
+    snapshot_guard.return_value.__exit__ = MagicMock(return_value=False)
     stub = {
         "mixar.modules.space_mixie_chat.core.session": {"get_session_manager": lambda: session},
         "mixar.modules.space_mixie_chat.core.turn_events": {"drop_scene": MagicMock()},
@@ -92,7 +96,10 @@ def tc(monkeypatch, tmp_path):
         "mixar.modules.space_mixie_chat.core.message_helpers": {"add_agent_message": MagicMock()},
         "mixar.modules.agent_bubble": {},
         "mixar.modules.agent_bubble.core": {},
-        "mixar.modules.agent_bubble.core.bubble_lifecycle": {"close_restored_agent_bubble_windows": MagicMock()},
+        "mixar.modules.agent_bubble.core.bubble_lifecycle": {
+            "close_restored_agent_bubble_windows": MagicMock(),
+            "keep_windows_for_snapshot": snapshot_guard,
+        },
         "mixar.modules.common": {},
         "mixar.modules.common.agent_rpc": {},
         "mixar.modules.common.agent_rpc.client": {"request": MagicMock()},
@@ -125,4 +132,5 @@ def tc(monkeypatch, tmp_path):
         return {'FINISHED'}
 
     bpy.ops.wm.save_as_mainfile.side_effect = save_as
-    return SimpleNamespace(m=module, bpy=bpy, session=session, document=document)
+    return SimpleNamespace(m=module, bpy=bpy, session=session, document=document,
+                           snapshot_guard=snapshot_guard)

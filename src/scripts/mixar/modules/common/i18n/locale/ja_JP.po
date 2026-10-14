@@ -1433,11 +1433,38 @@ msgstr "カスタムローカルサーバー"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "すでに実行しているOpenAI互換サーバー（Ollama、LM Studio、llama.cpp など）をMixarに指定します"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "フォームデータが無効です — サポートにお問い合わせください。"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "サーバー側で問題が発生しました。もう一度お試しください。"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "ローカルモデルカタログを読み込み中"
@@ -1517,6 +1544,12 @@ msgstr "あなたのキー: {name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "エージェントモデルを保存中… 送信やモデルの変更はしばらくお待ちください。"
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "エージェントモデル"
 
@@ -1565,14 +1598,44 @@ msgstr "モデルを変更できませんでした"
 msgid "Could not reset model"
 msgstr "モデルをリセットできませんでした"
 
-msgid "Removing your key…"
-msgstr "キーを削除中…"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "プロバイダーで検証中…"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "ChatGPTサブスクリプションを使用します — Mixarクレジットは消費されません。"
+
+msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "AIプロバイダー設定"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "アクティブ"
@@ -1580,8 +1643,11 @@ msgstr "アクティブ"
 msgid "Not configured"
 msgstr "未設定"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixarエージェントを自分のプロバイダーで実行します — 有効な間はMixarクレジットは消費されません。"
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "現在の構成"
@@ -1601,77 +1667,68 @@ msgstr "安全に保存済み"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "テキスト専用モデル — チャットは使えますが、3Dタスクは視覚的なフィードバックなしで実行されます。"
 
-msgid "Remove API Key…"
-msgstr "APIキーを削除…"
+msgid "Remove key…"
+msgstr ""
+
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Enter your API key to continue"
+msgstr ""
+
+msgid "Your provider and model are already set — just paste the key."
+msgstr ""
+
+msgid "Your key is stored only on this computer. Mixar never keeps it."
+msgstr ""
 
 msgid "Provider Setup"
 msgstr "プロバイダーの設定"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "暗号化して保存され、Mixarエージェントのリクエストにのみ使用されます — 保存後はマスクされたプレビューのみ表示されます。"
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ツール/関数呼び出しに対応したモデルを選択してください — エージェントに必要です。"
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-opus-4.8）。"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json から読み込む"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…または手動で貼り付け"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count}文字を貼り付けました"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "空です — auth.json を貼り付けてください"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ターミナルで  codex login  を実行し、読み込みまたは貼り付けで"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json の内容全体を入力してください（貼り付けボタンはクリップボードを読み取ります）。"
+msgid "Key removed"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "ChatGPTサブスクリプションを使用します — Mixarクレジットは消費されません。"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "変更を適用できませんでした"
-
-msgid "Remove your API key?"
-msgstr "APIキーを削除しますか？"
-
-msgid "The agent will use Mixar's default provider again."
-msgstr "エージェントは再びMixarのデフォルトプロバイダーを使用します。"
-
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "今後のエージェントリクエストにはMixarクレジットが消費されます。"
-
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixarエージェントはあなたのプロバイダーで実行されるようになりました — Mixarクレジットは消費されません。"
-
-msgid "API key removed"
-msgstr "APIキーを削除しました"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "エージェントはMixarのデフォルトプロバイダーに戻りました。"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "エージェントリクエストには再びMixarクレジットが消費されます。"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "再試行"
 
-msgid "Save & Activate"
-msgstr "保存して有効化"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "キーを保持"
-
-msgid "Remove API Key"
-msgstr "APIキーを削除"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "ローカルAIランタイムを展開中…"
@@ -1739,47 +1796,14 @@ msgstr "Mixarエージェントに自分のAPIキーを使用します。有効�
 msgid "Validate with the provider and save your API key"
 msgstr "プロバイダーで検証してAPIキーを保存します"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "このプロバイダーのモデルを選択し、APIキーを入力してください。"
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "モデルのスラッグとAPIキーは必須です。"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codexモデルを選択し、auth.json バンドルを読み込んでください。"
-
-msgid "Save failed."
-msgstr "保存に失敗しました。"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "このマシンの ~/.codex/auth.json をフィールドに読み込みます"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json が見つかりません — 先に `codex login` を実行してください"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json を読み取れませんでした"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json が空です"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
-
-msgid "Loaded auth.json"
-msgstr "auth.json を読み込みました"
-
-msgid "Paste auth.json"
-msgstr "auth.json を貼り付け"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "クリップボードの ~/.codex/auth.json をフィールドに貼り付けます"
-
-msgid "Clipboard is empty"
-msgstr "クリップボードが空です"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼り付けた auth.json がこのフィールドには大きすぎるため切り詰められました — 正しく保存されません"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "削除"
@@ -1793,8 +1817,8 @@ msgstr "削除フローをキャンセルしてメインダイアログに戻り
 msgid "Delete the stored API key server-side"
 msgstr "保存されたAPIキーをサーバー側で削除します"
 
-msgid "Remove failed."
-msgstr "削除に失敗しました。"
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK状態を更新"
@@ -1853,11 +1877,11 @@ msgstr "APIキーは暗号化して保存され、Mixarエージェントのリ�
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models の任意のモデルスラッグ（例: anthropic/claude-opus-4.8）"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json の内容（先に `codex login` を実行してください）"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ローカルモード"
@@ -5702,9 +5726,6 @@ msgstr "テクスチャのダウンロード中に予期しないエラーが発
 msgid "Failed to apply textures to any object"
 msgstr "どのオブジェクトにもテクスチャを適用できませんでした"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBRテクスチャを適用"
-
 msgid "Both refined and guide masks are required"
 msgstr "改良マスクとガイドマスクの両方が必要です"
 
@@ -5786,6 +5807,12 @@ msgstr "キャラクターをアセンブル"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "生成されたパーツを、リグ付きまたはリグなしの体にローカルで取り付けます"
 
+msgid "Use Image Style Only"
+msgstr "画像のスタイルのみを使用"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "有効にすると、画像の芸術的なスタイルのみが転送されます（プロンプトは引き続き適用）。無効にすると、画像がテクスチャ生成を直接駆動します"
+
 msgid "Enter a prompt in the image node"
 msgstr "画像ノードにプロンプトを入力してください"
 
@@ -5811,7 +5838,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "生成カタログでモデル生成を利用できません"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "このモデル生成モードは推論ノードでまだサポートされていません"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "有効な3D生成モデルがありません"
@@ -6334,9 +6361,6 @@ msgstr "ワールドのダウンロード/変換に失敗しました: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "ワールドはインポートされましたが、オブジェクトが生成されませんでした"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: ワールドをインポート"
 
 msgid "Failed to import world: {error}"
 msgstr "ワールドのインポートに失敗しました: {error}"
@@ -8001,12 +8025,6 @@ msgstr "スタイル転送画像 - 生成テクスチャに芸術的なスタイ
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "参照画像 - テクスチャ生成を直接駆動します（プロンプトは無視）"
-
-msgid "Use Image Style Only"
-msgstr "画像のスタイルのみを使用"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "有効にすると、画像の芸術的なスタイルのみが転送されます（プロンプトは引き続き適用）。無効にすると、画像がテクスチャ生成を直接駆動します"
 
 msgid "Output texture resolution in pixels"
 msgstr "出力テクスチャの解像度（ピクセル）"
@@ -10890,9 +10908,6 @@ msgstr "生成されたマテリアルのレスポンスにスクリプトが含
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "マテリアルを生成しましたが、適用に失敗しました: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "プロシージャルマテリアルを生成"
 
 msgid "Material generation failed"
 msgstr "マテリアルの生成に失敗しました"
@@ -19603,6 +19618,72 @@ msgstr "Mixie Chat ログイン用のユーザー ID"
 msgid "Agent expects: {formats}"
 msgstr "エージェントが受け付ける形式: {formats}"
 
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
+
 msgid "*Stopped*"
 msgstr "*停止しました*"
 
@@ -20152,8 +20233,8 @@ msgstr "ログインに失敗しました"
 msgid "Sign in with your Mixar account"
 msgstr "Mixar アカウントでサインイン"
 
-msgid "Waiting for browser..."
-msgstr "ブラウザーを待機中..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ブラウザーでログイン"
@@ -21269,6 +21350,12 @@ msgstr "前のタスクを再開中..."
 msgid "Could not resume the previous task"
 msgstr "前のタスクを再開できませんでした"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21288,6 +21375,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24443,6 +24533,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "新しいバージョンのMixar（%d.%d）で保存されたファイルです。一部のデータが失われる可能性があります"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "このファイルは新しいバージョンで保存されています。Mixar %s 以降で開いてください"
 
@@ -25021,6 +25168,12 @@ msgstr "閉じた数"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "閉じたエージェントバブルウィンドウの数"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "エージェントバブルのウィンドウサイズを設定"
@@ -26141,6 +26294,12 @@ msgstr "テクスチャセットスペース"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "サイドバーのパネルでテクスチャセットを管理してください"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "最初に戻る"
 
@@ -26854,6 +27013,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "ワークスペースのタスク識別子"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -28100,6 +28280,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28183,6 +28387,12 @@ msgstr "ファイル拡張子のフィルター"
 
 msgid "Write compressed .mixar file"
 msgstr ".mixarファイルを圧縮して書き込みます"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixarファイルとして保存します"

@@ -1433,11 +1433,38 @@ msgstr "自訂本機伺服器"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "讓 Mixar 連線至你已在執行的 OpenAI 相容伺服器（Ollama、LM Studio、llama.cpp...）"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "表單資料無效——請聯絡支援團隊。"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "我們這邊發生問題，請再試一次。"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "正在讀取本機模型目錄"
@@ -1517,6 +1544,12 @@ msgstr "你的金鑰：{name}"
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "正在儲存智慧代理模型…傳送或變更模型前請稍候。"
 
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
+
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
+
 msgid "Agent Model"
 msgstr "智慧代理模型"
 
@@ -1565,14 +1598,44 @@ msgstr "無法變更模型"
 msgid "Could not reset model"
 msgstr "無法重設模型"
 
-msgid "Removing your key…"
-msgstr "正在移除你的金鑰…"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "正在向供應商驗證…"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
+
+msgid "Codex sign-in file (empty = default)"
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Only the access token leaves this computer, with each agent request;"
+msgstr ""
+
+msgid "the sign-in file is never copied, and renewed tokens are written back to it."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
+msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
+
+msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "This can take a few seconds."
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
 
 msgid "AI Provider Settings"
 msgstr "AI 供應商設定"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Active"
 msgstr "作用中"
@@ -1580,8 +1643,11 @@ msgstr "作用中"
 msgid "Not configured"
 msgstr "未設定"
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "在你自己的供應商上執行 Mixar 智慧代理——啟用期間不會扣除 Mixar 點數。"
+msgid "Guide"
+msgstr ""
+
+msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgstr ""
 
 msgid "Current Configuration"
 msgstr "目前設定"
@@ -1601,77 +1667,68 @@ msgstr "已安全儲存"
 msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "純文字模型——聊天可正常運作；3D 任務將在沒有視覺回饋的情況下執行。"
 
-msgid "Remove API Key…"
-msgstr "移除 API 金鑰…"
+msgid "Remove key…"
+msgstr ""
+
+msgid "Codex sign-in needed on this device"
+msgstr ""
+
+msgid "Run  codex login  on this computer, then save below."
+msgstr ""
+
+msgid "Enter your API key to continue"
+msgstr ""
+
+msgid "Your provider and model are already set — just paste the key."
+msgstr ""
+
+msgid "Your key is stored only on this computer. Mixar never keeps it."
+msgstr ""
 
 msgid "Provider Setup"
 msgstr "供應商設定"
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "加密儲存，僅用於 Mixar 智慧代理要求——儲存後只會顯示遮蔽的預覽。"
+msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "請選擇支援工具 / 函式呼叫的模型——智慧代理需要此功能。"
+msgid "Pick a model that can use tools — the agent needs it. Most current models can."
+msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
 msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "從 ~/.codex/auth.json 載入"
+msgid "Couldn't save"
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…或手動貼上"
+msgid "Remove your key?"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "已貼上 {count} 個字元"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "空白——請貼上你的 auth.json"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "在終端機中執行  codex login  ，然後載入或貼上完整的"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json 內容（貼上按鈕會讀取你的剪貼簿）。"
+msgid "Key removed"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "無法套用你的變更"
-
-msgid "Remove your API key?"
-msgstr "要移除你的 API 金鑰嗎？"
-
-msgid "The agent will use Mixar's default provider again."
-msgstr "智慧代理將再次使用 Mixar 的預設供應商。"
-
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "之後的智慧代理要求將扣除 Mixar 點數。"
-
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar 智慧代理現在於你的供應商上執行——不會扣除 Mixar 點數。"
-
-msgid "API key removed"
-msgstr "已移除 API 金鑰"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "智慧代理已改回使用 Mixar 的預設供應商。"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "智慧代理要求將再次扣除 Mixar 點數。"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
 msgid "Try Again"
 msgstr "再試一次"
 
-msgid "Save & Activate"
-msgstr "儲存並啟用"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Keep My Key"
-msgstr "保留我的金鑰"
-
-msgid "Remove API Key"
-msgstr "移除 API 金鑰"
+msgid "Remove key"
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "正在解壓縮本機 AI 執行環境…"
@@ -1739,47 +1796,14 @@ msgstr "為 Mixar 智慧代理使用你自己的 API 金鑰。啟用期間，智
 msgid "Validate with the provider and save your API key"
 msgstr "向供應商驗證並儲存你的 API 金鑰"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "請為此供應商選擇模型並輸入 API 金鑰。"
+msgid "Pick a model and enter your key."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "必須填寫模型代號和 API 金鑰。"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "請選擇 Codex 模型並載入你的 auth.json 檔案。"
-
-msgid "Save failed."
-msgstr "儲存失敗。"
-
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
-
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "找不到 ~/.codex/auth.json——請先執行 `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "無法讀取 ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json 是空的"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
-
-msgid "Loaded auth.json"
-msgstr "已載入 auth.json"
-
-msgid "Paste auth.json"
-msgstr "貼上 auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "從剪貼簿將你的 ~/.codex/auth.json 貼上至欄位"
-
-msgid "Clipboard is empty"
-msgstr "剪貼簿為空白"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼上的 auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
+msgid "Couldn't save. Try again."
+msgstr ""
 
 msgid "Remove"
 msgstr "移除"
@@ -1793,8 +1817,8 @@ msgstr "取消移除流程並返回主對話框"
 msgid "Delete the stored API key server-side"
 msgstr "在伺服器端刪除已儲存的 API 金鑰"
 
-msgid "Remove failed."
-msgstr "移除失敗。"
+msgid "Couldn't switch back. Try again."
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "重新整理 BYOK 狀態"
@@ -1853,11 +1877,11 @@ msgstr "你的 API 金鑰會加密儲存，且僅用於 Mixar 智慧代理要求
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models 中的任何模型代號（例如 anthropic/claude-opus-4.8）"
 
-msgid "Codex auth.json"
+msgid "Codex sign-in file"
 msgstr ""
 
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json 的內容（請先執行 `codex login`）"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "本機模式"
@@ -5702,9 +5726,6 @@ msgstr "下載紋理時發生未預期的錯誤：{error}"
 msgid "Failed to apply textures to any object"
 msgstr "無法將紋理套用至任何物體"
 
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360：套用 PBR 紋理"
-
 msgid "Both refined and guide masks are required"
 msgstr "需要精修遮罩與引導遮罩"
 
@@ -5786,6 +5807,12 @@ msgstr "組裝角色"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "在本機將生成的部件附加至已綁定或一般的身體"
 
+msgid "Use Image Style Only"
+msgstr "僅使用影像風格"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
+
 msgid "Enter a prompt in the image node"
 msgstr "請在影像節點中輸入提示詞"
 
@@ -5811,7 +5838,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "生成編目中無法使用「模型生成」"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "推論節點尚不支援此「模型生成」模式"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "沒有可用的已啟用 3D 生成模型"
@@ -6334,9 +6361,6 @@ msgstr "無法下載／轉換世界：{error}"
 
 msgid "World imported but produced no objects"
 msgstr "已匯入世界，但未產生任何物體"
-
-msgid "World Labs: Import World"
-msgstr "World Labs：匯入世界"
 
 msgid "Failed to import world: {error}"
 msgstr "無法匯入世界：{error}"
@@ -8001,12 +8025,6 @@ msgstr "風格轉換影像 - 將藝術風格套用至生成的紋理"
 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "參考影像 - 直接驅動紋理生成（忽略提示詞）"
-
-msgid "Use Image Style Only"
-msgstr "僅使用影像風格"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
 
 msgid "Output texture resolution in pixels"
 msgstr "輸出紋理解析度（像素）"
@@ -10890,9 +10908,6 @@ msgstr "生成的材質回應未包含腳本"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "已生成材質，但無法套用：{result}"
-
-msgid "Generate Procedural Material"
-msgstr "生成程序化材質"
 
 msgid "Material generation failed"
 msgstr "材質生成失敗"
@@ -19599,6 +19614,72 @@ msgstr "Mixie 聊天登入用的使用者 ID"
 msgid "Agent expects: {formats}"
 msgstr "智慧代理預期的格式：{formats}"
 
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
+
 msgid "*Stopped*"
 msgstr "*已停止*"
 
@@ -20148,8 +20229,8 @@ msgstr "登入失敗"
 msgid "Sign in with your Mixar account"
 msgstr "使用你的 Mixar 帳號登入"
 
-msgid "Waiting for browser..."
-msgstr "正在等待瀏覽器..."
+msgid "Continue in your browser"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "使用瀏覽器登入"
@@ -21265,6 +21346,12 @@ msgstr "正在繼續先前的任務..."
 msgid "Could not resume the previous task"
 msgstr "無法繼續先前的任務"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21284,6 +21371,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -24439,6 +24529,63 @@ msgstr ""
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "檔案由較新版本的 Mixar（%d.%d）儲存，部分資料可能會遺失"
 
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
+
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "此檔案由較新版本儲存，請使用 Mixar %s 或更新版本開啟"
 
@@ -25017,6 +25164,12 @@ msgstr "已關閉數量"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "已關閉的智慧代理氣泡視窗數量"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "設定智慧代理氣泡視窗大小"
@@ -26137,6 +26290,12 @@ msgstr "紋理集空間"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "使用側邊欄面板管理紋理集"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "回到第一個"
 
@@ -26850,6 +27009,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "工作空間任務識別碼"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -28096,6 +28276,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28179,6 +28383,12 @@ msgstr "副檔名過濾器"
 
 msgid "Write compressed .mixar file"
 msgstr "寫入壓縮的 .mixar 檔案"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "儲存為 .mixar 檔案"

@@ -232,7 +232,7 @@ def test_preview_never_writes_the_lock_or_preferences():
 def test_preview_start_has_no_synchronous_render_path():
     src = PREVIEW.read_text()
     assert src.count("bpy.ops.render.render(") == 1
-    assert 'bpy.ops.render.render("INVOKE_DEFAULT", write_still=False)' in src
+    assert 'bpy.ops.render.render("INVOKE_DEFAULT", write_still=False, **kwargs)' in src
     assert "EXEC_DEFAULT" not in src
 
 
