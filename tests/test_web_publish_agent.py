@@ -82,7 +82,9 @@ def test_export_glb_delegates_to_export_to_path(monkeypatch):
 
     monkeypatch.setattr(agent_export, "export_to_path", fake_export)
     meshes = [SimpleNamespace(name="Chair")]
-    result = glb_export.export_glb("/tmp/x/scene.glb", meshes, include_animation=False)
+    no_camera = SimpleNamespace(camera=None)
+    result = glb_export.export_glb("/tmp/x/scene.glb", meshes, include_animation=False,
+                                   scene=no_camera)
     assert result["warning"] == "World not carried"
     filepath, spec, via, tool = calls[0]
     assert filepath.endswith("scene.glb") and via == "web_publish" and tool == "publish_to_web"
@@ -91,9 +93,34 @@ def test_export_glb_delegates_to_export_to_path(monkeypatch):
     monkeypatch.setattr(agent_export, "export_to_path",
                         lambda *a, **k: {"success": False, "error": "Exporter returned CANCELLED"})
     with pytest.raises(glb_export.ExportError, match="CANCELLED"):
-        glb_export.export_glb("/tmp/x/scene.glb", meshes)
+        glb_export.export_glb("/tmp/x/scene.glb", meshes, scene=no_camera)
     with pytest.raises(glb_export.ExportError):
-        glb_export.export_glb("/tmp/x/scene.glb", [])
+        glb_export.export_glb("/tmp/x/scene.glb", [], scene=no_camera)
+
+
+class _Camera(dict):
+    """An ID-property bag like ``bpy.types.Object``."""
+
+
+def test_active_camera_is_tagged_for_the_export_only(monkeypatch):
+    from mixar.modules.space_mixie_chat.core import agent_export
+
+    camera = _Camera()
+    seen = []
+    monkeypatch.setattr(agent_export, "export_to_path", lambda *a, **k: seen.append(
+        dict(camera)) or {"success": True})
+    glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair")],
+                          scene=SimpleNamespace(camera=camera))
+    assert seen == [{"mixar_active_camera": True}]  # the viewer's home camera
+    assert camera == {}  # removed afterwards: the .blend is left as found
+
+    camera["mixar_active_camera"] = "user value"
+    monkeypatch.setattr(agent_export, "export_to_path",
+                        lambda *a, **k: {"success": False, "error": "boom"})
+    with pytest.raises(glb_export.ExportError):
+        glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair")],
+                              scene=SimpleNamespace(camera=camera))
+    assert camera == {"mixar_active_camera": "user value"}
 
 
 # -- agent_api -----------------------------------------------------------------

@@ -80,12 +80,41 @@ def format_message(template: str, args: Optional[Dict[str, Any]] = None) -> str:
         return str(template or "")
 
 
-def camera_pose_to_config(world_matrix, lens_mm: float, sensor_mm: float) -> Dict[str, Any]:
-    """Decompose a camera world matrix into the viewer's config block.
+def _gltf_axes(x: float, y: float, z: float) -> List[float]:
+    """Blender Z-up → glTF / three.js Y-up (the exporter's ``export_yup``)."""
+    return [round(x, 4), round(z, 4), round(-y, 4)]
 
-    Position is the translation column; Blender cameras look down their -Z
-    axis (column 2 negated). The viewer rebuilds the orientation from
-    (position, target, up); coordinates are Blender Z-up.
+
+def vertical_fov_degrees(lens_mm: float, sensor_width_mm: float, sensor_height_mm: float = 0.0,
+                         sensor_fit: str = "AUTO", aspect: float = 16 / 9) -> Optional[float]:
+    """three.js ``PerspectiveCamera.fov`` (vertical) for a Blender camera.
+
+    ``aspect`` is the render width/height. AUTO fits the sensor width to the
+    larger frame dimension; HORIZONTAL to the width; VERTICAL uses the
+    sensor height for the frame height."""
+    if not lens_mm or lens_mm <= 0 or aspect <= 0:
+        return None
+    fit = str(sensor_fit or "AUTO").upper()
+    if fit == "VERTICAL" and sensor_height_mm > 0:
+        return math.degrees(2.0 * math.atan(sensor_height_mm / (2.0 * lens_mm)))
+    if not sensor_width_mm or sensor_width_mm <= 0:
+        return None
+    half = math.atan(sensor_width_mm / (2.0 * lens_mm))
+    if fit == "HORIZONTAL" or aspect >= 1.0:
+        half = math.atan(math.tan(half) / aspect)  # sensor spans the width
+    return math.degrees(2.0 * half)
+
+
+def camera_pose_to_config(world_matrix, lens_mm: float, sensor_mm: float, *,
+                          sensor_height_mm: float = 0.0, sensor_fit: str = "AUTO",
+                          aspect: float = 16 / 9) -> Dict[str, Any]:
+    """The viewer's ``viewer_config.camera`` from a Blender camera.
+
+    Coordinates are glTF / three.js Y-up (the same frame as the exported
+    GLB) and ``fov`` is VERTICAL degrees, as ``PerspectiveCamera.fov``.
+    Blender cameras look down their local -Z (matrix column 2 negated).
+    The viewer prefers the exported camera node tagged
+    ``mixar_active_camera``; this block is its fallback.
     """
     try:
         px, py, pz = world_matrix.col[3][0], world_matrix.col[3][1], world_matrix.col[3][2]
@@ -96,15 +125,15 @@ def camera_pose_to_config(world_matrix, lens_mm: float, sensor_mm: float) -> Dic
     except Exception:  # noqa: BLE001 — any malformed matrix means "no camera block"
         return {}
     distance = 10.0
-    target = (px + look[0] * distance, py + look[1] * distance, pz + look[2] * distance)
     config = {
-        "position": [round(px, 4), round(py, 4), round(pz, 4)],
-        "target": [round(target[0], 4), round(target[1], 4), round(target[2], 4)],
-        "up": [0.0, 0.0, 1.0],
+        "position": _gltf_axes(px, py, pz),
+        "target": _gltf_axes(px + look[0] * distance, py + look[1] * distance,
+                             pz + look[2] * distance),
+        "up": [0.0, 1.0, 0.0],
     }
-    if lens_mm and lens_mm > 0 and sensor_mm and sensor_mm > 0:
-        fov_deg = math.degrees(2.0 * math.atan(sensor_mm / (2.0 * lens_mm)))
-        config["fov"] = round(min(120.0, max(10.0, fov_deg)), 2)
+    fov = vertical_fov_degrees(lens_mm, sensor_mm, sensor_height_mm, sensor_fit, aspect)
+    if fov is not None:
+        config["fov"] = round(min(120.0, max(10.0, fov)), 2)
     return config
 
 

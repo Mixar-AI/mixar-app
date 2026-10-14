@@ -100,7 +100,7 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
 
     folder, glb_path = workspace.make_export_workspace()
     try:
-        result = glb_export.export_glb(glb_path, meshes, include_animation)
+        result = glb_export.export_glb(glb_path, meshes, include_animation, scene)
         state.set_warning(result.get("warning") or "")
         sha256, size = compute_sha256(glb_path)
         if size > MAX_SCENE_BYTES:
