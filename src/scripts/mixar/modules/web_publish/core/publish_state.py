@@ -238,8 +238,12 @@ class PublishState:
 
     # -- lifecycle ------------------------------------------------------------
 
-    def begin(self, publish_id: str, scene_name: str = "", via: str = "") -> bool:
-        """Claim the single publish slot; False while another publish runs."""
+    def begin(self, publish_id: str = "", scene_name: str = "", via: str = "") -> bool:
+        """Claim the single publish slot; False while another publish runs.
+
+        Taken BEFORE the export and reused by the worker hand-off: a second
+        busy check after the export aborted every #1360 publish, and
+        re-claiming would wipe a cancel requested during the export."""
         with self._lock:
             if self._progress.status in BUSY_STATUSES:
                 return False
@@ -252,6 +256,8 @@ class PublishState:
             self._applied = False
             self._finished_monotonic = 0.0
             return True
+
+    claim = begin  # #1372's name
 
     def start(self) -> None:
         """Unconditional ``begin`` without an id (tests, legacy callers)."""

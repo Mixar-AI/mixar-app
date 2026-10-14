@@ -23,6 +23,7 @@ service on the main thread (``HTTPClient`` reads config on creation).
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import requests
@@ -44,6 +45,24 @@ from mixar.modules.web_publish.constants import API_TIMEOUT_SECONDS, UPLOAD_TIME
 _logger = get_logger(__name__)
 
 _THUMBNAIL_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+# Any query string glued to a URL or a bare path ("…with url: /k?X-Amz-…").
+_SIGNED_QUERY = re.compile(r"(?<=[\w/.\-])\?[^\s'\"()]+")
+
+
+def redact_urls(text: str) -> str:
+    """Drop every URL query string: a presigned URL's query IS the grant,
+    and requests quotes the full URL in its exception text."""
+    return _SIGNED_QUERY.sub("?<redacted>", str(text or ""))
+
+
+def _redacted(exc: BaseException) -> BaseException:
+    """The same exception type with URL-free text, for classify + logs
+    (built outside the ``except`` so the original is not its context)."""
+    text = redact_urls(str(exc))
+    try:
+        return type(exc)(text)
+    except Exception:  # noqa: BLE001 — exotic constructor
+        return RuntimeError(f"{exc.__class__.__name__}: {text}")
 
 
 class PublishApiError(Exception):
@@ -87,7 +106,9 @@ def _http_error(exc: HTTPClientError) -> PublishApiError:
                                code="auth", status_code=status)
     body = _error_body(getattr(exc, "response_data", None))
     data = body.get("data") if isinstance(body.get("data"), dict) else {}
-    code = str(data.get("code") or "")
+    # Moderation refusals carry ``reason`` (content_policy /
+    # moderation_unavailable) instead of ``code``.
+    code = str(data.get("code") or data.get("reason") or "")
     server = str(body.get("message") or getattr(exc, "message", "") or "")
     if server:
         return PublishApiError("{message}", code=code, status_code=status,
@@ -213,11 +234,14 @@ def put_part(url: str, filepath: str, offset: int, length: int,
 
 
 def _put(url: str, body, headers: Dict[str, str]):
+    failure = None
     try:
         return requests.put(url, data=body, headers=headers, timeout=UPLOAD_TIMEOUT_SECONDS)
     except requests.exceptions.RequestException as exc:
-        # The presigned query string is a credential: classify on the bare host.
-        raise _network_error(exc, url.split("?", 1)[0], "web_publish storage upload") from exc
+        failure = _redacted(exc)
+    # The presigned query string is a credential: classify and log only the
+    # redacted text, on the bare host, with no chained original.
+    raise _network_error(failure, url.split("?", 1)[0], "web_publish storage upload")
 
 
 class _ProgressReader:
