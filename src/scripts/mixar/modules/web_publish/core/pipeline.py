@@ -45,7 +45,7 @@ _logger = get_logger(__name__)
 _MB = 1024 * 1024
 
 
-def _refusal(template: str, **args) -> Dict[str, Any]:
+def _refusal(template: str, /, **args) -> Dict[str, Any]:
     return {"ok": False, "error": template, "error_args": args}
 
 
@@ -126,7 +126,11 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
         _logger.warning("web_publish export failed: %s", exc)
         return _fail(state, folder, "{message}", message=str(exc) or exc.__class__.__name__)
 
-    if not spawn(job, folder, service):  # reported in the state, never silent
+    try:
+        spawned = spawn(job, folder, service)
+    except Exception as exc:  # noqa: BLE001 - a thread that never starts frees the slot
+        return _fail(state, folder, n_("Publish failed ({kind})"), kind=exc.__class__.__name__)
+    if not spawned:  # reported in the state, never silent
         ensure_timer()
         return _refusal(n_("The publish lost its claim before upload"))
     ensure_timer()
@@ -139,7 +143,7 @@ class _TooLarge(Exception):
         self.size = size
 
 
-def _fail(state, folder: str, template: str, **args) -> Dict[str, Any]:
+def _fail(state, folder: str, template: str, /, **args) -> Dict[str, Any]:
     workspace.cleanup_workspace(folder)
     state.set_error(template, **args)
     ensure_timer()

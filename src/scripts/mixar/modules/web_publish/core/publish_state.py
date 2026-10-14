@@ -269,7 +269,10 @@ class PublishState:
 
     # -- worker-side writers ----------------------------------------------------
 
-    def set_status(self, status: str, detail: Optional[str] = None,
+    # Template helpers take their fixed arguments positional-only: template
+    # parameters such as {message} must never collide with them (``detail``
+    # and ``progress`` stay keywords — never name a template field so).
+    def set_status(self, status: str, /, detail: Optional[str] = None,
                    progress: Optional[float] = None, **args) -> None:
         with self._lock:
             if self._progress.status in TERMINAL_STATUSES and status not in TERMINAL_STATUSES:
@@ -293,16 +296,17 @@ class PublishState:
         with self._lock:
             self._progress.warning = str(warning or "")
 
-    def set_error(self, message: str, **args) -> None:
-        self._finish(STATUS_ERROR, error=message, error_args=args)
+    def set_error(self, template: str, /, **args) -> None:
+        self._finish(STATUS_ERROR, error=template, error_args=args)
 
     def set_cancelled(self) -> None:
         self._finish(STATUS_CANCELLED, error="Publish cancelled", error_args={})
 
-    def set_result(self, result: PublishResult, detail: str = "", **args) -> None:
-        self._finish(STATUS_DONE, result=result, detail=detail, detail_args=args, progress=1.0)
+    def set_result(self, result: PublishResult, detail: str = "", /, **args) -> None:
+        self._finish(STATUS_DONE, result, detail=detail, detail_args=args, progress=1.0)
 
-    def _finish(self, status: str, result: Optional[PublishResult] = None, **changes) -> None:
+    def _finish(self, status: str, result: Optional[PublishResult] = None, /,
+                **changes) -> None:
         with self._lock:
             self._progress = replace(self._progress, status=status, **changes)
             if result is not None:

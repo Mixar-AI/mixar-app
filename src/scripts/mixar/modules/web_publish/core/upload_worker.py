@@ -61,19 +61,24 @@ def spawn(job: PublishJob, workspace: str, service) -> bool:
 
 
 def _run(job: PublishJob, workspace: str, service) -> None:
+    """Thread entry: every way out ends terminal, so the single publish
+    slot is always released (a dead thread must never leave it busy)."""
     state = get_publish_state()
     created = {}
     try:
-        _publish(job, service, state, created)
-    except _Cancelled:
-        _discard_draft(service, job, created)
-        state.set_cancelled()
-    except PublishApiError as exc:
-        state.set_error(exc.message, **exc.params)
-    except Exception as exc:  # noqa: BLE001 - the worker must never die silently
+        try:
+            _publish(job, service, state, created)
+        except _Cancelled:
+            _discard_draft(service, job, created)
+            state.set_cancelled()
+        except PublishApiError as exc:
+            state.set_error(exc.message, **exc.params)
+    except BaseException as exc:  # noqa: BLE001 - incl. a failing handler above
         _logger.error("web_publish worker failed: %s", exc, exc_info=True)
         state.set_error(n_("Publish failed ({kind})"), kind=exc.__class__.__name__)
     finally:
+        if state.busy:  # belt and braces: never leave the claim held
+            state.set_error(n_("Publish failed ({kind})"), kind="unfinished")
         cleanup_workspace(workspace)
 
 
