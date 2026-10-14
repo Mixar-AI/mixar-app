@@ -85,10 +85,22 @@ def scene_of(uid: int):
     return next((s for s in bpy.data.scenes if s.session_uid == uid), None)
 
 
+#: The agent preview's private render scene (space_mixie_chat/core/render_scene.py):
+#: a linked copy of a tab's scene for one render job, never a tab.
+RENDER_SCENE_PROP = "mixar_internal_render_scene"
+
+
+def is_internal(scene) -> bool:
+    try:
+        return bool(scene.get(RENDER_SCENE_PROP))
+    except (ReferenceError, AttributeError):
+        return False
+
+
 def live_tabs() -> list[int]:
-    TABS[:] = [uid for uid in TABS if scene_of(uid) is not None]
+    TABS[:] = [uid for uid in TABS if scene_of(uid) is not None and not is_internal(scene_of(uid))]
     for s in bpy.data.scenes:                       # a whole-document walk can bring one back
-        if s.session_uid not in TABS:
+        if s.session_uid not in TABS and not is_internal(s):
             TABS.append(s.session_uid)
     return list(TABS)
 
@@ -209,6 +221,14 @@ def push(uid: int, op: str, mode_step: bool = False) -> str:
     elif not bpy.context.window_manager.mixar_undo_push(step, scene=scene):
         raise RuntimeError(f"push {step} failed")
     SNAP[step] = fingerprint_all()
+    # A tab's own edit is filed under that tab, a private render scene alive or not
+    # (it shares the tab's whole content: counted as a tab, the reach rule filed the
+    # push under it; Blastoff merge, 2026-10-14).
+    if not mode_step and op in ("add", "move", "rename"):
+        top = history()["steps"][0]
+        if top["tab_uid"] != uid:
+            raise Violation(f"push {step!r} was filed under {top['tab_uid']}, not its tab {uid}"
+                            f" (render scene alive: {any(is_internal(x) for x in bpy.data.scenes)})")
     return step
 
 
@@ -390,7 +410,7 @@ def op_share(uid):
 def op_unshare(uid):
     scene = scene_of(uid)
     for o in scene.collection.objects:
-        users = [s for s in bpy.data.scenes if s is not scene and o.name in s.objects]
+        users = [s for s in bpy.data.scenes if s is not scene and not is_internal(s) and o.name in s.objects]
         if users and o.mode == "OBJECT":
             scene.collection.objects.unlink(o)
             return push(uid, "unshare")
@@ -424,6 +444,19 @@ def op_new_tab(uid):
     TABS.append(s.session_uid)
     show(s.session_uid)
     return push(s.session_uid, "new-tab")
+
+
+def op_preview_render(uid):
+    """The agent's preview render: a private linked copy of the tab's scene that
+    lives for one job (no undo step of its own), then goes."""
+    alive = [x for x in bpy.data.scenes if is_internal(x)]
+    if alive:
+        bpy.data.scenes.remove(alive[0], do_unlink=True)
+        return None
+    copy = scene_of(uid).copy()
+    copy[RENDER_SCENE_PROP] = True
+    copy.name = "~Mixar agent render"
+    return None
 
 
 def op_hdri(uid):
@@ -478,6 +511,7 @@ OPS = [
     (op_add, 14), (op_delete, 5), (op_move, 10), (op_material, 8), (op_edit, 8),
     (op_leave_modes, 3), (op_share, 3), (op_unshare, 3), (op_send, 4), (op_new_tab, 2),
     (op_hdri, 2), (op_rename, 2), (op_engine_scene_copy, 1), (op_engine_link_to_scene, 2),
+    (op_preview_render, 3),
 ]
 
 
