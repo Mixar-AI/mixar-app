@@ -199,7 +199,8 @@ class SessionLifecycleMixin:
         t = _telemetry()
         if t is not None:
             try:
-                t.started(self.tour.id, self.language, self.narration)
+                t.started(self.tour.id, self.language, self.narration,
+                          tour_run_id=self.tour_run_id)
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s started (rate=%.2f silent=%s narration=%s)",
@@ -268,7 +269,9 @@ class SessionLifecycleMixin:
         if t is not None:
             try:
                 elapsed = time.monotonic() - getattr(self, "_started_wall", time.monotonic())
-                t.finished(self.tour.id, reason, beat_id, elapsed)
+                t.finished(self.tour.id, reason, beat_id, elapsed,
+                           tour_run_id=self.tour_run_id,
+                           step_index=self.runner.index if self.runner else -1)
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s stopped: %s", self.tour.id, reason)
