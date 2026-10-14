@@ -3845,6 +3845,12 @@ static void minimise_anim_finish(void *user_data)
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
+#ifdef __APPLE__
+    /* Detached only now that the fade is over (see mixar_bubble_minimise_exec). */
+    if (g_host_ghostwin != nullptr) {
+      Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
+    }
+#endif
     Mixar_WindowOrderOut(g_bubble_ghostwin);
     Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
   }
@@ -4003,12 +4009,12 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
-   * hides or it will vanish too). */
+   * hides or it will vanish too). The bubble itself stays a child of the
+   * host until minimise_anim_finish: detached now, nothing keeps it above
+   * the host, the host (just clicked) covers it at once and the sink-and-fade
+   * plays unseen — the island blinked out for ~0.3 s before the pill showed. */
   if (g_pill_ghostwin != nullptr) {
     Mixar_WindowDetachFromParent(g_pill_ghostwin, g_bubble_ghostwin);
-  }
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #endif
 

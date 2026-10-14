@@ -16,6 +16,8 @@ OPERATIONS_FILE = "operations.jsonl"
 SCRIPTS_SUBDIR = "scripts"
 NO_SESSION = "_nosession"
 CLEANUP_MAX_AGE_DAYS = 15
+# A session holding only undo/redo markers is dropped once this old (it describes nothing).
+UNDO_ONLY_MAX_AGE_DAYS = 1
 
 # Record sources / kinds
 SOURCE_AGENT = "AGENT"

@@ -26089,6 +26089,12 @@ msgstr "Атекстурақәа Реизга Аҭыԥ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Атекстурақәа реизгақәа рнапхгаразы аган панельқәа шәырхә"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Аԥхьатәи ахь ахынҳәра"
 
@@ -28131,6 +28137,12 @@ msgstr "Ашәҟәы аҵыхәтәантәи афильтр"
 
 msgid "Write compressed .mixar file"
 msgstr "Икомпрессцу .mixar ашәҟәы аҩра"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ашәҟәы ҳасабала ахьчара"

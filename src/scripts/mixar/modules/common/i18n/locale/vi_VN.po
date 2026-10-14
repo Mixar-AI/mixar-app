@@ -26089,6 +26089,12 @@ msgstr "Không Gian Bộ Chất Liệu"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Dùng các bảng ở thanh bên để quản lý bộ chất liệu"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Về đầu tiên"
 
@@ -28131,6 +28137,12 @@ msgstr "Bộ lọc phần mở rộng tập tin"
 
 msgid "Write compressed .mixar file"
 msgstr "Ghi tập tin .mixar được nén"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Lưu thành tập tin .mixar"

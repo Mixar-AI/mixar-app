@@ -26089,6 +26089,12 @@ msgstr "纹理集空间"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "使用侧栏面板管理纹理集"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "回到第一个"
 
@@ -28131,6 +28137,12 @@ msgstr "文件扩展名过滤器"
 
 msgid "Write compressed .mixar file"
 msgstr "写入压缩的 .mixar 文件"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "保存为 .mixar 文件"

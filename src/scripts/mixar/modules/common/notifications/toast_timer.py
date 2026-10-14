@@ -14,6 +14,7 @@ import threading
 from typing import Optional
 
 import bpy
+from bpy.app.handlers import persistent
 
 from .constants import (
     ANIMATION_INTERVAL,
@@ -90,6 +91,31 @@ def _toast_tick() -> Optional[float]:
     return None
 
 
+@persistent
+def _resume_after_load(*_args) -> None:
+    """A file load (open, revert, checkpoint restore) drops non-persistent timers
+    and replaces the WindowManager, taking the WM visibility flag with it. A toast
+    still in the store kept drawing but never expired, and the C++ click gate read
+    the missing flag as "no toasts": clicks on its buttons fell through to the
+    viewport. Restart the machinery for any toast that survived the load."""
+    try:
+        from .store import get_notification_store
+        if get_notification_store().get_visible():
+            ensure_toast_timer_running()
+        else:
+            _set_toasts_visible_flag(False)
+    except Exception:
+        pass
+
+
+def _install_load_handler() -> None:
+    try:
+        if _resume_after_load not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(_resume_after_load)
+    except Exception:
+        pass
+
+
 def ensure_toast_timer_running() -> None:
     """Start the toast timer and install the draw handler if not already active.
 
@@ -106,6 +132,7 @@ def ensure_toast_timer_running() -> None:
         from .toast_renderer import install_draw_handler
         install_draw_handler()
         _set_toasts_visible_flag(True)
+        _install_load_handler()
 
         if not bpy.app.timers.is_registered(_toast_tick):
             bpy.app.timers.register(_toast_tick, first_interval=TIMER_INTERVAL)

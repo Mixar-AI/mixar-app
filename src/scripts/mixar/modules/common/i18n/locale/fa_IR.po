@@ -26089,6 +26089,12 @@ msgstr "ﺖﻓﺎﺑ ﯼﺎﻫ‌ﻪﻋﻮﻤﺠﻣ ﯼﺎﻀﻓ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ﺪﯿﻨﮐ ﻩﺩﺎﻔﺘﺳﺍ ﺖﻓﺎﺑ ﯼﺎﻫ‌ﻪﻋﻮﻤﺠﻣ ﺖﯾﺮﯾﺪﻣ ﯼﺍﺮﺑ ﯼﺭﺎﻨﮐ ﺭﺍﻮﻧ ﯼﺎﻫ‌ﻞﻨﭘ ﺯﺍ"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ﻝﻭﺍ ﻪﺑ ﺖﺸﮔﺯﺎﺑ"
 
@@ -28131,6 +28137,12 @@ msgstr "ﻞﯾﺎﻓ ﺪﻧﻮﺴﭘ ﯽﻓﺎﺻ"
 
 msgid "Write compressed .mixar file"
 msgstr "mixar. ﻩﺩﺮﺸﻓ ﻞﯾﺎﻓ ﻦﺘﺷﻮﻧ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "mixar. ﻞﯾﺎﻓ ﺕﺭﻮﺻ‌ﻪﺑ ﻩﺮﯿﺧﺫ"

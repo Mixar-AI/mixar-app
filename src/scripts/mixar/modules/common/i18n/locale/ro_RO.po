@@ -26089,6 +26089,12 @@ msgstr "Spațiu seturi de texturi"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Folosiți panourile barei laterale pentru a gestiona seturile de texturi"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Înapoi la primul"
 
@@ -28131,6 +28137,12 @@ msgstr "Filtru extensie fișier"
 
 msgid "Write compressed .mixar file"
 msgstr "Scrie fișier .mixar comprimat"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Salvare ca fișier .mixar"

@@ -26089,6 +26089,12 @@ msgstr "텍스처 세트 공간"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "사이드바 패널을 사용하여 텍스처 세트를 관리하세요"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "처음으로 돌아가기"
 
@@ -28131,6 +28137,12 @@ msgstr "파일 확장자 필터"
 
 msgid "Write compressed .mixar file"
 msgstr "압축된 .mixar 파일을 작성합니다"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar 파일로 저장합니다"

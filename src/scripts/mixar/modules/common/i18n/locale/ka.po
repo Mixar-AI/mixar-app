@@ -26089,6 +26089,12 @@ msgstr "ტექსტურების ნაკრებების სი�
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ტექსტურების ნაკრებების სამართავად გამოიყენეთ გვერდითა პანელები"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "უკან პირველზე"
 
@@ -28131,6 +28137,12 @@ msgstr "ფაილის გაფართოების ფილტრი"
 
 msgid "Write compressed .mixar file"
 msgstr "შეკუმშული .mixar ფაილის ჩაწერა"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "შენახვა .mixar ფაილად"

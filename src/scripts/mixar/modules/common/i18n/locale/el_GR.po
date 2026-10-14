@@ -26089,6 +26089,12 @@ msgstr "Χώρος συνόλων υφών"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Χρησιμοποιήστε τα ταμπλό της πλευρικής στήλης για τη διαχείριση συνόλων υφών"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Πίσω στο πρώτο"
 
@@ -28131,6 +28137,12 @@ msgstr "Φίλτρο επέκτασης αρχείου"
 
 msgid "Write compressed .mixar file"
 msgstr "Εγγραφή συμπιεσμένου αρχείου .mixar"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Αποθήκευση ως αρχείο .mixar"

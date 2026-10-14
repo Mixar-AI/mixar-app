@@ -26089,6 +26089,12 @@ msgstr "Espai de jocs de textures"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Usar els plafons laterals per gestionar els jocs de textures"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Tornar al primer"
 
@@ -28131,6 +28137,12 @@ msgstr "Filtre d'extensió de fitxer"
 
 msgid "Write compressed .mixar file"
 msgstr "Escriure un fitxer .mixar comprimit"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Desar com a fitxer .mixar"

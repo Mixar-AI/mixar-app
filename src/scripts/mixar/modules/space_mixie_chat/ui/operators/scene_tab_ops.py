@@ -32,7 +32,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
 from mixar.modules.common.utils.undo import push_undo_step
 
-from ...constants import SessionState, is_lane_scene
+from ...constants import SessionState, is_internal_scene, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
 from ...core.scene_identity import ACCOUNT_PROPS, inherit_account  # noqa: F401 — re-exported for callers
 from ...core.scene_tab_snapshot import snapshot_shown_tab
@@ -80,8 +80,9 @@ def reorder_scene_tab(scene, index: int) -> bool:
 
 
 def real_scenes() -> list:
-    """The user's tabs: every scene that is not an agent worker lane."""
-    return [s for s in bpy.data.scenes if not is_lane_scene(s)]
+    """The user's tabs: every scene that is not an agent worker lane or a
+    private preview-render scene."""
+    return [s for s in bpy.data.scenes if not is_lane_scene(s) and not is_internal_scene(s)]
 
 
 def switch_all_windows(scene, showing=None) -> None:

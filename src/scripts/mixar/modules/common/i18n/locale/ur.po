@@ -26089,6 +26089,12 @@ msgstr "ﺲﯿﭙﺳ ﺎﮐ ﮞﻮﭩﯿﺳ ﮯﮐ ﺖﺧﺎﺳ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "۔ﮟﯾﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﺰﻠﻨﯿﭘ ﺭﺎﺑ ﮉﯿﺋﺎﺳ ﮯﯿﻟ ﮯﮐ ﮯﻨﻟﺎﮭﺒﻨﺳ ﭧﯿﺳ ﮯﮐ ﺖﺧﺎﺳ"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ﺲﭘﺍﻭ ﺮﭘ ﮯﻠﮩﭘ"
 
@@ -28131,6 +28137,12 @@ msgstr "ﺮﭩﻠﻓ ﻦﺸﻨﯿﭩﺴﮑﯾﺍ ﻞﺋﺎﻓ"
 
 msgid "Write compressed .mixar file"
 msgstr "۔ﮯﮨ ﺎﺘﮭﮑﻟ ﻞﺋﺎﻓ mixar. ﮦﺪﺷ ﺲﯾﺮﭙﻤﮐ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ﮟﯾﺮﮐ ﻅﻮﻔﺤﻣ ﺮﭘ ﺭﻮﻃ ﮯﮐ ﻞﺋﺎﻓ"
