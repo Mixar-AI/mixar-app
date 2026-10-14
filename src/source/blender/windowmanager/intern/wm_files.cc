@@ -278,6 +278,11 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
     bScreen *screen = BKE_workspace_layout_screen_get(layout);
     if (bmain != nullptr && screen != nullptr && BLI_findindex(&bmain->screens, screen) != -1) {
       stash.screens.push_back({screen, screen->id.prev});
+      /* Out of the name map too: the writer validates names against Main (autosave,
+       * turn-checkpoint snapshots), and a name with no datablock read as "Critical data
+       * corruption: Conflicts and/or otherwise invalid data-blocks names" on every
+       * checkpoint taken with the island open, and rebuilt the map under the screens. */
+      BKE_main_namemap_remove_id(*bmain, screen->id);
       BLI_remlink(&bmain->screens, screen);
     }
   }
@@ -295,6 +300,10 @@ static void wm_agent_bubble_windows_relink_after_write(Main *bmain,
   /* Reverse order, so each `prev` is back in its list before its successor returns. */
   for (auto it = stash.screens.rbegin(); it != stash.screens.rend(); ++it) {
     BLI_insertlinkafter(&bmain->screens, it->prev, it->screen);
+  }
+  if (!stash.screens.empty()) {
+    /* Their names come back with them: rebuilt from Main on the next name lookup. */
+    BKE_main_namemap_clear(*bmain);
   }
   for (auto it = stash.layouts.rbegin(); it != stash.layouts.rend(); ++it) {
     BLI_insertlinkafter(&it->workspace->layouts, it->prev, it->layout);
