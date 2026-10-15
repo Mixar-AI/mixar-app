@@ -11,7 +11,6 @@ WIDGET_TOGGLE = "toggle"
 WIDGET_TEXT = "text"
 WIDGET_NUMBER = "number"
 WIDGET_SEGMENTED = "segmented"
-WIDGET_MULTI_SELECT = "multi_select"
 
 # Parameter value types the backend catalog may specify.
 TYPE_STRING = "string"

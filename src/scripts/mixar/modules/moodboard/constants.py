@@ -443,7 +443,7 @@ NODE_TEMPLATES = (
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', 'retopology'),
     ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', 'mesh_segmentation'),
     ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', 'animate'),
-    ('ANIMATE', n_("Animate"), 'ARMATURE_DATA', 'animation'),
+    ('ANIMATE', n_("Animate"), 'ACTION', 'animation'),
     ('MESH_REFERENCE', n_("Add Mesh"), 'OUTLINER_OB_MESH', None),
     ('CHARACTER_PARTS', n_("Character Parts"), 'OUTLINER_OB_ARMATURE', 'character_parts'),
     ('CHARACTER_SHEET_3D', n_("Character Sheet to 3D"), 'COMMUNITY', 'model_gen'),

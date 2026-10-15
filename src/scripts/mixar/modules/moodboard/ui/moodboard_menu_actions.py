@@ -30,7 +30,7 @@ MESH_CONTINUATIONS = (
 ASSEMBLE_CONTINUATION = ('ASSEMBLE', n_("Assemble onto this body"), 'BONE_DATA', None)
 # Offered only from a character that carries an Auto Rig job (an Auto Rig or
 # Animate card, or an import stamped by one): the retarget needs that job.
-ANIMATE_CONTINUATION = ('ANIMATE', n_("Animate"), 'ARMATURE_DATA', "animation")
+ANIMATE_CONTINUATION = ('ANIMATE', n_("Animate"), 'ACTION', "animation")
 
 
 def _is_rigged_asset(asset) -> bool:
