@@ -1020,24 +1020,6 @@ msgid "The serialized frozen frame this mark was drawn on"
 msgstr "The serialised frozen frame this mark was drawn on"
 
 # derived
-msgid ""
-"Profile / account dropdown — opened from the global top bar.\n"
-"\n"
-"The contents are drawn natively by `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
-"rather than a menu. Python still owns registration and every\n"
-"operator the card invokes — C++ owns only pixels.\n"
-msgstr ""
-"Profile / account dropdown — opened from the global top bar.\n"
-"\n"
-"The contents are drawn natively by `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage metre and the account actions, laid out as one card\n"
-"rather than a menu. Python still owns registration and every\n"
-"operator the card invokes — C++ owns only pixels.\n"
-
-# derived
 msgid "The generate sub-type — a generation-catalog service key (e.g. image_gen, model_3d)"
 msgstr "The generate sub-type — a generation-catalogue service key (e.g. image_gen, model_3d)"
 

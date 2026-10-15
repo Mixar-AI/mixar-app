@@ -3011,6 +3011,9 @@ msgstr "ანგარიშის სახელი"
 msgid "Display name for the account greeting"
 msgstr "საჩვენებელი სახელი ანგარიშის მისალმებისთვის"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "ფაილის უფრო ახალი ვერსია"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "შედით თქვენი Mixar ანგარიშით"
+
 msgid "Session expired"
 msgstr "სესია ამოიწურა"
 
@@ -20226,31 +20232,27 @@ msgstr "გთხოვთ, თავიდან შეხვიდეთ."
 msgid "Login Failed"
 msgstr "შესვლა ვერ მოხერხდა"
 
-msgid "Sign in with your Mixar account"
-msgstr "შედით თქვენი Mixar ანგარიშით"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ბრაუზერით შესვლა"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"პროფილის / ანგარიშის ჩამოშლა — იხსნება გლობალური ზედა ზოლიდან.\n"
-"\n"
-"შიგთავსს ადგილობრივად ხატავს `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): მისალმება, გეგმის ჩიპი,\n"
-"კრედიტების ხარჯვის მაჩვენებელი და ანგარიშის ქმედებები, ერთ ბარათად\n"
-"და არა მენიუდ. Python კვლავ ფლობს რეგისტრაციას და ყოველ\n"
-"ოპერატორს, რომელსაც ბარათი იძახებს — C++ მხოლოდ პიქსელებს ფლობს.\n"
 
 msgid "Dashboard"
 msgstr "მართვის პანელი"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "გასვლა"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "ეკრანის ანაბეჭდის დაჭერა"
 
@@ -21301,14 +21303,14 @@ msgstr "დევ რეჟიმი: გათიშულია"
 msgid "Disconnected from server"
 msgstr "სერვერიდან გათიშულია"
 
+msgid "Could not save the chat to History"
+msgstr "ჩატის ისტორიაში შენახვა ვერ მოხერხდა"
+
 msgid "New Chat"
 msgstr "ახალი ჩატი"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "ახალი ჩატის დაწყება (მიმდინარე ჩატი ისტორიაში ინახება)"
-
-msgid "Could not save the chat to History"
-msgstr "ჩატის ისტორიაში შენახვა ვერ მოხერხდა"
 
 msgid "Started new chat session"
 msgstr "ახალი ჩატის სესია დაიწყო"

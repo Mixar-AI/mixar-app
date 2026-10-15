@@ -3011,6 +3011,9 @@ msgstr "Jina la akaunti"
 msgid "Display name for the account greeting"
 msgstr "Jina la kuonyesha la salamu ya akaunti"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Toleo jipya zaidi la faili"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Ingia kwa akaunti yako ya Mixar"
+
 msgid "Session expired"
 msgstr "Kipindi kimeisha"
 
@@ -20226,31 +20232,27 @@ msgstr "Tafadhali ingia tena."
 msgid "Login Failed"
 msgstr "Kuingia kumeshindwa"
 
-msgid "Sign in with your Mixar account"
-msgstr "Ingia kwa akaunti yako ya Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Ingia kwa kivinjari"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Menyu kunjuzi ya wasifu / akaunti — inafunguliwa kutoka upau wa juu wa jumla.\n"
-"\n"
-"Maudhui huchorwa asili na `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): salamu, chipu ya mpango,\n"
-"mita ya matumizi ya krediti na vitendo vya akaunti, vimepangwa kama kadi moja\n"
-"badala ya menyu. Python bado inamiliki usajili na kila\n"
-"opereta ambaye kadi inamwita — C++ inamiliki pikseli tu.\n"
 
 msgid "Dashboard"
 msgstr "Dashibodi"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Toka"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Nasa picha ya skrini"
 
@@ -21301,14 +21303,14 @@ msgstr "Modi ya msanidi: Imetenganishwa"
 msgid "Disconnected from server"
 msgstr "Imetenganishwa na seva"
 
+msgid "Could not save the chat to History"
+msgstr "Haikuweza kuhifadhi mazungumzo kwenye Historia"
+
 msgid "New Chat"
 msgstr "Mazungumzo mapya"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Huanzisha mazungumzo mapya (mazungumzo ya sasa huhifadhiwa kwenye Historia)"
-
-msgid "Could not save the chat to History"
-msgstr "Haikuweza kuhifadhi mazungumzo kwenye Historia"
 
 msgid "Started new chat session"
 msgstr "Kipindi kipya cha mazungumzo kimeanza"

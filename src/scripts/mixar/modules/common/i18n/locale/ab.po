@@ -3011,6 +3011,9 @@ msgstr "Аккаунт ахьӡ"
 msgid "Display name for the account greeting"
 msgstr "Аккаунт азҵаара азы иаарԥштәу ахьӡ"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Ашәҟәы аверсиа ҿыц"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar аккаунт ала аҩналара"
+
 msgid "Session expired"
 msgstr "Асеанс иаҵәуп"
 
@@ -20226,31 +20232,27 @@ msgstr "Ишәҳәоуп, еиҭа шәыҩнала."
 msgid "Login Failed"
 msgstr "Аҭалара алымшеит"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar аккаунт ала аҩналара"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Абраузер ала аҭалара"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Апрофиль / аккаунт аиҵәыҵәа асиа — зеиԥшла ахы апанель аҟынтәи иаартоуп.\n"
-"\n"
-"Аҵакы ахаҭала иунарбоит `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): абзиара аҳәара, аплан ачип, а\n"
-"кредитқәа рхархәара аметр, аккаунт аусурақәа — акы акарточка ҳасабла,\n"
-"амениу акәымкәа. Python арегистрациагьы, акарточка зыԥхьо аоператорцыԥхьаӡагьы\n"
-"инапхгоит — C++ апикселқәа мацара инапхгоит.\n"
 
 msgid "Dashboard"
 msgstr "Адашборд"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Аҭыҵра"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Аекран асахьанҵа аимпыҵара"
 
@@ -21301,14 +21303,14 @@ msgstr "Dev аиҿкаашьа: аимадара иҟәыхран"
 msgid "Disconnected from server"
 msgstr "Асервер аҟынтәи аимадара иҟәыхран"
 
+msgid "Could not save the chat to History"
+msgstr "Ачат Аҭоурых ахь аԥышәара алымшеит"
+
 msgid "New Chat"
 msgstr "Ачат ҿыц"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Ачат ҿыц алагара (уажәтәи ачат Аҭоурых ахь иԥышәоит)"
-
-msgid "Could not save the chat to History"
-msgstr "Ачат Аҭоурых ахь аԥышәара алымшеит"
 
 msgid "Started new chat session"
 msgstr "Ачат асеанс ҿыц илагалоуп"

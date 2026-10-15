@@ -3011,6 +3011,9 @@ msgstr "கணக்குப் பெயர்"
 msgid "Display name for the account greeting"
 msgstr "கணக்கு வாழ்த்துக்கான காட்சிப் பெயர்"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "புதிய கோப்புப் பதிப்பு"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "உங்கள் Mixar கணக்கில் உள்நுழையவும்"
+
 msgid "Session expired"
 msgstr "அமர்வு காலாவதியானது"
 
@@ -20226,31 +20232,27 @@ msgstr "மீண்டும் உள்நுழையவும்."
 msgid "Login Failed"
 msgstr "உள்நுழைவு தோல்வி"
 
-msgid "Sign in with your Mixar account"
-msgstr "உங்கள் Mixar கணக்கில் உள்நுழையவும்"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "உலாவியில் உள்நுழை"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"சுயவிவரம் / கணக்கு கீழ்தோன்றல் — பொது மேல் பட்டியிலிருந்து திறக்கப்படுகிறது.\n"
-"\n"
-"உள்ளடக்கம் `layout.mixar_profile_card()` மூலம் இயல்பாக வரையப்படுகிறது\n"
-"(`interface_mixar_profile_card.cc`): வாழ்த்து, திட்டச் சில்லு,\n"
-"கிரெடிட் பயன்பாட்டு மீட்டர் மற்றும் கணக்குச் செயல்கள், பட்டிக்குப் பதிலாக\n"
-"ஒரே அட்டையாக அமைக்கப்பட்டுள்ளன. பதிவும் அட்டை அழைக்கும் ஒவ்வொரு\n"
-"ஆபரேட்டரும் Python-இடம்தான் — C++ பிக்சல்களை மட்டும் வைத்திருக்கிறது.\n"
 
 msgid "Dashboard"
 msgstr "டாஷ்போர்டு"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "வெளியேறு"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "திரைப்பிடிப்பைப் பிடி"
 
@@ -21301,14 +21303,14 @@ msgstr "Dev பயன்முறை: துண்டிக்கப்பட்
 msgid "Disconnected from server"
 msgstr "சேவையகத்திலிருந்து துண்டிக்கப்பட்டது"
 
+msgid "Could not save the chat to History"
+msgstr "அரட்டையை வரலாற்றில் சேமிக்க முடியவில்லை"
+
 msgid "New Chat"
 msgstr "புதிய அரட்டை"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "புதிய அரட்டையைத் தொடங்குகிறது (நடப்பு அரட்டை வரலாற்றில் சேமிக்கப்படும்)"
-
-msgid "Could not save the chat to History"
-msgstr "அரட்டையை வரலாற்றில் சேமிக்க முடியவில்லை"
 
 msgid "Started new chat session"
 msgstr "புதிய அரட்டை அமர்வு தொடங்கியது"

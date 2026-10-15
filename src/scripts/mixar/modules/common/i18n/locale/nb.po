@@ -3011,6 +3011,9 @@ msgstr "Kontonavn"
 msgid "Display name for the account greeting"
 msgstr "Visningsnavn for kontohilsenen"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Nyere filversjon"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Logg inn med Mixar-kontoen din"
+
 msgid "Session expired"
 msgstr "Økten er utløpt"
 
@@ -20226,31 +20232,27 @@ msgstr "Logg inn igjen."
 msgid "Login Failed"
 msgstr "Innlogging mislyktes"
 
-msgid "Sign in with your Mixar account"
-msgstr "Logg inn med Mixar-kontoen din"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Logg inn med nettleser"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Profil- / kontomeny — åpnes fra den globale topplinjen.\n"
-"\n"
-"Innholdet tegnes direkte av `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): en hilsen, abonnementbrikken,\n"
-"kredittmåleren og kontohandlingene, lagt ut som ett kort\n"
-"heller enn en meny. Python eier fortsatt registrering og hver\n"
-"operatør kortet kaller — C++ eier bare pikslene.\n"
 
 msgid "Dashboard"
 msgstr "Dashbord"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Logg ut"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Ta skjermbilde"
 
@@ -21301,14 +21303,14 @@ msgstr "Utviklermodus: Frakoblet"
 msgid "Disconnected from server"
 msgstr "Frakoblet serveren"
 
+msgid "Could not save the chat to History"
+msgstr "Kunne ikke lagre chatten i historikken"
+
 msgid "New Chat"
 msgstr "Ny chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Start en ny chat (gjeldende chat lagres i historikken)"
-
-msgid "Could not save the chat to History"
-msgstr "Kunne ikke lagre chatten i historikken"
 
 msgid "Started new chat session"
 msgstr "Startet ny chatøkt"

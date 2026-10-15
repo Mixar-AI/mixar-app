@@ -3011,6 +3011,9 @@ msgstr "Ime računa"
 msgid "Display name for the account greeting"
 msgstr "Prikazno ime za pozdrav računa"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Novejša različica datoteke"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Prijavite se z računom Mixar"
+
 msgid "Session expired"
 msgstr "Seja je potekla"
 
@@ -20226,31 +20232,27 @@ msgstr "Znova se prijavite."
 msgid "Login Failed"
 msgstr "Prijava ni uspela"
 
-msgid "Sign in with your Mixar account"
-msgstr "Prijavite se z računom Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prijava z brskalnikom"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Spustni meni profila/računa — odprt iz globalne zgornje vrstice.\n"
-"\n"
-"Vsebino izrisuje izvorno `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): pozdrav, značka paketa,\n"
-"merilnik porabe kreditov in dejanja računa, razporejena kot ena kartica\n"
-"namesto menija. Python še vedno vodi registracijo in vsak\n"
-"operator, ki ga kartica kliče — C++ vodi samo slikovne točke.\n"
 
 msgid "Dashboard"
 msgstr "Nadzorna plošča"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Odjava"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Zajemi posnetek zaslona"
 
@@ -21301,14 +21303,14 @@ msgstr "Način za razvijalce: povezava je prekinjena"
 msgid "Disconnected from server"
 msgstr "Povezava s strežnikom je prekinjena"
 
+msgid "Could not save the chat to History"
+msgstr "Klepeta ni bilo mogoče shraniti v zgodovino"
+
 msgid "New Chat"
 msgstr "Nov klepet"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Začne nov klepet (trenutni klepet se shrani v zgodovino)"
-
-msgid "Could not save the chat to History"
-msgstr "Klepeta ni bilo mogoče shraniti v zgodovino"
 
 msgid "Started new chat session"
 msgstr "Začeta je nova seja klepeta"

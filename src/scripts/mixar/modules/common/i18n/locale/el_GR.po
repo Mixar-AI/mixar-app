@@ -3011,6 +3011,9 @@ msgstr "Όνομα λογαριασμού"
 msgid "Display name for the account greeting"
 msgstr "Εμφανιζόμενο όνομα για τον χαιρετισμό λογαριασμού"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Νεότερη έκδοση αρχείου"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Συνδεθείτε με τον λογαριασμό Mixar"
+
 msgid "Session expired"
 msgstr "Η συνεδρία έληξε."
 
@@ -20226,31 +20232,27 @@ msgstr "Συνδεθείτε ξανά."
 msgid "Login Failed"
 msgstr "Η σύνδεση απέτυχε"
 
-msgid "Sign in with your Mixar account"
-msgstr "Συνδεθείτε με τον λογαριασμό Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Σύνδεση με πρόγραμμα περιήγησης"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Αναπτυσσόμενο προφίλ / λογαριασμού — ανοίγει από την καθολική επάνω γραμμή.\n"
-"\n"
-"Τα περιεχόμενα σχεδιάζονται εγγενώς από το `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): χαιρετισμός, η ένδειξη προγράμματος, ο\n"
-"μετρητής χρήσης πιστώσεων και οι ενέργειες λογαριασμού, σε μία κάρτα\n"
-"αντί για μενού. Η Python κρατά την καταχώριση και κάθε\n"
-"τελεστή που καλεί η κάρτα — η C++ κρατά μόνο τα pixel.\n"
 
 msgid "Dashboard"
 msgstr "Πίνακας ελέγχου"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Αποσύνδεση"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Λήψη στιγμιότυπου"
 
@@ -21301,14 +21303,14 @@ msgstr "Κατάσταση ανάπτυξης: αποσυνδέθηκε"
 msgid "Disconnected from server"
 msgstr "Αποσυνδέθηκε από τον διακομιστή."
 
+msgid "Could not save the chat to History"
+msgstr "Δεν ήταν δυνατή η αποθήκευση της συνομιλίας στο ιστορικό."
+
 msgid "New Chat"
 msgstr "Νέα συνομιλία"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Ξεκινά νέα συνομιλία (η τρέχουσα αποθηκεύεται στο ιστορικό)."
-
-msgid "Could not save the chat to History"
-msgstr "Δεν ήταν δυνατή η αποθήκευση της συνομιλίας στο ιστορικό."
 
 msgid "Started new chat session"
 msgstr "Ξεκίνησε νέα συνεδρία συνομιλίας."

@@ -3011,6 +3011,9 @@ msgstr "ชื่อบัญชี"
 msgid "Display name for the account greeting"
 msgstr "ชื่อที่แสดงสำหรับคำทักทายบัญชี"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "ไฟล์รุ่นใหม่กว่า"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "ลงชื่อเข้าใช้ด้วยบัญชี Mixar ของคุณ"
+
 msgid "Session expired"
 msgstr "เซสชันหมดอายุ"
 
@@ -20226,31 +20232,27 @@ msgstr "โปรดเข้าสู่ระบบอีกครั้ง"
 msgid "Login Failed"
 msgstr "เข้าสู่ระบบไม่สำเร็จ"
 
-msgid "Sign in with your Mixar account"
-msgstr "ลงชื่อเข้าใช้ด้วยบัญชี Mixar ของคุณ"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "เข้าสู่ระบบด้วยเบราว์เซอร์"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"เมนูแบบเลื่อนลงของโปรไฟล์/บัญชี — เปิดจากแถบด้านบนส่วนกลาง\n"
-"\n"
-"เนื้อหาถูกวาดแบบเนทีฟโดย `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): คำทักทาย ชิปแพ็กเกจ\n"
-"มาตรวัดการใช้เครดิต และการดำเนินการของบัญชี จัดวางเป็นการ์ดเดียว\n"
-"แทนที่จะเป็นเมนู Python ยังคงดูแลการลงทะเบียนและ\n"
-"ตัวดำเนินการทุกตัวที่การ์ดเรียกใช้ — C++ ดูแลเฉพาะพิกเซล\n"
 
 msgid "Dashboard"
 msgstr "แดชบอร์ด"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "ออกจากระบบ"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "จับภาพหน้าจอ"
 
@@ -21301,14 +21303,14 @@ msgstr "โหมดนักพัฒนา: ตัดการเชื่อ�
 msgid "Disconnected from server"
 msgstr "ตัดการเชื่อมต่อจากเซิร์ฟเวอร์แล้ว"
 
+msgid "Could not save the chat to History"
+msgstr "ไม่สามารถบันทึกแชทลงในประวัติได้"
+
 msgid "New Chat"
 msgstr "แชทใหม่"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "เริ่มแชทใหม่ (แชทปัจจุบันจะถูกบันทึกลงในประวัติ)"
-
-msgid "Could not save the chat to History"
-msgstr "ไม่สามารถบันทึกแชทลงในประวัติได้"
 
 msgid "Started new chat session"
 msgstr "เริ่มเซสชันแชทใหม่แล้ว"

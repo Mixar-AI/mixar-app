@@ -3011,6 +3011,9 @@ msgstr "Fiók neve"
 msgid "Display name for the account greeting"
 msgstr "Megjelenített név a fiók üdvözléséhez"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Újabb fájlverzió"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Jelentkezzen be a Mixar-fiókjával"
+
 msgid "Session expired"
 msgstr "A munkamenet lejárt"
 
@@ -20226,31 +20232,27 @@ msgstr "Kérjük, jelentkezzen be újra."
 msgid "Login Failed"
 msgstr "A bejelentkezés nem sikerült"
 
-msgid "Sign in with your Mixar account"
-msgstr "Jelentkezzen be a Mixar-fiókjával"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Bejelentkezés böngészővel"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Profil / fiók lenyíló — a globális felső sávból nyílik.\n"
-"\n"
-"A tartalmat natívan a `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`) rajzolja: üdvözlés, a csomag jelvénye, a\n"
-"kreditmérő és a fiókműveletek, egy kártyaként\n"
-"elrendezve, nem menüként. A regisztráció és minden\n"
-"operátor, amelyet a kártya hív, továbbra is Pythoné — a C++ csak a pixeleké.\n"
 
 msgid "Dashboard"
 msgstr "Irányítópult"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Kijelentkezés"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Képernyőkép rögzítése"
 
@@ -21301,14 +21303,14 @@ msgstr "Fejlesztői mód: kapcsolat bontva"
 msgid "Disconnected from server"
 msgstr "Kapcsolat bontva a szerverrel"
 
+msgid "Could not save the chat to History"
+msgstr "Nem sikerült a csevegést az Előzményekbe menteni"
+
 msgid "New Chat"
 msgstr "Új csevegés"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Új csevegés indítása (a jelenlegi csevegés az Előzményekbe kerül)"
-
-msgid "Could not save the chat to History"
-msgstr "Nem sikerült a csevegést az Előzményekbe menteni"
 
 msgid "Started new chat session"
 msgstr "Új csevegési munkamenet elindítva"

@@ -3011,6 +3011,9 @@ msgstr "계정 이름"
 msgid "Display name for the account greeting"
 msgstr "계정 인사말에 사용할 표시 이름입니다"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "최신 파일 버전"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar 계정으로 로그인하세요"
+
 msgid "Session expired"
 msgstr "세션이 만료됨"
 
@@ -20226,31 +20232,27 @@ msgstr "다시 로그인하세요."
 msgid "Login Failed"
 msgstr "로그인 실패"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar 계정으로 로그인하세요"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "브라우저로 로그인"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"프로필 / 계정 드롭다운 — 전역 상단 바에서 열립니다.\n"
-"\n"
-"내용은 `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`)가 네이티브로 그립니다. 인사말, 플랜 칩,\n"
-"크레딧 사용량 미터와 계정 작업이 메뉴가 아닌\n"
-"하나의 카드로 배치됩니다. 등록과 카드가 호출하는 모든\n"
-"작업자는 여전히 Python이 담당하며, C++는 픽셀만 담당합니다.\n"
 
 msgid "Dashboard"
 msgstr "대시보드"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "로그아웃"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "스크린샷 캡처"
 
@@ -21301,14 +21303,14 @@ msgstr "개발 모드: 연결 끊김"
 msgid "Disconnected from server"
 msgstr "서버와의 연결이 끊어졌습니다"
 
+msgid "Could not save the chat to History"
+msgstr "채팅을 기록에 저장할 수 없습니다"
+
 msgid "New Chat"
 msgstr "새 채팅"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "새 채팅을 시작합니다 (현재 채팅은 기록에 저장됨)"
-
-msgid "Could not save the chat to History"
-msgstr "채팅을 기록에 저장할 수 없습니다"
 
 msgid "Started new chat session"
 msgstr "새 채팅 세션을 시작했습니다"

@@ -3011,6 +3011,9 @@ msgstr "Tên Tài Khoản"
 msgid "Display name for the account greeting"
 msgstr "Tên hiển thị trong lời chào tài khoản"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Phiên Bản Tập Tin Mới Hơn"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Đăng nhập bằng tài khoản Mixar"
+
 msgid "Session expired"
 msgstr "Phiên đã hết hạn"
 
@@ -20226,31 +20232,27 @@ msgstr "Hãy đăng nhập lại."
 msgid "Login Failed"
 msgstr "Đăng Nhập Thất Bại"
 
-msgid "Sign in with your Mixar account"
-msgstr "Đăng nhập bằng tài khoản Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Đăng Nhập bằng Trình Duyệt"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Trình đơn thả xuống hồ sơ / tài khoản — mở từ thanh trên cùng toàn cục.\n"
-"\n"
-"Nội dung được vẽ gốc bằng `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): lời chào, nhãn gói, thước đo\n"
-"mức sử dụng tín dụng và các thao tác tài khoản, bố trí thành một thẻ\n"
-"thay vì trình đơn. Python vẫn quản lý việc đăng ký và mọi\n"
-"thao tác mà thẻ gọi — C++ chỉ quản lý điểm ảnh.\n"
 
 msgid "Dashboard"
 msgstr "Bảng Điều Khiển"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Đăng Xuất"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Chụp Ảnh Màn Hình"
 
@@ -21301,14 +21303,14 @@ msgstr "Chế Độ Dev: Đã ngắt kết nối"
 msgid "Disconnected from server"
 msgstr "Đã ngắt kết nối khỏi máy chủ"
 
+msgid "Could not save the chat to History"
+msgstr "Không thể lưu cuộc trò chuyện vào Lịch Sử"
+
 msgid "New Chat"
 msgstr "Trò Chuyện Mới"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Bắt đầu cuộc trò chuyện mới (cuộc trò chuyện hiện tại được lưu vào Lịch Sử)"
-
-msgid "Could not save the chat to History"
-msgstr "Không thể lưu cuộc trò chuyện vào Lịch Sử"
 
 msgid "Started new chat session"
 msgstr "Đã bắt đầu phiên trò chuyện mới"

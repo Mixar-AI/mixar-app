@@ -3011,6 +3011,9 @@ msgstr "Nombre de la cuenta"
 msgid "Display name for the account greeting"
 msgstr "Nombre visible para el saludo de la cuenta"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Versión de archivo más reciente"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Inicie sesión con su cuenta de Mixar"
+
 msgid "Session expired"
 msgstr "La sesión caducó"
 
@@ -20226,31 +20232,27 @@ msgstr "Vuelva a iniciar sesión."
 msgid "Login Failed"
 msgstr "Error al iniciar sesión"
 
-msgid "Sign in with your Mixar account"
-msgstr "Inicie sesión con su cuenta de Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Iniciar sesión con el navegador"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Menú desplegable de perfil/cuenta, abierto desde la barra superior global.\n"
-"\n"
-"El contenido se dibuja de forma nativa con `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): un saludo, la etiqueta del plan, el\n"
-"medidor de uso de créditos y las acciones de la cuenta, dispuestos en una tarjeta\n"
-"en lugar de un menú. Python sigue encargándose del registro y de cada\n"
-"operador que invoca la tarjeta; C++ solo se encarga de los píxeles.\n"
 
 msgid "Dashboard"
 msgstr "Panel de control"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Cerrar sesión"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Tomar captura de pantalla"
 
@@ -21301,14 +21303,14 @@ msgstr "Modo dev: desconectado"
 msgid "Disconnected from server"
 msgstr "Desconectado del servidor"
 
+msgid "Could not save the chat to History"
+msgstr "No se pudo guardar el chat en el historial"
+
 msgid "New Chat"
 msgstr "Nuevo chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Inicia un chat nuevo (el chat actual se guarda en el historial)"
-
-msgid "Could not save the chat to History"
-msgstr "No se pudo guardar el chat en el historial"
 
 msgid "Started new chat session"
 msgstr "Se inició una nueva sesión de chat"

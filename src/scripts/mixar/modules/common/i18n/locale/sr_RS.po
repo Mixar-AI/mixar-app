@@ -3011,6 +3011,9 @@ msgstr "Име налога"
 msgid "Display name for the account greeting"
 msgstr "Приказано име за поздрав налога"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Новија верзија датотеке"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Пријавите се налогом Mixar"
+
 msgid "Session expired"
 msgstr "Сесија је истекла"
 
@@ -20226,31 +20232,27 @@ msgstr "Пријавите се поново."
 msgid "Login Failed"
 msgstr "Пријава није успела"
 
-msgid "Sign in with your Mixar account"
-msgstr "Пријавите се налогом Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Пријава прегледачем"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Падајући мени профила и налога — отвара се са глобалне горње траке.\n"
-"\n"
-"Садржај изворно црта `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): поздрав, значка плана,\n"
-"мерило потрошње кредита и радње налога, сложени као једна картица\n"
-"а не као мени. Python и даље води регистрацију и сваки\n"
-"оператор који картица позива — C++ води само пикселе.\n"
 
 msgid "Dashboard"
 msgstr "Контролна табла"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Одјава"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Сними екран"
 
@@ -21301,14 +21303,14 @@ msgstr "Режим за развој: веза је прекинута"
 msgid "Disconnected from server"
 msgstr "Веза са сервером је прекинута"
 
+msgid "Could not save the chat to History"
+msgstr "Није било могуће сачувати ћаскање у историјат"
+
 msgid "New Chat"
 msgstr "Ново ћаскање"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Почиње ново ћаскање (текуће се чува у историјат)"
-
-msgid "Could not save the chat to History"
-msgstr "Није било могуће сачувати ћаскање у историјат"
 
 msgid "Started new chat session"
 msgstr "Започета је нова сесија ћаскања"

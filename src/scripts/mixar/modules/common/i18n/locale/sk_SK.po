@@ -3011,6 +3011,9 @@ msgstr "Názov účtu"
 msgid "Display name for the account greeting"
 msgstr "Zobrazované meno pre pozdrav účtu"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Novšia verzia súboru"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Prihláste sa účtom Mixar"
+
 msgid "Session expired"
 msgstr "Relácia vypršala"
 
@@ -20226,31 +20232,27 @@ msgstr "Prihláste sa znova."
 msgid "Login Failed"
 msgstr "Prihlásenie zlyhalo"
 
-msgid "Sign in with your Mixar account"
-msgstr "Prihláste sa účtom Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prihlásiť sa cez prehliadač"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Rozbaľovacia ponuka profilu/účtu – otvára sa z globálnej hornej lišty.\n"
-"\n"
-"Obsah natívne vykresľuje `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): pozdrav, štítok plánu,\n"
-"ukazovateľ využitia kreditov a akcie účtu, usporiadané ako jedna karta\n"
-"namiesto ponuky. Python stále vlastní registráciu a každý\n"
-"operátor, ktorý karta volá – C++ vlastní iba pixely.\n"
 
 msgid "Dashboard"
 msgstr "Ovládací panel"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Odhlásiť sa"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Zachytiť snímku obrazovky"
 
@@ -21301,14 +21303,14 @@ msgstr "Režim pre vývojárov: odpojené"
 msgid "Disconnected from server"
 msgstr "Odpojené od servera"
 
+msgid "Could not save the chat to History"
+msgstr "Chat sa nepodarilo uložiť do histórie"
+
 msgid "New Chat"
 msgstr "Nový chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Začať nový chat (aktuálny chat sa uloží do histórie)"
-
-msgid "Could not save the chat to History"
-msgstr "Chat sa nepodarilo uložiť do histórie"
 
 msgid "Started new chat session"
 msgstr "Spustená nová relácia chatu"

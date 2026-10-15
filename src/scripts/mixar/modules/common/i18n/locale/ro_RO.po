@@ -3011,6 +3011,9 @@ msgstr "Nume cont"
 msgid "Display name for the account greeting"
 msgstr "Numele afișat pentru salutul contului"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Versiune de fișier mai nouă"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Autentificați-vă cu contul Mixar"
+
 msgid "Session expired"
 msgstr "Sesiunea a expirat"
 
@@ -20226,31 +20232,27 @@ msgstr "Autentificați-vă din nou."
 msgid "Login Failed"
 msgstr "Autentificarea a eșuat"
 
-msgid "Sign in with your Mixar account"
-msgstr "Autentificați-vă cu contul Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Autentificare cu browserul"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Listă derulantă profil / cont — deschisă din bara de sus globală.\n"
-"\n"
-"Conținutul este desenat nativ de `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): o urare, pastila planului,\n"
-"contorul de credite și acțiunile contului, așezate ca un singur card,\n"
-"nu ca un meniu. Python deține în continuare înregistrarea și fiecare\n"
-"operator pe care îl invocă cardul — C++ deține doar pixelii.\n"
 
 msgid "Dashboard"
 msgstr "Tablou de bord"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Deconectare"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Capturare ecran"
 
@@ -21301,14 +21303,14 @@ msgstr "Mod Dev: deconectat"
 msgid "Disconnected from server"
 msgstr "Deconectat de la server"
 
+msgid "Could not save the chat to History"
+msgstr "Chatul nu a putut fi salvat în Istoric"
+
 msgid "New Chat"
 msgstr "Chat nou"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Pornire chat nou (chatul curent este salvat în Istoric)"
-
-msgid "Could not save the chat to History"
-msgstr "Chatul nu a putut fi salvat în Istoric"
 
 msgid "Started new chat session"
 msgstr "Sesiune de chat nouă pornită"

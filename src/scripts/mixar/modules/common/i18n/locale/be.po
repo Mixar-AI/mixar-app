@@ -3011,6 +3011,9 @@ msgstr "Назва ўліковага запісу"
 msgid "Display name for the account greeting"
 msgstr "Бачная назва для прывітання ўліковага запісу"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Навейшая версія файла"
 
@@ -20217,6 +20220,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Увайдзіце з уліковым запісам Mixar"
+
 msgid "Session expired"
 msgstr "Сеанс скончыўся"
 
@@ -20226,31 +20232,27 @@ msgstr "Увайдзіце яшчэ раз."
 msgid "Login Failed"
 msgstr "Уваход не ўдаўся"
 
-msgid "Sign in with your Mixar account"
-msgstr "Увайдзіце з уліковым запісам Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Увайсці праз браўзер"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Выпадны спіс профілю і ўліковага запісу — адкрываецца з глабальнай верхняй панэлі.\n"
-"\n"
-"Змесціва малюецца натыўна праз `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): прывітанне, чып плана,\n"
-"лічыльнік крэдытаў і дзеянні ўліковага запісу, сабраныя ў адну картку,\n"
-"а не ў меню. Python па-ранейшаму валодае рэгістрацыяй і кожным\n"
-"аператарам, які выклікае картка — C++ валодае толькі пікселямі.\n"
 
 msgid "Dashboard"
 msgstr "Панэль кіравання"
@@ -20268,9 +20270,6 @@ msgid "Logout"
 msgstr "Выйсці"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21214,6 +21213,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Зрабіць здымак экрана"
 
@@ -21301,14 +21303,14 @@ msgstr "Рэжым распрацоўкі: адключана"
 msgid "Disconnected from server"
 msgstr "Адключана ад сервера"
 
+msgid "Could not save the chat to History"
+msgstr "Не ўдалося захаваць чат у гісторыю"
+
 msgid "New Chat"
 msgstr "Новы чат"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Пачынае новы чат (бягучы захоўваецца ў гісторыі)"
-
-msgid "Could not save the chat to History"
-msgstr "Не ўдалося захаваць чат у гісторыю"
 
 msgid "Started new chat session"
 msgstr "Пачаты новы сеанс чата"
