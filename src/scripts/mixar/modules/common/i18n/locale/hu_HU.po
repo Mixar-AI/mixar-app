@@ -5726,6 +5726,9 @@ msgstr "Az alapszín-textúra letöltése sikertelen: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Az alapszín-textúra betöltése sikertelen: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Váratlan hiba a textúra letöltése közben: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "A jelenetgenerálás importálása sikertelen"
 msgid "No image URLs in server response"
 msgstr "Nincs kép-URL a kiszolgáló válaszában"
 
-msgid "Starting reconstruction..."
-msgstr "Rekonstrukció indítása..."
-
 msgid "Error: {error}"
 msgstr "Hiba: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Rekonstrukció indítása..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "A generált kép letöltése sikertelen: {error}"

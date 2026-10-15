@@ -5726,6 +5726,9 @@ msgstr "Imeshindwa kupakua muundo wa BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Imeshindwa kuleta muundo wa BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Hitilafu isiyotarajiwa wakati wa kupakua muundo: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Uingizaji wa SceneGen umeshindwa"
 msgid "No image URLs in server response"
 msgstr "Hakuna URL za taswira katika jibu la seva"
 
-msgid "Starting reconstruction..."
-msgstr "Inaanza kujenga upya..."
-
 msgid "Error: {error}"
 msgstr "Hitilafu: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Inaanza kujenga upya..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Imeshindwa kupakua taswira iliyotengenezwa: {error}"

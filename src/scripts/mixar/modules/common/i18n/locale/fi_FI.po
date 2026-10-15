@@ -5726,6 +5726,9 @@ msgstr "BaseColor-tekstuurin lataus epäonnistui: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor-tekstuuria ei voitu lukea: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Odottamaton virhe tekstuurin latauksessa: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Kohtausluonnin tuonti epäonnistui"
 msgid "No image URLs in server response"
 msgstr "Palvelimen vastauksessa ei ole kuvien URL-osoitteita"
 
-msgid "Starting reconstruction..."
-msgstr "Aloitetaan rekonstruktiota..."
-
 msgid "Error: {error}"
 msgstr "Virhe: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Aloitetaan rekonstruktiota..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Luodun kuvan lataus epäonnistui: {error}"

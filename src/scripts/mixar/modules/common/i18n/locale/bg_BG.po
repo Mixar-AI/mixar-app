@@ -5726,6 +5726,9 @@ msgstr "Текстурата BaseColor не можа да се изтегли: {
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Текстурата BaseColor не можа да се зареди: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Неочаквана грешка при изтегляне на текстурата: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Внасянето от генерацията на сцена е неу
 msgid "No image URLs in server response"
 msgstr "В отговора на сървъра няма URL адреси на изображения"
 
-msgid "Starting reconstruction..."
-msgstr "Стартиране на реконструкция..."
-
 msgid "Error: {error}"
 msgstr "Грешка: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Стартиране на реконструкция..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Генерираното изображение не можа да се изтегли: {error}"

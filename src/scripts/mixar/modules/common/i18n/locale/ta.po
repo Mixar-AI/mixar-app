@@ -5726,6 +5726,9 @@ msgstr "BaseColor அமைப்பைப் பதிவிறக்க மு
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor அமைப்பை ஏற்ற முடியவில்லை: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "அமைப்புப் பதிவிறக்கத்தின் போது எதிர்பாராத பிழை: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen இறக்குமதி தோல்வி"
 msgid "No image URLs in server response"
 msgstr "சேவையகப் பதிலில் பட URLகள் இல்லை"
 
-msgid "Starting reconstruction..."
-msgstr "புனரமைப்பு தொடங்குகிறது..."
-
 msgid "Error: {error}"
 msgstr "பிழை: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "புனரமைப்பு தொடங்குகிறது..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "உருவாக்கிய படத்தைப் பதிவிறக்க முடியவில்லை: {error}"

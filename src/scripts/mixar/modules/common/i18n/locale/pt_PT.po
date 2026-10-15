@@ -5726,6 +5726,9 @@ msgstr "Falha ao transferir a textura BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Falha ao carregar a textura BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Erro inesperado durante a transferência da textura: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "A importação do SceneGen falhou"
 msgid "No image URLs in server response"
 msgstr "Nenhum URL de imagem na resposta do servidor"
 
-msgid "Starting reconstruction..."
-msgstr "A iniciar a reconstrução..."
-
 msgid "Error: {error}"
 msgstr "Erro: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "A iniciar a reconstrução..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Falha ao transferir a imagem gerada: {error}"

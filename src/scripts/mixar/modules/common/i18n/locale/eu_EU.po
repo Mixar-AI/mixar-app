@@ -5726,6 +5726,9 @@ msgstr "Ezin izan da BaseColor testura deskargatu: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Ezin izan da BaseColor testura kargatu: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Ustekabeko errorea testura deskargatzean: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen inportazioak huts egin du"
 msgid "No image URLs in server response"
 msgstr "Ez dago irudi-URLrik zerbitzariaren erantzunean"
 
-msgid "Starting reconstruction..."
-msgstr "Berreraikuntza hasten..."
-
 msgid "Error: {error}"
 msgstr "Errorea: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Berreraikuntza hasten..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Ezin izan da sortutako irudia deskargatu: {error}"

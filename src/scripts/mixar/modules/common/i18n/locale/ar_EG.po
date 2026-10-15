@@ -5726,6 +5726,9 @@ msgstr "BaseColor: {error} ﺞﻴﺴﻧ ﻞﻳﺰﻨﺗ ﻞﺸﻓ"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor: {error} ﺞﻴﺴﻧ ﻞﻴﻤﺤﺗ ﻞﺸﻓ"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :ﺞﻴﺴﻨﻟﺍ ﻞﻳﺰﻨﺗ ءﺎﻨﺛﺃ ﻊﻗﻮﺘﻣ ﺮﻴﻏ ﺄﻄﺧ"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen ﺩﺍﺮﻴﺘﺳﺍ ﻞﺸﻓ"
 msgid "No image URLs in server response"
 msgstr "ﻡﺩﺎﺨﻟﺍ ﺔﺑﺎﺠﺘﺳﺍ ﻲﻓ ﺭﻮﺼﻠﻟ URL ﻦﻳﻭﺎﻨﻋ ﺪﺟﻮﺗ ﻻ﻿"
 
-msgid "Starting reconstruction..."
-msgstr "...ءﺎﻨﺒﻟﺍ ﺓﺩﺎﻋﺇ ءﺪﺑ ﺭٍﺎﺟ"
-
 msgid "Error: {error}"
 msgstr "{error} :ﺄﻄﺧ"
+
+msgid "Starting reconstruction..."
+msgstr "...ءﺎﻨﺒﻟﺍ ﺓﺩﺎﻋﺇ ءﺪﺑ ﺭٍﺎﺟ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :ﺓﺪﻟّﻮﻤﻟﺍ ﺓﺭﻮﺼﻟﺍ ﻞﻳﺰﻨﺗ ﻞﺸﻓ"

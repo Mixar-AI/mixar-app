@@ -5726,6 +5726,9 @@ msgstr "BaseColor dokusu indirilemedi: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor dokusu yüklenemedi: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Doku indirme sırasında beklenmeyen hata: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen içe aktarımı başarısız"
 msgid "No image URLs in server response"
 msgstr "Sunucu yanıtında görsel URL'si yok"
 
-msgid "Starting reconstruction..."
-msgstr "Yeniden yapılandırma başlatılıyor..."
-
 msgid "Error: {error}"
 msgstr "Hata: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Yeniden yapılandırma başlatılıyor..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Oluşturulan görsel indirilemedi: {error}"

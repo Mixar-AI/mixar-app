@@ -5726,6 +5726,9 @@ msgstr "{error} :הלשכנ BaseColor םקרמ תדרוה"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "{error} :הלשכנ BaseColor םקרמ תניעט"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :םקרמה תדרוה ךלהמב היופצ יתלב האיגש"
 
@@ -6140,11 +6143,11 @@ msgstr "לשכנ הנצסה תריצי אוביי"
 msgid "No image URLs in server response"
 msgstr "תרשה תבושתב הנומת לש URL תובותכ ןיא"
 
-msgid "Starting reconstruction..."
-msgstr "...רוזחש ליחתמ"
-
 msgid "Error: {error}"
 msgstr "{error} :האיגש"
+
+msgid "Starting reconstruction..."
+msgstr "...רוזחש ליחתמ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :הלשכנ הרצונש הנומתה תדרוה"

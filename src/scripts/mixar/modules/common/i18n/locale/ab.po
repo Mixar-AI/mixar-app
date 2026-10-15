@@ -5726,6 +5726,9 @@ msgstr "BaseColor атекстура аҭыгара алымшеит: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor атекстура аҭагалара алымшеит: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Атекстура аҭыгараан хыхьынтәи агха: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Асцена аԥҵамҭа аимпорт алымшеит"
 msgid "No image URLs in server response"
 msgstr "Асервер аҭак аҿы асахьанҵа URL ыҟаӡам"
 
-msgid "Starting reconstruction..."
-msgstr "Ареконструкциа алагара..."
-
 msgid "Error: {error}"
 msgstr "Агха: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Ареконструкциа алагара..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Иԥҵоу асахьанҵа аҭыгара алымшеит: {error}"

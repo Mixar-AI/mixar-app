@@ -5726,6 +5726,9 @@ msgstr "Nie udało się pobrać tekstury BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Nie udało się wczytać tekstury BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Nieoczekiwany błąd podczas pobierania tekstury: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Import SceneGen nie powiódł się"
 msgid "No image URLs in server response"
 msgstr "Brak adresów URL obrazów w odpowiedzi serwera"
 
-msgid "Starting reconstruction..."
-msgstr "Rozpoczynanie rekonstrukcji..."
-
 msgid "Error: {error}"
 msgstr "Błąd: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Rozpoczynanie rekonstrukcji..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Nie udało się pobrać wygenerowanego obrazu: {error}"

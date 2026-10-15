@@ -5726,6 +5726,9 @@ msgstr "無法下載 BaseColor 紋理：{error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "無法載入 BaseColor 紋理：{error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "下載紋理時發生未預期的錯誤：{error}"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen 匯入失敗"
 msgid "No image URLs in server response"
 msgstr "伺服器回應中沒有影像 URL"
 
-msgid "Starting reconstruction..."
-msgstr "正在開始重建..."
-
 msgid "Error: {error}"
 msgstr "錯誤：{error}"
+
+msgid "Starting reconstruction..."
+msgstr "正在開始重建..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "無法下載生成的影像：{error}"

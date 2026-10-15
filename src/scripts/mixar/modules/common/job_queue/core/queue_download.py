@@ -404,3 +404,22 @@ class _pinned_scene:
             except Exception:  # noqa: BLE001
                 pass
         return False
+
+
+def job_scene(job):
+    """The tab *job* was submitted from, or None when that tab is gone.
+
+    For job code that runs after submit (poll parsing, result handling,
+    listeners): ``bpy.context.scene`` there is whichever tab the window shows,
+    which with parallel scene tabs is often not the job's.
+    """
+    return resolve_job_scene(getattr(job, "scene_name", "") or "", _job_session_id(job))
+
+
+def pinned_to_job(job):
+    """Context manager making *job*'s tab the current scene.
+
+    For result code that reads ``bpy.context.scene`` indirectly (importers,
+    caller-supplied callbacks). Raises RuntimeError when the tab is gone.
+    """
+    return _pinned_scene(getattr(job, "scene_name", "") or "", _job_session_id(job))

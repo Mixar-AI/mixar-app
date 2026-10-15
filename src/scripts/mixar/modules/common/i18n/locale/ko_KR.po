@@ -5726,6 +5726,9 @@ msgstr "BaseColor 텍스처를 다운로드하지 못했습니다: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor 텍스처를 로드하지 못했습니다: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "텍스처 다운로드 중 예기치 않은 오류: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "SceneGen 가져오기 실패"
 msgid "No image URLs in server response"
 msgstr "서버 응답에 이미지 URL이 없습니다"
 
-msgid "Starting reconstruction..."
-msgstr "복원 시작 중..."
-
 msgid "Error: {error}"
 msgstr "오류: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "복원 시작 중..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "생성된 이미지를 다운로드하지 못했습니다: {error}"

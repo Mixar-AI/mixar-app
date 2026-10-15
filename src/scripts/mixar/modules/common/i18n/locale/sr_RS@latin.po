@@ -7213,6 +7213,9 @@ msgstr "Preuzimanje teksture BaseColor nije uspelo: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Učitavanje teksture BaseColor nije uspelo: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 # derived
 msgid "Unexpected error during texture download: {error}"
 msgstr "Neočekivana greška tokom preuzimanja teksture: {error}"
@@ -7761,12 +7764,12 @@ msgid "No image URLs in server response"
 msgstr "Nema URL-ova slika u odgovoru servera"
 
 # derived
-msgid "Starting reconstruction..."
-msgstr "Pokretanje rekonstrukcije…"
-
-# derived
 msgid "Error: {error}"
 msgstr "Greška: {error}"
+
+# derived
+msgid "Starting reconstruction..."
+msgstr "Pokretanje rekonstrukcije…"
 
 # derived
 msgid "Failed to download generated image: {error}"

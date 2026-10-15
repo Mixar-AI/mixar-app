@@ -5726,6 +5726,9 @@ msgstr "Αποτυχία λήψης υφής BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Αποτυχία φόρτωσης υφής BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Απρόσμενο σφάλμα κατά τη λήψη υφής: {error}"
 
@@ -6140,11 +6143,11 @@ msgstr "Η εισαγωγή SceneGen απέτυχε"
 msgid "No image URLs in server response"
 msgstr "Δεν υπάρχουν URL εικόνας στην απόκριση διακομιστή"
 
-msgid "Starting reconstruction..."
-msgstr "Έναρξη ανακατασκευής..."
-
 msgid "Error: {error}"
 msgstr "Σφάλμα: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Έναρξη ανακατασκευής..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Αποτυχία λήψης της δημιουργημένης εικόνας: {error}"
