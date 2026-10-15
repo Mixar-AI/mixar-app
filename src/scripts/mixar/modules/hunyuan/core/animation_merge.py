@@ -86,9 +86,11 @@ def clip_bone_names(binding) -> set:
 def imported_clips(objects) -> list:
     """``(action, slot, binding)`` per clip the import carries, in glTF order.
 
-    The importer stashes every animation on an NLA track in file order and
-    also makes the first one active, so the tracks are the order and the
-    active action is a duplicate of the first — deduplicated by action.
+    The importer stashes every animation on an NLA track and also makes the
+    first one active (a duplicate of a stashed one — deduplicated by action).
+    The track order is the importer's (Blender 5.2 stashes in REVERSE file
+    order), so the merge orders clips by the result's ``animations`` list
+    (``order_clips``), never by this one.
     """
     clips, seen = [], set()
 
@@ -170,16 +172,35 @@ def remove_objects(objects) -> int:
     return removed
 
 
-def merge_clips_onto_rig(scene, imported, target) -> list:
+_NAME_SUFFIX = re.compile(r"\.\d{3,}$")
+
+
+def order_clips(clips, order) -> list:
+    """*clips* (``(action, ...)`` tuples) in the result's ``animations`` order.
+
+    The importer renames a clip whose name is already taken ("walk" ->
+    "walk.001"), so the suffix is ignored when matching; unlisted clips keep
+    their relative order after the listed ones.
+    """
+    rank = {str(name): index for index, name in enumerate(order or ())}
+    if not rank:
+        return list(clips)
+    return sorted(clips, key=lambda clip: rank.get(
+        _NAME_SUFFIX.sub("", clip[0].name), len(rank)))
+
+
+def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
     """Move the clips *imported* carries onto *target*; return the clip names.
 
+    *order* is the job result's ``animations`` (request order): the tracks are
+    stashed in it and its last clip — the newest — becomes the active action.
     An empty result means nothing matched the rig (no bone in common) and the
     import was left untouched — the caller keeps it and says so.
     """
     clips = imported_clips(imported)
     rig_bones = {bone.name for bone in target.data.bones}
     matched = [
-        (action, slot) for action, slot, binding in clips
+        (action, slot) for action, slot, binding in order_clips(clips, order)
         if clip_bone_names(binding) & rig_bones
     ]
     if not matched:
@@ -230,7 +251,8 @@ def merge_hook(rig_job_id: str, rig_name: str = "", on_merged=None):
         names = [name.strip() for name in str(object_names or "").split(",") if name.strip()]
         imported = [obj for obj in (bpy.data.objects.get(name) for name in names) if obj]
         target = rig_armature(scene, rig_job_id, rig_name)
-        clips = merge_clips_onto_rig(scene, imported, target) if target is not None else []
+        order = (getattr(job, "result_data", None) or {}).get("animations") or ()
+        clips = merge_clips_onto_rig(scene, imported, target, order) if target is not None else []
         if not clips:
             show_armatures_in_front(object_names)
             body = NO_MATCH_BODY if target is not None else RIG_GONE_BODY

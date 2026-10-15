@@ -222,6 +222,30 @@ def test_removal_drops_objects_and_the_orphan_data_and_actions(monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
+def test_clips_follow_the_result_order_not_the_importers_track_order(monkeypatch):
+    # Blender 5.2's glTF importer stashes the tracks in REVERSE file order and
+    # renames a clip whose name is taken ("walk" on a rig that has a walk).
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: None)
+    idle, walk = _Action("idle", ["Hip"], 0.0, 368.0), _Action("walk.001", ["Hip"])
+    wave = _Action("wave_goodbye_01", ["Hip"], 0.0, 158.0)
+    rig, arm = _rig(), _imported(wave, walk, idle)
+    scene = _Scene([rig, arm])
+
+    names = merge.merge_clips_onto_rig(
+        scene, [arm], rig, ["idle", "walk", "wave_goodbye_01"])
+
+    assert names == ["idle", "walk.001", "wave_goodbye_01"]
+    assert rig.animation_data.action is wave
+    assert (scene.frame_start, scene.frame_end) == (0, 158)
+
+
+def test_without_an_order_the_import_order_stands():
+    walk, idle = _Action("walk", ["Hip"]), _Action("idle", ["Hip"])
+    clips = [(walk,), (idle,)]
+    assert merge.order_clips(clips, ()) == clips
+    assert merge.order_clips(clips, ["idle"]) == [(idle,), (walk,)]
+
+
 @pytest.fixture
 def hook_seams(monkeypatch):
     calls = NS(toasts=[], in_front=[], merged=[])
