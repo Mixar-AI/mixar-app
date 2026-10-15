@@ -679,3 +679,59 @@ def test_terminal_socket_auth_failure_recovers_the_session(monkeypatch):
     auth_ops.recover_session()
     auth_ops.recover_session()  # inside the window: one event
     assert len(registered) == 1
+
+
+# --- session-started telemetry ------------------------------------------------
+
+def test_a_guest_to_account_sign_in_captures_session_started_once(monkeypatch, config):
+    """capture() drops a guest's events, and capture_session_started spends
+    its once-guard even on a dropped one: the sign-in emits it only after
+    _apply_identity has unmarked the guest."""
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    guest.mark(True, "guest-6@guest.mixar.invalid")
+    captured = []
+    monkeypatch.setattr(auth_ops, "_capture_session_started",
+                        lambda method, refreshed=None: captured.append((method, guest.is_guest())))
+    for name in ("sync_pending_flag", "redraw_sign_in_surfaces", "activate_app", "_arm_login_watchdog",
+                 "_clear_referral_state", "_leave_guest_session", "_apply_guest_claim",
+                 "_apply_account_hooks", "_apply_account_name"):
+        monkeypatch.setattr(auth_ops, name, lambda *a, **k: None)
+    monkeypatch.setattr(auth_ops, "begin_sign_in", lambda supersede: ("attempt", None))
+    monkeypatch.setattr(auth_ops, "finish_sign_in", lambda attempt_id, cancel=False: True)
+    monkeypatch.setattr(auth_ops.guest, "sign_in",
+                        lambda login_fn: {"success": True, "switched_from_guest": True, "claimed_guest": True})
+    monkeypatch.setattr(auth_ops, "_user_info_after_sso", lambda result: {
+        "status": "success", "data": {"email": "user@example.com", "is_guest": False},
+    })
+    from mixar.modules.common.updates.core import toasts
+    monkeypatch.setattr(toasts, "tag_topbar_redraw", lambda: None)
+    wm = SimpleNamespace(mixie_chat_login_error="", mixie_chat_is_logged_in=False,
+                         mixie_chat_is_guest=True)
+    monkeypatch.setattr(auth_ops.bpy, "context", SimpleNamespace(window_manager=wm, scene=None), raising=False)
+    monkeypatch.setattr(auth_ops.bpy.app.timers, "register", lambda fn, first_interval=0.0: fn())
+
+    class _Thread:
+        def __init__(self, target, **_):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    monkeypatch.setattr(auth_ops.threading, "Thread", _Thread)
+    auth_ops.MIXIE_CHAT_OT_login.execute(SimpleNamespace(), SimpleNamespace(window_manager=wm))
+
+    assert captured == [("interactive_login", False)]
+    assert wm.mixie_chat_is_guest is False and wm.mixie_chat_is_logged_in is True
+
+
+def test_every_sign_in_path_captures_session_started_after_the_identity():
+    source = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
+    for apply_path, method in (("def _apply_sso_result", "sso_relogin"),
+                               ("def _apply_result", "interactive_login")):
+        body = source[source.index(apply_path):]
+        body = body[:body.index("\n    bpy.app.timers.register(") if apply_path == "def _apply_sso_result"
+                    else body.index("return None  # Don't repeat")]
+        call = f'_capture_session_started("{method}")'
+        assert body.count(call) == 1
+        assert body.index("_apply_identity(") < body.index(call)
+        assert "if not guest.is_guest():" in body[:body.index(call)]

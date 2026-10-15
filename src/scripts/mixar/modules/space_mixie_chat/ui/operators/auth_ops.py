@@ -574,7 +574,6 @@ def _reauthenticate() -> None:
                 # Mixar. Success only — a cancelled login must not steal focus.
                 activate_app()
 
-                _capture_session_started("sso_relogin")
                 _clear_referral_state(wm)
 
                 if user_info and user_info.get("status") == "success":
@@ -584,6 +583,10 @@ def _reauthenticate() -> None:
                     _apply_guest_claim(result, user_info["data"].get("email", ""))
                     _apply_account_hooks(user_info, is_guest)
                     logger.info("Auto SSO re-login completed successfully")
+                # After the identity: capture() drops a guest's events, and
+                # the once-guard would be spent on the dropped one.
+                if not guest.is_guest():
+                    _capture_session_started("sso_relogin")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
                     # Keep the real reason: a classified network failure
@@ -773,7 +776,6 @@ class MIXIE_CHAT_OT_login(Operator):
                         # Land the user back in Mixar from the browser.
                         # Success only — never on a failed or cancelled login.
                         activate_app()
-                        _capture_session_started("interactive_login")
                         _clear_referral_state(live_wm)
 
                         if user_info and user_info.get("status") == "success":
@@ -783,6 +785,11 @@ class MIXIE_CHAT_OT_login(Operator):
                             _apply_guest_claim(result, user_info["data"].get("email", ""))
                             _apply_account_hooks(user_info, is_guest)
                             logger.info("SSO login completed — user is logged in")
+                        # After the identity (guest.mark(False)): capture()
+                        # drops a guest's events and the once-guard would be
+                        # spent on the dropped one.
+                        if not guest.is_guest():
+                            _capture_session_started("interactive_login")
                     else:
                         msg = result.get("message", rpt_("Login failed"))
                         live_wm.mixie_chat_login_error = msg
