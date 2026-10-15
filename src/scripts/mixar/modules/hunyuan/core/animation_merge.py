@@ -39,17 +39,22 @@ logger = get_logger(__name__)
 _BONE_PATH = re.compile(r'^pose\.bones\["(.+?)"\]')
 
 
-def rig_armature(scene, rig_job_id: str, fallback_name: str = ""):
+def rig_armature(scene, rig_job_id: str, fallback_name: str = "", exclude=()):
     """The armature a rig job imported into *scene*, or None.
 
     Stamp first (the name may have changed since), then the name the job
-    was enqueued with, provided it is still an armature.
+    was enqueued with, provided it is still an armature. Objects named in
+    *exclude* (the clip import itself) never qualify: once the rig is
+    deleted, the import's armature can take its freed name.
     """
+    skip = set(exclude)
     objects = getattr(scene, "objects", ())
     for obj in objects:
+        if obj.name in skip:
+            continue
         if obj.type == 'ARMATURE' and str(obj.get(ANIMATE_RIG_JOB_PROP, "")) == str(rig_job_id):
             return obj
-    if fallback_name:
+    if fallback_name and fallback_name not in skip:
         obj = objects.get(fallback_name)
         if obj is not None and obj.type == 'ARMATURE':
             return obj
@@ -274,7 +279,7 @@ def merge_hook(rig_job_id: str, rig_name: str = "", on_merged=None):
         scene = resolve_job_scene(getattr(job, "scene_name", ""), session_id) or bpy.context.scene
         names = [name.strip() for name in str(object_names or "").split(",") if name.strip()]
         imported = [obj for obj in (bpy.data.objects.get(name) for name in names) if obj]
-        target = rig_armature(scene, rig_job_id, rig_name)
+        target = rig_armature(scene, rig_job_id, rig_name, exclude=names)
         order = (getattr(job, "result_data", None) or {}).get("animations") or ()
         clips = merge_clips_onto_rig(scene, imported, target, order) if target is not None else []
         if not clips:

@@ -322,3 +322,19 @@ def test_the_hook_keeps_the_import_and_says_so_when_it_cannot_merge(
     assert hook(NS(scene_name="Scene", agent_ref=None), "Armature.001") is None
     assert hook_seams.in_front == ["Armature.001"]
     assert hook_seams.toasts == [("warning", merge.RIG_GONE_TITLE, body)]
+
+
+def test_an_import_that_took_the_deleted_rigs_name_is_kept_not_merged_into_itself(
+        hook_seams, monkeypatch):
+    # The rig "Rig" was deleted while the job ran; the clip import is then
+    # named "Rig" too and must not be taken for the rig (live: it merged into
+    # itself, deleted itself and raised "StructRNA ... has been removed").
+    arm = _imported(_Action("walk", ["Hip"]))
+    arm.name = "Rig"
+    hook_seams.scene = _Scene([arm])
+    _bpy_with(hook_seams.scene, [arm], monkeypatch)
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: pytest.fail("kept"))
+    hook = merge.merge_hook("job-1", "Rig", on_merged=lambda *a: pytest.fail("no merge"))
+
+    assert hook(NS(scene_name="Scene", agent_ref=None), "Rig") is None
+    assert hook_seams.toasts == [("warning", merge.RIG_GONE_TITLE, merge.RIG_GONE_BODY)]
