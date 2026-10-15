@@ -25,20 +25,29 @@ def _image(b64, mime='image/png', name='angel'):
 def uploads(monkeypatch):
     """Uploads succeed (ids by content) unless ``fail`` is set; the worker
     thread's hand-back runs inline so a test sees the swap at once."""
-    state = SimpleNamespace(calls=[], fail=None, supported=True)
+    state = SimpleNamespace(calls=[], fail=None, supported=True, hold=False, held=[])
 
-    def upload(session_id, mime, b64, name=''):
-        state.calls.append((session_id, mime, name))
+    def upload(session_id, b64, timeout):
+        state.calls.append((session_id, b64, timeout))
         if state.fail:
             raise state.fail
         return f'{len(state.calls):016x}'
 
     class _Thread:
+        """Runs the upload inline, or parks it while ``hold`` is set (an
+        upload still in flight); ``release()`` finishes the parked ones."""
         def __init__(self, target, **kw):
             self._target = target
 
         def start(self):
-            self._target()
+            (state.held.append if state.hold else lambda t: t())(self._target)
+
+    def release():
+        state.hold = False
+        while state.held:
+            state.held.pop(0)()
+
+    state.release = release
 
     monkeypatch.setattr(attachment_upload, 'upload', upload)
     monkeypatch.setattr(attachment_upload.threading, 'Thread', _Thread)
@@ -62,6 +71,7 @@ def transport(monkeypatch, live_bpy, uploads):
     monkeypatch.setattr(turn_transport, 'command', lambda *a, **kw: calls.append((a, kw)))
     yield scene, calls
     turn_transport._handlers.clear()
+    turn_transport._lines.clear()
 
 
 def test_offload_swaps_each_image_for_its_reference_and_uploads_a_repeat_once(uploads):
@@ -70,7 +80,7 @@ def test_offload_swaps_each_image_for_its_reference_and_uploads_a_repeat_once(up
     done = []
     backup = attachment_upload.offload('chat', payload, lambda: done.append(True))
     assert done == [True]
-    assert [c[1] for c in uploads.calls] == ['image/png', 'image/jpeg']  # PNG uploaded once
+    assert [c[1] for c in uploads.calls] == [PNG, JPEG]  # PNG uploaded once
     refs = payload['content'][1:]
     assert refs[0] == {'type': 'image_ref', 'image_ref': {'id': f'{1:016x}'}, 'name': 'angel'}
     assert refs[1] == {'type': 'image_ref', 'image_ref': {'id': f'{2:016x}'}}
@@ -140,3 +150,89 @@ def test_the_handshake_flag_follows_the_server_capability():
         connection = types.SimpleNamespace()
         SocketConnection._set_server_capabilities(connection, {'server_capabilities': capabilities})
         assert connection.agent_attachments_by_reference is expected
+
+
+def test_a_stalled_path_falls_back_inline_at_the_deadline(uploads, monkeypatch):
+    monkeypatch.setattr(attachment_upload, 'UPLOAD_MAX_S', 0.0)
+    payload = {'session_id': 'sid', 'content': [_image(PNG)]}
+    attachment_upload.offload('chat', payload, lambda: None)
+    assert uploads.calls == [] and payload['content'][0]['type'] == 'image_url'
+
+
+def test_uploads_use_one_attempt_and_the_message_deadline(uploads):
+    payload = {'session_id': 'sid', 'content': [_image(PNG)]}
+    attachment_upload.offload('chat', payload, lambda: None)
+    timeout = uploads.calls[0][2]
+    assert 0 < timeout <= attachment_upload.UPLOAD_BASE_S + 1
+    client = attachment_upload._http()
+    assert client._retry_count == 0
+
+
+def test_an_uploading_message_does_not_arm_the_dead_socket_probe(transport, uploads):
+    scene, calls = transport
+    uploads.hold = True
+    handler = turn_transport.create_turn_handler(scene.name)
+    handler.start_input_stream('sid', 'submit', text='x', attachments=[_image(PNG)])
+    assert calls == [] and not turn_events.awaiting_results()  # still uploading
+    uploads.release()
+    assert len(calls) == 1 and turn_events.awaiting_results()  # sent: now waiting
+
+
+def test_a_message_behind_an_upload_is_sent_after_it(transport, uploads):
+    scene, calls = transport
+    uploads.hold = True
+    handler = turn_transport.create_turn_handler(scene.name)
+    handler.start_input_stream('sid', 'submit', text='with image', attachments=[_image(PNG)])
+    handler.start_input_stream('sid', 'submit', text='typed after')
+    assert calls == []
+    uploads.release()
+    assert [c[0][1]['text'] for c in calls] == ['with image', 'typed after']
+    assert not turn_transport._lines
+
+
+def test_a_reconnect_during_the_upload_keeps_the_message_for_redelivery(transport, uploads, monkeypatch):
+    scene, calls = transport
+
+    def offline(*args, **kwargs):
+        raise RuntimeError('Agent is reconnecting. Please try again when connected.')
+
+    monkeypatch.setattr(turn_transport, 'command', offline)
+    monkeypatch.setattr(turn_transport, '_socket_connected', lambda: False)
+    msg = scene.mixie_chat_messages.add()
+    msg.sender = 'USER'
+    handler = turn_transport.create_turn_handler(scene.name)
+    handler.start_input_stream('sid', 'submit', text='x', attachments=[_image(PNG)], user_message=msg)
+    turn_events._drain()
+    cid = msg.bubble_id
+    assert cid in turn_events._outbox and turn_events.command_pending(cid)
+    assert msg.delivery_hint == 'delivery uncertain'  # never "could not be delivered"
+    assert turn_events._outbox[cid]['payload']['attachments'][0]['type'] == 'image_ref'
+
+
+def test_the_inline_resend_drops_the_old_sealed_key(transport):
+    scene, calls = transport
+    handler = turn_transport.create_turn_handler(scene.name)
+    handler.start_input_stream('sid', 'submit', text='x', attachments=[_image(PNG)])
+    first_payload, first = calls[0][0][1], calls[0][1]['command_id']
+    first_payload['byok_key'] = 'mxs1.old.sealed'
+    turn_events._consume('agent.command.result', {
+        'command_id': first, 'ok': False, 'data': {'code': 'attachment_unavailable'}})
+    assert 'byok_key' not in calls[1][0][1]
+
+
+def test_the_byok_card_keeps_the_images_themselves(transport, monkeypatch):
+    from mixar.modules.space_mixie_chat.core import byok_notice, byok_resend, queue_processor
+    scene, calls = transport
+    remembered = []
+    monkeypatch.setattr(byok_resend, 'remember', lambda *a: remembered.append(a))
+    monkeypatch.setattr(byok_notice, 'byok_error_code', lambda result, data: 'byok_key_required')
+    monkeypatch.setattr(queue_processor, 'get_event_processor', lambda: SimpleNamespace(
+        _clear_loader_bubbles=lambda target: None, handle_command_error=lambda result, target: None))
+    handler = turn_transport.create_turn_handler(scene.name)
+    handler.start_input_stream('sid', 'submit', text='x', attachments=[_image(PNG)])
+    sent_payload, cid = calls[0][0][1], calls[0][1]['command_id']
+    turn_events._consume('agent.command.result', {
+        'command_id': cid, 'ok': False, 'status_code': 409, 'data': {'code': 'byok_key_required'}})
+    stored = remembered[0][3]
+    assert stored['attachments'] == [_image(PNG)]  # the card's resend uploads again
+    assert sent_payload['attachments'][0]['type'] == 'image_ref'  # the sent frame is untouched

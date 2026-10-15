@@ -19,7 +19,6 @@ import base64
 import re
 import threading
 import time
-from urllib.parse import quote
 
 from mixar.config.logging_config import get_logger
 
@@ -29,8 +28,12 @@ CAPABILITY = 'agent_attachments_v1'
 ENDPOINT = 'api/v1/agent/attachments'
 REF_TYPE = 'image_ref'
 UNAVAILABLE = 'attachment_unavailable'
-# Per image: a slow uplink at 16 KB/s moves ~1.9 MB in this time.
-UPLOAD_TIMEOUT_S = 120.0
+# One deadline for a message's uploads: a base plus the time its bytes need
+# at 16 KB/s, capped. Past it the images go inline instead — a silently dead
+# path must not hold the message for minutes.
+UPLOAD_BASE_S = 20.0
+UPLOAD_MIN_BPS = 16_000
+UPLOAD_MAX_S = 180.0
 _FIELDS = {'chat': 'content', 'input': 'attachments'}
 _DATA_URL = re.compile(r'^data:(image/[\w.+-]+);base64,(.*)$', re.S)
 
@@ -59,15 +62,25 @@ def wanted(method, payload):
     return bool(_inline_images(method, payload)) and server_supports()
 
 
-def upload(session_id, mime, b64, name=''):
-    """One image's id on the server. Worker thread; raises on any failure."""
-    from mixar.modules.common.api.client import get_http_client
-    headers = {'Content-Type': mime}
-    if name:
-        headers['X-File-Name'] = quote(str(name)[:200], safe='')
-    response = get_http_client().post(ENDPOINT, params={'session_id': session_id},
-                                      data=base64.b64decode(b64), headers=headers,
-                                      timeout=UPLOAD_TIMEOUT_S)
+_client = None
+
+
+def _http():
+    """Uploads never retry: the shared client retries a POST three times,
+    which on a stalled path held the message for minutes before the inline
+    fallback. One attempt, one deadline; a failure goes inline."""
+    global _client
+    if _client is None:
+        from mixar.modules.common.api.client import HTTPClient
+        _client = HTTPClient(retry_count=0)
+    return _client
+
+
+def upload(session_id, b64, timeout):
+    """One image's id on the server. Worker thread; raises on any failure.
+    The server reads the type from the bytes."""
+    response = _http().post(ENDPOINT, params={'session_id': session_id},
+                            data=base64.b64decode(b64), timeout=timeout)
     data = getattr(response, 'data', None)
     image_id = ((data or {}).get('data') or {}).get('id') if isinstance(data, dict) else None
     if not isinstance(image_id, str) or not image_id:
@@ -89,12 +102,17 @@ def offload(method, payload, then):
 
     def work():
         started = time.monotonic()
+        total = sum(len(b64) * 3 // 4 for _f, _i, _m, b64 in images)
+        deadline = started + min(UPLOAD_MAX_S, UPLOAD_BASE_S + total / UPLOAD_MIN_BPS)
         ids, failure = {}, None
         try:
             for field, index, mime, b64 in images:
                 key = (mime, b64)  # the same picture twice is one upload
                 if key not in ids:
-                    ids[key] = upload(session_id, mime, b64, payload[field][index].get('name') or '')
+                    left = deadline - time.monotonic()
+                    if left <= 0:
+                        raise TimeoutError('attachment upload deadline passed')
+                    ids[key] = upload(session_id, b64, left)
         except Exception as exc:  # noqa: BLE001 — any failure: the images stay inline
             failure = exc
         from mixar.modules.byok.core.byok_client import schedule_on_main

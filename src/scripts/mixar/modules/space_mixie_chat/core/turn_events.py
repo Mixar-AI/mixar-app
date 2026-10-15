@@ -89,9 +89,24 @@ def expect(scene, command_id, callback=None):
     return sid
 
 
+# Commands created but not sent yet: their images are still uploading over
+# HTTP (attachment_upload). Nothing is waiting on the server for them, so
+# they must not arm the socket's fast dead-path probe — a slow upload would
+# read as a dead socket and tear it down mid-upload.
+_staging = set()
+
+
+def stage(command_id):
+    _staging.add(command_id)
+
+
+def unstage(command_id):
+    _staging.discard(command_id)
+
+
 def awaiting_results():
     """A command was sent and its result is still due (socket_liveness.py)."""
-    return bool(_commands)
+    return any(command_id not in _staging for command_id in _commands)
 
 
 def remember_unsent(command_id, method, payload, ack):
@@ -562,6 +577,7 @@ def reset():
     _turns.clear()
     _commands.clear()
     _outbox.clear()
+    _staging.clear()
     _bindings.clear()
     _blocked.clear()
     command_retry.reset()
