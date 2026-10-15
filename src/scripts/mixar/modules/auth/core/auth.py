@@ -120,7 +120,19 @@ if _is_windows:
                 return True  # Nothing to delete is success
         return bool(result)
 else:
-    import keyring
+    # keyring must not be a hard import: if it (or its platform backend
+    # deps) is missing from the bundle, raising here would take down the
+    # whole auth -> connection -> chat/moodboard import chain. Every call
+    # site is wrapped in try/except, so a None module degrades to
+    # "credentials don't persist" instead of "half the UI never registers".
+    try:
+        import keyring
+    except ImportError as _keyring_import_error:
+        keyring = None
+        logger.error(
+            f"keyring unavailable ({_keyring_import_error}) - "
+            "credentials will not persist across sessions"
+        )
 
 
 # Item names (shared with the C++ shell, creator_auth.cc, which reads the
