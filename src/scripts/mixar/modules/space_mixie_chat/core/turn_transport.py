@@ -13,7 +13,7 @@ from mixar.modules.common.agent_rpc.client import command, call
 from mixar.modules.common.i18n import n_
 from .agent_events import AgentEvent
 from .chat_payloads import build_chat_payload, collect_user_preferences
-from . import command_retry, turn_events
+from . import attachment_upload, command_retry, turn_events
 
 _handlers = {}
 
@@ -49,11 +49,18 @@ class TurnTransport:
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
-    def _send(self, method, payload, user_message=None, interjecting=False, retry_of=None):
+    def _send(self, method, payload, user_message=None, interjecting=False, retry_of=None,
+              inline=False, attachments_backup=None):
         """``retry_of`` is the command id of the attempt this send repeats
         after a ``byok_transport_key_stale`` refusal (see ``settled``): the
         user bubble is re-keyed to the new id, and a second refusal is
-        shown, never retried again — the guard is this argument."""
+        shown, never retried again — the guard is this argument.
+
+        Inline images are uploaded over HTTP first and the command carries
+        references (``attachment_upload``); ``inline`` skips that, for the
+        one resend after the server answered ``attachment_unavailable``.
+        ``attachments_backup`` carries the inline originals across a retry
+        whose payload already holds references."""
         from .session import get_session_manager
         scene = self._scene()
         if scene is None:
@@ -91,8 +98,17 @@ class TurnTransport:
                     item.bubble_id = command_id
                     break
 
+        uploads = {'backup': attachments_backup}
+
         def settled(target, result):
             from .queue_processor import get_event_processor
+            if uploads['backup'] and attachment_upload.unavailable(result):
+                # The server no longer holds the uploaded images (expired,
+                # or the store lost them): send them inline, once, under a
+                # new id — the old one is journaled with this refusal.
+                attachment_upload.restore(payload, uploads['backup'])
+                self._send(method, payload, None, interjecting, retry_of=command_id, inline=True)
+                return
             if retry_of is None and _stale_transport_key(result):
                 # The key was sealed to a server key that has since rotated:
                 # forget the cached one and resend this command ONCE under a
@@ -102,7 +118,8 @@ class TurnTransport:
                 transport_seal.invalidate()
                 for field in (BYOK_TURN_KEY_FIELD, BYOK_TURN_ACCOUNT_FIELD):
                     payload.pop(field, None)
-                self._send(method, payload, None, interjecting, retry_of=command_id)
+                self._send(method, payload, None, interjecting, retry_of=command_id,
+                           attachments_backup=uploads['backup'])
                 return
             for item in target.mixie_chat_messages:
                 if item.sender == 'USER' and item.bubble_id == command_id:
@@ -206,6 +223,15 @@ class TurnTransport:
         # main-thread timer, so the send is accepted here and a failure
         # settles through the expected command id above.
         from mixar.modules.byok.core.turn_credentials import prepare
+        if not inline and attachment_upload.wanted(method, payload):
+            # Images go up over HTTP first; the frame then carries ids. The
+            # send is accepted now and settles through the expected id, as
+            # on the BYOK worker-thread path.
+            def uploaded():
+                if turn_events.command_pending(command_id):  # Stop forgets it meanwhile
+                    prepare(dispatch, method=method, action=payload.get('action'))
+            uploads['backup'] = attachment_upload.offload(method, payload, uploaded)
+            return True
         prepare(dispatch, method=method, action=payload.get('action'))
         return outcome.get('ok', True)
 
