@@ -2012,6 +2012,9 @@ msgstr "Chưa chọn cái gì cả"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Giá Trị"
 
@@ -4625,6 +4628,15 @@ msgstr "Dàn Dựng Tự Động thất bại"
 msgid "Animate failed"
 msgstr "Tạo hoạt họa thất bại"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Số bước tinh chỉnh dùng trong quá trình sinh tạo. Nhiều b�
 
 msgid "The file format used to store the generated image."
 msgstr "Định dạng tập tin dùng để lưu hình ảnh được sinh tạo."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Hãy chọn một nút suy luận"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Biên soạn lời nhắc, rồi bấm Enter hoặc Sinh Tạo"
 
-msgid "Node added to the generation queue"
-msgstr "Đã thêm nút vào hàng đợi sinh tạo"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Hiển thị sắp đặt và lời nhắc của nút này để có thể điều chỉnh và chạy lại; bấm lần nữa để hủy biên soạn và quay lại kết quả"
@@ -25721,6 +25742,9 @@ msgstr "Đang chờ..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Bấm để biên soạn lời nhắc và thử lại"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

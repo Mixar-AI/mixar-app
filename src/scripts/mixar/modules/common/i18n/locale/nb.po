@@ -2012,6 +2012,9 @@ msgstr "Ingenting valgt"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Verdi"
 
@@ -4625,6 +4628,15 @@ msgstr "Automatisk rigg mislyktes"
 msgid "Animate failed"
 msgstr "Animering mislyktes"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Antall forfiningstrinn som brukes under generering. Flere trinn kan ta l
 
 msgid "The file format used to store the generated image."
 msgstr "Filformatet som brukes til å lagre det genererte bildet."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Velg en inferensnode"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Rediger ledeteksten, og trykk Enter eller Generer"
 
-msgid "Node added to the generation queue"
-msgstr "Noden er lagt i genereringskøen"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Vis innstillingene og ledeteksten for denne noden så de kan justeres og kjøres på nytt; klikk igjen for å avbryte redigeringen og gå tilbake til resultatet"
@@ -25721,6 +25742,9 @@ msgstr "I kø..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Klikk for å redigere ledeteksten og prøve igjen"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

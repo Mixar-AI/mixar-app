@@ -2012,6 +2012,9 @@ msgstr "ไม่ได้เลือกสิ่งใด"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "ค่า"
 
@@ -4625,6 +4628,15 @@ msgstr "ริกอัตโนมัติล้มเหลว"
 msgid "Animate failed"
 msgstr "ทำแอนิเมชันล้มเหลว"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "จำนวนขั้นตอนการปรับแต่งท
 
 msgid "The file format used to store the generated image."
 msgstr "รูปแบบไฟล์ที่ใช้จัดเก็บภาพที่สร้าง"
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "เลือกจุดต่ออนุมาน"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "แก้ไขพรอมต์ แล้วกด Enter หรือ “สร้าง”"
 
-msgid "Node added to the generation queue"
-msgstr "เพิ่มจุดต่อลงในคิวการสร้างแล้ว"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "แสดงการตั้งค่าและพรอมต์ของจุดต่อนี้เพื่อปรับและเรียกใช้อีกครั้ง คลิกอีกครั้งเพื่อยกเลิกการแก้ไขและกลับไปยังผลลัพธ์"
@@ -25721,6 +25742,9 @@ msgstr "อยู่ในคิว..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "คลิกเพื่อแก้ไขพรอมต์แล้วลองอีกครั้ง"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

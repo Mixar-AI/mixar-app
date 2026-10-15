@@ -2012,6 +2012,9 @@ msgstr "ഒന്നും തിരഞ്ഞെടുത്തിട്ടി�
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "വാല്യൂ"
 
@@ -4625,6 +4628,15 @@ msgstr "ഓട്ടോ റിഗ് പരാജയപ്പെട്ടു"
 msgid "Animate failed"
 msgstr "ആനിമേറ്റ് പരാജയപ്പെട്ടു"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "ജനറേഷനിടെ ഉപയോഗിക്കുന്ന ശ�
 
 msgid "The file format used to store the generated image."
 msgstr "ജനറേറ്റ് ചെയ്ത ചിത്രം സൂക്ഷിക്കാൻ ഉപയോഗിക്കുന്ന ഫയൽ ഫോർമാറ്റ്."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "ഒരു ഇൻഫറൻസ് നോഡ് തിരഞ്ഞെടു
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "പ്രോംപ്റ്റ് തിരുത്തുക, തുടർന്ന് Enter അമർത്തുക അല്ലെങ്കിൽ ജനറേറ്റ് ചെയ്യുക"
 
-msgid "Node added to the generation queue"
-msgstr "നോഡ് ജനറേഷൻ ക്യൂവിൽ ചേർത്തു"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "വീണ്ടും ക്രമീകരിച്ച് പ്രവർത്തിപ്പിക്കാൻ ഈ നോഡിന്റെ ക്രമീകരണങ്ങളും പ്രോംപ്റ്റും കാണിക്കുക; തിരുത്തൽ റദ്ദാക്കി ഫലത്തിലേക്ക് മടങ്ങാൻ വീണ്ടും ക്ലിക്ക് ചെയ്യുക"
@@ -25721,6 +25742,9 @@ msgstr "ക്യൂവിൽ..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "പ്രോംപ്റ്റ് തിരുത്തി വീണ്ടും ശ്രമിക്കാൻ ക്ലിക്ക് ചെയ്യുക"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

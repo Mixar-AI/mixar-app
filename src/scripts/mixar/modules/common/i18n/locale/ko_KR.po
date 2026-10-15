@@ -2012,6 +2012,9 @@ msgstr "아무 것도 선택되지 않음"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "값"
 
@@ -4625,6 +4628,15 @@ msgstr "자동 리그 실패"
 msgid "Animate failed"
 msgstr "애니메이션 실패"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "생성 중에 사용하는 정제 단계 수입니다. 단계가 많을�
 
 msgid "The file format used to store the generated image."
 msgstr "생성된 이미지를 저장하는 데 사용하는 파일 형식입니다."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "추론 노드를 선택하세요"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "프롬프트를 편집한 다음 Enter 키나 생성을 누르세요"
 
-msgid "Node added to the generation queue"
-msgstr "노드를 생성 대기열에 추가했습니다"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "이 노드의 설정과 프롬프트를 표시하여 조정 후 다시 실행할 수 있게 합니다. 다시 클릭하면 편집을 취소하고 결과로 돌아갑니다"
@@ -25721,6 +25742,9 @@ msgstr "대기 중..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "클릭하여 프롬프트를 편집하고 다시 시도하세요"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

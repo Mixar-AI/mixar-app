@@ -2012,6 +2012,9 @@ msgstr "何も選択していません"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "値"
 
@@ -4625,6 +4628,15 @@ msgstr "自動リグに失敗しました"
 msgid "Animate failed"
 msgstr "アニメーションに失敗しました"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "生成時に使用する改良ステップの数。ステップが多い
 
 msgid "The file format used to store the generated image."
 msgstr "生成された画像の保存に使用するファイルフォーマット。"
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "推論ノードを選択してください"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "プロンプトを編集してから、Enterまたは「生成」を押してください"
 
-msgid "Node added to the generation queue"
-msgstr "ノードを生成キューに追加しました"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "このノードの設定とプロンプトを表示して、調整と再実行ができるようにします。もう一度クリックすると編集をキャンセルして結果に戻ります"
@@ -25725,6 +25746,9 @@ msgstr "待機中..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "クリックしてプロンプトを編集し、再試行"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

@@ -2012,6 +2012,9 @@ msgstr "Nimic selectat"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Valoare"
 
@@ -4625,6 +4628,15 @@ msgstr "Rig automat a eșuat"
 msgid "Animate failed"
 msgstr "Animarea a eșuat"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Numărul de pași de rafinare folosiți în generare. Mai mulți pași p
 
 msgid "The file format used to store the generated image."
 msgstr "Formatul de fișier folosit pentru a stoca imaginea generată."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Selectați un nod de inferență"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Editați promptul, apoi apăsați Enter sau Generare"
 
-msgid "Node added to the generation queue"
-msgstr "Nod adăugat în coada de generare"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Afișează setările și promptul acestui nod ca să poată fi ajustate și rulate din nou; faceți clic din nou pentru a anula editarea și a reveni la rezultat"
@@ -25721,6 +25742,9 @@ msgstr "În coadă..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Clic pentru a edita promptul și a reîncerca"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

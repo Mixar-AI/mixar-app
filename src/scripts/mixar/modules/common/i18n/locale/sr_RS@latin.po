@@ -2546,6 +2546,9 @@ msgstr "Ništa nije izabrano"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Vrednost"
 
@@ -5834,6 +5837,15 @@ msgstr "Automatski rig nije uspeo"
 msgid "Animate failed"
 msgstr "Animacija nije uspela"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -5850,6 +5862,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 # derived
@@ -6948,9 +6972,6 @@ msgstr "Broj koraka dorade tokom generisanja. Više koraka može duže trajati."
 # derived
 msgid "The file format used to store the generated image."
 msgstr "Format datoteke u kojem se čuva generisana slika."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -12751,9 +12772,8 @@ msgstr "Izaberite čvor zaključivanja"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Uredite prompt, zatim pritisnite Enter ili Generiši"
 
-# derived
-msgid "Node added to the generation queue"
-msgstr "Čvor je dodat u red generisanja"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 # derived
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
@@ -32958,6 +32978,9 @@ msgstr "U redu..."
 # derived
 msgid "Click to edit the prompt and try again"
 msgstr "Kliknite da uredite prompt i pokušate ponovo"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 # derived
 msgid ""

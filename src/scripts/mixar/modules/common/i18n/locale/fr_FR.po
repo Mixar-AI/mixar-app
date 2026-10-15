@@ -2012,6 +2012,9 @@ msgstr "Aucune sélection"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Valeur"
 
@@ -4625,6 +4628,15 @@ msgstr "Échec de l’Auto Rig"
 msgid "Animate failed"
 msgstr "Échec de l’animation"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Le nombre d’étapes d’affinage utilisées pendant la génération. P
 
 msgid "The file format used to store the generated image."
 msgstr "Le format de fichier utilisé pour stocker l’image générée."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Sélectionnez un nœud d’inférence"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Modifiez le prompt, puis appuyez sur Enter ou Générer"
 
-msgid "Node added to the generation queue"
-msgstr "Nœud ajouté à la file d’attente de génération"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Afficher les réglages et le prompt de ce nœud pour les ajuster et le relancer ; cliquez à nouveau pour annuler l’édition et revenir au résultat"
@@ -25721,6 +25742,9 @@ msgstr "En attente..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Cliquez pour modifier le prompt et réessayer"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

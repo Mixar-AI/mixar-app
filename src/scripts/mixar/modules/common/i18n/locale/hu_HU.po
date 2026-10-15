@@ -2012,6 +2012,9 @@ msgstr "Nincs kijelölés"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Érték"
 
@@ -4625,6 +4628,15 @@ msgstr "Az automatikus riggelés sikertelen"
 msgid "Animate failed"
 msgstr "Az animálás sikertelen"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "A generálás során használt finomítási lépések száma. Több lép
 
 msgid "The file format used to store the generated image."
 msgstr "A generált kép tárolásához használt fájlformátum."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Jelöljön ki egy következtetési csomópontot"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Szerkessze a promptot, majd nyomja meg az Entert, vagy válassza a Generálást"
 
-msgid "Node added to the generation queue"
-msgstr "A csomópont a generálási várólistára került"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "A csomópont beállításainak és promptjának megjelenítése, hogy állítható és újrafuttatható legyen; újbóli kattintás elveti a szerkesztést, és visszatér az eredményhez"
@@ -25721,6 +25742,9 @@ msgstr "Várólistán..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Kattintson a prompt szerkesztéséhez, és próbálja újra"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

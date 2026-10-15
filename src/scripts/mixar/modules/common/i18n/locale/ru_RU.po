@@ -2012,6 +2012,9 @@ msgstr "Ничего не выделено"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Значение"
 
@@ -4625,6 +4628,15 @@ msgstr "Ошибка авторига"
 msgid "Animate failed"
 msgstr "Ошибка анимации"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Количество шагов уточнения при генерац
 
 msgid "The file format used to store the generated image."
 msgstr "Формат файла для сохранения сгенерированного изображения."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Выберите ноду инференса"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Отредактируйте промпт, затем нажмите Enter или «Генерировать»"
 
-msgid "Node added to the generation queue"
-msgstr "Нода добавлена в очередь генерации"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Показывает настройки и промпт этой ноды, чтобы их можно было изменить и запустить снова; повторное нажатие отменяет редактирование и возвращает к результату"
@@ -25721,6 +25742,9 @@ msgstr "В очереди..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Нажмите, чтобы изменить промпт и повторить попытку"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"

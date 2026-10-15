@@ -2012,6 +2012,9 @@ msgstr "Nieko nepasirinkta"
 msgid "{names} +{count}"
 msgstr ""
 
+msgid "No {group} choices are available yet"
+msgstr ""
+
 msgid "Value"
 msgstr "Reikšmė"
 
@@ -4625,6 +4628,15 @@ msgstr "Automatinis rigas nepavyko"
 msgid "Animate failed"
 msgstr "Animuoti nepavyko"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
 msgid "Choose at least one animation preset"
 msgstr ""
 
@@ -4641,6 +4653,18 @@ msgid "The rigged character it was made for is no longer in the scene"
 msgstr ""
 
 msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
 msgstr ""
 
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
@@ -5533,9 +5557,6 @@ msgstr "Tobulinimo žingsnių skaičius generuojant. Daugiau žingsnių gali už
 
 msgid "The file format used to store the generated image."
 msgstr "Failo formatas, kuriuo saugomas sugeneruotas paveikslas."
-
-msgid "Animate needs a rigged character: connect an Auto Rig result"
-msgstr ""
 
 msgid "Animate is unavailable in the generation catalog"
 msgstr ""
@@ -9976,8 +9997,8 @@ msgstr "Pasirinkite išvedimo mazgą"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Redaguokite raginimą, tada paspauskite Enter arba „Generuoti“"
 
-msgid "Node added to the generation queue"
-msgstr "Mazgas įtrauktas į generavimo eilę"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Rodo šio mazgo nustatymus ir raginimą, kad juos būtų galima pakoreguoti ir vykdyti dar kartą; spustelėkite dar kartą, kad atšauktumėte redagavimą ir grįžtumėte prie rezultato"
@@ -25721,6 +25742,9 @@ msgstr "Eilėje..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Spustelėkite, kad pataisytumėte raginimą ir bandytumėte dar kartą"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
