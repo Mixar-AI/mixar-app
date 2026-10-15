@@ -17565,6 +17565,12 @@ msgstr "GPU를 사용할 수 있으면 항상 GPU로 렌더링합니다"
 msgid "Always render on the CPU"
 msgstr "항상 CPU로 렌더링합니다"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "기본적으로 외부 베이크 노드 사용"
 
@@ -17642,12 +17648,6 @@ msgstr "항상 프레임 평가"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "프레임이 바뀔 때마다 노드 트리를 평가합니다"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "채널 옵션"
@@ -19617,12 +19617,6 @@ msgstr "Mixie 채팅 로그인용 사용자 ID"
 msgid "Agent expects: {formats}"
 msgstr "에이전트가 요구하는 형식: {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "처리가 느린 이미지를 건너뜀: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "이미지 인코딩 실패: {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "마크: {note}"
 msgid "Sketch"
 msgstr "스케치"
 
+msgid "Skipped slow image: {name}"
+msgstr "처리가 느린 이미지를 건너뜀: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "이미지 인코딩 실패: {error}"
+
 msgid "Message sent"
 msgstr "메시지를 보냈습니다"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

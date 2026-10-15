@@ -19,14 +19,7 @@ from queue import Empty
 from typing import Optional
 
 from ..constants import DISCONNECT_REASON_AUTH_FAILED, JSONRPCMethod
-from .jsonrpc_frames import (
-    HANDSHAKE_AUTH_FAILED,
-    HANDSHAKE_OK,
-    HANDSHAKE_TRANSIENT,
-    reconnect_sleep,
-    server_retry_after,
-    wait_for_handshake,
-)
+from .jsonrpc_frames import HANDSHAKE_AUTH_FAILED, HANDSHAKE_OK, HANDSHAKE_TRANSIENT, wait_for_handshake
 
 try:
     import websocket
@@ -101,23 +94,11 @@ class SocketConnection:
                     logger.error(f"Error in on_disconnected callback: {e}")
 
             if self._running.is_set():
-                # A 1013 close ("capacity; retry in Ns") sets the floor; every
-                # wait is jittered so clients never reconnect in lockstep.
-                # Jitter touches the sleep only, never the backoff itself.
-                retry_after = getattr(self, "_server_retry_after", None)
-                self._server_retry_after = None
-                delay = reconnect_sleep(self._current_delay, retry_after)
-                logger.info(f"Reconnecting in {delay:.1f}s...")
-                time.sleep(delay)
+                logger.info(f"Reconnecting in {self._current_delay:.1f}s...")
+                time.sleep(self._current_delay)
                 self._current_delay = min(
                     self._current_delay * 2, self._max_reconnect_delay
                 )
-
-    def _note_server_close(self, close_code, reason="") -> None:
-        """Record a server close; a 1013 sets the next reconnect's floor."""
-        retry_after = server_retry_after(close_code, reason)
-        if retry_after is not None:
-            self._server_retry_after = retry_after
 
     def _do_connect(self) -> bool:
         """Establish connection and perform handshake.
@@ -400,7 +381,6 @@ class SocketConnection:
             outcome, detail = wait_for_handshake(
                 self._ws, timeout=10.0,
                 result_sink=self._set_server_capabilities,
-                close_sink=self._note_server_close,
             )
         except Exception as e:
             logger.warning(f"Handshake error: {e} - transient, will retry")

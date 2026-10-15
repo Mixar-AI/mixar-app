@@ -17,7 +17,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
 from ..constants import SessionState
 from .agent_events import AgentEvent
-from . import command_retry, turn_cursor
+from . import turn_cursor
 from .turn_event_pump import TurnEventPump
 
 logger = get_logger(__name__)
@@ -32,6 +32,15 @@ _overflow = set()
 _bindings = {}
 _turns = {}
 _commands = {}
+# Exact frames of chat/input commands the server has not acknowledged, by
+# command id. A command lost with its socket is resent under the SAME id once
+# the next connection's request_status says the server never saw it: the
+# server keys receipts on (user, command id) plus a content digest, so a
+# resend that races a late original only ever returns the first receipt —
+# it can never run twice. Bounded: after the last attempt the bubble is
+# marked undelivered and the tab leaves BUSY.
+_outbox = {}
+_MAX_REDELIVERIES = 3
 _blocked = set()
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_ITEMS = 512
@@ -80,10 +89,44 @@ def expect(scene, command_id, callback=None):
     return sid
 
 
-def command_pending(command_id):
-    """True while a sent command still awaits its result (Stop drops it)."""
-    entry = _commands.get(command_id)
-    return bool(entry) and entry[0] not in _blocked
+def awaiting_results():
+    """A command was sent and its result is still due (socket_liveness.py)."""
+    return bool(_commands)
+
+
+def remember_unsent(command_id, method, payload, ack):
+    """Keep a command's exact frame until the server acknowledges it."""
+    _outbox[command_id] = {'method': method, 'payload': payload, 'ack': ack, 'attempts': 0}
+
+
+def acknowledged(command_id):
+    """The server answered this command: stop holding it. Returns how many
+    times it had been resent (0 when it was delivered first time)."""
+    entry = _outbox.pop(command_id, None)
+    return entry['attempts'] if entry else 0
+
+
+def _redeliver(command_id, session_id):
+    """request_status said ``unknown``: the frame died with its socket. Any thread."""
+    entry = _outbox.get(command_id)
+    if entry is None or command_id not in _commands:
+        return
+    if entry['attempts'] >= _MAX_REDELIVERIES:
+        _outbox.pop(command_id, None)
+        logger.warning(f"[CONN] command {command_id[:8]} never reached the server after "
+                       f"{entry['attempts']} resends; marking it undelivered")
+        handle_turn_notification('agent.command.result', {
+            'session_id': session_id, 'command_id': command_id, 'ok': False, 'undelivered': True,
+        })
+        return
+    entry['attempts'] += 1
+    logger.warning(f"[CONN] command {command_id[:8]} never reached the server; "
+                   f"resending it (attempt {entry['attempts']}/{_MAX_REDELIVERIES})")
+    from mixar.modules.common.agent_rpc.client import command
+    try:
+        command(entry['method'], entry['payload'], entry['ack'], command_id=command_id)
+    except Exception:  # noqa: BLE001 — not connected again yet; the next reconnect retries
+        logger.debug('Command resend waits for the socket')
 
 
 def reopen(scene):
@@ -102,6 +145,7 @@ def reopen(scene):
     for cid, (session_id, _) in list(_commands.items()):
         if session_id == sid:
             _commands.pop(cid)
+            _outbox.pop(cid, None)
     _blocked.discard(sid)
 
 
@@ -234,18 +278,11 @@ def _consume(method, params):
         elif turn is not None and not turn.recovering:
             _request_replay(turn)  # reconnect() already attached a recovering turn.
         return
-    if method == 'agent.command.retry':
-        # A -32017 busy ack: arm the one resend here, on the main thread,
-        # unless Stop already forgot the command (core/command_retry.py).
-        command_id = params.get('command_id')
-        if command_pending(command_id):
-            command_retry.schedule(command_id, params.get('retry_after_s') or 0)
-        else:
-            command_retry.discard(command_id)
-        return
     if method in ('agent.command.result', 'agent.command.delivered'):
         command_id = params.get('command_id')
         entry = _commands.get(command_id) if params.get('uncertain') or method == 'agent.command.delivered' else _commands.pop(command_id, None)
+        if not params.get('uncertain') and method == 'agent.command.result':
+            _outbox.pop(command_id, None)
         if entry and entry[0] not in _blocked and entry[1]:
             scene = _resolve(entry[0])
             if scene is not None:
@@ -398,7 +435,7 @@ def _replay_unavailable(scene, turn):
     processor = get_event_processor()
     processor._clear_loader_bubbles(scene)
     from .executor import get_executor
-    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
+    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
     add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
@@ -425,7 +462,19 @@ def reconnect(session_ids=None):
         if sid in _blocked or (wanted is not None and sid not in wanted):
             continue
         def received(result, cid=command_id, session_id=sid):
-            if result.get('state') == 'complete':
+            state = result.get('state') if isinstance(result, dict) else None
+            if state == 'unknown':
+                # The server never saw it: the frame died with the old socket.
+                _redeliver(cid, session_id)
+                return
+            if state in ('pending', 'accepted') and cid in _outbox:
+                # It arrived after all: drop the "delivery uncertain" mark.
+                acknowledged(cid)
+                handle_turn_notification('agent.command.delivered', {
+                    'command_id': cid, 'session_id': session_id, 'ok': True,
+                })
+            if state == 'complete':
+                acknowledged(cid)
                 handle_turn_notification('agent.command.result', {
                     'command_id': cid, 'session_id': session_id, **(result.get('result') or {}),
                 })
@@ -478,6 +527,7 @@ def drop_scene(scene_name):
     for key, entry in list(_commands.items()):
         if entry[0] == sid:
             _commands.pop(key, None)
+            _outbox.pop(key, None)
 
 
 def shutdown(app_exit=False):
@@ -495,6 +545,6 @@ def reset():
         _inbox_last = ''
     _turns.clear()
     _commands.clear()
+    _outbox.clear()
     _bindings.clear()
     _blocked.clear()
-    command_retry.reset()

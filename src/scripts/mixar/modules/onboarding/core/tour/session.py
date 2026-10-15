@@ -83,7 +83,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         self._host_rect = (0, 0, 0, 0)
         self._card_bounds = (0, 0, 0, 0)  # host minus a header overlapping its top
         self._host_lost = False        # host window has no VIEW_3D right now
-        self._paused_before_host_lost = False
         self._ui_scale = 1.0
         self._last_wall = time.monotonic()
         self._started_wall = self._last_wall
@@ -336,16 +335,12 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         if region is None:
             if not self._host_lost:
                 self._host_lost = True
-                # A pause the user made before the host went away is theirs:
-                # the host coming back must not resume it.
-                self._paused_before_host_lost = self.runner.user_paused
                 self.runner.set_user_paused(True)
                 self.cursor.hide()
             return True
         if self._host_lost:
             self._host_lost = False
-            if not self.exit_confirm and not getattr(
-                    self, "_paused_before_host_lost", False):
+            if not self.exit_confirm:
                 self.runner.set_user_paused(False)
         ptr = anchors.normalize_ptr(region.as_pointer())
         if ptr != self._host_region_ptr:

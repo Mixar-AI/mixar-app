@@ -17565,6 +17565,12 @@ msgstr "Всегда рендерит на GPU, если он доступен"
 msgid "Always render on the CPU"
 msgstr "Всегда рендерит на CPU"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "Запечённое снаружи по умолчанию"
 
@@ -17642,12 +17648,6 @@ msgstr "Всегда вычислять кадр"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Вычисляет дерево нод при каждой смене кадра"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "Параметры канала"
@@ -19617,12 +19617,6 @@ msgstr "ID пользователя для входа в чат Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Агент ожидает: {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "Пропущено медленное изображение: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Ошибка кодирования изображения: {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "Отметки: {note}"
 msgid "Sketch"
 msgstr "Набросок"
 
+msgid "Skipped slow image: {name}"
+msgstr "Пропущено медленное изображение: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Ошибка кодирования изображения: {error}"
+
 msgid "Message sent"
 msgstr "Сообщение отправлено"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

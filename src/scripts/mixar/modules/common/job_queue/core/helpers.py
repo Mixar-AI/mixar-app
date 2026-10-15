@@ -80,9 +80,7 @@ def create_scene_flag_listener(
     on_start : callable(scene) | None
         Called on the idle→active transition, *after* the flag is set.
     on_finish : callable(scene) | None
-        Called for EVERY scene whose flag clears, *after* the failure (if any)
-        is recorded and the flag cleared: when that scene's jobs finish while
-        another scene's continue, or when the queue goes idle.
+        Called on the active→idle transition, *after* the flag is cleared.
     """
 
     # Queue-level edge tracker. The flag lives per-scene but the queue (and this
@@ -116,64 +114,25 @@ def create_scene_flag_listener(
         else ""
     )
 
-    # Per-scene batch membership, keyed by scene NAME (never an RNA
-    # reference): the ids of every job that was active for the scene while its
-    # flag was up. A release reports only failures from this set, so a failure
-    # released early is never re-reported against the scene's next batch.
-    # Membership is not bounded by ``finished_at``: the mirror sync stamps it,
-    # so it can still be 0 when this listener fires.
-    batch: dict = {}
-
-    def _record_batch_failure(scene, snapshot, job_ids) -> None:
+    def _record_batch_failure(scene, snapshot) -> None:
         if not error_property or not hasattr(scene, error_property):
             return
         from .failure_info import failure_message, failure_reason
 
         for job in reversed(snapshot):
-            if job_ids is None:
-                # No recorded batch (the listener attached mid-batch): the
-                # legacy scene-name scan.
-                if job.scene_name and job.scene_name != scene.name:
-                    continue
-            elif job.id not in job_ids:
-                continue
-            if job.state != JobState.FAILED:
-                continue
-            if getattr(job, "_scene_error_reported", False):
-                continue
-            job._scene_error_reported = True
-            reason = failure_reason(job)
-            text = failure_message(job) + (f" ({reason})" if reason else "")
-            try:
-                setattr(scene, error_property, text)
-            except (AttributeError, TypeError):
-                pass
-            return
-
-    def _release(scene, snapshot) -> None:
-        """Clear one scene's flag, reporting its batch's latest failure first."""
-        job_ids = batch.pop(scene.name, None)
-        _record_batch_failure(scene, snapshot, job_ids)
-        if job_ids:
-            for job in snapshot:
-                if job.id in job_ids:
-                    job._scene_error_reported = True
-        _set_flag(scene, False)
-        if on_finish is not None:
-            try:
-                on_finish(scene)
-            except Exception:
-                pass
-
-    def _begin(scene) -> None:
-        """False→True: a new batch starts with a clean error field."""
-        if error_property:
-            try:
-                if hasattr(scene, error_property):
-                    setattr(scene, error_property, "")
-            except (AttributeError, TypeError):
-                pass
-        _set_flag(scene, True)
+            if (
+                job.state == JobState.FAILED
+                and (not job.scene_name or job.scene_name == scene.name)
+                and not getattr(job, "_scene_error_reported", False)
+            ):
+                job._scene_error_reported = True
+                reason = failure_reason(job)
+                text = failure_message(job) + (f" ({reason})" if reason else "")
+                try:
+                    setattr(scene, error_property, text)
+                except (AttributeError, TypeError):
+                    pass
+                return
 
     def _on_queue_changed(queue: FeatureQueue) -> None:
         snapshot = queue.snapshot()
@@ -190,8 +149,7 @@ def create_scene_flag_listener(
             scenes = _iter_scenes()
             scenes_by_name = {s.name: s for s in scenes}
             targets = [scenes_by_name[n] for n in active_scene_names if n in scenes_by_name]
-            legacy = not active_scene_names
-            if legacy:
+            if not active_scene_names:
                 # Compatibility only for jobs created before scene tracking.
                 fallback = getattr(bpy.context, "scene", None)
                 if fallback is not None:
@@ -201,28 +159,11 @@ def create_scene_flag_listener(
             # different Python object than the matching ``bpy.data.scenes``
             # item and an ``id()`` set would exclude it.
             target_names = {scene.name for scene in targets}
-            for name in target_names:
-                ids = batch.setdefault(name, set())
-                ids.update(
-                    j.id for j in snapshot
-                    if j.state in _ACTIVE_STATES
-                    and (j.scene_name == name or (legacy and not j.scene_name))
-                )
             # Recompute every scene, not just the currently-active targets. If
-            # scene A finishes while scene B continues, A is released now
-            # (failure recorded, on_finish run) instead of waiting for the
-            # entire feature queue to become idle.
+            # scene A finishes while scene B continues, A must be released now
+            # instead of waiting for the entire feature queue to become idle.
             for scene in scenes:
-                was_set = bool(getattr(scene, property_name, False))
-                if scene.name in target_names:
-                    if not was_set:
-                        _begin(scene)
-                elif was_set:
-                    _release(scene, snapshot)
-            if legacy:
-                # The fallback wrapper is not the bpy.data item; set it too.
-                for scene in targets:
-                    _set_flag(scene, True)
+                _set_flag(scene, scene.name in target_names)
             if not edge["active"]:
                 edge["active"] = True
                 if on_start is not None:
@@ -237,10 +178,19 @@ def create_scene_flag_listener(
         # the user has since switched away from is never left stuck True.
         if edge["active"]:
             edge["active"] = False
+            cleared = []
             for scene in _iter_scenes():
                 if bool(getattr(scene, property_name, False)):
-                    _release(scene, snapshot)
-            batch.clear()
+                    _record_batch_failure(scene, snapshot)
+                    _set_flag(scene, False)
+                    cleared.append(scene)
+
+            if on_finish is not None:
+                for scene in cleared:
+                    try:
+                        on_finish(scene)
+                    except Exception:
+                        pass
 
     # Stable dedupe identity: this factory returns a NEW closure on every
     # enqueue, but all closures for the same scene property are the same logical

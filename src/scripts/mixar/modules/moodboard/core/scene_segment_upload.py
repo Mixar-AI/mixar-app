@@ -14,7 +14,6 @@ from mixar.modules.common.i18n import rpt_
 from ...common.api.response import APIResponse
 from ...common.api.services.scene_segment_service import get_scene_segment_service
 from ..constants import SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS
-from .mask_tool_feedback import error_message
 from .scene_segment_image import compress_image_for_scene_segment
 from .scene_segment_types import (
     JobState,
@@ -111,7 +110,7 @@ class SceneSegmentUploadMixin:
             logger.debug("[SceneSegment] Uploaded '%s'", image_name)
 
         def on_error(error: Exception):
-            self._finish_upload(image_name, state, False, error_message(error))
+            self._finish_upload(image_name, state, False, str(error))
             logger.error("[SceneSegment] Upload failed for '%s': %s", image_name, error)
 
         try:

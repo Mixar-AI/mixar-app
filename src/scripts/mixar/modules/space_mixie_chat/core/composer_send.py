@@ -8,7 +8,6 @@ from mixar.modules.common.i18n import n_
 
 from ..constants import SessionState, STATE_LABELS, VIDEO_ATTACHMENT_REJECTED
 from .attachment_validation import pending_video_attachments
-from .chat_payloads import image_block
 from .session import get_session_manager
 
 HINT_QUEUED = n_('queued')  # display: C++ translates the token
@@ -16,9 +15,6 @@ HINT_QUEUED = n_('queued')  # display: C++ translates the token
 
 @dataclass
 class OutgoingMessage:
-    """A composed send. ``image_attachments`` are the paired image dicts
-    (``{"base64", "mime_type"[, "name"]}``, core/attachment_pairing.py);
-    ``attachment_names`` is the legacy list derived from those same pairs."""
     text: str
     image_attachments: Optional[list] = None
     attachment_names: Optional[list] = None
@@ -83,7 +79,10 @@ def send_user_message(scene, msg):
             action='modify' if state == SessionState.MODIFYING else 'respond',
             text=msg.text, question_ref=pending_question_ref(scene),
             user_message=msg.user_message,
-            interrupt_id=pending_interrupt_id(scene), attachments=[image_block(img) for img in (msg.image_attachments or [])],
+            interrupt_id=pending_interrupt_id(scene), attachments=[
+                {"type": "image_url", "image_url": {"url":
+                 f"data:{img.get('mime_type', 'image/png')};base64,{img.get('base64', '')}"}}
+                for img in (msg.image_attachments or [])],
         )
         if ok:
             session.set_state(scene, SessionState.BUSY)

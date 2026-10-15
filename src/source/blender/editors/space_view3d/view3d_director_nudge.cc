@@ -262,15 +262,6 @@ static wmOperatorStatus director_nudge_modal(bContext *C, wmOperator *op, const 
     return director_nudge_tick(C, op, data);
   }
 
-  if (event->type == WINDEACTIVATE) {
-    /* Focus left the window: the held keys' releases will never arrive, so
-     * this is the all-keys-released end — one undo step for the motion so
-     * far. It must still pass: the window manager requires it of every
-     * handler. */
-    data->held = 0;
-    return director_nudge_finish(C, op) | OPERATOR_PASS_THROUGH;
-  }
-
   if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE)) {
     if (event->val == KM_PRESS) {
       return director_nudge_finish(C, op);

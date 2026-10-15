@@ -17565,6 +17565,12 @@ msgstr "GPU கிடைத்தால் எப்போதும் அதி
 msgid "Always render on the CPU"
 msgstr "எப்போதும் CPU-இல் வழங்குகிறது"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "இயல்பாக வெளியே சுடப்பட்டதை இயக்கு"
 
@@ -17642,12 +17648,6 @@ msgstr "பிரேமை எப்போதும் மதிப்பிட�
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ஒவ்வொரு பிரேம் மாற்றத்திலும் முனை மரத்தை மதிப்பிடுகிறது"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "சேனல் விருப்பங்கள்"
@@ -19617,12 +19617,6 @@ msgstr "Mixie அரட்டை உள்நுழைவுக்கான ப�
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "மெதுவான படம் தவிர்க்கப்பட்டது: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "பட குறியாக்கம் தோல்வி: {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "குறிகள்: {note}"
 msgid "Sketch"
 msgstr "வரைவு"
 
+msgid "Skipped slow image: {name}"
+msgstr "மெதுவான படம் தவிர்க்கப்பட்டது: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "பட குறியாக்கம் தோல்வி: {error}"
+
 msgid "Message sent"
 msgstr "செய்தி அனுப்பப்பட்டது"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

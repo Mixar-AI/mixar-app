@@ -147,7 +147,6 @@ set(SRC
   view3d_intern.hh
   view3d_moodboard_drawer.hh
   view3d_scenes_drawer.hh
-  view3d_scenes_drawer_srgb.hh
   view3d_navigate.hh
 )
 

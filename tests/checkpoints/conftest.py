@@ -8,7 +8,6 @@ Holds the `tc` fixture, which loads core/turn_checkpoints.py with its lazy
 neighbours stubbed, so the capture/restore/rewind cases and the disk-budget
 cases can live in separate modules without duplicating any of it."""
 
-from contextlib import contextmanager
 import importlib.util
 from pathlib import Path
 import sys
@@ -64,62 +63,12 @@ class FakeSession:
         self.calls.append(("clear_session_id",))
 
 
-@contextmanager
-def _isolated_checkpoint_modules():
-    """Do not reuse or leak modules bound to another test's bpy/session mocks."""
-    def owned(name):
-        return (name.startswith("mixar.modules.space_mixie_chat.core.checkpoint_")
-                or name == "mixar.modules.space_mixie_chat.core.turn_checkpoints"
-                or name == "mixar.modules.common.i18n"
-                or name.startswith("mixar.modules.common.i18n."))
-
-    previous = {name: module for name, module in sys.modules.copy().items()
-                if name == "mixar" or name.startswith("mixar.")}
-    # Import also writes parent.child, even if the parent was already loaded.
-    # Keep the original binding (including a non-module value) only so the
-    # specific child bindings created below can be restored on exit.
-    bindings = {name: vars(module).copy() for name, module in previous.items()
-                if isinstance(module, ModuleType)}
-    reloaded = {name: module for name, module in previous.items() if owned(name)}
-    for name in reloaded:
-        del sys.modules[name]
-    try:
-        yield
-    finally:
-        current = {name: module for name, module in sys.modules.copy().items()
-                   if name == "mixar" or name.startswith("mixar.")}
-        missing = object()
-        for name, module in current.items():
-            if name not in previous or owned(name):
-                parent_name, _, child = name.rpartition(".")
-                parent = previous.get(parent_name)
-                before = bindings.get(parent_name)
-                # Restore only an actual import binding. Other attributes and
-                # deliberate state changes on existing modules are untouched.
-                if before is not None and vars(parent).get(child, missing) is module:
-                    value = before.get(child, missing)
-                    if value is missing:
-                        delattr(parent, child)
-                    else:
-                        setattr(parent, child, value)
-                del sys.modules[name]
-        sys.modules.update(reloaded)
-
-
 @pytest.fixture
-def tc(tmp_path):
-    # Undo local stubs before restoring the imported module graph. Tests can
-    # still use their own monkeypatch fixture without changing this lifetime.
-    with _isolated_checkpoint_modules(), pytest.MonkeyPatch.context() as patch:
-        yield _load_checkpoint_fixture(patch, tmp_path)
-
-
-def _load_checkpoint_fixture(monkeypatch, tmp_path):
+def tc(monkeypatch, tmp_path):
     """Load core/turn_checkpoints.py with its lazy neighbours stubbed."""
     for name, path in (
         ("mixar", _MIXAR_ROOT),
         ("mixar.modules", _MODULES_ROOT),
-        ("mixar.modules.common", _MODULES_ROOT / "common"),
         ("mixar.modules.space_mixie_chat", _CHAT_ROOT),
         ("mixar.modules.space_mixie_chat.core", _CORE_ROOT),
     ):
@@ -151,6 +100,7 @@ def _load_checkpoint_fixture(monkeypatch, tmp_path):
             "close_restored_agent_bubble_windows": MagicMock(),
             "keep_windows_for_snapshot": snapshot_guard,
         },
+        "mixar.modules.common": {},
         "mixar.modules.common.agent_rpc": {},
         "mixar.modules.common.agent_rpc.client": {"request": MagicMock()},
     }

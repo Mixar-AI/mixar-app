@@ -119,7 +119,6 @@ def apply_backend_failure(job, data: dict) -> None:
         return
     if data.get("error_class"):
         job.error_class = str(data["error_class"])
-        job.error_class_source = "backend"
     reason = clean_reason(data.get("error_reason"))
     if reason:
         job.error_reason = reason
@@ -188,7 +187,6 @@ def apply_client_failure(job, error, *, stage: str = "submit", message: str = ""
         job.error_class = stage
     else:
         job.error_class = _exception_class(error)
-    job.error_class_source = "client"
     detail = clean_reason(getattr(error, "message", None) or str(error))
     job.error_reason = detail
     generic = classify_error(error)
@@ -216,14 +214,8 @@ def failure_hint(job) -> str:
     """What the user can do next (and whether the credits came back)."""
     cls = getattr(job, "error_class", "") or ""
     hint = _class_text(cls)[1]
-    # Only a class the backend stamped proves the backend failed (and so
-    # refunded) it. A client poll/submit failure maps onto the same names
-    # (ServerError -> vendor_transient) while the backend job may still charge.
-    if (
-        cls in _REFUNDED_CLASSES
-        and getattr(job, "error_class_source", "") == "backend"
-        and hint
-    ):
+    # Only a class the backend stamped proves the backend failed it.
+    if cls in _REFUNDED_CLASSES and hint:
         hint += " Credits for this generation were refunded."
     return hint
 

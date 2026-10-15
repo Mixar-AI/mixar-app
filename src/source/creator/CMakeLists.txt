@@ -189,7 +189,6 @@ set(SRC
   creator_auth.cc
   mixar_local_auth_server.h
   mixar_sso_success_page.h
-  mixar_sso_failure_page.h
   mixar_local_auth_server.cc
   creator_intern.h
 )

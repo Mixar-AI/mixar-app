@@ -17,12 +17,8 @@ executor now retries inside a borrowed window and governs the result:
   pre-turn state), a failed push never aborts the script, is not counted, and
   is logged once per turn;
 - turn boundaries are wired in the stream pipeline (begin on the first
-  streamed event, end on complete/error/abort/file-load); only the normal
-  ends (complete, error, replay-unavailable, Abort) push the closing step;
-- read-only tools (``AGENT_UNDO_NEUTRAL_TOOLS``) push nothing and do not mark
-  the turn as having run.
+  streamed event, end on complete/error/abort/file-load).
 """
-
 
 import importlib.util
 from pathlib import Path
@@ -267,7 +263,7 @@ def test_execute_grouped_turn_pushes_once(executor_module, monkeypatch):
 
     # Ending a turn that ran scripts closes it with the state the agent left,
     # so the turn is bracketed: undo reverts it, redo reapplies it.
-    executor.end_agent_turn("", checkpoint=True)
+    executor.end_agent_turn()
     assert _undo_pushes(bpy_mod) == 2
     assert bpy_mod.ops.ed.undo_push.call_args_list[-1].kwargs["message"] == "Mixie Chat Turn"
     executor.begin_agent_turn()
@@ -363,13 +359,8 @@ def test_closing_checkpoint_is_skipped_while_pinned_to_a_lane(executor_module, m
     assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
     assert _undo_pushes(bpy_mod) == 1
     bpy_mod.context.window_manager.windows = [_window("agentlane:x")]
-    executor.end_agent_turn("s1", checkpoint=True)
+    executor.end_agent_turn("s1")
     assert _undo_pushes(bpy_mod) == 1
-
-
-# --------------------------------------------------------------------------- #
-#  Closing checkpoint opt-in and read-only (undo-neutral) tools
-# --------------------------------------------------------------------------- #
 
 
 def test_checkpoints_are_pushed_on_behalf_of_the_sessions_tab(executor_module, monkeypatch):
@@ -385,7 +376,7 @@ def test_checkpoints_are_pushed_on_behalf_of_the_sessions_tab(executor_module, m
     executor = executor_module.ScriptExecutor()
     executor.begin_agent_turn("s1")
     assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
-    executor.end_agent_turn("s1", checkpoint=True)
+    executor.end_agent_turn("s1")
     assert pusher.call_count == 2
     for call in pusher.call_args_list:
         assert call.kwargs["scene"] is agent_scene
@@ -432,7 +423,7 @@ def test_per_tab_closing_checkpoint_lands_while_the_user_watches_a_lane(executor
     executor.begin_agent_turn("s1")
     assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
     bpy_mod.context.window_manager.windows = [_window("agentlane:x")]
-    executor.end_agent_turn("s1", checkpoint=True)
+    executor.end_agent_turn("s1")
     assert pusher.call_count == 2
     assert all(call.kwargs.get("scene") is agent_scene for call in pusher.call_args_list)
 

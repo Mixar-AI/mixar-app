@@ -17,7 +17,6 @@ from ..constants import (
     SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS,
     SCENE_SEGMENT_REQUEST_TIMEOUT_SECONDS,
 )
-from .mask_tool_feedback import error_message
 from .scene_segment_types import (
     JobState,
     JobStatus,
@@ -122,8 +121,8 @@ class SceneSegmentRequestMixin:
             )
 
         def on_error(error: Exception):
-            error_msg = error_message(error)
-            if self._is_expiry_error(str(error)):
+            error_msg = str(error)
+            if self._is_expiry_error(error_msg):
                 self._handle_expired_job(image_name)
                 error_msg = "expired"
             if on_complete:
@@ -297,7 +296,7 @@ class SceneSegmentRequestMixin:
                 )
 
         def on_error(error: Exception):
-            self._finish_request(state, request, False, None, error_message(error))
+            self._finish_request(state, request, False, None, str(error))
 
         try:
             get_scene_segment_service().download_mask_async(

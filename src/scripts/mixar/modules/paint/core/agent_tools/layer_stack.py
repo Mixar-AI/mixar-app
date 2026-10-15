@@ -29,7 +29,7 @@ from ._common import (
     _semanticize_shared_material,
     _sync_layer_stack_ui,
 )
-from .material_library import find_procedural_material, server_catalog
+from .material_library import find_procedural_material
 
 logger = get_logger(__name__)
 
@@ -200,8 +200,6 @@ def add_procedural_material_layer(
             "error": "Procedural material not found",
             "material_id": material_id,
             "material_name": material_name,
-            # "loading": the backend library is still arriving; retry shortly.
-            "catalog_status": server_catalog.catalog_status(),
         }
 
     targets, missing = _resolve_mesh_objects(object_names)

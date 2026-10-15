@@ -41,34 +41,6 @@ def refresh_generation_caches():
         sound_catalog.refresh_async()
     except Exception as e:
         logger.warning(f"Notification sound catalog refresh failed: {e}")
-    _schedule_material_catalog_refresh()
-
-
-def _ensure_material_catalog():
-    """Timer body: (re)start the procedural-material catalog fetch.
-
-    Returns None so the timer runs once (a bool would count as a number and
-    reschedule it).
-    """
-    try:
-        from mixar.modules.paint.procedural_materials.server_catalog import (
-            ensure_server_catalog,
-        )
-        ensure_server_catalog()
-    except Exception as e:
-        logger.warning(f"Material catalog refresh failed: {e}")
-    return None
-
-
-def _schedule_material_catalog_refresh():
-    """The material catalog fetch registers a timer and touches bpy, and this
-    hook may run on an auth worker thread, so hand it to the main thread."""
-    try:
-        import bpy
-
-        bpy.app.timers.register(_ensure_material_catalog, first_interval=0)
-    except Exception as e:
-        logger.warning(f"Material catalog refresh scheduling failed: {e}")
 
 
 def invalidate_generation_caches():

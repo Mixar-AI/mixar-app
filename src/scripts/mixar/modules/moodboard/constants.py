@@ -274,7 +274,6 @@ SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
 # (SCENE_SEGMENT_API_TIMEOUT) and answers with the upstream error when that
 # expires; a client timeout equal to it fires first and hides that answer.
 SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS = 135.0
-SCENE_SEGMENT_CREDITS_ERROR = "insufficient_credits"  # 402 marker, like "expired"
 
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.

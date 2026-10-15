@@ -17565,6 +17565,12 @@ msgstr "Mindig a GPU-n renderel, ha elérhető"
 msgid "Always render on the CPU"
 msgstr "Mindig a CPU-n renderel"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "Külső sütés alapértelmezett engedélyezése"
 
@@ -17642,12 +17648,6 @@ msgstr "Képkocka mindig kiértékelése"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "A csomópontfa kiértékelése minden képkockaváltáskor"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "Csatornaopciók"
@@ -19617,12 +19617,6 @@ msgstr "Felhasználói azonosító a Mixie Chat bejelentkezéshez"
 msgid "Agent expects: {formats}"
 msgstr "Az ügynök ezeket várja: {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "Lassú kép kihagyva: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "A kép kódolása nem sikerült: {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "Megjelölések: {note}"
 msgid "Sketch"
 msgstr "Vázlat"
 
+msgid "Skipped slow image: {name}"
+msgstr "Lassú kép kihagyva: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "A kép kódolása nem sikerült: {error}"
+
 msgid "Message sent"
 msgstr "Üzenet elküldve"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

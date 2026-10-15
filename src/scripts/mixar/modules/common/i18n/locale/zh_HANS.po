@@ -17565,6 +17565,12 @@ msgstr "有可用的 GPU 时始终使用 GPU 渲染"
 msgid "Always render on the CPU"
 msgstr "始终使用 CPU 渲染"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "默认启用外置烘焙"
 
@@ -17642,12 +17648,6 @@ msgstr "始终求值帧"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "每次帧变化时都对节点树求值"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "通道选项"
@@ -19617,12 +19617,6 @@ msgstr "用于登录 Mixie 对话的用户 ID"
 msgid "Agent expects: {formats}"
 msgstr "智能体支持的格式：{formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "已跳过处理缓慢的图像：{name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "图像编码失败：{error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "标记：{note}"
 msgid "Sketch"
 msgstr "草图"
 
+msgid "Skipped slow image: {name}"
+msgstr "已跳过处理缓慢的图像：{name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "图像编码失败：{error}"
+
 msgid "Message sent"
 msgstr "消息已发送"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

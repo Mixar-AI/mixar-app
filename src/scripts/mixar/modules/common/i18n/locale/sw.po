@@ -17565,6 +17565,12 @@ msgstr "Rendisha kwenye GPU daima kunapopatikana"
 msgid "Always render on the CPU"
 msgstr "Rendisha kwenye CPU daima"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "Wezesha iliyookwa nje kwa chaguomsingi"
 
@@ -17642,12 +17648,6 @@ msgstr "Tathmini kadirio daima"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Hutathmini mti wa nodi kila kadirio linapobadilika"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "Chaguzi za chaneli"
@@ -19617,12 +19617,6 @@ msgstr "Kitambulisho cha mtumiaji kwa kuingia kwenye mazungumzo ya Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Wakala anatarajia: {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "Taswira polepole imerukwa: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Usimbaji wa taswira umeshindwa: {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "Alama: {note}"
 msgid "Sketch"
 msgstr "Mchoro"
 
+msgid "Skipped slow image: {name}"
+msgstr "Taswira polepole imerukwa: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Usimbaji wa taswira umeshindwa: {error}"
+
 msgid "Message sent"
 msgstr "Ujumbe umetumwa"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

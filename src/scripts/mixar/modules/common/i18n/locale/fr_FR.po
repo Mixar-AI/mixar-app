@@ -17565,6 +17565,12 @@ msgstr "Toujours effectuer le rendu sur le GPU s’il y en a un de disponible"
 msgid "Always render on the CPU"
 msgstr "Toujours effectuer le rendu sur le CPU"
 
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
+
 msgid "Enable Baked Outside by Default"
 msgstr "Activer le précalcul externe par défaut"
 
@@ -17642,12 +17648,6 @@ msgstr "Toujours évaluer l’image"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Évaluer l’arbre de nœuds à chaque changement d’image"
-
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
 
 msgid "Channel Options"
 msgstr "Options du canal"
@@ -19617,12 +19617,6 @@ msgstr "ID utilisateur pour la connexion à Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "L’agent attend : {formats}"
 
-msgid "Skipped slow image: {name}"
-msgstr "Image lente ignorée : {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Échec de l’encodage de l’image : {error}"
-
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20489,6 +20483,12 @@ msgstr "Marques : {note}"
 msgid "Sketch"
 msgstr "Croquis"
 
+msgid "Skipped slow image: {name}"
+msgstr "Image lente ignorée : {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Échec de l’encodage de l’image : {error}"
+
 msgid "Message sent"
 msgstr "Message envoyé"
 
@@ -21212,9 +21212,6 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
-msgstr ""
-
-msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

@@ -106,8 +106,19 @@ def get_total_face_count(context):
     return total
 
 
-def _export_selected(context, view_layer, selected, filepath, format):
-    """Write exactly ``selected`` to ``filepath``; the selection is restored."""
+def export_selected_mesh(context, format="GLB"):
+    """Export selected mesh objects to temp file. Returns (bytes, filename)."""
+    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
+    ext = ext_map[format]
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
+    os.close(fd)
+
+    view_layer = context.view_layer
+    selected = [o for o in context.selected_objects
+                if o.type == 'MESH' and o.name in view_layer.objects]
+    if not selected:
+        raise ValueError("No mesh objects selected")
+
     # Deterministic: exactly the selected MESH objects of the active view
     # layer, nothing else the selection may hold (empties, lights, an
     # object selected in another scene). The selection is restored after.
@@ -144,31 +155,12 @@ def _export_selected(context, view_layer, selected, filepath, format):
         except Exception:
             pass
 
-
-def export_selected_mesh(context, format="GLB"):
-    """Export selected mesh objects to temp file. Returns (bytes, filename)."""
-    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
-    ext = ext_map[format]
-    view_layer = context.view_layer
-    selected = [o for o in context.selected_objects
-                if o.type == 'MESH' and o.name in view_layer.objects]
-    if not selected:
-        raise ValueError("No mesh objects selected")
-
-    # Created only once there is something to export, and removed on every
-    # path out (exporter or read failure included) — the bytes are returned,
-    # never the path.
-    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
-    os.close(fd)
+    with open(filepath, "rb") as f:
+        data = f.read()
     try:
-        _export_selected(context, view_layer, selected, filepath, format)
-        with open(filepath, "rb") as f:
-            data = f.read()
-    finally:
-        try:
-            os.remove(filepath)
-        except OSError:
-            pass
+        os.remove(filepath)
+    except OSError:
+        pass
 
     return data, f"export{ext}"
 
