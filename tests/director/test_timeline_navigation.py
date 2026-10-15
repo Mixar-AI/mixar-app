@@ -95,3 +95,19 @@ def test_home_frames_the_whole_shot():
 def test_the_trackpad_gestures_are_untouched():
     assert "ELEM(event->type, MOUSEZOOM, MOUSEPAN)" in INTERACTION
     assert "MOUSESMARTZOOM" in INTERACTION
+
+
+def test_a_release_outside_the_region_ends_the_pan():
+    """A region handler never sees a middle-button release let go over the
+    viewport; the motion that brings the pointer back carries it in
+    `prev_type` / `prev_val`, as box-select already reads it."""
+    pan = _pan()
+    tail = pan[pan.index("if (!runtime->panning) {") :]
+    check = "if (event->prev_type == MIDDLEMOUSE && event->prev_val == KM_RELEASE) {"
+    assert check in tail
+    branch = tail[tail.index(check) :]
+    branch = branch[: branch.index("\n  }")]
+    assert "runtime->panning = false;" in branch
+    assert "return false;" in branch
+    # Checked before the motion moves the view.
+    assert tail.index(check) < tail.index("runtime->view_start_frame =")

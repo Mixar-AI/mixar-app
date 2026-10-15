@@ -119,6 +119,11 @@ def scenes_drawer(args: dict) -> bool:
     global _scenes_drawer_opened
     want_open = bool(args.get("open", True))
     if _scenes_drawer_is_open() == want_open:
+        if not want_open:
+            # Already shut (the user closed the drawer the tour opened):
+            # nothing of ours is open any more, so a drawer the user opens
+            # later is theirs and must never be toggled shut.
+            _scenes_drawer_opened = False
         return True
     if not want_open and not _scenes_drawer_opened:
         return True                     # the user's drawer, not ours
@@ -143,14 +148,15 @@ def scenes_drawer(args: dict) -> bool:
 def reset_transients() -> None:
     """Close the tour's menu, drop the highlight, put the Library back on
     the generations grid and shut the Scenes drawer if the tour moved them."""
-    global _library_source_changed
+    global _library_source_changed, _scenes_drawer_opened
     help_menu_close({})
     if _library_source_changed:
         library_source({"source": "AI"})
         _library_source_changed = False
     if _scenes_drawer_opened:
         scenes_drawer({"open": False})
-_scenes_drawer_opened = False
+    # Whatever the close did, the next tour starts owning no drawer.
+    _scenes_drawer_opened = False
 
 
 EXTRA_ACTIONS = {

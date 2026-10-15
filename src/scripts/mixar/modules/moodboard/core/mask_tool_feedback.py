@@ -13,11 +13,18 @@ toasts (terminal failures). ``describe_failure`` is pure so the wording is
 unit-tested rather than only observable in a running app.
 """
 
+import re
 from typing import Tuple
 
 from mixar.config.logging_config import get_logger
+from ..constants import SCENE_SEGMENT_CREDITS_ERROR
 
 logger = get_logger(__name__)
+
+# Whole-word matches only: a request id, file name or backend sentence
+# ("job 5b402c", "Empty response body") must never pick a title.
+_NO_OBJECT = re.compile(r"\bno object\b|\bempty mask\b|\bmask is empty\b")
+_UNAVAILABLE = re.compile(r"\b503\b|\bunavailable\b")
 
 UPLOAD_FAILED_TITLE = "Couldn't prepare the image"
 NO_OBJECT_TITLE = "No object found here"
@@ -25,6 +32,25 @@ NO_CREDITS_TITLE = "Not enough credits"
 UNAVAILABLE_TITLE = "Segmentation is unavailable right now"
 TIMED_OUT_TITLE = "Segmentation timed out"
 FAILED_TITLE = "Segmentation failed"
+
+
+def error_message(error) -> str:
+    """The message an ``on_error(error)`` callback hands the mask tools.
+
+    Classified here, while the exception is still in hand: an out-of-credits
+    error becomes the ``SCENE_SEGMENT_CREDITS_ERROR`` marker (the text itself is
+    never searched for "402"/"credit"), and a known HTTP status is kept as an
+    ``HTTP <code>: <message>`` prefix.
+    """
+    from ...common.api.exceptions import InsufficientCreditsError
+
+    if isinstance(error, InsufficientCreditsError):
+        return SCENE_SEGMENT_CREDITS_ERROR
+    text = str(error)
+    status = getattr(error, "status_code", None)
+    if isinstance(status, int) and status > 0:
+        return f"HTTP {status}: {text}" if text else f"HTTP {status}"
+    return text
 
 
 def describe_failure(message: str, *, upload: bool = False) -> Tuple[str, str]:
@@ -36,13 +62,13 @@ def describe_failure(message: str, *, upload: bool = False) -> Tuple[str, str]:
     """
     text = (message or "").strip()
     lower = text.lower()
-    if "402" in lower or "credit" in lower:
+    if text == SCENE_SEGMENT_CREDITS_ERROR:
         return NO_CREDITS_TITLE, "Segmentation uses credits. Add credits and try again."
-    if not upload and ("no object" in lower or "empty" in lower):
+    if not upload and _NO_OBJECT.search(lower):
         return NO_OBJECT_TITLE, "Try clicking on a different spot of the object."
     if "timed out" in lower or "timeout" in lower:
         return TIMED_OUT_TITLE, "The service took too long. Try again."
-    if "503" in lower or "unavailable" in lower:
+    if _UNAVAILABLE.search(lower):
         return UNAVAILABLE_TITLE, "Try again in a minute."
     if upload:
         return UPLOAD_FAILED_TITLE, text or "Try again."

@@ -315,7 +315,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # the stream's complete/error event, so nothing else would end it and
         # the next turn would inherit this one's checkpoint budget.
         from ...core.executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)

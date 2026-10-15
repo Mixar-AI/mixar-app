@@ -40,7 +40,7 @@ class FakeExecutor:
         self.seen = []
         self.context_during = []
 
-    def execute(self, script, session_id=""):
+    def execute(self, script, session_id="", **_kw):
         # The pump routes every script to its session (parallel scenes).
         self.seen.append(script)
         self.context_during.append(ctx_mod.get_agent_execution_context())
@@ -125,7 +125,7 @@ class TestExecuteAndRespond:
         ref = '{"generation_id": "current"}'
         claimed = []
 
-        def execute(script, session_id=""):
+        def execute(script, session_id="", **_kw):
             assert "mixar_agent_ref" not in wm
             wm["mixar_agent_ref"] = ref
             if outcome == "accepted":

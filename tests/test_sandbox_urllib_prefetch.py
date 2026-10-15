@@ -16,7 +16,7 @@ import tempfile
 import io
 
 import pytest
-from mixar.modules.common.agent_execution import asset_cache
+from mixar.modules.common.agent_execution import asset_cache, asset_cache_directory
 
 _SANDBOX_MODULES = (
     Path(__file__).parents[1]
@@ -34,7 +34,8 @@ def _load_sandbox_modules():
 
 @pytest.fixture(autouse=True)
 def isolated_cache(monkeypatch, tmp_path):
-    monkeypatch.setattr(asset_cache.tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(asset_cache_directory.tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(asset_cache, "_DIRECTORY", None)
 
 
 _FakeResponse = io.BytesIO

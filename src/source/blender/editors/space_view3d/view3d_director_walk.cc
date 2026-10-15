@@ -359,6 +359,14 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
     return director_walk_tick(C, op, data, walk_speed_factor(event));
   }
 
+  if (event->type == WINDEACTIVATE) {
+    /* Focus left (the island is its own OS window): no release will come, so
+     * drop what is held. The walk stays; WINDEACTIVATE must always pass. */
+    data->held = 0;
+    data->looking = false;
+    return OPERATOR_PASS_THROUGH;
+  }
+
   /* No key or button ends the walk; the Walk chip is the one switch.
    *
    * Esc and the right button used to, alongside the chip — so the chip's lit

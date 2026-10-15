@@ -169,7 +169,7 @@ class EventProcessor:
         turn and return to IDLE.
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # The loader timer walks every scene and stops itself once none shows
         # a loader (parallel scenes: another tab may still be streaming).
@@ -228,7 +228,7 @@ class EventProcessor:
         Abort button stays visible (the backend may still be processing).
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         logger.error(f"agent stream error: {error_message}")
 
@@ -394,7 +394,7 @@ class EventProcessor:
         # settles to IDLE or pauses for input (the user's answer starts a new
         # stream, and with it a new turn / fresh checkpoint budget).
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —

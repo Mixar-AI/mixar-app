@@ -181,6 +181,17 @@ def _render_viewport_still(context, scene, camera, display_name: str):
             pass
 
 
+def _still_in_beats(scene, image, shot=None) -> bool:
+    """Whether any beat still shows *image*: one of *shot*'s, or one in any
+    shot of the scene. A duplicated keyframe shares its still on purpose, and
+    a split moves stills into another shot, so one shot's beats are not
+    enough to know the still is free."""
+    shots = list(getattr(getattr(scene, "mixar_director", None), "shots", ()) or ())
+    if shot is not None:
+        shots.append(shot)
+    return any(beat.image == image for item in shots for beat in item.beats)
+
+
 def _discard_still(scene, image, shot=None) -> None:
     """Drop a replaced capture's packed still if nothing else wants it.
 
@@ -195,7 +206,7 @@ def _discard_still(scene, image, shot=None) -> None:
     board = getattr(scene, "mixie_moodboard_images", None)
     if board is not None and any(item.image == image for item in board):
         return
-    if shot is not None and any(beat.image == image for beat in shot.beats):
+    if _still_in_beats(scene, image, shot):
         return
     if getattr(image, "users", 0) != 0:
         return
@@ -333,12 +344,20 @@ def remove_beat(scene, shot, index: int, *, delete_keys: bool = True) -> bool:
     if delete_keys:
         _delete_camera_keys(shot.camera, beat.frame)
 
-    if image is not None and hasattr(scene, "mixie_moodboard_images"):
+    shot.beats.remove(index)
+    shot.active_beat_index = min(index, max(0, len(shot.beats) - 1))
+
+    # The board card goes with the still's LAST beat, in any shot: a
+    # duplicate (Shift+D) shares the still, and its card must survive the
+    # original's deletion.
+    if (
+        image is not None
+        and hasattr(scene, "mixie_moodboard_images")
+        and not _still_in_beats(scene, image, shot)
+    ):
         for item_index in range(len(scene.mixie_moodboard_images) - 1, -1, -1):
             if scene.mixie_moodboard_images[item_index].image == image:
                 scene.mixie_moodboard_images.remove(item_index)
-    shot.beats.remove(index)
-    shot.active_beat_index = min(index, max(0, len(shot.beats) - 1))
 
     _discard_still(scene, image, shot)
     if (

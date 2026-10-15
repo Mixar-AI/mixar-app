@@ -17565,12 +17565,6 @@ msgstr "Zawsze renderuje na GPU, gdy jest dostępny"
 msgid "Always render on the CPU"
 msgstr "Zawsze renderuje na CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Domyślnie włączaj wypieczone na zewnątrz"
 
@@ -17648,6 +17642,12 @@ msgstr "Zawsze przeliczaj klatkę"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Przelicza drzewo węzłów przy każdej zmianie klatki"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opcje kanału"
@@ -19617,6 +19617,12 @@ msgstr "Identyfikator użytkownika do logowania w czacie Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent oczekuje: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Pominięto wolno przetwarzany obraz: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Kodowanie obrazu nie powiodło się: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Znaczniki: {note}"
 msgid "Sketch"
 msgstr "Szkic"
 
-msgid "Skipped slow image: {name}"
-msgstr "Pominięto wolno przetwarzany obraz: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Kodowanie obrazu nie powiodło się: {error}"
-
 msgid "Message sent"
 msgstr "Wysłano wiadomość"
 
@@ -21213,6 +21213,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

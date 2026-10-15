@@ -17565,12 +17565,6 @@ msgstr "Αποδίδει πάντα στην GPU όταν υπάρχει."
 msgid "Always render on the CPU"
 msgstr "Αποδίδει πάντα στην CPU."
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Ενεργοποίηση φτιαγμένου έξω από προεπιλογή"
 
@@ -17648,6 +17642,12 @@ msgstr "Αξιολόγηση σε κάθε καρέ"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Αξιολογεί το δέντρο κόμβων σε κάθε αλλαγή καρέ."
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Επιλογές καναλιού"
@@ -19617,6 +19617,12 @@ msgstr "Αναγνωριστικό χρήστη για σύνδεση στη σ�
 msgid "Agent expects: {formats}"
 msgstr "Ο πράκτορας αναμένει: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Παραλείφθηκε αργή εικόνα: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Η κωδικοποίηση εικόνας απέτυχε: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Σημάδια: {note}"
 msgid "Sketch"
 msgstr "Σκίτσο"
 
-msgid "Skipped slow image: {name}"
-msgstr "Παραλείφθηκε αργή εικόνα: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Η κωδικοποίηση εικόνας απέτυχε: {error}"
-
 msgid "Message sent"
 msgstr "Το μήνυμα στάλθηκε."
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

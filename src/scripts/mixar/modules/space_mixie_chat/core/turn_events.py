@@ -17,7 +17,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
 from ..constants import SessionState
 from .agent_events import AgentEvent
-from . import turn_cursor
+from . import command_retry, turn_cursor
 from .turn_event_pump import TurnEventPump
 
 logger = get_logger(__name__)
@@ -78,6 +78,12 @@ def expect(scene, command_id, callback=None):
     _blocked.discard(sid)
     _commands[command_id] = (sid, callback)
     return sid
+
+
+def command_pending(command_id):
+    """True while a sent command still awaits its result (Stop drops it)."""
+    entry = _commands.get(command_id)
+    return bool(entry) and entry[0] not in _blocked
 
 
 def reopen(scene):
@@ -227,6 +233,15 @@ def _consume(method, params):
                 session.set_state(scene, SessionState[saved.get('state', 'IDLE')])
         elif turn is not None and not turn.recovering:
             _request_replay(turn)  # reconnect() already attached a recovering turn.
+        return
+    if method == 'agent.command.retry':
+        # A -32017 busy ack: arm the one resend here, on the main thread,
+        # unless Stop already forgot the command (core/command_retry.py).
+        command_id = params.get('command_id')
+        if command_pending(command_id):
+            command_retry.schedule(command_id, params.get('retry_after_s') or 0)
+        else:
+            command_retry.discard(command_id)
         return
     if method in ('agent.command.result', 'agent.command.delivered'):
         command_id = params.get('command_id')
@@ -383,7 +398,7 @@ def _replay_unavailable(scene, turn):
     processor = get_event_processor()
     processor._clear_loader_bubbles(scene)
     from .executor import get_executor
-    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
     add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
@@ -482,3 +497,4 @@ def reset():
     _commands.clear()
     _bindings.clear()
     _blocked.clear()
+    command_retry.reset()

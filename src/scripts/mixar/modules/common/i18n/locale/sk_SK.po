@@ -17565,12 +17565,6 @@ msgstr "Vždy prekresľuje na GPU, ak je k dispozícii"
 msgid "Always render on the CPU"
 msgstr "Vždy prekresľuje na CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Predvolene povoliť zapečené mimo"
 
@@ -17648,6 +17642,12 @@ msgstr "Vždy vyhodnotiť snímku"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Vyhodnotí strom uzlov pri každej zmene snímky"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Možnosti kanála"
@@ -19617,6 +19617,12 @@ msgstr "ID používateľa na prihlásenie do chatu Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očakáva: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Preskočený pomalý obrázok: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Kódovanie obrázka zlyhalo: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Značky: {note}"
 msgid "Sketch"
 msgstr "Náčrt"
 
-msgid "Skipped slow image: {name}"
-msgstr "Preskočený pomalý obrázok: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Kódovanie obrázka zlyhalo: {error}"
-
 msgid "Message sent"
 msgstr "Správa odoslaná"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

@@ -20,8 +20,8 @@ from ..service import get_addon_project_service
 def ensure_addon_project_ready(operator) -> bool:
     """Make an unlinked project-mode Send proceed in the SAME action.
 
-    Zero questions: the projects root is the ``addon_projects_dir``
-    Preference (default ``~/Mixar Addons``), created on first use by
+    Zero questions: the projects root is the per-user ``addon_projects_dir``
+    setting (default ``~/Mixar Addons``), created on first use by
     link_workspace_root, linked as THE project (idempotent), and the scene
     props are set, so the caller falls straight through to
     build_project_context. False only on real failures, with the error
