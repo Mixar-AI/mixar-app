@@ -438,3 +438,55 @@ def test_guests_send_no_telemetry_and_no_usage_polls():
     assert "if not _has_auth_token() or _is_guest():" in capture
     poller = (MODULES / "common/usage/core/poller.py").read_text()
     assert "mixie_chat_is_guest" in poller
+
+
+# --- a socket whose auth gave up hands the session back --------------------
+
+def _auth_ops(monkeypatch):
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    calls = []
+    monkeypatch.setattr(auth_ops, "_auth_check_background", lambda: calls.append("check"))
+    monkeypatch.setattr(auth_ops, "_enter_guest_session", lambda fallback: calls.append(("guest", fallback)))
+    monkeypatch.setattr(auth_ops, "_reauthenticate", lambda: calls.append("reauth"))
+    return auth_ops, calls
+
+
+def test_recovery_with_a_live_pair_reruns_the_auth_check(monkeypatch):
+    auth_ops, calls = _auth_ops(monkeypatch)
+    monkeypatch.setattr(auth_ops, "get_access_token", lambda: "still-here")
+    auth_ops._recover_session_background()
+    assert calls == ["check"]
+
+
+def test_recovery_replaces_a_dead_guest_pair_silently(monkeypatch):
+    auth_ops, calls = _auth_ops(monkeypatch)
+    monkeypatch.setattr(auth_ops, "get_access_token", lambda: "")
+    monkeypatch.setattr(auth_ops.guest, "is_guest", lambda: True)
+    auth_ops._recover_session_background()
+    assert calls == [("guest", auth_ops._reauthenticate)]
+
+
+def test_recovery_expires_a_dead_account_session(monkeypatch):
+    auth_ops, calls = _auth_ops(monkeypatch)
+    monkeypatch.setattr(auth_ops, "get_access_token", lambda: "")
+    monkeypatch.setattr(auth_ops.guest, "is_guest", lambda: False)
+    auth_ops._recover_session_background()
+    assert calls == ["reauth"]
+
+
+def test_terminal_socket_auth_failure_recovers_the_session(monkeypatch):
+    """The reconnect loop stops only when a refresh can never help; that
+    disconnect must re-run the auth check, or a guest whose pair died at
+    runtime (kill switch, a token revoked or rotated elsewhere) sits OFFLINE
+    with no token until a relaunch."""
+    source = (MODULES / "space_mixie_chat/core/connection_manager.py").read_text()
+    block = source[source.index("def on_disconnected("):source.index("def on_script_execute(")]
+    assert "if terminal:" in block and "recover_session()" in block
+
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    registered = []
+    monkeypatch.setattr(auth_ops.bpy.app.timers, "register", lambda fn, first_interval=0.0: registered.append(fn))
+    monkeypatch.setattr(auth_ops, "_last_recovery", 0.0)
+    auth_ops.recover_session()
+    auth_ops.recover_session()  # inside the window: one event
+    assert len(registered) == 1

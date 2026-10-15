@@ -10,6 +10,7 @@ Provides operators for user login and logout functionality.
 """
 
 import threading
+import time
 
 import bpy
 from bpy.app.handlers import persistent
@@ -309,6 +310,66 @@ def _stay_signed_out() -> None:
     """Guest fallback after a sign-out: nothing to do but release the latch."""
     global _auth_check_started
     _auth_check_started = False
+
+
+# A socket whose auth backoff gave up hands the session back here; two of
+# those inside this window are one event (the backend is still refusing).
+_RECOVERY_MIN_GAP_S = 30.0
+_last_recovery = 0.0
+
+
+def recover_session() -> None:
+    """The socket's credentials are gone for good: its auth backoff stopped
+    because a refresh was rejected, or no pair is left (the kill switch
+    flipped, the token was revoked or rotated by another process, the guest
+    was claimed elsewhere). Nothing else would run the auth check again, so
+    the app sat OFFLINE as a token-less "guest" until a relaunch.
+
+    Any thread. Re-runs the startup check on the main thread: a pair that is
+    still here is validated or refreshed and the socket reconnects; a dead
+    guest pair becomes a fresh guest (the same silent replacement a relaunch
+    does); a dead account pair gets the session-expired sign-in.
+    """
+    global _last_recovery
+    now = time.monotonic()
+    if now - _last_recovery < _RECOVERY_MIN_GAP_S:
+        logger.info("Session recovery skipped: one ran %.0fs ago", now - _last_recovery)
+        return
+    _last_recovery = now
+
+    def _start():
+        global _auth_check_started, _auto_connect_scheduled
+        if _auth_check_started:
+            logger.info("Session recovery skipped: an auth check is running")
+            return None
+        _auth_check_started = True
+        _auto_connect_scheduled = False
+        threading.Thread(
+            target=_recover_session_background, daemon=True, name="MixarAuthRecover",
+        ).start()
+        return None
+
+    bpy.app.timers.register(_start, first_interval=0.0)
+
+
+def _recover_session_background() -> None:
+    """Daemon thread body of ``recover_session``."""
+    try:
+        if get_access_token():
+            # The pair survived (only the socket's copy was refused): the
+            # ordinary check validates or refreshes it and reconnects.
+            _auth_check_background()
+            return
+        if guest.is_guest():
+            logger.info("Guest pair gone while running; starting a fresh guest")
+            _enter_guest_session(fallback=_reauthenticate)
+            return
+        logger.info("Account pair gone while running; session expired")
+        _reauthenticate()
+    except Exception as e:  # noqa: BLE001 — never leave the latch set
+        global _auth_check_started
+        logger.warning("Session recovery failed: %s", e)
+        _auth_check_started = False
 
 
 def _enter_guest_session(fallback) -> None:

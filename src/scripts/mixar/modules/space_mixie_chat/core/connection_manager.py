@@ -331,6 +331,13 @@ class ConnectionManager:
                 redraw_chat_areas()
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
+            if terminal:
+                # The pair is gone for good or the backend refuses it: hand the
+                # session back to the auth check (a guest is replaced silently,
+                # an account gets the session-expired sign-in) instead of
+                # sitting OFFLINE with no token until a relaunch.
+                from ..ui.operators.auth_ops import recover_session
+                recover_session()
 
         def on_script_execute(
             script: str,
