@@ -17565,12 +17565,6 @@ msgstr "Акы ыҟозар еснагь GPU ала архиара"
 msgid "Always render on the CPU"
 msgstr "Еснагь CPU ала архиара"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Астандартла анҭыҵ изапеканхаз аҿактәра"
 
@@ -17648,6 +17642,12 @@ msgstr "Акадр еснагь ахышәара"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Акадр ԥсахуацыԥхьаӡа аузел аҵла ахышәара"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Аканал аопциақәа"
@@ -19617,6 +19617,12 @@ msgstr "Mixie ачат аҭалара азы ахархәаҩ ID"
 msgid "Agent expects: {formats}"
 msgstr "Агент иԥшуеит: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Ибжьахиан амед асахьанҵа: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Асахьанҵа акодирование алымшеит: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Адыргақәа: {note}"
 msgid "Sketch"
 msgstr "Аескиз"
 
-msgid "Skipped slow image: {name}"
-msgstr "Ибжьахиан амед асахьанҵа: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Асахьанҵа акодирование алымшеит: {error}"
-
 msgid "Message sent"
 msgstr "Аҳәамҭа ишьҭан"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

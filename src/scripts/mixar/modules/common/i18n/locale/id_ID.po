@@ -17565,12 +17565,6 @@ msgstr "Selalu render di GPU jika tersedia"
 msgid "Always render on the CPU"
 msgstr "Selalu render di CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Hidupkan Hasil Panggang di Luar secara Bawaan"
 
@@ -17648,6 +17642,12 @@ msgstr "Selalu Evaluasi Bingkai"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Mengevaluasi pohon simpul pada setiap perubahan bingkai"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opsi Saluran"
@@ -19617,6 +19617,12 @@ msgstr "ID pengguna untuk masuk ke Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "Agen mengharapkan: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Gambar lambat dilewati: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Pengodean gambar gagal: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Tanda: {note}"
 msgid "Sketch"
 msgstr "Sketsa"
 
-msgid "Skipped slow image: {name}"
-msgstr "Gambar lambat dilewati: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Pengodean gambar gagal: {error}"
-
 msgid "Message sent"
 msgstr "Pesan terkirim"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

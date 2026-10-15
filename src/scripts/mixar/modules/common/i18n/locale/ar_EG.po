@@ -17565,12 +17565,6 @@ msgstr "ﻩﺮﻓﻮﺗ ﺪﻨﻋ GPU ﻰﻠﻋ ﺎﻤًﺋﺍﺩ ﺮﻴّﺼﻳ
 msgid "Always render on the CPU"
 msgstr "CPU ﻰﻠﻋ ﺎﻤًﺋﺍﺩ ﺮﻴّﺼﻳ"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "ﺎﻴًﺿﺍﺮﺘﻓﺍ ﺎﻴًﺟﺭﺎﺧ ﻦﻳﺰﺨﺘﻟﺍ ﻞﻴﻌﻔﺗ"
 
@@ -17648,6 +17642,12 @@ msgstr "ﺎﻤًﺋﺍﺩ ﺭﺎﻃﻹ﻿ﺍ ﻢﻴﻴﻘﺗ"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ﺭﺎﻃﻺ﻿ﻟ ﺮﻴﻴﻐﺗ ﻞﻛ ﺪﻨﻋ ﺪﻘﻌﻟﺍ ﺓﺮﺠﺷ ﻢﻴّﻘﻳ"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ﺓﺎﻨﻘﻟﺍ ﺕﺍﺭﺎﻴﺧ"
@@ -19617,6 +19617,12 @@ msgstr "Mixie ﺔﺛﺩﺎﺤﻣ ﻰﻟﺇ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺘﻟ
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ﻞﻴﻛﻮﻟﺍ ﻊﻗﻮﺘﻳ"
 
+msgid "Skipped slow image: {name}"
+msgstr "{name} :ﺔﺌﻴﻄﺑ ﺓﺭﻮﺻ ﻲﻄﺨﺗ ﻢﺗ"
+
+msgid "Image encoding failed: {error}"
+msgstr "{error} :ﺓﺭﻮﺼﻟﺍ ﺰﻴﻣﺮﺗ ﻞﺸﻓ"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "{note} :ﺕﺎﻣﻼ﻿ﻌﻟﺍ"
 msgid "Sketch"
 msgstr "ﻲﻄﻴﻄﺨﺗ ﻢﺳﺭ"
 
-msgid "Skipped slow image: {name}"
-msgstr "{name} :ﺔﺌﻴﻄﺑ ﺓﺭﻮﺻ ﻲﻄﺨﺗ ﻢﺗ"
-
-msgid "Image encoding failed: {error}"
-msgstr "{error} :ﺓﺭﻮﺼﻟﺍ ﺰﻴﻣﺮﺗ ﻞﺸﻓ"
-
 msgid "Message sent"
 msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﺖﻠﺳﺭﺃُ"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

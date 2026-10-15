@@ -148,3 +148,12 @@ def test_the_camera_reaches_the_painter():
 def test_the_file_is_built():
     cmake = (VIEW3D / "CMakeLists.txt").read_text(encoding="utf-8")
     assert "view3d_director_timeline_keys.cc" in cmake
+
+
+def test_only_the_bare_delete_keys_delete():
+    """Cmd/Ctrl+X, Cmd+Backspace and Shift+Del are other commands' habits;
+    with the pointer over the dock they deleted camera keys."""
+    start = INTERACTION.index("ELEM(event->type, EVT_XKEY, EVT_DELKEY, EVT_BACKSPACEKEY)")
+    condition = INTERACTION[start : INTERACTION.index("{", start)]
+    assert "event->modifier == 0" in condition
+    assert "event->val == KM_PRESS" in condition

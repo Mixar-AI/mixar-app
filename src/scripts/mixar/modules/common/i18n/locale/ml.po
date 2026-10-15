@@ -17565,12 +17565,6 @@ msgstr "GPU ലഭ്യമാണെങ്കിൽ എപ്പോഴും അ
 msgid "Always render on the CPU"
 msgstr "എപ്പോഴും CPU-യിൽ റെൻഡർ ചെയ്യുക"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "സ്വതേ പുറത്ത് ബേക്ക് പ്രാപ്തമാക്കുക"
 
@@ -17648,6 +17642,12 @@ msgstr "ആനിമേഷൻ ഫ്രെയിം എപ്പോഴും വ
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ഓരോ ആനിമേഷൻ ഫ്രെയിം മാറ്റത്തിലും നോഡ് ട്രീ വിലയിരുത്തുക"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ചാനൽ ഓപ്ഷനുകൾ"
@@ -19617,6 +19617,12 @@ msgstr "Mixie ചാറ്റ് ലോഗിനുള്ള ഉപയോക്�
 msgid "Agent expects: {formats}"
 msgstr "ഏജന്റ് പ്രതീക്ഷിക്കുന്നത്: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "മന്ദഗതിയിലുള്ള ചിത്രം ഒഴിവാക്കി: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "ചിത്ര എൻകോഡിങ് പരാജയപ്പെട്ടു: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "മാർക്കുകൾ: {note}"
 msgid "Sketch"
 msgstr "സ്കെച്ച്"
 
-msgid "Skipped slow image: {name}"
-msgstr "മന്ദഗതിയിലുള്ള ചിത്രം ഒഴിവാക്കി: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "ചിത്ര എൻകോഡിങ് പരാജയപ്പെട്ടു: {error}"
-
 msgid "Message sent"
 msgstr "സന്ദേശം അയച്ചു"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

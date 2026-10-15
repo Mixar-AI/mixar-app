@@ -498,8 +498,21 @@ PREVIEW_DEFERRED_MAX_S = 240.0
 #   False: every script gets its own checkpoint (bounded by the cap below).
 # Turn boundaries come from queue_processor: begin_agent_turn on the first
 # streamed event, end_agent_turn on stream complete/error (and on abort /
-# file load), so a checkpoint-less turn cannot leak into the next one.
+# tab close / file load / undo handlers), so a checkpoint-less turn cannot
+# leak into the next one. The closing "Mixie Chat Turn" step is pushed only
+# on complete / error / replay-unavailable / Abort (checkpoint=True), never
+# from tab close, load_pre or the undo/redo handlers.
 AGENT_UNDO_GROUP_PER_TURN = True
+
+# Read-only tools: no undo checkpoint and the turn does not count as having
+# run, so chat-only turns leave no no-op steps. NOT render_gate.READ_ONLY_TOOLS
+# (that set includes render_scene_*, which write data).
+AGENT_UNDO_NEUTRAL_TOOLS = frozenset({
+    "_scene_digest", "_wait_generation_poll", "_detect_views_poll",
+    "_await_generation_image", "poll_generation", "get_all_queue_status",
+    "list_scene_meshes", "list_rules", "list_moodboard_images",
+    "get_paint_layer_stack", "get_paint_channels", "inspect_moodboard_image",
+})
 
 # Per-script checkpoints are capped per turn. Blender keeps U.undosteps
 # (32 by default) memfile steps, so an uncapped long turn would evict the

@@ -13,7 +13,7 @@ from mixar.modules.common.agent_rpc.client import command, call
 from mixar.modules.common.i18n import n_
 from .agent_events import AgentEvent
 from .chat_payloads import build_chat_payload, collect_user_preferences
-from . import turn_events
+from . import command_retry, turn_events
 
 _handlers = {}
 
@@ -125,7 +125,28 @@ class TurnTransport:
             self._running = False
 
         turn_events.expect(scene, command_id, settled)
+        busy_retries = []
+
+        def resend():
+            # Main thread (command_retry timer). The SAME id and payload: the
+            # backend refused before claiming the receipt, and going back
+            # through _send would mint a new id and recompute the rules.
+            try:
+                command(method, payload, ack, command_id=command_id)
+            except Exception as exc:
+                turn_events.handle_turn_notification('agent.command.result', {
+                    'session_id': payload['session_id'], 'command_id': command_id,
+                    'ok': False, 'message': str(exc),
+                })
+
         def ack(result):
+            if command_retry.is_busy(result) and not busy_retries:
+                # First -32017: no result yet (it would settle the bubble and
+                # clear the loader); resend once after the server's hint.
+                busy_retries.append(result)
+                command_retry.request(payload['session_id'], command_id,
+                                      command_retry.retry_after(result), resend)
+                return
             lost = (isinstance(result, dict) and result.get('code')
                     and (result.get('data') or {}).get('uncertain'))
             if not lost and turn_events.acknowledged(command_id) and isinstance(result, dict) \
@@ -193,11 +214,13 @@ class TurnTransport:
                      image_attachments=None, attachment_names=None, imported_object_names=None,
                      project_context=None, mark_context=None, user_message=None,
                      interjecting=False, auto_mode=False):
+        # ``attachment_names`` mirrors the pairs for callers and QA probes; the
+        # wire's names (per block and legacy list) come from image_attachments.
         payload = build_chat_payload(
             message=message, instance_id=instance_id, session_id=session_id,
             plan_required=plan_required, execution_required=execution_required,
             approval_required=approval_required, image_attachments=image_attachments,
-            attachment_names=attachment_names, imported_object_names=imported_object_names,
+            imported_object_names=imported_object_names,
             project_context=project_context, mark_context=mark_context,
             user_preferences=collect_user_preferences(), auto_mode=auto_mode,
         )

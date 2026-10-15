@@ -108,6 +108,8 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._device_id = device_id
         self._reconnect_delay = reconnect_delay
         self._max_reconnect_delay = max_reconnect_delay
+        # Set by a 1013 close; the next reconnect waits at least this long.
+        self._server_retry_after = None
         self._ping_interval = ping_interval
 
         # Callbacks
@@ -298,6 +300,7 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
                     break
 
                 if frame.kind == KIND_CLOSED:
+                    self._note_server_close(frame.close_code, frame.close_reason)
                     if frame.close_code == WS_CLOSE_AUTH_FAILED:
                         # Recorded, not terminal: the run loop reconnects
                         # and _do_connect refreshes the token first, then

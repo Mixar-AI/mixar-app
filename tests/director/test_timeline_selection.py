@@ -129,7 +129,9 @@ def test_select_all_and_deselect_all():
     body = SELECT[SELECT.index("/* ---- Select all / none ---- */") :]
     body = body[: body.index("/* ---- Shift+click")]
     assert "event->type == EVT_AKEY" in body
-    assert '(event->modifier & KM_ALT) ? "NONE" : "ALL"' in body
+    # Bare A is all, Alt+A none; Cmd/Ctrl+A and Shift+A are not ours.
+    assert "ELEM(event->modifier, 0, KM_ALT)" in body
+    assert 'event->modifier == KM_ALT ? "NONE" : "ALL"' in body
 
 
 def test_selecting_is_allowed_on_a_locked_take_editing_is_not():

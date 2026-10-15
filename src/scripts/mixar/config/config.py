@@ -16,7 +16,7 @@ Two files back the configuration and they must never be confused:
   access, and on macOS the ``.app`` bundle is replaced wholesale by updates.
 * The **user overlay** ``<user config>/mixar/mixar.json`` holds every key a
   running app persists (``ui_mode``, ``share_usage_data``, the fallback
-  ``device_id``). It contains ONLY keys written through :func:`add_config`,
+  ``device_id``, ``addon_projects_dir``). It contains ONLY keys written through :func:`add_config`,
   so a stale copy of a bundled key can never shadow a newer build's value.
 
 Reads see the overlay merged over the bundled defaults; writes go to the
@@ -271,6 +271,31 @@ def set_ui_mode(mode: str) -> bool:
         logger.error("Invalid ui_mode: %r", mode)
         return False
     return add_config("ui_mode", mode)
+
+
+# The Add-on tab's projects root: one per-user value (never per-Scene), so a
+# new scene tab or another .blend cannot see or save a different one.
+# addon_project/constants.py:DEFAULT_WORKSPACE_DIR is the same literal
+# (pinned by tests/test_addon_project_preference_root.py).
+ADDON_PROJECTS_DIR_KEY = "addon_projects_dir"
+DEFAULT_ADDON_PROJECTS_DIR = "~/Mixar Addons"
+
+
+def has_addon_projects_dir() -> bool:
+    """True once the projects root was written to the user overlay (even "")."""
+    return ADDON_PROJECTS_DIR_KEY in get_config()
+
+
+def get_addon_projects_dir() -> str:
+    """The stored projects root, stripped; "" when unset (use the default)."""
+    value = get_config().get(ADDON_PROJECTS_DIR_KEY, "")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def set_addon_projects_dir(path) -> bool:
+    """Persist the projects root to the user overlay. False on write failure."""
+    value = path.strip() if isinstance(path, str) else ""
+    return add_config(ADDON_PROJECTS_DIR_KEY, value)
 
 
 def get_frontend_url():

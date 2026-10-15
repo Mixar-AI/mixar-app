@@ -17565,12 +17565,6 @@ msgstr "Randare mereu pe GPU, când este disponibil"
 msgid "Always render on the CPU"
 msgstr "Randare mereu pe CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Activare implicită a coptului în exterior"
 
@@ -17648,6 +17642,12 @@ msgstr "Evaluare mereu a cadrului"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Evaluare arbore de noduri la fiecare schimbare de cadru"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opțiuni canal"
@@ -19617,6 +19617,12 @@ msgstr "ID utilizator pentru autentificarea în chatul Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agentul așteaptă: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Imagine lentă omisă: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Codificarea imaginii a eșuat: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20483,12 +20489,6 @@ msgstr "Marcaje: {note}"
 msgid "Sketch"
 msgstr "Schiță"
 
-msgid "Skipped slow image: {name}"
-msgstr "Imagine lentă omisă: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Codificarea imaginii a eșuat: {error}"
-
 msgid "Message sent"
 msgstr "Mesaj trimis"
 
@@ -21212,6 +21212,9 @@ msgid "Close Scene"
 msgstr ""
 
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
+msgstr ""
+
+msgid "Track Scenes Drawer Open"
 msgstr ""
 
 msgid "Capture Screenshot"

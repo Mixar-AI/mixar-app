@@ -875,6 +875,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
+            job.error_class_source = "client"
             job.error_reason = job.error
             self._notify()
             self._pump()
@@ -950,6 +951,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
+            job.error_class_source = "client"
             job.error_reason = job.error
         elif job.state == JobState.RUNNING_DOWNLOAD:
             # The worker thread should have failed itself long before this;
@@ -962,6 +964,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Download timed out — please retry")
             job.error_class = "download"
+            job.error_class_source = "client"
             job.error_reason = job.error
         else:
             return
