@@ -64,8 +64,9 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     (pose kept) and its material/images cleaned up + packed map split, then the
     node binds to the FINAL name.
 
-    When *armature_in_front* is set (Auto Rig), the imported armature is shown
-    In Front, like every other Auto Rig import.
+    When *armature_in_front* is set (Auto Rig), the import lands exactly like
+    every other Auto Rig import: stamped with the rig job id and skeleton
+    (the Animate card and the agent read them back) and shown In Front.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -78,10 +79,9 @@ def _mesh_result_hook(scene_name: str, node_id: str,
 
         result = object_names
         if armature_in_front:
-            from mixar.modules.hunyuan.core.animate_enqueue import (
-                show_armatures_in_front,
-            )
-            show_armatures_in_front(object_names)
+            from mixar.modules.hunyuan.core.animate_enqueue import stamp_rig_import
+
+            stamp_rig_import(job, object_names)
         if texture_finalize:
             try:
                 from mixar.modules.common.job_queue.core.model_io import (
