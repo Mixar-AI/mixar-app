@@ -298,7 +298,8 @@ def test_the_transport_remembers_a_refused_command_for_the_card():
     src = (SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "core" / "turn_transport.py").read_text(encoding="utf-8")
     settled = src[src.index("def settled("):src.index("turn_events.expect(scene, command_id, settled)")]
     assert "byok_error_code(result, result.get('data') or {})" in settled
-    assert "byok_resend.remember(payload['session_id'], command_id, method, payload, joining)" in settled
+    # The remembered payload keeps the images themselves (not upload refs).
+    assert "byok_resend.remember(payload['session_id'], command_id, method, remembered, joining)" in settled
     assert settled.index("byok_resend.remember(") < settled.index("processor.handle_command_error(result, target)")
 
 

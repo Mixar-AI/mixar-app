@@ -171,7 +171,8 @@ def test_the_resend_lives_in_the_transport_not_the_error_handler():
     src = (SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "core" / "turn_transport.py").read_text(encoding="utf-8")
     body = src[src.index("def settled(target, result):"):src.index("turn_events.expect(scene, command_id, settled)")]
     assert body.index("retry_of is None and _stale_transport_key(result)") < body.index("processor.handle_command_error(result, target)")
-    assert "self._send(method, payload, None, interjecting, retry_of=command_id)" in body
+    stale = body[body.index("retry_of is None and _stale_transport_key(result)"):]
+    assert "self._send(method, payload, None, interjecting, retry_of=command_id," in stale
     assert "transport_seal.invalidate()" in body
     qp = (SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "core" / "queue_processor.py").read_text(encoding="utf-8")
     assert "transport_seal" not in qp and "retry_of" not in qp

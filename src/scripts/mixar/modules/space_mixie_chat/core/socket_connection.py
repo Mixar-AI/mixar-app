@@ -399,6 +399,7 @@ class SocketConnection:
         self.agent_ws_supported = False
         self.agent_history_supported = False
         self.agent_history_blobs_by_reference = False
+        self.agent_attachments_by_reference = False
         self._ws.send(json.dumps(handshake))
 
         try:
@@ -424,3 +425,5 @@ class SocketConnection:
         capabilities = result.get('server_capabilities', [])
         self.agent_history_supported = 'agent_history_v1' in capabilities
         self.agent_history_blobs_by_reference = 'agent_history_v2' in capabilities
+        # Chat images upload over HTTP; commands carry references (attachment_upload).
+        self.agent_attachments_by_reference = 'agent_attachments_v1' in capabilities
