@@ -88,8 +88,10 @@ def _node(action_type='ANIMATE', node_id="anim", **kwargs):
 class _Object:
     def __init__(self, name, type='MESH', parent=None, **stamps):
         self.name, self.type, self.parent = name, type, parent
-        self.modifiers = []
+        self.modifiers, self.children_recursive = [], []
         self._props = dict(stamps)
+        if parent is not None:
+            parent.children_recursive.append(self)
 
     def get(self, key, default=None):
         return self._props.get(key, default)
@@ -107,7 +109,14 @@ def _scene(nodes=(), links=(), assets=(), objects=()):
               mixie_moodboard_asset_nodes=list(assets), mixie_moodboard_images=[],
               mixie_moodboard_links=_Collection(dict) + list(links)
               if False else _links(links),
-              objects={obj.name: obj for obj in objects})
+              objects=_Objects((obj.name, obj) for obj in objects))
+
+
+class _Objects(dict):
+    """``scene.objects``: looked up by name, iterated as objects."""
+
+    def __iter__(self):
+        return iter(list(self.values()))
 
 
 def _links(links):
@@ -252,8 +261,15 @@ def test_duplicate_carries_the_ticks_and_rebuilds_the_rows(catalog):
 # --------------------------------------------------------------------------- #
 
 
+def _rig_stamps(skeleton="biped"):
+    stamps = {ANIMATE_RIG_JOB_PROP: "job-1"}
+    if skeleton:
+        stamps[ANIMATE_RIG_SKELETON_PROP] = skeleton
+    return stamps
+
+
 def test_only_rig_cards_and_stamped_assets_feed_animate():
-    armature = _Object("Rig", 'ARMATURE', **{ANIMATE_RIG_JOB_PROP: "job-1"})
+    armature = _Object("Rig", 'ARMATURE', **_rig_stamps())
     body = _Object("Body", parent=armature)
     plain = _Object("Plain")
     scene = _scene(
@@ -263,6 +279,7 @@ def test_only_rig_cards_and_stamped_assets_feed_animate():
                 NS(node_id="legacy", preview_object=None, object_names="Rig")],
         objects=[armature, body, plain],
     )
+    # A rig card that has not produced its character yet: the run checks it.
     assert animate_node.source_carries_rig(scene, "rig")
     assert animate_node.source_carries_rig(scene, "anim")
     assert not animate_node.source_carries_rig(scene, "pbr")
@@ -273,6 +290,35 @@ def test_only_rig_cards_and_stamped_assets_feed_animate():
     with pytest.raises(ValueError, match="rigged character"):
         animate_node.require_rig_source(scene, "plain")
     animate_node.require_rig_source(scene, "rig")
+
+
+def test_a_rig_without_its_skeleton_stamp_is_refused_everywhere():
+    # A Meshy rig (or a rig from before Animate) carries the job id alone.
+    armature = _Object("Rig", 'ARMATURE', **_rig_stamps(skeleton=""))
+    body = _Object("Body", parent=armature)
+    scene = _scene(
+        nodes=[_node('AUTO_RIG', "rig", result_names="Rig, Body")],
+        assets=[NS(node_id="meshy", preview_object=body, object_names="")],
+        objects=[armature, body],
+    )
+    for node_id in ("rig", "meshy"):
+        assert not animate_node.source_carries_rig(scene, node_id)
+        with pytest.raises(ValueError, match="can't take preset animations"):
+            animate_node.require_rig_source(scene, node_id)
+
+
+def test_the_continuation_menu_offers_animate_only_for_a_skeleton_stamped_rig(monkeypatch):
+    from mixar.modules.moodboard.ui import moodboard_menu_actions as actions
+
+    monkeypatch.setattr(actions, "capability_available", lambda capability: True)
+    monkeypatch.setattr(actions, "template_available", lambda template: True)
+    armature = _Object("Rig", 'ARMATURE', **_rig_stamps())
+    body = _Object("Body", parent=armature)
+    scene = _scene(nodes=[_node('AUTO_RIG', "rig", result_names="Rig, Body")],
+                   objects=[armature, body])
+    assert 'ANIMATE' in [entry[0] for entry in actions.mesh_continuations_for(scene, "rig")]
+    del armature._props[ANIMATE_RIG_SKELETON_PROP]
+    assert 'ANIMATE' not in [entry[0] for entry in actions.mesh_continuations_for(scene, "rig")]
 
 
 def test_connect_nodes_refuses_an_unrigged_mesh_on_animate(monkeypatch):
@@ -287,20 +333,17 @@ def test_connect_nodes_refuses_an_unrigged_mesh_on_animate(monkeypatch):
     assert list(scene.mixie_moodboard_links) == []
 
 
-def test_the_stamp_wins_and_a_fresh_rig_card_supplies_its_job_id():
-    armature = _Object("Rig", 'ARMATURE', **{ANIMATE_RIG_JOB_PROP: "job-1",
-                                             ANIMATE_RIG_SKELETON_PROP: "biped"})
+def test_the_rig_comes_from_the_stamps_on_the_connected_character():
+    armature = _Object("Rig", 'ARMATURE', **_rig_stamps())
     body = _Object("Body", parent=armature)
     rig_card = _node('AUTO_RIG', "rig", result_names="Rig, Body", job_id="backend-9")
     anim = _node('ANIMATE', "anim")
     scene = _scene(nodes=[rig_card, anim], links=[_link("rig", "anim")],
                    objects=[armature, body])
-    assert animate_node.rig_source(scene, anim) == ("job-1", "biped", ["Rig", "Body"], "Rig")
-    # Not stamped yet (the result just landed, or an older file): the card's id.
+    assert animate_node.rig_source(scene, anim) == ("job-1", "biped", ["Rig", "Body"], armature)
+    # Unstamped: the card's own job id is never a substitute (no skeleton).
     armature._props.clear()
-    assert animate_node.rig_source(scene, anim) == ("backend-9", "", ["Rig", "Body"], "")
-    rig_card.result_names = ""
-    assert animate_node.rig_source(scene, anim) == ("backend-9", "", [], "")
+    assert animate_node.rig_source(scene, anim) == ("", "", ["Rig", "Body"], None)
 
 
 def test_the_preset_filter_groups_rows_by_skeleton_and_narrows_to_the_rigs(catalog):
@@ -366,7 +409,9 @@ def test_run_submits_the_rig_job_id_and_the_ticked_presets(run_seams):
     kw = run_seams["enqueue"]
     assert kw["rig_job_id"] == "job-1" and kw["service_key"] == "tripo_retarget"
     assert kw["model"] == MODEL["slug"] and kw["params"] == params
-    assert kw["label"] == "Rig" and kw["rig_name"] == "Rig"
+    # The queue row and toasts name the character (its mesh), the merge
+    # targets the armature.
+    assert kw["label"] == "Body" and kw["rig_name"] == "Rig"
     assert kw["graph_node_id"] == "anim" and callable(kw["on_merged"])
     assert run_seams["listener"] == "animate"
 
@@ -393,11 +438,19 @@ def test_run_refuses_without_a_rig(run_seams):
         animate_node.run_animate_node(NS(scene=scene), anim)
 
 
-def test_an_unknown_skeleton_accepts_every_preset(run_seams):
+def test_run_refuses_a_rig_without_its_skeleton_stamp(run_seams):
     scene, anim = _rigged_graph(skeleton="")
     anim.parameters[0].choices[2].selected = True
-    animate_node.run_animate_node(NS(scene=scene), anim)
-    assert run_seams["enqueue"]["params"][ANIMATE_PRESETS_PARAM] == ["preset:quadruped:walk"]
+    with pytest.raises(ValueError, match="can't take preset animations"):
+        animate_node.run_animate_node(NS(scene=scene), anim)
+    assert "enqueue" not in run_seams
+
+
+def test_run_explains_a_skeleton_the_catalog_has_no_presets_for(run_seams):
+    scene, anim = _rigged_graph(skeleton="avian")
+    with pytest.raises(ValueError, match="No preset animations are available for avian rigs"):
+        animate_node.run_animate_node(NS(scene=scene), anim)
+    assert "enqueue" not in run_seams
 
 
 def test_the_merged_character_becomes_the_cards_result(monkeypatch):
@@ -429,3 +482,4 @@ def test_the_output_kind_table_names_animate_as_a_mesh():
     socket_cc = (ROOT / "src/source/blender/editors/space_mixie/"
                  "mixie_draw_moodboard_graph_sockets.cc").read_text(encoding="utf-8")
     assert "ASSEMBLE, ANIMATE)" in socket_cc
+

@@ -5,6 +5,7 @@
 """Retarget preset rules shared by the Animate card and the agent operator."""
 
 import sys
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 from mixar.modules.common import generation_params
@@ -41,6 +42,35 @@ def test_preset_errors_name_the_problem():
     # Unknown rig skeleton or unknown catalog: nothing to check against.
     assert presets.preset_error(["preset:quadruped:walk"], CHOICES, "") == ""
     assert presets.preset_error(["preset:anything:x"], [], "") == ""
+
+
+def test_a_skeleton_the_catalog_has_no_presets_for_is_explained():
+    assert presets.preset_error(["preset:biped:walk"], CHOICES, "avian") == (
+        "No preset animations are available for avian rigs yet")
+    assert presets.preset_error([], CHOICES, "avian").startswith("No preset animations")
+
+
+def test_refusals_are_english_unless_a_display_path_translates_them():
+    # The agent gets the template formatted as is; the card passes rpt_, which
+    # must see the untranslated TEMPLATE (a formatted string has no msgid).
+    seen = []
+
+    def translate(text):
+        seen.append(text)
+        return "[" + text + "]"
+
+    assert presets.preset_error(["preset:quadruped:walk"], CHOICES, "biped", translate) == (
+        "[preset:quadruped:walk: not for a biped rig — pick biped presets]")
+    assert seen == ["{names}: not for a {skeleton} rig — pick {skeleton} presets"]
+    source = Path(presets.__file__).read_text(encoding="utf-8")
+    assert "import n_\n" in source and "rpt_(" not in source and "iface_(" not in source
+
+
+def test_only_a_rig_stamped_with_its_skeleton_takes_presets():
+    assert presets.rig_refusal("", "") == presets.NOT_A_RIG
+    assert presets.rig_refusal("job-1", "") == presets.RIG_TAKES_NO_PRESETS
+    assert "Tripo" in presets.RIG_TAKES_NO_PRESETS
+    assert presets.rig_refusal("job-1", "biped") == ""
 
 
 def test_presets_for_skeleton_keeps_the_rigs_and_the_shapeless():

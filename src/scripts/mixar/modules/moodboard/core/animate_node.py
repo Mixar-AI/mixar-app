@@ -6,11 +6,12 @@
 
 No export: the payload names the Auto Rig job (``rig_job_id``) the backend
 already holds, read from the ``mixar_rig_job_id`` stamp on the connected
-character (or the upstream Auto Rig card's own job id while its result is
-still landing), plus the card's catalog params. The result's clips are
-merged onto that same character (``hunyuan.core.animation_merge``), and the
-card's result IS the character — armature and meshes — so another Animate
-card or an export chains off it.
+character, plus the card's catalog params. Only a rig stamped with its
+skeleton (``mixar_rig_skeleton``) can take presets: the rig job reports one
+for a retargetable rig alone, so a rig without it is refused up front. The
+result's clips are merged onto that same character
+(``hunyuan.core.animation_merge``), and the card's result IS the character —
+armature and meshes — so another Animate card or an export chains off it.
 """
 
 from __future__ import annotations
@@ -25,7 +26,13 @@ from mixar.modules.hunyuan.core.animate_enqueue import (
     find_rig_job_id,
     find_rig_skeleton,
 )
-from mixar.modules.hunyuan.core.animate_presets import preset_error, preset_skeleton
+from mixar.modules.hunyuan.core.animate_presets import (
+    NOT_A_RIG,
+    preset_error,
+    preset_skeleton,
+    rig_refusal,
+)
+from mixar.modules.hunyuan.core.animation_merge import character_label
 
 # Cards whose MESH output is a rigged character once they have run.
 RIG_ACTION_TYPES = frozenset({'AUTO_RIG', 'ANIMATE'})
@@ -38,7 +45,7 @@ def _scene_objects(scene, names) -> list:
 
 
 def _rig_of_objects(objects) -> tuple:
-    """``(rig_job_id, skeleton, armature_name)`` from stamped objects."""
+    """``(rig_job_id, skeleton, armature)`` from stamped objects."""
     for obj in objects:
         rig_job_id = find_rig_job_id(obj)
         if rig_job_id:
@@ -48,58 +55,60 @@ def _rig_of_objects(objects) -> tuple:
                     armature = obj.find_armature()
                 except Exception:  # noqa: BLE001 — not every type has one
                     armature = None
-            return rig_job_id, find_rig_skeleton(obj), getattr(armature, "name", "")
-    return "", "", ""
+            return rig_job_id, find_rig_skeleton(obj), armature
+    return "", "", None
 
 
-def source_carries_rig(scene, node_id: str) -> bool:
-    """Whether a graph node's output is (or will be) a rigged character.
+def source_rig_refusal(scene, node_id: str) -> str:
+    """Why a graph node's output cannot feed Animate (an ``n_`` msgid), or "".
 
-    Read-only (menus draw it): an Auto Rig / Animate card qualifies, any
-    other card does not (a generation re-imports fresh, unstamped objects),
-    and an asset card qualifies through the stamp on its object(s).
+    Read-only (menus draw it). An Auto Rig / Animate card that has not
+    produced its character yet qualifies (the run checks the result); one
+    with a result, and an asset card, are judged by their objects' stamps.
+    Any other card does not qualify (a generation re-imports fresh,
+    unstamped objects).
     """
-    from .node_graph import action_node_by_id, asset_node_by_id
+    from .node_graph import action_node_by_id, asset_node_by_id, mesh_source_object_names
 
     action = action_node_by_id(scene, node_id)
     if action is not None:
-        return action.action_type in RIG_ACTION_TYPES
+        if action.action_type not in RIG_ACTION_TYPES:
+            return NOT_A_RIG
+        objects = _scene_objects(scene, mesh_source_object_names(scene, node_id))
+        return rig_refusal(*_rig_of_objects(objects)[:2]) if objects else ""
     asset = asset_node_by_id(scene, node_id)
     if asset is None:
-        return False
+        return NOT_A_RIG
     preview = getattr(asset, "preview_object", None)
     if preview is not None:
-        return bool(find_rig_job_id(preview))
-    legacy = str(getattr(asset, "object_names", "") or "")
-    names = [name.strip() for name in legacy.split(",") if name.strip()]
-    return bool(_rig_of_objects(_scene_objects(scene, names))[0])
+        objects = [preview]
+    else:
+        legacy = str(getattr(asset, "object_names", "") or "")
+        objects = _scene_objects(scene, [name.strip() for name in legacy.split(",")])
+    return rig_refusal(*_rig_of_objects(objects)[:2])
+
+
+def source_carries_rig(scene, node_id: str) -> bool:
+    """Whether a graph node's output is (or will be) a character Animate takes."""
+    return not source_rig_refusal(scene, node_id)
 
 
 def require_rig_source(scene, node_id: str) -> None:
-    """``connect_nodes`` guard: an Animate input must carry an Auto Rig job."""
-    if not source_carries_rig(scene, node_id):
-        raise ValueError(rpt_("Animate needs a rigged character: connect an Auto Rig result"))
+    """``connect_nodes`` guard: an Animate input must be a rig that takes presets."""
+    refusal = source_rig_refusal(scene, node_id)
+    if refusal:
+        raise ValueError(rpt_(refusal))
 
 
 def rig_source(scene, node) -> tuple:
-    """``(rig_job_id, skeleton, object_names, armature_name)`` feeding *node*.
+    """``(rig_job_id, skeleton, object_names, armature)`` feeding *node*.
 
-    The stamp on the connected objects wins (it is saved with the file); an
-    upstream Auto Rig card that finished in this session supplies its job id
-    while the stamp is still missing.
+    Read from the stamps on the connected objects (saved with the file).
     """
-    from .node_graph import action_node_by_id, input_source_object_names
+    from .node_graph import input_source_object_names
 
     names = input_source_object_names(scene, node)
     rig_job_id, skeleton, armature = _rig_of_objects(_scene_objects(scene, names))
-    if not rig_job_id:
-        for link in getattr(scene, "mixie_moodboard_links", ()):
-            if link.to_node_id != node.node_id:
-                continue
-            producer = action_node_by_id(scene, link.from_node_id)
-            if producer is not None and producer.action_type == 'AUTO_RIG' and producer.job_id:
-                rig_job_id = str(producer.job_id)
-                break
     return rig_job_id, skeleton, names, armature
 
 
@@ -167,16 +176,20 @@ def run_animate_node(context, node):
     rig_job_id, skeleton, names, armature = rig_source(scene, node)
     if not rig_job_id:
         raise ValueError(rpt_("Connect an Auto Rig result (a rigged character) to Animate"))
+    refusal = rig_refusal(rig_job_id, skeleton)
+    if refusal:
+        raise ValueError(rpt_(refusal))
     refresh_preset_filter(scene, node)
     params = collect_node_params(node)
     presets = list(params.get(ANIMATE_PRESETS_PARAM) or ())
     parameter = _preset_parameter(node)
     choices = [{"value": row.value} for row in parameter.choices] if parameter else []
-    error = preset_error(presets, choices, skeleton)
+    error = preset_error(presets, choices, skeleton, translate=rpt_)
     if error:
         raise ValueError(error)
 
-    label = armature or names[0]
+    rig_name = getattr(armature, "name", "")
+    label = character_label(scene, armature) if armature is not None else names[0]
     ensure_graph_listener(FEATURE_ANIMATE)
     job = enqueue_retarget_job(
         rig_job_id=rig_job_id,
@@ -184,7 +197,7 @@ def run_animate_node(context, node):
         model=model,
         params=params,
         label=label,
-        rig_name=armature,
+        rig_name=rig_name,
         graph_node_id=node.node_id,
         on_merged=_node_result(scene.name, node.node_id),
     )

@@ -8,12 +8,32 @@ A preset value is ``preset:<skeleton>:<name>``; its skeleton must be the
 rig's (the backend refuses a mismatch at submit, and fails closed at
 dispatch), so both entry points filter and validate by it here. The preset
 list itself is the catalog's: nothing in this module names a preset.
+
+Refusals are English ``n_`` templates: the agent operator sends them as they
+are, and the card passes ``rpt_`` as ``translate`` so its error line is in
+the interface language (see ``preset_error``).
 """
 
 from __future__ import annotations
 
-from mixar.modules.common.i18n import rpt_
+from mixar.modules.common.i18n import n_
 from ..constants import ANIMATE_PRESETS_PARAM, ANIMATION_CAPABILITY
+
+# Why a character cannot be animated. A rig job stamps the skeleton only when
+# the backend reported one, which it does for a retargetable Tripo rig alone
+# (a Meshy rig or an older rig carries the job id without it).
+NOT_A_RIG = n_("Animate needs a rigged character: connect an Auto Rig result")
+RIG_TAKES_NO_PRESETS = n_(
+    "This rig can't take preset animations: run Auto Rig again with a Tripo model")
+
+
+def rig_refusal(rig_job_id, skeleton) -> str:
+    """The ``n_`` refusal for a rig's stamps, or "" when it can be animated."""
+    if not rig_job_id:
+        return NOT_A_RIG
+    if not skeleton:
+        return RIG_TAKES_NO_PRESETS
+    return ""
 
 
 def preset_skeleton(value) -> str:
@@ -64,19 +84,24 @@ def retarget_catalog() -> tuple:
     return service_key, model_slug, spec_choices(spec if isinstance(spec, dict) else {})
 
 
-def preset_error(presets, choices, skeleton: str) -> str:
+def preset_error(presets, choices, skeleton: str, translate=str) -> str:
     """One readable refusal for a preset list, or "" when it is submittable.
 
     ``choices`` is the catalog's published list (empty = unknown, not
     validated); ``skeleton`` is the rig's stamped skeleton ("" = unknown).
+    The text is English unless a display path passes ``translate=rpt_``.
     """
+    if choices and skeleton and not presets_for_skeleton(choices, skeleton):
+        return translate(n_(
+            "No preset animations are available for {skeleton} rigs yet"
+        )).format(skeleton=skeleton)
     if not presets:
-        return rpt_("Choose at least one animation preset")
+        return translate(n_("Choose at least one animation preset"))
     if choices:
         known = {str(choice.get("value")) for choice in choices}
         unknown = [preset for preset in presets if preset not in known]
         if unknown:
-            return rpt_("Unknown animation preset(s): {names}").format(
+            return translate(n_("Unknown animation preset(s): {names}")).format(
                 names=", ".join(unknown))
     if skeleton:
         mismatched = [
@@ -84,9 +109,9 @@ def preset_error(presets, choices, skeleton: str) -> str:
             if preset_skeleton(preset) and preset_skeleton(preset) != skeleton
         ]
         if mismatched:
-            return rpt_(
+            return translate(n_(
                 "{names}: not for a {skeleton} rig — pick {skeleton} presets"
-            ).format(names=", ".join(mismatched), skeleton=skeleton)
+            )).format(names=", ".join(mismatched), skeleton=skeleton)
     return ""
 
 

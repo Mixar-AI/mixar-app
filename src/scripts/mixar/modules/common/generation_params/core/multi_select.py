@@ -97,11 +97,22 @@ def summary(rows) -> str:
 
 def draw_multi_select(layout, owner, rows_attr: str, active_attr: str, text: str = "",
                       rows: int = 6) -> None:
-    """Caption, selection summary and the filterable row list for one param."""
+    """Caption, selection summary and the filterable row list for one param.
+
+    When the owner's ``choice_filter`` leaves no row (the catalog publishes
+    nothing for that group — say, no presets for an avian rig), one line
+    says so instead of an empty list.
+    """
     col = layout.column(align=True)
     if text:
         col.label(text=text)
-    col.label(text=summary(getattr(owner, rows_attr)), translate=False)
+    rows_data = getattr(owner, rows_attr)
+    group = str(getattr(owner, "choice_filter", "") or "")
+    if group and not any(row.group in ("", group) for row in rows_data):
+        col.label(text=iface_("No {group} choices are available yet").format(group=group),
+                  icon='INFO', translate=False)
+        return
+    col.label(text=summary(rows_data), translate=False)
     col.template_list(
         MULTI_SELECT_LIST_ID, rows_attr, owner, rows_attr, owner, active_attr, rows=rows,
     )

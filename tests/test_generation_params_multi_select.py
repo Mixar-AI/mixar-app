@@ -218,3 +218,26 @@ def test_the_list_filters_by_name_and_by_the_owners_group():
     assert [bool(flag) for flag in flags] == [False, True, False]
     source = (choice_list.__file__)
     assert "self.use_filter_show = True" in open(source, encoding="utf-8").read()
+
+
+def test_a_filter_that_leaves_no_row_says_so_instead_of_an_empty_list():
+    calls = []
+
+    class _Layout:
+        def column(self, align=False):
+            return self
+
+        def label(self, text="", translate=True, icon='NONE'):
+            calls.append(("label", text))
+
+        def template_list(self, *args, **kwargs):
+            calls.append(("list",))
+
+    owner = NS(choices=_rows(), active_choice=0, choice_filter="avian")
+    multi_select.draw_multi_select(_Layout(), owner, "choices", "active_choice", "Animations")
+    assert calls == [("label", "Animations"),
+                     ("label", "No avian choices are available yet")]
+    calls.clear()
+    owner.choice_filter = "y"
+    multi_select.draw_multi_select(_Layout(), owner, "choices", "active_choice", "Animations")
+    assert calls[-1] == ("list",)

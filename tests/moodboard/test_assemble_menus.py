@@ -38,7 +38,7 @@ def _ids(entries):
 
 
 def test_a_rig_result_continues_into_assemble(catalog):
-    scene = _scene([NS(node_id="rig", action_type='AUTO_RIG')])
+    scene = _scene([NS(node_id="rig", action_type='AUTO_RIG', result_names="")])
     entries = actions.mesh_continuations_for(scene, "rig")
     # Assemble and Animate are the two continuations only a rig offers.
     assert _ids(entries) == [
@@ -79,7 +79,7 @@ def test_an_asset_offers_assemble_only_when_its_mesh_has_an_armature(catalog):
 
 def test_unavailable_mesh_features_are_filtered(catalog, monkeypatch):
     monkeypatch.setattr(actions, "capability_available", lambda capability: capability == "animate")
-    scene = _scene([NS(node_id="rig", action_type='AUTO_RIG')])
+    scene = _scene([NS(node_id="rig", action_type='AUTO_RIG', result_names="")])
     assert _ids(actions.mesh_continuations_for(scene, "rig")) == ['AUTO_RIG', 'ASSEMBLE']
 
 

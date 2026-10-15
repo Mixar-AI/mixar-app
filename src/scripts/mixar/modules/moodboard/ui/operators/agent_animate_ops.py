@@ -12,6 +12,9 @@ job is resolved with ``find_rig_job_id`` from the ``mixar_rig_job_id`` stamp
 an Auto Rig import carries, the job goes on the shared Animate queue, and the
 result's clips are merged onto that character — so the job reports the
 ORIGINAL character's object names (armature + meshes) as its result names.
+The character must be in the scene the result lands in (the agent session's
+main scene), and its rig must carry the skeleton stamp a retargetable Auto
+Rig leaves; anything else is refused before a job exists.
 
 Contract with the agent's ``enqueue_generation`` tool: on success return
 ``{'FINISHED'}``; on any refusal set ``window_manager['mixar_agent_gen_reason']``
@@ -33,11 +36,23 @@ def _fail(context, reason: str):
     return {'CANCELLED'}
 
 
-def plan_agent_animate(obj, animations: str, animate_in_place: bool) -> tuple:
+def landing_scene(context):
+    """The scene the job's result will land in: the agent session's (MAIN),
+    else the window's — the same choice the queue stamps on the job."""
+    from mixar.modules.common.job_queue.core.queue_download import resolve_job_scene
+    from mixar.modules.common.utils.agent_feedback import peek_agent_ref
+
+    session_id = str(peek_agent_ref(context).get("session_id") or "")
+    return (resolve_job_scene("", session_id) if session_id else None) or context.scene
+
+
+def plan_agent_animate(obj, animations: str, animate_in_place: bool, scene) -> tuple:
     """``(submission, reason)``: everything the enqueue needs, or why not.
 
-    Pure resolution so it is testable without an Operator: the rig stamp,
+    Pure resolution so it is testable without an Operator: the character's
+    place in *scene* (where the result lands and merges), the rig stamps,
     the live retarget catalog, the preset list and the skeleton rule.
+    Reasons are English: they go to the agent.
     """
     from mixar.modules.hunyuan.constants import ANIMATE_IN_PLACE_PARAM, ANIMATE_PRESETS_PARAM
     from mixar.modules.hunyuan.core.animate_enqueue import find_rig_job_id, find_rig_skeleton
@@ -45,7 +60,9 @@ def plan_agent_animate(obj, animations: str, animate_in_place: bool) -> tuple:
         parse_preset_list,
         preset_error,
         retarget_catalog,
+        rig_refusal,
     )
+    from mixar.modules.hunyuan.core.animation_merge import character_label
 
     rig_job_id = find_rig_job_id(obj)
     if not rig_job_id:
@@ -53,14 +70,25 @@ def plan_agent_animate(obj, animations: str, animate_in_place: bool) -> tuple:
             f"'{obj.name}' was not imported by Auto Rig — run mixie.agent_auto_rig on the "
             "character first, then animate the rigged result."
         )
+    skeleton = find_rig_skeleton(obj)
+    refusal = rig_refusal(rig_job_id, skeleton)
+    if refusal:
+        return None, refusal
+    armature = obj if obj.type == 'ARMATURE' else (obj.find_armature() or obj)
+    objects = getattr(scene, "objects", None)
+    if objects is None or objects.get(armature.name) is None:
+        return None, (
+            f"'{armature.name}' is not in the main scene '{getattr(scene, 'name', '')}', where "
+            "the animation result lands — animate the character in the main scene (merge a "
+            "workspace build into it first)."
+        )
     service_key, model, choices = retarget_catalog()
     if not service_key or not model:
         return None, "Animate is unavailable in the generation catalog"
     presets = parse_preset_list(animations)
-    error = preset_error(presets, choices, find_rig_skeleton(obj))
+    error = preset_error(presets, choices, skeleton)
     if error:
         return None, error
-    armature = obj if obj.type == 'ARMATURE' else (obj.find_armature() or obj)
     return {
         "rig_job_id": rig_job_id,
         "service_key": service_key,
@@ -69,7 +97,7 @@ def plan_agent_animate(obj, animations: str, animate_in_place: bool) -> tuple:
             ANIMATE_PRESETS_PARAM: presets,
             ANIMATE_IN_PLACE_PARAM: bool(animate_in_place),
         },
-        "label": armature.name,
+        "label": character_label(scene, armature),
         "rig_name": armature.name,
     }, ""
 
@@ -110,7 +138,8 @@ class MIXIE_OT_agent_animate(Operator):
         if obj is None:
             return _fail(context, f"No object named '{name}' in the scene.")
 
-        submission, reason = plan_agent_animate(obj, self.animations, self.animate_in_place)
+        submission, reason = plan_agent_animate(
+            obj, self.animations, self.animate_in_place, landing_scene(context))
         if submission is None:
             return _fail(context, reason)
         try:

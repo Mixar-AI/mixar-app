@@ -48,7 +48,10 @@ CHOICES = [{"value": "preset:biped:walk", "label": "Walk"},
 class _Object:
     def __init__(self, name, type='MESH', parent=None, **stamps):
         self.name, self.type, self.parent, self.modifiers = name, type, parent, []
+        self.children_recursive = []
         self._props = dict(stamps)
+        if parent is not None:
+            parent.children_recursive.append(self)
 
     def get(self, key, default=None):
         return self._props.get(key, default)
@@ -61,8 +64,19 @@ def _character(skeleton="biped"):
     stamps = {ANIMATE_RIG_JOB_PROP: "job-1"}
     if skeleton:
         stamps[ANIMATE_RIG_SKELETON_PROP] = skeleton
-    rig = _Object("Rig", 'ARMATURE', **stamps)
-    return rig, _Object("Body", parent=rig, **stamps)
+    rig = _Object("Armature", 'ARMATURE', **stamps)
+    return rig, _Object("Hero", parent=rig, **stamps)
+
+
+class _Objects(dict):
+    """``scene.objects``: looked up by name, iterated as objects."""
+
+    def __iter__(self):
+        return iter(list(self.values()))
+
+
+def _scene(*objects, name="Scene"):
+    return NS(name=name, objects=_Objects((obj.name, obj) for obj in objects))
 
 
 @pytest.fixture
@@ -79,17 +93,25 @@ def catalog(monkeypatch):
 
 def test_a_rigged_mesh_or_its_armature_plans_the_same_submission(catalog):
     rig, body = _character()
+    scene = _scene(rig, body)
     for obj in (rig, body):
         submission, reason = agent_animate_ops.plan_agent_animate(
-            obj, "preset:biped:walk, preset:biped:idle", True)
+            obj, "preset:biped:walk, preset:biped:idle", True, scene)
         assert reason == ""
+        # The queue row names the character's mesh; the merge targets the rig.
         assert submission == {
             "rig_job_id": "job-1", "service_key": "tripo_retarget",
             "model": "tripo_retarget_v2_5",
             "params": {ANIMATE_PRESETS_PARAM: ["preset:biped:walk", "preset:biped:idle"],
                        ANIMATE_IN_PLACE_PARAM: True},
-            "label": "Rig", "rig_name": "Rig",
+            "label": "Hero", "rig_name": "Armature",
         }
+
+
+def _plan(obj, animations, scene=None):
+    character = [obj] + ([obj.parent] if obj.parent is not None else [])
+    return agent_animate_ops.plan_agent_animate(
+        obj, animations, False, scene if scene is not None else _scene(*character))
 
 
 @pytest.mark.parametrize("obj, animations, fragment", [
@@ -97,16 +119,36 @@ def test_a_rigged_mesh_or_its_armature_plans_the_same_submission(catalog):
     (_character()[1], "", "at least one animation preset"),
     (_character()[1], "preset:biped:fly", "Unknown animation preset"),
     (_character()[1], "preset:quadruped:walk", "not for a biped rig"),
+    # A Meshy (or pre-Animate) rig: stamped with the job, not the skeleton.
+    (_character(skeleton="")[1], "preset:biped:walk", "can't take preset animations"),
+    (_character(skeleton="avian")[1], "preset:biped:walk",
+     "No preset animations are available for avian rigs"),
 ])
 def test_refusals_say_what_to_do(catalog, obj, animations, fragment):
-    submission, reason = agent_animate_ops.plan_agent_animate(obj, animations, False)
+    submission, reason = _plan(obj, animations)
     assert submission is None and fragment in reason
+
+
+def test_a_character_outside_the_scene_the_result_lands_in_is_refused(catalog):
+    # Built in a workspace: the result lands (and merges) in the main scene.
+    rig, body = _character()
+    main = _scene(name="Main")
+    submission, reason = _plan(body, "preset:biped:walk", main)
+    assert submission is None
+    assert "'Armature' is not in the main scene 'Main'" in reason
+
+
+def test_refusals_reach_the_agent_in_english(catalog, monkeypatch):
+    import mixar.modules.common.i18n as i18n
+
+    monkeypatch.setattr(i18n, "rpt_", lambda text: "TRANSLATED")
+    _submission, reason = _plan(_character()[1], "preset:quadruped:walk")
+    assert reason.startswith("preset:quadruped:walk: not for a biped rig")
 
 
 def test_a_catalog_without_the_service_refuses(catalog):
     catalog["catalog"] = ("", "", [])
-    submission, reason = agent_animate_ops.plan_agent_animate(
-        _character()[1], "preset:biped:walk", False)
+    submission, reason = _plan(_character()[1], "preset:biped:walk")
     assert submission is None and "unavailable in the generation catalog" in reason
 
 
@@ -123,6 +165,8 @@ def seams(monkeypatch, catalog):
     # The operator module holds its own ``bpy`` reference (whichever mock was
     # live when another test first imported the operators package).
     monkeypatch.setattr(agent_animate_ops.bpy.data, "objects", NS(get=objects.get))
+    calls.scene = _scene(rig, body)
+    monkeypatch.setattr(agent_animate_ops, "landing_scene", lambda context: calls.scene)
     monkeypatch.setattr(agent_feedback, "set_agent_gen_reason",
                         lambda context, reason: calls.reasons.append(reason))
     monkeypatch.setattr(agent_animate_ops, "set_agent_gen_reason",
@@ -146,11 +190,11 @@ def _operator(**props):
 
 
 def test_execute_enqueues_through_the_shared_retarget_helper(seams):
-    op = _operator(object_name="Body", animations="preset:biped:idle", animate_in_place=True)
+    op = _operator(object_name="Hero", animations="preset:biped:idle", animate_in_place=True)
     assert op.execute(NS(window_manager=MagicMock())) == {'FINISHED'}
     assert seams.reasons == []
     (kw,) = seams.enqueued
-    assert kw["rig_job_id"] == "job-1" and kw["label"] == "Rig"
+    assert kw["rig_job_id"] == "job-1" and kw["label"] == "Hero"
     assert kw["params"] == {ANIMATE_PRESETS_PARAM: ["preset:biped:idle"],
                             ANIMATE_IN_PLACE_PARAM: True}
 
@@ -158,7 +202,7 @@ def test_execute_enqueues_through_the_shared_retarget_helper(seams):
 @pytest.mark.parametrize("props, fragment", [
     ({}, "object_name is required"),
     ({"object_name": "Ghost"}, "No object named 'Ghost'"),
-    ({"object_name": "Body", "animations": "preset:quadruped:walk"}, "not for a biped rig"),
+    ({"object_name": "Hero", "animations": "preset:quadruped:walk"}, "not for a biped rig"),
 ])
 def test_execute_refuses_with_a_reason_before_enqueueing(seams, props, fragment):
     assert _operator(**props).execute(NS(window_manager=MagicMock())) == {'CANCELLED'}
@@ -167,7 +211,7 @@ def test_execute_refuses_with_a_reason_before_enqueueing(seams, props, fragment)
 
 def test_execute_reports_a_duplicate_and_an_enqueue_failure(seams, monkeypatch):
     seams.job = None
-    op = _operator(object_name="Body", animations="preset:biped:walk")
+    op = _operator(object_name="Hero", animations="preset:biped:walk")
     assert op.execute(NS(window_manager=MagicMock())) == {'CANCELLED'}
     assert "already queued or running" in seams.reasons[-1]
 
@@ -177,6 +221,27 @@ def test_execute_reports_a_duplicate_and_an_enqueue_failure(seams, monkeypatch):
     monkeypatch.setattr(animate_enqueue, "enqueue_retarget_job", _boom)
     assert op.execute(NS(window_manager=MagicMock())) == {'CANCELLED'}
     assert "Animate submission failed: offline" in seams.reasons[-1]
+
+
+def test_execute_refuses_a_character_outside_the_landing_scene(seams):
+    seams.scene = _scene(name="Main")
+    op = _operator(object_name="Hero", animations="preset:biped:walk")
+    assert op.execute(NS(window_manager=MagicMock())) == {'CANCELLED'}
+    assert seams.enqueued == [] and "not in the main scene 'Main'" in seams.reasons[-1]
+
+
+def test_the_landing_scene_is_the_agent_sessions_and_the_ref_stays(monkeypatch):
+    from mixar.modules.common.job_queue.core import queue_download
+
+    session_scene, window_scene = NS(name="Main"), NS(name="Shown")
+    monkeypatch.setattr(queue_download, "resolve_job_scene",
+                        lambda name, session: session_scene if session == "s1" else None)
+    wm = {"mixar_agent_ref": '{"generation_id": "g1", "session_id": "s1"}'}
+    context = NS(window_manager=NS(get=wm.get, keys=wm.keys), scene=window_scene)
+    assert agent_animate_ops.landing_scene(context) is session_scene
+    assert "mixar_agent_ref" in wm  # peeked, left for the enqueue to claim
+    wm.clear()
+    assert agent_animate_ops.landing_scene(context) is window_scene
 
 
 # --------------------------------------------------------------------------- #
