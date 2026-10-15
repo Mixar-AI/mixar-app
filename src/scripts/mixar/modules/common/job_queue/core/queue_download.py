@@ -263,6 +263,7 @@ class DownloadMixin:
             job.error = f"Import failed: {e}"
             job.user_message = n_("Failed to import the generated model")
             job.error_class = "import"
+            job.error_class_source = "client"
             job.error_reason = clean_reason(f"{type(e).__name__}: {e}")
             # Don't leave the downloaded temp file behind — repeated failed
             # imports would otherwise accumulate multi-MB files in tempdir.
@@ -311,6 +312,7 @@ class DownloadMixin:
         job.error = message
         if message != "Download cancelled":
             job.error_class = "download"
+            job.error_class_source = "client"
             job.error_reason = clean_reason(message)
         if user_message:
             job.user_message = user_message

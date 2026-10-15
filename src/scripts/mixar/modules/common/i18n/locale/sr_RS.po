@@ -17568,12 +17568,6 @@ msgstr "Увек рендерује на GPU када је доступан"
 msgid "Always render on the CPU"
 msgstr "Увек рендерује на CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Подразумевано омогући испечено споља"
 
@@ -17651,6 +17645,12 @@ msgstr "Увек израчунај кадар"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Израчунава стабло чворова при свакој промени кадра"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Опције канала"
@@ -19620,6 +19620,12 @@ msgstr "ID корисника за пријаву у ћаскање Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Агент очекује: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Прескочена је спора слика: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Кодирање слике није успело: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Ознаке: {note}"
 
 msgid "Sketch"
 msgstr "Скица"
-
-msgid "Skipped slow image: {name}"
-msgstr "Прескочена је спора слика: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Кодирање слике није успело: {error}"
 
 msgid "Message sent"
 msgstr "Порука је послата"

@@ -183,7 +183,9 @@ def execute_request(
     try:
         clear_agent_ref()
         set_agent_execution_context(context_session_id, context_turn_id)
-        result = executor.execute(req.script, session_id=context_session_id)
+        result = executor.execute(
+            req.script, session_id=context_session_id, tool_name=req.tool_name
+        )
         result_dict = result.to_dict()
         _attach_scene_cost(result_dict)
         if result_dict.get("success") and on_success is not None:

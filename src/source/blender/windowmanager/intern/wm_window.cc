@@ -1183,6 +1183,65 @@ static void wm_window_ensure_eventstate(wmWindow *win)
 
 static bool wm_window_update_size_position(wmWindow *win);
 
+/* Mixar's Linux bubble supplies its own chrome. Keep native backend details in GHOST. */
+#ifdef __linux__
+extern "C" void Mixar_GHOST_RequestNextWindowCustomDecoration(void);
+extern "C" void Mixar_GHOST_ClearNextWindowCustomDecoration(void);
+#endif
+extern "C" void Mixar_WindowSetCustomDecoration(void *window_handle, int width, int height, float radius)
+{
+  if (window_handle) {
+    static_cast<GHOST_IWindow *>(window_handle)->setCustomDecoration(width, height, radius);
+  }
+}
+
+extern "C" bool Mixar_WindowBeginNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->beginWindowDrag() == GHOST_kSuccess;
+}
+
+extern "C" bool Mixar_WindowUpdateNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->updateWindowDrag() == GHOST_kSuccess;
+}
+
+extern "C" bool Mixar_WindowEndNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->endWindowDrag() == GHOST_kSuccess;
+}
+
+#ifdef __linux__
+static void mixar_pump_native_window_drags(wmWindowManager *wm)
+{
+  if (wm == nullptr) {
+    return;
+  }
+  /* XTest/xdotool XI2 motion often never becomes MOUSEMOVE after begin
+   * ungrabs the implicit button grab. The idle loop still runs every
+   * few milliseconds; XQueryPointer follows the server pointer. */
+  for (wmWindow &win : wm->windows) {
+    if (win.runtime && win.runtime->ghostwin) {
+      Mixar_WindowUpdateNativeDrag(win.runtime->ghostwin);
+    }
+  }
+}
+#endif
+
+extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int height)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->setClientSize(width, height) == GHOST_kSuccess;
+}
+
+extern "C" bool Mixar_WindowSupportsTransparency(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->supportsTransparentRendering();
+}
+
 /* Belongs to below. */
 static void wm_window_ghostwindow_add(wmWindowManager *wm,
                                       const char *title,
@@ -1200,6 +1259,25 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
   }
 
   GPUBackendType gpu_backend = GPU_backend_type_selection_get();
+#ifdef __linux__
+  {
+    const bScreen *screen = WM_window_get_active_screen(win);
+    if (screen && win->parent) {
+      for (const ScrArea &area : screen->areabase) {
+        if (area.spacetype == SPACE_AGENT_BUBBLE) {
+          /* Motif decorations=0 must be on the X11 window before map.
+           * xfwm4 frames a DIALOG at first map and later ignores Motif
+           * decoration changes once the rounded bounding shape exists. */
+          Mixar_GHOST_RequestNextWindowCustomDecoration();
+          if (gpu_backend == GPU_BACKEND_OPENGL) {
+            gpu_settings.flags |= GHOST_gpuTransparent;
+          }
+          break;
+        }
+      }
+    }
+  }
+#endif
   gpu_settings.context_type = wm_ghost_drawing_context_type(gpu_backend);
   gpu_settings.preferred_device = GPU_backend_preferred_device_get();
   if (GPU_backend_vsync_is_overridden()) {
@@ -1232,6 +1310,9 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
       false,
       is_dialog,
       static_cast<GHOST_IWindow *>((win->parent) ? win->parent->runtime->ghostwin : nullptr));
+#ifdef __linux__
+  Mixar_GHOST_ClearNextWindowCustomDecoration();
+#endif
 
   if (ghost_window) {
     win->runtime->gpuctx = GPU_context_create(ghost_window, nullptr);
@@ -2473,6 +2554,9 @@ void wm_window_events_process(const bContext *C)
   const int sleep_us_default = 5000;
   int sleep_us = has_event ? 0 : sleep_us_default;
   has_event |= wm_window_timers_process(C, &sleep_us);
+#ifdef __linux__
+  mixar_pump_native_window_drags(CTX_wm_manager(C));
+#endif
 #ifdef WITH_XR_OPENXR
   /* XR events don't use the regular window queues. So here we don't only trigger
    * processing/dispatching but also handling. */
@@ -3479,6 +3563,11 @@ static void wm_window_csd_title_redraw_tag(wmWindowManager *wm, wmWindow *win)
 bool WM_window_is_csd(const wmWindow *win)
 {
 #ifdef WITH_GHOST_CSD
+  if (win->runtime->ghostwin &&
+      static_cast<GHOST_IWindow *>(win->runtime->ghostwin)->hasCustomDecoration())
+  {
+    return false;
+  }
   if (g_system_use_csd && !WM_window_is_fullscreen(win)) {
     return true;
   }

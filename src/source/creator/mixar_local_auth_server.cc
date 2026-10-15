@@ -4,6 +4,7 @@
 
 #include "mixar_local_auth_server.h"
 #include "mixar_sso_success_page.h"
+#include "mixar_sso_failure_page.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,70 +43,63 @@ using namespace blender;
 // closes the cross-origin readability channel.
 static const char* CONNECTION_CLOSE = "Connection: close\r\n";
 
-static const char* FAILURE_PAGE =
-    "<!DOCTYPE html>"
-    "<html lang=\"en\"><head><meta charset=\"UTF-8\">"
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
-    "<title>Login Failed — Mixar</title>"
-    "<style>"
-    "* { margin: 0; padding: 0; box-sizing: border-box; }"
-    "body {"
-    "  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;"
-    "  background: #0a0a0a; color: #fff; min-height: 100vh;"
-    "  display: flex; align-items: center; justify-content: center;"
-    "  padding: 2rem; -webkit-font-smoothing: antialiased;"
-    "}"
-    ".card {"
-    "  width: 100%; max-width: 480px;"
-    "  background: rgba(255, 255, 255, 0.02);"
-    "  border: 1px solid rgba(239, 68, 68, 0.15);"
-    "  border-radius: 24px; padding: 3rem;"
-    "  backdrop-filter: blur(20px); text-align: center;"
-    "  animation: fadeUp 0.6s ease forwards;"
-    "}"
-    ".icon {"
-    "  width: 64px; height: 64px;"
-    "  background: rgba(239, 68, 68, 0.1);"
-    "  border: 1px solid rgba(239, 68, 68, 0.3);"
-    "  border-radius: 50%; display: flex;"
-    "  align-items: center; justify-content: center;"
-    "  margin: 0 auto 1.5rem;"
-    "}"
-    ".icon svg { color: #ef4444; }"
-    "h1 {"
-    "  font-size: 2rem; font-weight: 600; margin-bottom: 0.75rem;"
-    "  color: #ef4444;"
-    "}"
-    "p { font-size: 1rem; color: rgba(255, 255, 255, 0.5); line-height: 1.6; }"
-    "@keyframes fadeUp {"
-    "  from { opacity: 0; transform: translateY(40px); }"
-    "  to   { opacity: 1; transform: translateY(0); }"
-    "}"
-    "</style></head><body>"
-    "<div class=\"card\">"
-    "  <div class=\"icon\">"
-    "    <svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\""
-    "         stroke=\"currentColor\" stroke-width=\"2.5\">"
-    "      <line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\" />"
-    "      <line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\" />"
-    "    </svg>"
-    "  </div>"
-    "  <h1>Login Failed</h1>"
-    "  <p>No auth code received. Please try again.</p>"
-    "</div>"
-    "</body></html>";
+// Monotonic milliseconds: the 120 s callback deadline and each client's budget.
+static long long now_ms() {
+#ifdef _WIN32
+    return (long long)GetTickCount64();
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+// One accepted client may hold the (pre-UI, main-thread) wait for at most this
+// long: a silent peer such as an endpoint-security probe or a browser's
+// speculative preconnect must never hang app launch (the Python SSO server has
+// the same per-connection timeout, auth/core/sso.py).
+static const long long CLIENT_BUDGET_MS = 5000;
+
+// Bound the next blocking recv()/send() on a client to what is left of its
+// budget. A zero timeout means "block forever" on both platforms, so clamp
+// to 1 ms. Windows takes a DWORD of milliseconds, POSIX a timeval.
+static void set_client_timeouts(SOCKET socket, long long remaining_ms) {
+    if (remaining_ms < 1) remaining_ms = 1;
+#ifdef _WIN32
+    DWORD timeout = (DWORD)remaining_ms;
+#else
+    struct timeval timeout;
+    timeout.tv_sec = (time_t)(remaining_ms / 1000);
+    timeout.tv_usec = (int)((remaining_ms % 1000) * 1000);
+#endif
+    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+    setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+}
+
+// This runs before Python sets SIGPIPE to ignored, so a peer that disconnects
+// mid-response must not raise SIGPIPE: SO_NOSIGPIPE on the socket (macOS/BSD)
+// and MSG_NOSIGNAL on every send (Linux). Newer macOS SDKs also define
+// MSG_NOSIGNAL; SO_NOSIGPIPE already covers every supported macOS there.
+#if defined(MSG_NOSIGNAL) && !defined(__APPLE__)
+#define MIXAR_SEND_FLAGS MSG_NOSIGNAL
+#else
+#define MIXAR_SEND_FLAGS 0
+#endif
 
 // Embedded webfonts make the response larger than a single socket write may accept.
-static bool send_all(SOCKET socket, const char *data, int length) {
+static bool send_all(SOCKET socket, const char *data, int length, long long deadline_ms) {
     while (length > 0) {
-        const int sent = (int)send(socket, data, length, 0);
+        const long long remaining_ms = deadline_ms - now_ms();
+        if (remaining_ms <= 0) return false;
+        set_client_timeouts(socket, remaining_ms);
+        const int sent = (int)send(socket, data, length, MIXAR_SEND_FLAGS);
         if (sent == SOCKET_ERROR) {
 #ifdef _WIN32
             if (WSAGetLastError() == WSAEINTR) continue;
 #else
             if (errno == EINTR) continue;
 #endif
-            return false;
+            return false;  // timeout, reset or error: drop this client
         }
         if (sent == 0) return false;
         data += sent;
@@ -114,11 +108,37 @@ static bool send_all(SOCKET socket, const char *data, int length) {
     return true;
 }
 
+// Read the request head until "\r\n\r\n", EOF, a full buffer or the client's
+// budget. Returns the bytes read (NUL-terminated) or -1 on timeout or error.
+static int recv_request_head(SOCKET socket, char *buffer, int size, long long deadline_ms) {
+    int total = 0;
+    buffer[0] = '\0';
+    while (total < size - 1) {
+        const long long remaining_ms = deadline_ms - now_ms();
+        if (remaining_ms <= 0) return -1;
+        set_client_timeouts(socket, remaining_ms);
+        const int n = (int)recv(socket, buffer + total, size - 1 - total, 0);
+        if (n == SOCKET_ERROR) {
+#ifdef _WIN32
+            if (WSAGetLastError() == WSAEINTR) continue;
+#else
+            if (errno == EINTR) continue;
+#endif
+            return -1;
+        }
+        if (n == 0) break;  // EOF: parse whatever arrived
+        total += n;
+        buffer[total] = '\0';
+        if (strstr(buffer, "\r\n\r\n") != NULL) break;
+    }
+    return total;
+}
+
 // Send an HTTP response for GET requests.
 // result > 0: auth code received - success HTML
 // result == 0: GET arrived with query but no code, or state mismatch — failure HTML
 // result < 0: stray request (favicon, no query, etc.) - plain OK
-static void send_http_response(SOCKET client_socket, int result) {
+static void send_http_response(SOCKET client_socket, int result, long long deadline_ms) {
     // Send headers first, then body separately (pages exceed small buffer)
     char headers[256];
     const char* body;
@@ -138,13 +158,13 @@ static void send_http_response(SOCKET client_socket, int result) {
     }
 
     int hdr_len = (int)strlen(headers);
-    if (!send_all(client_socket, headers, hdr_len)) {
+    if (!send_all(client_socket, headers, hdr_len, deadline_ms)) {
         printf("Warning: send() failed for HTTP headers (result=%d).\n", result);
         return;
     }
     if (body) {
         int body_len = (int)strlen(body);
-        if (!send_all(client_socket, body, body_len)) {
+        if (!send_all(client_socket, body, body_len, deadline_ms)) {
             printf("Warning: send() failed for HTTP body (result=%d).\n", result);
         }
     }
@@ -210,9 +230,16 @@ intptr_t auth_server_start(int preferred_port, int* out_port) {
         return -1;
     }
 
-    // Allow reuse of port
     int opt = 1;
+#ifdef _WIN32
+    // SO_REUSEADDR on Windows lets another socket bind the same port, making
+    // which process receives the callback nondeterministic. Claim it
+    // exclusively; a busy port falls back to an OS-assigned one below.
+    setsockopt(listen_socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char*)&opt, sizeof(opt));
+#else
+    // POSIX SO_REUSEADDR only permits rebinding over TIME_WAIT (a quick re-login).
     setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+#endif
 
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -288,42 +315,23 @@ bool auth_server_wait_for_code(intptr_t server_handle,
     // Compute absolute deadline (120 seconds from now).
     // Loop handles stray requests (favicon, CORS preflight, etc.)
     // just like the Python SSO server does.
-#ifdef _WIN32
-    ULONGLONG deadline = GetTickCount64() + 120000;
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    long deadline_sec = ts.tv_sec + 120;
-#endif
+    const long long deadline_ms = now_ms() + 120000;
 
     while (!success) {
-#ifdef _WIN32
-        LONGLONG remaining_ms = (LONGLONG)(deadline - GetTickCount64());
+        const long long remaining_ms = deadline_ms - now_ms();
         if (remaining_ms <= 0) {
             printf("Auth callback timed out after 120 seconds.\n");
             break;
         }
-#else
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        long remaining_sec = deadline_sec - ts.tv_sec;
-        if (remaining_sec <= 0) {
-            printf("Auth callback timed out after 120 seconds.\n");
-            break;
-        }
-#endif
 
         fd_set read_fds;
         FD_ZERO(&read_fds);
         FD_SET(listen_socket, &read_fds);
-        struct timeval tv;
-#ifdef _WIN32
-        tv.tv_sec  = (long)(remaining_ms / 1000);
-        tv.tv_usec = (long)((remaining_ms % 1000) * 1000);
-#else
         // Poll in 1-second slices so the timeout check runs frequently.
-        tv.tv_sec = (remaining_sec > 1) ? 1 : remaining_sec;
-        tv.tv_usec = 0;
-#endif
+        const long long slice_ms = (remaining_ms > 1000) ? 1000 : remaining_ms;
+        struct timeval tv;
+        tv.tv_sec = (long)(slice_ms / 1000);
+        tv.tv_usec = (long)((slice_ms % 1000) * 1000);
 
         int sel = select((int)listen_socket + 1, &read_fds, NULL, NULL, &tv);
         if (sel < 0) {
@@ -339,15 +347,26 @@ bool auth_server_wait_for_code(intptr_t server_handle,
             continue;
         }
 
-        // Single-shot recv is sufficient for the short auth-callback URLs
-        // (typically < 500 bytes). Partial reads are not expected on loopback.
+        // Every blocking recv()/send() on this client is bounded by its own
+        // budget, clamped to the overall deadline; a silent or stalled peer is
+        // dropped and the wait goes on for the real callback.
+        const long long accepted_ms = now_ms();
+        const long long left_ms = deadline_ms - accepted_ms;
+        const long long client_deadline_ms =
+            accepted_ms + ((left_ms < CLIENT_BUDGET_MS) ? left_ms : CLIENT_BUDGET_MS);
+        set_client_timeouts(client_socket, client_deadline_ms - accepted_ms);
+#ifdef SO_NOSIGPIPE
+        int no_sigpipe = 1;
+        setsockopt(client_socket, SOL_SOCKET, SO_NOSIGPIPE, (const char*)&no_sigpipe,
+                   sizeof(no_sigpipe));
+#endif
+
         char buffer[4096];
-        int bytes_received = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+        int bytes_received = recv_request_head(client_socket, buffer, (int)sizeof(buffer),
+                                               client_deadline_ms);
 
         if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-
-            if (bytes_received == sizeof(buffer) - 1) {
+            if (bytes_received == (int)sizeof(buffer) - 1) {
                 printf("Warning: recv buffer full (%d bytes), request may be truncated.\n",
                        bytes_received);
             }
@@ -426,9 +445,9 @@ bool auth_server_wait_for_code(intptr_t server_handle,
                 }
             }
 
-            send_http_response(client_socket, result);
+            send_http_response(client_socket, result, client_deadline_ms);
         } else if (bytes_received < 0) {
-            printf("Warning: recv() error on client socket.\n");
+            printf("Warning: auth client timed out or failed; dropping it.\n");
         }
 
         // Reached only when client_socket is valid (accept succeeded above).

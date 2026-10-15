@@ -86,6 +86,23 @@ def config(monkeypatch):
     return store
 
 
+@pytest.fixture(autouse=True)
+def bundle(monkeypatch):
+    """The credential bundle a deferred claim is kept in (no keychain)."""
+    values = {}
+    store = guest.credential_store
+    monkeypatch.setattr(store, "get_value", lambda key: values.get(key))
+    monkeypatch.setattr(store, "set_value", lambda key, value: values.__setitem__(key, value) or True)
+    monkeypatch.setattr(store, "delete_value", lambda key: values.pop(key, None) is None or True)
+    return values
+
+
+def _jwt(sub):
+    import base64
+    claims = base64.urlsafe_b64encode(json.dumps({"sub": sub}).encode()).decode().rstrip("=")
+    return f"h.{claims}.s"
+
+
 # --- the refusal body ---------------------------------------------------------
 
 def test_refusal_is_read_from_every_wire_shape():
@@ -314,6 +331,113 @@ def test_a_rejected_claim_is_a_plain_sign_in(monkeypatch, config):
     assert result["claimed_guest"] is False and result["switched_from_guest"] is True
 
 
+@pytest.mark.parametrize("status, retry", [
+    (400, False), (409, False), (429, True), (500, True), (503, True), (418, True),
+])
+def test_claim_failures_are_final_or_transient(monkeypatch, status, retry):
+    monkeypatch.setattr(guest, "get_access_token", lambda: "account-access")
+    monkeypatch.setattr(guest.requests, "post", lambda *a, **k: _Response(status, {}))
+    assert guest.claim_guest("guest-refresh") == {"claimed": False, "retry": retry}
+
+
+def test_a_claim_that_never_reached_the_backend_is_transient(monkeypatch):
+    monkeypatch.setattr(guest, "get_access_token", lambda: "account-access")
+
+    def post(*a, **k):
+        raise guest.requests.exceptions.Timeout("slow")
+
+    monkeypatch.setattr(guest.requests, "post", post)
+    assert guest.claim_guest("guest-refresh") == {"claimed": False, "retry": True}
+
+
+def test_a_claim_reports_what_moved(monkeypatch):
+    monkeypatch.setattr(guest, "get_access_token", lambda: "account-access")
+    monkeypatch.setattr(guest.requests, "post", lambda *a, **k: _Response(200, {
+        "status": "success", "data": {"claimed": True, "byok_moved": ["default"]},
+    }))
+    claim = guest.claim_guest("guest-refresh")
+    assert claim["claimed"] is True and claim["retry"] is False
+    assert claim["byok_moved"] == ["default"]
+
+
+def _sign_in_over_a_guest(monkeypatch, response):
+    guest.mark(True, "guest-4@guest.mixar.invalid")
+    tokens = {"access": _jwt("guest-id")}
+    monkeypatch.setattr(guest, "get_access_token", lambda: tokens["access"])
+    monkeypatch.setattr(guest, "take_replaced_refresh_token", lambda: "guest-refresh")
+    monkeypatch.setattr(guest.requests, "post", response)
+
+    def login():
+        tokens["access"] = _jwt("account-id")
+        return {"success": True}
+
+    return guest.sign_in(login)
+
+
+def test_a_transient_claim_failure_is_kept_for_a_retry(monkeypatch, config, bundle):
+    result = _sign_in_over_a_guest(monkeypatch, lambda *a, **k: _Response(503, {}))
+    assert result["claimed_guest"] is False and result["switched_from_guest"] is True
+    assert bundle[guest.PENDING_CLAIM_KEY] == {
+        "guest_refresh_token": "guest-refresh",
+        "guest_user_id": "guest-id",
+        "guest_email": "guest-4@guest.mixar.invalid",
+        "account_user_id": "account-id",
+    }
+
+
+def test_a_final_claim_failure_is_not_retried(monkeypatch, config, bundle):
+    result = _sign_in_over_a_guest(monkeypatch, lambda *a, **k: _Response(409, {}))
+    assert result["claimed_guest"] is False
+    assert guest.PENDING_CLAIM_KEY not in bundle
+
+
+def _pending(bundle, account="account-id"):
+    bundle[guest.PENDING_CLAIM_KEY] = {
+        "guest_refresh_token": "guest-refresh", "guest_user_id": "guest-id",
+        "guest_email": "guest-5@guest.mixar.invalid", "account_user_id": account,
+    }
+
+
+def test_a_pending_claim_is_retried_and_carried_over(monkeypatch, bundle):
+    _pending(bundle)
+    monkeypatch.setattr(guest, "get_access_token", lambda: _jwt("account-id"))
+    posted = {}
+
+    def post(url, data=None, headers=None, timeout=None):
+        posted.update(body=json.loads(data))
+        return _Response(200, {"status": "success", "data": {"claimed": True, "byok_moved": ["default"]}})
+
+    monkeypatch.setattr(guest.requests, "post", post)
+    assert guest.retry_pending_claim() == {
+        "claimed_guest": True, "byok_moved": ["default"],
+        "guest_user_id": "guest-id", "guest_email": "guest-5@guest.mixar.invalid",
+    }
+    assert posted["body"] == {"guest_refresh_token": "guest-refresh"}
+    assert guest.PENDING_CLAIM_KEY not in bundle
+
+
+@pytest.mark.parametrize("status, kept", [(503, True), (429, True), (400, False), (409, False)])
+def test_a_pending_claim_stays_only_while_failures_are_transient(monkeypatch, bundle, status, kept):
+    _pending(bundle)
+    monkeypatch.setattr(guest, "get_access_token", lambda: _jwt("account-id"))
+    monkeypatch.setattr(guest.requests, "post", lambda *a, **k: _Response(status, {}))
+    assert guest.retry_pending_claim() == {}
+    assert (guest.PENDING_CLAIM_KEY in bundle) is kept
+
+
+def test_a_pending_claim_is_never_made_for_another_account(monkeypatch, bundle):
+    _pending(bundle, account="first-account")
+    monkeypatch.setattr(guest, "get_access_token", lambda: _jwt("second-account"))
+    monkeypatch.setattr(guest.requests, "post", lambda *a, **k: pytest.fail("claim must not be called"))
+    assert guest.retry_pending_claim() == {}
+    assert guest.PENDING_CLAIM_KEY not in bundle
+
+
+def test_nothing_pending_is_nothing_to_retry(monkeypatch, bundle):
+    monkeypatch.setattr(guest.requests, "post", lambda *a, **k: pytest.fail("claim must not be called"))
+    assert guest.retry_pending_claim() == {}
+
+
 def test_mark_persists_the_guest_marker(config):
     guest.mark(True, "guest-3@guest.mixar.invalid")
     assert guest.is_guest() and guest.email() == "guest-3@guest.mixar.invalid"
@@ -384,23 +508,88 @@ def test_every_sign_in_path_goes_through_the_claiming_wrapper():
     assert "_enter_guest_session(fallback=_reauthenticate)" in source
     assert "_enter_guest_session, args=(_stay_signed_out,)" in source
     assert source.count("_leave_guest_session(") == 3  # def + two apply paths
+    # Every apply path moves the guest's state only through the one
+    # post-claim step, after the account's identity is applied.
+    assert source.count("_apply_guest_claim(") == 4  # def + startup + two sign-in paths
+    for apply_path in ("_apply_sso_result", "_apply_result", "def _apply() -> None"):
+        body = source[source.index(apply_path):]
+        body = body[:body.index("_apply_account_hooks(user_info, is_guest)")]
+        assert body.index("_apply_identity(") < body.index("_apply_guest_claim(")
 
 
-def test_claim_carries_the_guest_device_key_to_the_account():
+def _carry_over_spies(monkeypatch):
+    """``_apply_guest_claim``'s two effects, recorded: the device key record
+    re-scoped (byok key_store) and the chat archive re-filed (chat_history,
+    stubbed so the chat core's executor never loads)."""
+    from mixar.modules.byok.core import key_store
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    calls = []
+    monkeypatch.setattr(key_store, "reassign", lambda old, new: calls.append(("key", old, new)))
+    monkeypatch.setattr(key_store, "current_user_id", lambda: "account-id")
+    history = SimpleNamespace(reassign_owner=lambda old, new: calls.append(("chats", old, new)))
+    monkeypatch.setitem(
+        sys.modules, "mixar.modules.space_mixie_chat.core", SimpleNamespace(chat_history=history),
+    )
+    return auth_ops, calls
+
+
+def test_a_claim_carries_the_guest_device_key_and_chats_to_the_account(monkeypatch):
     """QA 2026-10-14: after a claim the account's BYOK row was active server-side
     but the device reported the key missing — the local record is keyed by
-    user id. guest.sign_in reports the guest's id and the roles the claim
-    moved; the post-SSO background step re-scopes the record (account wins)."""
-    guest_src = (MODULES / "auth/core/guest.py").read_text()
-    assert 'result["guest_user_id"] = guest_user_id' in guest_src
-    assert 'result["byok_moved"] = list(claim.get("byok_moved") or [])' in guest_src
-    ops = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
-    after_sso = ops[ops.index("def _user_info_after_sso"):ops.index("def _carry_guest_device_key")]
-    assert "_carry_guest_device_key(result)" in after_sso
-    carry = ops[ops.index("def _carry_guest_device_key"):]
-    carry = carry[:carry.index("\ndef ")]
-    assert "key_store.reassign(result[\"guest_user_id\"], key_store.current_user_id())" in carry
-    assert 'result.get("byok_moved")' in carry
+    user id. The one post-claim step re-scopes it (account wins) and re-files
+    the guest's chats, for a direct claim and a retried one alike."""
+    auth_ops, calls = _carry_over_spies(monkeypatch)
+    auth_ops._apply_guest_claim({
+        "claimed_guest": True, "byok_moved": ["default"],
+        "guest_user_id": "guest-id", "guest_email": "guest@guest.mixar.invalid",
+    }, "user@example.com")
+    assert calls == [
+        ("key", "guest-id", "account-id"),
+        ("chats", "guest@guest.mixar.invalid", "user@example.com"),
+    ]
+
+
+def test_a_failed_claim_moves_neither_key_nor_chats(monkeypatch, config, bundle):
+    auth_ops, calls = _carry_over_spies(monkeypatch)
+    result = _sign_in_over_a_guest(monkeypatch, lambda *a, **k: _Response(503, {}))
+    auth_ops._apply_guest_claim(result, "user@example.com")
+    auth_ops._apply_guest_claim({}, "user@example.com")
+    assert calls == []
+
+
+def test_account_validation_retries_a_pending_claim(monkeypatch):
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    retried = []
+    monkeypatch.setattr(auth_ops.guest, "retry_pending_claim", lambda: retried.append(1) or {})
+    monkeypatch.setattr(auth_ops.bpy.app.timers, "register", lambda fn, first_interval=0.0: None)
+    auth_ops._schedule_apply_login({"data": {"email": "guest@x", "is_guest": True}}, refreshed=False)
+    assert retried == []
+    auth_ops._schedule_apply_login({"data": {"email": "user@example.com"}}, refreshed=False)
+    assert retried == [1]
+
+
+def test_a_sign_in_that_claimed_nothing_retries_a_pending_claim(monkeypatch):
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    monkeypatch.setattr(auth_ops, "get_user_info", lambda: {"status": "success"})
+    monkeypatch.setattr(auth_ops.guest, "retry_pending_claim", lambda: {"claimed_guest": True})
+    plain = {"success": True, "switched_from_guest": False}
+    auth_ops._user_info_after_sso(plain)
+    assert plain["claimed_guest"] is True
+
+    monkeypatch.setattr(auth_ops.guest, "retry_pending_claim", lambda: pytest.fail("not retried"))
+    claimed_now = {"success": True, "switched_from_guest": True, "claimed_guest": False}
+    auth_ops._user_info_after_sso(claimed_now)
+    assert auth_ops._user_info_after_sso({"success": False}) is None
+
+
+def test_sign_out_drops_a_pending_claim(bundle):
+    _pending(bundle)
+    assert guest.clear_pending_claim() is True
+    assert guest.PENDING_CLAIM_KEY not in bundle
+    source = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
+    logout = source[source.index("class MIXIE_CHAT_OT_logout"):]
+    logout = logout[:logout.index("return {'FINISHED'}")]
+    assert "guest.clear_pending_claim()" in logout
 
 
 def test_sign_out_starts_a_fresh_chat_in_every_tab():
@@ -490,3 +679,59 @@ def test_terminal_socket_auth_failure_recovers_the_session(monkeypatch):
     auth_ops.recover_session()
     auth_ops.recover_session()  # inside the window: one event
     assert len(registered) == 1
+
+
+# --- session-started telemetry ------------------------------------------------
+
+def test_a_guest_to_account_sign_in_captures_session_started_once(monkeypatch, config):
+    """capture() drops a guest's events, and capture_session_started spends
+    its once-guard even on a dropped one: the sign-in emits it only after
+    _apply_identity has unmarked the guest."""
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    guest.mark(True, "guest-6@guest.mixar.invalid")
+    captured = []
+    monkeypatch.setattr(auth_ops, "_capture_session_started",
+                        lambda method, refreshed=None: captured.append((method, guest.is_guest())))
+    for name in ("sync_pending_flag", "redraw_sign_in_surfaces", "activate_app", "_arm_login_watchdog",
+                 "_clear_referral_state", "_leave_guest_session", "_apply_guest_claim",
+                 "_apply_account_hooks", "_apply_account_name"):
+        monkeypatch.setattr(auth_ops, name, lambda *a, **k: None)
+    monkeypatch.setattr(auth_ops, "begin_sign_in", lambda supersede: ("attempt", None))
+    monkeypatch.setattr(auth_ops, "finish_sign_in", lambda attempt_id, cancel=False: True)
+    monkeypatch.setattr(auth_ops.guest, "sign_in",
+                        lambda login_fn: {"success": True, "switched_from_guest": True, "claimed_guest": True})
+    monkeypatch.setattr(auth_ops, "_user_info_after_sso", lambda result: {
+        "status": "success", "data": {"email": "user@example.com", "is_guest": False},
+    })
+    from mixar.modules.common.updates.core import toasts
+    monkeypatch.setattr(toasts, "tag_topbar_redraw", lambda: None)
+    wm = SimpleNamespace(mixie_chat_login_error="", mixie_chat_is_logged_in=False,
+                         mixie_chat_is_guest=True)
+    monkeypatch.setattr(auth_ops.bpy, "context", SimpleNamespace(window_manager=wm, scene=None), raising=False)
+    monkeypatch.setattr(auth_ops.bpy.app.timers, "register", lambda fn, first_interval=0.0: fn())
+
+    class _Thread:
+        def __init__(self, target, **_):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    monkeypatch.setattr(auth_ops.threading, "Thread", _Thread)
+    auth_ops.MIXIE_CHAT_OT_login.execute(SimpleNamespace(), SimpleNamespace(window_manager=wm))
+
+    assert captured == [("interactive_login", False)]
+    assert wm.mixie_chat_is_guest is False and wm.mixie_chat_is_logged_in is True
+
+
+def test_every_sign_in_path_captures_session_started_after_the_identity():
+    source = (MODULES / "space_mixie_chat/ui/operators/auth_ops.py").read_text()
+    for apply_path, method in (("def _apply_sso_result", "sso_relogin"),
+                               ("def _apply_result", "interactive_login")):
+        body = source[source.index(apply_path):]
+        body = body[:body.index("\n    bpy.app.timers.register(") if apply_path == "def _apply_sso_result"
+                    else body.index("return None  # Don't repeat")]
+        call = f'_capture_session_started("{method}")'
+        assert body.count(call) == 1
+        assert body.index("_apply_identity(") < body.index(call)
+        assert "if not guest.is_guest():" in body[:body.index(call)]

@@ -19,6 +19,7 @@ from mixar.modules.moodboard.core.magic_select_flow import (
     IDLE, SEGMENT, UPLOAD, WAIT, MagicSelectFlow,
 )
 from mixar.modules.moodboard.core import mask_tool_feedback as feedback
+from mixar.modules.moodboard.constants import SCENE_SEGMENT_CREDITS_ERROR
 
 ROOT = Path(__file__).resolve().parents[2]
 OPS = ROOT / "src/scripts/mixar/modules/moodboard/ui/operators"
@@ -161,8 +162,16 @@ def test_status_text_follows_the_wait():
 # -- failure wording ----------------------------------------------------------
 
 @pytest.mark.parametrize("message, upload, title", [
-    ("HTTP 402 Payment Required", False, feedback.NO_CREDITS_TITLE),
-    ("Insufficient credits", True, feedback.NO_CREDITS_TITLE),
+    (SCENE_SEGMENT_CREDITS_ERROR, False, feedback.NO_CREDITS_TITLE),
+    (SCENE_SEGMENT_CREDITS_ERROR, True, feedback.NO_CREDITS_TITLE),
+    # Out of credits comes ONLY from the structured marker, never from text.
+    ("HTTP 402 Payment Required", False, feedback.FAILED_TITLE),
+    ("job 5b402c failed", False, feedback.FAILED_TITLE),
+    ("Credits were refunded", False, feedback.FAILED_TITLE),
+    ("Empty response body", False, feedback.FAILED_TITLE),
+    ("request 7a503f failed", False, feedback.FAILED_TITLE),
+    ("HTTP 503: Bad gateway", False, feedback.UNAVAILABLE_TITLE),
+    ("Empty mask response", False, feedback.NO_OBJECT_TITLE),
     ("No object detected", False, feedback.NO_OBJECT_TITLE),
     ("empty mask", False, feedback.NO_OBJECT_TITLE),
     ("Request timed out", True, feedback.TIMED_OUT_TITLE),
@@ -184,6 +193,41 @@ def test_describe_failure_keeps_an_actionable_message_as_the_body():
     assert body == "NET-004: proxy refused the connection"
     _, body = feedback.describe_failure("", upload=False)
     assert body == "Try again."
+
+
+def test_error_message_classifies_the_exception_at_the_callback():
+    from mixar.modules.common.api.exceptions import (
+        InsufficientCreditsError,
+        ServerError,
+    )
+
+    assert feedback.error_message(
+        InsufficientCreditsError("Payment required", status_code=402)
+    ) == SCENE_SEGMENT_CREDITS_ERROR
+    assert feedback.error_message(
+        ServerError("Service Unavailable", status_code=503)
+    ) == "HTTP 503: Service Unavailable"
+    assert feedback.error_message(RuntimeError("credit card job 402")) == (
+        "credit card job 402"
+    )
+    title, _ = feedback.describe_failure(
+        feedback.error_message(RuntimeError("credit card job 402"))
+    )
+    assert title == feedback.FAILED_TITLE
+
+
+@pytest.mark.parametrize("name", ["scene_segment_requests.py", "scene_segment_upload.py"])
+def test_segment_error_callbacks_pass_the_classified_message(name):
+    source = (ROOT / "src/scripts/mixar/modules/moodboard/core" / name).read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "on_error":
+            body = ast.unparse(node)
+            # Every error callback that hands a message to a mask tool.
+            if "_finish_" in body or "on_complete(" in body:
+                assert "error_message(error)" in body, body
 
 
 def test_no_object_is_a_warning_not_an_error(monkeypatch):

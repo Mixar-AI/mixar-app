@@ -17568,12 +17568,6 @@ msgstr "Заўсёды рэндэрыць на GPU, калі ён ёсць"
 msgid "Always render on the CPU"
 msgstr "Заўсёды рэндэрыць на CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Прадвызначана ўключаць запяканне звонку"
 
@@ -17651,6 +17645,12 @@ msgstr "Заўсёды разлічваць кадр"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Разлічвае дрэва вузлоў пры кожнай змене кадра"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Параметры канала"
@@ -19620,6 +19620,12 @@ msgstr "ID карыстальніка для ўваходу ў чат Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Агент чакае: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Прапушчана марудная выява: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Не ўдалося закадаваць выяву: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Пазнакі: {note}"
 
 msgid "Sketch"
 msgstr "Эскіз"
-
-msgid "Skipped slow image: {name}"
-msgstr "Прапушчана марудная выява: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Не ўдалося закадаваць выяву: {error}"
 
 msgid "Message sent"
 msgstr "Паведамленне адпраўлена"

@@ -23,6 +23,7 @@ import requests
 from ....config.config import add_config, get_config, get_server_url
 from ....config.logging_config import get_logger
 from ...common.network import classify_network_error, log_network_failure
+from ...common.utils import credential_store
 from ..utils.constants import AUTH_BASE_URL
 from .auth import (
     get_access_token, store_login_token_pair, take_replaced_refresh_token, user_id_from_token,
@@ -45,6 +46,17 @@ CTA_FIX_BYOK = "fix_byok"
 # that dies (idle sweep, kill switch) is then replaced by a fresh guest
 # instead of the "session expired" sign-in flow an account gets.
 _SESSION_KEY = "guest_session"
+
+# Credential-bundle key (``common/utils/credential_store``, beside auth's
+# ``auth:refresh_attempt``) of a claim that failed TRANSIENTLY: the guest's
+# refresh token, whose it was and which account claims it. Retried at the
+# account's next validation (``retry_pending_claim``); sign-out drops it.
+PENDING_CLAIM_KEY = "auth:pending_guest_claim"
+
+# Claim answers after which the guest has nothing to carry over (400
+# ``guest_token_invalid``, 409 ``guest_already_claimed``). Anything else that
+# is not a 200 — 429, 5xx, a timeout, no network — is worth retrying.
+_FINAL_CLAIM_STATUSES = (400, 409)
 
 _is_guest = False
 _email = ""
@@ -159,8 +171,11 @@ def create_guest_session() -> dict:
 def claim_guest(guest_refresh_token: str) -> dict:
     """``POST /auth/guest/claim`` with the signed-in account's bearer.
 
-    400 ``guest_token_invalid`` / 409 ``guest_already_claimed`` mean there is
-    nothing to carry over — the sign-in proceeds as a plain one.
+    ``{"claimed": bool, "retry": bool, **data}``. 400 ``guest_token_invalid``
+    / 409 ``guest_already_claimed`` are FINAL (``retry`` False): nothing to
+    carry over, the sign-in proceeds as a plain one. A network error, a
+    timeout, 429 or 5xx is TRANSIENT (``retry`` True): the guest is still
+    there to claim later.
     """
     url = f"{get_server_url()}/{AUTH_BASE_URL}/guest/claim"
     try:
@@ -176,7 +191,7 @@ def claim_guest(guest_refresh_token: str) -> dict:
     except requests.exceptions.RequestException as e:
         failure = classify_network_error(e, url=url)
         log_network_failure(logger, failure, "Guest claim")
-        return {"claimed": False}
+        return {"claimed": False, "retry": True}
     body = _error_body(response)
     if response.status_code == 200:
         data = body.get("data") or {}
@@ -184,13 +199,76 @@ def claim_guest(guest_refresh_token: str) -> dict:
             "Guest claimed: byok_moved=%s byok_kept_account=%s",
             data.get("byok_moved"), data.get("byok_kept_account"),
         )
-        return {"claimed": bool(data.get("claimed", True)), **data}
+        return {**data, "claimed": bool(data.get("claimed", True)), "retry": False}
     detail = body.get("detail") if isinstance(body.get("detail"), dict) else body
+    retry = response.status_code not in _FINAL_CLAIM_STATUSES
     logger.info(
-        "Guest claim skipped: HTTP %s %s", response.status_code,
+        "Guest claim %s: HTTP %s %s", "deferred" if retry else "skipped", response.status_code,
         (detail.get("data") or {}).get("code") if isinstance(detail, dict) else "",
     )
-    return {"claimed": False}
+    return {"claimed": False, "retry": retry}
+
+
+def _carry_over(claim: dict, guest_user_id, guest_email: str) -> dict:
+    """What the apply path needs to move a claimed guest's device state:
+    whether it was claimed, the BYOK roles whose row moved (the key material
+    for them lives on this device under the guest's id, byok key_store) and
+    the guest's id and email (its chat archive is filed under the email)."""
+    return {
+        "claimed_guest": bool(claim.get("claimed")),
+        "byok_moved": list(claim.get("byok_moved") or []),
+        "guest_user_id": guest_user_id,
+        "guest_email": guest_email,
+    }
+
+
+def _save_pending_claim(guest_refresh_token: str, guest_user_id, guest_email: str) -> None:
+    record = {
+        "guest_refresh_token": guest_refresh_token,
+        "guest_user_id": guest_user_id,
+        "guest_email": guest_email,
+        "account_user_id": user_id_from_token(get_access_token()),
+    }
+    if not credential_store.set_value(PENDING_CLAIM_KEY, record):
+        logger.warning("Guest claim deferred but could not be kept for a retry")
+
+
+def clear_pending_claim() -> bool:
+    """Drop a deferred claim (sign-out, or the claim settled). Any thread."""
+    return credential_store.delete_value(PENDING_CLAIM_KEY)
+
+
+def retry_pending_claim() -> dict:
+    """Retry a claim that failed transiently. Background thread, an account
+    session just validated (its bearer is the stored access token).
+
+    The carry-over (``_carry_over``) when the guest is now claimed, else
+    ``{}``. A FINAL answer drops the pending claim, a transient one keeps it,
+    and so does a pending claim made for a different account: the guest is
+    never claimed into an account other than the one that signed in over it.
+    Never raises: a failure leaves the claim for the next validation.
+    """
+    try:
+        pending = credential_store.get_value(PENDING_CLAIM_KEY)
+        if not isinstance(pending, dict) or not pending.get("guest_refresh_token"):
+            return {}
+        account = user_id_from_token(get_access_token())
+        if not account:
+            return {}
+        if pending.get("account_user_id") not in (None, account):
+            logger.info("Pending guest claim belongs to another account; dropped")
+            clear_pending_claim()
+            return {}
+        claim = claim_guest(pending["guest_refresh_token"])
+        if claim.get("retry"):
+            return {}
+        clear_pending_claim()
+        if not claim.get("claimed"):
+            return {}
+        return _carry_over(claim, pending.get("guest_user_id"), pending.get("guest_email") or "")
+    except Exception as e:  # noqa: BLE001 — the claim waits for the next validation
+        logger.warning("Pending guest claim retry failed: %s", e)
+        return {}
 
 
 def sign_in(login_fn) -> dict:
@@ -201,21 +279,22 @@ def sign_in(login_fn) -> dict:
     replaced refresh token — the guest's proof of possession — is claimed
     under the account's bearer. The result gains ``switched_from_guest`` so
     the main-thread apply path can drop the guest socket and reload state,
-    plus ``guest_user_id`` / ``byok_moved`` so the device key record the guest
-    saved can be re-scoped to the account (``byok.core.key_store.reassign``).
+    plus the carry-over (``_carry_over``) the apply path moves the guest's
+    device key record and chat archive with — only when ``claimed_guest``.
+    A claim that failed transiently is kept for a retry
+    (``retry_pending_claim``); until then the guest's key and chats stay its own.
     """
     was_guest = is_guest()
     guest_user_id = user_id_from_token(get_access_token()) if was_guest else None
+    guest_email = email() if was_guest else ""
     result = login_fn()
     if not result.get("success"):
         return result
     guest_refresh = take_replaced_refresh_token()
     if was_guest and guest_refresh:
         claim = claim_guest(guest_refresh)
-        result["claimed_guest"] = claim.get("claimed", False)
-        # The roles whose key row moved to the account: the key material for
-        # them lives on this device under the guest's id (byok key_store).
-        result["byok_moved"] = list(claim.get("byok_moved") or [])
-        result["guest_user_id"] = guest_user_id
+        if claim.get("retry"):
+            _save_pending_claim(guest_refresh, guest_user_id, guest_email)
+        result.update(_carry_over(claim, guest_user_id, guest_email))
     result["switched_from_guest"] = was_guest
     return result

@@ -17568,12 +17568,6 @@ msgstr "Gjengi alltid på GPU når en er tilgjengelig"
 msgid "Always render on the CPU"
 msgstr "Gjengi alltid på CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Aktiver bakt utenfor som standard"
 
@@ -17651,6 +17645,12 @@ msgstr "Evaluer alltid bilde"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Evaluer nodetreet ved hvert bildebytte"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Kanalinnstillinger"
@@ -19620,6 +19620,12 @@ msgstr "Bruker-ID for innlogging i Mixie-chat"
 msgid "Agent expects: {formats}"
 msgstr "Agenten forventer: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Hoppet over tregt bilde: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Bildekoding mislyktes: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Markeringer: {note}"
 
 msgid "Sketch"
 msgstr "Skisse"
-
-msgid "Skipped slow image: {name}"
-msgstr "Hoppet over tregt bilde: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Bildekoding mislyktes: {error}"
 
 msgid "Message sent"
 msgstr "Melding sendt"

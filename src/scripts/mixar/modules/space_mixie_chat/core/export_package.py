@@ -8,6 +8,9 @@ lower-resolution texture tiers, a ``.blend`` source and a README.
 
 Exports run on temporary copies (transforms and modifiers applied, parents
 flattened, optionally joined), so the user's objects are never changed.
+Mixar paint slots on the copies are swapped to their baked Principled/image
+materials (``export_materials``) for the whole package; an unbaked stack
+still ships untextured.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
 never an absolute local path. The written main file is verified with
@@ -22,10 +25,12 @@ import json
 import os
 import re
 import time
+from contextlib import ExitStack
 
 import bpy
 
 from .export_clips import animation_kwargs, clip_selection, select_clips
+from .export_materials import temporary_export_materials
 from .export_verify import file_clip_names, verify_export
 
 FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
@@ -375,7 +380,12 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     verification = None
     clips, clips_missing = select_clips(armatures, animations)
     col, copies, renamed = _copies(meshes, join)
+    swap = ExitStack()
     try:
+        # Mixar paint slots on the COPIES become their baked Principled/image
+        # materials first, so the file, textures/, tiers, the .blend source
+        # and the manifest all describe what an exporter can read.
+        swap.enter_context(temporary_export_materials(copies))
         mats = []
         for c in copies:
             for s in c.material_slots:
@@ -446,6 +456,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             files.append("manifest.json")
         success = True
     finally:
+        swap.close()
         _cleanup(col, renamed)
         for o in scene.objects:
             o.select_set(o.name in prev_sel)

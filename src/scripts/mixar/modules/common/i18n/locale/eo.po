@@ -17568,12 +17568,6 @@ msgstr "Ĉiam bildigi sur la GPU, kiam unu disponeblas"
 msgid "Always render on the CPU"
 msgstr "Ĉiam bildigi sur la CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Ebligi bakadon ekstere defaŭlte"
 
@@ -17651,6 +17645,12 @@ msgstr "Ĉiam taksi bildkadron"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Taksi la nodan arbon ĉe ĉiu ŝanĝo de bildkadro"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Kanalaj opcioj"
@@ -19620,6 +19620,12 @@ msgstr "Uzant-ID por ensaluto al Mixie-babilado"
 msgid "Agent expects: {formats}"
 msgstr "La agento atendas: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Preterlasis malrapidan bildon: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Kodado de bildo malsukcesis: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Markoj: {note}"
 
 msgid "Sketch"
 msgstr "Skizo"
-
-msgid "Skipped slow image: {name}"
-msgstr "Preterlasis malrapidan bildon: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Kodado de bildo malsukcesis: {error}"
 
 msgid "Message sent"
 msgstr "Mesaĝo sendita"

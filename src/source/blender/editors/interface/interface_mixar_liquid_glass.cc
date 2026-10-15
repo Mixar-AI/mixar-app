@@ -39,6 +39,9 @@
  * match every other declaration of it in the tree. */
 extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 #endif
+#ifdef __linux__
+extern "C" bool Mixar_WindowSupportsTransparency(void *window_handle);
+#endif
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -256,6 +259,10 @@ bool mixar_glass_window_apply_translucency(void *ghostwin, const bool enable)
     return false;
   }
   return Mixar_WindowSetBlurBehind(ghostwin, enable);
+#elif defined(__linux__)
+  /* X11 composites the captured host frost; Wayland presents per-pixel alpha
+   * directly. Never fade the entire window: text and controls remain opaque. */
+  return enable && Mixar_WindowSupportsTransparency(ghostwin);
 #else
   /* No definition of the underlying call exists on this platform, so calling
    * it would be an undefined reference at link time. A window that cannot be

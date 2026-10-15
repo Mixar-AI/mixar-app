@@ -23,8 +23,10 @@
 #include "BLI_string.h"
 #include "BLI_time.h"
 
+#include "BKE_callbacks.hh"
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
+#include "BKE_wm_runtime.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -73,14 +75,26 @@ static ScenesDrawerRuntime *drawer_runtime(const bContext *C)
                                              view3d_scenes_drawer_region_from_context(C));
 }
 
-static void drawer_tick_timer_ensure(const bContext *C, ScenesDrawerRuntime *runtime)
+/* The slide's redraw timer belongs to the window that OWNS the drawer region:
+ * Ctrl+` also fires from the island, whose window freed the timer while the
+ * drawer kept the pointer. A cached timer is trusted only while wm lists it. */
+static void drawer_tick_timer_ensure(wmWindowManager *wm,
+                                     ARegion *region,
+                                     ScenesDrawerRuntime *runtime)
 {
+  if (wm == nullptr || runtime == nullptr) {
+    return;
+  }
+  wmTimer *timer = runtime->tick_timer;
+  if (timer != nullptr && (BLI_findindex(&wm->runtime->timers, timer) == -1 ||
+                           (timer->flags & WM_TIMER_TAGGED_FOR_REMOVAL) != 0))
+  {
+    runtime->tick_timer = nullptr;
+  }
   if (runtime->tick_timer != nullptr) {
     return;
   }
-  wmWindowManager *wm = CTX_wm_manager(C);
-  wmWindow *win = CTX_wm_window(C);
-  if (wm != nullptr && win != nullptr) {
+  if (wmWindow *win = view3d_scenes_drawer_region_window(wm, region)) {
     runtime->tick_timer = WM_event_timer_add(wm, win, TIMERNOTIFIER, 1.0 / 60.0);
   }
 }
@@ -91,7 +105,9 @@ static void drawer_tick_timer_remove(wmWindowManager *wm, ScenesDrawerRuntime *r
     return;
   }
   if (wm != nullptr) {
-    WM_event_timer_remove(wm, runtime->tick_timer->win, runtime->tick_timer);
+    /* Never read the cached timer: it may already be freed. The remove call
+     * ignores the window and checks the pointer against the live list. */
+    WM_event_timer_remove(wm, nullptr, runtime->tick_timer);
   }
   runtime->tick_timer = nullptr;
 }
@@ -121,13 +137,15 @@ float view3d_scenes_drawer_display_amount(const bContext *C)
 
 void view3d_scenes_drawer_slide_begin(bContext *C)
 {
-  ScenesDrawerRuntime *runtime = drawer_runtime(C);
+  wmWindowManager *wm = CTX_wm_manager(C);
+  ARegion *region = view3d_scenes_drawer_region_from_context(C);
+  ScenesDrawerRuntime *runtime = view3d_scenes_drawer_runtime_ensure(wm, region);
   if (runtime == nullptr) {
     return;
   }
   runtime->slide_start_amount = view3d_scenes_drawer_display_amount(C);
   runtime->slide_started_at = BLI_time_now_seconds();
-  drawer_tick_timer_ensure(C, runtime);
+  drawer_tick_timer_ensure(wm, region, runtime);
 }
 
 void view3d_scenes_drawer_slide_stop(bContext *C)
@@ -296,23 +314,41 @@ void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *regi
   WM_event_add_keymap_handler_priority(&region->runtime->handlers, keymap, 0);
 }
 
-/* The area a drawer region belongs to: `ARegionType.init` gets no area, and
- * the width clamp needs one (a stored width from a wide window must not eat a
- * narrower area's whole viewport). */
-static ScrArea *drawer_region_area(const wmWindowManager *wm, const ARegion *region)
+wmWindow *view3d_scenes_drawer_region_window(const wmWindowManager *wm,
+                                             const ARegion *region,
+                                             ScrArea **r_area)
 {
-  for (const wmWindow &win : wm->windows) {
+  if (r_area != nullptr) {
+    *r_area = nullptr;
+  }
+  if (wm == nullptr || region == nullptr) {
+    return nullptr;
+  }
+  for (wmWindow &win : wm->windows) {
     const bScreen *screen = WM_window_get_active_screen(&win);
     if (screen == nullptr) {
       continue;
     }
     for (ScrArea &area : screen->areabase) {
       if (BLI_findindex(&area.regionbase, region) != -1) {
-        return &area;
+        if (r_area != nullptr) {
+          *r_area = &area;
+        }
+        return &win;
       }
     }
   }
   return nullptr;
+}
+
+/* The area a drawer region belongs to: `ARegionType.init` gets no area, and
+ * the width clamp needs one (a stored width from a wide window must not eat a
+ * narrower area's whole viewport). */
+static ScrArea *drawer_region_area(const wmWindowManager *wm, const ARegion *region)
+{
+  ScrArea *area = nullptr;
+  view3d_scenes_drawer_region_window(wm, region, &area);
+  return area;
 }
 
 void view3d_scenes_drawer_region_init(wmWindowManager *wm, ARegion *region)
@@ -357,8 +393,30 @@ void view3d_scenes_drawer_region_exit(wmWindowManager *wm, ARegion *region)
   drawer_region_free(region);
 }
 
+/* A file load (Open, Revert, File > New) replaces every scene, often at the same
+ * path and Main address, so the store's Main check cannot tell. CPU only. */
+static void drawer_snapshots_load_post(Main * /*bmain*/,
+                                       PointerRNA ** /*pointers*/,
+                                       int /*pointers_num*/,
+                                       void * /*arg*/)
+{
+  view3d_scenes_drawer_snapshot_store_reset();
+}
+
+static void drawer_snapshots_load_post_register()
+{
+  static bCallbackFuncStore store = {};
+  if (store.func != nullptr) {
+    return;
+  }
+  store.func = drawer_snapshots_load_post;
+  store.alloc = false;
+  BKE_callback_add(&store, BKE_CB_EVT_LOAD_POST);
+}
+
 void view3d_scenes_drawer_region_register(SpaceType *st)
 {
+  drawer_snapshots_load_post_register();
   ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype view3d scenes drawer region");
   art->regionid = VIEW3D_SCENES_DRAWER_REGION_TYPE;
   art->prefsizex = VIEW3D_SCENES_DRAWER_WIDTH;

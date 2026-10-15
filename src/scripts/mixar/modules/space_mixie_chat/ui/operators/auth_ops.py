@@ -257,21 +257,46 @@ def _apply_account_hooks(user_info: dict, is_guest: bool) -> None:
     refresh_agent_settings()
 
 
-def _leave_guest_session(new_email: str) -> None:
-    """Switch the live session from the guest to the account that claimed it.
+def _leave_guest_session() -> None:
+    """Switch the live session from the guest to the account that signed in.
 
     The guest socket is closed cleanly (a dropped socket holds the instance id
-    for up to 60 s and the account's reconnect would see 4009), its cached
-    agent settings dropped, and its chat archive re-filed under the account.
-    Main thread, before the account's identity is applied.
+    for up to 60 s and the account's reconnect would see 4009) and its cached
+    agent settings dropped — whether or not the claim went through; what the
+    guest owned moves only with a claim (``_apply_guest_claim``). Main thread,
+    before the account's identity is applied.
     """
     global _auto_connect_scheduled
-    from ...core import chat_history, get_connection_manager
+    from ...core import get_connection_manager
     get_connection_manager().disconnect()
     _auto_connect_scheduled = False
     invalidate_agent_settings()
+
+
+def _apply_guest_claim(claim: dict, account_email: str) -> None:
+    """Main thread: move a CLAIMED guest's device state to the account.
+
+    The one post-claim step for a sign-in that claimed the guest directly
+    (``guest.sign_in``) and for a claim retried after a transient failure
+    (``guest.retry_pending_claim``). The backend moved the guest's BYOK row,
+    so the key material for it — on this device, keyed by user id — is
+    re-scoped too (the account's own record wins), or the first turn would
+    report the device key missing; the guest's chat archive is re-filed under
+    the account. Callers run ``_apply_account_hooks`` right after, whose
+    ``refresh_agent_settings`` reloads the BYOK state. Nothing happens for a
+    claim that did not succeed: the guest's key and chats stay its own.
+    """
+    if not (claim and claim.get("claimed_guest")):
+        return
+    if claim.get("byok_moved") and claim.get("guest_user_id"):
+        try:
+            from mixar.modules.byok.core import key_store
+            key_store.reassign(claim["guest_user_id"], key_store.current_user_id())
+        except Exception as e:  # noqa: BLE001 — the user can re-add the key
+            logger.warning("Guest BYOK device key carry-over failed: %s", e)
     try:
-        chat_history.reassign_owner(guest.email(), new_email)
+        from ...core import chat_history
+        chat_history.reassign_owner(claim.get("guest_email", ""), account_email)
     except Exception as e:  # noqa: BLE001 — history is best-effort
         logger.debug("Guest chat history reassign failed: %s", e)
 
@@ -280,8 +305,11 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
     """Schedule main-thread bpy property updates after successful auth.
 
     Called from a daemon thread — uses bpy.app.timers (thread-safe) to
-    write bpy properties back on the main thread.
+    write bpy properties back on the main thread. A validated account first
+    retries a guest claim that failed transiently at its sign-in.
     """
+    claim = {} if user_info["data"].get("is_guest") else guest.retry_pending_claim()
+
     def _apply() -> None:
         global _auth_check_started
         try:
@@ -292,6 +320,7 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
                 wm.mixie_chat_session_expired = False
             wm.mixie_chat_login_error = ""
             is_guest = _apply_identity(wm, scene, user_info)
+            _apply_guest_claim(claim, user_info["data"].get("email", ""))
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
             if not is_guest:
@@ -545,15 +574,19 @@ def _reauthenticate() -> None:
                 # Mixar. Success only — a cancelled login must not steal focus.
                 activate_app()
 
-                _capture_session_started("sso_relogin")
                 _clear_referral_state(wm)
 
                 if user_info and user_info.get("status") == "success":
                     if result.get("switched_from_guest"):
-                        _leave_guest_session(user_info["data"].get("email", ""))
+                        _leave_guest_session()
                     is_guest = _apply_identity(wm, bpy.context.scene, user_info)
+                    _apply_guest_claim(result, user_info["data"].get("email", ""))
                     _apply_account_hooks(user_info, is_guest)
                     logger.info("Auto SSO re-login completed successfully")
+                # After the identity: capture() drops a guest's events, and
+                # the once-guard would be spent on the dropped one.
+                if not guest.is_guest():
+                    _capture_session_started("sso_relogin")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
                     # Keep the real reason: a classified network failure
@@ -582,28 +615,15 @@ def _user_info_after_sso(result: dict):
     """
     if not result.get("success"):
         return None
-    _carry_guest_device_key(result)
+    if "claimed_guest" not in result:
+        # This sign-in claimed nothing itself: an earlier claim that failed
+        # transiently is retried under the account it was made for.
+        result.update(guest.retry_pending_claim())
     try:
         return get_user_info()
     except Exception as e:  # noqa: BLE001
         logger.warning("User info fetch after SSO failed: %s", e)
         return None
-
-
-def _carry_guest_device_key(result: dict) -> None:
-    """Background thread, right after a sign-in that claimed a guest: the
-    backend moved the guest's BYOK row to the account, so the key material
-    for it — on this device, keyed by user id — is re-scoped to the account
-    too, or its first turn would report the device key missing. Only when
-    the claim moved a role; the account's own record always wins."""
-    if not (result.get("switched_from_guest") and result.get("byok_moved")
-            and result.get("guest_user_id")):
-        return
-    try:
-        from mixar.modules.byok.core import key_store
-        key_store.reassign(result["guest_user_id"], key_store.current_user_id())
-    except Exception as e:  # noqa: BLE001 — the user can re-add the key
-        logger.warning("Guest BYOK device key carry-over failed: %s", e)
 
 
 def _sync_pending_flag_timer():
@@ -756,15 +776,20 @@ class MIXIE_CHAT_OT_login(Operator):
                         # Land the user back in Mixar from the browser.
                         # Success only — never on a failed or cancelled login.
                         activate_app()
-                        _capture_session_started("interactive_login")
                         _clear_referral_state(live_wm)
 
                         if user_info and user_info.get("status") == "success":
                             if result.get("switched_from_guest"):
-                                _leave_guest_session(user_info["data"].get("email", ""))
+                                _leave_guest_session()
                             is_guest = _apply_identity(live_wm, bpy.context.scene, user_info)
+                            _apply_guest_claim(result, user_info["data"].get("email", ""))
                             _apply_account_hooks(user_info, is_guest)
                             logger.info("SSO login completed — user is logged in")
+                        # After the identity (guest.mark(False)): capture()
+                        # drops a guest's events and the once-guard would be
+                        # spent on the dropped one.
+                        if not guest.is_guest():
+                            _capture_session_started("interactive_login")
                     else:
                         msg = result.get("message", rpt_("Login failed"))
                         live_wm.mixie_chat_login_error = msg
@@ -830,8 +855,10 @@ class MIXIE_CHAT_OT_logout(Operator):
         except Exception as exc:
             logger.debug("logout session-end capture failed: %s", exc)
 
-        # Delete tokens from keyring
+        # Delete tokens from keyring, and a guest claim still waiting for a
+        # retry: the guest is never claimed into the next seat.
         clear_credentials()
+        guest.clear_pending_claim()
 
         # Clear cached generation configs
         invalidate_generation_caches()

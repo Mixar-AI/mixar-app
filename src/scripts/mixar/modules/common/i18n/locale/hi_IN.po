@@ -17568,12 +17568,6 @@ msgstr "GPU उपलब्ध होने पर हमेशा उसी प
 msgid "Always render on the CPU"
 msgstr "हमेशा CPU पर प्रतिपादन करता है"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "मूलभूत रूप से बाहर भर्जित सक्षम करें"
 
@@ -17651,6 +17645,12 @@ msgstr "हमेशा फ़्रेम का मूल्यांकन �
 
 msgid "Evaluate node tree on every frame change"
 msgstr "हर फ़्रेम परिवर्तन पर ग्रन्थि ट्री का मूल्यांकन करता है"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "सरणि विकल्प"
@@ -19620,6 +19620,12 @@ msgstr "Mixie चैट लॉगिन के लिए प्रयोक्�
 msgid "Agent expects: {formats}"
 msgstr "एजेंट को अपेक्षित: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "धीमी छवि छोड़ी गई: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "छवि एन्कोडिंग विफल: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "चिह्न: {note}"
 
 msgid "Sketch"
 msgstr "स्केच"
-
-msgid "Skipped slow image: {name}"
-msgstr "धीमी छवि छोड़ी गई: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "छवि एन्कोडिंग विफल: {error}"
 
 msgid "Message sent"
 msgstr "संदेश भेजा गया"

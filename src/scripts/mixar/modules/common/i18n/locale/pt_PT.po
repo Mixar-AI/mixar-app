@@ -17568,12 +17568,6 @@ msgstr "Renderiza sempre na GPU quando houver uma disponível"
 msgid "Always render on the CPU"
 msgstr "Renderiza sempre no CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Ativar gravação externa por predefinição"
 
@@ -17651,6 +17645,12 @@ msgstr "Avaliar sempre o fotograma"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Avalia a árvore de nós em cada mudança de fotograma"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opções do canal"
@@ -19620,6 +19620,12 @@ msgstr "ID do utilizador para iniciar sessão no Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "O agente espera: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Imagem lenta ignorada: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Falha na codificação da imagem: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Marcas: {note}"
 
 msgid "Sketch"
 msgstr "Esboço"
-
-msgid "Skipped slow image: {name}"
-msgstr "Imagem lenta ignorada: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Falha na codificação da imagem: {error}"
 
 msgid "Message sent"
 msgstr "Mensagem enviada"

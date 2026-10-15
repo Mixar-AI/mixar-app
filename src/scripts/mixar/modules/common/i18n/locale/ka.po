@@ -17568,12 +17568,6 @@ msgstr "ყოველთვის რენდერი GPU-ზე, თუ ხ
 msgid "Always render on the CPU"
 msgstr "ყოველთვის რენდერი CPU-ზე"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "გარეთ გამოცხობის ნაგულისხმებად ჩართვა"
 
@@ -17651,6 +17645,12 @@ msgstr "კადრის ყოველთვის გამოთვლა"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "კვანძების ხის გამოთვლა ყოველი კადრის ცვლილებაზე"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "არხის ვარიანტები"
@@ -19620,6 +19620,12 @@ msgstr "მომხმარებლის ID Mixie-ს ჩატში შე
 msgid "Agent expects: {formats}"
 msgstr "აგენტი ელოდება: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "გამოტოვდა ნელი გამოსახულება: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "გამოსახულების კოდირება ვერ მოხერხდა: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "აღნიშვნები: {note}"
 
 msgid "Sketch"
 msgstr "ესკიზი"
-
-msgid "Skipped slow image: {name}"
-msgstr "გამოტოვდა ნელი გამოსახულება: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "გამოსახულების კოდირება ვერ მოხერხდა: {error}"
 
 msgid "Message sent"
 msgstr "შეტყობინება გაიგზავნა"

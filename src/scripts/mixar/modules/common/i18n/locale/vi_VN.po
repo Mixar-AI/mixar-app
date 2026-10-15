@@ -17568,12 +17568,6 @@ msgstr "Luôn kết xuất trên GPU khi có sẵn"
 msgid "Always render on the CPU"
 msgstr "Luôn kết xuất trên CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Bật Nướng Bên Ngoài theo Mặc Định"
 
@@ -17651,6 +17645,12 @@ msgstr "Luôn Tính Toán Khung Hình"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Tính toán lại cây nút mỗi khi khung hình thay đổi"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Tùy Chọn Kênh"
@@ -19620,6 +19620,12 @@ msgstr "ID người dùng để đăng nhập Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "Tác nhân chấp nhận: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Đã bỏ qua hình ảnh xử lý chậm: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Mã hóa hình ảnh thất bại: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Dấu: {note}"
 
 msgid "Sketch"
 msgstr "Phác Thảo"
-
-msgid "Skipped slow image: {name}"
-msgstr "Đã bỏ qua hình ảnh xử lý chậm: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Mã hóa hình ảnh thất bại: {error}"
 
 msgid "Message sent"
 msgstr "Đã gửi tin nhắn"

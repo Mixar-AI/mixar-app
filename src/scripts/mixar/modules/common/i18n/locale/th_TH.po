@@ -17568,12 +17568,6 @@ msgstr "เรนเดอร์บน GPU เสมอเมื่อมี"
 msgid "Always render on the CPU"
 msgstr "เรนเดอร์บน CPU เสมอ"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "เปิดใช้การอบไว้ภายนอกเป็นค่าเริ่มต้น"
 
@@ -17651,6 +17645,12 @@ msgstr "ประเมินผลทุกเฟรมเสมอ"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ประเมินผลทรีจุดต่อทุกครั้งที่เปลี่ยนเฟรม"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ตัวเลือกช่อง"
@@ -19620,6 +19620,12 @@ msgstr "ID ผู้ใช้สำหรับเข้าสู่ระบบ
 msgid "Agent expects: {formats}"
 msgstr "เอเจนต์รองรับ: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "ข้ามภาพที่ประมวลผลช้า: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "เข้ารหัสภาพไม่สำเร็จ: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "เครื่องหมาย: {note}"
 
 msgid "Sketch"
 msgstr "ภาพร่าง"
-
-msgid "Skipped slow image: {name}"
-msgstr "ข้ามภาพที่ประมวลผลช้า: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "เข้ารหัสภาพไม่สำเร็จ: {error}"
 
 msgid "Message sent"
 msgstr "ส่งข้อความแล้ว"

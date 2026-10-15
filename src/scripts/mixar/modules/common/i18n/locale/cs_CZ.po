@@ -17568,12 +17568,6 @@ msgstr "Vždy renderuje na GPU, pokud je k dispozici"
 msgid "Always render on the CPU"
 msgstr "Vždy renderuje na CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Ve výchozím stavu povolit zapečení mimo"
 
@@ -17651,6 +17645,12 @@ msgstr "Vždy vyhodnocovat snímek"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Vyhodnotí strom uzlů při každé změně snímku"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Možnosti kanálu"
@@ -19620,6 +19620,12 @@ msgstr "ID uživatele pro přihlášení do chatu Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očekává: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Pomalý obrázek přeskočen: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Kódování obrázku selhalo: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Značky: {note}"
 
 msgid "Sketch"
 msgstr "Skica"
-
-msgid "Skipped slow image: {name}"
-msgstr "Pomalý obrázek přeskočen: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Kódování obrázku selhalo: {error}"
 
 msgid "Message sent"
 msgstr "Zpráva odeslána"

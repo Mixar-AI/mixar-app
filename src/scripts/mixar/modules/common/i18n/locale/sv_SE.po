@@ -17568,12 +17568,6 @@ msgstr "Renderar alltid på GPU:n när en sådan finns"
 msgid "Always render on the CPU"
 msgstr "Renderar alltid på CPU:n"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Aktivera bakat utanför som standard"
 
@@ -17651,6 +17645,12 @@ msgstr "Utvärdera alltid bildruta"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Utvärderar nodträdet vid varje bildrutebyte"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Kanalalternativ"
@@ -19620,6 +19620,12 @@ msgstr "Användar-ID för inloggning i Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "Agenten förväntar sig: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Hoppade över långsam bild: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Bildkodningen misslyckades: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Markeringar: {note}"
 
 msgid "Sketch"
 msgstr "Skiss"
-
-msgid "Skipped slow image: {name}"
-msgstr "Hoppade över långsam bild: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Bildkodningen misslyckades: {error}"
 
 msgid "Message sent"
 msgstr "Meddelandet skickades"

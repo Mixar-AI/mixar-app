@@ -122,5 +122,37 @@ def test_client_timeout_does_not_claim_a_refund():
     job = Job(state=JobState.FAILED, error_class="timeout",
               user_message="Generation timed out — please try again")
     assert "refunded" not in FI.failure_hint(job)
-    job.error_class = "vendor_down"
+    # A refund is claimed only when the backend stamped the class.
+    FI.apply_backend_failure(job, {"error_class": "vendor_down"})
+    assert job.error_class_source == "backend"
+    assert "refunded" in FI.failure_hint(job)
+
+
+def test_class_set_without_backend_source_claims_no_refund():
+    job = Job(state=JobState.FAILED, error_class="vendor_down")
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_client_poll_server_error_claims_no_refund():
+    """After N poll 5xx/429 the client stamps vendor_transient, but the
+    backend job may still run and charge: never say "refunded"."""
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ServerError("Bad gateway", status_code=502), stage="poll")
+    assert job.error_class == "vendor_transient"
+    assert job.error_class_source == "client"
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_client_submit_validation_error_claims_no_refund():
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ValidationError("Bad prompt", status_code=422), stage="submit")
+    assert job.error_class == "invalid_input"
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_backend_class_overrides_a_client_poll_failure():
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ServerError("Bad gateway", status_code=502), stage="poll")
+    FI.apply_backend_failure(job, {"error_class": "vendor_down"})
+    assert job.error_class_source == "backend"
     assert "refunded" in FI.failure_hint(job)

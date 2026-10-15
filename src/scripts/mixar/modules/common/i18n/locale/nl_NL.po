@@ -17568,12 +17568,6 @@ msgstr "Rendert altijd op de GPU als die beschikbaar is"
 msgid "Always render on the CPU"
 msgstr "Rendert altijd op de CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Gebakken nodes standaard buiten plaatsen"
 
@@ -17651,6 +17645,12 @@ msgstr "Frame altijd evalueren"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Evalueert de nodeboom bij elke framewijziging"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Kanaalopties"
@@ -19620,6 +19620,12 @@ msgstr "Gebruikers-ID om in te loggen bij Mixie Chat"
 msgid "Agent expects: {formats}"
 msgstr "Agent verwacht: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Trage afbeelding overgeslagen: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Afbeelding coderen mislukt: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Markeringen: {note}"
 
 msgid "Sketch"
 msgstr "Schets"
-
-msgid "Skipped slow image: {name}"
-msgstr "Trage afbeelding overgeslagen: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Afbeelding coderen mislukt: {error}"
 
 msgid "Message sent"
 msgstr "Bericht verzonden"

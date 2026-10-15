@@ -17572,12 +17572,6 @@ msgstr "GPU が利用可能な場合は常に GPU でレンダリングします
 msgid "Always render on the CPU"
 msgstr "常に CPU でレンダリングします"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "デフォルトで外部ベイクを有効化"
 
@@ -17655,6 +17649,12 @@ msgstr "常にフレームを評価"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "フレームが変わるたびにノードツリーを評価します"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "チャンネルオプション"
@@ -19624,6 +19624,12 @@ msgstr "Mixie Chat ログイン用のユーザー ID"
 msgid "Agent expects: {formats}"
 msgstr "エージェントが受け付ける形式: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "時間のかかる画像をスキップしました: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "画像のエンコードに失敗しました: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20485,12 +20491,6 @@ msgstr "マーク: {note}"
 
 msgid "Sketch"
 msgstr "スケッチ"
-
-msgid "Skipped slow image: {name}"
-msgstr "時間のかかる画像をスキップしました: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "画像のエンコードに失敗しました: {error}"
 
 msgid "Message sent"
 msgstr "メッセージを送信しました"

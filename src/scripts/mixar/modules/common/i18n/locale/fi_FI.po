@@ -17568,12 +17568,6 @@ msgstr "Renderöi aina GPU:lla, jos sellainen on käytettävissä"
 msgid "Always render on the CPU"
 msgstr "Renderöi aina CPU:lla"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Käytä paistoa ulkopuolella oletuksena"
 
@@ -17651,6 +17645,12 @@ msgstr "Arvioi kehys aina"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Arvioi noodipuun jokaisella kehyksen vaihdolla"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Kanavan asetukset"
@@ -19620,6 +19620,12 @@ msgstr "Käyttäjätunnus Mixie-keskusteluun kirjautumista varten"
 msgid "Agent expects: {formats}"
 msgstr "Agentti odottaa: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "Ohitettiin hidas kuva: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Kuvan koodaus epäonnistui: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Merkit: {note}"
 
 msgid "Sketch"
 msgstr "Luonnos"
-
-msgid "Skipped slow image: {name}"
-msgstr "Ohitettiin hidas kuva: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Kuvan koodaus epäonnistui: {error}"
 
 msgid "Message sent"
 msgstr "Viesti lähetettiin"

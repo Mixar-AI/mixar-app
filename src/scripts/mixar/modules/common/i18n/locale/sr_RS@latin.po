@@ -22628,12 +22628,6 @@ msgstr "Uvek renderuje na GPU kada je dostupan"
 msgid "Always render on the CPU"
 msgstr "Uvek renderuje na CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 # derived
 msgid "Enable Baked Outside by Default"
 msgstr "Podrazumevano omogući ispečeno spolja"
@@ -22737,6 +22731,12 @@ msgstr "Uvek izračunaj kadar"
 # derived
 msgid "Evaluate node tree on every frame change"
 msgstr "Izračunava stablo čvorova pri svakoj promeni kadra"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 # derived
 msgid "Channel Options"
@@ -25288,6 +25288,14 @@ msgstr "ID korisnika za prijavu u ćaskanje Mixie"
 msgid "Agent expects: {formats}"
 msgstr "Agent očekuje: {formats}"
 
+# derived
+msgid "Skipped slow image: {name}"
+msgstr "Preskočena je spora slika: {name}"
+
+# derived
+msgid "Image encoding failed: {error}"
+msgstr "Kodiranje slike nije uspelo: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -26366,14 +26374,6 @@ msgstr "Oznake: {note}"
 # derived
 msgid "Sketch"
 msgstr "Skica"
-
-# derived
-msgid "Skipped slow image: {name}"
-msgstr "Preskočena je spora slika: {name}"
-
-# derived
-msgid "Image encoding failed: {error}"
-msgstr "Kodiranje slike nije uspelo: {error}"
 
 # derived
 msgid "Message sent"

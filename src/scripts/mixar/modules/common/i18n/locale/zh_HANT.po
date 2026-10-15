@@ -17568,12 +17568,6 @@ msgstr "有可用的 GPU 時一律以 GPU 算繪"
 msgid "Always render on the CPU"
 msgstr "一律以 CPU 算繪"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "預設啟用外置烘培"
 
@@ -17651,6 +17645,12 @@ msgstr "永遠評估影格"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "每次影格變更時評估節點樹"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "通道選項"
@@ -19620,6 +19620,12 @@ msgstr "Mixie 聊天登入用的使用者 ID"
 msgid "Agent expects: {formats}"
 msgstr "智慧代理預期的格式：{formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "已略過處理緩慢的影像：{name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "影像編碼失敗：{error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "標記：{note}"
 
 msgid "Sketch"
 msgstr "草圖"
-
-msgid "Skipped slow image: {name}"
-msgstr "已略過處理緩慢的影像：{name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "影像編碼失敗：{error}"
 
 msgid "Message sent"
 msgstr "訊息已傳送"

@@ -17568,12 +17568,6 @@ msgstr "ןימז דחאשכ GPU-ב דבעל דימת"
 msgid "Always render on the CPU"
 msgstr "CPU-ב דבעל דימת"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "לדחמ תרירבכ תינוציח הייפא תלעפה"
 
@@ -17651,6 +17645,12 @@ msgstr "תרגסמ ךירעהל דימת"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "תרגסמ יוניש לכב םיתמצה ץע תכרעה"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ץורע תויורשפא"
@@ -19620,6 +19620,12 @@ msgstr "Mixie טא'צל תורבחתהל שמתשמ ההזמ"
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ל הפצמ ןכוסה"
 
+msgid "Skipped slow image: {name}"
+msgstr "{name} :תיטיא הנומת לע גוליד"
+
+msgid "Image encoding failed: {error}"
+msgstr "{error} :לשכנ הנומתה דודיק"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "{note} :םינומיס"
 
 msgid "Sketch"
 msgstr "הציקס"
-
-msgid "Skipped slow image: {name}"
-msgstr "{name} :תיטיא הנומת לע גוליד"
-
-msgid "Image encoding failed: {error}"
-msgstr "{error} :לשכנ הנומתה דודיק"
 
 msgid "Message sent"
 msgstr "החלשנ העדוהה"

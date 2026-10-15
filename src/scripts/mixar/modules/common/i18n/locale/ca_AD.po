@@ -17568,12 +17568,6 @@ msgstr "Revela sempre amb la GPU si n'hi ha una de disponible"
 msgid "Always render on the CPU"
 msgstr "Revela sempre amb la CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Habilitar precuinat a fora per defecte"
 
@@ -17651,6 +17645,12 @@ msgstr "Avaluar sempre el fotograma"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Avalua l'arbre de nodes a cada canvi de fotograma"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opcions del canal"
@@ -19620,6 +19620,12 @@ msgstr "ID d'usuari per iniciar la sessió al xat de Mixie"
 msgid "Agent expects: {formats}"
 msgstr "L'agent espera: {formats}"
 
+msgid "Skipped slow image: {name}"
+msgstr "S'ha omès una imatge lenta: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "La codificació de la imatge ha fallat: {error}"
+
 msgid "Why am I seeing this?"
 msgstr ""
 
@@ -20481,12 +20487,6 @@ msgstr "Marques: {note}"
 
 msgid "Sketch"
 msgstr "Esbós"
-
-msgid "Skipped slow image: {name}"
-msgstr "S'ha omès una imatge lenta: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "La codificació de la imatge ha fallat: {error}"
 
 msgid "Message sent"
 msgstr "S'ha enviat el missatge"

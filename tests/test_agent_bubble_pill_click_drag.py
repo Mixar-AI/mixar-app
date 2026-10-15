@@ -103,6 +103,26 @@ def _method_src(name: str) -> str:
     raise AssertionError(f"{name} missing")
 
 
+def test_linux_modal_stops_when_compositor_consumes_release():
+    """The native pointer pump can end a drag without a LEFTMOUSE event."""
+    import textwrap
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    update = Mock(return_value={'CANCELLED'})
+    namespace = {
+        'sys': SimpleNamespace(platform='linux'),
+        'bpy': SimpleNamespace(ops=SimpleNamespace(
+            mixar=SimpleNamespace(bubble_window_update_drag=update))),
+    }
+    exec(textwrap.dedent(_method_src('modal')), namespace)
+    op = SimpleNamespace(_pill_press=None, _stop_linux_followup=Mock())
+    context = object()
+    result = namespace['modal'](op, context, SimpleNamespace(type='TIMER'))
+    assert result == {'FINISHED'}
+    op._stop_linux_followup.assert_called_once_with(context)
+
+
 def test_pill_press_goes_modal_instead_of_toggling():
     """invoke() on the pill window must not call minimise/restore; it records
     the press and waits."""
@@ -257,6 +277,8 @@ def test_island_content_press_cannot_start_window_drag():
     namespace = {
         '_is_pill_window': lambda area: False,
         '_IS_WINDOWS': False,
+        '_linux_client_drag_followup': lambda: False,
+        '_event_hits_header': lambda area, event: False,
         'bpy': SimpleNamespace(ops=SimpleNamespace(mixar=SimpleNamespace(bubble_window_begin_drag=begin))),
     }
     exec(compile(tree, str(DRAG_OP), 'exec'), namespace)
@@ -278,9 +300,51 @@ def test_island_content_press_cannot_start_window_drag():
     begin.assert_called_once()
 
 
+def test_x11_header_drag_goes_modal_for_client_followup():
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    cls = _operator_class()
+    method = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "invoke")
+    tree = ast.Module(body=[method], type_ignores=[])
+    begin = Mock(return_value={'FINISHED'})
+    wm = SimpleNamespace(modal_handler_add=Mock(), event_timer_add=Mock(return_value=object()))
+    namespace = {
+        '_is_pill_window': lambda area: False,
+        '_IS_WINDOWS': False,
+        '_linux_client_drag_followup': lambda: True,
+        '_event_hits_header': lambda area, event: False,
+        'bpy': SimpleNamespace(ops=SimpleNamespace(mixar=SimpleNamespace(bubble_window_begin_drag=begin))),
+    }
+    exec(compile(tree, str(DRAG_OP), 'exec'), namespace)
+    context = SimpleNamespace(
+        area=object(),
+        region=SimpleNamespace(type='HEADER'),
+        window=object(),
+        window_manager=wm,
+    )
+    op = SimpleNamespace(_timer=None)
+    assert namespace['invoke'](op, context, object()) == {'RUNNING_MODAL'}
+    wm.modal_handler_add.assert_called_once()
+    wm.event_timer_add.assert_called_once()
+    assert op._timer is not None
+
+
+def test_x11_modal_followup_reads_inbetween_and_timer():
+    modal = _method_src("modal")
+    assert "{'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE', 'TIMER'}" in modal
+    assert "_stop_linux_followup" in modal
+    assert "bubble_window_update_drag" in modal
+    stop = _method_src("_stop_linux_followup")
+    assert "event_timer_remove" in stop
+
+
 def test_native_begin_drag_also_refuses_content():
+    helper = _cc_function("static const ARegion *agent_bubble_header_for_drag")
+    assert "RGN_TYPE_HEADER" in helper
+    assert "BLI_rcti_isect_pt_v" in helper
     body = _cc_function("static wmOperatorStatus mixar_bubble_window_begin_drag_exec")
-    guard = body.index("region->regiontype != RGN_TYPE_HEADER")
+    guard = body.index("agent_bubble_header_for_drag")
     assert body.index("return OPERATOR_CANCELLED", guard) < body.index("Mixar_WindowBeginDrag")
 
 

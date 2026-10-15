@@ -11,7 +11,18 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # First argument selects the build environment folder (defaults to Dev).
 BUILD_ENV="${1:-Dev}"
 
-BINARY="$ROOT_DIR/build/$BUILD_ENV/bin/Mixar.app/Contents/MacOS/Mixar"
+case "$(uname -s)" in
+    Darwin)
+        BINARY="$ROOT_DIR/build/$BUILD_ENV/bin/Mixar.app/Contents/MacOS/Mixar"
+        ;;
+    Linux)
+        BINARY="$ROOT_DIR/build/$BUILD_ENV/bin/mixar"
+        ;;
+    *)
+        echo "Error: unsupported platform: $(uname -s)" >&2
+        exit 1
+        ;;
+esac
 
 if [[ ! -x "$BINARY" ]]; then
 	echo "Error: Mixar binary not found at:" >&2
@@ -22,4 +33,7 @@ fi
 
 echo "Launching Mixar from build/$BUILD_ENV..."
 shift || true
-exec open -n -W "$ROOT_DIR/build/$BUILD_ENV/bin/Mixar.app" --args "$@"
+if [[ "$(uname -s)" == Darwin ]]; then
+    exec open -n -W "$ROOT_DIR/build/$BUILD_ENV/bin/Mixar.app" --args "$@"
+fi
+exec "$BINARY" "$@"

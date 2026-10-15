@@ -341,3 +341,70 @@ def test_the_strip_menu_offers_it_before_delete():
         '"mixar.director_remove_beat"'
     )
     assert "copy.indices = str(beat_index)" in STRIP
+
+
+# -------------------------------------------------------------------------
+# Deleting the original keeps a shared still's moodboard card.
+# -------------------------------------------------------------------------
+
+
+class _Indexed(list):
+    """An RNA collection: `remove` takes an index."""
+
+    def remove(self, index):  # noqa: D401 - RNA semantics
+        del self[index]
+
+
+@pytest.fixture
+def removal(monkeypatch):
+    from mixar.modules.director.core import capture
+
+    for name in ("_delete_camera_keys", "refresh_manifest", "release_preview_range",
+                 "purge_camera_animation"):
+        monkeypatch.setattr(capture, name, lambda *args, **kwargs: None)
+    freed = []
+    monkeypatch.setattr(
+        capture.bpy, "data", SimpleNamespace(images=SimpleNamespace(remove=freed.append))
+    )
+    return capture, freed
+
+
+def _still_scene(still, beats, other_beats=()):
+    shot = SimpleNamespace(
+        state='DRAFT', camera=None, active_beat_index=0,
+        beats=_Indexed(SimpleNamespace(image=image, frame=frame) for frame, image in beats),
+    )
+    other = SimpleNamespace(beats=_Indexed(SimpleNamespace(image=i) for i in other_beats))
+    scene = SimpleNamespace(
+        mixar_director=SimpleNamespace(shots=[shot, other]),
+        mixie_moodboard_images=_Indexed([SimpleNamespace(image=still)]),
+    )
+    return scene, shot
+
+
+def test_the_card_stays_while_a_duplicate_shows_the_still(removal):
+    capture, freed = removal
+    still = SimpleNamespace(name="still", users=1)
+    scene, shot = _still_scene(still, [(1, still), (9, still)])
+    assert capture.remove_beat(scene, shot, 0)
+    assert len(scene.mixie_moodboard_images) == 1
+    assert freed == []
+
+
+def test_the_card_stays_while_another_shot_shows_the_still(removal):
+    """A split moves stills into another shot."""
+    capture, freed = removal
+    still = SimpleNamespace(name="still", users=1)
+    scene, shot = _still_scene(still, [(1, still)], other_beats=[still])
+    assert capture.remove_beat(scene, shot, 0)
+    assert len(scene.mixie_moodboard_images) == 1
+    assert freed == []
+
+
+def test_the_card_goes_with_the_stills_last_beat(removal):
+    capture, _freed = removal
+    still = SimpleNamespace(name="still", users=1)
+    scene, shot = _still_scene(still, [(1, still), (9, SimpleNamespace(name="other"))])
+    assert capture.remove_beat(scene, shot, 0)
+    assert len(scene.mixie_moodboard_images) == 0
+    assert len(shot.beats) == 1

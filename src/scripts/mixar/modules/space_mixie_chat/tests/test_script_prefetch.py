@@ -171,7 +171,7 @@ class TestExecutorHoldsForPrefetch:
         )
         executed = []
 
-        def fake_execute(script, push_undo=True, session_id=""):
+        def fake_execute(script, push_undo=True, session_id="", tool_name=""):
             executed.append(script)
             return SimpleNamespace(success=True, to_dict=lambda: {"success": True})
 
