@@ -5795,6 +5795,9 @@ msgstr "BaseColor текстурасын түшүрүү ишке ашкан жо
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor текстурасын жүктөө ишке ашкан жок: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Текстураны түшүрүү учурунда күтүлбөгөн ката: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen импорту ишке ашкан жок"
 msgid "No image URLs in server response"
 msgstr "Сервердин жообунда сүрөт URL'дери жок"
 
-msgid "Starting reconstruction..."
-msgstr "Реконструкция башталууда..."
-
 msgid "Error: {error}"
 msgstr "Ката: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Реконструкция башталууда..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Генерацияланган сүрөттү түшүрүү ишке ашкан жок: {error}"

@@ -5795,6 +5795,9 @@ msgstr "Gagal mengunduh tekstur BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Gagal memuat tekstur BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Galat tak terduga saat mengunduh tekstur: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Impor SceneGen gagal"
 msgid "No image URLs in server response"
 msgstr "Tidak ada URL gambar dalam respons server"
 
-msgid "Starting reconstruction..."
-msgstr "Memulai rekonstruksi..."
-
 msgid "Error: {error}"
 msgstr "Galat: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Memulai rekonstruksi..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Gagal mengunduh gambar yang dihasilkan: {error}"

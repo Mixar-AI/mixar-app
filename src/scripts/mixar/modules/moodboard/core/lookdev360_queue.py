@@ -26,6 +26,11 @@ from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
+from mixar.modules.common.job_queue.core.helpers import create_scene_flag_listener
+from mixar.modules.common.job_queue.core.queue_download import (
+    job_scene,
+    pinned_to_job,
+)
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
@@ -211,12 +216,21 @@ class Lookdev360Job(Job):
                                 "Failed to load %s: %s", tex_type.capitalize(), e
                             )
 
-                    _apply_textures(
-                        stored_objects, albedo_img, optional_imgs.get("roughness"),
-                        optional_imgs.get("metallic"), optional_imgs.get("normal"),
-                        timestamp, stored_obj_path, on_done, on_error,
-                        scene=_job_scene(self),
-                    )
+                    # Pinned to the job's tab: the paint integration and the
+                    # active-object switch read bpy.context, which otherwise
+                    # is whichever tab the window shows.
+                    try:
+                        with pinned_to_job(self):
+                            _apply_textures(
+                                stored_objects, albedo_img,
+                                optional_imgs.get("roughness"),
+                                optional_imgs.get("metallic"),
+                                optional_imgs.get("normal"),
+                                timestamp, stored_obj_path, on_done, on_error,
+                                scene=_job_scene(self),
+                            )
+                    except RuntimeError as e:
+                        on_error(rpt_("Failed to apply textures: {error}").format(error=e))
                     return None
 
                 bpy.app.timers.register(_apply, first_interval=0.0)
@@ -261,10 +275,7 @@ class Lookdev360Job(Job):
 def _job_scene(job):
     """The tab the job was submitted from (the queue stamps it), else None."""
     try:
-        from mixar.modules.common.job_queue.core.queue_download import (
-            _job_session_id, resolve_job_scene,
-        )
-        return resolve_job_scene(getattr(job, "scene_name", ""), _job_session_id(job))
+        return job_scene(job)
     except Exception:  # noqa: BLE001
         return None
 
@@ -417,40 +428,32 @@ def enqueue_lookdev360_job(
 _listener_attached = False
 
 
-def _on_queue_changed(queue: FeatureQueue) -> None:
-    """Sync lookdev360 progress bar to queue activity."""
+def _clear_error(scene) -> None:
+    if hasattr(scene, "mixie_lookdev360_error"):
+        try:
+            scene.mixie_lookdev360_error = ""
+        except (AttributeError, TypeError):
+            pass
+
+
+def _redraw_sidebar(_scene) -> None:
+    """Redraw MIXIE sidebar so applied textures / error state are visible."""
     try:
-        scene = bpy.context.scene
-    except Exception:
-        return
-    if scene is None:
-        return
-
-    has_work = queue.has_active_work()
-    was_generating = bool(getattr(scene, "mixie_lookdev360_is_generating", False))
-
-    if has_work and not was_generating:
-        try:
-            scene.mixie_lookdev360_is_generating = True
-            if hasattr(scene, "mixie_lookdev360_error"):
-                scene.mixie_lookdev360_error = ""
-        except (AttributeError, TypeError):
-            pass
-        return
-
-    if not has_work and was_generating:
-        try:
-            scene.mixie_lookdev360_is_generating = False
-        except (AttributeError, TypeError):
-            pass
-
-        # Redraw MIXIE sidebar so applied textures / error state are visible
-        try:
-            for area in bpy.context.screen.areas:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
                 if area.type == 'MIXIE':
                     area.tag_redraw()
-        except Exception:
-            pass
+    except Exception:
+        pass
+
+
+# Flags the tabs that submitted the active jobs, never the shown tab, and
+# clears each tab's old error as it starts (also while another tab's job runs).
+_on_queue_changed = create_scene_flag_listener(
+    "mixie_lookdev360_is_generating",
+    on_scene_start=_clear_error,
+    on_finish=_redraw_sidebar,
+)
 
 
 def _get_lookdev360_queue() -> FeatureQueue:

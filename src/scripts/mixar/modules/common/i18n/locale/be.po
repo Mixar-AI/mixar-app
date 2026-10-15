@@ -5795,6 +5795,9 @@ msgstr "Не ўдалося спампаваць тэкстуру BaseColor: {er
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Не ўдалося загрузіць тэкстуру BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Нечаканая памылка падчас спампоўвання тэкстуры: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Імпарт SceneGen не ўдаўся"
 msgid "No image URLs in server response"
 msgstr "У адказе сервера няма URL выяў"
 
-msgid "Starting reconstruction..."
-msgstr "Пачатак рэканструкцыі..."
-
 msgid "Error: {error}"
 msgstr "Памылка: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Пачатак рэканструкцыі..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Не ўдалося спампаваць згенераваную выяву: {error}"

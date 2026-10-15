@@ -5795,6 +5795,9 @@ msgstr "Malsukcesis elŝuti teksturon BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Malsukcesis ŝargi teksturon BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Neatendita eraro dum elŝuto de teksturo: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Importo de SceneGen malsukcesis"
 msgid "No image URLs in server response"
 msgstr "Neniuj URL-oj de bildoj en la respondo de la servilo"
 
-msgid "Starting reconstruction..."
-msgstr "Startigante rekonstruon..."
-
 msgid "Error: {error}"
 msgstr "Eraro: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Startigante rekonstruon..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Malsukcesis elŝuti generitan bildon: {error}"

@@ -5795,6 +5795,9 @@ msgstr "Teksture BaseColor ni bilo mogoče prenesti: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Teksture BaseColor ni bilo mogoče naložiti: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Nepričakovana napaka med prenosom teksture: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Uvoz SceneGen ni uspel"
 msgid "No image URLs in server response"
 msgstr "V odgovoru strežnika ni URL-jev slik"
 
-msgid "Starting reconstruction..."
-msgstr "Začenjanje rekonstrukcije..."
-
 msgid "Error: {error}"
 msgstr "Napaka: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Začenjanje rekonstrukcije..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Generirane slike ni bilo mogoče prenesti: {error}"

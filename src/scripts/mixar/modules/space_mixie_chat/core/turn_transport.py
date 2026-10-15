@@ -3,6 +3,7 @@
 """WebSocket turn commands, shared by composer and all question/choice controls."""
 
 import uuid
+from collections import deque
 
 from mixar.modules.byok.constants import (
     BYOK_TRANSPORT_KEY_STALE_CODE,
@@ -13,9 +14,12 @@ from mixar.modules.common.agent_rpc.client import command, call
 from mixar.modules.common.i18n import n_
 from .agent_events import AgentEvent
 from .chat_payloads import build_chat_payload, collect_user_preferences
-from . import command_retry, turn_events
+from . import attachment_upload, command_retry, turn_events
 
 _handlers = {}
+# Per session, sends that wait behind a message whose images are still
+# uploading: the server receives a session's messages in the order sent.
+_lines = {}
 
 
 class TurnTransport:
@@ -49,11 +53,18 @@ class TurnTransport:
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
-    def _send(self, method, payload, user_message=None, interjecting=False, retry_of=None):
+    def _send(self, method, payload, user_message=None, interjecting=False, retry_of=None,
+              inline=False, attachments_backup=None):
         """``retry_of`` is the command id of the attempt this send repeats
         after a ``byok_transport_key_stale`` refusal (see ``settled``): the
         user bubble is re-keyed to the new id, and a second refusal is
-        shown, never retried again — the guard is this argument."""
+        shown, never retried again — the guard is this argument.
+
+        Inline images are uploaded over HTTP first and the command carries
+        references (``attachment_upload``); ``inline`` skips that, for the
+        one resend after the server answered ``attachment_unavailable``.
+        ``attachments_backup`` carries the inline originals across a retry
+        whose payload already holds references."""
         from .session import get_session_manager
         scene = self._scene()
         if scene is None:
@@ -91,8 +102,19 @@ class TurnTransport:
                     item.bubble_id = command_id
                     break
 
+        uploads = {'backup': attachments_backup}
+
         def settled(target, result):
             from .queue_processor import get_event_processor
+            if uploads['backup'] and attachment_upload.unavailable(result):
+                # The server no longer holds the uploaded images (expired,
+                # or the store lost them): send them inline, once, under a
+                # new id — the old one is journaled with this refusal.
+                attachment_upload.restore(payload, uploads['backup'])
+                for field in (BYOK_TURN_KEY_FIELD, BYOK_TURN_ACCOUNT_FIELD):
+                    payload.pop(field, None)  # resealed for the new id
+                self._send(method, payload, None, interjecting, retry_of=command_id, inline=True)
+                return
             if retry_of is None and _stale_transport_key(result):
                 # The key was sealed to a server key that has since rotated:
                 # forget the cached one and resend this command ONCE under a
@@ -102,7 +124,8 @@ class TurnTransport:
                 transport_seal.invalidate()
                 for field in (BYOK_TURN_KEY_FIELD, BYOK_TURN_ACCOUNT_FIELD):
                     payload.pop(field, None)
-                self._send(method, payload, None, interjecting, retry_of=command_id)
+                self._send(method, payload, None, interjecting, retry_of=command_id,
+                           attachments_backup=uploads['backup'])
                 return
             for item in target.mixie_chat_messages:
                 if item.sender == 'USER' and item.bubble_id == command_id:
@@ -120,7 +143,13 @@ class TurnTransport:
                     # the key-missing card can resend it (new id) once the
                     # key is entered or the account switches to credits.
                     from . import byok_resend
-                    byok_resend.remember(payload['session_id'], command_id, method, payload, joining)
+                    remembered = payload
+                    if uploads['backup']:
+                        # The card may resend long after the upload expired:
+                        # keep the images themselves; the resend uploads again.
+                        remembered = dict(payload)
+                        attachment_upload.restore(remembered, uploads['backup'])
+                    byok_resend.remember(payload['session_id'], command_id, method, remembered, joining)
                 processor.handle_command_error(result, target)
             self._running = False
 
@@ -147,6 +176,14 @@ class TurnTransport:
                 command_retry.request(payload['session_id'], command_id,
                                       command_retry.retry_after(result), resend)
                 return
+            lost = (isinstance(result, dict) and result.get('code')
+                    and (result.get('data') or {}).get('uncertain'))
+            if not lost and turn_events.acknowledged(command_id) and isinstance(result, dict) \
+                    and not result.get('code') and result.get('state') != 'complete':
+                # A resend after a dead socket was admitted: clear "delivery uncertain".
+                turn_events.handle_turn_notification('agent.command.delivered', {
+                    'session_id': payload['session_id'], 'command_id': command_id, 'ok': True,
+                })
             if isinstance(result, dict) and result.get('code'):
                 turn_events.handle_turn_notification('agent.command.result', {
                     'session_id': payload['session_id'], 'command_id': command_id,
@@ -177,11 +214,26 @@ class TurnTransport:
                 outcome['ok'] = False
                 return
             payload.update(byok_fields or {})
+            # Held until the server answers, so a frame that dies with its
+            # socket is resent under this id on the next connection.
+            turn_events.remember_unsent(command_id, method, payload, ack)
             try:
                 command(method, payload, ack, command_id=command_id)
                 self._running = True
                 outcome['ok'] = True
             except Exception as exc:
+                if uploads.get('deferred') and not _socket_connected():
+                    # The socket dropped while the images uploaded. Keep the
+                    # frame held and mark it uncertain: the reconnect's
+                    # request_status finds it unknown and sends it (same id).
+                    self._running = True
+                    outcome['ok'] = True
+                    turn_events.handle_turn_notification('agent.command.result', {
+                        'session_id': payload['session_id'], 'command_id': command_id,
+                        'ok': False, 'uncertain': True,
+                    })
+                    return
+                turn_events.acknowledged(command_id)  # refused before sending: shown, not held
                 turn_events.handle_turn_notification('agent.command.result', {
                     'session_id': payload['session_id'], 'command_id': command_id,
                     'ok': False, 'message': str(exc),
@@ -194,8 +246,52 @@ class TurnTransport:
         # main-thread timer, so the send is accepted here and a failure
         # settles through the expected command id above.
         from mixar.modules.byok.core.turn_credentials import prepare
-        prepare(dispatch, method=method, action=payload.get('action'))
-        return outcome.get('ok', True)
+        sid = payload['session_id']
+        uploading = not inline and attachment_upload.wanted(method, payload)
+        if not uploading and not _lines.get(sid):
+            prepare(dispatch, method=method, action=payload.get('action'))
+            return outcome.get('ok', True)
+
+        # Images go up over HTTP first; the frame then carries ids. A send
+        # behind an upload waits its turn in the session's line. Either way
+        # the send is accepted now and settles through the expected id, as
+        # on the BYOK worker-thread path.
+        def advance():
+            line = _lines.get(sid)
+            if line and line[0] is start:
+                line.popleft()
+                if line:
+                    line[0]()
+                else:
+                    _lines.pop(sid, None)
+
+        def sent(byok_fields, byok_error):
+            try:
+                dispatch(byok_fields, byok_error)
+            finally:
+                advance()
+
+        def start():
+            if not turn_events.command_pending(command_id):  # Stop forgot it
+                advance()
+            elif uploading:
+                turn_events.stage(command_id)
+                uploads['deferred'] = True
+
+                def uploaded():
+                    turn_events.unstage(command_id)
+                    if turn_events.command_pending(command_id):
+                        prepare(sent, method=method, action=payload.get('action'))
+                    else:
+                        advance()
+                uploads['backup'] = attachment_upload.offload(method, payload, uploaded)
+            else:
+                prepare(sent, method=method, action=payload.get('action'))
+
+        _lines.setdefault(sid, deque()).append(start)
+        if len(_lines[sid]) == 1:
+            start()
+        return True
 
     def start_stream(self, message, instance_id, session_id, plan_required=True,
                      execution_required=True, approval_required=True, auth_token=None,
@@ -251,6 +347,12 @@ class TurnTransport:
             return False
 
 
+def _socket_connected():
+    from .jsonrpc_client import get_jsonrpc_client
+    client = get_jsonrpc_client()
+    return bool(client is not None and client.is_connected)
+
+
 def _stale_transport_key(result):
     """A settled command refused with ``byok_transport_key_stale`` (409):
     the receipt shape carries the code at the top level, a JSON-RPC error
@@ -304,3 +406,4 @@ def cleanup_all_turn_handlers(app_exit=False):
         handler._running = False
     _handlers.clear()
     turn_events.shutdown(app_exit=app_exit)
+    _lines.clear()

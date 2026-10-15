@@ -5795,6 +5795,9 @@ msgstr "Nepavyko atsisiųsti BaseColor tekstūros: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Nepavyko įkelti BaseColor tekstūros: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Netikėta klaida atsisiunčiant tekstūrą: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Scenos generavimo importas nepavyko"
 msgid "No image URLs in server response"
 msgstr "Serverio atsakyme nėra paveikslų URL"
 
-msgid "Starting reconstruction..."
-msgstr "Pradedamas atkūrimas..."
-
 msgid "Error: {error}"
 msgstr "Klaida: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Pradedamas atkūrimas..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Nepavyko atsisiųsti sugeneruoto paveikslo: {error}"

@@ -427,3 +427,68 @@ def test_attach_answer_resets_the_failure_budget(attach):
     _real_request_replay(turn)
     replies[-1]({'turn_id': 'turn', 'status': 'running', 'replay_available': True})
     assert turn.attach_failures == 0 and turn.recovering and _verdicts() == []
+
+
+# ---- redelivery: a command that died with its socket ------------------------
+
+@pytest.fixture
+def wire(env, monkeypatch):
+    """Fake socket: records sends and request_status probes; replies on demand."""
+    from mixar.modules.common.agent_rpc import client
+    from mixar.modules.space_mixie_chat.core import turn_resume
+    sent, probes = [], {}
+    monkeypatch.setattr(client, 'command', lambda method, payload, cb, command_id=None:
+                        sent.append((method, payload, command_id)))
+    def call(method, params, callback):
+        if method == 'agent.request_status':
+            probes[params['command_id']] = callback
+    monkeypatch.setattr(client, 'call', call)
+    monkeypatch.setattr(turn_resume, 'check_orphaned_turns', lambda: None)
+    settled = []
+    events.expect(env.scene, 'cmd', lambda scene, data: settled.append(data))
+    payload = {'session_id': 'sid', 'message': 'remove background', 'byok_key': 'mxs1.sealed'}
+    events.remember_unsent('cmd', 'chat', payload, lambda result: None)
+    # The socket died under the frame: the flush reports it uncertain.
+    events.handle_turn_notification('agent.command.result', {
+        'session_id': 'sid', 'command_id': 'cmd', 'ok': False, 'uncertain': True})
+    events._drain()
+    return SimpleNamespace(sent=sent, probes=probes, settled=settled, payload=payload)
+
+
+def test_command_the_server_never_saw_is_resent_with_the_same_id_and_bytes(wire):
+    events.reconnect()
+    wire.probes.pop('cmd')({'state': 'unknown', 'result': None})
+    # Same id, the very payload object (sealed key included): the server's
+    # receipt digest matches, so a racing original can never run twice.
+    assert wire.sent == [('chat', wire.payload, 'cmd')]
+    assert 'cmd' in events._commands and 'cmd' in events._outbox
+
+
+def test_command_that_arrived_is_not_resent_and_loses_its_uncertain_mark(wire):
+    events.reconnect()
+    wire.probes.pop('cmd')({'state': 'pending', 'result': None})
+    events._drain()
+    assert wire.sent == [] and 'cmd' not in events._outbox
+    assert wire.settled[-1].get('ok') is True and not wire.settled[-1].get('uncertain')
+
+
+def test_redelivery_is_bounded_and_then_settles_as_undelivered(wire):
+    for _ in range(events._MAX_REDELIVERIES):
+        events.reconnect()
+        wire.probes.pop('cmd')({'state': 'unknown'})
+    assert len(wire.sent) == events._MAX_REDELIVERIES
+    events.reconnect()
+    wire.probes.pop('cmd')({'state': 'unknown'})
+    events._drain()
+    assert len(wire.sent) == events._MAX_REDELIVERIES
+    assert wire.settled[-1]['ok'] is False and wire.settled[-1].get('undelivered')
+    assert 'cmd' not in events._commands and 'cmd' not in events._outbox
+
+
+def test_server_answer_releases_the_held_frame(wire):
+    events.handle_turn_notification('agent.command.result', {
+        'session_id': 'sid', 'command_id': 'cmd', 'ok': False, 'message': 'refused'})
+    events._drain()
+    assert 'cmd' not in events._outbox
+    events.reconnect()
+    assert 'cmd' not in wire.probes  # settled: nothing left to ask about or resend

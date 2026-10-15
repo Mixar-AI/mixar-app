@@ -5795,6 +5795,9 @@ msgstr "No s'ha pogut baixar la textura BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "No s'ha pogut carregar la textura BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Error inesperat durant la baixada de la textura: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "La importació de la generació d'escena ha fallat"
 msgid "No image URLs in server response"
 msgstr "No hi ha URL d'imatge a la resposta del servidor"
 
-msgid "Starting reconstruction..."
-msgstr "S'està iniciant la reconstrucció..."
-
 msgid "Error: {error}"
 msgstr "Error: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "S'està iniciant la reconstrucció..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "No s'ha pogut baixar la imatge generada: {error}"

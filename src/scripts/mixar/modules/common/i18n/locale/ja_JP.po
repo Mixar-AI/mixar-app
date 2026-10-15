@@ -5795,6 +5795,9 @@ msgstr "BaseColorテクスチャのダウンロードに失敗しました: {err
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColorテクスチャの読み込みに失敗しました: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "テクスチャのダウンロード中に予期しないエラーが発生しました: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGenのインポートに失敗しました"
 msgid "No image URLs in server response"
 msgstr "サーバー応答に画像URLがありません"
 
-msgid "Starting reconstruction..."
-msgstr "再構成を開始中..."
-
 msgid "Error: {error}"
 msgstr "エラー: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "再構成を開始中..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "生成された画像のダウンロードに失敗しました: {error}"

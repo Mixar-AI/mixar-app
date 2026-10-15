@@ -5795,6 +5795,9 @@ msgstr "BaseColor ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﮈﻮﻟ ﻥﺅﺍﮈ ﺖﺧﺎ
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﮈﻮﻟ ﺖﺧﺎﺳ: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :ﯽﺑﺍﺮﺧ ﻊﻗﻮﺘﻣ ﺮﯿﻏ ﻥﺍﺭﻭﺩ ﮯﮐ ﮈﻮﻟ ﻥﺅﺍﮈ ﺖﺧﺎﺳ"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen ﻡﺎﮐﺎﻧ ﺪﻣﺁﺭﺩ"
 msgid "No image URLs in server response"
 msgstr "ﮟﯿﮩﻧ URL ﺮﯾﻮﺼﺗ ﯽﺋﻮﮐ ﮟﯿﻣ ﺏﺍﻮﺟ ﺭﻭﺮﺳ"
 
-msgid "Starting reconstruction..."
-msgstr "...ﮯﮨ ﯽﮨﺭ ﻮﮨ ﻉﻭﺮﺷ ﻮﻧ ﺮﯿﻤﻌﺗ"
-
 msgid "Error: {error}"
 msgstr "{error} :ﯽﺑﺍﺮﺧ"
+
+msgid "Starting reconstruction..."
+msgstr "...ﮯﮨ ﯽﮨﺭ ﻮﮨ ﻉﻭﺮﺷ ﻮﻧ ﺮﯿﻤﻌﺗ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﮈﻮﻟ ﻥﺅﺍﮈ ﺮﯾﻮﺼﺗ ﮦﺩﺮﮐ ﺍﺪﯿﭘ"

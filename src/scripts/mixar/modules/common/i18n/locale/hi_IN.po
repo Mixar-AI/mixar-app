@@ -5795,6 +5795,9 @@ msgstr "BaseColor बनावट डाउनलोड करने में �
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor बनावट लोड करने में विफल: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "बनावट डाउनलोड के दौरान अप्रत्याशित त्रुटि: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen आयात विफल"
 msgid "No image URLs in server response"
 msgstr "सर्वर प्रतिक्रिया में कोई छवि URL नहीं"
 
-msgid "Starting reconstruction..."
-msgstr "पुनर्निर्माण प्रारंभ हो रहा है..."
-
 msgid "Error: {error}"
 msgstr "त्रुटि: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "पुनर्निर्माण प्रारंभ हो रहा है..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "उत्पन्न छवि डाउनलोड नहीं हो सकी: {error}"

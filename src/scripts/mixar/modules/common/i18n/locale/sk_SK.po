@@ -5795,6 +5795,9 @@ msgstr "Textúru BaseColor sa nepodarilo stiahnuť: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Textúru BaseColor sa nepodarilo načítať: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Neočakávaná chyba pri sťahovaní textúry: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Import SceneGen zlyhal"
 msgid "No image URLs in server response"
 msgstr "V odpovedi servera nie sú žiadne URL obrázkov"
 
-msgid "Starting reconstruction..."
-msgstr "Spúšťa sa rekonštrukcia..."
-
 msgid "Error: {error}"
 msgstr "Chyba: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Spúšťa sa rekonštrukcia..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Vygenerovaný obrázok sa nepodarilo stiahnuť: {error}"

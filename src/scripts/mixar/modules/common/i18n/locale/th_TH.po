@@ -5795,6 +5795,9 @@ msgstr "ดาวน์โหลดพื้นผิว BaseColor ไม่ส�
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "โหลดพื้นผิว BaseColor ไม่สำเร็จ: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "เกิดข้อผิดพลาดที่ไม่คาดคิดระหว่างดาวน์โหลดพื้นผิว: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "การนำเข้า SceneGen ล้มเหลว"
 msgid "No image URLs in server response"
 msgstr "ไม่มี URL ของภาพในการตอบกลับของเซิร์ฟเวอร์"
 
-msgid "Starting reconstruction..."
-msgstr "กำลังเริ่มการสร้างใหม่..."
-
 msgid "Error: {error}"
 msgstr "ข้อผิดพลาด: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "กำลังเริ่มการสร้างใหม่..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "ดาวน์โหลดภาพที่สร้างไม่สำเร็จ: {error}"

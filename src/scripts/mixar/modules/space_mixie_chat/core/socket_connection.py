@@ -76,6 +76,7 @@ class SocketConnection:
                 callbacks = list(self._pending_callbacks.values())
                 self._pending_callbacks.clear()
                 self._pending_deadlines.clear()
+                self._awaiting_ack.clear()
             for callback in callbacks:
                 try:
                     callback({"code": -32020, "message": "Connection lost; delivery is uncertain",
@@ -221,7 +222,11 @@ class SocketConnection:
             self._auth.reset()
             self._last_ping_time = time.time()
             self._last_recv_time = time.time()
+            self._last_reply_time = time.time()
             self._liveness_probe_started = None
+            self._send_backlog = None
+            self._last_send_progress = 0.0
+            self._upload_clear_at = 0.0
 
             self._ws.settimeout(10.0)
             self._diag.phase('connected')
@@ -394,6 +399,7 @@ class SocketConnection:
         self.agent_ws_supported = False
         self.agent_history_supported = False
         self.agent_history_blobs_by_reference = False
+        self.agent_attachments_by_reference = False
         self._ws.send(json.dumps(handshake))
 
         try:
@@ -419,3 +425,5 @@ class SocketConnection:
         capabilities = result.get('server_capabilities', [])
         self.agent_history_supported = 'agent_history_v1' in capabilities
         self.agent_history_blobs_by_reference = 'agent_history_v2' in capabilities
+        # Chat images upload over HTTP; commands carry references (attachment_upload).
+        self.agent_attachments_by_reference = 'agent_attachments_v1' in capabilities

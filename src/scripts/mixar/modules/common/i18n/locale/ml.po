@@ -5795,6 +5795,9 @@ msgstr "BaseColor ടെക്സ്ചർ ഡൗൺലോഡ് ചെയ്യ
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor ടെക്സ്ചർ ലോഡ് ചെയ്യാനായില്ല: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "ടെക്സ്ചർ ഡൗൺലോഡിനിടെ അപ്രതീക്ഷിത പിശക്: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen ഇമ്പോർട്ട് പരാജയപ്പെട�
 msgid "No image URLs in server response"
 msgstr "സെർവർ പ്രതികരണത്തിൽ ചിത്ര URL-കളില്ല"
 
-msgid "Starting reconstruction..."
-msgstr "പുനർനിർമാണം ആരംഭിക്കുന്നു..."
-
 msgid "Error: {error}"
 msgstr "പിശക്: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "പുനർനിർമാണം ആരംഭിക്കുന്നു..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "ജനറേറ്റ് ചെയ്ത ചിത്രം ഡൗൺലോഡ് ചെയ്യാനായില്ല: {error}"

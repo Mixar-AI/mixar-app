@@ -5795,6 +5795,9 @@ msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ BaseColor ﺖﻓﺎﺑ ﯼﺮﯿ�
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ BaseColor ﺖﻓﺎﺑ ﯼﺭﺍﺬﮔﺭﺎﺑ"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :ﺖﻓﺎﺑ ﯼﺮﯿﮔﺭﺎﺑ ﻡﺎﮕﻨﻫ ﻩﺮﻈﺘﻨﻣﺮﯿﻏ ﯼﺎﻄﺧ"
 
@@ -6215,11 +6218,11 @@ msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ SceneGen ﻥﺩﺮﮐ ﺩﺭﺍﻭ"
 msgid "No image URLs in server response"
 msgstr "URL ﺖﺴﯿﻧ ﺭﻭﺮﺳ ﺦﺳﺎﭘ ﺭﺩ ﯼﺮﯾﻮﺼﺗ"
 
-msgid "Starting reconstruction..."
-msgstr "...ﯼﺯﺎﺳﺯﺎﺑ ﻉﻭﺮﺷ"
-
 msgid "Error: {error}"
 msgstr "{error} :ﺎﻄﺧ"
+
+msgid "Starting reconstruction..."
+msgstr "...ﯼﺯﺎﺳﺯﺎﺑ ﻉﻭﺮﺷ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻩﺪﺷﺪﯿﻟﻮﺗ ﺮﯾﻮﺼﺗ ﯼﺮﯿﮔﺭﺎﺑ"

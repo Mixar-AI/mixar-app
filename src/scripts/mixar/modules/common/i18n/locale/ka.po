@@ -5795,6 +5795,9 @@ msgstr "BaseColor ტექსტურის ჩამოტვირთვა 
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor ტექსტურის ჩატვირთვა ვერ მოხერხდა: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "მოულოდნელი შეცდომა ტექსტურის ჩამოტვირთვისას: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen იმპორტი ჩავარდა"
 msgid "No image URLs in server response"
 msgstr "სერვერის პასუხში გამოსახულების URL-ები არ არის"
 
-msgid "Starting reconstruction..."
-msgstr "რეკონსტრუქცია იწყება..."
-
 msgid "Error: {error}"
 msgstr "შეცდომა: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "რეკონსტრუქცია იწყება..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "წარმოქმნილი გამოსახულების ჩამოტვირთვა ვერ მოხერხდა: {error}"

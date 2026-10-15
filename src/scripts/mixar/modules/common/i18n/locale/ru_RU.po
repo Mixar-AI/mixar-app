@@ -5795,6 +5795,9 @@ msgstr "Не удалось скачать текстуру BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Не удалось загрузить текстуру BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Непредвиденная ошибка при скачивании текстуры: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Ошибка импорта SceneGen"
 msgid "No image URLs in server response"
 msgstr "В ответе сервера нет URL изображений"
 
-msgid "Starting reconstruction..."
-msgstr "Запуск реконструкции..."
-
 msgid "Error: {error}"
 msgstr "Ошибка: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Запуск реконструкции..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Не удалось скачать сгенерированное изображение: {error}"

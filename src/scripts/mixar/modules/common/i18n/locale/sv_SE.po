@@ -5795,6 +5795,9 @@ msgstr "Det gick inte att ladda ned BaseColor-texturen: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Det gick inte att läsa in BaseColor-texturen: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Oväntat fel vid nedladdning av textur: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "SceneGen-importen misslyckades"
 msgid "No image URLs in server response"
 msgstr "Inga bild-URL:er i serverns svar"
 
-msgid "Starting reconstruction..."
-msgstr "Startar rekonstruktion..."
-
 msgid "Error: {error}"
 msgstr "Fel: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Startar rekonstruktion..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Det gick inte att ladda ned den genererade bilden: {error}"

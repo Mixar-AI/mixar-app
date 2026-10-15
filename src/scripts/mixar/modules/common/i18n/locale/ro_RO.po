@@ -5795,6 +5795,9 @@ msgstr "Textura BaseColor nu a putut fi descărcată: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Textura BaseColor nu a putut fi încărcată: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Eroare neașteptată la descărcarea texturii: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Importul SceneGen a eșuat"
 msgid "No image URLs in server response"
 msgstr "Niciun URL de imagine în răspunsul serverului"
 
-msgid "Starting reconstruction..."
-msgstr "Începe reconstrucția..."
-
 msgid "Error: {error}"
 msgstr "Eroare: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Începe reconstrucția..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Imaginea generată nu a putut fi descărcată: {error}"

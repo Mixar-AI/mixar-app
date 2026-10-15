@@ -5795,6 +5795,9 @@ msgstr "Không thể tải xuống chất liệu BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Không thể nạp chất liệu BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Lỗi không mong muốn khi tải xuống chất liệu: {error}"
 
@@ -6215,11 +6218,11 @@ msgstr "Nhập khẩu SceneGen thất bại"
 msgid "No image URLs in server response"
 msgstr "Không có URL hình ảnh trong phản hồi của máy chủ"
 
-msgid "Starting reconstruction..."
-msgstr "Đang bắt đầu tái tạo..."
-
 msgid "Error: {error}"
 msgstr "Lỗi: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Đang bắt đầu tái tạo..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Không thể tải xuống hình ảnh đã sinh tạo: {error}"
