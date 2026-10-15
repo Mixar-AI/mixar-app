@@ -141,7 +141,10 @@ def main() -> dict:
 
     merged = []
     hook = merge_hook("rig-job-1", "Rig", on_merged=lambda job, names: merged.append(names))
-    job = type("Job", (), {"scene_name": scene.name, "agent_ref": None})()
+    # A real job carries the result's clip names in request order; the importer
+    # stashes the tracks reversed, so the merge must follow this list.
+    job = type("Job", (), {"scene_name": scene.name, "agent_ref": None,
+                           "result_data": {"animations": ["walk", "idle"]}})()
     result_names = hook(job, ", ".join(imported))
 
     anim = rig.animation_data
