@@ -2,7 +2,13 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Connection-scoped writer; large sends cannot block reads or tool replies."""
 import threading
+import time
 from queue import Empty
+
+from . import socket_liveness
+
+# Idle writer ticks are 0.1 s apart; a longer gap means this thread was starved.
+_STARVED_S = 1.0
 
 
 def start_writer(client):
@@ -10,11 +16,19 @@ def start_writer(client):
     stopped = threading.Event()
 
     def write():
+        last = time.monotonic()
         while not stopped.is_set() and client._running.is_set() and client._ws is socket:
             try:
                 frame = client._outbound.get(timeout=0.1)
             except Empty:
                 client._expire_pending()
+                now = time.monotonic()
+                starved, last = now - last > _STARVED_S, now
+                # Queue empty: every watched command has left; judge the path on time.
+                socket_liveness.progress(client)
+                socket_liveness.drained(client)
+                if client._connected and socket_liveness.tick(client, starved=starved):
+                    return
                 continue
             if stopped.is_set() or client._ws is not socket:
                 return
@@ -35,7 +49,9 @@ def start_writer(client):
                     pass
                 return
             client._diag.sent(size)
+            socket_liveness.uploaded(client, size)
             client._expire_pending()
+            last = time.monotonic()
 
     thread = threading.Thread(target=write, name='MixarSocketWriter', daemon=True)
     thread.start()

@@ -25,10 +25,9 @@ from ..constants import (
     JSONRPCErrorCode,
     JSONRPCMethod,
     WS_CLOSE_AUTH_FAILED,
-    WS_LIVENESS_PROBE_GRACE,
-    WS_LIVENESS_TIMEOUT,
     WS_UI_STALE_THRESHOLD,
 )
+from . import socket_liveness
 from .jsonrpc_auth import AuthBackoffManager
 from .jsonrpc_frames import (
     HANDSHAKE_AUTH_FAILED,
@@ -46,6 +45,9 @@ except ImportError:
     websocket = None
 
 logger = get_logger(__name__)
+
+# The reader's read times out at 10 s; a loop gap past this is starvation.
+_READER_STARVED_S = 12.0
 
 
 from .socket_connection import SocketConnection
@@ -138,8 +140,18 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._last_ping_time = 0.0
         self._last_recv_time = 0.0
         # Liveness grace probe: set to the probe start time when the liveness
-        # window expires, cleared when traffic arrives (see _receive_loop).
+        # window expires, cleared when traffic arrives (socket_liveness.py).
         self._liveness_probe_started: Optional[float] = None
+        self._liveness_probe_why = None
+        self._liveness_lock = threading.Lock()
+        # Commands awaiting their answer: request id -> when the frame left (socket_liveness.py).
+        self._awaiting_ack: dict[str, list] = {}
+        # Kernel send backlog and when it last shrank (the peer acking our bytes).
+        self._send_backlog: Optional[int] = None
+        self._last_send_progress = 0.0
+        self._last_reply_time = 0.0
+        # Until when our sent bytes may still be crossing a slow uplink.
+        self._upload_clear_at = 0.0
 
         # Auth failure backoff
         self._auth = AuthBackoffManager()
@@ -248,66 +260,19 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         while self._running.is_set() and self._connected:
             now = time.monotonic()
             # A read waits up to 10 s; anything well past that is this thread starved.
-            self._diag.loop_gap(now - tick)
+            gap = now - tick
+            self._diag.loop_gap(gap)
             tick = now
             try:
-                # Liveness: a healthy connection receives at least the pong
-                # to our ~15s pings. A silently dead TCP connection (network
-                # drop, sleep/resume) times out recv forever while sends
-                # still "succeed" — without this check the client never
-                # notices and never reconnects.
-                if time.time() - self._last_recv_time > WS_LIVENESS_TIMEOUT:
-                    # Grace probe before declaring death. This thread starves
-                    # whenever Blender's main thread holds the GIL through a
-                    # long script/render — on wake, _last_recv_time is stale
-                    # even though the server kept the connection healthy the
-                    # whole time (uat3 2026-07-21: three healthy connections
-                    # torn down here after GIL-blocked stretches). Send a ping
-                    # and give the server one short window to answer; only a
-                    # probe that ALSO gets nothing means the link is dead.
-                    if self._liveness_probe_started is None:
-                        self._liveness_probe_started = time.time()
-                        logger.info(
-                            f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
-                            f"— probing liveness before teardown"
-                        )
-                        self._send_ping()
-                    elif (
-                        time.time() - self._liveness_probe_started
-                        > WS_LIVENESS_PROBE_GRACE
-                    ):
-                        # The probe's answer may already sit in the socket
-                        # buffer if this thread was starved again during the
-                        # grace window — drain once more before the verdict.
-                        _probe = None
-                        try:
-                            _probe = read_frame(self._ws)
-                        except Exception:
-                            pass
-                        if _probe is not None and _probe.kind != KIND_CLOSED:
-                            # Any frame — a protocol ping included — is
-                            # proof the link is alive.
-                            self._last_recv_time = time.time()
-                            self._liveness_probe_started = None
-                            if _probe.kind == KIND_MESSAGE:
-                                self._handle_message(json.loads(_probe.text))
-                            continue
-                        logger.warning(
-                            f"No WebSocket traffic for "
-                            f"{time.time() - self._last_recv_time:.0f}s and the "
-                            f"liveness probe got no answer in "
-                            f"{WS_LIVENESS_PROBE_GRACE:.0f}s — treating "
-                            f"connection as dead"
-                        )
-                        self._diag.end('liveness_timeout',
-                                       silent_s=round(time.time() - self._last_recv_time, 1))
-                        try:
-                            self._ws.close()
-                        except Exception:
-                            pass
-                        break
-                else:
-                    self._liveness_probe_started = None
+                # Liveness (socket_liveness.py): silence, or a command left
+                # unanswered, starts a probe ping; no answer within the grace
+                # means the path is dead. The writer usually judges first —
+                # this read can sit 10 s. A loop gap well past that read is
+                # this thread starved by the GIL (uat3 2026-07-21: healthy
+                # sockets torn down after long scripts), so it restarts the
+                # grace instead of judging.
+                if socket_liveness.tick(self, starved=gap > _READER_STARVED_S):
+                    break
 
                 # Send ping if needed
                 if time.time() - self._last_ping_time > self._ping_interval:
@@ -357,7 +322,10 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
                     self._handle_message(json.loads(frame.text))
 
             except Exception as e:
-                logger.error(f"Receive error: {type(e).__name__}: {e}")
+                if not self._connected:  # we aborted it (socket_liveness): already reported
+                    logger.info(f"Receive ended after teardown: {type(e).__name__}")
+                else:
+                    logger.error(f"Receive error: {type(e).__name__}: {e}")
                 self._diag.end('receive_error', e)
                 break
 

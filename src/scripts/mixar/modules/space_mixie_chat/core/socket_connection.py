@@ -69,6 +69,7 @@ class SocketConnection:
                 callbacks = list(self._pending_callbacks.values())
                 self._pending_callbacks.clear()
                 self._pending_deadlines.clear()
+                self._awaiting_ack.clear()
             for callback in callbacks:
                 try:
                     callback({"code": -32020, "message": "Connection lost; delivery is uncertain",
@@ -202,7 +203,11 @@ class SocketConnection:
             self._auth.reset()
             self._last_ping_time = time.time()
             self._last_recv_time = time.time()
+            self._last_reply_time = time.time()
             self._liveness_probe_started = None
+            self._send_backlog = None
+            self._last_send_progress = 0.0
+            self._upload_clear_at = 0.0
 
             self._ws.settimeout(10.0)
             self._diag.phase('connected')
