@@ -3011,6 +3011,9 @@ msgstr "Accountnaam"
 msgid "Display name for the account greeting"
 msgstr "Weergavenaam voor de accountbegroeting"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Nieuwere bestandsversie"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Log in met uw Mixar-account"
+
 msgid "Session expired"
 msgstr "Sessie verlopen"
 
@@ -20232,31 +20238,27 @@ msgstr "Log opnieuw in."
 msgid "Login Failed"
 msgstr "Inloggen mislukt"
 
-msgid "Sign in with your Mixar account"
-msgstr "Log in met uw Mixar-account"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Inloggen via browser"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Vervolgkeuzemenu voor profiel/account — geopend vanuit de globale bovenbalk.\n"
-"\n"
-"De inhoud wordt native getekend door `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): een begroeting, het abonnementslabel, de\n"
-"creditverbruiksmeter en de accountacties, opgemaakt als één kaart\n"
-"in plaats van een menu. Python blijft verantwoordelijk voor de registratie en elke\n"
-"operator die de kaart aanroept — C++ verzorgt alleen de pixels.\n"
 
 msgid "Dashboard"
 msgstr "Dashboard"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Uitloggen"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Ontwikkelmodus: verbinding verbroken"
 msgid "Disconnected from server"
 msgstr "Verbinding met server verbroken"
 
+msgid "Could not save the chat to History"
+msgstr "Kan de chat niet opslaan in Geschiedenis"
+
 msgid "New Chat"
 msgstr "Nieuwe chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Start een nieuwe chat (de huidige chat wordt opgeslagen in Geschiedenis)"
-
-msgid "Could not save the chat to History"
-msgstr "Kan de chat niet opslaan in Geschiedenis"
 
 msgid "Started new chat session"
 msgstr "Nieuwe chatsessie gestart"

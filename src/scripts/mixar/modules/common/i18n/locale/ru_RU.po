@@ -3011,6 +3011,9 @@ msgstr "Имя аккаунта"
 msgid "Display name for the account greeting"
 msgstr "Отображаемое имя для приветствия аккаунта"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Более новая версия файла"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Войдите с аккаунтом Mixar"
+
 msgid "Session expired"
 msgstr "Сеанс истёк"
 
@@ -20232,31 +20238,27 @@ msgstr "Войдите снова."
 msgid "Login Failed"
 msgstr "Ошибка входа"
 
-msgid "Sign in with your Mixar account"
-msgstr "Войдите с аккаунтом Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Войти через браузер"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Выпадающее меню профиля / аккаунта — открывается из глобальной верхней панели.\n"
-"\n"
-"Содержимое рисуется нативно через `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): приветствие, значок тарифа,\n"
-"индикатор расхода кредитов и действия аккаунта, скомпонованные в одну\n"
-"карточку, а не меню. Python по-прежнему отвечает за регистрацию и все\n"
-"операторы, которые вызывает карточка, — C++ отвечает только за пиксели.\n"
 
 msgid "Dashboard"
 msgstr "Панель управления"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Выйти"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Режим разработчика: отключено"
 msgid "Disconnected from server"
 msgstr "Отключено от сервера"
 
+msgid "Could not save the chat to History"
+msgstr "Не удалось сохранить чат в историю"
+
 msgid "New Chat"
 msgstr "Новый чат"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Начинает новый чат (текущий чат сохраняется в историю)"
-
-msgid "Could not save the chat to History"
-msgstr "Не удалось сохранить чат в историю"
 
 msgid "Started new chat session"
 msgstr "Начат новый сеанс чата"

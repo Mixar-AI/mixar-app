@@ -3011,6 +3011,9 @@ msgstr "アカウント名"
 msgid "Display name for the account greeting"
 msgstr "アカウントの挨拶に使う表示名"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "新しいファイルバージョン"
 
@@ -20227,6 +20230,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar アカウントでサインイン"
+
 msgid "Session expired"
 msgstr "セッションの有効期限が切れました"
 
@@ -20236,31 +20242,27 @@ msgstr "もう一度ログインしてください。"
 msgid "Login Failed"
 msgstr "ログインに失敗しました"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar アカウントでサインイン"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ブラウザーでログイン"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"プロフィール/アカウントのドロップダウン — グローバルトップバーから開きます。\n"
-"\n"
-"内容は `layout.mixar_profile_card()` によってネイティブに描画されます\n"
-"（`interface_mixar_profile_card.cc`）: 挨拶、プランチップ、\n"
-"クレジット使用量メーター、アカウント操作が、メニューではなく\n"
-"1枚のカードとして配置されます。登録とカードが呼び出すすべての\n"
-"オペレーターは引き続き Python が担当し、C++ はピクセルのみを担当します。\n"
 
 msgid "Dashboard"
 msgstr "ダッシュボード"
@@ -20278,9 +20280,6 @@ msgid "Logout"
 msgstr "ログアウト"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21308,14 +21307,14 @@ msgstr "開発モード: 切断しました"
 msgid "Disconnected from server"
 msgstr "サーバーから切断しました"
 
+msgid "Could not save the chat to History"
+msgstr "チャットを履歴に保存できませんでした"
+
 msgid "New Chat"
 msgstr "新規チャット"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "新しいチャットを開始します（現在のチャットは履歴に保存されます）"
-
-msgid "Could not save the chat to History"
-msgstr "チャットを履歴に保存できませんでした"
 
 msgid "Started new chat session"
 msgstr "新しいチャットセッションを開始しました"

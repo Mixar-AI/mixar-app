@@ -3011,6 +3011,9 @@ msgstr "Paskyros pavadinimas"
 msgid "Display name for the account greeting"
 msgstr "Rodomas pavadinimas paskyros pasveikinimui"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Naujesnė failo versija"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Prisijunkite su „Mixar“ paskyra"
+
 msgid "Session expired"
 msgstr "Seansas baigėsi"
 
@@ -20232,31 +20238,27 @@ msgstr "Prisijunkite dar kartą."
 msgid "Login Failed"
 msgstr "Prisijungti nepavyko"
 
-msgid "Sign in with your Mixar account"
-msgstr "Prisijunkite su „Mixar“ paskyra"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prisijungti naršykle"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Profilio ir paskyros išskleidžiamasis sąrašas — atidaromas iš visuotinės viršutinės juostos.\n"
-"\n"
-"Turinys piešiamas natyviai funkcija `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): pasisveikinimas, plano žyma,\n"
-"kreditų naudojimo matuoklis ir paskyros veiksmai, sudėti į vieną kortelę,\n"
-"o ne į meniu. Python vis dar valdo registraciją ir kiekvieną\n"
-"operatorių, kurį kortelė iškviečia — C++ valdo tik pikselius.\n"
 
 msgid "Dashboard"
 msgstr "Suvestinė"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Atsijungti"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Kūrėjo veiksena: ryšys nutrauktas"
 msgid "Disconnected from server"
 msgstr "Ryšys su serveriu nutrauktas"
 
+msgid "Could not save the chat to History"
+msgstr "Nepavyko išsaugoti pokalbio į istoriją"
+
 msgid "New Chat"
 msgstr "Naujas pokalbis"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Pradeda naują pokalbį (dabartinis pokalbis išsaugomas istorijoje)"
-
-msgid "Could not save the chat to History"
-msgstr "Nepavyko išsaugoti pokalbio į istoriją"
 
 msgid "Started new chat session"
 msgstr "Pradėtas naujas pokalbio seansas"

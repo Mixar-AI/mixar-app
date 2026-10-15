@@ -3011,6 +3011,9 @@ msgstr "Nazwa konta"
 msgid "Display name for the account greeting"
 msgstr "Wyświetlana nazwa w powitaniu konta"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Nowsza wersja pliku"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Zaloguj się kontem Mixar"
+
 msgid "Session expired"
 msgstr "Sesja wygasła"
 
@@ -20232,31 +20238,27 @@ msgstr "Proszę zalogować się ponownie."
 msgid "Login Failed"
 msgstr "Logowanie nie powiodło się"
 
-msgid "Sign in with your Mixar account"
-msgstr "Zaloguj się kontem Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Zaloguj się przez przeglądarkę"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Menu profilu / konta — otwierane z globalnego górnego paska.\n"
-"\n"
-"Zawartość jest rysowana natywnie przez `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): powitanie, etykieta planu,\n"
-"wskaźnik zużycia kredytów i akcje konta, ułożone jako jedna karta,\n"
-"a nie menu. Python nadal odpowiada za rejestrację i każdy\n"
-"operator wywoływany przez kartę — C++ odpowiada tylko za piksele.\n"
 
 msgid "Dashboard"
 msgstr "Pulpit"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Wyloguj się"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21305,14 +21304,14 @@ msgstr "Tryb deweloperski: rozłączono"
 msgid "Disconnected from server"
 msgstr "Rozłączono z serwerem"
 
+msgid "Could not save the chat to History"
+msgstr "Nie można zapisać czatu w historii"
+
 msgid "New Chat"
 msgstr "Nowy czat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Rozpoczyna nowy czat (bieżący czat jest zapisywany w historii)"
-
-msgid "Could not save the chat to History"
-msgstr "Nie można zapisać czatu w historii"
 
 msgid "Started new chat session"
 msgstr "Rozpoczęto nową sesję czatu"

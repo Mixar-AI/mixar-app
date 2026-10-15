@@ -3011,6 +3011,9 @@ msgstr "खाता नाम"
 msgid "Display name for the account greeting"
 msgstr "खाता अभिवादन के लिए प्रदर्शन नाम"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "नया संचिका संस्करण"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "अपने Mixar खाते से साइन इन करें"
+
 msgid "Session expired"
 msgstr "सत्र समाप्त हो गया"
 
@@ -20232,31 +20238,27 @@ msgstr "कृपया फिर से लॉग इन करें।"
 msgid "Login Failed"
 msgstr "लॉगिन विफल"
 
-msgid "Sign in with your Mixar account"
-msgstr "अपने Mixar खाते से साइन इन करें"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ब्राउज़र से लॉगिन करें"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"प्रोफ़ाइल / खाता ड्रॉपडाउन — वैश्विक शीर्ष पट्टी से खुलता है।\n"
-"\n"
-"इसकी सामग्री `layout.mixar_profile_card()` द्वारा नेटिव रूप से बनाई जाती है\n"
-"(`interface_mixar_profile_card.cc`): एक अभिवादन, प्लान चिप,\n"
-"क्रेडिट उपयोग मीटर और खाता क्रियाएँ, मेनू के बजाय एक ही कार्ड\n"
-"के रूप में व्यवस्थित। पंजीकरण और कार्ड द्वारा बुलाए जाने वाले हर\n"
-"संचालक का स्वामित्व अभी भी Python के पास है — C++ केवल पिक्सेल का स्वामी है।\n"
 
 msgid "Dashboard"
 msgstr "डैशबोर्ड"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "लॉगआउट"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Dev रूप: डिस्कनेक्ट किया गया"
 msgid "Disconnected from server"
 msgstr "सर्वर से डिस्कनेक्ट हो गया"
 
+msgid "Could not save the chat to History"
+msgstr "चैट को इतिहास में सहेजा नहीं जा सका"
+
 msgid "New Chat"
 msgstr "नई चैट"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "नई चैट शुरू करता है (वर्तमान चैट इतिहास में सहेजी जाती है)"
-
-msgid "Could not save the chat to History"
-msgstr "चैट को इतिहास में सहेजा नहीं जा सका"
 
 msgid "Started new chat session"
 msgstr "नया चैट सत्र शुरू किया गया"

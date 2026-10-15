@@ -3011,6 +3011,9 @@ msgstr "ﺏﺎﺴﺤﻟﺍ ﻢﺳﺍ"
 msgid "Display name for the account greeting"
 msgstr "ﺏﺎﺴﺤﻟﺍ ﺔﻴﺤﺘﻟ ﺽﺮﻌﻟﺍ ﻢﺳﺍ"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "ﺙﺪﺣﺃ ﻒﻠﻣ ﺭﺍﺪﺻﺇ"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar ﺏﺎﺴﺤﺑ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
+
 msgid "Session expired"
 msgstr "ﺔﺴﻠﺠﻟﺍ ﺖﻬﺘﻧﺍ"
 
@@ -20232,31 +20238,27 @@ msgstr ".ﺍﺩًﺪﺠﻣ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻰﺟﺮﻳُ"
 msgid "Login Failed"
 msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻞﺸﻓ"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar ﺏﺎﺴﺤﺑ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﺢﻔﺼﺘﻤﻟﺍ ﺮﺒﻋ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-".ﻡﺎﻌﻟﺍ ﻱﻮﻠﻌﻟﺍ ﻂﻳﺮﺸﻟﺍ ﻦﻣ ﺢﺘﻔﺗُ — ﺏﺎﺴﺤﻟﺍ / ﻲﺼﺨﺸﻟﺍ ﻒﻠﻤﻠﻟ ﺔﻟﺪﺴﻨﻤﻟﺍ ﺔﻤﺋﺎﻘﻟﺍ\n"
-"\n"
-"`()layout.mixar_profile_card` ﺔﻄﺳﺍﻮﺑ ﺎﻴًﻠﺻﺃ ﻯﻮﺘﺤﻤﻟﺍ ﻢﺳﺮﻳُ\n"
-"(`interface_mixar_profile_card.cc`): ﺔﻄﺨﻟﺍ ﺓﺭﺎﺷﻭ ،ﺔﻴﺤﺗ،\n"
-"ﺓﺪﺣﺍﻭ ﺔﻗﺎﻄﺒﻛ ﺔﺒﺗﺮﻣ ،ﺏﺎﺴﺤﻟﺍ ﺕﺍءﺍﺮﺟﺇﻭ ﺓﺪﺻﺭﻷ﻿ﺍ ﻙﻼ﻿ﻬﺘﺳﺍ ﺱﺎﻴﻘﻣﻭ\n"
-"ﻞﻛﻭ ﻞﻴﺠﺴﺘﻟﺍ ﻰﻟﻮﺘﺗ Python ﻝﺍﺰﺗ ﻻ﻿ .ﺔﻤﺋﺎﻗ ﻦﻣ ﺎﻟًﺪﺑ\n"
-".ﺕﻼ﻿ﺴﻜﺒﻟﺍ ﻯﻮﺳ ++C ﻰﻟﻮﺘﺗ ﻻ﻿ﻭ — ﺔﻗﺎﻄﺒﻟﺍ ﻪﻴﻋﺪﺘﺴﺗ ﻞﻣﺎﻋ\n"
 
 msgid "Dashboard"
 msgstr "ﻢﻜﺤﺘﻟﺍ ﺔﺣﻮﻟ"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "ﺝﻭﺮﺨﻟﺍ ﻞﻴﺠﺴﺗ"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻘﻧﺍ :ﺭﻮﻄﻤﻟﺍ ﻊﺿﻭ"
 msgid "Disconnected from server"
 msgstr "ﻡﺩﺎﺨﻟﺎﺑ ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻘﻧﺍ"
 
+msgid "Could not save the chat to History"
+msgstr "ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺣ ﺭﺬﻌﺗ"
+
 msgid "New Chat"
 msgstr "ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "(ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﻴﻟﺎﺤﻟﺍ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺤﺗُ) ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ ﺃﺪﺒﻳ"
-
-msgid "Could not save the chat to History"
-msgstr "ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺣ ﺭﺬﻌﺗ"
 
 msgid "Started new chat session"
 msgstr "ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ ﺔﺴﻠﺟ ﺕﺃﺪﺑ"

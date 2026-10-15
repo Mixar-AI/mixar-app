@@ -415,7 +415,7 @@ def test_auto_path_reserves_before_the_browser_opens():
     src = AUTH_OPS.read_text()
     body = src.split("def _auth_check_background()")[1].split("_auth_check_started = False\n\n")[0]
     reserve = body.index("begin_sign_in(supersede=False)")
-    browser = body.index("result = sso_login(cancel=cancel)")
+    browser = body.index("result = guest.sign_in(lambda: sso_login(cancel=cancel))")
     assert reserve < browser
     apply = body.split("def _apply_sso_result")[1]
     assert apply.index("finish_sign_in(attempt_id)") < apply.index("sync_pending_flag(wm)")

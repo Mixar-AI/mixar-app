@@ -3011,6 +3011,9 @@ msgstr "Název účtu"
 msgid "Display name for the account greeting"
 msgstr "Zobrazované jméno pro pozdrav účtu"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Novější verze souboru"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Přihlaste se pomocí účtu Mixar"
+
 msgid "Session expired"
 msgstr "Relace vypršela"
 
@@ -20232,31 +20238,27 @@ msgstr "Přihlaste se prosím znovu."
 msgid "Login Failed"
 msgstr "Přihlášení selhalo"
 
-msgid "Sign in with your Mixar account"
-msgstr "Přihlaste se pomocí účtu Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Přihlásit se přes prohlížeč"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Rozbalovací nabídka profilu / účtu — otevírá se z globálního horního panelu.\n"
-"\n"
-"Obsah je vykreslován nativně pomocí `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): pozdrav, štítek tarifu,\n"
-"měřič využití kreditů a akce účtu, uspořádané jako jedna karta\n"
-"místo nabídky. Python stále vlastní registraci a všechny\n"
-"operátory, které karta vyvolává — C++ vlastní pouze pixely.\n"
 
 msgid "Dashboard"
 msgstr "Přehled"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Odhlásit se"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Vývojářský režim: Odpojeno"
 msgid "Disconnected from server"
 msgstr "Odpojeno od serveru"
 
+msgid "Could not save the chat to History"
+msgstr "Chat se nepodařilo uložit do historie"
+
 msgid "New Chat"
 msgstr "Nový chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Zahájí nový chat (aktuální chat se uloží do historie)"
-
-msgid "Could not save the chat to History"
-msgstr "Chat se nepodařilo uložit do historie"
 
 msgid "Started new chat session"
 msgstr "Zahájena nová relace chatu"

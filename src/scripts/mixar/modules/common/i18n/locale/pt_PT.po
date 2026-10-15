@@ -3011,6 +3011,9 @@ msgstr "Nome da conta"
 msgid "Display name for the account greeting"
 msgstr "Nome apresentado na saudação da conta"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Versão de ficheiro mais recente"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Inicie sessão com a sua conta Mixar"
+
 msgid "Session expired"
 msgstr "Sessão expirada"
 
@@ -20232,31 +20238,27 @@ msgstr "Inicie sessão novamente."
 msgid "Login Failed"
 msgstr "Falha ao iniciar sessão"
 
-msgid "Sign in with your Mixar account"
-msgstr "Inicie sessão com a sua conta Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Iniciar sessão com o navegador"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Menu de perfil / conta — aberto a partir da barra superior global.\n"
-"\n"
-"O conteúdo é desenhado nativamente por `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): uma saudação, o chip do plano, o\n"
-"medidor de utilização de créditos e as ações da conta, dispostos num cartão\n"
-"em vez de um menu. O Python continua a gerir o registo e todos os\n"
-"operadores que o cartão invoca — o C++ só gere os píxeis.\n"
 
 msgid "Dashboard"
 msgstr "Painel de controlo"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Terminar sessão"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Modo Dev: desligado"
 msgid "Disconnected from server"
 msgstr "Desligado do servidor"
 
+msgid "Could not save the chat to History"
+msgstr "Não foi possível guardar a conversa no Histórico"
+
 msgid "New Chat"
 msgstr "Nova conversa"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Inicia uma nova conversa (a conversa atual é guardada no Histórico)"
-
-msgid "Could not save the chat to History"
-msgstr "Não foi possível guardar a conversa no Histórico"
 
 msgid "Started new chat session"
 msgstr "Nova sessão de conversa iniciada"

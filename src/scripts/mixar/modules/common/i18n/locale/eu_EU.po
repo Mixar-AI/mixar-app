@@ -3011,6 +3011,9 @@ msgstr "Kontuaren izena"
 msgid "Display name for the account greeting"
 msgstr "Kontuaren agurrerako bistaratzeko izena"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Fitxategiaren bertsio berriagoa"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Hasi saioa zure Mixar kontuarekin"
+
 msgid "Session expired"
 msgstr "Saioa iraungi da"
 
@@ -20232,31 +20238,27 @@ msgstr "Hasi saioa berriro, mesedez."
 msgid "Login Failed"
 msgstr "Saio-hasierak huts egin du"
 
-msgid "Sign in with your Mixar account"
-msgstr "Hasi saioa zure Mixar kontuarekin"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Hasi saioa arakatzailearekin"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Profila / kontua goitibehera — goiko barra globaletik irekitzen da.\n"
-"\n"
-"Edukia modu natiboan marrazten du `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`) funtzioak: agurra, planaren etiketa,\n"
-"kredituen erabilera-neurgailua eta kontu-ekintzak, txartel bakar batean\n"
-"antolatuta, menu gisa beharrean. Python-ek erregistratzea eta txartelak\n"
-"deitzen duen operadore bakoitza ditu oraindik — C++-k pixelak soilik.\n"
 
 msgid "Dashboard"
 msgstr "Aginte-panela"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Amaitu saioa"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Garatzaile modua: deskonektatuta"
 msgid "Disconnected from server"
 msgstr "Zerbitzaritik deskonektatu da"
 
+msgid "Could not save the chat to History"
+msgstr "Ezin izan da txata Historian gorde"
+
 msgid "New Chat"
 msgstr "Txat berria"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Hasi txat berri bat (uneko txata Historian gordetzen da)"
-
-msgid "Could not save the chat to History"
-msgstr "Ezin izan da txata Historian gorde"
 
 msgid "Started new chat session"
 msgstr "Txat-saio berria hasi da"

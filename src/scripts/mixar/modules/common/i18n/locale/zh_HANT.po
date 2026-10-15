@@ -3011,6 +3011,9 @@ msgstr "帳號名稱"
 msgid "Display name for the account greeting"
 msgstr "帳號問候語中的顯示名稱"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "較新的檔案版本"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "使用你的 Mixar 帳號登入"
+
 msgid "Session expired"
 msgstr "工作階段已過期"
 
@@ -20232,31 +20238,27 @@ msgstr "請重新登入。"
 msgid "Login Failed"
 msgstr "登入失敗"
 
-msgid "Sign in with your Mixar account"
-msgstr "使用你的 Mixar 帳號登入"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "使用瀏覽器登入"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"個人資料／帳號下拉選單，從全域頂部列開啟。\n"
-"\n"
-"其內容由 `layout.mixar_profile_card()` 原生繪製\n"
-"（`interface_mixar_profile_card.cc`）：問候語、方案標籤、\n"
-"點數用量計量表與帳號操作，排列成一張卡片\n"
-"而非選單。Python 仍負責註冊以及卡片所呼叫的\n"
-"每個操作器；C++ 只負責像素。\n"
 
 msgid "Dashboard"
 msgstr "儀表板"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "登出"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "開發模式：已中斷連線"
 msgid "Disconnected from server"
 msgstr "已中斷與伺服器的連線"
 
+msgid "Could not save the chat to History"
+msgstr "無法將聊天儲存至歷史"
+
 msgid "New Chat"
 msgstr "新聊天"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "開始新的聊天（目前的聊天會儲存至歷史）"
-
-msgid "Could not save the chat to History"
-msgstr "無法將聊天儲存至歷史"
 
 msgid "Started new chat session"
 msgstr "已開始新的聊天工作階段"

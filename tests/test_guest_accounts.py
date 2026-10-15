@@ -616,8 +616,8 @@ def test_signed_out_surfaces_admit_guests():
     panel = (MODULES / "space_mixie_chat/ui/login_panel.py").read_text()
     assert "mixie_chat_is_guest" in panel
     topbar = (MODULES / "space_mixie_chat/ui/topbar.py").read_text()
-    assert 'account.label(text="Guest")' in topbar
-    assert "mixie_chat_is_logged_in', False) and not guest" in topbar
+    assert 'caption = email if logged_in else iface_("Guest")' in topbar
+    assert 'topbar_layout.account_signed_in(wm)' in topbar
     menu = (MODULES / "byok/ui/menus/agent_model_menu.py").read_text()
     assert "guest=bool(getattr(context.window_manager, \"mixie_chat_is_guest\"" in menu
 

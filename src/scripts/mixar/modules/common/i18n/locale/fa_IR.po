@@ -3011,6 +3011,9 @@ msgstr "ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ ﻡﺎﻧ"
 msgid "Display name for the account greeting"
 msgstr "ﺏﺎﺴﺣ ﺪﻣﺎﺷﻮﺧ ﯼﺍﺮﺑ ﯽﺸﯾﺎﻤﻧ ﻡﺎﻧ"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "ﻞﯾﺎﻓ ﺮﺗﺪﯾﺪﺟ ﻪﺨﺴﻧ"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "ﺪﯾﻮﺷ ﺩﺭﺍﻭ Mixar ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ ﺎﺑ"
+
 msgid "Session expired"
 msgstr "ﺪﺷ ﯽﻀﻘﻨﻣ ﺖﺴﺸﻧ"
 
@@ -20232,31 +20238,27 @@ msgstr ".ﺪﯾﻮﺷ ﺩﺭﺍﻭ ﻩﺭﺎﺑﻭﺩ ﺎًﻔﻄﻟ"
 msgid "Login Failed"
 msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺩﻭﺭﻭ"
 
-msgid "Sign in with your Mixar account"
-msgstr "ﺪﯾﻮﺷ ﺩﺭﺍﻭ Mixar ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ ﺎﺑ"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﺮﮔﺭﻭﺮﻣ ﺎﺑ ﺩﻭﺭﻭ"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-".ﺩﻮﺷ‌ﯽﻣ ﺯﺎﺑ ﯼﺮﺳﺍﺮﺳ ﯼﻻ﻿ﺎﺑ ﺭﺍﻮﻧ ﺯﺍ — ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ / ﻪﯾﺎﻤﻧ ﯽﯾﻮﺸﮐ ﯼﻮﻨﻣ\n"
-"\n"
-"ﺩﻮﺷ‌ﯽﻣ ﻢﺳﺭ `()layout.mixar_profile_card` ﺎﺑ ﯽﻣﻮﺑ ﺕﺭﻮﺻ‌ﻪﺑ ﺍﻮﺘﺤﻣ\n"
-"(`interface_mixar_profile_card.cc`): ﺡﺮﻃ ﻪﺷﺍﺮﺗ ،ﻡﻼ﻿ﺳ ﮏﯾ،\n"
-"ﺕﺭﺎﮐ ﮏﯾ ﺕﺭﻮﺻ‌ﻪﺑ ،ﯼﺮﺑﺭﺎﮐ ﺏﺎﺴﺣ ﯼﺎﻫ‌ﻞﻤﻋ ﻭ ﺭﺎﺒﺘﻋﺍ ﻑﺮﺼﻣ ﺞﻨﺳ\n"
-"ﺮﻫ ﻭ ﺖﺒﺛ ﺯﻮﻨﻫ Python .ﻮﻨﻣ ﮏﯾ ﻪﻧ ﺖﺳﺍ ﻩﺪﺷ ﻩﺪﯿﭼ\n"
-".ﺍﺭ ﺎﻫ‌ﻞﺴﮑﯿﭘ ﻂﻘﻓ ++C — ﺩﺭﺍﺩ ﺭﺎﯿﺘﺧﺍ ﺭﺩ ﺪﻧﺍﻮﺧ‌ﯽﻣ ﺍﺮﻓ ﺕﺭﺎﮐ ﻪﮐ ﺍﺭ ﯽﻠﻣﺎﻋ\n"
 
 msgid "Dashboard"
 msgstr "ﻥﺍﻮﺨﺸﯿﭘ"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "ﺝﻭﺮﺧ"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "ﺪﺷ ﻊﻄﻗ :ﻪﻌﺳﻮﺗ ﺖﻟﺎﺣ"
 msgid "Disconnected from server"
 msgstr "ﺪﺷ ﻊﻄﻗ ﺯﺎﺳﺭﺎﮐ ﺯﺍ"
 
+msgid "Could not save the chat to History"
+msgstr "ﺪﺸﻧ ﻦﮑﻤﻣ ﻪﭽﺨﯾﺭﺎﺗ ﺭﺩ ﻮﮕﺘﻔﮔ ﻩﺮﯿﺧﺫ"
+
 msgid "New Chat"
 msgstr "ﺪﯾﺪﺟ ﯼﻮﮕﺘﻔﮔ"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "(ﺩﻮﺷ‌ﯽﻣ ﻩﺮﯿﺧﺫ ﻪﭽﺨﯾﺭﺎﺗ ﺭﺩ ﯼﺭﺎﺟ ﯼﻮﮕﺘﻔﮔ) ﺪﻨﮐ‌ﯽﻣ ﻉﻭﺮﺷ ﯼﺍ‌ﻩﺯﺎﺗ ﯼﻮﮕﺘﻔﮔ"
-
-msgid "Could not save the chat to History"
-msgstr "ﺪﺸﻧ ﻦﮑﻤﻣ ﻪﭽﺨﯾﺭﺎﺗ ﺭﺩ ﻮﮕﺘﻔﮔ ﻩﺮﯿﺧﺫ"
 
 msgid "Started new chat session"
 msgstr "ﺪﺷ ﻉﻭﺮﺷ ﺪﯾﺪﺟ ﯼﻮﮕﺘﻔﮔ ﺖﺴﺸﻧ"

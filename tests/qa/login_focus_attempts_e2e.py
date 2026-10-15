@@ -192,7 +192,7 @@ def snap(qa, name, target=None, margin=120):
 ATTEMPT = '__import__("mixar.modules.common.utils.sign_in", fromlist=["x"])._attempt_id'
 OPENED = "len(__import__('mixar.modules.auth.core.sso', fromlist=['x'])._qa_opened)"
 WAITING_TEXT = 'Continue in your browser'
-POPOVER_TITLE = 'Sign in with your Mixar account'
+POPOVER_TITLE = "You're using Mixar as a guest"
 
 
 def popover(qa):
@@ -203,13 +203,13 @@ def popover(qa):
 
 
 def open_login_popover(qa):
-    """Top bar Login -> the login popover, as a person opens it (the first
+    """Top bar Guest -> the profile popover, as a person opens it (the first
     click after an activation is often swallowed: retry)."""
-    qa.wait("any(w.get('text') == 'Login' for w in drv.find(area_type='TOPBAR'))", timeout=10)
+    qa.wait("any(w.get('text') == 'Guest' for w in drv.find(area_type='TOPBAR'))", timeout=10)
     for _ in range(3):
         if POPOVER_TITLE in popover(qa)['texts']:
             return
-        qa.click(text='Login', area_type='TOPBAR')
+        qa.click(text='Guest', area_type='TOPBAR')
         try:
             qa.wait(f"any(w.get('text') == {POPOVER_TITLE!r} for w in drv.find(area_type='POPUP'))",
                     timeout=3)
@@ -237,12 +237,14 @@ def click_sign_in(qa):
     before = qa.eval(f'result = {ATTEMPT}')
     open_login_popover(qa)
     texts = popover(qa)['texts']
-    if 'Login with Browser' not in texts:
+    if 'Sign in to Mixar' not in texts:
         raise ScenarioFail(f'popover does not offer Login with Browser: {texts}')
-    click_in_popover(qa, 'MIXIE_CHAT_OT_login', f'{ATTEMPT} > {before}', 'Login with Browser')
+    click_in_popover(qa, 'MIXIE_CHAT_OT_login', f'{ATTEMPT} > {before}', 'Sign in to Mixar')
 
 
 def wait_popover(qa, text, timeout=3):
+    # Profile actions close their card; reopening reads the latest login state.
+    open_login_popover(qa)
     qa.wait(f"any(w.get('text') == {text!r} for w in drv.find(area_type='POPUP'))", timeout=timeout)
 
 
@@ -294,7 +296,7 @@ def _run(qa, pid, evidence):
         port = evidence['waiting_port']
         click_in_popover(qa, 'MIXIE_CHAT_OT_cancel_login',
                          'not bpy.data.window_managers[0].mixie_chat_is_logging_in', 'Cancel')
-        wait_popover(qa, 'Login with Browser')
+        wait_popover(qa, 'Sign in to Mixar')
         wait_until(lambda: not port_open(port), 3, f'cancelled callback server :{port} closes')
         time.sleep(1.5)  # let the cancelled thread's exit run
         s = state(qa)
@@ -373,7 +375,7 @@ def _run(qa, pid, evidence):
         if WAITING_TEXT in pop['texts']:
             # Its stale Cancel must reveal the failure, never wipe it.
             qa.click(op='MIXIE_CHAT_OT_cancel_login', area_type='POPUP')
-        wait_popover(qa, 'Login with Browser')
+        wait_popover(qa, 'Sign in to Mixar')
         pop = popover(qa)
         assert WAITING_TEXT not in pop['texts'], f'still waiting: {pop}'
         assert 'Login Failed' in pop['texts'], f'failure not shown: {pop}'

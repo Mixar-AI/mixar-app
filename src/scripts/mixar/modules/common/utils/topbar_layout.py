@@ -108,19 +108,26 @@ def _account_budget_units(window_width, engine, sound=True, selectors=False):
     return budget_px / UNIT_PX
 
 
-def full_account_units(logged_in, email):
+def full_account_units(logged_in, email, guest_label="Guest"):
     """Width of the account button with its whole label."""
-    if logged_in:
-        return len(email) * PROFILE_CHAR_UNITS + PROFILE_BASE_UNITS
-    return LOGIN_UNITS
+    label = email if logged_in else guest_label
+    return len(label) * PROFILE_CHAR_UNITS + PROFILE_BASE_UNITS
+
+
+def account_signed_in(wm):
+    """An authenticated guest session still uses the guest profile surface."""
+    return (bool(getattr(wm, "mixie_chat_is_logged_in", False)) and
+            not bool(getattr(wm, "mixie_chat_is_guest", False)))
 
 
 def context_account_units(context):
     """`full_account_units` for the account the menu bar is showing."""
-    logged_in = bool(getattr(context.window_manager, "mixie_chat_is_logged_in", False))
+    from ..i18n import iface_
+
+    logged_in = account_signed_in(context.window_manager)
     scene = getattr(context, "scene", None)
     email = getattr(scene, "mixie_chat_user_id", "") if scene is not None else ""
-    return full_account_units(logged_in, email or "")
+    return full_account_units(logged_in, email or "", iface_("Guest"))
 
 
 def engine_full_selectors(window_width, account_units):
@@ -132,7 +139,7 @@ def engine_full_selectors(window_width, account_units):
 
 def show_sound_toggle(window_width, *, engine=False, logged_in=True):
     """False when even the smallest account button would reach the slider."""
-    smallest = PROFILE_AVATAR_UNITS if logged_in else LOGIN_ICON_UNITS
+    smallest = PROFILE_AVATAR_UNITS
     return _account_budget_units(window_width, engine) >= smallest
 
 

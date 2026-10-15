@@ -3011,6 +3011,9 @@ msgstr "ﻡﺎﻧ ﺎﮐ ﭧﻧﺅﺎﮐﺍ"
 msgid "Display name for the account greeting"
 msgstr "ﻡﺎﻧ ﻻ﻿ﺍﻭ ﮯﻧﺎﺟ ﺎﯾﺎﮭﮐﺩ ﮯﯿﻟ ﮯﮐ ﻡﻼ﻿ﺳ ﭧﻧﺅﺎﮐﺍ"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "ﻥﮊﺭﻭ ﺎﯿﻧ ﺎﮐ ﻞﺋﺎﻓ"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "ﮟﯾﺮﮐ ﻥﺍ ﻦﺋﺎﺳ ﮯﺳ ﭧﻧﺅﺎﮐﺍ Mixar ﮯﻨﭘﺍ"
+
 msgid "Session expired"
 msgstr "ﻢﺘﺧ ﻦﺸﯿﺳ"
 
@@ -20232,31 +20238,27 @@ msgstr "۔ﮟﯾﺮﮐ ﻥﺍ ﻦﺋﺎﺳ ﮦﺭﺎﺑﻭﺩ ﻡﺮﮐ ﮦﺍ�
 msgid "Login Failed"
 msgstr "ﻡﺎﮐﺎﻧ ﻥﺍ ﻦﺋﺎﺳ"
 
-msgid "Sign in with your Mixar account"
-msgstr "ﮟﯾﺮﮐ ﻥﺍ ﻦﺋﺎﺳ ﮯﺳ ﭧﻧﺅﺎﮐﺍ Mixar ﮯﻨﭘﺍ"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﻥﺍ ﻦﺋﺎﺳ ﮯﺳ ﺭﺯﺅﺍﺮﺑ"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"۔ﮯﮨ ﺎﺘﻠﮭﮐ ﮯﺳ ﺭﺎﺑ ﭖﺎﭨ ﯽﻤﻟﺎﻋ — ﻥﺅﺍﮈ ﭖﺍﺭﮈ ﭧﻧﺅﺎﮐﺍ / ﻞﺋﺎﻓﻭﺮﭘ\n"
-"\n"
-"ﮯﮨ ﺎﺘﻨﺑ ﮯﺳ `()layout.mixar_profile_card` ﺮﭘ ﺭﻮﻃ ﯽﻣﺎﻘﻣ ﺩﺍﻮﻣ\n"
-"(`interface_mixar_profile_card.cc`): ﭗﭼ ﻥﻼ﻿ﭘ ،ﻡﻼ﻿ﺳ،\n"
-"ﮯﺋﺎﺠﺑ ﮯﮐ ﻮﻨﯿﻣ ،ﻝﺎﻤﻋﺍ ﮯﮐ ﭧﻧﺅﺎﮐﺍ ﺭﻭﺍ ﺮﭩﯿﻣ ﻝﺎﻤﻌﺘﺳﺍ ﭦﮉﯾﺮﮐ\n"
-"ﺮﮨ ﺭﻭﺍ ﻦﺸﯾﺮﭩﺴﺟﺭ ۔ﮟﯿﻣ ﺕﺭﻮﺻ ﯽﮐ ﮈﺭﺎﮐ ﮏﯾﺍ\n"
-"۔ﮟﯿﮨ ﺰﻠﺴﮑﭘ ﻑﺮﺻ ﺱﺎﭘ ﮯﮐ ++C — ﮟﯿﮨ ﮯﺘﮨﺭ ﺱﺎﭘ ﮯﮐ Python ﮯﮨ ﺎﺗﻼ﻿ﭼ ﮈﺭﺎﮐ ﻮﺟ ﺮﭩﯾﺮﭘﺁ\n"
 
 msgid "Dashboard"
 msgstr "ﮈﺭﻮﺑ ﺶﯾﮈ"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "ﭦﺅﺁ ﻦﺋﺎﺳ"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Dev ﻊﻄﻘﻨﻣ :ﮈﻮﻣ"
 msgid "Disconnected from server"
 msgstr "ﻊﻄﻘﻨﻣ ﮯﺳ ﺭﻭﺮﺳ"
 
+msgid "Could not save the chat to History"
+msgstr "ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻅﻮﻔﺤﻣ ﮟﯿﻣ ﺦﯾﺭﺎﺗ ﭧﯿﭼ"
+
 msgid "New Chat"
 msgstr "ﭧﯿﭼ ﯽﺌﻧ"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "(ﮯﮨ ﯽﺗﻮﮨ ﻅﻮﻔﺤﻣ ﮟﯿﻣ ﺦﯾﺭﺎﺗ ﭧﯿﭼ ﮦﺩﻮﺟﻮﻣ) ﮟﯾﺮﮐ ﻉﻭﺮﺷ ﭧﯿﭼ ﯽﺌﻧ"
-
-msgid "Could not save the chat to History"
-msgstr "ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻅﻮﻔﺤﻣ ﮟﯿﻣ ﺦﯾﺭﺎﺗ ﭧﯿﭼ"
 
 msgid "Started new chat session"
 msgstr "ﺍﻮﮨ ﻉﻭﺮﺷ ﻦﺸﯿﺳ ﭧﯿﭼ ﺎﯿﻧ"

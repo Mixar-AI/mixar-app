@@ -3011,6 +3011,9 @@ msgstr "Ime računa"
 msgid "Display name for the account greeting"
 msgstr "Prikazno ime za pozdrav računa"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Novija verzija datoteke"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Prijavite se Mixar računom"
+
 msgid "Session expired"
 msgstr "Sesija je istekla"
 
@@ -20232,31 +20238,27 @@ msgstr "Prijavite se ponovno."
 msgid "Login Failed"
 msgstr "Prijava nije uspjela"
 
-msgid "Sign in with your Mixar account"
-msgstr "Prijavite se Mixar računom"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Prijava preglednikom"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Padajući izbornik profila / računa — otvara se s globalne gornje trake.\n"
-"\n"
-"Sadržaj crta izvorno `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): pozdrav, oznaka tarife,\n"
-"mjerač potrošnje kredita i radnje računa, složeni kao jedna kartica,\n"
-"a ne izbornik. Python i dalje vodi registraciju i svaki\n"
-"operator koji kartica poziva — C++ vodi samo piksele.\n"
 
 msgid "Dashboard"
 msgstr "Nadzorna ploča"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Odjava"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Razvojni način: veza prekinuta"
 msgid "Disconnected from server"
 msgstr "Veza s poslužiteljem je prekinuta"
 
+msgid "Could not save the chat to History"
+msgstr "Razgovor nije bilo moguće spremiti u Povijest"
+
 msgid "New Chat"
 msgstr "Novi razgovor"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Započinje novi razgovor (trenutačni se sprema u Povijest)"
-
-msgid "Could not save the chat to History"
-msgstr "Razgovor nije bilo moguće spremiti u Povijest"
 
 msgid "Started new chat session"
 msgstr "Započeta je nova sesija razgovora"

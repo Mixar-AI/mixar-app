@@ -3011,6 +3011,9 @@ msgstr "Hesap Adı"
 msgid "Display name for the account greeting"
 msgstr "Hesap karşılamasında gösterilecek ad"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Daha Yeni Dosya Sürümü"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar hesabınızla oturum açın"
+
 msgid "Session expired"
 msgstr "Oturumun süresi doldu"
 
@@ -20232,31 +20238,27 @@ msgstr "Lütfen yeniden oturum açın."
 msgid "Login Failed"
 msgstr "Oturum Açılamadı"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar hesabınızla oturum açın"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Tarayıcıyla Oturum Aç"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Profil / hesap açılır menüsü — genel üst çubuktan açılır.\n"
-"\n"
-"İçerik `layout.mixar_profile_card()` tarafından yerel olarak çizilir\n"
-"(`interface_mixar_profile_card.cc`): bir karşılama, plan etiketi,\n"
-"kredi kullanım göstergesi ve hesap eylemleri, menü yerine tek bir kart\n"
-"olarak yerleştirilir. Kaydı ve kartın çağırdığı her operatörü\n"
-"hâlâ Python yönetir — C++ yalnızca pikselleri yönetir.\n"
 
 msgid "Dashboard"
 msgstr "Kontrol Paneli"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Oturumu Kapat"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Geliştirici Kipi: Bağlantı kesildi"
 msgid "Disconnected from server"
 msgstr "Sunucu bağlantısı kesildi"
 
+msgid "Could not save the chat to History"
+msgstr "Sohbet Geçmiş'e kaydedilemedi"
+
 msgid "New Chat"
 msgstr "Yeni Sohbet"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Yeni bir sohbet başlatır (mevcut sohbet Geçmiş'e kaydedilir)"
-
-msgid "Could not save the chat to History"
-msgstr "Sohbet Geçmiş'e kaydedilemedi"
 
 msgid "Started new chat session"
 msgstr "Yeni sohbet oturumu başlatıldı"

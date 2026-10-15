@@ -3011,6 +3011,9 @@ msgstr "Nome account"
 msgid "Display name for the account greeting"
 msgstr "Nome visualizzato nel saluto dell'account"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "Versione del file più recente"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Accedere con l'account Mixar"
+
 msgid "Session expired"
 msgstr "Sessione scaduta"
 
@@ -20232,31 +20238,27 @@ msgstr "Accedere di nuovo."
 msgid "Login Failed"
 msgstr "Accesso non riuscito"
 
-msgid "Sign in with your Mixar account"
-msgstr "Accedere con l'account Mixar"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "Accedi con il browser"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Menu a discesa profilo/account — aperto dalla barra superiore globale.\n"
-"\n"
-"Il contenuto è disegnato in modo nativo da `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): un saluto, il chip del piano, il\n"
-"misuratore di utilizzo dei crediti e le azioni dell'account, disposti in una scheda\n"
-"anziché in un menu. Python gestisce ancora la registrazione e ogni\n"
-"operatore invocato dalla scheda — il C++ gestisce solo i pixel.\n"
 
 msgid "Dashboard"
 msgstr "Dashboard"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "Esci"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Modalità sviluppatore: disconnesso"
 msgid "Disconnected from server"
 msgstr "Disconnesso dal server"
 
+msgid "Could not save the chat to History"
+msgstr "Impossibile salvare la chat nella cronologia"
+
 msgid "New Chat"
 msgstr "Nuova chat"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Avvia una nuova chat (la chat corrente viene salvata nella cronologia)"
-
-msgid "Could not save the chat to History"
-msgstr "Impossibile salvare la chat nella cronologia"
 
 msgid "Started new chat session"
 msgstr "Nuova sessione di chat avviata"

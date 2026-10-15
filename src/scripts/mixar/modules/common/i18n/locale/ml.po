@@ -3011,6 +3011,9 @@ msgstr "അക്കൗണ്ട് പേര്"
 msgid "Display name for the account greeting"
 msgstr "അക്കൗണ്ട് ആശംസയുടെ പ്രദർശന പേര്"
 
+msgid "Guest"
+msgstr ""
+
 msgid "Newer File Version"
 msgstr "പുതിയ ഫയൽ പതിപ്പ്"
 
@@ -20223,6 +20226,9 @@ msgstr ""
 msgid "Sign in for Mixar models and generation."
 msgstr ""
 
+msgid "Sign in with your Mixar account"
+msgstr "Mixar അക്കൗണ്ട് ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക"
+
 msgid "Session expired"
 msgstr "സെഷൻ കാലഹരണപ്പെട്ടു"
 
@@ -20232,31 +20238,27 @@ msgstr "വീണ്ടും ലോഗിൻ ചെയ്യുക."
 msgid "Login Failed"
 msgstr "ലോഗിൻ പരാജയപ്പെട്ടു"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar അക്കൗണ്ട് ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക"
-
 msgid "Continue in your browser"
+msgstr ""
+
+msgid "Sign in to Mixar"
 msgstr ""
 
 msgid "Login with Browser"
 msgstr "ബ്രൗസർ വഴി ലോഗിൻ ചെയ്യുക"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"പ്രൊഫൈൽ / അക്കൗണ്ട് ഡ്രോപ്പ്ഡൗൺ — ആഗോള ടോപ്പ് ബാറിൽ നിന്ന് തുറക്കുന്നു.\n"
-"\n"
-"ഉള്ളടക്കം `layout.mixar_profile_card()` നേറ്റീവായി വരയ്ക്കുന്നു\n"
-"(`interface_mixar_profile_card.cc`): ആശംസ, പ്ലാൻ ചിപ്പ്,\n"
-"ക്രെഡിറ്റ് ഉപയോഗ മീറ്റർ, അക്കൗണ്ട് പ്രവർത്തനങ്ങൾ, ഒരു മെനുവിന് പകരം ഒരു കാർഡായി\n"
-"ക്രമീകരിച്ചത്. രജിസ്ട്രേഷനും കാർഡ് വിളിക്കുന്ന ഓരോ\n"
-"ഓപ്പറേറ്ററും Python-ന്റേതാണ് — C++-ന് പിക്സലുകൾ മാത്രം.\n"
 
 msgid "Dashboard"
 msgstr "ഡാഷ്ബോർഡ്"
@@ -20274,9 +20276,6 @@ msgid "Logout"
 msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 
 msgid "Sound on"
-msgstr ""
-
-msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21304,14 +21303,14 @@ msgstr "Dev മോഡ്: വിച്ഛേദിച്ചു"
 msgid "Disconnected from server"
 msgstr "സെർവറിൽ നിന്ന് വിച്ഛേദിച്ചു"
 
+msgid "Could not save the chat to History"
+msgstr "ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല"
+
 msgid "New Chat"
 msgstr "പുതിയ ചാറ്റ്"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "ഒരു പുതിയ ചാറ്റ് തുടങ്ങുക (നിലവിലെ ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കുന്നു)"
-
-msgid "Could not save the chat to History"
-msgstr "ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല"
 
 msgid "Started new chat session"
 msgstr "പുതിയ ചാറ്റ് സെഷൻ തുടങ്ങി"
