@@ -122,17 +122,35 @@ def _assign(binding, action, slot) -> None:
             logger.debug("[Animate] slot assignment skipped: %s", error)
 
 
+def _free_track_name(anim, name: str) -> str:
+    """*name*, or the first free ``name.NNN`` among *anim*'s tracks.
+
+    Blender does not uniquify NLA track names, and action names are unique
+    per FILE (another character's "walk" makes this one "walk.001"), so the
+    track's name is made unique on this rig alone.
+    """
+    taken = {track.name for track in anim.nla_tracks}
+    index = 0
+    candidate = name
+    while candidate in taken:
+        index += 1
+        candidate = f"{name}.{index:03d}"
+    return candidate
+
+
 def stash_clip(anim, action, slot, name: str) -> str:
     """Park *action* on its own locked, muted NLA track; returns the track name.
 
-    Blender uniquifies action and track names itself, so a clip that already
-    exists on the rig ("walk") gets "walk.001" rather than replacing it.
+    The track is named *name*, or ``name.001``… when the rig already has a
+    clip of that name, so nothing is replaced; the action takes *name* too
+    (Blender keeps action names unique across the file).
     """
-    action.name = name
+    track_name = _free_track_name(anim, name)
+    action.name = track_name
     track = anim.nla_tracks.new()
-    track.name = action.name
+    track.name = track_name
     start = int(math.floor(float(action.frame_range[0])))
-    strip = track.strips.new(action.name, start, action)
+    strip = track.strips.new(track_name, start, action)
     _assign(strip, action, slot)
     track.lock = True
     track.mute = True
@@ -221,7 +239,10 @@ def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
         except Exception:  # noqa: BLE001 — read-only on an older Blender, harmless
             pass
     # Tracks carry the short clip name, whatever the vendor named the clip.
-    names = [stash_clip(anim, action, slot, clip_name(action.name)) for action, slot in matched]
+    names = [
+        stash_clip(anim, action, slot, clip_name(_NAME_SUFFIX.sub("", action.name)))
+        for action, slot in matched
+    ]
     newest, newest_slot = matched[-1]
     _assign(anim, newest, newest_slot)
     set_frame_range(scene, newest)

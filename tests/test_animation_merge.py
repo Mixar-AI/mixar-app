@@ -234,7 +234,7 @@ def test_clips_follow_the_result_order_not_the_importers_track_order(monkeypatch
     names = merge.merge_clips_onto_rig(
         scene, [arm], rig, ["idle", "walk", "wave_goodbye_01"])
 
-    assert names == ["idle", "walk.001", "wave_goodbye_01"]
+    assert names == ["idle", "walk", "wave_goodbye_01"]
     assert rig.animation_data.action is wave
     assert (scene.frame_start, scene.frame_end) == (0, 158)
 
@@ -247,6 +247,19 @@ def test_a_clip_named_after_its_whole_preset_lands_under_its_short_name(monkeypa
 
     assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig, ["walk"]) == ["walk"]
     assert walk.name == "walk" and rig.animation_data.nla_tracks[0].name == "walk"
+
+
+def test_a_clip_the_rig_already_has_gets_a_numbered_track(monkeypatch):
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: None)
+    rig = _rig()
+    first = _Action("walk", ["Hip"])
+    merge.merge_clips_onto_rig(_Scene([rig]), [_imported(first)], rig, ["walk"])
+    again = _Action("walk.001", ["Hip"])
+
+    names = merge.merge_clips_onto_rig(_Scene([rig]), [_imported(again)], rig, ["walk"])
+
+    assert names == ["walk.001"]
+    assert [t.name for t in rig.animation_data.nla_tracks] == ["walk", "walk.001"]
 
 
 def test_without_an_order_the_import_order_stands():
