@@ -11,6 +11,7 @@ WIDGET_TOGGLE = "toggle"
 WIDGET_TEXT = "text"
 WIDGET_NUMBER = "number"
 WIDGET_SEGMENTED = "segmented"
+WIDGET_MULTI_SELECT = "multi_select"
 
 # Parameter value types the backend catalog may specify.
 TYPE_STRING = "string"
@@ -18,6 +19,15 @@ TYPE_INTEGER = "integer"
 TYPE_NUMBER = "number"
 TYPE_FLOAT = "float"
 TYPE_BOOLEAN = "boolean"
+# A list of published choices (``items.enum`` / ``choices``), rendered as a
+# searchable multi-select and collected as a list — see core/multi_select.py.
+TYPE_ARRAY = "array"
+
+# Suffix of the hidden per-list active-row IntProperty beside a multi-select
+# collection attribute (``p_<name>`` + this); template_list needs one.
+MULTI_SELECT_ACTIVE_SUFFIX = "__active"
+# The shared UIList that draws every multi-select (ui/lists/choice_list.py).
+MULTI_SELECT_LIST_ID = "MIXAR_UL_genparams_choices"
 
 # The backend validator treats "float" and "number" as the same numeric
 # type; keep the client in sync so a "float" param renders as a real

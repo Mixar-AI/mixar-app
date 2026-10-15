@@ -15,6 +15,7 @@ from typing import Any, Dict
 
 from mixar.config.logging_config import get_logger
 from ..constants import (
+    MULTI_SELECT_ACTIVE_SUFFIX,
     WIDGET_DROPDOWN,
     WIDGET_SEGMENTED,
     WIDGET_SLIDER,
@@ -30,6 +31,7 @@ from .engine import (
     is_param_visible,
     sorted_param_names,
 )
+from .multi_select import draw_multi_select
 
 logger = get_logger(__name__)
 
@@ -52,6 +54,10 @@ def _draw_widget(layout, group, entry: Dict[str, Any]) -> None:
     spec = entry["spec"]
     attr = entry["attr"]
     label = spec.get("label") or ""
+    if entry.get("multi"):
+        # A list of ticked choices has one widget whatever the catalog says.
+        draw_multi_select(layout, group, attr, attr + MULTI_SELECT_ACTIVE_SUFFIX, label)
+        return
     widget = spec.get("widget") or _default_widget(entry)
 
     if widget == WIDGET_DROPDOWN:
