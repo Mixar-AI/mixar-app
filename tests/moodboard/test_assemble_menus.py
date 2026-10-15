@@ -40,8 +40,12 @@ def _ids(entries):
 def test_a_rig_result_continues_into_assemble(catalog):
     scene = _scene([NS(node_id="rig", action_type='AUTO_RIG')])
     entries = actions.mesh_continuations_for(scene, "rig")
-    assert _ids(entries) == ['PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE']
-    assert entries[-1] == actions.ASSEMBLE_CONTINUATION
+    # Assemble and Animate are the two continuations only a rig offers.
+    assert _ids(entries) == [
+        'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE',
+    ]
+    assert entries[-2] == actions.ASSEMBLE_CONTINUATION
+    assert entries[-1] == actions.ANIMATE_CONTINUATION
 
 
 def test_assemble_offers_no_continuation(catalog):

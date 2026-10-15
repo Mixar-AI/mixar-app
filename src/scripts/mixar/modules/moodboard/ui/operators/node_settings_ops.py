@@ -9,6 +9,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.generation_params.core.bounds import integer_window
+from mixar.modules.common.generation_params.core.multi_select import draw_multi_select
 from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
@@ -79,6 +80,12 @@ def _draw_parameter(layout, parameter, spec=None):
     """Caption over the control for every kind; hover either for help."""
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
+    if kind == 'ARRAY':
+        # Caption, summary and the filterable tick list in one shared widget.
+        field = layout.column(align=True)
+        draw_multi_select(field, parameter, 'choices', 'active_choice', label)
+        draw_tooltip(field, parameter_help(parameter, spec))
+        return
     field = layout.column(align=True)
     field.label(text=label)
     if kind == 'BOOLEAN':
@@ -181,6 +188,12 @@ class MIXIE_OT_moodboard_node_settings(Operator):
         if node is None:
             self.report({'WARNING'}, "This inference node is no longer available")
             return {'CANCELLED'}
+        if node.action_type == 'ANIMATE':
+            # Narrow the preset list to the connected rig's skeleton. Written
+            # here, in the operator, because the list draws read-only.
+            from mixar.modules.moodboard.core.animate_node import refresh_preset_filter
+
+            refresh_preset_filter(context.scene, node)
         # Pin the native overlay below this card's model row, over the prompt.
         # No cursor warp, saved UI state or changes to the draft are needed.
         region = context.region

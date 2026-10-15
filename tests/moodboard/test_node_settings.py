@@ -98,8 +98,8 @@ def parameter(kind, **kwargs):
 
 
 def node(**kwargs):
-    values = dict(node_id='owner', state='DRAFT', show_mode=True, parameters=[],
-                  preview_image=None, preview_object=None)
+    values = dict(node_id='owner', action_type='IMAGE_GEN', state='DRAFT', show_mode=True,
+                  parameters=[], preview_image=None, preview_object=None)
     values.update(kwargs)
     return SimpleNamespace(**values)
 

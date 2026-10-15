@@ -10,7 +10,13 @@ import json
 import logging
 
 from mixar.modules.common.generation_params.core.bounds import catalog_int, rna_int
-from mixar.modules.common.i18n import iface_
+from mixar.modules.common.generation_params.core.multi_select import (
+    default_values,
+    selected_values,
+    spec_choices,
+    sync_choice_rows,
+)
+from mixar.modules.common.i18n import iface_, n_
 
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
@@ -49,6 +55,9 @@ _OUTPUT_TYPES = {
     'WORLD_LABS': 'SPLAT',
     'CHARACTER_PARTS': 'MESH',
     'ASSEMBLE': 'MESH',
+    # Rigged character in, the SAME character (now animated) out, so a second
+    # Animate card or an export can chain off it.
+    'ANIMATE': 'MESH',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -56,7 +65,11 @@ _MESH_FEATURE_CAPABILITY = {
     'RETOPOLOGY': 'retopology',
     'MESH_SEGMENT': 'mesh_segmentation',
     'AUTO_RIG': 'animate',
+    'ANIMATE': 'animation',
 }
+# The injected single MESH input's id/label; "mesh" unless named here.
+_MESH_SOCKET_DEFAULT = ("mesh", n_("Mesh"))
+_MESH_SOCKET_NAMES = {'ANIMATE': ("rig", n_("Rigged Character"))}
 
 _CONNECTABLE_TYPES = {
     "image": "IMAGE",
@@ -81,7 +94,7 @@ MODEL_3D_SERVICE_KEYS = frozenset({'model_3d', 'image_to_3d', 'hunyuan_rapid'})
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
 _PROMPTLESS_ACTION_TYPES = frozenset(
-    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE'})
+    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE', 'ANIMATE'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -281,9 +294,15 @@ def build_input_contract(service: dict, model: dict) -> dict:
 
 
 def _choices(spec: dict) -> list[dict]:
+    """Published choices: ``choices``, else ``enum`` / an array's ``items.enum``.
+
+    Values keep their catalog type (an integer enum stays an int on the wire);
+    the multi-select rows are strings (``spec_choices``), matched by ``str``.
+    """
     raw = spec.get("choices")
     if raw is None:
-        raw = spec.get("enum") or []
+        items = spec.get("items") if isinstance(spec.get("items"), dict) else {}
+        raw = items.get("enum") or spec.get("enum") or []
     normalized = []
     for choice in raw if isinstance(raw, list) else []:
         if isinstance(choice, dict):
@@ -299,6 +318,8 @@ def _choices(spec: dict) -> list[dict]:
 
 def _parameter_value(parameter):
     kind = parameter.parameter_type
+    if kind == 'ARRAY':
+        return selected_values(parameter.choices)
     if kind == 'ENUM':
         selected = parameter.value_enum
         try:
@@ -373,7 +394,12 @@ def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
     value = old_value if old_value is not None else spec.get("default")
     kind = parameter.parameter_type
     try:
-        if kind == 'ENUM':
+        if kind == 'ARRAY':
+            sync_choice_rows(
+                parameter.choices, spec_choices(spec),
+                old_value if old_value is not None else default_values(spec),
+            )
+        elif kind == 'ENUM':
             valid = [str(choice["value"]) for choice in choices]
             selected = str(value) if value is not None else (valid[0] if valid else "NONE")
             parameter.value_enum = selected if selected in valid else (valid[0] if valid else "NONE")
@@ -493,14 +519,15 @@ def sync_node_schema(_scene, node) -> None:
         "MESH" in socket.get("accepted_types", ())
         for socket in input_contract["sockets"]
     ):
+        socket_id, socket_label = _MESH_SOCKET_NAMES.get(node.action_type, _MESH_SOCKET_DEFAULT)
         input_contract["sockets"].insert(
             0,
             {
-                "id": "mesh",
-                "label": iface_("Mesh"),
+                "id": socket_id,
+                "label": iface_(socket_label),
                 "accepted_types": ["MESH"],
                 "required": True,
-                "group_id": "mesh",
+                "group_id": socket_id,
                 "repeatable": False,
             },
         )
@@ -640,7 +667,9 @@ def sync_node_schema(_scene, node) -> None:
         choices = _choices(spec)
         parameter.choices_json = json.dumps(choices, separators=(",", ":"))
         ptype = str(spec.get("type") or "string").lower()
-        if choices:
+        if choices and ptype == "array":
+            parameter.parameter_type = 'ARRAY'
+        elif choices:
             parameter.parameter_type = 'ENUM'
         elif ptype == "boolean":
             parameter.parameter_type = 'BOOLEAN'

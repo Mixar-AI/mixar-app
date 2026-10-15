@@ -483,6 +483,10 @@ def run_action_node(context, node, operator):
 
         run_assemble_node(context, node)
         return None
+    elif node.action_type == 'ANIMATE':
+        from .animate_node import run_animate_node
+
+        job, params = run_animate_node(context, node)
     elif node.action_type in _MESH_FEATURE_ROUTING:
         job, params = _run_mesh_feature(context, node, operator)
     else:
