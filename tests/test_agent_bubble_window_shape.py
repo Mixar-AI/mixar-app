@@ -406,7 +406,9 @@ class TestIslandWindowTranslucency:
         assert styled == 2, (
             f"both island styling sites must call it after the corner radius, found {styled}"
         )
-        assert src.count(call) == 2, "only creation and repair queue native setup"
+        assert src.count(call) == 3, (
+            "macOS/Windows creation and repair, plus Linux creation, queue native setup"
+        )
 
     def test_macos_glass_embeds_the_retained_metal_view(self) -> None:
         """The real GPU view is the glass content, preserving its GHOST context."""

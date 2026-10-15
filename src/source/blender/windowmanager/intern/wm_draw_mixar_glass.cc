@@ -5,19 +5,21 @@
 /** \file
  * \ingroup wm
  *
- * Windows DWM cannot reliably frost the parent's OpenGL/Vulkan viewport. Keep
+ * Windows DWM and X11 cannot reliably frost the parent's GPU viewport. Keep
  * that completed host framebuffer on the GPU and composite its blurred pixels
  * under the island's premultiplied UI. The final window pixels are opaque, so
- * this works even when DWM accepts alpha setup but presents an opaque surface.
+ * this also works when the native compositor does not provide background blur.
  */
 
 #include "wm_draw_mixar_glass.hh"
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__linux__)
 
 #  include "wm_draw_mixar_glass_sync.hh"
 
 #  include <map>
+#  include <algorithm>
+#  include <cmath>
 
 #  include "BKE_screen.hh"
 #  include "BLI_listbase.h"
@@ -36,7 +38,9 @@
 #  include "GPU_texture.hh"
 #  include "WM_api.hh"
 
+#ifdef WIN32
 extern "C" bool Mixar_WindowIsVisible(void *window_handle);
+#endif
 
 namespace blender {
 namespace {
@@ -66,7 +70,15 @@ bool is_glass_window(const wmWindow *win)
   }
   for (const ScrArea &area : screen->areabase) {
     if (area.spacetype == SPACE_AGENT_BUBBLE) {
+#ifdef __linux__
+      /* Wayland deliberately does not expose global window coordinates. Use
+       * real compositor alpha there, not an incorrectly aligned host image. */
+      const auto *ghost = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+      return (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION) && ghost &&
+             ghost->supportsTransparentRendering();
+#else
       return true;
+#endif
     }
   }
   return false;
@@ -75,8 +87,14 @@ bool is_glass_window(const wmWindow *win)
 bool is_visible(const wmWindow *win)
 {
   const auto *ghost = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
-  return ghost != nullptr && ghost->getState() != GHOST_kWindowStateMinimized &&
-         Mixar_WindowIsVisible(win->runtime->ghostwin);
+  if (ghost == nullptr || ghost->getState() == GHOST_kWindowStateMinimized) {
+    return false;
+  }
+#ifdef WIN32
+  return Mixar_WindowIsVisible(win->runtime->ghostwin);
+#else
+  return true;
+#endif
 }
 
 wmWindow *host_window(wmWindowManager *wm, wmWindow *win)
@@ -282,7 +300,7 @@ void composite_backdrop(wmWindowManager *wm, wmWindow *win)
   }
   /* Fill any missing host/alpha with charcoal; preserve already drawn UI. */
   draw_solid(size, 0.07f);
-  /* Native rounded HWND regions clip the exterior. Interior presents opaque
+  /* On Windows, rounded HWND regions clip the exterior. Interior presents opaque
    * regardless of the parent framebuffer's alpha convention. */
   GPU_blend(GPU_BLEND_NONE);
   GPU_color_mask(false, false, false, true);
@@ -301,6 +319,57 @@ void composite_backdrop(wmWindowManager *wm, wmWindow *win)
 }
 
 }  // namespace
+
+#ifdef __linux__
+static void clip_linux_window_corners(wmWindow *win)
+{
+  const auto *ghost = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+  if (!ghost || !ghost->supportsTransparentRendering() || ghost->getWindowCornerRadius() <= 0) {
+    return;
+  }
+  const int2 size = WM_window_native_pixel_size(win);
+  const int radius = std::min(int(std::round(ghost->getWindowCornerRadius())),
+                              std::min(size.x, size.y) / 2);
+  /* Clip AFTER the host frost, otherwise that pass fills the transparent
+   * corners again. Wayland consumes this alpha; X11 additionally clips input
+   * and presentation using its native window shape. */
+  const GPUBlend blend = GPU_blend_get();
+  const GPUDepthTest depth = GPU_depth_test_get();
+  const GPUWriteMask mask = GPU_write_mask_get();
+  int scissor[4];
+  GPU_scissor_get(scissor);
+  GPU_scissor(0, 0, size.x, size.y);
+  GPU_matrix_push();
+  GPU_matrix_push_projection();
+  GPU_matrix_identity_set();
+  GPU_matrix_ortho_set(0, float(size.x), 0, float(size.y), -1, 1);
+  GPU_depth_test(GPU_DEPTH_NONE);
+  GPU_depth_mask(false);
+  GPU_color_mask(true, true, true, true);
+  GPU_blend(GPU_BLEND_NONE);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4f(0, 0, 0, 0);
+  for (int y = 0; y < radius; y++) {
+    const float dy = radius - (y + 0.5f);
+    const int inset = int(std::ceil(radius - std::sqrt(radius * radius - dy * dy) - 0.5f));
+    if (inset > 0) {
+      immRectf(pos, 0, y, inset, y + 1);
+      immRectf(pos, size.x - inset, y, size.x, y + 1);
+      immRectf(pos, 0, size.y - y - 1, inset, size.y - y);
+      immRectf(pos, size.x - inset, size.y - y - 1, size.x, size.y - y);
+    }
+  }
+  immUnbindProgram();
+  GPU_matrix_pop_projection();
+  GPU_matrix_pop();
+  GPU_write_mask(mask);
+  GPU_depth_test(depth);
+  GPU_blend(blend);
+  GPU_scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+}
+#endif
 
 void wm_draw_mixar_glass_update(wmWindowManager *wm)
 {
@@ -341,6 +410,9 @@ void wm_draw_mixar_glass(wmWindowManager *wm, wmWindow *win)
   else {
     capture_host(wm, win);
   }
+#ifdef __linux__
+  clip_linux_window_corners(win);
+#endif
 }
 
 void wm_draw_mixar_glass_free(wmWindow *win)

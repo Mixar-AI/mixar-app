@@ -75,9 +75,8 @@ void MIXAR_OT_bubble_sync_attachment_size(wmOperatorType *ot);
 
 /* Hands off window-drag tracking to the native platform code path
  * via Mixar_WindowBeginDrag (AppKit on macOS, WM_NCLBUTTONDOWN on
- * Win32). Python idname: mixar.bubble_window_begin_drag. Called once
- * by the Python drag op; the OS handles per-frame tracking from
- * there until the user releases the mouse. */
+ * Win32, _NET_WM_MOVERESIZE + XQueryPointer on X11). Python idname:
+ * mixar.bubble_window_begin_drag. */
 void MIXAR_OT_bubble_window_begin_drag(wmOperatorType *ot);
 void MIXAR_OT_bubble_window_update_drag(wmOperatorType *ot);
 void MIXAR_OT_bubble_window_end_drag(wmOperatorType *ot);

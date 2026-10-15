@@ -20,6 +20,8 @@
 #include <climits>
 #include <cstdint>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -167,6 +169,14 @@ namespace blender {
  * island's rounded corners are not clipped square by a tighter frame. */
 #define AGENT_BUBBLE_CORNER_RADIUS 14.0f
 
+#ifdef __linux__
+extern "C" void Mixar_WindowSetCustomDecoration(void *window_handle, int width, int height, float radius);
+extern "C" bool Mixar_WindowBeginNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowUpdateNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowEndNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int height);
+#endif
+
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
  * GHOST_SystemWin32.cc (Windows). Declared here as extern "C" so we
  * don't need a fresh GHOST header just for these (the editor build
@@ -268,8 +278,8 @@ static void agent_bubble_island_panel_color(float r_rgba[4])
 {
   if (agent_bubble_island_bed_is_transparent()) {
     float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-    agent_bubble_windows_island_wash(wash);
+#if defined(WIN32) || defined(__linux__)
+    agent_bubble_composited_island_wash(wash);
 #endif
     r_rgba[0] = wash[0] * wash[3];
     r_rgba[1] = wash[1] * wash[3];
@@ -889,8 +899,8 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   if (agent_bubble_island_bed_is_transparent()) {
     /* A replacement bed, unlike alpha blending, must premultiply itself. */
     float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-    agent_bubble_windows_island_wash(wash);
+#if defined(WIN32) || defined(__linux__)
+    agent_bubble_composited_island_wash(wash);
 #endif
     agent_bubble_replace_frost_wash(&r, wash);
     return;
@@ -1236,9 +1246,9 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
       mixie_chat_history_read_visible(CTX_wm_manager(C)))
   {
-#ifdef WIN32
+#if defined(WIN32) || defined(__linux__)
     const float transcript_wash[4] = AGENT_COL_GLASS_WASH;
-    agent_bubble_windows_transcript_color(panel_bg, transcript_wash);
+    agent_bubble_composited_transcript_color(panel_bg, transcript_wash);
 #endif
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
@@ -2874,8 +2884,8 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymax = float(region->winy);
   /* Replace the complete region with the premultiplied native-frost wash. */
   float wash[4] = AGENT_COL_GLASS_WASH;
-#ifdef WIN32
-  agent_bubble_windows_island_wash(wash);
+#if defined(WIN32) || defined(__linux__)
+  agent_bubble_composited_island_wash(wash);
 #endif
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {
@@ -3059,6 +3069,17 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     BKE_report(op->reports, RPT_ERROR, "Failed to open Agent Bubble window");
     return OPERATOR_CANCELLED;
   }
+
+#ifdef __linux__
+  /* Below this floor the island can no longer draw usable controls. Enforce
+   * its usable size in the window manager itself, before interactive resizing. */
+  Mixar_WindowSetCustomDecoration(
+      win->runtime->ghostwin, AGENT_BUBBLE_MIN_WIDTH, AGENT_BUBBLE_DEFAULT_HEIGHT,
+      AGENT_BUBBLE_CORNER_RADIUS);
+  agent_bubble_glass_reset(win->runtime->ghostwin);
+  agent_bubble_glass_request(C, win->runtime->ghostwin, false);
+  WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32)
   if (win->runtime->ghostwin != nullptr) {
@@ -3538,10 +3559,14 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
 #  ifdef __APPLE__
   Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
+#elif defined(__linux__)
+  if (!Mixar_WindowSetNativeSize(win->runtime->ghostwin,
+                                std::max(width, AGENT_BUBBLE_MIN_WIDTH),
+                                std::max(height, AGENT_BUBBLE_DEFAULT_HEIGHT)))
+  {
+    return OPERATOR_CANCELLED;
+  }
 #else
-  /* Non-macOS: best-effort no-op for now. Windows / Linux GHOST
-   * doesn't have the same chrome-stripping pipeline as Cocoa, so
-   * resize would need its own platform implementation. */
   (void)width;
   (void)height;
 #endif
@@ -3682,6 +3707,31 @@ static bool agent_bubble_scribble_active(const bContext *C)
   return false;
 }
 
+static const ARegion *agent_bubble_header_for_drag(const bContext *C)
+{
+  const ARegion *region = CTX_wm_region(C);
+  if (region != nullptr && region->regiontype == RGN_TYPE_HEADER) {
+    return region;
+  }
+  /* Window-level LEFTMOUSE can arrive with a stale context region when
+   * the press is an XTest/XI2 synthetic event. Hit-test HEADER by the
+   * eventstate coordinate — the island header starts at the client top. */
+  ScrArea *area = CTX_wm_area(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (area == nullptr || win == nullptr || win->runtime == nullptr ||
+      win->runtime->eventstate == nullptr)
+  {
+    return nullptr;
+  }
+  const int *xy = win->runtime->eventstate->xy;
+  for (ARegion &other : area->regionbase) {
+    if (other.regiontype == RGN_TYPE_HEADER && BLI_rcti_isect_pt_v(&other.winrct, xy)) {
+      return &other;
+    }
+  }
+  return nullptr;
+}
+
 static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
@@ -3692,8 +3742,8 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
   /* Content owns text selection, scrolling and asset gestures. A press
    * passed through by a region handler must never turn into a window move.
    * The resting pill also uses HEADER, so its click/drag gesture is retained. */
-  const ARegion *region = CTX_wm_region(C);
-  if (region == nullptr || region->regiontype != RGN_TYPE_HEADER) {
+  const ARegion *region = agent_bubble_header_for_drag(C);
+  if (region == nullptr) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3705,7 +3755,7 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
    * it here hands the gesture to AppKit's native window drag, which swallows
    * every following mouse-move, so the tile's asset drag never begins and the
    * window moves instead. */
-  if (UI_mixar_region_active_but_is_draggable(CTX_wm_region(C))) {
+  if (UI_mixar_region_active_but_is_draggable(const_cast<ARegion *>(region))) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3718,6 +3768,20 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
   if (mixie_chat_ink_read_visible(CTX_wm_manager(C))) {
     return OPERATOR_CANCELLED;
   }
+
+#ifdef __linux__
+  if (std::getenv("MIXAR_BUBBLE_DRAG_TRACE") && std::getenv("MIXAR_BUBBLE_DRAG_TRACE")[0] != '0') {
+    const wmEvent *event = win->runtime->eventstate;
+    fprintf(stderr,
+            "[mixar-bubble-drag] header hit winrct=%d,%d %dx%d event_xy=%d,%d\n",
+            region->winrct.xmin,
+            region->winrct.ymin,
+            BLI_rcti_size_x(&region->winrct) + 1,
+            BLI_rcti_size_y(&region->winrct) + 1,
+            event ? event->xy[0] : -1,
+            event ? event->xy[1] : -1);
+  }
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32)
   if (win->runtime->ghostwin == g_pill_ghostwin) {
@@ -3745,6 +3809,10 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
     }
   }
   Mixar_WindowBeginDrag(win->runtime->ghostwin);
+#elif defined(__linux__)
+  if (!Mixar_WindowBeginNativeDrag(win->runtime->ghostwin)) {
+    return OPERATOR_CANCELLED;
+  }
 #endif
 
   return OPERATOR_FINISHED;
@@ -3767,6 +3835,10 @@ static wmOperatorStatus mixar_bubble_window_update_drag_exec(bContext *C,
   }
 #ifdef _WIN32
   Mixar_WindowUpdateDrag(win->runtime->ghostwin);
+#elif defined(__linux__)
+  if (!Mixar_WindowUpdateNativeDrag(win->runtime->ghostwin)) {
+    return OPERATOR_CANCELLED;
+  }
 #endif
   return OPERATOR_FINISHED;
 }
@@ -3791,6 +3863,8 @@ static wmOperatorStatus mixar_bubble_window_end_drag_exec(bContext *C,
   if (win->runtime->ghostwin == g_pill_ghostwin && g_bubble_minimised) {
     pill_remember_user_seat();
   }
+#elif defined(__linux__)
+  Mixar_WindowEndNativeDrag(win->runtime->ghostwin);
 #endif
   return OPERATOR_FINISHED;
 }
