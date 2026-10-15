@@ -1112,6 +1112,9 @@ msgstr "Verificarea stării a eșuat: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Scanează bibliotecile de resurse, verifică modificările, randează doar previzualizările noi și le trimite la API-ul de antrenare"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Se pornește…"
 
@@ -1516,6 +1519,9 @@ msgstr "Serverul local nu a putut fi contactat. Verificați că rulează și că
 
 msgid "No models available — contact support"
 msgstr "Niciun model disponibil — contactați asistența"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Cheia dvs. API controlează modelul"
@@ -2060,6 +2066,9 @@ msgstr "Generări gata: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Nu mai aveți credite — treceți la un plan superior pentru a continua"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Este necesară autentificarea — autentificați-vă"
 
@@ -2149,6 +2158,9 @@ msgstr "Importare rezultat generat"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Anulat (generarea se poate termina totuși pe server)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Răspunsul serverului nu a putut fi procesat"
@@ -19863,6 +19875,27 @@ msgstr "„{name}” nu mai este în fișierul de resurse."
 msgid "Could not add the asset to the scene."
 msgstr "Resursa nu a putut fi adăugată în scenă."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Se gândește..."
 
@@ -20178,6 +20211,12 @@ msgstr "Autentificare"
 msgid "Login panel for Mixie Chat"
 msgstr "Panou de autentificare pentru chatul Mixie"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Sesiunea a expirat"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Deconectare"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Este autentificat"
 
 msgid "Whether user is currently logged in"
 msgstr "Dacă utilizatorul este autentificat acum"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Autentificare în curs"

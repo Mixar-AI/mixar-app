@@ -141,6 +141,85 @@ class MIXIE_CHAT_OT_disconnect(Operator):
         return {'FINISHED'}
 
 
+def start_new_chat(scene, report=None) -> None:
+    """Turn ``scene`` into a fresh chat: the live chat is archived to History,
+    its stream, queued events and scripts dropped, the backend session
+    cancelled, and the next message creates a new session.
+
+    The New Chat button's body, shared with sign-out (every open tab belongs
+    to the account that just left; the next identity owns none of them).
+    ``report`` is the operator's ``self.report`` when there is one.
+    """
+    from ...core import voice
+    voice.cancel()
+    session = get_session_manager()
+    scene_name = scene.name
+    from ...core.export_destination import clear_destination
+    clear_destination(session.get_session_id(scene))
+
+    # Cancel any running session before clearing
+    old_session_id = session.get_session_id(scene)
+    if old_session_id:
+        from ...core.export_destination import clear_destination
+        clear_destination(old_session_id)
+
+    # 1. Stop any running agent stream for this scene
+    cleanup_turn_handler(scene_name)
+
+    # 2. Drain queued agent events
+    from ...core.queue_processor import cleanup_event_queue_for_scene
+    cleanup_event_queue_for_scene(scene_name)
+
+    # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
+    flush_executor_queue(session_id=old_session_id)
+
+    # 4. Tell the backend to cancel the old session
+    if old_session_id:
+        send_cancel_request_async(old_session_id, 'new_chat')
+
+    # 5. Archive the current chat to local history before wiping it —
+    #    New Chat is recoverable via the History popover
+    #    (see core/chat_history.py). Best-effort: a failed archive
+    #    must never block starting a fresh chat.
+    try:
+        from ...core.chat_history import archive_current
+        archive_current(scene)
+    except Exception as e:
+        logger.error(f"Failed to archive chat before new session: {e}")
+        if report is not None:
+            report({'WARNING'}, "Could not save the chat to History")
+
+    # Clear messages and incremental markdown cache
+    scene.mixie_chat_messages.clear()
+    scene.mixie_chat_input = ""
+    # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
+    if hasattr(scene, "mixie_chat_user_has_engaged"):
+        scene.mixie_chat_user_has_engaged = False
+    from ...core.markdown_parser import clear_incremental_cache
+    clear_incremental_cache()
+
+    # Dev mode: reset state cycle
+    if DEV_MODE:
+        DevDataProvider.reset_state_cycle()
+
+    # Reset session (keep connected if connected)
+    if session.is_connected(scene):
+        session.clear_streaming()
+        session.clear_session_id(scene)  # Force new session_id on next message
+        session.set_connected(scene)
+    else:
+        session.clear_session_id(scene)
+        session.set_state(scene, SessionState.OFFLINE)
+
+    # The old session is gone — sweep any agentlane:* workspace scenes it
+    # leaked (their backend removal scripts were dropped as stale).
+    try:
+        from ...core.lane_scene_sweep import schedule_lane_scene_sweep
+        schedule_lane_scene_sweep(parent_session_id=old_session_id or "")
+    except Exception as e:
+        logger.debug(f"lane scene sweep scheduling skipped: {e}")
+
+
 class MIXIE_CHAT_OT_new_session(Operator):
     """Start a new chat session"""
     bl_idname = "mixie_chat.new_session"
@@ -153,75 +232,7 @@ class MIXIE_CHAT_OT_new_session(Operator):
         return context.scene is not None
 
     def execute(self, context):
-        from ...core import voice
-        voice.cancel()
-        session = get_session_manager()
-        scene = context.scene
-        scene_name = scene.name
-        from ...core.export_destination import clear_destination
-        clear_destination(session.get_session_id(scene))
-
-        # Cancel any running session before clearing
-        old_session_id = session.get_session_id(scene)
-        if old_session_id:
-            from ...core.export_destination import clear_destination
-            clear_destination(old_session_id)
-
-        # 1. Stop any running agent stream for this scene
-        cleanup_turn_handler(scene_name)
-
-        # 2. Drain queued agent events
-        from ...core.queue_processor import cleanup_event_queue_for_scene
-        cleanup_event_queue_for_scene(scene_name)
-
-        # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
-        flush_executor_queue(session_id=old_session_id)
-
-        # 4. Tell the backend to cancel the old session
-        if old_session_id:
-            send_cancel_request_async(old_session_id, 'new_chat')
-
-        # 5. Archive the current chat to local history before wiping it —
-        #    New Chat is recoverable via the History popover
-        #    (see core/chat_history.py). Best-effort: a failed archive
-        #    must never block starting a fresh chat.
-        try:
-            from ...core.chat_history import archive_current
-            archive_current(scene)
-        except Exception as e:
-            logger.error(f"Failed to archive chat before new session: {e}")
-            self.report({'WARNING'}, "Could not save the chat to History")
-
-        # Clear messages and incremental markdown cache
-        scene.mixie_chat_messages.clear()
-        scene.mixie_chat_input = ""
-        # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
-        if hasattr(scene, "mixie_chat_user_has_engaged"):
-            scene.mixie_chat_user_has_engaged = False
-        from ...core.markdown_parser import clear_incremental_cache
-        clear_incremental_cache()
-
-        # Dev mode: reset state cycle
-        if DEV_MODE:
-            DevDataProvider.reset_state_cycle()
-
-        # Reset session (keep connected if connected)
-        if session.is_connected(scene):
-            session.clear_streaming()
-            session.clear_session_id(scene)  # Force new session_id on next message
-            session.set_connected(scene)
-        else:
-            session.clear_session_id(scene)
-            session.set_state(scene, SessionState.OFFLINE)
-
-        # The old session is gone — sweep any agentlane:* workspace scenes it
-        # leaked (their backend removal scripts were dropped as stale).
-        try:
-            from ...core.lane_scene_sweep import schedule_lane_scene_sweep
-            schedule_lane_scene_sweep(parent_session_id=old_session_id or "")
-        except Exception as e:
-            logger.debug(f"lane scene sweep scheduling skipped: {e}")
-
+        start_new_chat(context.scene, report=self.report)
         self.report({'INFO'}, "Started new chat session")
         return {'FINISHED'}
 

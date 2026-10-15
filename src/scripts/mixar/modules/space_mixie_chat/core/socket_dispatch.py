@@ -38,7 +38,14 @@ class SocketDispatch:
                     self._pending_deadlines.pop(msg_id, None)
                 if cb is not None:
                     try:
-                        payload = msg.get("result") if "result" in msg else msg.get("error")
+                        # An error response also carries ``"result": null``
+                        # (the server serialises every field), so test the
+                        # error first: JSON-RPC never sets both, and a
+                        # refused turn command (the guest door: rate limit,
+                        # kill switch) delivered as ``None`` here was never
+                        # settled — the chat sat BUSY until a relaunch.
+                        error = msg.get("error")
+                        payload = error if isinstance(error, dict) else msg.get("result")
                         cb(payload)
                     except Exception as e:
                         logger.error(f"Error in response callback for {msg_id}: {e}")

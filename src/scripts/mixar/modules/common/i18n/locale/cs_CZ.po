@@ -1112,6 +1112,9 @@ msgstr "Kontrola stavu selhala: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Prohledá knihovny assetů, zkontroluje změny, vykreslí pouze nové náhledy a odešle je do trénovacího API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Spouštění…"
 
@@ -1516,6 +1519,9 @@ msgstr "Lokální server není dostupný. Zkontrolujte, zda běží a zda je zá
 
 msgid "No models available — contact support"
 msgstr "Nejsou k dispozici žádné modely — kontaktujte podporu"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Model určuje váš klíč API"
@@ -2060,6 +2066,9 @@ msgstr "Dokončená generování: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Došly vám kredity — pro pokračování si navyšte tarif"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Je vyžadováno ověření — přihlaste se prosím"
 
@@ -2149,6 +2158,9 @@ msgstr "Importovat vygenerovaný výsledek"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Zrušeno (generování se na serveru může přesto dokončit)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Nepodařilo se zpracovat odpověď serveru"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' již není v souboru assetů."
 msgid "Could not add the asset to the scene."
 msgstr "Asset se nepodařilo přidat do scény."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Přemýšlím..."
 
@@ -20178,6 +20211,12 @@ msgstr "Přihlášení"
 msgid "Login panel for Mixie Chat"
 msgstr "Přihlašovací panel pro chat Mixie"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Relace vypršela"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Odhlásit se"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Je přihlášen"
 
 msgid "Whether user is currently logged in"
 msgstr "Zda je uživatel aktuálně přihlášen"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Probíhá přihlašování"

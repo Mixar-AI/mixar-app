@@ -1112,6 +1112,9 @@ msgstr "நிலைச் சரிபார்ப்பு தோல்வி:
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "சொத்து நூலகங்களை வருடி, மாற்றங்களைச் சரிபார்த்து, புதிய முன்னோட்டங்களை மட்டும் வழங்கி, பயிற்சி API-க்கு அனுப்புகிறது"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "தொடங்குகிறது…"
 
@@ -1516,6 +1519,9 @@ msgstr "உள்ளகச் சேவையகத்தை அடைய மு
 
 msgid "No models available — contact support"
 msgstr "மாதிரிகள் எதுவும் கிடைக்கவில்லை — ஆதரவைத் தொடர்புகொள்ளுங்கள்"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "உங்கள் API விசை மாதிரியைக் கட்டுப்படுத்துகிறது"
@@ -2060,6 +2066,9 @@ msgstr "தயாரான உருவாக்கங்கள்: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "உங்கள் கிரெடிட்கள் தீர்ந்துவிட்டன — தொடர உங்கள் திட்டத்தை மேம்படுத்துங்கள்"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "அங்கீகாரம் தேவை — உள்நுழையுங்கள்"
 
@@ -2149,6 +2158,9 @@ msgstr "உருவாக்கிய முடிவை இறக்கும�
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "ரத்துசெய்யப்பட்டது (உருவாக்கம் சேவையகத்தில் இன்னும் முடியலாம்)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "சேவையகப் பதிலைச் செயலாக்க முடியவில்லை"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' இனி சொத்துக் கோப்பில் இ
 msgid "Could not add the asset to the scene."
 msgstr "சொத்தைக் காட்சியில் சேர்க்க முடியவில்லை."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "சிந்திக்கிறது..."
 
@@ -20178,6 +20211,12 @@ msgstr "உள்நுழைவு"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie அரட்டைக்கான உள்நுழைவுப் பேனல்"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "அமர்வு காலாவதியானது"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "வெளியேறு"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "உள்நுழைந்துள்ளாரா"
 
 msgid "Whether user is currently logged in"
 msgstr "பயனர் தற்போது உள்நுழைந்துள்ளாரா"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "உள்நுழைகிறது"

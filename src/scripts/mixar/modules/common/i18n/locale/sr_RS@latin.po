@@ -1415,6 +1415,9 @@ msgstr "Provera statusa nije uspela: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skenira zbirke resursa, proverava izmene, renderuje samo nove preglede i šalje ih API-ju za obuku"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 # derived
 msgid "Starting…"
 msgstr "Pokretanje…"
@@ -1939,6 +1942,9 @@ msgstr "Nije moguće doći do lokalnog servera. Proverite da li radi i da li je 
 # derived
 msgid "No models available — contact support"
 msgstr "Nema dostupnih modela — obratite se podršci"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 # derived
 msgid "Your API key controls the model"
@@ -2611,6 +2617,9 @@ msgstr "Spremna generisanja: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Potrošili ste kredite — unapredite plan da nastavite"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 # derived
 msgid "Authentication required — please sign in"
 msgstr "Potrebna je potvrda identiteta — prijavite se"
@@ -2729,6 +2738,9 @@ msgstr "Uvezi generisani rezultat"
 # derived
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Otkazano (generisanje se ipak može završiti na serveru)"
+
+msgid "Sign in"
+msgstr ""
 
 # derived
 msgid "Failed to process server response"
@@ -25589,6 +25601,27 @@ msgstr "„{name}“ više nije u datoteci resursa."
 msgid "Could not add the asset to the scene."
 msgstr "Nije bilo moguće dodati resurs u scenu."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 # derived
 msgid "Thinking..."
 msgstr "Razmišljanje..."
@@ -25990,6 +26023,12 @@ msgstr "Prijava"
 msgid "Login panel for Mixie Chat"
 msgstr "Panel prijave za ćaskanje Mixie"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 # derived
 msgid "Session expired"
 msgstr "Sesija je istekla"
@@ -26051,6 +26090,9 @@ msgid "Logout"
 msgstr "Odjava"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 # derived
@@ -28092,6 +28134,12 @@ msgstr "Da li je prijavljen"
 # derived
 msgid "Whether user is currently logged in"
 msgstr "Da li je korisnik trenutno prijavljen"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 # derived
 msgid "Is Logging In"

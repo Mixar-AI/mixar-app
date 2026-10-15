@@ -1112,6 +1112,9 @@ msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺖﯿﻌﺿﻭ ﯽﺳﺭﺮﺑ"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ﺪﺘﺳﺮﻓ‌ﯽﻣ ﺵﺯﻮﻣﺁ API ﻪﺑ ﻭ ﺪﻨﮐ‌ﯽﻣ ﺭﺪﻧﺭ ﺍﺭ ﺪﯾﺪﺟ ﯼﺎﻫ‌ﺶﯾﺎﻤﻨﺸﯿﭘ ﻂﻘﻓ ،ﺪﻨﮐ‌ﯽﻣ ﯽﺳﺭﺮﺑ ﺍﺭ ﺎﻫﺮﯿﯿﻐﺗ ،ﺪﻨﮐ‌ﯽﻣ ﺶﯾﻮﭘ ﺍﺭ ﯽﯾﺍﺭﺍﺩ ﯼﺎﻫ‌ﻪﻧﺎﺨﺑﺎﺘﮐ"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "…ﻉﻭﺮﺷ ﻝﺎﺣ ﺭﺩ"
 
@@ -1516,6 +1519,9 @@ msgstr ".ﺪﺷﺎﺑ ﺖﺳﺭﺩ ﻪﯾﺎﭘ URL ﻭ ﺪﺷﺎﺑ ﺍﺮﺟ�
 
 msgid "No models available — contact support"
 msgstr "ﺪﯾﺮﯿﮕﺑ ﺱﺎﻤﺗ ﯽﻧﺎﺒﯿﺘﺸﭘ ﺎﺑ — ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯽﻟﺪﻣ"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻦﯿﯿﻌﺗ ﺍﺭ ﻝﺪﻣ ﺎﻤﺷ API ﺪﯿﻠﮐ"
@@ -2060,6 +2066,9 @@ msgstr "{count} ﺖﺳﺍ ﻩﺩﺎﻣﺁ ﺪﯿﻟﻮﺗ"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "ﺪﯿﻫﺩ ﺎﻘﺗﺭﺍ ﺍﺭ ﺩﻮﺧ ﺡﺮﻃ ﻪﻣﺍﺩﺍ ﯼﺍﺮﺑ — ﺖﺳﺍ ﻩﺪﺷ ﻡﺎﻤﺗ ﺎﻤﺷ ﺭﺎﺒﺘﻋﺍ"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "ﺪﯾﻮﺷ ﺩﺭﺍﻭ ﺎًﻔﻄﻟ — ﺖﺳﺍ ﻡﺯﻻ﻿ ﺖﯾﻮﻫ ﺯﺍﺮﺣﺍ"
 
@@ -2149,6 +2158,9 @@ msgstr "ﻩﺪﺷﺪﯿﻟﻮﺗ ﻪﺠﯿﺘﻧ ﻥﺩﺮﮐ ﺩﺭﺍﻭ"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "(ﺩﻮﺷ ﻡﺎﻤﺗ ﺭﻭﺮﺳ ﯼﻭﺭ ﺯﻮﻨﻫ ﺖﺳﺍ ﻦﮑﻤﻣ ﺪﯿﻟﻮﺗ) ﺪﺷ ﻮﻐﻟ"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺭﻭﺮﺳ ﺦﺳﺎﭘ ﺵﺯﺍﺩﺮﭘ"
@@ -19863,6 +19875,27 @@ msgstr "«{name}» ﺖﺴﯿﻧ ﯽﯾﺍﺭﺍﺩ ﻞﯾﺎﻓ ﺭﺩ ﺮﮕﯾ
 msgid "Could not add the asset to the scene."
 msgstr ".ﺪﺸﻧ ﻦﮑﻤﻣ ﻪﻨﺤﺻ ﻪﺑ ﯽﯾﺍﺭﺍﺩ ﻥﺩﻭﺰﻓﺍ"
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "...ﺮﮑﻓ ﻝﺎﺣ ﺭﺩ"
 
@@ -20178,6 +20211,12 @@ msgstr "ﺩﻭﺭﻭ"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ﯼﻮﮕﺘﻔﮔ ﺩﻭﺭﻭ ﻞﻨﭘ"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "ﺪﺷ ﯽﻀﻘﻨﻣ ﺖﺴﺸﻧ"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "ﺝﻭﺮﺧ"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "ﺖﺳﺍ ﻩﺪﺷ ﺩﺭﺍﻭ"
 
 msgid "Whether user is currently logged in"
 msgstr "ﺖﺳﺍ ﻩﺪﺷ ﺩﺭﺍﻭ ﻥﻮﻨﮐﺍ ﺮﺑﺭﺎﮐ ﺎﯾﺁ"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ﺖﺳﺍ ﺩﻭﺭﻭ ﻝﺎﺣ ﺭﺩ"

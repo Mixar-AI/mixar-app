@@ -97,9 +97,12 @@ def test_login_paths_refresh_agent_settings_and_logout_invalidates():
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     ]
-    # Startup token validation, auto SSO re-login, interactive SSO login.
-    assert called.count("refresh_agent_settings") == 3
-    assert called.count("invalidate_agent_settings") == 1
+    # Startup token validation, auto SSO re-login, interactive SSO login all
+    # finish through the one post-login hook, which refreshes the settings.
+    assert called.count("_apply_account_hooks") == 3
+    assert called.count("refresh_agent_settings") == 1
+    # Logout, and a guest signing in (the account's settings replace the guest's).
+    assert called.count("invalidate_agent_settings") == 2
     # The socket-race workaround is gone, not merely unused.
     assert "_schedule_byok_fetch" not in AUTH_OPS.read_text(encoding="utf-8")
 

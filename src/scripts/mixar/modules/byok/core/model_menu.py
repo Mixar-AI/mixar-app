@@ -36,6 +36,7 @@ from mixar.modules.common.i18n import iface_, n_
 #: published nothing. Never replaced by a hardcoded model list: a
 #: backend-authoritative list fails CLOSED.
 EMPTY_SENTINEL_TEXT = n_("No models available — contact support")
+GUEST_NOTE_TEXT = n_("Sign in to use Mixar models")
 
 #: Shown at the top of the menu while a user key is configured. The server
 #: resolves BYOK ahead of any stored platform pick, so the pick is inert until
@@ -139,6 +140,7 @@ def build_rows(
     byok_active: bool = False,
     byok_provider_label: str = "",
     byok_model_label: str = "",
+    guest: bool = False,
 ) -> List[MenuRow]:
     """Rows for the picker, in the order the backend returned the models.
 
@@ -150,6 +152,9 @@ def build_rows(
 
     ``byok_provider_label`` / ``byok_model_label`` are the key's catalog
     labels (or raw ids) and only shape the NOTE row's wording.
+
+    ``guest``: Mixar's hosted models need a sign-in, so every platform row is
+    greyed under a "Sign in" note; the key route stays the way forward.
     """
     rows: List[MenuRow] = []
     current_levels: List[str] = []
@@ -168,6 +173,8 @@ def build_rows(
             label=byok_note_text(byok_provider_label, byok_model_label),
             enabled=False,
         ))
+    elif guest:
+        rows.append(MenuRow(kind="NOTE", label=GUEST_NOTE_TEXT, enabled=False))
 
     for record in models:
         provider = record.get("provider_id") or ""
@@ -178,8 +185,9 @@ def build_rows(
         levels = [
             level for level in (record.get("thinking_levels") or []) if level
         ]
-        # BYOK wins over every row; ineligibility only over its own.
-        enabled = not byok_active and bool(record.get("eligible", True))
+        # BYOK wins over every row; ineligibility only over its own; a guest
+        # can pick nothing hosted until signed in.
+        enabled = not byok_active and not guest and bool(record.get("eligible", True))
         is_current = provider == active_provider and model == active_model
         rows.append(
             MenuRow(
@@ -206,7 +214,7 @@ def build_rows(
             MenuRow(
                 kind="THINKING_MENU",
                 label=format_thinking_label(active_thinking),
-                enabled=not byok_active,
+                enabled=not byok_active and not guest,
                 provider=active_provider,
                 model=active_model,
                 thinking_level=active_thinking,
@@ -215,7 +223,7 @@ def build_rows(
         )
 
     rows.append(
-        MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active,
+        MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active and not guest,
                 active=not active_provider and not active_model)
     )
     rows.append(_byok_row(byok_active))

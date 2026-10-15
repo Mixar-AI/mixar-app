@@ -1112,6 +1112,9 @@ msgstr "状態の確認に失敗しました: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "アセットライブラリをスキャンして変更を確認し、新しいプレビューのみをレンダリングして学習APIに送信します"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "開始中…"
 
@@ -1516,6 +1519,9 @@ msgstr "ローカルサーバーに接続できませんでした。実行中で
 
 msgid "No models available — contact support"
 msgstr "利用可能なモデルはありません — サポートにお問い合わせください"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "モデルはあなたのAPIキーで決まります"
@@ -2060,6 +2066,9 @@ msgstr "{count}件の生成が完了しました"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "クレジットが不足しています — 続行するにはプランをアップグレードしてください"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "認証が必要です — サインインしてください"
 
@@ -2149,6 +2158,9 @@ msgstr "生成結果をインポート"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "キャンセルしました（サーバー側では生成が完了する場合があります）"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "サーバー応答の処理に失敗しました"
@@ -19867,6 +19879,27 @@ msgstr "'{name}' はもうアセットファイル内にありません。"
 msgid "Could not add the asset to the scene."
 msgstr "アセットをシーンに追加できませんでした。"
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "思考中..."
 
@@ -20182,6 +20215,12 @@ msgstr "ログイン"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie Chat のログインパネル"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "セッションの有効期限が切れました"
 
@@ -20233,6 +20272,9 @@ msgid "Logout"
 msgstr "ログアウト"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21826,6 +21868,12 @@ msgstr "ログイン済み"
 
 msgid "Whether user is currently logged in"
 msgstr "ユーザーが現在ログインしているかどうか"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ログイン中"

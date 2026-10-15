@@ -1112,6 +1112,9 @@ msgstr "Statuscontrole mislukt: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Scant assetbibliotheken, controleert op wijzigingen, rendert alleen nieuwe voorbeelden en stuurt ze naar de trainings-API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Starten…"
 
@@ -1516,6 +1519,9 @@ msgstr "Kon de lokale server niet bereiken. Controleer of deze actief is en of d
 
 msgid "No models available — contact support"
 msgstr "Geen modellen beschikbaar — neem contact op met support"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Uw API-sleutel bepaalt het model"
@@ -2060,6 +2066,9 @@ msgstr "{count} generaties gereed"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Uw credits zijn op — upgrade uw abonnement om door te gaan"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Authenticatie vereist — log in"
 
@@ -2149,6 +2158,9 @@ msgstr "Gegenereerd resultaat importeren"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Geannuleerd (generatie kan op de server nog worden voltooid)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Kon het serverantwoord niet verwerken"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' staat niet meer in het assetbestand."
 msgid "Could not add the asset to the scene."
 msgstr "Kon het asset niet aan de scène toevoegen."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Denken..."
 
@@ -20178,6 +20211,12 @@ msgstr "Inloggen"
 msgid "Login panel for Mixie Chat"
 msgstr "Inlogpaneel voor Mixie Chat"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Sessie verlopen"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Uitloggen"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Is ingelogd"
 
 msgid "Whether user is currently logged in"
 msgstr "Of de gebruiker momenteel is ingelogd"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Bezig met inloggen"

@@ -1112,6 +1112,9 @@ msgstr "Kontrolo de stato malsukcesis: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Skanas rimedbibliotekojn, kontrolas ŝanĝojn, redonas nur novajn antaŭvidojn, kaj sendas al la trejna API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Startigante…"
 
@@ -1516,6 +1519,9 @@ msgstr "Ne eblis atingi la lokan servilon. Kontrolu, ke ĝi rulas kaj ke la baza
 
 msgid "No models available — contact support"
 msgstr "Neniuj modeloj disponeblas — kontaktu subtenon"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Via API-ŝlosilo regas la modelon"
@@ -2060,6 +2066,9 @@ msgstr "Generadoj pretaj: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Vi ne plu havas kreditojn — plialtigu vian abonplanon por daŭrigi"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Aŭtentigo necesas — bonvolu ensaluti"
 
@@ -2149,6 +2158,9 @@ msgstr "Importi generitan rezulton"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Nuligita (generado eble ankoraŭ finiĝos sur la servilo)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Malsukcesis prilabori la respondon de la servilo"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' ne plu estas en la rimeda dosiero."
 msgid "Could not add the asset to the scene."
 msgstr "Ne eblis aldoni la rimedon al la sceno."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Pripensado..."
 
@@ -20178,6 +20211,12 @@ msgstr "Ensaluti"
 msgid "Login panel for Mixie Chat"
 msgstr "Panelo de ensaluto por Mixie-babilado"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Seanco eksvalidiĝis"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Elsaluti"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Estas ensalutinta"
 
 msgid "Whether user is currently logged in"
 msgstr "Ĉu la uzanto estas nun ensalutinta"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Ensalutas"

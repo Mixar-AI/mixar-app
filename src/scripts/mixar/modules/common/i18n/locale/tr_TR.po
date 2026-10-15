@@ -1112,6 +1112,9 @@ msgstr "Durum denetimi başarısız: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Varlık kütüphanelerini tarar, değişiklikleri denetler, yalnızca yeni önizlemelerin sunumunu oluşturur ve eğitim API'sine gönderir"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Başlatılıyor…"
 
@@ -1516,6 +1519,9 @@ msgstr "Yerel sunucuya ulaşılamadı. Çalıştığını ve temel URL'nin doğr
 
 msgid "No models available — contact support"
 msgstr "Kullanılabilir model yok — destek ekibiyle iletişime geçin"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Modeli API anahtarınız belirler"
@@ -2060,6 +2066,9 @@ msgstr "{count} oluşturma hazır"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Krediniz bitti — devam etmek için planınızı yükseltin"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Kimlik doğrulama gerekli — lütfen oturum açın"
 
@@ -2149,6 +2158,9 @@ msgstr "Oluşturulan Sonucu İçe Aktar"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "İptal edildi (oluşturma sunucuda yine de tamamlanabilir)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Sunucu yanıtı işlenemedi"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' artık varlık dosyasında değil."
 msgid "Could not add the asset to the scene."
 msgstr "Varlık sahneye eklenemedi."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Düşünüyor..."
 
@@ -20178,6 +20211,12 @@ msgstr "Oturum Aç"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie Sohbet için oturum açma paneli"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Oturumun süresi doldu"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Oturumu Kapat"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Oturum Açık"
 
 msgid "Whether user is currently logged in"
 msgstr "Kullanıcının şu anda oturum açmış olup olmadığı"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Oturum Açılıyor"

@@ -1029,6 +1029,14 @@ def register():
         default=False,
     )
 
+    # Mirrors /auth/me's is_guest: logged in on a guest account (no sign-in
+    # yet). The top bar reads "Guest", paid features ask to sign in.
+    bpy.types.WindowManager.mixie_chat_is_guest = BoolProperty(
+        name="Is Guest",
+        description="Whether the current session is a guest account",
+        default=False,
+    )
+
     bpy.types.WindowManager.mixie_chat_is_logging_in = BoolProperty(
         name="Is Logging In",
         description="Whether login is in progress",

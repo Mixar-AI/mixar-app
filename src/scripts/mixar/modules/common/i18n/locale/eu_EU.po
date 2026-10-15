@@ -1112,6 +1112,9 @@ msgstr "Egoera-egiaztapenak huts egin du: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Eskaneatu baliabide-liburutegiak, egiaztatu aldaketak, errendatu aurrebista berriak soilik, eta bidali entrenamendu-APIra"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Hastatzen…"
 
@@ -1516,6 +1519,9 @@ msgstr "Ezin izan da zerbitzari lokalera heldu. Egiaztatu martxan dagoela eta oi
 
 msgid "No models available — contact support"
 msgstr "Ez dago eredurik erabilgarri — jarri harremanetan laguntzarekin"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Zure API gakoak kontrolatzen du eredua"
@@ -2060,6 +2066,9 @@ msgstr "{count} sorkuntza prest"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Kredituak agortu zaizkizu — igo plana jarraitzeko"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Autentifikazioa behar da — hasi saioa"
 
@@ -2149,6 +2158,9 @@ msgstr "Inportatu sortutako emaitza"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Bertan behera (sorkuntza zerbitzarian amaitu daiteke oraindik)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Ezin izan da zerbitzariaren erantzuna prozesatu"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' ez dago jada baliabide-fitxategian."
 msgid "Could not add the asset to the scene."
 msgstr "Ezin izan da baliabidea eszenara gehitu."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Pentsatzen..."
 
@@ -20178,6 +20211,12 @@ msgstr "Saio-hasiera"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie txataren saio-hasiera panela"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Saioa iraungi da"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Amaitu saioa"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Saioa hasita dago"
 
 msgid "Whether user is currently logged in"
 msgstr "Erabiltzaileak saioa hasita duen"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Saioa hasten ari da"

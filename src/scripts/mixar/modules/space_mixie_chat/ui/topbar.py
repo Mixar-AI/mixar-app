@@ -39,6 +39,10 @@ from ...common.utils import topbar_layout
 from ...workflow.constants import BASIC_WORKSPACE_NAME
 
 
+#: Width of the "Guest" caption drawn before a guest's Sign in button.
+GUEST_LABEL_UNITS = 2.8
+
+
 class MIXAR_PT_profile(Panel):
     """Profile / account dropdown — opened from the global top bar.
 
@@ -189,7 +193,10 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
-    logged_in = getattr(wm, 'mixie_chat_is_logged_in', False)
+    # A guest is logged in to no account: the lane reads "Guest" and offers
+    # the sign-in instead of the profile pill.
+    guest = getattr(wm, 'mixie_chat_is_guest', False)
+    logged_in = getattr(wm, 'mixie_chat_is_logged_in', False) and not guest
     # On the narrowest windows the account button keeps the lane; sound
     # stays reachable from Preferences.
     sound = _show_sound_toggle(context, logged_in)
@@ -230,6 +237,10 @@ def _draw_topbar_profile_right(self, context):
     else:
         # Icon-only on windows whose right lane cannot fit the label.
         account.ui_units_x, label = _login_button_size(context, sound)
+        if guest and label:
+            label = "Sign in"
+            account.ui_units_x += GUEST_LABEL_UNITS
+            account.label(text="Guest")
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't
         # finished registering yet.

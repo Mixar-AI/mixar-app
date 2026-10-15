@@ -1112,6 +1112,9 @@ msgstr "Перевірка стану не вдалася: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Просканувати бібліотеки активів, перевірити зміни, відрендерити лише нові передогляди й надіслати їх до API навчання"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Запуск…"
 
@@ -1516,6 +1519,9 @@ msgstr "Не вдалося зв'язатися з локальним серве
 
 msgid "No models available — contact support"
 msgstr "Немає доступних моделей — зверніться до підтримки"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "Модель визначає ваш API-ключ"
@@ -2060,6 +2066,9 @@ msgstr "Генерацій готово: {count}"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "У вас закінчилися кредити — оновіть тарифний план, щоб продовжити"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Потрібна автентифікація — увійдіть"
 
@@ -2149,6 +2158,9 @@ msgstr "Імпортувати згенерований результат"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Скасовано (генерація може все одно завершитися на сервері)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Не вдалося обробити відповідь сервера"
@@ -19863,6 +19875,27 @@ msgstr "'{name}' більше немає у файлі активу."
 msgid "Could not add the asset to the scene."
 msgstr "Не вдалося додати актив до сцени."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Міркування..."
 
@@ -20178,6 +20211,12 @@ msgstr "Вхід"
 msgid "Login panel for Mixie Chat"
 msgstr "Панель входу в чат Mixie"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "Сеанс завершився"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Вийти"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Вхід виконано"
 
 msgid "Whether user is currently logged in"
 msgstr "Чи виконав користувач вхід"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Виконується вхід"

@@ -1112,6 +1112,9 @@ msgstr "Az állapotellenőrzés sikertelen: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Assetkönyvtárak átvizsgálása, változások keresése, csak az új előnézetek renderelése és elküldése a tanítási API-nak"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Indítás…"
 
@@ -1516,6 +1519,9 @@ msgstr "Nem érhető el a lokális szerver. Ellenőrizze, hogy fut-e, és helyes
 
 msgid "No models available — contact support"
 msgstr "Nem érhetők el modellek – forduljon az ügyfélszolgálathoz"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
 
 msgid "Your API key controls the model"
 msgstr "A modellt az Ön API-kulcsa határozza meg"
@@ -2060,6 +2066,9 @@ msgstr "{count} generálás kész"
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Elfogyott a kreditje — a folytatáshoz váltson magasabb csomagra"
 
+msgid "Sign in to Mixar to use this"
+msgstr ""
+
 msgid "Authentication required — please sign in"
 msgstr "Hitelesítés szükséges — kérjük, jelentkezzen be"
 
@@ -2149,6 +2158,9 @@ msgstr "Generált eredmény importálása"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Megszakítva (a generálás a kiszolgálón még befejeződhet)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "A kiszolgáló válaszának feldolgozása sikertelen"
@@ -19863,6 +19875,27 @@ msgstr "A(z) „{name}” már nincs az asset fájljában."
 msgid "Could not add the asset to the scene."
 msgstr "Az asset nem adható a jelenethez."
 
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
+
 msgid "Thinking..."
 msgstr "Gondolkodik..."
 
@@ -20178,6 +20211,12 @@ msgstr "Bejelentkezés"
 msgid "Login panel for Mixie Chat"
 msgstr "Bejelentkezési panel a Mixie csevegéshez"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
 msgid "Session expired"
 msgstr "A munkamenet lejárt"
 
@@ -20229,6 +20268,9 @@ msgid "Logout"
 msgstr "Kijelentkezés"
 
 msgid "Sound on"
+msgstr ""
+
+msgid "Guest"
 msgstr ""
 
 msgid "Retry"
@@ -21822,6 +21864,12 @@ msgstr "Bejelentkezve"
 
 msgid "Whether user is currently logged in"
 msgstr "A felhasználó be van-e jelentkezve"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Bejelentkezés folyamatban"

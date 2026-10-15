@@ -96,6 +96,7 @@ class MIXIE_CHAT_MT_agent_model(Menu):
             byok_active=bool(current["mixar_agent_model_byok_active"]),
             byok_provider_label=byok_provider_label,
             byok_model_label=byok_model_label,
+            guest=bool(getattr(context.window_manager, "mixie_chat_is_guest", False)),
         )
         # A build without the BYOK dialog would draw a row that pops nothing;
         # the removed topbar entry guarded the same way.

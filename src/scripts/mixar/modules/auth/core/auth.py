@@ -6,6 +6,7 @@
 Authentication utilities for Mixar
 """
 
+import base64
 import hashlib
 import json
 import platform
@@ -157,6 +158,21 @@ def _read_token(item, win_target):
     from mixar.modules.common.utils import credential_store
 
     return credential_store.get_secret(item) or ""
+
+
+def user_id_from_token(token):
+    """The Mixar user id: the access token's ``sub`` claim (no signature
+    check — this only scopes local, per-user state such as the BYOK key
+    record; the server authenticates)."""
+    if not token or token.count(".") != 2:
+        return None
+    try:
+        encoded = token.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
+        sub = claims.get("sub")
+        return str(sub) if sub else None
+    except Exception:  # noqa: BLE001 — not a JWT
+        return None
 
 
 def get_access_token():
@@ -613,11 +629,28 @@ def _replace_token_pair_locked(new_access_token, new_refresh_token):
     return True, None
 
 
+# The refresh token the last explicit login replaced. Captured under the
+# refresh fence so a rotation can never slip between "login stored" and
+# "guest claimed" (guest.sign_in): it is the guest's proof of possession.
+_replaced_refresh_token = ""
+
+
+def take_replaced_refresh_token():
+    """Return (and forget) the refresh token the last login replaced."""
+    global _replaced_refresh_token
+    with _refresh_lock:
+        token, _replaced_refresh_token = _replaced_refresh_token, ""
+        return token
+
+
 def store_login_token_pair(access_token, refresh_token):
     """Atomically fence an explicit login pair against refresh operations."""
+    global _replaced_refresh_token
     with _refresh_lock:
+        _, previous_refresh_token = _credentials_snapshot()
         stored, error = _replace_token_pair_locked(access_token, refresh_token)
         if stored:
+            _replaced_refresh_token = previous_refresh_token
             # Login establishes a new credential lineage. A stale durable
             # attempt is harmless if deletion fails (digest mismatch prevents
             # replay), but report it so safe-storage health remains visible.
@@ -801,6 +834,9 @@ def get_user_info():
             # the profile card falls back to the email's local part.
             response_data["data"]["name"] = user_data.get("name") or ""
             response_data["data"]["credits"] = user_data.get("credits", 0)
+            # A guest account (no sign-in yet); the UI shows "Guest", not the
+            # placeholder email, and every paid route answers 403.
+            response_data["data"]["is_guest"] = bool(user_data.get("is_guest", False))
             return response_data
         else:
             logger.warning(f"Error getting user info: {response.status_code}")
