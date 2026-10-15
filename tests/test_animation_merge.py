@@ -239,6 +239,16 @@ def test_clips_follow_the_result_order_not_the_importers_track_order(monkeypatch
     assert (scene.frame_start, scene.frame_end) == (0, 158)
 
 
+def test_a_clip_named_after_its_whole_preset_lands_under_its_short_name(monkeypatch):
+    # Tripo v2.5 (creature rigs) names a single clip by the whole preset.
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: None)
+    walk = _Action("preset:quadruped:walk", ["Hip"])
+    rig, arm = _rig(), _imported(walk)
+
+    assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig, ["walk"]) == ["walk"]
+    assert walk.name == "walk" and rig.animation_data.nla_tracks[0].name == "walk"
+
+
 def test_without_an_order_the_import_order_stands():
     walk, idle = _Action("walk", ["Hip"]), _Action("idle", ["Hip"])
     clips = [(walk,), (idle,)]

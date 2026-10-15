@@ -32,6 +32,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 from mixar.modules.common.utils.animation import bound_fcurves
 from ..constants import ANIMATE_RIG_JOB_PROP
+from .animate_presets import clip_name
 
 logger = get_logger(__name__)
 
@@ -178,15 +179,16 @@ _NAME_SUFFIX = re.compile(r"\.\d{3,}$")
 def order_clips(clips, order) -> list:
     """*clips* (``(action, ...)`` tuples) in the result's ``animations`` order.
 
-    The importer renames a clip whose name is already taken ("walk" ->
-    "walk.001"), so the suffix is ignored when matching; unlisted clips keep
-    their relative order after the listed ones.
+    The result lists short names ("walk"), while a clip may carry the whole
+    preset (Tripo v2.5 names a single clip "preset:quadruped:walk") and the
+    importer renames a clip whose name is taken ("walk.001"); both are
+    ignored when matching. Unlisted clips keep their order after the rest.
     """
     rank = {str(name): index for index, name in enumerate(order or ())}
     if not rank:
         return list(clips)
     return sorted(clips, key=lambda clip: rank.get(
-        _NAME_SUFFIX.sub("", clip[0].name), len(rank)))
+        clip_name(_NAME_SUFFIX.sub("", clip[0].name)), len(rank)))
 
 
 def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
@@ -218,7 +220,8 @@ def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
             slot.name_display = target.name
         except Exception:  # noqa: BLE001 — read-only on an older Blender, harmless
             pass
-    names = [stash_clip(anim, action, slot, action.name) for action, slot in matched]
+    # Tracks carry the short clip name, whatever the vendor named the clip.
+    names = [stash_clip(anim, action, slot, clip_name(action.name)) for action, slot in matched]
     newest, newest_slot = matched[-1]
     _assign(anim, newest, newest_slot)
     set_frame_range(scene, newest)
