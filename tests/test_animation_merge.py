@@ -154,6 +154,36 @@ class _Scene:
         self.frame_start, self.frame_end, self.frame_current = 1, 250, 1
 
 
+def test_the_rig_the_job_was_enqueued_for_wins_over_a_stamped_duplicate():
+    # Shift+D copies the stamps: the original and its duplicate both carry
+    # job-1, and the duplicate may come first in the scene.
+    original, duplicate = _rig(), _rig()
+    duplicate.name = "Rig.001"
+    scene = _Scene([original, duplicate])
+    assert merge.rig_armature(scene, "job-1", "Rig.001") is duplicate
+    assert merge.rig_armature(scene, "job-1", "Rig") is original
+    # The target renamed meanwhile: any armature with the stamp.
+    assert merge.rig_armature(scene, "job-1", "Renamed") is original
+    # The named armature carries another job's stamp: the stamped one wins.
+    other = _Object("Other", 'ARMATURE', **{ANIMATE_RIG_JOB_PROP: "job-2"})
+    assert merge.rig_armature(_Scene([other, original]), "job-1", "Other") is original
+    # Excluded names never qualify, even with the right stamp.
+    assert merge.rig_armature(scene, "job-1", "Rig.001", exclude=["Rig.001"]) is original
+
+
+def test_the_character_is_labelled_by_its_mesh_not_the_generic_armature():
+    rig = _rig()
+    rig.name = "Armature"
+    body, cape = _Object("Hero.001", 'MESH', parent=rig), _Object("Cape", 'MESH')
+    bone_empty = _Object("Socket", 'EMPTY', parent=rig)
+    rig.children_recursive = [bone_empty, body]
+    assert merge.character_label(_Scene([rig, bone_empty, body, cape]), rig) == "Hero.001"
+    cape.modifiers = [NS(type='ARMATURE', object=rig)]
+    rig.children_recursive = [bone_empty]
+    assert merge.character_label(_Scene([rig, bone_empty, cape]), rig) == "Cape"
+    assert merge.character_label(_Scene([rig]), rig) == "Armature"
+
+
 # --------------------------------------------------------------------------- #
 # The merge
 # --------------------------------------------------------------------------- #
@@ -166,7 +196,7 @@ def test_clips_move_onto_the_rig_as_stashed_tracks_with_the_newest_active(monkey
     rig, arm = _rig(), _imported(walk, idle)
     scene = _Scene([rig, arm])
 
-    assert merge.merge_clips_onto_rig(scene, [arm], rig) == ["walk", "idle"]
+    assert merge.merge_clips_onto_rig(scene, [arm], rig) == (["walk", "idle"], [])
 
     anim = rig.animation_data
     assert [(t.name, t.lock, t.mute) for t in anim.nla_tracks] == [
@@ -182,8 +212,19 @@ def test_a_clip_with_no_bone_in_common_leaves_the_import_alone(monkeypatch):
     monkeypatch.setattr(merge, "remove_objects", lambda objects: pytest.fail("must not delete"))
     foreign = _Action("walk", ["tripo::0_Left_Limb_0"])
     rig, arm = _rig(), _imported(foreign)
-    assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig) == []
+    assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig) == ([], ["walk"])
     assert rig.animation_data is None
+
+
+def test_a_clip_that_fits_nothing_is_dropped_beside_the_ones_that_merge(monkeypatch):
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: None)
+    walk, foreign = _Action("walk", ["Hip"]), _Action("crawl", ["tripo::0_Left_Limb_0"])
+    rig, arm = _rig(), _imported(walk, foreign)
+
+    merged, dropped = merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig)
+
+    assert (merged, dropped) == (["walk"], ["crawl"])
+    assert [t.name for t in rig.animation_data.nla_tracks] == ["walk"]
 
 
 def test_an_unstashed_user_action_is_parked_before_the_new_clip_takes_over(monkeypatch):
@@ -231,7 +272,7 @@ def test_clips_follow_the_result_order_not_the_importers_track_order(monkeypatch
     rig, arm = _rig(), _imported(wave, walk, idle)
     scene = _Scene([rig, arm])
 
-    names = merge.merge_clips_onto_rig(
+    names, _dropped = merge.merge_clips_onto_rig(
         scene, [arm], rig, ["idle", "walk", "wave_goodbye_01"])
 
     assert names == ["idle", "walk", "wave_goodbye_01"]
@@ -245,7 +286,7 @@ def test_a_clip_named_after_its_whole_preset_lands_under_its_short_name(monkeypa
     walk = _Action("preset:quadruped:walk", ["Hip"])
     rig, arm = _rig(), _imported(walk)
 
-    assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig, ["walk"]) == ["walk"]
+    assert merge.merge_clips_onto_rig(_Scene([rig, arm]), [arm], rig, ["walk"]) == (["walk"], [])
     assert walk.name == "walk" and rig.animation_data.nla_tracks[0].name == "walk"
 
 
@@ -256,7 +297,8 @@ def test_a_clip_the_rig_already_has_gets_a_numbered_track(monkeypatch):
     merge.merge_clips_onto_rig(_Scene([rig]), [_imported(first)], rig, ["walk"])
     again = _Action("walk.001", ["Hip"])
 
-    names = merge.merge_clips_onto_rig(_Scene([rig]), [_imported(again)], rig, ["walk"])
+    names, _dropped = merge.merge_clips_onto_rig(
+        _Scene([rig]), [_imported(again)], rig, ["walk"])
 
     assert names == ["walk.001"]
     assert [t.name for t in rig.animation_data.nla_tracks] == ["walk", "walk.001"]
@@ -322,6 +364,34 @@ def test_the_hook_keeps_the_import_and_says_so_when_it_cannot_merge(
     assert hook(NS(scene_name="Scene", agent_ref=None), "Armature.001") is None
     assert hook_seams.in_front == ["Armature.001"]
     assert hook_seams.toasts == [("warning", merge.RIG_GONE_TITLE, body)]
+
+
+def test_the_hook_warns_when_some_clips_did_not_fit(hook_seams, monkeypatch):
+    rig = _rig()
+    arm = _imported(_Action("walk", ["Hip"]), _Action("crawl", ["tripo::0_Left_Limb_0"]))
+    hook_seams.scene = _Scene([rig, arm])
+    _bpy_with(hook_seams.scene, [rig, arm], monkeypatch)
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: None)
+    hook = merge.merge_hook("job-1", "Rig")
+
+    assert hook(NS(scene_name="Scene", agent_ref=None), "Armature.001") == "Rig"
+    assert hook_seams.toasts == [("warning", merge.PARTLY_MERGED_TITLE,
+                                  "crawl: no bone in common with the character's skeleton")]
+
+
+def test_an_import_without_a_clip_is_removed_and_says_nothing_was_imported(
+        hook_seams, monkeypatch):
+    rig, arm = _rig(), _imported()
+    hook_seams.scene = _Scene([rig, arm])
+    _bpy_with(hook_seams.scene, [rig, arm], monkeypatch)
+    removed = []
+    monkeypatch.setattr(merge, "remove_objects", lambda objects: removed.extend(objects))
+    hook = merge.merge_hook("job-1", "Rig", on_merged=lambda *a: pytest.fail("no merge"))
+
+    assert hook(NS(scene_name="Scene", agent_ref=None), "Armature.001") is None
+    assert removed == [arm] and rig.animation_data is None
+    assert hook_seams.toasts == [("warning", merge.NOTHING_IMPORTED_TITLE,
+                                  merge.NOTHING_IMPORTED_BODY)]
 
 
 def test_an_import_that_took_the_deleted_rigs_name_is_kept_not_merged_into_itself(

@@ -39,26 +39,32 @@ logger = get_logger(__name__)
 _BONE_PATH = re.compile(r'^pose\.bones\["(.+?)"\]')
 
 
-def rig_armature(scene, rig_job_id: str, fallback_name: str = "", exclude=()):
+def rig_armature(scene, rig_job_id: str, target_name: str = "", exclude=()):
     """The armature a rig job imported into *scene*, or None.
 
-    Stamp first (the name may have changed since), then the name the job
-    was enqueued with, provided it is still an armature. Objects named in
-    *exclude* (the clip import itself) never qualify: once the rig is
+    The armature the job was enqueued for (*target_name*) wins while it
+    still carries the job's stamp: a duplicate of the character (Shift+D
+    copies the stamps too) must not take the clips meant for this one. Any
+    other armature with the stamp comes next (the target was renamed), then
+    the target by name alone (an import that lost its stamp). Objects named
+    in *exclude* (the clip import itself) never qualify: once the rig is
     deleted, the import's armature can take its freed name.
     """
     skip = set(exclude)
     objects = getattr(scene, "objects", ())
+
+    def stamped(obj) -> bool:
+        return str(obj.get(ANIMATE_RIG_JOB_PROP, "")) == str(rig_job_id)
+
+    named = objects.get(target_name) if target_name and target_name not in skip else None
+    if named is not None and named.type != 'ARMATURE':
+        named = None
+    if named is not None and stamped(named):
+        return named
     for obj in objects:
-        if obj.name in skip:
-            continue
-        if obj.type == 'ARMATURE' and str(obj.get(ANIMATE_RIG_JOB_PROP, "")) == str(rig_job_id):
+        if obj.name not in skip and obj.type == 'ARMATURE' and stamped(obj):
             return obj
-    if fallback_name and fallback_name not in skip:
-        obj = objects.get(fallback_name)
-        if obj is not None and obj.type == 'ARMATURE':
-            return obj
-    return None
+    return named
 
 
 def character_object_names(armature) -> list:
@@ -77,6 +83,21 @@ def skinned_mesh_names(scene, armature) -> list:
         if obj.type == 'MESH' and obj.parent is not armature
         and any(m.type == 'ARMATURE' and m.object is armature for m in obj.modifiers)
     ]
+
+
+def character_label(scene, armature) -> str:
+    """The character's name for queue rows and toasts.
+
+    Its first mesh (the Auto Rig import names the mesh after the source
+    model, while the armature is a generic "Armature"), else the armature's.
+    """
+    objects = getattr(scene, "objects", None)
+    names = character_object_names(armature)[1:] + skinned_mesh_names(scene, armature)
+    for name in names:
+        obj = objects.get(name) if objects is not None else None
+        if obj is not None and obj.type == 'MESH':
+            return name
+    return armature.name
 
 
 def clip_bone_names(binding) -> set:
@@ -214,23 +235,26 @@ def order_clips(clips, order) -> list:
         clip_name(_NAME_SUFFIX.sub("", clip[0].name)), len(rank)))
 
 
-def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
-    """Move the clips *imported* carries onto *target*; return the clip names.
+def merge_clips_onto_rig(scene, imported, target, order=()) -> tuple:
+    """Move the clips *imported* carries onto *target*.
 
-    *order* is the job result's ``animations`` (request order): the tracks are
-    stashed in it and its last clip — the newest — becomes the active action.
-    An empty result means nothing matched the rig (no bone in common) and the
-    import was left untouched — the caller keeps it and says so.
+    Returns ``(merged, dropped)``: the track names the matching clips took,
+    and the short names of the clips with no bone in common with the rig
+    (deleted with the import). *order* is the job result's ``animations``
+    (request order): the tracks are stashed in it and its last clip — the
+    newest — becomes the active action. Nothing merged means the import was
+    left untouched — the caller keeps it and says so.
     """
-    clips = imported_clips(imported)
     rig_bones = {bone.name for bone in target.data.bones}
-    matched = [
-        (action, slot) for action, slot, binding in order_clips(clips, order)
-        if clip_bone_names(binding) & rig_bones
-    ]
+    matched, dropped = [], []
+    for action, slot, binding in order_clips(imported_clips(imported), order):
+        if clip_bone_names(binding) & rig_bones:
+            matched.append((action, slot))
+        else:
+            dropped.append(clip_name(_NAME_SUFFIX.sub("", action.name)))
     if not matched:
         logger.warning("[Animate] no clip matches the rig's bones; import kept")
-        return []
+        return [], dropped
     anim = target.animation_data or target.animation_data_create()
     # A clip the user had active but never stashed must not be lost under the
     # new one. Our own merges always stash first, so this is their own work.
@@ -252,14 +276,33 @@ def merge_clips_onto_rig(scene, imported, target, order=()) -> list:
     _assign(anim, newest, newest_slot)
     set_frame_range(scene, newest)
     remove_objects(imported)
-    logger.info("[Animate] merged %d clip(s) onto %s: %s", len(names), target.name, names)
-    return names
+    logger.info("[Animate] merged %d clip(s) onto %s: %s (dropped %s)",
+                len(names), target.name, names, dropped)
+    return names, dropped
 
 
-# The sentence shown (toast + log) when the rig is gone and the import stays.
+# Toasts (and log lines) for a result that did not land whole on the rig.
 RIG_GONE_TITLE = n_("Animation imported on its own")
 RIG_GONE_BODY = n_("The rigged character it was made for is no longer in the scene")
 NO_MATCH_BODY = n_("Its skeleton does not match the rigged character, so it was kept beside it")
+NOTHING_IMPORTED_TITLE = n_("No animation imported")
+NOTHING_IMPORTED_BODY = n_("The result held no animation clip, so nothing was added")
+PARTLY_MERGED_TITLE = n_("Some animations were not applied")
+PARTLY_MERGED_BODY = n_("{names}: no bone in common with the character's skeleton")
+
+
+def _warn(title: str, body: str, **fields) -> None:
+    """Log the English text and toast it (the toast translates at draw;
+    a *body* template with *fields* is translated here, before formatting)."""
+    from mixar.modules.common.i18n import rpt_
+    from mixar.modules.common.notifications import get_notification_store
+
+    logger.warning("[Animate] %s: %s", title, body.format(**fields))
+    try:
+        get_notification_store().push(
+            "warning", title, rpt_(body).format(**fields) if fields else body)
+    except Exception:  # noqa: BLE001 — a toast must never fail a landed import
+        pass
 
 
 def merge_hook(rig_job_id: str, rig_name: str = "", on_merged=None):
@@ -272,25 +315,28 @@ def merge_hook(rig_job_id: str, rig_name: str = "", on_merged=None):
     def _hook(job, object_names: str):
         import bpy
         from mixar.modules.common.job_queue.core.queue_download import resolve_job_scene
-        from mixar.modules.common.notifications import get_notification_store
         from .animate_enqueue import show_armatures_in_front
 
         session_id = str((getattr(job, "agent_ref", None) or {}).get("session_id") or "")
         scene = resolve_job_scene(getattr(job, "scene_name", ""), session_id) or bpy.context.scene
         names = [name.strip() for name in str(object_names or "").split(",") if name.strip()]
         imported = [obj for obj in (bpy.data.objects.get(name) for name in names) if obj]
-        target = rig_armature(scene, rig_job_id, rig_name, exclude=names)
-        order = (getattr(job, "result_data", None) or {}).get("animations") or ()
-        clips = merge_clips_onto_rig(scene, imported, target, order) if target is not None else []
-        if not clips:
-            show_armatures_in_front(object_names)
-            body = NO_MATCH_BODY if target is not None else RIG_GONE_BODY
-            logger.warning("[Animate] %s", body)
-            try:
-                get_notification_store().push("warning", RIG_GONE_TITLE, body)
-            except Exception:  # noqa: BLE001 — a toast must never fail a landed import
-                pass
+        if not imported_clips(imported):
+            # A bare skeleton with no clip is of no use beside the character.
+            remove_objects(imported)
+            _warn(NOTHING_IMPORTED_TITLE, NOTHING_IMPORTED_BODY)
             return None
+        target = rig_armature(scene, rig_job_id, rig_name, exclude=names)
+        merged, dropped = [], []
+        if target is not None:
+            order = (getattr(job, "result_data", None) or {}).get("animations") or ()
+            merged, dropped = merge_clips_onto_rig(scene, imported, target, order)
+        if not merged:
+            show_armatures_in_front(object_names)
+            _warn(RIG_GONE_TITLE, NO_MATCH_BODY if target is not None else RIG_GONE_BODY)
+            return None
+        if dropped:
+            _warn(PARTLY_MERGED_TITLE, PARTLY_MERGED_BODY, names=", ".join(dropped))
         character = character_object_names(target) + skinned_mesh_names(scene, target)
         if on_merged is not None:
             on_merged(job, character)
