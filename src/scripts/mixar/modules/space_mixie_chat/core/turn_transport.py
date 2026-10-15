@@ -147,6 +147,14 @@ class TurnTransport:
                 command_retry.request(payload['session_id'], command_id,
                                       command_retry.retry_after(result), resend)
                 return
+            lost = (isinstance(result, dict) and result.get('code')
+                    and (result.get('data') or {}).get('uncertain'))
+            if not lost and turn_events.acknowledged(command_id) and isinstance(result, dict) \
+                    and not result.get('code') and result.get('state') != 'complete':
+                # A resend after a dead socket was admitted: clear "delivery uncertain".
+                turn_events.handle_turn_notification('agent.command.delivered', {
+                    'session_id': payload['session_id'], 'command_id': command_id, 'ok': True,
+                })
             if isinstance(result, dict) and result.get('code'):
                 turn_events.handle_turn_notification('agent.command.result', {
                     'session_id': payload['session_id'], 'command_id': command_id,
@@ -177,11 +185,15 @@ class TurnTransport:
                 outcome['ok'] = False
                 return
             payload.update(byok_fields or {})
+            # Held until the server answers, so a frame that dies with its
+            # socket is resent under this id on the next connection.
+            turn_events.remember_unsent(command_id, method, payload, ack)
             try:
                 command(method, payload, ack, command_id=command_id)
                 self._running = True
                 outcome['ok'] = True
             except Exception as exc:
+                turn_events.acknowledged(command_id)  # refused before sending: shown, not held
                 turn_events.handle_turn_notification('agent.command.result', {
                     'session_id': payload['session_id'], 'command_id': command_id,
                     'ok': False, 'message': str(exc),

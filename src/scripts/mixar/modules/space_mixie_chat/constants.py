@@ -241,6 +241,20 @@ WS_LIVENESS_TIMEOUT = 45.0
 # GIL-starved wake-up proves the link alive within ~1s and carries on.
 WS_LIVENESS_PROBE_GRACE = 5.0
 
+# Unanswered-command probe: the server answers a command (chat, input,
+# cancel, …) within ~100 ms of receiving it, and pings run on their own lane
+# there, so a command with no answer AND no inbound traffic this long after
+# its frame left the client means the path probably died under it. The
+# client probes at once instead of waiting out WS_LIVENESS_TIMEOUT, so a lost
+# message is resent ~15 s after the send, not ~76 s (socket_liveness.py).
+WS_ACK_TIMEOUT = 8.0
+
+# The slowest uplink still treated as alive: every frame sent holds the fast
+# probes off for size / this rate (a 250 KB image ~16 s), since a local proxy
+# or TLS-inspecting antivirus can swallow a frame at once and upload it slowly
+# where the kernel's send backlog cannot show it (socket_liveness.uploaded).
+WS_ACK_MIN_UPLINK_BPS = 16_000
+
 # UI transport-staleness threshold: how long recv may be silent before the
 # status surfaces (bubble pill, chat header) stop implying a healthy
 # connection. A healthy connection carries at least a pong per ~15s ping, so

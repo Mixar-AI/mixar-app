@@ -12,6 +12,8 @@ Handles bidirectional RPC:
 - Tool lifecycle notifications (agent.tool_start, agent.tool_end)
 """
 
+import time
+
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
@@ -33,6 +35,9 @@ class SocketDispatch:
         if "result" in msg or "error" in msg:
             msg_id = msg.get("id")
             if msg_id:
+                # The server read something we sent: the only proof the
+                # upstream works (its own pings and events prove downstream).
+                self._last_reply_time = time.time()
                 with self._pending_lock:
                     cb = self._pending_callbacks.pop(msg_id, None)
                     self._pending_deadlines.pop(msg_id, None)
