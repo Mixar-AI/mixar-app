@@ -2006,6 +2006,21 @@ msgstr "ﺪﯿﻨﮐ ﺵﻼ﻿ﺗ ﻩﺭﺎﺑﻭﺩ ﺎًﻔﻄﻟ — ﺩﻮ�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ﯽﮔﮋﯾﻭ ﺎﺑ ،ﺖﺳﺮﻬﻓ RNA ﻩﺪﺷ ﺪﯿﻠﮐ"
 
+msgid "Nothing selected"
+msgstr "ﻩﺪﺸﻧ ﺏﺎﺨﺘﻧﺍ ﺰﯿﭼ ﭻﯿﻫ"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "ﺭﺍﺪﻘﻣ"
+
+msgid "Group"
+msgstr "ﻩﻭﺮﮔ"
+
+msgid "Selected"
+msgstr "ﻩﺪﺷ‌ﺏﺎﺨﺘﻧﺍ"
+
 msgid "No modes"
 msgstr "ﺖﺴﯿﻧ ﯽﺘﻟﺎﺣ"
 
@@ -4610,6 +4625,24 @@ msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺭﺎﮐﺩﻮﺧ ﮓﯾﺭ"
 msgid "Animate failed"
 msgstr "ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﺖﯿﻤﯿﻧﺍ"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "({max_faces:,} ﻪﻨﯿﺸﯿﺑ) ﺩﺭﺍﺩ ﻪﺟﻭ {count:,} ﻩﺪﺷ‌ﺏﺎﺨﺘﻧﺍ ﺶﻣ"
 
@@ -5396,6 +5429,9 @@ msgstr "ﺶﻣ ﯼﺪﻨﺑ‌ﺶﺨﺑ"
 msgid "Auto Rig"
 msgstr "ﺭﺎﮐﺩﻮﺧ ﮓﯾﺭ"
 
+msgid "Animate"
+msgstr "ﯼﺯﺎﺳ‌ﮎﺮﺤﺘﻣ"
+
 msgid "Add Mesh"
 msgstr "ﺶﻣ ﻥﺩﺮﮐ‌ﻪﻓﺎﺿﺍ"
 
@@ -5497,6 +5533,18 @@ msgstr ".ﺩﻮﺷ ﺮﺗ‌ﯽﻧﻻ﻿ﻮﻃ ﺪﻧﺍﻮﺗ‌ﯽﻣ ﺮﺘ�
 
 msgid "The file format used to store the generated image."
 msgstr ".ﺩﻮﺷ‌ﯽﻣ ﻩﺮﯿﺧﺫ ﻥﺁ ﺎﺑ ﻩﺪﺷﺪﯿﻟﻮﺗ ﺮﯾﻮﺼﺗ ﻪﮐ ﯽﻠﯾﺎﻓ ﺖﻣﺮﻓ"
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "(ﻡﺎﻧ ﺯﺍ) ﺭﺎﮐﺩﻮﺧ"
@@ -5813,6 +5861,9 @@ msgstr "ﺖﯿﺼﺨﺷ ﻥﺩﺮﮐ ﻢﻫﺮﺳ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻞﺻﻭ ﻩﺩﺎﺳ ﺎﯾ ﻩﺪﺷ‌ﮓﯾﺭ ﻥﺪﺑ ﮏﯾ ﻪﺑ ﯽﻠﺤﻣ ﺕﺭﻮﺻ‌ﻪﺑ ﺍﺭ ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌ﻪﻌﻄﻗ"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "ﺮﯾﻮﺼﺗ ﮏﺒﺳ ﻂﻘﻓ"
 
@@ -5971,6 +6022,9 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﻩﺩﺎﻔﺘﺳﺍ ﻥﺁ ﻪﺠﯿﺘﻧ ﺯﺍ �
 
 msgid "Mesh"
 msgstr "ﺶﻣ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number} ﻊﺟﺮﻣ"
@@ -6917,9 +6971,6 @@ msgstr "ﯽﺷﺭﺎﻔﺳ ﮓﻧﺭ ﺯﺍ ﻩﺩﺎﻔﺘﺳﺍ"
 msgid "Custom Colour"
 msgstr "ﯽﺷﺭﺎﻔﺳ ﮓﻧﺭ"
 
-msgid "Selected"
-msgstr "ﻩﺪﺷ‌ﺏﺎﺨﺘﻧﺍ"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "ﺪﻨﺷﺎﺑ ﺏﺎﺨﺘﻧﺍ ﻞﺑﺎﻗ ﺶﯾﺎﻀﻋﺍ ﻂﻘﻓ ﺎﺗ ،ﺩﻮﺷ‌ﯽﻣ ﻪﺘﻓﺮﮔ ﻩﺪﯾﺩﺎﻧ ﺏﺎﻗ ﻦﯾﺍ ﻞﺧﺍﺩ ﻭ ﺯﺮﻣ ﮏﯿﻠﮐ ﻡﺎﮕﻨﻫ"
 
@@ -6928,6 +6979,18 @@ msgstr "ﻩﺪﺷ‌ﻊﻤﺟ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻥﺎﻬﻨﭘ ﺍﺭ ﻥﺁ ﻪﻧﺪﺑ ﻭ ﺪﺸﮐ‌ﯽﻣ ﺭﺍﺩ‌ﻥﺍﻮﻨﻋ ﺭﺍﻮﻧ ﮏﯾ ﺕﺭﻮﺻ‌ﻪﺑ ﺍﺭ ﺏﺎﻗ"
+
+msgid "Unavailable"
+msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ"
+
+msgid "No supported 3D service is available"
+msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯼﺍ‌ﻩﺪﺷ‌ﯽﻧﺎﺒﯿﺘﺸﭘ ﯼﺪﻌﺑ‌ﻪﺳ ﺖﻣﺪﺧ"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "ﺪﻨﻨﮐ ﻡﻼ﻿ﻋﺍ ﺍﺭ ﻊﺟﺮﻣ ﻭﺩ ﻭ ﮏﺳﺎﻣ ﯽﯾﺎﻤﻨﻫﺍﺭ ﺪﯾﺎﺑ ﺮﯾﻮﺼﺗ ﯼﺎﻫ‌ﻝﺪﻣ"
+
+msgid "Attachment settings"
+msgstr "ﺖﺳﻮﯿﭘ ﺕﺎﻤﯿﻈﻨﺗ"
 
 msgid "No choices published"
 msgstr "ﻩﺪﺸﻧ ﺮﺸﺘﻨﻣ ﯼﺍ‌ﻪﻨﯾﺰﮔ"
@@ -6946,18 +7009,6 @@ msgstr "ﻞﻣﺎﮐ"
 
 msgid "Generation completed"
 msgstr "ﺪﺷ ﻞﻣﺎﮐ ﺪﯿﻟﻮﺗ"
-
-msgid "Unavailable"
-msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ"
-
-msgid "No supported 3D service is available"
-msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﯼﺍ‌ﻩﺪﺷ‌ﯽﻧﺎﺒﯿﺘﺸﭘ ﯼﺪﻌﺑ‌ﻪﺳ ﺖﻣﺪﺧ"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "ﺪﻨﻨﮐ ﻡﻼ﻿ﻋﺍ ﺍﺭ ﻊﺟﺮﻣ ﻭﺩ ﻭ ﮏﺳﺎﻣ ﯽﯾﺎﻤﻨﻫﺍﺭ ﺪﯾﺎﺑ ﺮﯾﻮﺼﺗ ﯼﺎﻫ‌ﻝﺪﻣ"
-
-msgid "Attachment settings"
-msgstr "ﺖﺳﻮﯿﭘ ﺕﺎﻤﯿﻈﻨﺗ"
 
 msgid "Parameter ID"
 msgstr "ﺮﺘﻣﺍﺭﺎﭘ ﻪﺳﺎﻨﺷ"
@@ -6983,14 +7034,14 @@ msgstr "ﯽﻟﻮﺑ ﺭﺍﺪﻘﻣ"
 msgid "Catalog choice"
 msgstr "ﺖﺳﺮﻬﻓ ﻪﻨﯾﺰﮔ"
 
-msgid "Widget"
-msgstr "ﮎﺭﺍﺰﺑﺍ"
-
-msgid "Group"
-msgstr "ﻩﻭﺮﮔ"
-
 msgid "Choices"
 msgstr "ﺎﻫ‌ﻪﻨﯾﺰﮔ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ﮎﺭﺍﺰﺑﺍ"
 
 msgid "Visibility Condition"
 msgstr "ﯽﻧﺎﯾﺎﻤﻧ ﻁﺮﺷ"
@@ -7010,11 +7061,14 @@ msgstr "ﻪﻨﯿﻤﮐ"
 msgid "Maximum"
 msgstr "ﻪﻨﯿﺸﯿﺑ"
 
-msgid "Value"
-msgstr "ﺭﺍﺪﻘﻣ"
-
 msgid "Value Label"
 msgstr "ﺭﺍﺪﻘﻣ ﺐﺴﭼﺮﺑ"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ﺖﮐﻮﺳ ﻪﺳﺎﻨﺷ"
@@ -8722,6 +8776,33 @@ msgstr "ﻪﻤﻫ ﯼﺪﻨﺑ‌ﺏﺎﻗ"
 msgid "Clear Board"
 msgstr "ﻪﺘﺨﺗ ﻥﺩﺮﮐ‌ﮎﺎﭘ"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ءﯽﺷ ﻡﺎﻧ"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ﺎﻫ‌ﻦﺸﯿﻤﯿﻧﺍ"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ﻞﻣﺎﻋ ﺭﺎﮐﺩﻮﺧ ﮓﯾﺭ"
 
@@ -8763,9 +8844,6 @@ msgstr "ﻞﻣﺎﻋ PBR ﺪﯿﻟﻮﺗ"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﺪﯿﻟﻮﺗ Tripo ﺎﺑ ﻩﺪﺷ‌ﻩﺩﺍﺩ ﺶﻣ ﺊﺷ ﯼﺍﺮﺑ ﺍﺭ PBR ﯼﺎﻫ‌ﺖﻓﺎﺑ"
-
-msgid "Object Name"
-msgstr "ءﯽﺷ ﻡﺎﻧ"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "ﯽﻫﺩ‌ﺖﻓﺎﺑ ﯼﺍﺮﺑ ﻪﻨﺤﺻ ﺭﺩ ﺶﻣ ﺊﺷ ﻡﺎﻧ"
@@ -11949,9 +12027,6 @@ msgstr "ﮓﻧﺭ ﻩﺰﯿﺘﻧﺍﻮﮐ ﯼﺎﻫ‌ﺖﯿﺑ"
 
 msgid "Generic Quantization Bits"
 msgstr "ﯽﻣﻮﻤﻋ ﻩﺰﯿﺘﻧﺍﻮﮐ ﯼﺎﻫ‌ﺖﯿﺑ"
-
-msgid "Animations"
-msgstr "ﺎﻫ‌ﻦﺸﯿﻤﯿﻧﺍ"
 
 msgid "Animation Mode"
 msgstr "ﻦﺸﯿﻤﯿﻧﺍ ﺖﻟﺎﺣ"
@@ -24828,9 +24903,6 @@ msgstr "ﻒﺻ ﻥﺩﺮﮐ ﺯﺎﺑ"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "ﻩﺪﺸﻧ ﺏﺎﺨﺘﻧﺍ ﺰﯿﭼ ﭻﯿﻫ"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ﺪﯿﻨﮐ ﻡﺎﻤﺗ ﺍﺭ ﻪﺘﮑﯾﺩ ﺎﯾ ﭻﮑﺳﺍ ﺎﻫ‌ﻪﻧﺎﺑﺯ ﻥﺩﺮﮐ ﺽﻮﻋ ﺯﺍ ﺶﯿﭘ"
 
@@ -26846,9 +26918,6 @@ msgstr "ﻦﻣﺍ ﯽﺣﺍﻮﻧ"
 
 msgid "Select a character to animate"
 msgstr "ﺪﯿﻨﮐ ﺏﺎﺨﺘﻧﺍ ﯼﺯﺎﺳ‌ﮎﺮﺤﺘﻣ ﯼﺍﺮﺑ ﺍﺭ ﺖﯿﺼﺨﺷ ﮏﯾ"
-
-msgid "Animate"
-msgstr "ﯼﺯﺎﺳ‌ﮎﺮﺤﺘﻣ"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﺪﯿﻠﮐ ﺶﺨﭘ ﻞﺤﻣ ﺯﺍ ﺍﺭ ﯼﺪﻨﺑ‌ﮎﻮﻠﺑ ﺢﻄﺳ ﺖﮐﺮﺣ ﻦﯾﺍ"

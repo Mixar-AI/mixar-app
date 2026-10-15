@@ -2006,6 +2006,21 @@ msgstr "생성 실패 — 다시 시도하세요"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA 속성을 키로 하는 카탈로그 visible_if입니다"
 
+msgid "Nothing selected"
+msgstr "아무 것도 선택되지 않음"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "값"
+
+msgid "Group"
+msgstr "그룹"
+
+msgid "Selected"
+msgstr "선택됨"
+
 msgid "No modes"
 msgstr "모드 없음"
 
@@ -4610,6 +4625,24 @@ msgstr "자동 리그 실패"
 msgid "Animate failed"
 msgstr "애니메이션 실패"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "선택한 메시의 페이스가 {count:,}개입니다 (최대 {max_faces:,}개)"
 
@@ -5396,6 +5429,9 @@ msgstr "메시 분할"
 msgid "Auto Rig"
 msgstr "자동 리그"
 
+msgid "Animate"
+msgstr "애니메이션 적용"
+
 msgid "Add Mesh"
 msgstr "메시 추가"
 
@@ -5497,6 +5533,18 @@ msgstr "생성 중에 사용하는 정제 단계 수입니다. 단계가 많을�
 
 msgid "The file format used to store the generated image."
 msgstr "생성된 이미지를 저장하는 데 사용하는 파일 형식입니다."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "자동 (이름 기준)"
@@ -5813,6 +5861,9 @@ msgstr "캐릭터 조립"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "생성된 파트를 리깅된 바디나 일반 바디에 로컬로 부착합니다"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "이미지 스타일만 사용"
 
@@ -5971,6 +6022,9 @@ msgstr "먼저 '{name}'을(를) 생성하세요 — 이 카드는 그 결과를 
 
 msgid "Mesh"
 msgstr "메시"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "참조 {number}"
@@ -6917,9 +6971,6 @@ msgstr "커스텀 색상 사용"
 msgid "Custom Colour"
 msgstr "커스텀 색상"
 
-msgid "Selected"
-msgstr "선택됨"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "클릭할 때 이 프레임의 테두리와 내부를 무시하여 멤버만 선택할 수 있게 합니다"
 
@@ -6928,6 +6979,18 @@ msgstr "접힘"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "프레임을 제목 표시줄로 그리고 본문을 숨깁니다"
+
+msgid "Unavailable"
+msgstr "사용 불가"
+
+msgid "No supported 3D service is available"
+msgstr "지원되는 3D 서비스가 없습니다"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "이미지 모델은 마스크 가이던스와 두 개의 참조 지원을 명시해야 합니다"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "게시된 선택지가 없습니다"
@@ -6946,18 +7009,6 @@ msgstr "완료"
 
 msgid "Generation completed"
 msgstr "생성이 완료되었습니다"
-
-msgid "Unavailable"
-msgstr "사용 불가"
-
-msgid "No supported 3D service is available"
-msgstr "지원되는 3D 서비스가 없습니다"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "이미지 모델은 마스크 가이던스와 두 개의 참조 지원을 명시해야 합니다"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "매개변수 ID"
@@ -6983,14 +7034,14 @@ msgstr "불리언 값입니다"
 msgid "Catalog choice"
 msgstr "카탈로그 선택지입니다"
 
-msgid "Widget"
-msgstr "위젯"
-
-msgid "Group"
-msgstr "그룹"
-
 msgid "Choices"
 msgstr "선택지"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "위젯"
 
 msgid "Visibility Condition"
 msgstr "표시 조건"
@@ -7010,11 +7061,14 @@ msgstr "최소치"
 msgid "Maximum"
 msgstr "최대치"
 
-msgid "Value"
-msgstr "값"
-
 msgid "Value Label"
 msgstr "값 레이블"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "소켓 ID"
@@ -8722,6 +8776,33 @@ msgstr "모든 프레임"
 msgid "Clear Board"
 msgstr "보드 지우기"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "오브젝트 이름"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "애니메이션"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "에이전트 자동 리그"
 
@@ -8763,9 +8844,6 @@ msgstr "에이전트 PBR 생성"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo를 사용하여 지정한 메시 오브젝트의 PBR 텍스처를 생성합니다"
-
-msgid "Object Name"
-msgstr "오브젝트 이름"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "텍스처를 입힐 씬 내 메시 오브젝트의 이름"
@@ -11949,9 +12027,6 @@ msgstr "색상 양자화 비트"
 
 msgid "Generic Quantization Bits"
 msgstr "일반 양자화 비트"
-
-msgid "Animations"
-msgstr "애니메이션"
 
 msgid "Animation Mode"
 msgstr "애니메이션 모드"
@@ -24828,9 +24903,6 @@ msgstr "대기열 열기"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "아무 것도 선택되지 않음"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "탭을 전환하기 전에 스케치나 받아쓰기를 완료하세요"
 
@@ -26846,9 +26918,6 @@ msgstr "안전 영역"
 
 msgid "Select a character to animate"
 msgstr "애니메이션할 캐릭터를 선택하세요"
-
-msgid "Animate"
-msgstr "애니메이션 적용"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "재생 헤드부터 이 블로킹 수준의 모션에 키를 입력합니다"

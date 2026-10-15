@@ -2006,6 +2006,21 @@ msgstr "Η παραγωγή απέτυχε — δοκιμάστε ξανά"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Το visible_if του καταλόγου κλειδώνεται από ιδιότητα RNA"
 
+msgid "Nothing selected"
+msgstr "Δεν επιλέχθηκε τίποτα"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Τιμή"
+
+msgid "Group"
+msgstr "Γκρουπ"
+
+msgid "Selected"
+msgstr "Επιλεγμένο"
+
 msgid "No modes"
 msgstr "Καμία κατάσταση"
 
@@ -4610,6 +4625,24 @@ msgstr "Ο αυτόματος σκελετός απέτυχε"
 msgid "Animate failed"
 msgstr "Η κίνηση απέτυχε"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Τα επιλεγμένα πολύγωνα έχουν {count:,} όψεις (μέγ. {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Τμηματοποίηση πολυγώνων"
 msgid "Auto Rig"
 msgstr "Αυτόματος σκελετός"
 
+msgid "Animate"
+msgstr "Κίνηση"
+
 msgid "Add Mesh"
 msgstr "Προσθήκη πολυγώνων"
 
@@ -5497,6 +5533,18 @@ msgstr "Ο αριθμός βημάτων εκλέπτυνσης κατά την 
 
 msgid "The file format used to store the generated image."
 msgstr "Η μορφή αρχείου που χρησιμοποιείται για την αποθήκευση της δημιουργημένης εικόνας."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Αυτόματα (από το όνομα)"
@@ -5813,6 +5861,9 @@ msgstr "Συναρμολόγηση χαρακτήρα"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Προσαρτά τα δημιουργημένα μέρη σε σκελετωμένο ή απλό σώμα, τοπικά"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Χρήση μόνο του στυλ εικόνας"
 
@@ -5971,6 +6022,9 @@ msgstr "Δημιουργήστε πρώτα το «{name}» — αυτή η κά
 
 msgid "Mesh"
 msgstr "Πολύγωνα"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Αναφορά {number}"
@@ -6917,9 +6971,6 @@ msgstr "Χρήση προσαρμοσμένου χρώματος"
 msgid "Custom Colour"
 msgstr "Προσαρμοσμένο χρώμα"
 
-msgid "Selected"
-msgstr "Επιλεγμένο"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Αγνοεί το περίγραμμα και το εσωτερικό αυτού του πλαισίου στο κλικ, ώστε να επιλέγονται μόνο τα μέλη του"
 
@@ -6928,6 +6979,18 @@ msgstr "Συμπτυγμένο"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Σχεδιάζει το πλαίσιο ως γραμμή τίτλου και κρύβει το σώμα του"
+
+msgid "Unavailable"
+msgstr "Μη διαθέσιμο"
+
+msgid "No supported 3D service is available"
+msgstr "Δεν υπάρχει διαθέσιμη υποστηριζόμενη υπηρεσία 3D"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Τα μοντέλα εικόνας πρέπει να δηλώνουν καθοδήγηση μάσκας και δύο αναφορές"
+
+msgid "Attachment settings"
+msgstr "Ρυθμίσεις συνημμένου"
 
 msgid "No choices published"
 msgstr "Δεν δημοσιεύτηκαν επιλογές"
@@ -6946,18 +7009,6 @@ msgstr "Ολοκληρώθηκε"
 
 msgid "Generation completed"
 msgstr "Η παραγωγή ολοκληρώθηκε"
-
-msgid "Unavailable"
-msgstr "Μη διαθέσιμο"
-
-msgid "No supported 3D service is available"
-msgstr "Δεν υπάρχει διαθέσιμη υποστηριζόμενη υπηρεσία 3D"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Τα μοντέλα εικόνας πρέπει να δηλώνουν καθοδήγηση μάσκας και δύο αναφορές"
-
-msgid "Attachment settings"
-msgstr "Ρυθμίσεις συνημμένου"
 
 msgid "Parameter ID"
 msgstr "Αναγνωριστικό παραμέτρου"
@@ -6983,14 +7034,14 @@ msgstr "Λογική τιμή"
 msgid "Catalog choice"
 msgstr "Επιλογή καταλόγου"
 
-msgid "Widget"
-msgstr "Γραφικό στοιχείο"
-
-msgid "Group"
-msgstr "Γκρουπ"
-
 msgid "Choices"
 msgstr "Επιλογές"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Γραφικό στοιχείο"
 
 msgid "Visibility Condition"
 msgstr "Συνθήκη ορατότητας"
@@ -7010,11 +7061,14 @@ msgstr "Ελάχιστο"
 msgid "Maximum"
 msgstr "Μέγιστο"
 
-msgid "Value"
-msgstr "Τιμή"
-
 msgid "Value Label"
 msgstr "Ετικέτα τιμής"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Αναγνωριστικό υποδοχής"
@@ -8722,6 +8776,33 @@ msgstr "Πλαίσιο σε όλα"
 msgid "Clear Board"
 msgstr "Καθαρισμός πίνακα"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Όνομα αντικειμένου"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Κινήσεις"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Αυτόματος σκελετός πράκτορα"
 
@@ -8763,9 +8844,6 @@ msgstr "Παραγωγή PBR πράκτορα"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Δημιουργία υφών PBR για το δοσμένο αντικείμενο πολυγώνων με Tripo"
-
-msgid "Object Name"
-msgstr "Όνομα αντικειμένου"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Όνομα του αντικειμένου πολυγώνων στη σκηνή που θα υφανθεί"
@@ -11949,9 +12027,6 @@ msgstr "Bit κβαντοποίησης χρώματος"
 
 msgid "Generic Quantization Bits"
 msgstr "Bit γενικής κβαντοποίησης"
-
-msgid "Animations"
-msgstr "Κινήσεις"
 
 msgid "Animation Mode"
 msgstr "Κατάσταση κίνησης"
@@ -24828,9 +24903,6 @@ msgstr "Άνοιγμα ουράς"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Δεν επιλέχθηκε τίποτα"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Ολοκληρώστε το σκίτσο ή την υπαγόρευση πριν αλλάξετε καρτέλες"
 
@@ -26846,9 +26918,6 @@ msgstr "Ασφαλείς περιοχές"
 
 msgid "Select a character to animate"
 msgstr "Επιλέξτε χαρακτήρα για κίνηση"
-
-msgid "Animate"
-msgstr "Κίνηση"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Ορισμός αυτής της κίνησης επιπέδου μπλοκαρίσματος από την κεφαλή αναπαραγωγής"

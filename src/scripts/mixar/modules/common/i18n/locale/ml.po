@@ -2006,6 +2006,21 @@ msgstr "ജനറേഷൻ പരാജയപ്പെട്ടു — ദയവ
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA ആട്രിബ്യൂട്ട് കീ ചെയ്ത കാറ്റലോഗ് visible_if"
 
+msgid "Nothing selected"
+msgstr "ഒന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "വാല്യൂ"
+
+msgid "Group"
+msgstr "ഗ്രൂപ്പ്"
+
+msgid "Selected"
+msgstr "തിരഞ്ഞെടുത്തത്"
+
 msgid "No modes"
 msgstr "മോഡുകളില്ല"
 
@@ -4610,6 +4625,24 @@ msgstr "ഓട്ടോ റിഗ് പരാജയപ്പെട്ടു"
 msgid "Animate failed"
 msgstr "ആനിമേറ്റ് പരാജയപ്പെട്ടു"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "തിരഞ്ഞെടുത്ത മെഷിന് {count:,} ഫേസുകൾ ഉണ്ട് (പരമാവധി {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "മെഷ് സെഗ്മെന്റേഷൻ"
 msgid "Auto Rig"
 msgstr "ഓട്ടോ റിഗ്"
 
+msgid "Animate"
+msgstr "ആനിമേറ്റ് ചെയ്യുക"
+
 msgid "Add Mesh"
 msgstr "മെഷ് ചേർക്കുക"
 
@@ -5497,6 +5533,18 @@ msgstr "ജനറേഷനിടെ ഉപയോഗിക്കുന്ന ശ�
 
 msgid "The file format used to store the generated image."
 msgstr "ജനറേറ്റ് ചെയ്ത ചിത്രം സൂക്ഷിക്കാൻ ഉപയോഗിക്കുന്ന ഫയൽ ഫോർമാറ്റ്."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "ഓട്ടോ (പേരിൽ നിന്ന്)"
@@ -5813,6 +5861,9 @@ msgstr "കഥാപാത്രം അസംബിൾ ചെയ്യുക"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ജനറേറ്റ് ചെയ്ത ഭാഗങ്ങൾ റിഗ് ചെയ്തതോ സാധാരണമോ ആയ ശരീരത്തിൽ ലോക്കലായി അറ്റാച്ച് ചെയ്യുക"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "ചിത്ര ശൈലി മാത്രം ഉപയോഗിക്കുക"
 
@@ -5971,6 +6022,9 @@ msgstr "ആദ്യം '{name}' ജനറേറ്റ് ചെയ്യുക 
 
 msgid "Mesh"
 msgstr "മെഷ്"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "റഫറൻസ് {number}"
@@ -6917,9 +6971,6 @@ msgstr "ഇഷ്ടാനുസൃത കളർ ഉപയോഗിക്കു�
 msgid "Custom Colour"
 msgstr "ഇഷ്ടാനുസൃത കളർ"
 
-msgid "Selected"
-msgstr "തിരഞ്ഞെടുത്തത്"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "ക്ലിക്ക് ചെയ്യുമ്പോൾ ഈ ഫ്രെയിമിന്റെ അതിർത്തിയും ഉൾഭാഗവും അവഗണിക്കുക, അതിനാൽ അംഗങ്ങളെ മാത്രം തിരഞ്ഞെടുക്കാം"
 
@@ -6928,6 +6979,18 @@ msgstr "ചുരുക്കിയത്"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ഫ്രെയിം ഒരു തലക്കെട്ട് ബാറായി വരച്ച് ബോഡി മറയ്ക്കുക"
+
+msgid "Unavailable"
+msgstr "ലഭ്യമല്ല"
+
+msgid "No supported 3D service is available"
+msgstr "പിന്തുണയുള്ള 3D സേവനം ലഭ്യമല്ല"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "ചിത്ര മോഡലുകൾ മാസ്ക് ഗൈഡൻസും രണ്ട് റഫറൻസുകളും പ്രഖ്യാപിക്കണം"
+
+msgid "Attachment settings"
+msgstr "അറ്റാച്ച്മെന്റ് ക്രമീകരണങ്ങൾ"
 
 msgid "No choices published"
 msgstr "തിരഞ്ഞെടുപ്പുകൾ പ്രസിദ്ധീകരിച്ചിട്ടില്ല"
@@ -6946,18 +7009,6 @@ msgstr "പൂർത്തി"
 
 msgid "Generation completed"
 msgstr "ജനറേഷൻ പൂർത്തിയായി"
-
-msgid "Unavailable"
-msgstr "ലഭ്യമല്ല"
-
-msgid "No supported 3D service is available"
-msgstr "പിന്തുണയുള്ള 3D സേവനം ലഭ്യമല്ല"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "ചിത്ര മോഡലുകൾ മാസ്ക് ഗൈഡൻസും രണ്ട് റഫറൻസുകളും പ്രഖ്യാപിക്കണം"
-
-msgid "Attachment settings"
-msgstr "അറ്റാച്ച്മെന്റ് ക്രമീകരണങ്ങൾ"
 
 msgid "Parameter ID"
 msgstr "പാരാമീറ്റർ ID"
@@ -6983,14 +7034,14 @@ msgstr "ബൂളിയൻ വാല്യൂ"
 msgid "Catalog choice"
 msgstr "കാറ്റലോഗ് തിരഞ്ഞെടുപ്പ്"
 
-msgid "Widget"
-msgstr "വിജറ്റ്"
-
-msgid "Group"
-msgstr "ഗ്രൂപ്പ്"
-
 msgid "Choices"
 msgstr "തിരഞ്ഞെടുപ്പുകൾ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "വിജറ്റ്"
 
 msgid "Visibility Condition"
 msgstr "ദൃശ്യതാ വ്യവസ്ഥ"
@@ -7010,11 +7061,14 @@ msgstr "കുറഞ്ഞത്"
 msgid "Maximum"
 msgstr "കൂടിയത്"
 
-msgid "Value"
-msgstr "വാല്യൂ"
-
 msgid "Value Label"
 msgstr "വാല്യൂ ലേബൽ"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "സോക്കറ്റ് ID"
@@ -8722,6 +8776,33 @@ msgstr "എല്ലാം ഫ്രെയിം ചെയ്യുക"
 msgid "Clear Board"
 msgstr "ബോർഡ് മായ്ക്കുക"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ഒബ്ജക്റ്റ് പേര്"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ആനിമേഷനുകൾ"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ഏജന്റ് ഓട്ടോ റിഗ്"
 
@@ -8763,9 +8844,6 @@ msgstr "ഏജന്റ് PBR ജനറേഷൻ"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "നൽകിയ മെഷ് ഒബ്ജക്റ്റിന് Tripo ഉപയോഗിച്ച് PBR ടെക്സ്ചറുകൾ ജനറേറ്റ് ചെയ്യുക"
-
-msgid "Object Name"
-msgstr "ഒബ്ജക്റ്റ് പേര്"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "ടെക്സ്ചർ ചെയ്യേണ്ട സീനിലെ മെഷ് ഒബ്ജക്റ്റിന്റെ പേര്"
@@ -11949,9 +12027,6 @@ msgstr "കളർ ക്വാണ്ടൈസേഷൻ ബിറ്റുകൾ"
 
 msgid "Generic Quantization Bits"
 msgstr "പൊതു ക്വാണ്ടൈസേഷൻ ബിറ്റുകൾ"
-
-msgid "Animations"
-msgstr "ആനിമേഷനുകൾ"
 
 msgid "Animation Mode"
 msgstr "ആനിമേഷൻ മോഡ്"
@@ -24828,9 +24903,6 @@ msgstr "ക്യൂ തുറക്കുക"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "ഒന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ടാബുകൾ മാറുന്നതിന് മുമ്പ് സ്കെച്ചോ ഡിക്റ്റേഷനോ പൂർത്തിയാക്കുക"
 
@@ -26846,9 +26918,6 @@ msgstr "സുരക്ഷിത മേഖലകൾ"
 
 msgid "Select a character to animate"
 msgstr "ആനിമേറ്റ് ചെയ്യാൻ ഒരു കഥാപാത്രം തിരഞ്ഞെടുക്കുക"
-
-msgid "Animate"
-msgstr "ആനിമേറ്റ് ചെയ്യുക"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "പ്ലേഹെഡിൽ നിന്ന് ഈ ബ്ലോക്കിങ്-ലെവൽ ചലനം കീ ചെയ്യുക"

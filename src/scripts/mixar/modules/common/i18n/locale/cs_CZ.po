@@ -2006,6 +2006,21 @@ msgstr "Generování selhalo — zkuste to prosím znovu"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if katalogu podle atributu RNA"
 
+msgid "Nothing selected"
+msgstr "Není nic vybrané"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Hodnota"
+
+msgid "Group"
+msgstr "Skupina"
+
+msgid "Selected"
+msgstr "Vybrané"
+
 msgid "No modes"
 msgstr "Žádné režimy"
 
@@ -4610,6 +4625,24 @@ msgstr "Automatický rig selhal"
 msgid "Animate failed"
 msgstr "Animace selhala"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Vybraná síť má {count:,} ploch (max. {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Segmentace sítě"
 msgid "Auto Rig"
 msgstr "Automatický rig"
 
+msgid "Animate"
+msgstr "Animovat"
+
 msgid "Add Mesh"
 msgstr "Přidat síť"
 
@@ -5497,6 +5533,18 @@ msgstr "Počet kroků zpřesnění použitých při generování. Více kroků m
 
 msgid "The file format used to store the generated image."
 msgstr "Formát souboru pro uložení vygenerovaného obrázku."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Automaticky (podle názvu)"
@@ -5813,6 +5861,9 @@ msgstr "Sestavit postavu"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lokálně připojí vygenerované části k riggovanému nebo prostému tělu"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Použít pouze styl obrázku"
 
@@ -5971,6 +6022,9 @@ msgstr "Nejprve vygenerujte „{name}“ — tato karta používá jeho výslede
 
 msgid "Mesh"
 msgstr "Síť"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Reference {number}"
@@ -6917,9 +6971,6 @@ msgstr "Použít vlastní barvu"
 msgid "Custom Colour"
 msgstr "Vlastní barva"
 
-msgid "Selected"
-msgstr "Vybrané"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Při klikání ignoruje okraj a vnitřek tohoto rámce, takže lze vybrat pouze jeho členy"
 
@@ -6928,6 +6979,18 @@ msgstr "Sbalený"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Vykreslí rámec jako lištu s názvem a skryje jeho tělo"
+
+msgid "Unavailable"
+msgstr "Nedostupné"
+
+msgid "No supported 3D service is available"
+msgstr "Není k dispozici žádná podporovaná 3D služba"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Modely obrázků musí deklarovat vedení maskou a dvě reference"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Nebyly zveřejněny žádné volby"
@@ -6946,18 +7009,6 @@ msgstr "Dokončeno"
 
 msgid "Generation completed"
 msgstr "Generování dokončeno"
-
-msgid "Unavailable"
-msgstr "Nedostupné"
-
-msgid "No supported 3D service is available"
-msgstr "Není k dispozici žádná podporovaná 3D služba"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Modely obrázků musí deklarovat vedení maskou a dvě reference"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID parametru"
@@ -6983,14 +7034,14 @@ msgstr "Logická hodnota"
 msgid "Catalog choice"
 msgstr "Volba z katalogu"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Skupina"
-
 msgid "Choices"
 msgstr "Volby"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Podmínka viditelnosti"
@@ -7010,11 +7061,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maximum"
 
-msgid "Value"
-msgstr "Hodnota"
-
 msgid "Value Label"
 msgstr "Popisek hodnoty"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID zásuvky"
@@ -8722,6 +8776,33 @@ msgstr "Zarámovat vše"
 msgid "Clear Board"
 msgstr "Vyčistit tabuli"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Název objektu"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animace"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Automatický rig agenta"
 
@@ -8763,9 +8844,6 @@ msgstr "Generování PBR agentem"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Vygeneruje textury PBR pro zadaný objekt sítě pomocí Tripo"
-
-msgid "Object Name"
-msgstr "Název objektu"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Název objektu sítě ve scéně k otexturování"
@@ -11949,9 +12027,6 @@ msgstr "Bity kvantizace barev"
 
 msgid "Generic Quantization Bits"
 msgstr "Obecné bity kvantizace"
-
-msgid "Animations"
-msgstr "Animace"
 
 msgid "Animation Mode"
 msgstr "Režim animace"
@@ -24828,9 +24903,6 @@ msgstr "Otevřít frontu"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Není nic vybrané"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Před přepnutím karet dokončete skicování nebo diktování"
 
@@ -26846,9 +26918,6 @@ msgstr "Bezpečné oblasti"
 
 msgid "Select a character to animate"
 msgstr "Vyberte postavu k animaci"
-
-msgid "Animate"
-msgstr "Animovat"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Zaklíčuje tento pohyb na úrovni blockingu od přehrávací hlavy"

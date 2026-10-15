@@ -2006,6 +2006,21 @@ msgstr "Generowanie nie powiodło się — proszę spróbować ponownie"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if katalogu według atrybutu RNA"
 
+msgid "Nothing selected"
+msgstr "Nic nie wybrano"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Wartość"
+
+msgid "Group"
+msgstr "Grupa"
+
+msgid "Selected"
+msgstr "Wybrany"
+
 msgid "No modes"
 msgstr "Brak trybów"
 
@@ -4610,6 +4625,24 @@ msgstr "Automatyczny rig nie powiódł się"
 msgid "Animate failed"
 msgstr "Animowanie nie powiodło się"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Zaznaczona siatka ma lica: {count:,} (maks. {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Segmentacja siatki"
 msgid "Auto Rig"
 msgstr "Automatyczny rig"
 
+msgid "Animate"
+msgstr "Animuj"
+
 msgid "Add Mesh"
 msgstr "Dodaj siatkę"
 
@@ -5497,6 +5533,18 @@ msgstr "Liczba kroków udoskonalania podczas generowania. Więcej kroków może 
 
 msgid "The file format used to store the generated image."
 msgstr "Format pliku używany do zapisania wygenerowanego obrazu."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Automatycznie (z nazwy)"
@@ -5813,6 +5861,9 @@ msgstr "Złóż postać"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lokalnie dołącza wygenerowane części do ciała z rigiem lub bez"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Użyj tylko stylu obrazu"
 
@@ -5971,6 +6022,9 @@ msgstr "Najpierw wygeneruj „{name}” — ta karta używa jego wyniku"
 
 msgid "Mesh"
 msgstr "Siatka"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Odniesienie {number}"
@@ -6917,9 +6971,6 @@ msgstr "Użyj własnego koloru"
 msgid "Custom Colour"
 msgstr "Własny kolor"
 
-msgid "Selected"
-msgstr "Wybrany"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ignoruje obramowanie i wnętrze tej ramki przy klikaniu, dzięki czemu można zaznaczać tylko jej elementy"
 
@@ -6928,6 +6979,18 @@ msgstr "Zwinięta"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Rysuje ramkę jako pasek z tytułem i ukrywa jej zawartość"
+
+msgid "Unavailable"
+msgstr "Niedostępny"
+
+msgid "No supported 3D service is available"
+msgstr "Brak dostępnej obsługiwanej usługi 3D"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Modele obrazów muszą deklarować prowadzenie maską i dwa odniesienia"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Nie opublikowano opcji"
@@ -6946,18 +7009,6 @@ msgstr "Gotowe"
 
 msgid "Generation completed"
 msgstr "Generowanie ukończone"
-
-msgid "Unavailable"
-msgstr "Niedostępny"
-
-msgid "No supported 3D service is available"
-msgstr "Brak dostępnej obsługiwanej usługi 3D"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Modele obrazów muszą deklarować prowadzenie maską i dwa odniesienia"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID parametru"
@@ -6983,14 +7034,14 @@ msgstr "Wartość logiczna"
 msgid "Catalog choice"
 msgstr "Wybór z katalogu"
 
-msgid "Widget"
-msgstr "Widżet"
-
-msgid "Group"
-msgstr "Grupa"
-
 msgid "Choices"
 msgstr "Opcje wyboru"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widżet"
 
 msgid "Visibility Condition"
 msgstr "Warunek widoczności"
@@ -7010,11 +7061,14 @@ msgstr "Minimalne"
 msgid "Maximum"
 msgstr "Maksymalnie"
 
-msgid "Value"
-msgstr "Wartość"
-
 msgid "Value Label"
 msgstr "Etykieta wartości"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID gniazda"
@@ -8722,6 +8776,33 @@ msgstr "Wszystkie klatki"
 msgid "Clear Board"
 msgstr "Wyczyść tablicę"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Nazwa obiektu"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animacje"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Automatyczny rig agenta"
 
@@ -8763,9 +8844,6 @@ msgstr "Generowanie PBR przez agenta"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Generuje tekstury PBR dla podanego obiektu siatki za pomocą Tripo"
-
-msgid "Object Name"
-msgstr "Nazwa obiektu"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Nazwa obiektu siatki w scenie do teksturowania"
@@ -11949,9 +12027,6 @@ msgstr "Bity kwantyzacji kolorów"
 
 msgid "Generic Quantization Bits"
 msgstr "Ogólne bity kwantyzacji"
-
-msgid "Animations"
-msgstr "Animacje"
 
 msgid "Animation Mode"
 msgstr "Tryb animacji"
@@ -24829,9 +24904,6 @@ msgstr "Otwórz kolejkę"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Nic nie wybrano"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Zakończ szkicowanie lub dyktowanie przed przełączeniem kart"
 
@@ -26847,9 +26919,6 @@ msgstr "Bezpieczne obszary"
 
 msgid "Select a character to animate"
 msgstr "Zaznacz postać do animowania"
-
-msgid "Animate"
-msgstr "Animuj"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Kluczuje ten ruch na poziomie blockingu od głowicy odtwarzania"

@@ -2006,6 +2006,21 @@ msgstr "Sorkuntzak huts egin du — saiatu berriro"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Katalogoaren visible_if, RNA atributuaren arabera gakotua"
 
+msgid "Nothing selected"
+msgstr "Ezer ez da hautatu"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Balioa"
+
+msgid "Group"
+msgstr "Taldea"
+
+msgid "Selected"
+msgstr "Hautatutako"
+
 msgid "No modes"
 msgstr "Ez dago modurik"
 
@@ -4610,6 +4625,24 @@ msgstr "Eskeleto automatikoak huts egin du"
 msgid "Animate failed"
 msgstr "Animatzeak huts egin du"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Hautatutako amaraunak {count:,} aurpegi ditu (gehienez {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Amaraun-segmentazioa"
 msgid "Auto Rig"
 msgstr "Eskeleto automatikoa"
 
+msgid "Animate"
+msgstr "Animatu"
+
 msgid "Add Mesh"
 msgstr "Gehitu amarauna"
 
@@ -5497,6 +5533,18 @@ msgstr "Sorkuntzan erabilitako fintze-urratsen kopurua. Urrats gehiagok luzeago 
 
 msgid "The file format used to store the generated image."
 msgstr "Sortutako irudia gordetzeko erabilitako fitxategi-formatua."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Automatikoa (izenetik)"
@@ -5813,6 +5861,9 @@ msgstr "Muntatu pertsonaia"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lotu sortutako piezak eskeletatutako edo soileko gorputz bati, lokalean"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Erabili irudiaren estiloa soilik"
 
@@ -5971,6 +6022,9 @@ msgstr "Sortu '{name}' lehenik — txartel honek haren emaitza erabiltzen du"
 
 msgid "Mesh"
 msgstr "Amarauna"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number}. erreferentzia"
@@ -6917,9 +6971,6 @@ msgstr "Erabili kolore pertsonalizatua"
 msgid "Custom Colour"
 msgstr "Kolore pertsonalizatua"
 
-msgid "Selected"
-msgstr "Hautatutako"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ezikusi marko honen ertza eta barrualdea klik egitean, kideak soilik hauta daitezen"
 
@@ -6928,6 +6979,18 @@ msgstr "Tolestuta"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Marraztu markoa izenburudun barra gisa eta ezkutatu gorputza"
+
+msgid "Unavailable"
+msgstr "Ez dago erabilgarri"
+
+msgid "No supported 3D service is available"
+msgstr "Ez dago onartutako 3D zerbitzurik erabilgarri"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Irudi-ereduek maskara-gida eta bi erreferentzia iragarri behar dituzte"
+
+msgid "Attachment settings"
+msgstr "Eranskin-ezarpenak"
 
 msgid "No choices published"
 msgstr "Ez da aukerarik argitaratu"
@@ -6946,18 +7009,6 @@ msgstr "Osatuta"
 
 msgid "Generation completed"
 msgstr "Sorkuntza osatu da"
-
-msgid "Unavailable"
-msgstr "Ez dago erabilgarri"
-
-msgid "No supported 3D service is available"
-msgstr "Ez dago onartutako 3D zerbitzurik erabilgarri"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Irudi-ereduek maskara-gida eta bi erreferentzia iragarri behar dituzte"
-
-msgid "Attachment settings"
-msgstr "Eranskin-ezarpenak"
 
 msgid "Parameter ID"
 msgstr "Parametroaren IDa"
@@ -6983,14 +7034,14 @@ msgstr "Balio boolearra"
 msgid "Catalog choice"
 msgstr "Katalogo-aukera"
 
-msgid "Widget"
-msgstr "Widgeta"
-
-msgid "Group"
-msgstr "Taldea"
-
 msgid "Choices"
 msgstr "Aukerak"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widgeta"
 
 msgid "Visibility Condition"
 msgstr "Ikusgaitasun-baldintza"
@@ -7010,11 +7061,14 @@ msgstr "Gutxienekoa"
 msgid "Maximum"
 msgstr "Gehienekoa"
 
-msgid "Value"
-msgstr "Balioa"
-
 msgid "Value Label"
 msgstr "Balioaren etiketa"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Hargunearen IDa"
@@ -8722,6 +8776,33 @@ msgstr "Markoztatu dena"
 msgid "Clear Board"
 msgstr "Garbitu taula"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objectuaren Izena"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animazioak"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Agentea: eskeleto automatikoa"
 
@@ -8763,9 +8844,6 @@ msgstr "Agentea: PBR sorkuntza"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Sortu PBR testurak emandako amaraun-objektuarentzat Tripo erabiliz"
-
-msgid "Object Name"
-msgstr "Objectuaren Izena"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Testuratu beharreko eszenako amaraun-objektuaren izena"
@@ -11949,9 +12027,6 @@ msgstr "Kolorearen kuantizazio-bitak"
 
 msgid "Generic Quantization Bits"
 msgstr "Kuantizazio-bit generikoak"
-
-msgid "Animations"
-msgstr "Animazioak"
 
 msgid "Animation Mode"
 msgstr "Animazio modua"
@@ -24828,9 +24903,6 @@ msgstr "Ireki ilara"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Ezer ez da hautatu"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Amaitu zirriborroa edo diktaketa fitxaz aldatu aurretik"
 
@@ -26846,9 +26918,6 @@ msgstr "Eremu seguruak"
 
 msgid "Select a character to animate"
 msgstr "Hautatu animatzeko pertsonaia bat"
-
-msgid "Animate"
-msgstr "Animatu"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Gakoztatu blokeo-mailako mugimendu hau erreprodukzio-burutik"

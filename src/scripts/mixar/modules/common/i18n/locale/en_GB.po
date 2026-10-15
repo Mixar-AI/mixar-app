@@ -109,6 +109,10 @@ msgid "How strongly the generation follows its guidance. Higher values emphasize
 msgstr "How strongly the generation follows its guidance. Higher values emphasise that guidance."
 
 # derived
+msgid "Animate is unavailable in the generation catalog"
+msgstr "Animate is unavailable in the generation catalogue"
+
+# derived
 msgid "Character Parts is unavailable in the generation catalog"
 msgstr "Character Parts is unavailable in the generation catalogue"
 
@@ -171,6 +175,10 @@ msgstr "Segment a UV-unwrapped mesh into labelled parts"
 # derived
 msgid "Catalog choice"
 msgstr "Catalogue choice"
+
+# derived
+msgid "Any number of catalog choices, sent as a list"
+msgstr "Any number of catalogue choices, sent as a list"
 
 # derived
 msgid "Generation service supplied by the backend catalog"
@@ -236,6 +244,10 @@ msgstr "Catalogue input config is incomplete"
 # derived
 msgid "World Labs catalog settings are unavailable"
 msgstr "World Labs catalogue settings are unavailable"
+
+# derived
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr "Comma-separated preset values from the animation catalogue, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
 
 # derived
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"

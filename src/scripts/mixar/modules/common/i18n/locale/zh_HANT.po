@@ -2006,6 +2006,21 @@ msgstr "生成失敗——請再試一次"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "依 RNA 屬性索引的目錄 visible_if"
 
+msgid "Nothing selected"
+msgstr "未有選取"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "值"
+
+msgid "Group"
+msgstr "群組"
+
+msgid "Selected"
+msgstr "所選項"
+
 msgid "No modes"
 msgstr "無模式"
 
@@ -4610,6 +4625,24 @@ msgstr "自動綁定失敗"
 msgid "Animate failed"
 msgstr "動畫製作失敗"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "所選網格有 {count:,} 個面（上限 {max_faces:,}）"
 
@@ -5396,6 +5429,9 @@ msgstr "網格分割"
 msgid "Auto Rig"
 msgstr "自動綁定"
 
+msgid "Animate"
+msgstr "製作動畫"
+
 msgid "Add Mesh"
 msgstr "加入網格"
 
@@ -5497,6 +5533,18 @@ msgstr "生成期間使用的精修步數。步數越多，耗時可能越長。
 
 msgid "The file format used to store the generated image."
 msgstr "用於儲存生成影像的檔案格式。"
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "自動（依名稱）"
@@ -5813,6 +5861,9 @@ msgstr "組裝角色"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "在本機將生成的部件附加至已綁定或一般的身體"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "僅使用影像風格"
 
@@ -5971,6 +6022,9 @@ msgstr "請先生成「{name}」——此卡片會使用其結果"
 
 msgid "Mesh"
 msgstr "網格"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "參考 {number}"
@@ -6917,9 +6971,6 @@ msgstr "使用自訂色彩"
 msgid "Custom Colour"
 msgstr "自訂色彩"
 
-msgid "Selected"
-msgstr "所選項"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "點擊時忽略此框的邊框與內部，因此只能選取其成員"
 
@@ -6928,6 +6979,18 @@ msgstr "已收合"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "將框繪製為帶標題的列並隱藏其主體"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "No supported 3D service is available"
+msgstr "沒有可用的受支援 3D 服務"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "影像模型必須宣告支援遮罩引導與兩個參考"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "未發布任何選項"
@@ -6946,18 +7009,6 @@ msgstr "完成"
 
 msgid "Generation completed"
 msgstr "生成已完成"
-
-msgid "Unavailable"
-msgstr "不可用"
-
-msgid "No supported 3D service is available"
-msgstr "沒有可用的受支援 3D 服務"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "影像模型必須宣告支援遮罩引導與兩個參考"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "參數 ID"
@@ -6983,14 +7034,14 @@ msgstr "布林值"
 msgid "Catalog choice"
 msgstr "編目選項"
 
-msgid "Widget"
-msgstr "元件"
-
-msgid "Group"
-msgstr "群組"
-
 msgid "Choices"
 msgstr "選項"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "元件"
 
 msgid "Visibility Condition"
 msgstr "可見性條件"
@@ -7010,11 +7061,14 @@ msgstr "最小值"
 msgid "Maximum"
 msgstr "最大值"
 
-msgid "Value"
-msgstr "值"
-
 msgid "Value Label"
 msgstr "值標籤"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "接口 ID"
@@ -8722,6 +8776,33 @@ msgstr "聚焦視窗中所有物件"
 msgid "Clear Board"
 msgstr "清除畫板"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "物體名稱"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "動畫"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "智慧代理自動綁定"
 
@@ -8763,9 +8844,6 @@ msgstr "智慧代理 PBR 生成"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "使用 Tripo 為指定的網格物體生成 PBR 紋理"
-
-msgid "Object Name"
-msgstr "物體名稱"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "場景中要上紋理的網格物體名稱"
@@ -11949,9 +12027,6 @@ msgstr "色彩量化位元數"
 
 msgid "Generic Quantization Bits"
 msgstr "通用量化位元數"
-
-msgid "Animations"
-msgstr "動畫"
 
 msgid "Animation Mode"
 msgstr "動畫模式"
@@ -24828,9 +24903,6 @@ msgstr "開啟佇列"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "未有選取"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "切換分頁前請先完成草圖或聽寫"
 
@@ -26846,9 +26918,6 @@ msgstr "安全區域"
 
 msgid "Select a character to animate"
 msgstr "選取要製作動畫的角色"
-
-msgid "Animate"
-msgstr "製作動畫"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "從播放頭插入此粗略階段運動的關鍵影格"

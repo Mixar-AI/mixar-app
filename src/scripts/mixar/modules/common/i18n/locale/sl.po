@@ -2006,6 +2006,21 @@ msgstr "Generiranje ni uspelo — poskusite znova"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Katalog visible_if, ključen z atributom RNA"
 
+msgid "Nothing selected"
+msgstr "Nič ni izbrano"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Vrednost"
+
+msgid "Group"
+msgstr "Skupina"
+
+msgid "Selected"
+msgstr "Izbrano"
+
 msgid "No modes"
 msgstr "Ni načinov"
 
@@ -4610,6 +4625,24 @@ msgstr "Samodejna okostitev ni uspela"
 msgid "Animate failed"
 msgstr "Animacija ni uspela"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Izbrana mreža ima lic: {count:,} (največ {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Segmentacija mreže"
 msgid "Auto Rig"
 msgstr "Samodejna okostitev"
 
+msgid "Animate"
+msgstr "Animiraj"
+
 msgid "Add Mesh"
 msgstr "Dodaj mrežo"
 
@@ -5497,6 +5533,18 @@ msgstr "Število korakov izboljšave med generiranjem. Več korakov lahko traja 
 
 msgid "The file format used to store the generated image."
 msgstr "Oblika datoteke za shranjevanje generirane slike."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Samodejno (iz imena)"
@@ -5813,6 +5861,9 @@ msgstr "Sestavi lik"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Krajevno pripne generirane dele na okosteno ali navadno telo"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Uporabi le slog slike"
 
@@ -5971,6 +6022,9 @@ msgstr "Najprej generirajte '{name}' — ta kartica uporabi njegov rezultat"
 
 msgid "Mesh"
 msgstr "Mreža"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referenca {number}"
@@ -6917,9 +6971,6 @@ msgstr "Uporabi barvo po meri"
 msgid "Custom Colour"
 msgstr "Barva po meri"
 
-msgid "Selected"
-msgstr "Izbrano"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ob kliku prezre rob in notranjost tega okvirja, da je mogoče izbrati le njegove člane"
 
@@ -6928,6 +6979,18 @@ msgstr "Strnjeno"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Izriše okvir kot naslovno vrstico in skrije njegovo telo"
+
+msgid "Unavailable"
+msgstr "Ni na voljo"
+
+msgid "No supported 3D service is available"
+msgstr "Na voljo ni nobene podprte storitve 3D"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Slikovni modeli morajo oglaševati vodenje maske in dve referenci"
+
+msgid "Attachment settings"
+msgstr "Nastavitve priloge"
 
 msgid "No choices published"
 msgstr "Nobena izbira ni objavljena"
@@ -6946,18 +7009,6 @@ msgstr "Dokončano"
 
 msgid "Generation completed"
 msgstr "Generiranje dokončano"
-
-msgid "Unavailable"
-msgstr "Ni na voljo"
-
-msgid "No supported 3D service is available"
-msgstr "Na voljo ni nobene podprte storitve 3D"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Slikovni modeli morajo oglaševati vodenje maske in dve referenci"
-
-msgid "Attachment settings"
-msgstr "Nastavitve priloge"
 
 msgid "Parameter ID"
 msgstr "ID parametra"
@@ -6983,14 +7034,14 @@ msgstr "Logična vrednost"
 msgid "Catalog choice"
 msgstr "Izbira kataloga"
 
-msgid "Widget"
-msgstr "Gradnik"
-
-msgid "Group"
-msgstr "Skupina"
-
 msgid "Choices"
 msgstr "Izbire"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Gradnik"
 
 msgid "Visibility Condition"
 msgstr "Pogoj vidnosti"
@@ -7010,11 +7061,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maksimum"
 
-msgid "Value"
-msgstr "Vrednost"
-
 msgid "Value Label"
 msgstr "Oznaka vrednosti"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID vtičnice"
@@ -8722,6 +8776,33 @@ msgstr "Usmeri v vse"
 msgid "Clear Board"
 msgstr "Počisti tablo"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Ime predmeta"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animacije"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Agent: samodejna okostitev"
 
@@ -8763,9 +8844,6 @@ msgstr "Agent: generiranje PBR"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Generira teksture PBR za podani mrežni predmet s Tripo"
-
-msgid "Object Name"
-msgstr "Ime predmeta"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Ime mrežnega predmeta v sceni za teksturiranje"
@@ -11949,9 +12027,6 @@ msgstr "Biti kvantizacije barve"
 
 msgid "Generic Quantization Bits"
 msgstr "Biti splošne kvantizacije"
-
-msgid "Animations"
-msgstr "Animacije"
 
 msgid "Animation Mode"
 msgstr "Animacijski način"
@@ -24828,9 +24903,6 @@ msgstr "Odpri čakalno vrsto"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Nič ni izbrano"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Pred preklopom zavihkov dokončajte skiciranje ali narekovanje"
 
@@ -26846,9 +26918,6 @@ msgstr "Varna območja"
 
 msgid "Select a character to animate"
 msgstr "Izberite lik za animiranje"
-
-msgid "Animate"
-msgstr "Animiraj"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Zakleni to gibanje na ravni blokade od predvajalne glave"

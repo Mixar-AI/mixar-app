@@ -2006,6 +2006,21 @@ msgstr "Аԥҵамҭа алымшеит — ишәҳәоуп, еиҭа шәыԥ�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Акаталог visible_if RNA атрибутла иацаԥхоуп"
 
+msgid "Nothing selected"
+msgstr "Маҷ алхым"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Аҵакы"
+
+msgid "Group"
+msgstr "Агәыԥ"
+
+msgid "Selected"
+msgstr "Иалхын"
+
 msgid "No modes"
 msgstr "Аиҿкаашьақәа ыҟаӡам"
 
@@ -4610,6 +4625,24 @@ msgstr "Автоматла Абаҩ алымшеит"
 msgid "Animate failed"
 msgstr "Анимациа алымшеит"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Иалху аҿарҧага ахаҿқәа амоуп: {count:,} (амаксимум {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Аҿарҧага асегментациа"
 msgid "Auto Rig"
 msgstr "Автоматла Абаҩ"
 
+msgid "Animate"
+msgstr "Анимациа"
+
 msgid "Add Mesh"
 msgstr "Аҿарҧага ацҵара"
 
@@ -5497,6 +5533,18 @@ msgstr "Аԥҵамҭаан ихархәоу аиашара ашьаҿақәа р
 
 msgid "The file format used to store the generated image."
 msgstr "Иԥҵоу асахьанҵа аиқәырхаразы ихархәоу ашәҟәы аформат."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Автоматла (ахьӡ аҟынтәи)"
@@ -5813,6 +5861,9 @@ msgstr "Аперсонаж аеилаҵара"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Иԥҵоу ахәҭақәа абаҩ змоу, мамзаргьы ажьы хәыҷы ахь ҷыдала реимадара"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Асахьанҵа Астиль мацара"
 
@@ -5971,6 +6022,9 @@ msgstr "Раԥхьа «{name}» шәыԥҵа — ари акарточка ал�
 
 msgid "Mesh"
 msgstr "Аҿарҧага"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Ахьырԥш {number}"
@@ -6917,9 +6971,6 @@ msgstr "Ахатә ԥштәы ахархәара"
 msgid "Custom Colour"
 msgstr "Ахатә ԥштәы"
 
-msgid "Selected"
-msgstr "Иалхын"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ақәыӷәӷәараан ари арамка аҳәаа аҩныҵҟатәи аҵакы рыӡбар, алахәылацәа мацара алхра ауеит"
 
@@ -6928,6 +6979,18 @@ msgstr "Иеилаҵәоуп"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Арамка ахы змоу абарк иарҳәа, амаҭәар аҵәаха"
+
+msgid "Unavailable"
+msgstr "Ыҟаӡам"
+
+msgid "No supported 3D service is available"
+msgstr "Иднакылоу 3D асервис ыҟаӡам"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Асахьанҵа амодельқәа амаска анапхгара, ахьырԥшқәа ҩба ирыднакылар ауеит"
+
+msgid "Attachment settings"
+msgstr "Ацҵамҭа аиҿкаарақәа"
 
 msgid "No choices published"
 msgstr "Алхрақәа кьыԥхьым"
@@ -6946,18 +7009,6 @@ msgstr "Ихиеит"
 
 msgid "Generation completed"
 msgstr "Аԥҵамҭа ихиеит"
-
-msgid "Unavailable"
-msgstr "Ыҟаӡам"
-
-msgid "No supported 3D service is available"
-msgstr "Иднакылоу 3D асервис ыҟаӡам"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Асахьанҵа амодельқәа амаска анапхгара, ахьырԥшқәа ҩба ирыднакылар ауеит"
-
-msgid "Attachment settings"
-msgstr "Ацҵамҭа аиҿкаарақәа"
 
 msgid "Parameter ID"
 msgstr "Апараметр аидентификатор"
@@ -6983,14 +7034,14 @@ msgstr "Алогикатә ҵакы"
 msgid "Catalog choice"
 msgstr "Акаталог алхра"
 
-msgid "Widget"
-msgstr "Авиджет"
-
-msgid "Group"
-msgstr "Агәыԥ"
-
 msgid "Choices"
 msgstr "Алхрақәа"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Авиджет"
 
 msgid "Visibility Condition"
 msgstr "Аарԥшра аусловие"
@@ -7010,11 +7061,14 @@ msgstr "Аминимум"
 msgid "Maximum"
 msgstr "Амаксимум"
 
-msgid "Value"
-msgstr "Аҵакы"
-
 msgid "Value Label"
 msgstr "Аҵакы адырга"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Асокет аидентификатор"
@@ -8722,6 +8776,33 @@ msgstr "Зегьы Арамка Аҟны"
 msgid "Clear Board"
 msgstr "Адоска Арыцқьара"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Амаҭәар Ахьӡ"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Аанимациақәа"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Агент Автоматла Абаҩ"
 
@@ -8763,9 +8844,6 @@ msgstr "Агент PBR Аԥҵамҭа"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Иарбоу аҿарҧага амаҭәар азы PBR атекстурақәа раԥҵара Tripo ала"
-
-msgid "Object Name"
-msgstr "Амаҭәар Ахьӡ"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Асцена аҟны атекстура зызу аҿарҧага амаҭәар ахьӡ"
@@ -11949,9 +12027,6 @@ msgstr "Аԥштә Аквантизациа Абитқәа"
 
 msgid "Generic Quantization Bits"
 msgstr "Азеиԥш Аквантизациа Абитқәа"
-
-msgid "Animations"
-msgstr "Аанимациақәа"
 
 msgid "Animation Mode"
 msgstr "Аанимациа Аиҿкаашьа"
@@ -24828,9 +24903,6 @@ msgstr "Ацәаҳәа Аартра"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Маҷ алхым"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Атабқәа рԥсахра аԥхьа аескиз ма адиктовка шәхиркәшаа"
 
@@ -26846,9 +26918,6 @@ msgstr "Ишәарҭа Аҭыԥқәа"
 
 msgid "Select a character to animate"
 msgstr "Анимациазы аперсонаж шәылкаа"
-
-msgid "Animate"
-msgstr "Анимациа"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Аблокинг аҩаӡара аҵыхәтәара аиҳәара ахы аҟынтәи ацаԥха"

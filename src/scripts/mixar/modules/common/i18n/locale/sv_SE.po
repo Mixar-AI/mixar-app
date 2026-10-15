@@ -2006,6 +2006,21 @@ msgstr "Genereringen misslyckades – försök igen"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Katalogens visible_if med RNA-attribut som nyckel"
 
+msgid "Nothing selected"
+msgstr "Inget valt"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Värde"
+
+msgid "Group"
+msgstr "Grupp"
+
+msgid "Selected"
+msgstr "Utvalda"
+
 msgid "No modes"
 msgstr "Inga lägen"
 
@@ -4610,6 +4625,24 @@ msgstr "Automatisk riggning misslyckades"
 msgid "Animate failed"
 msgstr "Animeringen misslyckades"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Valt nät har {count:,} ytor (max {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Nätsegmentering"
 msgid "Auto Rig"
 msgstr "Automatisk riggning"
 
+msgid "Animate"
+msgstr "Animera"
+
 msgid "Add Mesh"
 msgstr "Lägg till nät"
 
@@ -5497,6 +5533,18 @@ msgstr "Antalet förfiningssteg som används under genereringen. Fler steg kan t
 
 msgid "The file format used to store the generated image."
 msgstr "Filformatet som används för att lagra den genererade bilden."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Auto (från namn)"
@@ -5813,6 +5861,9 @@ msgstr "Montera karaktär"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Fäster genererade delar på en riggad eller vanlig kropp, lokalt"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Använd endast bildens stil"
 
@@ -5971,6 +6022,9 @@ msgstr "Generera '{name}' först – det här kortet använder dess resultat"
 
 msgid "Mesh"
 msgstr "Nät"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referens {number}"
@@ -6917,9 +6971,6 @@ msgstr "Använd anpassad färg"
 msgid "Custom Colour"
 msgstr "Anpassad färg"
 
-msgid "Selected"
-msgstr "Utvalda"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ignorerar ramens kant och insida vid klick, så att endast dess medlemmar kan väljas"
 
@@ -6928,6 +6979,18 @@ msgstr "Hopfälld"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Ritar ramen som en namnlist och döljer dess innehåll"
+
+msgid "Unavailable"
+msgstr "Ej tillgänglig"
+
+msgid "No supported 3D service is available"
+msgstr "Ingen 3D-tjänst som stöds är tillgänglig"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Bildmodeller måste ange stöd för maskvägledning och två referenser"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Inga alternativ publicerade"
@@ -6946,18 +7009,6 @@ msgstr "Klar"
 
 msgid "Generation completed"
 msgstr "Genereringen slutförd"
-
-msgid "Unavailable"
-msgstr "Ej tillgänglig"
-
-msgid "No supported 3D service is available"
-msgstr "Ingen 3D-tjänst som stöds är tillgänglig"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Bildmodeller måste ange stöd för maskvägledning och två referenser"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "Parameter-ID"
@@ -6983,14 +7034,14 @@ msgstr "Booleskt värde"
 msgid "Catalog choice"
 msgstr "Katalogval"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Grupp"
-
 msgid "Choices"
 msgstr "Alternativ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Synlighetsvillkor"
@@ -7010,11 +7061,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maximalt"
 
-msgid "Value"
-msgstr "Värde"
-
 msgid "Value Label"
 msgstr "Värdeetikett"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Uttags-ID"
@@ -8722,6 +8776,33 @@ msgstr "Bildruta All"
 msgid "Clear Board"
 msgstr "Rensa tavlan"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objektnamn"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animationer"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Automatisk riggning (agent)"
 
@@ -8763,9 +8844,6 @@ msgstr "PBR-generering (agent)"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Genererar PBR-texturer för det angivna nätobjektet med Tripo"
-
-msgid "Object Name"
-msgstr "Objektnamn"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Namn på nätobjektet i scenen som ska textureras"
@@ -11949,9 +12027,6 @@ msgstr "Färgkvantiseringsbitar"
 
 msgid "Generic Quantization Bits"
 msgstr "Generiska kvantiseringsbitar"
-
-msgid "Animations"
-msgstr "Animationer"
 
 msgid "Animation Mode"
 msgstr "Animationsläge"
@@ -24828,9 +24903,6 @@ msgstr "Öppna kö"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Inget valt"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Avsluta skissandet eller dikteringen innan du byter flik"
 
@@ -26846,9 +26918,6 @@ msgstr "Säkra områden"
 
 msgid "Select a character to animate"
 msgstr "Markera en karaktär att animera"
-
-msgid "Animate"
-msgstr "Animera"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Sätter nycklar för den här rörelsen på blockingnivå från uppspelningshuvudet"

@@ -2006,6 +2006,21 @@ msgstr "Sinh tạo thất bại — vui lòng thử lại"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if của danh mục theo thuộc tính RNA"
 
+msgid "Nothing selected"
+msgstr "Chưa chọn cái gì cả"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Giá Trị"
+
+msgid "Group"
+msgstr "Nhóm"
+
+msgid "Selected"
+msgstr "Đã Chọn"
+
 msgid "No modes"
 msgstr "Không có chế độ"
 
@@ -4610,6 +4625,24 @@ msgstr "Dàn Dựng Tự Động thất bại"
 msgid "Animate failed"
 msgstr "Tạo hoạt họa thất bại"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Khung lưới đã chọn có {count:,} mặt (tối đa {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Phân Đoạn Khung Lưới"
 msgid "Auto Rig"
 msgstr "Dàn Dựng Tự Động"
 
+msgid "Animate"
+msgstr "Hoạt Họa"
+
 msgid "Add Mesh"
 msgstr "Thêm Khung Lưới"
 
@@ -5497,6 +5533,18 @@ msgstr "Số bước tinh chỉnh dùng trong quá trình sinh tạo. Nhiều b�
 
 msgid "The file format used to store the generated image."
 msgstr "Định dạng tập tin dùng để lưu hình ảnh được sinh tạo."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Tự động (từ tên)"
@@ -5813,6 +5861,9 @@ msgstr "Lắp Ráp Nhân Vật"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Gắn các bộ phận đã sinh tạo vào cơ thể có hoặc không có khung rối, ngay trên máy"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Chỉ Dùng Phong Cách Hình Ảnh"
 
@@ -5971,6 +6022,9 @@ msgstr "Hãy sinh tạo '{name}' trước — thẻ này dùng kết quả của
 
 msgid "Mesh"
 msgstr "Khung Lưới"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Tham Chiếu {number}"
@@ -6917,9 +6971,6 @@ msgstr "Dùng Màu Tùy Chỉnh"
 msgid "Custom Colour"
 msgstr "Màu Tùy Chỉnh"
 
-msgid "Selected"
-msgstr "Đã Chọn"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Bỏ qua viền và phần bên trong của khung này khi bấm, để chỉ các thành viên của nó mới có thể được chọn"
 
@@ -6928,6 +6979,18 @@ msgstr "Thu Gọn"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Vẽ khung dưới dạng thanh có tiêu đề và ẩn phần thân"
+
+msgid "Unavailable"
+msgstr "Không Khả Dụng"
+
+msgid "No supported 3D service is available"
+msgstr "Không có dịch vụ 3D được hỗ trợ nào khả dụng"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Mô hình hình ảnh phải công bố hỗ trợ hướng dẫn màn chắn lọc và hai tham chiếu"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Không có lựa chọn nào được công bố"
@@ -6946,18 +7009,6 @@ msgstr "Hoàn Tất"
 
 msgid "Generation completed"
 msgstr "Đã sinh tạo xong"
-
-msgid "Unavailable"
-msgstr "Không Khả Dụng"
-
-msgid "No supported 3D service is available"
-msgstr "Không có dịch vụ 3D được hỗ trợ nào khả dụng"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Mô hình hình ảnh phải công bố hỗ trợ hướng dẫn màn chắn lọc và hai tham chiếu"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID Tham Số"
@@ -6983,14 +7034,14 @@ msgstr "Giá trị Boolean"
 msgid "Catalog choice"
 msgstr "Lựa chọn trong danh mục"
 
-msgid "Widget"
-msgstr "Thành Tố Điều Khiển"
-
-msgid "Group"
-msgstr "Nhóm"
-
 msgid "Choices"
 msgstr "Các Lựa Chọn"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Thành Tố Điều Khiển"
 
 msgid "Visibility Condition"
 msgstr "Điều Kiện Hiển Thị"
@@ -7010,11 +7061,14 @@ msgstr "Tối Thiểu"
 msgid "Maximum"
 msgstr "Tối Đa"
 
-msgid "Value"
-msgstr "Giá Trị"
-
 msgid "Value Label"
 msgstr "Nhãn Giá Trị"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID Ổ Cắm"
@@ -8722,6 +8776,33 @@ msgstr "Toàn Bộ Khung Hình"
 msgid "Clear Board"
 msgstr "Xóa Sạch Bảng"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Tên Đối Tượng"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Hoạt Họa"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Dàn Dựng Tự Động (Tác Nhân)"
 
@@ -8763,9 +8844,6 @@ msgstr "Sinh Tạo PBR (Tác Nhân)"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Sinh tạo chất liệu PBR cho đối tượng khung lưới đã cho bằng Tripo"
-
-msgid "Object Name"
-msgstr "Tên Đối Tượng"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Tên của đối tượng khung lưới trong cảnh cần áp chất liệu"
@@ -11949,9 +12027,6 @@ msgstr "Số Bit Lượng Tử Hóa Màu"
 
 msgid "Generic Quantization Bits"
 msgstr "Số Bit Lượng Tử Hóa Phổ Thông"
-
-msgid "Animations"
-msgstr "Hoạt Họa"
 
 msgid "Animation Mode"
 msgstr "Chế Độ Hoạt Họa"
@@ -24828,9 +24903,6 @@ msgstr "Mở Hàng Đợi"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Chưa chọn cái gì cả"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Hãy hoàn tất phác thảo hoặc đọc chính tả trước khi chuyển thẻ"
 
@@ -26846,9 +26918,6 @@ msgstr "Vùng An Toàn"
 
 msgid "Select a character to animate"
 msgstr "Chọn một nhân vật để tạo hoạt họa"
-
-msgid "Animate"
-msgstr "Hoạt Họa"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Tạo khung khóa cho chuyển động mức phác dựng này từ đầu chơi"

@@ -2006,6 +2006,21 @@ msgstr "Generarea a eșuat — încercați din nou"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if din catalog, indexat după atributul RNA"
 
+msgid "Nothing selected"
+msgstr "Nimic selectat"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "Value"
+msgstr "Valoare"
+
+msgid "Group"
+msgstr "Grup"
+
+msgid "Selected"
+msgstr "Selectat"
+
 msgid "No modes"
 msgstr "Niciun mod"
 
@@ -4610,6 +4625,24 @@ msgstr "Rig automat a eșuat"
 msgid "Animate failed"
 msgstr "Animarea a eșuat"
 
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Plasa selectată are {count:,} fețe (maxim {max_faces:,})"
 
@@ -5396,6 +5429,9 @@ msgstr "Segmentare plasă"
 msgid "Auto Rig"
 msgstr "Rig automat"
 
+msgid "Animate"
+msgstr "Animare"
+
 msgid "Add Mesh"
 msgstr "Adăugare plasă"
 
@@ -5497,6 +5533,18 @@ msgstr "Numărul de pași de rafinare folosiți în generare. Mai mulți pași p
 
 msgid "The file format used to store the generated image."
 msgstr "Formatul de fișier folosit pentru a stoca imaginea generată."
+
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Auto (din nume)"
@@ -5813,6 +5861,9 @@ msgstr "Asamblare personaj"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Atașează local părțile generate la un corp rigat sau simplu"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Folosire doar a stilului imaginii"
 
@@ -5971,6 +6022,9 @@ msgstr "Generați mai întâi '{name}' — acest card îi folosește rezultatul"
 
 msgid "Mesh"
 msgstr "Plasă"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referința {number}"
@@ -6917,9 +6971,6 @@ msgstr "Folosire culoare personalizată"
 msgid "Custom Colour"
 msgstr "Culoare personalizată"
 
-msgid "Selected"
-msgstr "Selectat"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ignoră marginea și interiorul acestui chenar la clic, ca să poată fi selectați doar membrii"
 
@@ -6928,6 +6979,18 @@ msgstr "Restrâns"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Desenează chenarul ca o bară cu titlu și îi ascunde corpul"
+
+msgid "Unavailable"
+msgstr "Indisponibil"
+
+msgid "No supported 3D service is available"
+msgstr "Niciun serviciu 3D acceptat nu este disponibil"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Modelele de imagine trebuie să anunțe ghidaj de mască și două referințe"
+
+msgid "Attachment settings"
+msgstr "Setări atașament"
 
 msgid "No choices published"
 msgstr "Nicio alegere publicată"
@@ -6946,18 +7009,6 @@ msgstr "Complet"
 
 msgid "Generation completed"
 msgstr "Generare terminată"
-
-msgid "Unavailable"
-msgstr "Indisponibil"
-
-msgid "No supported 3D service is available"
-msgstr "Niciun serviciu 3D acceptat nu este disponibil"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Modelele de imagine trebuie să anunțe ghidaj de mască și două referințe"
-
-msgid "Attachment settings"
-msgstr "Setări atașament"
 
 msgid "Parameter ID"
 msgstr "ID parametru"
@@ -6983,14 +7034,14 @@ msgstr "Valoare booleană"
 msgid "Catalog choice"
 msgstr "Alegere din catalog"
 
-msgid "Widget"
-msgstr "Control"
-
-msgid "Group"
-msgstr "Grup"
-
 msgid "Choices"
 msgstr "Alegeri"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Control"
 
 msgid "Visibility Condition"
 msgstr "Condiție de vizibilitate"
@@ -7010,11 +7061,14 @@ msgstr "Minim"
 msgid "Maximum"
 msgstr "Maxim"
 
-msgid "Value"
-msgstr "Valoare"
-
 msgid "Value Label"
 msgstr "Etichetă valoare"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID mufă"
@@ -8722,6 +8776,33 @@ msgstr "Încadrare tot"
 msgid "Clear Board"
 msgstr "Șterge panoul"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Nume obiect"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animații"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Rig automat agent"
 
@@ -8763,9 +8844,6 @@ msgstr "Generare PBR agent"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Generează texturi PBR pentru obiectul plasă dat, folosind Tripo"
-
-msgid "Object Name"
-msgstr "Nume obiect"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Numele obiectului plasă din scenă de texturat"
@@ -11949,9 +12027,6 @@ msgstr "Biți de cuantizare a culorii"
 
 msgid "Generic Quantization Bits"
 msgstr "Biți de cuantizare generici"
-
-msgid "Animations"
-msgstr "Animații"
 
 msgid "Animation Mode"
 msgstr "Mod animație"
@@ -24828,9 +24903,6 @@ msgstr "Deschidere coadă"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Nimic selectat"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Terminați schița sau dictarea înainte de a schimba filele"
 
@@ -26846,9 +26918,6 @@ msgstr "Zone sigure"
 
 msgid "Select a character to animate"
 msgstr "Selectați un personaj de animat"
-
-msgid "Animate"
-msgstr "Animare"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Pune o cheie pentru această mișcare de blocaj de la capul de redare"
