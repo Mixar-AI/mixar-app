@@ -470,11 +470,19 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
                             BLI_rctf_size_x(media_rect),
                             BLI_rctf_size_y(media_rect)))
         {
-          PointerRNA image_ptr = RNA_pointer_get(&media, "image");
-          Image *image = static_cast<Image *>(image_ptr.data);
-          moodboard_draw_output_handle(v2d, media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
-                                       BLI_rctf_cent_y(media_rect),
-                                       moodboard_media_output_color(image));
+          const float handle_x = media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
+          const float handle_y = BLI_rctf_cent_y(media_rect);
+          /* This pass runs after every picture and card, so without the test
+           * a handle would float over the picture dropped on top of its
+           * owner — a "+" for an image the user cannot see, which the
+           * hit-test refuses for the same reason. Card handles need no test:
+           * they are painted inline, under whatever follows them. */
+          if (!moodboard_graph_point_covered_above(*cache, media_id, handle_x, handle_y)) {
+            PointerRNA image_ptr = RNA_pointer_get(&media, "image");
+            Image *image = static_cast<Image *>(image_ptr.data);
+            moodboard_draw_output_handle(
+                v2d, handle_x, handle_y, moodboard_media_output_color(image));
+          }
         }
       }
       RNA_property_collection_next(&iter);

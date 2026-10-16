@@ -13,6 +13,7 @@
 
 #include "BLI_map.hh"
 #include "BLI_set.hh"
+#include "BLI_vector.hh"
 
 /* rctf is stored by value in MoodboardGraphCache, so the full type is needed. */
 #include "DNA_vec_types.h"
@@ -354,6 +355,10 @@ struct MoodboardGraphCache {
   blender::Map<std::string, PointerRNA> action_nodes;
   /** "to_node_id|to_socket" of every link, so sockets can draw occupancy. */
   blender::Set<std::string> occupied_inputs;
+  /** Every body in PAINT order, bottom to top (see #MoodboardGraphBody). */
+  blender::Vector<MoodboardGraphBody> bodies;
+  /** node_id -> position in `bodies`, for #moodboard_graph_point_covered_above. */
+  blender::Map<std::string, int> body_index;
 };
 
 void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cache);

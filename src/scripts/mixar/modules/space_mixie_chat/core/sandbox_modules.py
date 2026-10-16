@@ -20,6 +20,9 @@ Blocked capabilities:
   resolves "0.__class__.__base__.__subclasses__" against the REAL getattr and
   hands back the object, walking straight past the dunder guard
 - open(): write mode restricted to temp directory only
+- bpy: every ``_``-prefixed attribute of bpy and its submodules. The private
+  helpers are plain functions with the real builtins and no denial of their
+  own: bpy.utils._test_import(name, set()) returns the real module it imports.
 """
 
 import builtins
@@ -189,13 +192,20 @@ def safe_module(module, root: str = None):
             # blocks the escape dunders in scripts; refuse them here too so
             # the proxy is safe on its own, keeping only the informational
             # ones scripts legitimately read.
-            if (
-                attr.startswith("__")
-                and attr.endswith("__")
-                and attr not in _MODULE_INFO_DUNDERS
-            ):
+            if attr.startswith("__") and attr.endswith("__"):
+                if attr not in _MODULE_INFO_DUNDERS:
+                    raise AttributeError(
+                        f"{name}.{attr} is not available in the sandbox."
+                    )
+            elif root == "bpy" and attr.startswith("_"):
+                # bpy's private module helpers are plain functions with the
+                # real builtins and no denial of their own: bpy.utils.
+                # _test_import(name, set()) returns the real module it
+                # imports; bpy.ops._op_create_function builds any operator
+                # from a string.
                 raise AttributeError(
-                    f"{name}.{attr} is not available in the sandbox."
+                    f"{name}.{attr} is not available in the sandbox: private "
+                    f"bpy helpers are not part of the sandboxed API."
                 )
             if attr in _DENIED_ATTRS.get(name, ()):
                 raise AttributeError(

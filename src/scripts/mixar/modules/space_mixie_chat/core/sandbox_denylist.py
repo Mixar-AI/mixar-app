@@ -83,7 +83,13 @@ DENIED_ATTR_NAMES = frozenset({
     "_ctypes",
 })
 
-# Whole operator namespaces refused through bpy.ops.
+# Whole operator namespaces refused through bpy.ops. Namespaces match in ANY
+# case: Blender uppercases the namespace into the operator idname (bpy/ops.py
+# ``BPyOpsSubModOp.idname`` is ``module.upper() + "_OT_" + func``, and
+# ``WM_operator_bl_idname`` does the same for a call), so ``bpy.ops.SCRIPT.
+# python_file_run`` and ``bpy.ops.Script.python_file_run`` both run
+# ``SCRIPT_OT_python_file_run``. The operator NAME is copied as typed, so it
+# needs no folding. Every check goes through the helpers below.
 DENIED_OPS_NAMESPACES = frozenset({
     "script",       # python_file_run, reload, execute_preset: files with real builtins
     "text",         # run_script execs a Text; jump_to_file_at_point launches an editor
@@ -151,8 +157,29 @@ def types_denial_reason(name: str, value=None):
     return None
 
 
+def ops_namespace_key(namespace: str) -> str:
+    """The denylist spelling of a ``bpy.ops`` namespace: lowercase, which is
+    how Blender resolves it (see ``DENIED_OPS_NAMESPACES``)."""
+    return namespace.lower()
+
+
+def is_denied_ops_namespace(namespace: str) -> bool:
+    """True when the whole ``bpy.ops.<namespace>`` is refused, in any case."""
+    return ops_namespace_key(namespace) in DENIED_OPS_NAMESPACES
+
+
+def denied_ops_kwargs(namespace: str) -> frozenset:
+    """Keyword arguments refused on every operator of ``bpy.ops.<namespace>``."""
+    return DENIED_OPS_KWARGS.get(ops_namespace_key(namespace), frozenset())
+
+
 def op_denial_reason(namespace: str, name: str):
-    """Why ``bpy.ops.<namespace>.<name>`` is refused, or None when allowed."""
+    """Why ``bpy.ops.<namespace>.<name>`` is refused, or None when allowed.
+
+    The namespace matches in any case; the reported route is the canonical
+    lowercase spelling.
+    """
+    namespace = ops_namespace_key(namespace)
     if namespace in DENIED_OPS_NAMESPACES:
         return f"bpy.ops.{namespace} is not available in the sandbox: it runs Python outside it"
     idname = f"{namespace}.{name}"

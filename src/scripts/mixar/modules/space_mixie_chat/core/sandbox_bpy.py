@@ -17,7 +17,9 @@ Three more holes are closed here:
 
 - ``bpy.ops._op_create_function`` / ``bpy.ops._bpy_ops_submodule`` build an
   operator callable from a name, walking straight past a namespace check, so
-  the ops proxy refuses every ``_``-prefixed name.
+  the ops proxy refuses every ``_``-prefixed name. A namespace is matched in
+  any case (``bpy.ops.SCRIPT`` is ``bpy.ops.script`` to Blender, which
+  uppercases it into the idname).
 - ``bpy.types`` hands out Python-registered operator CLASSES
   (``bpy.types.WM_OT_context_set_value`` is the ``bl_operators.wm`` class
   itself), whose ``execute`` is a plain function with the real builtins that
@@ -41,8 +43,8 @@ import types
 
 from .sandbox_denylist import (
     DENIED_ATTR_NAMES,
-    DENIED_OPS_KWARGS,
-    DENIED_OPS_NAMESPACES,
+    denied_ops_kwargs,
+    is_denied_ops_namespace,
     op_denial_reason,
     types_denial_reason,
 )
@@ -75,7 +77,7 @@ def _guard_op(op, namespace, name, denied_kwargs):
 
 
 def _sandboxed_ops_namespace(real_ns, namespace):
-    denied_kwargs = DENIED_OPS_KWARGS.get(namespace, frozenset())
+    denied_kwargs = denied_ops_kwargs(namespace)
 
     class _SandboxedOpsNamespace:
         __slots__ = ()
@@ -294,7 +296,7 @@ def make_sandboxed_bpy(real_bpy):
         __slots__ = ()
 
         def __getattr__(self, name):
-            if name in DENIED_OPS_NAMESPACES:
+            if is_denied_ops_namespace(name):
                 raise PermissionError(op_denial_reason(name, ""))
             if name.startswith("_"):
                 # _op_create_function / _bpy_ops_submodule build any operator
@@ -310,7 +312,7 @@ def make_sandboxed_bpy(real_bpy):
         def __dir__(self):
             return [
                 n for n in dir(real_ops)
-                if n not in DENIED_OPS_NAMESPACES and not n.startswith("_")
+                if not is_denied_ops_namespace(n) and not n.startswith("_")
             ]
 
     driver_namespace = _sandboxed_driver_namespace(real_bpy)

@@ -285,6 +285,13 @@ ESCAPES = {
     "numpy_tofile_computed": "getattr(numpy.zeros(3), 'to' + 'file')('/tmp/x')",
     "numpy_ctypes_module": "numpy.zeros(1).ctypes._ctypes.CDLL(None)",
     "numpy_ctypes_computed": "getattr(getattr(numpy.zeros(1), 'cty' + 'pes'), '_cty' + 'pes')",
+    # operator namespace spelled in another case: Blender uppercases it into
+    # the idname, so bpy.ops.SCRIPT is bpy.ops.script
+    "ops_namespace_uppercase": "bpy.ops.SCRIPT.python_file_run(filepath='/tmp/x.py')",
+    "ops_namespace_uppercase_computed": "getattr(bpy.ops, 'SCR' + 'IPT').python_file_run(filepath='/tmp/x.py')",
+    "ops_mixedcase_denied_operator": "bpy.ops.Wm.open_mainfile(filepath='/tmp/x.blend', use_scripts=True)",
+    "ops_mixedcase_denied_prefix": "bpy.ops.WM.context_set_value(data_path='x', value='1')",
+    "ops_mixedcase_denied_kwarg": "bpy.ops.NODE.add_node(settings=[{'name': 'x', 'value': '1'}])",
     # the add-on workspace (writes, installs and enables add-ons)
     "addon_project_import": "import mixar.modules.addon_project.service",
     "addon_project_from": "from mixar.modules.addon_project.installer import set_addon_enabled",
@@ -329,6 +336,12 @@ def test_ast_rejections_name_the_route(monkeypatch):
     assert "'as_module' is blocked" in msg
     msg = validator.validate_script_ast("bpy.ops.script.python_file_run()")
     assert "bpy.ops.script is not available" in msg
+    msg = validator.validate_script_ast("bpy.ops.SCRIPT.python_file_run()")
+    assert "bpy.ops.script is not available" in msg
+    msg = validator.validate_script_ast("bpy.ops.Wm.open_mainfile(use_scripts=True)")
+    assert "bpy.ops.wm.open_mainfile is not available" in msg
+    msg = validator.validate_script_ast("bpy.ops.NODE.add_node(settings=[])")
+    assert "settings=...) is blocked" in msg
     msg = validator.validate_script_ast("bpy.ops.wm.context_toggle(data_path='x')")
     assert "bpy.ops.wm.context_toggle is not available" in msg
     msg = validator.validate_script_ast("bpy.ops.node.add_node(settings=[])")
@@ -344,6 +357,7 @@ def test_ast_rejections_name_the_route(monkeypatch):
         "import json\njson.dump({}, open('/tmp/x.json', 'w'))\n"
         "bpy.ops.wm.obj_export(filepath='/tmp/x.obj')\n"
         "bpy.ops.node.add_node(type='ShaderNodeMath')\n"
+        "bpy.ops.MESH.primitive_cube_add(size=2)\n"
         "isinstance(bpy.context.object.data, bpy.types.Mesh)\n"
         "bpy.types.Scene.my_prop = bpy.props.IntProperty()\n"
     ) is None

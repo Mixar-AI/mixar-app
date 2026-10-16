@@ -19,8 +19,8 @@ from typing import Optional
 
 from .sandbox_denylist import (
     DENIED_ATTR_NAMES,
-    DENIED_OPS_KWARGS,
-    DENIED_OPS_NAMESPACES,
+    denied_ops_kwargs,
+    is_denied_ops_namespace,
     op_denial_reason,
     types_denial_reason,
 )
@@ -106,7 +106,7 @@ class _SandboxASTValidator(ast.NodeVisitor):
             and isinstance(func.value.value, ast.Attribute)
             and func.value.value.attr == "ops"
         ):
-            denied = DENIED_OPS_KWARGS.get(func.value.attr, ())
+            denied = denied_ops_kwargs(func.value.attr)
             for keyword in node.keywords:
                 if keyword.arg in denied:
                     self.violations.append(
@@ -147,14 +147,14 @@ def _ops_chain_denial(node: ast.Attribute):
     """
     value = node.value
     if isinstance(value, ast.Attribute) and value.attr == "ops":
-        if node.attr in DENIED_OPS_NAMESPACES:
+        if is_denied_ops_namespace(node.attr):
             return op_denial_reason(node.attr, "")
         return None
     if (
         isinstance(value, ast.Attribute)
         and isinstance(value.value, ast.Attribute)
         and value.value.attr == "ops"
-        and value.attr not in DENIED_OPS_NAMESPACES  # reported one level up
+        and not is_denied_ops_namespace(value.attr)  # reported one level up
     ):
         return op_denial_reason(value.attr, node.attr)
     return None
