@@ -87,8 +87,12 @@ kill → wait 5 s). `stop_all()` exists for Stage 2 to wire into
 `bootstrap/shutdown_hooks._run_all_cleanups` AND `unregister()` — a
 llama-server holding gigabytes of RAM must never outlive Blender.
 
-argv: `llama-server -m <gguf> --host 127.0.0.1 --port <port> --no-webui
---api-key <token> -ngl 99 -c 16384 [--mmproj <mmproj>]`. The port is the
+argv: `llama-server -m <gguf> --alias <model id> --host 127.0.0.1 --port
+<port> --no-webui --api-key <token> -ngl 99 -c 16384 [--mmproj <mmproj>]`.
+`--alias` is a privacy contract: without it llama-server reports the
+absolute `.gguf` path (the user's account name and directory layout) as
+the id in `/v1/models` and as `model` in every completion, which the
+backend then records. The path appears only in this argv. The port is the
 manifest port when still free (bind-tested), else a fresh bind-tested
 port from 11500–11599, persisted back.
 
@@ -157,7 +161,50 @@ failure-tolerant.
 `detect.probe_known_servers()` GETs `/v1/models` on the default ports of
 Ollama (11434), LM Studio (1234), oMLX (8000) and stock llama.cpp (8080)
 at 127.0.0.1, returning kind/base_url/model-ids for responders.
-Blocking and failure-silent; callers run it on a worker thread.
+Blocking and failure-silent; callers run it on a worker thread. Ids pass
+through `core/model_name.safe_model_name`, so an unaliased llama.cpp
+server's path id is offered as its basename.
+
+## Model names never carry a local path
+
+A local BYOK `model` is a catalog id (managed) or a server id (custom),
+never a filesystem path. `core/model_name.py` (`is_path_like`,
+`safe_model_name`) reduces a path (backslash, drive letter, `file:`, a
+leading `/ ~ ./ ../`, or a `.gguf/.ggml/.bin/.safetensors` file with a
+directory) to its basename, including paths wrapped in matching quotes;
+slash ids such as LM Studio `qwen/qwen3-8b`
+and Ollama Hub ids (`hf.co/owner/repo:filename.gguf` or
+`huggingface.co/owner/repo:filename.gguf`) stay unchanged.
+`byok_client.save_credentials` applies it to every local
+save; the custom save also remembers the basename in the manifest. A
+single-model llama-server ignores the request's `model`, so a basename
+still works against an unaliased server. The relay also sanitizes the
+top-level JSON completion `model` before returning it to the backend:
+custom servers can echo their original path even when the request uses
+a basename. Generated content, ordinary ids and non-JSON responses are
+preserved. Backend sanitization is a separate defence for older clients.
+Pinned by `tests/local_models/test_model_name_privacy.py` (set
+`MIXAR_TEST_LLAMA_SERVER` + `MIXAR_TEST_GGUF` to also run it against a
+real llama-server). The running-app replay is
+`tests/qa/local_model_name_privacy_e2e.py`. Its default local HTTP fixture
+can be replaced by a real unaliased server using `MIXAR_QA_LLAMA_BASE`
+and `MIXAR_TEST_GGUF` in the QA app's environment. Credential services
+and the key store remain synthetic; workers, timers, HTTP inference and
+the provider dialog are real. `MIXAR_QA_BASELINE_ROOT` can supply the
+target's `detect.py` and `relay.py` for an in-app before/after comparison.
+
+Validation scope: Windows tests passed with the pinned `b10485` CPU
+runtime and [SmolLM2-135M-Instruct Q4_K_M](https://huggingface.co/QuantFactory/SmolLM2-135M-Instruct-GGUF/blob/476854d00ede130660aba430d15f9347ad2e7d0e/SmolLM2-135M-Instruct.Q4_K_M.gguf)
+(105,454,144 bytes, SHA-256
+`8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684`).
+All 153 local-model tests passed, including real inference with and
+without an alias. In the same running QA app, target-branch detection
+and relay code exposed the GGUF path; reviewed code returned only its
+basename. The real-server dialog replay passed and both screenshots
+were inspected. Reviewed Python was loaded into the existing Dev
+binary; a fresh binary and macOS remain unverified. The prior broader
+BYOK run had two Codex path/permission failures also reproduced on the
+untouched target branch. Replay stalls were attributed to QA pixel encoding.
 
 ## Threading rules (house style)
 
