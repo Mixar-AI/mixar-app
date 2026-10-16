@@ -30,6 +30,7 @@ from .chat_slot_types import (
     MixieChatStepItem,
 )
 from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN, FEEDBACK_STATUS_SENDING
+from ...core import composer_limit
 
 logger = get_logger(__name__)
 
@@ -425,6 +426,44 @@ classes = (
 )
 
 
+_draft_full_notified = False
+
+
+def _notify_when_draft_full(text: str) -> None:
+    """Say so once when the composer buffer is full.
+
+    The native text editor drops keystrokes past the RNA ``maxlen`` without
+    any feedback, which reads as the app eating input. One stable toast per
+    fill; it re-arms as soon as the draft has room again.
+    """
+    global _draft_full_notified
+    try:
+        full = composer_limit.is_full(text, CHAT_INPUT_MAXLEN)
+    except Exception:  # noqa: BLE001
+        return
+    if not full:
+        _draft_full_notified = False
+        return
+    if _draft_full_notified:
+        return
+    _draft_full_notified = True
+    try:
+        from mixar.modules.common.analytics.essential_events import capture_composer_cap_hit
+        capture_composer_cap_hit("typed", len(text.encode("utf-8")))
+    except Exception:  # noqa: BLE001 — telemetry is fail-open
+        pass
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().push(
+            "warning", n_("Message box is full"),
+            body=n_("The message box is full ({kb} KB). Shorten the draft, or send it "
+                    "and continue in the next message.").format(kb=CHAT_INPUT_MAXLEN // 1024),
+            ttl_ms=6000, id="mixie_chat_input_full",
+        )
+    except Exception:  # noqa: BLE001 — the cap itself is enforced by RNA
+        logger.debug("draft-full notice skipped", exc_info=True)
+
+
 def on_chat_input_changed(self, context):
     """Auto-submit when Enter is pressed (detected by \\x1F marker).
 
@@ -444,6 +483,8 @@ def on_chat_input_changed(self, context):
             first_interval=0.001
         )
         return
+
+    _notify_when_draft_full(self.mixie_chat_input)
 
     # An emptied composer can't have an active @-mention token. Interactive
     # edits are handled by the C++ detection hooks; this covers programmatic

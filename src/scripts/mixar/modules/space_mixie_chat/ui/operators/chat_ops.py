@@ -230,7 +230,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Dev mode: simulate response without backend
         if DEV_MODE:
-            capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input)
+            capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input,
+                                  message_bytes=len(message_text.encode('utf-8')))
             return self._execute_dev_mode(context, message_text)
 
         connection_manager = get_connection_manager()
@@ -261,7 +262,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # The finalized outgoing payload determines usage, not merely opening
         # Sketch or keeping a previously sent drawing in the scene.
-        capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context)
+        capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context,
+                              message_bytes=len(message_text.encode('utf-8')))
 
         fresh_turn = not (is_modify or is_awaiting_input or interjecting)
         if fresh_turn:

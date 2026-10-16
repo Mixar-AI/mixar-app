@@ -20,6 +20,8 @@ EVENT_MOODBOARD_SIDEBAR = "moodboard.sidebar_toggled"
 EVENT_CHAT_MODE = "agent.mode_changed"
 EVENT_CHAT_HISTORY = "agent.history_toggled"
 EVENT_MESSAGE_SENT = "agent.message_sent"
+# The composer buffer (CHAT_INPUT_MAXLEN) was hit: a draft could not grow.
+EVENT_COMPOSER_CAP_HIT = "agent.composer_cap_hit"
 EVENT_BUBBLE_STATE = "agent_bubble.state_changed"
 EVENT_BUBBLE_EXPAND = "agent_bubble.expand_toggled"
 EVENT_EXPORT = "export.completed"
