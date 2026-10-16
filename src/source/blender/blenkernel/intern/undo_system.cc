@@ -128,6 +128,34 @@ static TabCursors *tab_cursors_snapshot(UndoStack *ustack)
 
 static void undosys_tab_cursors_pin_after_document_walk(UndoStack *ustack);
 
+/**
+ * Mixar: the last step a push keeps. Classic Blender frees every step after the
+ * active one. After Undo Whole Document the active step can sit BELOW a step a
+ * tab has since redone (a per-tab redo moves only that tab's cursor), and
+ * freeing it took the tab's applied work with it: the next undo in the tab
+ * jumped two steps, and an edit after that lost the work for good (overnight
+ * regression 2026-10-15, headless repro: add a cube, Undo Whole Document, redo
+ * in the tab, move something, undo). Keep every step up to the highest tab
+ * cursor; with no tab standing above the active step this is the active step.
+ */
+static UndoStep *undosys_push_keep_until(UndoStack *ustack)
+{
+  UndoStep *keep = ustack->step_active;
+  const TabCursors *cursors = tab_cursors_get(ustack, false);
+  if (keep == nullptr || cursors == nullptr || cursors->is_empty()) {
+    return keep;
+  }
+  for (UndoStep *us = keep->next; us != nullptr; us = us->next) {
+    for (const UndoStep *cursor : cursors->values()) {
+      if (cursor == us) {
+        keep = us;
+        break;
+      }
+    }
+  }
+  return keep;
+}
+
 static void tab_cursors_snapshot_free(UndoStep *us)
 {
   if (us->mixar_cursors != nullptr) {
@@ -702,8 +730,8 @@ UndoStep *BKE_undosys_step_push_init_with_type(UndoStack *ustack,
       undosys_step_free_and_unlink(ustack, us);
       ustack->step_init = nullptr;
     }
-    if (ustack->step_active) {
-      undosys_stack_clear_all_last(ustack, ustack->step_active->next);
+    if (UndoStep *keep = undosys_push_keep_until(ustack)) {
+      undosys_stack_clear_all_last(ustack, keep->next);
     }
 
     UndoStep *us = static_cast<UndoStep *>(MEM_new_zeroed(ut->step_size, __func__));
@@ -753,8 +781,10 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
     retval |= UNDO_PUSH_RET_OVERRIDE_CHANGED;
   }
 
-  /* Remove all undo-steps after (also when 'ustack->step_active == nullptr'). */
-  while (ustack->steps.last != ustack->step_active) {
+  /* Remove all undo-steps after (also when 'ustack->step_active == nullptr'),
+   * except steps a tab has redone above it (undosys_push_keep_until). */
+  UndoStep *keep_until = undosys_push_keep_until(ustack);
+  while (ustack->steps.last != keep_until) {
     UndoStep *us_iter = static_cast<UndoStep *>(ustack->steps.last);
     undosys_step_free_and_unlink(ustack, us_iter);
     undosys_stack_validate(ustack, is_not_empty);
