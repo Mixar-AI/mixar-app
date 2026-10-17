@@ -6,11 +6,13 @@
 live while a save / remove is in flight.
 
 Why it exists: the save runs on a worker thread and flips `byok_dialog_state`
-to SAVED / ERROR from a zero-delay timer, but the dialog is an
-`invoke_props_dialog` popup and a single `tag_redraw` does not reliably repaint
-a popup block — so the dialog sat on "Validating with provider…" until the user
-moved the mouse, making a finished save look stuck. The pump nudges a redraw on
-a short timer while the state is transient and stops itself once it settles.
+to SAVED / ERROR from a zero-delay timer, but the dialog is a pop-up, outside
+every area, so `area.tag_redraw()` never reaches it — the dialog sat on
+"Validating with your provider…" until the user moved the mouse, making a ~1 s
+save look like minutes. The pump rebuilds the open dialog (native
+`Window.mixar_refresh_popups`) whenever it sees the state change, repaints in
+between, and stops itself once the state settles. Live replay:
+tests/qa/byok_save_result_without_pointer_e2e.py.
 """
 
 import sys
@@ -28,22 +30,71 @@ install_bpy_mock()
 from mixar.modules.byok.ui.operators import byok_state_ops
 
 
-def test_the_pump_repaints_and_keeps_ticking_while_a_save_or_remove_is_in_flight(monkeypatch):
+def _record(monkeypatch):
     calls = []
-    monkeypatch.setattr(byok_state_ops, "_redraw_mixie_chat_areas", lambda: calls.append(1))
+    monkeypatch.setattr(byok_state_ops, "_redraw_mixie_chat_areas", lambda: calls.append("paint"))
+    monkeypatch.setattr(byok_state_ops, "_refresh_open_dialogs", lambda: calls.append("rebuild"))
+    monkeypatch.setattr(byok_state_ops, "_pump_last_state", None)
+    return calls
+
+
+def test_the_pump_repaints_and_keeps_ticking_while_a_save_or_remove_is_in_flight(monkeypatch):
+    calls = _record(monkeypatch)
     for state in ("SAVING", "REMOVING"):
+        monkeypatch.setattr(byok_state_ops, "_pump_last_state", None)
         calls.clear()
         assert byok_state_ops._pump_tick(state) == byok_state_ops._PUMP_INTERVAL_S
-        assert calls == [1]                       # a repaint every tick
+        assert calls == ["paint", "rebuild"]      # entering the state rebuilds the dialog
+        calls.clear()
+        assert byok_state_ops._pump_tick(state) == byok_state_ops._PUMP_INTERVAL_S
+        assert calls == ["paint"]                 # an unchanged state only repaints
 
 
-def test_the_pump_paints_once_more_then_stops_when_the_state_settles(monkeypatch):
-    calls = []
-    monkeypatch.setattr(byok_state_ops, "_redraw_mixie_chat_areas", lambda: calls.append(1))
+def test_the_settled_state_rebuilds_the_dialog_then_the_pump_stops(monkeypatch):
+    """The regression: SAVED landed but the dialog kept drawing the old state
+    until the pointer moved, because nothing rebuilt the pop-up."""
+    calls = _record(monkeypatch)
     for state in ("SAVED", "ERROR", "REMOVED", "IDLE", ""):
+        monkeypatch.setattr(byok_state_ops, "_pump_last_state", "SAVING")
         calls.clear()
         assert byok_state_ops._pump_tick(state) is None   # unregister
-        assert calls == [1]                               # one final frame for the settled state
+        assert calls == ["paint", "rebuild"]              # the settled state is drawn
+        assert byok_state_ops._pump_last_state is None    # the next save rebuilds again
+
+
+def test_a_whole_save_rebuilds_once_per_state_change(monkeypatch):
+    calls = _record(monkeypatch)
+    for state in ("SAVING", "SAVING", "SAVING", "SAVED"):
+        byok_state_ops._pump_tick(state)
+    assert calls.count("rebuild") == 2
+    assert calls.count("paint") == 4
+
+
+def test_refresh_popup_dialogs_asks_every_window_and_tolerates_old_binaries(monkeypatch):
+    from types import SimpleNamespace
+    from mixar.modules.common.utils import platform_utils
+
+    asked = []
+    windows = [SimpleNamespace(mixar_refresh_popups=lambda: asked.append(1) or 1),
+               SimpleNamespace()]  # a binary without the native call
+    fake_bpy = SimpleNamespace(context=SimpleNamespace(
+        window_manager=SimpleNamespace(windows=windows)))
+    monkeypatch.setitem(sys.modules, "bpy", fake_bpy)
+    assert platform_utils.refresh_popup_dialogs() == 1
+    assert asked == [1]
+
+
+def test_a_catalog_load_rebuilds_the_open_dialog(monkeypatch):
+    """The dialog's provider list reads the catalog in draw(); "Loading…" must
+    turn into providers without the pointer moving."""
+    from mixar.modules.byok.core import models_cache
+    from mixar.modules.common.utils import platform_utils
+
+    calls = []
+    monkeypatch.setattr(platform_utils, "trigger_ui_redraw", lambda: calls.append("paint"))
+    monkeypatch.setattr(platform_utils, "refresh_popup_dialogs", lambda: calls.append("rebuild"))
+    models_cache._redraw()
+    assert calls == ["paint", "rebuild"]
 
 
 def test_ensure_pump_is_idempotent_and_registers_the_callback():

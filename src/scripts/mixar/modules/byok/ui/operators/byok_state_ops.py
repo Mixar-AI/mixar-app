@@ -53,24 +53,44 @@ def _redraw_mixie_chat_areas():
 # ---------------------------------------------------------------------------
 #
 # The save / remove runs on a worker thread and flips `byok_dialog_state` to
-# SAVED / ERROR from a zero-delay timer. The dialog is an `invoke_props_dialog`
-# popup, and a single `tag_redraw` does not reliably repaint a popup block, so
-# the flip is invisible until the user moves the mouse over the dialog — the
-# save looks stuck on "Validating with provider…" long after it landed. While a
-# save / remove is in flight we therefore keep nudging a redraw on a short
-# repeating timer; it stops itself the moment the state settles (one final
-# paint for the settled frame). Registered idempotently so repeated saves do
-# not stack timers.
+# SAVED / ERROR from a zero-delay timer. The dialog is a pop-up, and pop-up
+# regions sit outside every area, so `area.tag_redraw()` never reaches them: the
+# flip stayed invisible until the pointer moved over the dialog — a ~1 s save
+# sat on "Validating with your provider…" for as long as the user waited. Each
+# time the pump sees the state change it rebuilds the open dialog
+# (`refresh_popup_dialogs`, native `Window.mixar_refresh_popups`); between
+# changes it only repaints. It stops itself the tick the state settles.
+# Registered idempotently so repeated saves do not stack timers.
 
 _PUMP_INTERVAL_S = 0.12
 _TRANSIENT_STATES = ('SAVING', 'REMOVING')
 
+# The state the pump last rebuilt the dialog for (None: no pump running).
+_pump_last_state = None
+
+
+def _refresh_open_dialogs():
+    try:
+        from mixar.modules.common.utils.platform_utils import refresh_popup_dialogs
+
+        refresh_popup_dialogs()
+    except Exception as e:  # noqa: BLE001 — never break the pump
+        logger.debug("BYOK dialog refresh failed: %s", e)
+
 
 def _pump_tick(state):
-    """One pump step: repaint, then the next interval while a save/remove is in
-    flight, else a final repaint and None (unregister). Pure of `bpy` for tests."""
+    """One pump step: repaint, rebuilding the dialog when the state changed;
+    the next interval while a save/remove is in flight, else None (unregister).
+    Pure of `bpy` for tests."""
+    global _pump_last_state
     _redraw_mixie_chat_areas()
-    return _PUMP_INTERVAL_S if state in _TRANSIENT_STATES else None
+    if state != _pump_last_state:
+        _refresh_open_dialogs()
+    if state in _TRANSIENT_STATES:
+        _pump_last_state = state
+        return _PUMP_INTERVAL_S
+    _pump_last_state = None
+    return None
 
 
 def _dialog_redraw_pump():

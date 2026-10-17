@@ -58,6 +58,7 @@ set(SRC
   mixar/cinema_label.cc
   mixar/cinema_label.hh
   mixar/tour_menu.cc
+  mixar/popup_query.cc
   mixar/credits_banner.cc
   mixar/credits_banner.hh
   mixar/credits_banner_layout.cc

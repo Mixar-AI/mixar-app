@@ -52,7 +52,6 @@
 
 #include "WM_mixar.hh"
 
-
 #ifdef RNA_RUNTIME
 #  include <algorithm>
 #  include <cstring>
@@ -75,6 +74,7 @@
 #endif
 
 #include "rna_wm_ui_control.cc"
+#include "rna_wm_mixar_popup.cc"
 
 /* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
  * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
@@ -267,7 +267,6 @@ static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
   }
 }
 
-
 #else /* RNA_RUNTIME */
 
 void RNA_def_wm_mixar(BlenderRNA *brna)
@@ -288,6 +287,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
   }
 
   RNA_def_mixar_ui_control(brna, srna);
+  RNA_def_mixar_popup_query(brna, srna);
 
   PropertyRNA *prop = RNA_def_property(srna, "global_areas", PROP_COLLECTION, PROP_NONE);
   RNA_def_property_collection_funcs(prop,

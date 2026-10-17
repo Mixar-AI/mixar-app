@@ -32,10 +32,6 @@
 
 #include <fmt/format.h>
 
-#if defined(__APPLE__) || defined(_WIN32)
-extern "C" void Mixar_FloatingDocksSuppressForModal();
-extern "C" void Mixar_FloatingDocksRestoreAfterModal();
-#endif
 
 #include "MEM_CacheLimiterC-Api.h"
 #include "MEM_guardedalloc.h"
@@ -151,6 +147,7 @@ extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #include "DEG_depsgraph.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
@@ -5378,23 +5375,19 @@ static void wm_block_file_close_save_button(ui::Block *block,
 
 static const char *close_file_dialog_name = "file_close_popup";
 
+/* The close-file dialog's floating-dock hold, keyed by its block name (one
+ * such dialog at a time). Its buttons release it and so does the pop-up's
+ * free callback; the owner key makes the second release a no-op instead of
+ * undoing another dialog's hold. The release also tags the redraw a dock
+ * needs after being natively hidden (wm_mixar_modal_dialog.cc). */
 static void wm_mixar_floating_docks_suppress_for_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksSuppressForModal();
-#endif
+  Mixar_floating_docks_hold(close_file_dialog_name);
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksRestoreAfterModal();
-  /* wm_draw_update skips natively-hidden windows entirely (see the
-   * Mixar_WindowIsVisible check in wm_draw.cc), so a dock's content is
-   * frozen while suppressed — tag a global redraw so the first visible
-   * frame after the modal closes isn't stale. */
-  WM_main_add_notifier(NC_WINDOW, nullptr);
-#endif
+  Mixar_floating_docks_release(close_file_dialog_name);
 }
 
 static void free_post_file_close_action_restore_floating_docks(void *arg)

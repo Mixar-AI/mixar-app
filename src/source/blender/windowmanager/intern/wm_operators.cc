@@ -105,6 +105,7 @@
 
 #include "WM_api.hh"
 #include "WM_stall_monitor.hh"
+#include "WM_mixar.hh"
 #include "WM_keymap.hh"
 #include "WM_types.hh"
 
@@ -1480,6 +1481,19 @@ struct wmOpPopUp {
   bool cancel_default;
   bool mouse_move_quit;
   bool include_properties;
+  /* Mixar: a #Mixar_operator_modal_dialog_popup dialog hides the floating
+   * docks for exactly this struct's lifetime. Every close path ends in a
+   * #MEM_delete of it (OK, Cancel, Escape/click-outside via the cancel
+   * callback, and #popup_handler_remove when a file load or window close
+   * tears the pop-up down), so the release lives in the destructor. */
+  bool mixar_docks_held = false;
+
+  ~wmOpPopUp()
+  {
+    if (mixar_docks_held) {
+      Mixar_floating_docks_release(this);
+    }
+  }
 };
 
 /* Only invoked by OK button in popups created with #wm_block_dialog_create(). */
@@ -1917,6 +1931,53 @@ wmOperatorStatus WM_operator_props_dialog_popup(bContext *C,
   popup_block_ex(
       C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
 
+  return OPERATOR_RUNNING_MODAL;
+}
+
+/**
+ * Mixar: `WindowManager.mixar_invoke_modal_dialog`. A props dialog that is
+ * centred, hides the Agent island and pill while it is open, and is hosted
+ * in the main window when invoked from an Agent Bubble window (it would be
+ * hidden with the island otherwise). Opt-in per operator; no operator is
+ * named here.
+ */
+wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C, wmOperator *op, int width)
+{
+  wmWindow *win_ctx = CTX_wm_window(C);
+  ScrArea *area_ctx = CTX_wm_area(C);
+  ARegion *region_ctx = CTX_wm_region(C);
+  wmWindow *win_dialog = Mixar_modal_dialog_host_window(CTX_wm_manager(C), win_ctx);
+  const bool redirected = (win_dialog != win_ctx);
+  if (redirected) {
+    /* The pop-up handler is registered on the context window. */
+    CTX_wm_window_set(C, win_dialog);
+  }
+
+  wmOpPopUp *data = MEM_new<wmOpPopUp>(__func__);
+  data->op = op;
+  data->width = int(float(width) * UI_SCALE_FAC * ui::style_get()->widget.points /
+                    UI_DEFAULT_TEXT_POINTS);
+  data->free_op = true;
+  data->title = WM_operatortype_name(op->type, op->ptr);
+  data->confirm_text = IFACE_("OK");
+  data->icon = ui::AlertIcon::None;
+  data->size = WM_POPUP_SIZE_SMALL;
+  data->position = WM_POPUP_POSITION_CENTER;
+  data->cancel_default = false;
+  data->mouse_move_quit = false;
+  data->include_properties = true;
+  data->mixar_docks_held = true;
+  Mixar_floating_docks_hold(data);
+
+  popup_block_ex(
+      C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
+
+  if (redirected) {
+    Mixar_modal_dialog_focus_host(win_dialog);
+    CTX_wm_window_set(C, win_ctx);
+    CTX_wm_area_set(C, area_ctx);
+    CTX_wm_region_set(C, region_ctx);
+  }
   return OPERATOR_RUNNING_MODAL;
 }
 
