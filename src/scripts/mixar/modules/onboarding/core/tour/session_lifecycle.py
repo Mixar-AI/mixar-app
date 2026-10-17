@@ -309,8 +309,8 @@ class SessionLifecycleMixin:
 
     def _mark_seen(self) -> None:
         try:
-            from mixar.modules.onboarding.core import mark_current_user_seen
-            mark_current_user_seen()
+            from mixar.modules.onboarding.core import mark_seen
+            mark_seen()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Tour: could not mark the tour seen: %s", exc)
 

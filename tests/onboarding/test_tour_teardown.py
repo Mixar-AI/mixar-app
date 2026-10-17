@@ -21,7 +21,6 @@ for _name in ("gpu", "gpu.state", "gpu.shader", "gpu.matrix", "gpu.types",
               "addon_utils"):
     sys.modules.setdefault(_name, MagicMock(name=_name))
 
-from mixar.modules.onboarding import core as onboarding_core  # noqa: E402
 from mixar.modules.onboarding.core.tour import (  # noqa: E402
     actions,
     actions_extra,
@@ -204,52 +203,6 @@ def test_reset_transients_assigns_the_module_flag():
                       and any(getattr(t, "id", "") == "_scenes_drawer_opened"
                               for t in n.targets)]
     assert len(module_assigns) == 1 and module_assigns[0] < reset.lineno
-
-
-# ---- CL-30: whose tour was seen ----------------------------------------------
-
-@pytest.fixture
-def seen(monkeypatch):
-    written = []
-    monkeypatch.setattr(onboarding_core.persistence, "mark_user_seen_onboarding",
-                        written.append)
-    monkeypatch.setattr(onboarding_core, "_tour_email", "")
-    current = SimpleNamespace(mixie_chat_user_id="")
-    other = SimpleNamespace(mixie_chat_user_id="")
-    fake_bpy = SimpleNamespace(context=SimpleNamespace(scene=current),
-                               data=SimpleNamespace(scenes=[current, other]))
-    monkeypatch.setitem(sys.modules, "bpy", fake_bpy)
-    return SimpleNamespace(written=written, current=current, other=other)
-
-
-def test_the_launch_email_is_used_when_the_scene_has_none(seen, monkeypatch):
-    monkeypatch.setattr(onboarding_core, "_tour_email", "ada@example.com")
-    onboarding_core.mark_current_user_seen()
-    assert seen.written == ["ada@example.com"]
-
-
-def test_a_scan_of_scenes_is_the_last_resort(seen):
-    seen.other.mixie_chat_user_id = "grace@example.com"
-    onboarding_core.mark_current_user_seen()
-    assert seen.written == ["grace@example.com"]
-
-
-def test_the_live_sign_in_wins_over_the_launch_email(seen, monkeypatch):
-    monkeypatch.setattr(onboarding_core, "_tour_email", "ada@example.com")
-    seen.current.mixie_chat_user_id = "grace@example.com"
-    onboarding_core.mark_current_user_seen()
-    assert seen.written == ["grace@example.com"]
-
-
-def test_nobody_signed_in_writes_nothing(seen):
-    onboarding_core.mark_current_user_seen()
-    assert seen.written == []
-
-
-def test_the_tour_remembers_its_email_before_invoking():
-    source = (TOUR_DIR / "core/__init__.py").read_text(encoding="utf-8")
-    fire = source.split("def _fire():", 1)[1]
-    assert fire.index("_tour_email = email") < fire.index('("INVOKE_DEFAULT")')
 
 
 # ---- NB-6: a user pause survives a lost host window ---------------------------

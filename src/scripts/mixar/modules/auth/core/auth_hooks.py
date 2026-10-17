@@ -96,18 +96,17 @@ def invalidate_generation_caches():
 
 
 def maybe_show_onboarding(email: str) -> None:
-    """Trigger the onboarding tour for ``email`` if they haven't
-    completed or skipped it before on this machine.
+    """Trigger the onboarding tour if this device hasn't seen it yet.
 
-    Called from every successful auth path (startup token-validation
-    AND fresh SSO login). The seen-list dedupes — same email won't
-    see the tour twice.
+    Called from every successful auth path (startup token-validation,
+    a fresh SSO login and a guest session). The per-device seen flag
+    dedupes — the tour opens once per device, whoever is signed in.
     """
     if not email:
         return
     try:
-        from mixar.modules.onboarding.core import maybe_show_for_user
-        maybe_show_for_user(email)
+        from mixar.modules.onboarding.core import maybe_show_tour
+        maybe_show_tour(email)
     except Exception as exc:
         logger.warning(f"Onboarding hook failed: {exc}")
 

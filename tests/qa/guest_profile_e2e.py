@@ -39,12 +39,11 @@ assert os.environ.get('MIXAR_QA') == '1'
 assert type(__import__('keyring').get_keyring()).__name__ == 'QAMemoryKeyring'
 assert not sign_in.sign_in_pending()
 assert not auth.get_access_token(), 'Use a fresh offline instance, not a real login'
-from mixar.modules.onboarding.core.persistence import mark_user_seen_onboarding
+from mixar.modules.onboarding.core.persistence import mark_device_seen_onboarding
 from mixar.modules.onboarding.core.tour import session as tour
 if tour.current():
     tour.current().stop('QA menu validation')
-for email in ('qa.guest@example.invalid', 'stale@example.invalid', 'qa.profile@example.invalid'):
-    mark_user_seen_onboarding(email)
+mark_device_seen_onboarding()
 wm = bpy.context.window_manager
 f = types.SimpleNamespace(opened=[], fail_open=False, activations=0)
 f.saved = (sso.webbrowser, sso._exchange_code, cfg.get_dev_bypass_credentials,
