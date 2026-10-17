@@ -78,9 +78,11 @@ def env(monkeypatch):
     preference_state.clear(wm)
 
 
-def _key_in_use(wm):
+def _key_in_use(wm, calls=None, summary=RESUMABLE):
     credential_state.apply_from_payload(_payload(), wm)
     preference_state.apply_local({"mixar_agent_model_byok_active": True}, wm)
+    if calls is not None:
+        calls.resumable[-1](summary)  # the record here could be re-sent
 
 
 def _paused(wm, calls, summary=RESUMABLE):
@@ -113,11 +115,13 @@ def test_a_record_that_cannot_be_resent_is_not_resumable(env):
     assert credential_state.resume_target() == ("", "")
 
 
-def test_an_active_key_is_never_resumable(env):
+def test_an_active_key_is_never_resumable_but_may_be_pausable(env):
     wm, calls = env
-    _key_in_use(wm)
-    assert calls.resumable == []  # active: no store read needed
+    _key_in_use(wm, calls)
     assert not credential_state.resumable() and wm.mixar_agent_key_resumable is False
+    assert credential_state.pausable()
+    calls.resumable[-1](None)  # a Local key, a revoked sign-in, no model
+    assert not credential_state.pausable()
 
 
 def test_the_last_answer_is_kept_until_the_store_answers_again(env):
@@ -138,7 +142,7 @@ def test_the_last_answer_is_kept_until_the_store_answers_again(env):
 
 def test_mixie_deletes_the_rows_and_keeps_the_record(env):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     assert ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm)) == {'FINISHED'}
     assert [forget for _, forget in calls.delete] == [False]
     assert credential_state.pending() == "pause"
@@ -160,7 +164,7 @@ def test_mixie_deletes_the_rows_and_keeps_the_record(env):
 
 def test_a_failed_pause_leaves_the_key_in_use_and_says_why(env):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm))
     calls.delete[0][0](False, 0, "Provider unreachable")
     assert credential_state.pending() == ""
@@ -176,13 +180,22 @@ def test_mixie_with_mixie_already_answering_does_nothing(env):
     assert calls.delete == []
 
 
-def test_mixie_pauses_even_before_the_credential_mirror_has_loaded(env):
-    """The thumb reads the hosted pick's flag; if it says a key answers, the
-    click must reach the server (which answers 200 with nothing to delete)."""
+@pytest.mark.parametrize("why", ["mirror_not_loaded", "record_not_resumable"])
+def test_mixie_opens_the_settings_for_a_key_it_could_not_bring_back(env, monkeypatch, why):
+    """A pause orphans a record Custom AI cannot re-send (Local: endpoint and
+    managed runtime outside the record; a revoked Codex sign-in; a record with
+    no model) — and before the store has answered nothing is known. Those go
+    to the settings, where Remove key is; nothing is deleted."""
     wm, calls = env
-    preference_state.apply_local({"mixar_agent_model_byok_active": True}, wm)
+    if why == "mirror_not_loaded":
+        preference_state.apply_local({"mixar_agent_model_byok_active": True}, wm)
+    else:
+        _key_in_use(wm, calls, summary=None)
+    opened = []
+    monkeypatch.setattr(ops.bpy.ops.mixar_byok, "open_dialog",
+                        lambda *a, **k: opened.append(a) or {'RUNNING_MODAL'}, raising=False)
     assert ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm)) == {'FINISHED'}
-    assert [forget for _, forget in calls.delete] == [False]
+    assert opened == [('INVOKE_DEFAULT',)] and calls.delete == []
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +265,7 @@ def test_forget_saved_key_drops_the_record_only(env):
 
 def test_the_toggle_waits_for_any_other_account_mutation(env, monkeypatch):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ctx = SimpleNamespace(window_manager=wm)
     assert ops.MIXAR_BYOK_OT_use_mixie.poll(ctx)
     ops.MIXAR_BYOK_OT_use_mixie().execute(ctx)
@@ -285,7 +298,7 @@ def test_nothing_switches_pauses_or_resumes_while_a_turn_is_in_flight(env, monke
     otherwise. Custom AI with nothing to resume may still open the settings."""
     from mixar.modules.byok.ui.operators import byok_switch_ops
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ctx = SimpleNamespace(window_manager=wm, scene=SimpleNamespace())
     # The operators bind the gate by name at import.
     for module in (ops, byok_switch_ops):
@@ -319,13 +332,14 @@ def test_nothing_switches_pauses_or_resumes_while_a_turn_is_in_flight(env, monke
     assert ops.MIXAR_BYOK_OT_use_key.poll(ctx)
 
 
-def test_the_turn_gate_reads_the_chat_session_and_the_open_run(monkeypatch):
+def test_the_turn_gate_reads_the_chat_session_the_open_run_and_every_other_tab(monkeypatch):
     from mixar.modules.byok.ui.operators import byok_dialog_support
     from mixar.modules.space_mixie_chat.constants import SessionState
     from mixar.modules.space_mixie_chat.core import session as session_module
-    states = {"state": SessionState.IDLE, "run": False}
+    states = {"state": SessionState.IDLE, "run": False, "any": False}
     fake = SimpleNamespace(get_state=lambda scene: states["state"],
-                           run_open=lambda scene: states["run"])
+                           run_open=lambda scene: states["run"],
+                           has_active_session=lambda session_id="": states["any"])
     monkeypatch.setattr(session_module, "get_session_manager", lambda: fake)
     ctx = SimpleNamespace(scene=SimpleNamespace())
     assert not byok_dialog_support.turn_in_flight(ctx)
@@ -335,12 +349,18 @@ def test_the_turn_gate_reads_the_chat_session_and_the_open_run(monkeypatch):
     states["state"] = SessionState.IDLE
     states["run"] = True  # workers still building after an "in progress" answer
     assert byok_dialog_support.turn_in_flight(ctx)
+    states["run"] = False
+    assert not byok_dialog_support.turn_in_flight(ctx)
+    states["any"] = True  # another tab streams on the same account key
+    assert byok_dialog_support.turn_in_flight(ctx)
+    assert byok_dialog_support.turn_in_flight(SimpleNamespace(scene=None))
+    states["any"] = False
     assert not byok_dialog_support.turn_in_flight(SimpleNamespace(scene=None))
 
 
 def test_a_toggle_that_lands_after_logout_leaves_nothing_behind(env):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm))
     credential_state.clear(wm)
     preference_state.clear(wm)
@@ -376,7 +396,7 @@ def test_an_older_preference_read_cannot_flip_the_thumb_mid_toggle(env):
     """Pause lands and refreshes the preference (GET A); Custom AI right away;
     GET A (still "paused") lands during the resume's echo and must be dropped."""
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ctx = SimpleNamespace(window_manager=wm)
     ops.MIXAR_BYOK_OT_use_mixie().execute(ctx)
     calls.delete[0][0](True, 1, None)
@@ -391,7 +411,7 @@ def test_an_older_preference_read_cannot_flip_the_thumb_mid_toggle(env):
 
 def test_an_older_credential_read_cannot_undo_a_finished_toggle(env):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     credential_state.refresh()  # e.g. the launch GET, still in flight
     ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm))
     calls.delete[0][0](True, 1, None)
@@ -419,9 +439,27 @@ def test_a_superseded_read_still_answers_whoever_waited_on_it(env):
     assert seen == [True]
 
 
+def test_a_read_overtaken_by_a_newer_read_before_anything_loaded_keeps_its_waiter(env):
+    """The cold-start 409: the login fetch is still out, a keyless turn is
+    refused, byok_notice arms the hook and refreshes. The login fetch lands
+    first and is superseded — it must NOT answer the hook with "not loaded"
+    (that shows the key-missing card and drops the auto-resend); the newer
+    fetch answers it."""
+    wm, calls = env
+    credential_state.refresh()  # the login fetch
+    seen = []
+    credential_state.on_next_fetch(seen.append)
+    credential_state.refresh()  # the 409 handler's refresh
+    assert len(calls.fetch) == 2
+    calls.fetch[0](True, _payload(), None)  # the older one lands first
+    assert seen == [] and wm.byok_is_active is False
+    calls.fetch[1](True, _payload(), None)
+    assert seen == [True] and wm.byok_is_active is True
+
+
 def test_a_read_held_by_a_mutation_is_reissued_for_whoever_waits(env):
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     ops.MIXAR_BYOK_OT_use_mixie().execute(SimpleNamespace(window_manager=wm))
     seen = []
     credential_state.on_next_fetch(seen.append)
@@ -456,7 +494,7 @@ def test_after_a_removal_mixie_does_not_pause_a_key_that_is_gone(env, monkeypatc
     the island on Mixie, so nothing sends a pause for a deleted key."""
     from mixar.modules.byok.ui.operators import byok_ops
     wm, calls = env
-    _key_in_use(wm)
+    _key_in_use(wm, calls)
     monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
     monkeypatch.setattr(byok_ops, "_deregister_local_if_switched_away", lambda _: None)
     # byok_ops binds bpy at import; the dialog callbacks read the WindowManager through it.

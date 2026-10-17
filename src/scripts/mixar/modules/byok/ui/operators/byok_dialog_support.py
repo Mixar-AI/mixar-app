@@ -23,20 +23,24 @@ def turn_in_flight(context) -> bool:
     starts, so a switch, pause or resume now would apply only to the NEXT
     message while the island claimed otherwise — the chip would name a model
     the running turn is not on, or the thumb would sit on Mixie while a key
-    run keeps streaming on the key. False when there is no scene or the chat
-    module is unavailable."""
+    run keeps streaming on the key. Every scene tab counts: a turn streaming
+    in another tab runs on the same account key. False when the chat module
+    is unavailable."""
     try:
         from mixar.modules.space_mixie_chat.constants import SessionState
         from mixar.modules.space_mixie_chat.core.session import get_session_manager
 
-        scene = getattr(context, "scene", None)
-        if scene is None:
-            return False
         session = get_session_manager()
-        if session.get_state(scene) in (SessionState.BUSY, SessionState.MODIFYING,
-                                        SessionState.AWAITING_INPUT):
-            return True
-        return bool(session.run_open(scene))
+        scene = getattr(context, "scene", None)
+        if scene is not None:
+            if session.get_state(scene) in (SessionState.BUSY, SessionState.MODIFYING,
+                                            SessionState.AWAITING_INPUT):
+                return True
+            if session.run_open(scene):
+                return True
+        # Any other tab with a live turn or an open run (the registry the
+        # script executor gates on).
+        return bool(session.has_active_session())
     except Exception as exc:  # noqa: BLE001 — a gate must never break a click
         logger.debug("BYOK turn gate skipped: %s", exc)
         return False

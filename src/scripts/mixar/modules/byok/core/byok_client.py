@@ -157,6 +157,18 @@ _in_flight_generation = 0
 _NO_STORED_KEY_MSG = n_(
     "No saved key on this computer. Enter it in AI Provider Settings."
 )
+_SIGNED_OUT_MSG = n_("Signed out before the request finished.")
+
+
+def _account_epoch() -> int:
+    """The credential lifecycle epoch (bumped by logout). Captured on the
+    main thread when a request is submitted and compared on the worker right
+    before the network call: a logout + sign-in as another account inside
+    that window (a Codex refresh can take seconds) must never send the first
+    account's key or delete the second account's rows with the new token."""
+    from . import credential_state
+
+    return credential_state.current_epoch()
 
 
 def mutation_in_flight() -> bool:
@@ -281,29 +293,16 @@ def save_credentials(
 ) -> None:
     """PUT /agent/byok — validate + register BYOK config. ≤ 15 s.
 
-    ``base_url`` / ``supports_vision`` are forwarded only when provided
-    (the "local" provider's relay-target registration); ``account_id`` only
-    for Codex. ``codex_auth_path`` (Codex) is NEVER sent — it is the
-    reference this device keeps to the Codex CLI's sign-in file; the tokens
-    themselves stay in that file.
-
-    On 200 the key material is written to this device's credential store
-    (`key_store`, with ``model``, which a later resume re-sends) — still on
-    the worker thread, before the callback — so the next turn can carry it.
-    The server keeps metadata only. A store write that fails is reported as
-    an ERROR (with the server's state attached, so the card still shows the
-    truth): the account is BYOK-active and this device cannot sign a turn,
-    which a "Saved" recap would hide until the next message's 409.
-
-    The key is SEALED to the backend's transport key before the PUT
-    (`transport_seal`, on this worker thread); this device's store keeps the
-    plaintext — sealing is transport only. A 409 ``byok_transport_key_stale``
-    (the server rotated its key inside our cache window) drops the cached
-    key and repeats the PUT once with a fresh envelope.
-
-    A local ``model`` that is a filesystem path is sent as its basename;
-    every local save funnels through here before transport sealing. The
-    request is counted in flight until its callback (`mutation_in_flight`).
+    ``base_url`` / ``supports_vision`` only when provided (Local);
+    ``account_id`` only for Codex; ``codex_auth_path`` is NEVER sent — it is
+    this device's reference to the CLI's sign-in file. The key goes out
+    SEALED (`transport_seal`; a stale-transport-key 409 repeats the PUT once
+    with a fresh envelope). On 200 the record — with ``model``, which a later
+    resume re-sends — is written to this device's store on the worker thread,
+    before the callback; a store write that fails is an ERROR carrying the
+    server's state (the account is active, this device cannot sign a turn).
+    A local ``model`` that is a path is sent as its basename. Counted in
+    flight until the callback (`mutation_in_flight`).
     """
     if provider == LOCAL_PROVIDER_ID:
         from mixar.modules.local_models.core.model_name import safe_model_name
@@ -327,22 +326,18 @@ def resave_stored_key(
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
 ) -> None:
     """PUT /agent/byok with the key THIS DEVICE already holds — nothing is
-    typed and nothing is re-entered. Two island callers: the key chip's
-    model switch (``model`` is the new model of the same provider) and
-    Custom AI resuming a paused key (``model`` None: the record's own, saved
-    with it). The server re-validates exactly like a fresh save and answers
-    with the credential echo.
-
-    Worker thread: the record is loaded; a Codex sign-in is read from the
-    CLI's file and renewed when stale, exactly as before a turn
-    (`turn_credentials.resolve`, renewed tokens written back to the file);
-    the token is sealed by `_put_sealed`; on 200 the record's ``model`` is
-    updated. Refused (nothing sent) with a user-safe message when this
-    device holds no key, the record names no model (an earlier build saved
-    it) or the provider is Local, whose endpoint is not in the record — the
-    settings dialog is the route then. Counted in flight like a save.
+    typed. Island callers: the key chip's model switch (``model`` is the new
+    model, same provider) and Custom AI resuming a paused key (``model``
+    None: the record's own). The server re-validates like a fresh save.
+    Worker thread: load the record, read / renew a Codex sign-in exactly as
+    before a turn (`turn_credentials.resolve`, renewals written back to the
+    file), seal through `_put_sealed`, update the record's ``model`` on 200.
+    Refused before anything is sent when this device holds no key, the
+    record names no model or the provider is Local (its endpoint is not in
+    the record). Counted in flight like a save.
     """
     on_done = _track(on_done)
+    epoch = _account_epoch()
 
     def _work():
         from . import codex_auth, key_store, turn_credentials
@@ -360,12 +355,18 @@ def resave_stored_key(
         resolution = turn_credentials.resolve(live, refresher=codex_auth.refresh_access_token)
         if resolution.blocked:
             return False, None, resolution.error
-        if resolution.record_changes:
-            key_store.persist_changes(live, resolution.record_changes)
+        if resolution.record_changes and not key_store.persist_changes(
+                live, resolution.record_changes):
+            # The grant rotated the refresh token and the file could not take
+            # it: the next turn will refresh with a stale token and read as
+            # revoked. Say so in the log; the turn path has the same gap.
+            logger.warning("BYOK Codex renewal could not be written back to the sign-in file")
         api_key = resolution.fields.get(BYOK_TURN_KEY_FIELD)
         if not api_key:
             return False, None, _NO_STORED_KEY_MSG
         account_id = resolution.fields.get(BYOK_TURN_ACCOUNT_FIELD)
+        if epoch != _account_epoch():
+            return False, None, _SIGNED_OUT_MSG
         success, data, err = _put_sealed(provider, target, api_key, None, None, account_id)
         if success and not key_store.update({"model": target}):
             # The server runs the new model; only a later resume would re-send
@@ -429,18 +430,18 @@ def delete_credentials(
     *,
     forget_local: bool = True,
 ) -> None:
-    """DELETE /agent/credentials/all — remove BYOK config. Always 200 on
-    a reachable server; `removed_count` is the row count deleted.
-
-    ``forget_local`` False keeps this device's key record: the island's
-    Mixie half PAUSES the key — the server forgets it (Mixie answers, credits
-    are charged) and Custom AI re-sends it later from the record
-    (`resave_stored_key`). "Remove key" and the chat card's "Use Mixar
-    credits instead" delete both. Counted in flight like a save.
+    """DELETE /agent/credentials/all — remove BYOK config (`removed_count`
+    rows). ``forget_local`` False keeps this device's key record: the
+    island's Mixie half PAUSES the key and Custom AI re-sends it later
+    (`resave_stored_key`); "Remove key" and the chat card delete both.
+    Counted in flight like a save.
     """
     on_done = _track(on_done)
+    epoch = _account_epoch()
 
     def _work():
+        if epoch != _account_epoch():
+            return False, 0, _SIGNED_OUT_MSG
         response = get_agent_service().delete_credentials_all()
         success, data, err = _translate(response)
         if not success:
@@ -459,10 +460,13 @@ def forget_stored_key(on_done: Callable[[bool], None]) -> None:
     wants kept). Nothing is sent: the server holds nothing for a paused
     key. ``on_done(deleted)`` on the main thread."""
     on_done = _track(on_done)
+    epoch = _account_epoch()
 
     def _work():
         from . import key_store
 
+        if epoch != _account_epoch():
+            return (False,)  # another account's record by now
         return (bool(key_store.delete()),)
 
     _run_worker("MixarBYOKForget", _work, on_done, (False,))

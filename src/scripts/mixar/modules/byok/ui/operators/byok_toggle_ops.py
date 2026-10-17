@@ -9,7 +9,12 @@ only. So the toggle never asks for the key and never deletes it:
 - **Mixie** while a key is in use PAUSES it: the server's rows are deleted
   (`byok_client.delete_credentials(forget_local=False)`) so Mixie answers,
   the platform pick applies and credits are charged — and this computer
-  keeps the key record.
+  keeps the key record. Only a key Custom AI could bring back is paused
+  (`credential_state.pausable`): a Local key (its endpoint and managed
+  runtime live outside the record), a revoked Codex sign-in or a record
+  from a build that did not remember the model would be orphaned in the
+  credential store, so for those Mixie opens AI Provider Settings, where
+  Remove key is.
 - **Custom AI** RESUMES a paused key: the record is re-sent
   (`byok_client.resave_stored_key`; the server re-validates it like a fresh
   save) — no dialog, no typing. With nothing to resume (no record, a Local
@@ -76,6 +81,9 @@ class MIXAR_BYOK_OT_use_mixie(Operator):
             return False
         return _can_toggle()
 
+    def invoke(self, context, _event):
+        return self.execute(context)
+
     def execute(self, context):
         if turn_in_flight(context):
             self.report({'WARNING'}, TURN_IN_FLIGHT_MESSAGE)
@@ -85,6 +93,11 @@ class MIXAR_BYOK_OT_use_mixie(Operator):
         if not (credential_state.snapshot()["byok_is_active"]
                 or preference_state.snapshot()["mixar_agent_model_byok_active"]):
             return {'CANCELLED'}
+        if not credential_state.pausable():
+            # Nothing Custom AI could bring back (Local, a revoked sign-in, a
+            # record without a model, or the store not read yet): the settings
+            # own that decision — Remove key lives there.
+            return _open_settings()
         return {'FINISHED'} if _pause(context.window_manager) else {'CANCELLED'}
 
 
@@ -112,8 +125,12 @@ class MIXAR_BYOK_OT_use_key(Operator):
             return {'FINISHED'} if _resume(context.window_manager) else {'CANCELLED'}
         # In use already, nothing saved here, or a saved key that must be
         # entered again: the settings are where that happens.
-        result = bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT')
-        return {'FINISHED'} if result & {'RUNNING_MODAL', 'FINISHED'} else {'CANCELLED'}
+        return _open_settings()
+
+
+def _open_settings():
+    result = bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT')
+    return {'FINISHED'} if result & {'RUNNING_MODAL', 'FINISHED'} else {'CANCELLED'}
 
 
 class MIXAR_BYOK_OT_forget_stored_key(Operator):

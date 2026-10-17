@@ -12,20 +12,13 @@ over several frames) is retained rather than silently lost. Not persisted:
 it carries the account's provider, model and masked key preview, and is
 refetched per launch.
 
-**The epoch** guards logout: a fetch or echo that lands after `clear()` would
-otherwise write the PREVIOUS account's provider back into the mirror (over
-HTTP the request completes with a still-valid bearer token).
-
-**The request serial** guards ordering: every write this process knows the
-answer of (an island mutation's start and end, a save / remove echo) bumps
-it, and a GET issued before it is dropped when it lands, so an older read can
-never put the older state back. While an island mutation is in flight
-(`_pending`: a model switch, a pause, a resume) no background fetch is issued
-and a second mutation is refused.
-
-**A paused key** is a record in this device's credential store (`key_store`)
-while the server says inactive: Mixie answers, and the island's Custom AI
-re-sends the record without a dialog. `byok_key_resumable` is derived
+**The epoch** guards logout (a fetch or echo landing after `clear()` would
+write the PREVIOUS account's provider back). **The request serial** guards
+ordering: every write this process knows the answer of bumps it, and a GET
+issued before it is dropped when it lands; while an island mutation is in
+flight (`_pending`) no background fetch is issued and a second mutation is
+refused. **A paused key** is a record in this device's store while the server
+says inactive; `byok_key_resumable` / `byok_record_resumable` are derived
 off-thread after every apply (`key_store.check_resumable_async`), the way
 `byok_device_key_missing` is.
 """
@@ -69,6 +62,11 @@ _DEFAULTS: Dict[str, Any] = {
     "byok_key_resumable": False,
     "byok_resume_provider": "",
     "byok_resume_model": "",
+    # The record here could be re-sent (derived while active too): Mixie
+    # pauses only such a key — a Local key (endpoint not in the record), a
+    # revoked Codex sign-in or a record from a build that did not remember
+    # the model would be orphaned by a pause, so Mixie opens the settings.
+    "byok_record_resumable": False,
     # Whether a server payload has been applied since the last `clear()`.
     # Not mirrored. Before the cold-start fetch lands the default "inactive"
     # is not knowledge: a 409 `byok_key_required` in that window refreshes
@@ -77,7 +75,8 @@ _DEFAULTS: Dict[str, Any] = {
     "byok_state_loaded": False,
 }
 
-_RESUME_FIELDS = ("byok_key_resumable", "byok_resume_provider", "byok_resume_model")
+_RESUME_FIELDS = ("byok_key_resumable", "byok_resume_provider", "byok_resume_model",
+                  "byok_record_resumable")
 _lock = threading.Lock()
 _state: Dict[str, Any] = dict(_DEFAULTS)
 _epoch: int = 0
@@ -90,8 +89,7 @@ _fetch_hooks: list = []
 # the mutation) and a second mutation is refused.
 _pending: Optional[Dict[str, Any]] = None
 # Bumped by every write this process knows the answer of: a GET issued before
-# it is dropped when it lands. Its failure retry carries the serial too, so
-# new work cancels it.
+# it is dropped when it lands; its failure retry carries the serial too.
 _request_serial: int = 0
 _RETRY_DELAY_S = 15.0
 
@@ -192,11 +190,10 @@ def apply_from_payload(data: Optional[dict], wm=None, *, epoch: Optional[int] = 
 
 
 def apply_removed(wm=None, *, epoch: Optional[int] = None) -> bool:
-    """The server's rows are gone (a pause or a removal landed): reset to
-    "nothing stored, LOADED" WITHOUT touching the lifecycle epoch (that is
-    logout's; bumping it here would drop the echo of a save made right
-    after). The resumable check that follows tells the island whether this
-    device still holds the key."""
+    """The server's rows are gone (a pause or removal landed): "nothing
+    stored, LOADED", without touching the logout epoch (a save made right
+    after keeps its echo); the resumable check that follows tells the island
+    whether this device still holds the key."""
     return apply_from_payload({"byok_active": False, "items": []}, wm, epoch=epoch)
 
 
@@ -233,29 +230,28 @@ def _check_device_key(parsed: Dict[str, Any]) -> None:
 
 def set_resumable(summary: Optional[Dict[str, str]]) -> None:
     """Main thread: record whether this device holds a key record the island
-    can re-send (``summary`` = ``{"provider", "model"}``, else None). Only
-    meaningful while inactive; an active account is never "paused"."""
+    can re-send (``summary`` = ``{"provider", "model"}``, else None)."""
     global _state
     with _lock:
-        resumable = bool(summary) and not _state["byok_is_active"]
-        provider = (summary or {}).get("provider", "") if resumable else ""
-        model = (summary or {}).get("model", "") if resumable else ""
+        record = bool(summary)
+        resumable = record and not _state["byok_is_active"]
+        provider = (summary or {}).get("provider", "") if record else ""
+        model = (summary or {}).get("model", "") if record else ""
         if (_state["byok_key_resumable"] == resumable
+                and _state["byok_record_resumable"] == record
                 and _state["byok_resume_provider"] == provider
                 and _state["byok_resume_model"] == model):
             return
-        _state = dict(_state, byok_key_resumable=resumable,
+        _state = dict(_state, byok_key_resumable=resumable, byok_record_resumable=record,
                       byok_resume_provider=provider, byok_resume_model=model)
     apply_to_wm()
     _redraw()
 
 
 def _check_resumable(parsed: Dict[str, Any]) -> None:
-    """After a successful apply: inactive → ask the key store (worker thread)
-    whether this device holds a record Custom AI can re-send; active → no."""
-    if parsed["byok_is_active"]:
-        set_resumable(None)
-        return
+    """After a successful apply: ask the key store (worker thread) whether
+    this device holds a record that can be re-sent — while inactive that is
+    what Custom AI resumes, while active it is what Mixie may pause."""
     epoch = current_epoch()
 
     def _done(summary):
@@ -272,12 +268,12 @@ def _check_resumable(parsed: Dict[str, Any]) -> None:
 
 def _carry_resumable(parsed: Dict[str, Any], previous: Dict[str, Any]) -> None:
     """A payload says nothing about this device's record: keep the last
-    answer while inactive, so the island does not flicker to "no key" between
-    an apply and the off-thread check that follows it. Lock held."""
-    if parsed["byok_is_active"]:
-        return
+    answer, so the island does not flicker between an apply and the
+    off-thread check that follows it. Lock held."""
     for field in _RESUME_FIELDS:
         parsed[field] = previous[field]
+    parsed["byok_key_resumable"] = bool(previous["byok_record_resumable"]
+                                        and not parsed["byok_is_active"])
 
 
 def apply_to_wm(wm=None) -> None:
@@ -302,10 +298,9 @@ def apply_to_wm(wm=None) -> None:
 
 
 def _apply_key_chip(target, current) -> None:
-    """The island key chip's mirrors: provider and model as drawn, whether
-    the model opens a dropdown, whether an island mutation is in flight (a
-    switch names its target model, dimmed) and whether a paused key can be
-    resumed. C++ only reads them (`agent_ui_provider.cc`)."""
+    """The island key chip's mirrors (C++ only reads them): provider and
+    model as drawn (a switch names its target, dimmed), dropdown, busy,
+    resumable."""
     from . import catalog_labels, model_suggestions
     from mixar.modules.common.i18n import iface_
 
@@ -337,6 +332,12 @@ def resumable(current: Optional[Dict[str, Any]] = None) -> bool:
     with no dialog."""
     current = current if current is not None else snapshot()
     return bool(current["byok_key_resumable"] and not current["byok_is_active"])
+
+
+def pausable(current: Optional[Dict[str, Any]] = None) -> bool:
+    """A key in use that Custom AI could bring back after a pause."""
+    current = current if current is not None else snapshot()
+    return bool(current["byok_is_active"] and current["byok_record_resumable"])
 
 
 def resume_target() -> tuple:
@@ -373,10 +374,9 @@ def begin_switch(model: str, wm=None) -> bool:
 
 def begin_toggle(enabled: bool, wm=None) -> bool:
     """Mark a pause (``enabled`` False) or resume (True) in flight. The mirror
-    is NOT flipped ahead of the server: a turn sent meanwhile reads the
-    mirror to decide whether to carry the key, and a guessed "inactive" would
-    send it keyless into a 409. False when another mutation is in flight, or
-    for a resume with nothing to resume."""
+    is NOT flipped ahead of the server (a turn sent meanwhile reads it to
+    decide whether to carry the key). False when another mutation is in
+    flight, or for a resume with nothing to resume."""
     global _pending, _request_serial
     with _lock:
         if _pending is not None:
@@ -391,8 +391,7 @@ def begin_toggle(enabled: bool, wm=None) -> bool:
 
 def end_pending(wm=None) -> None:
     """The mutation landed (or failed); the caller adopts its echo or
-    re-reads next. A fetch somebody waits on (`on_next_fetch`) that was held
-    while the mutation ran is issued now."""
+    re-reads next. A read somebody waits on (`on_next_fetch`) is issued now."""
     global _pending, _request_serial
     with _lock:
         _pending = None
@@ -454,9 +453,12 @@ def _apply_fetch_result(epoch: int, success: bool, data, err, *, serial=None) ->
             else:
                 logger.debug("BYOK state fetch failed (keeping cached state, retrying): %s", err)
     if superseded_loaded is not None:
-        # Held by a mutation: `end_pending` re-issues the read for the hooks.
-        if not held:
-            _fire_fetch_hooks(superseded_loaded)
+        # Held by a mutation: `end_pending` re-issues the read. Superseded by
+        # a newer READ before anything loaded (the cold-start 409 refresh
+        # overtaking the login fetch): that read answers the hooks — firing
+        # False here would trade the auto-resend for the key-missing card.
+        if not held and superseded_loaded:
+            _fire_fetch_hooks(True)
         return
     if not success:
         _fire_fetch_hooks(False)
@@ -470,9 +472,7 @@ def _apply_fetch_result(epoch: int, success: bool, data, err, *, serial=None) ->
 
 
 def _schedule_retry(epoch, serial) -> None:
-    """One failed read must not leave the mirror empty for the session (the
-    key chip would never draw, a paused key never resume). Logout and any
-    newer write cancel the ticket."""
+    """Retry one failed read later; logout and any newer write cancel it."""
     try:
         import bpy
     except Exception:  # noqa: BLE001

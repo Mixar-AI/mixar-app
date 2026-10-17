@@ -1855,6 +1855,9 @@ msgstr ""
 msgid "No saved key on this computer. Enter it in AI Provider Settings."
 msgstr ""
 
+msgid "Signed out before the request finished."
+msgstr ""
+
 msgid "Local"
 msgstr ""
 

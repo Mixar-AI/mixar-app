@@ -169,7 +169,7 @@ class _Sync(threading.Thread):
 
 
 def _run_resave(monkeypatch, record, model='claude-sonnet-5-5', response=None, raises=None,
-                live=None):
+                live=None, logout_in_worker=False):
     calls, results, updates = [], [], []
 
     def save(**kwargs):
@@ -184,7 +184,12 @@ def _run_resave(monkeypatch, record, model='claude-sonnet-5-5', response=None, r
     monkeypatch.setattr(byok_client.threading, 'Thread', _Sync)
     monkeypatch.setattr(byok_client, '_schedule_on_main', lambda cb, *args: cb(*args))
     monkeypatch.setattr(transport_seal, 'seal', lambda secret: 'sealed:' + secret)
-    monkeypatch.setattr(key_store, 'load', lambda user_id=None: record)
+    def load(user_id=None):
+        if logout_in_worker:
+            credential_state.clear(SimpleNamespace())  # logout while the worker runs
+        return record
+
+    monkeypatch.setattr(key_store, 'load', load)
     monkeypatch.setattr(key_store, 'update', lambda changes, user_id=None: updates.append(changes) or True)
     monkeypatch.setattr(key_store, 'materialize',
                         lambda rec: (live, None) if live is not None else (rec, None))
@@ -238,6 +243,18 @@ def test_a_revoked_codex_sign_in_is_refused_with_its_message(monkeypatch):
     live = dict(record, key='at', refresh_token='rt', account_id='a', expired=True, can_persist=True)
     calls, results, _ = _run_resave(monkeypatch, record, live=live)
     assert calls == [] and results == [(False, None, codex_auth.MSG_SIGN_IN_EXPIRED)]
+
+
+def test_a_resave_that_outlives_a_logout_sends_nothing(monkeypatch):
+    """A Codex refresh can take seconds; logging out and in as another
+    account meanwhile must not register the first account's key on the
+    second account's row with the new token."""
+    record = key_store.make_record('anthropic', 'sk-ant-x', model='claude-opus-5-5')
+    calls, results, updates = _run_resave(monkeypatch, record, live=None,
+                                          logout_in_worker=True)
+    assert calls == [] and updates == []
+    assert results[0][0] is False and results[0][2]
+    assert not byok_client.mutation_in_flight()
 
 
 def test_a_provider_rejection_keeps_the_server_message(monkeypatch):
