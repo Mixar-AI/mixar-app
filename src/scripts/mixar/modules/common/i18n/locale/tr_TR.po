@@ -1445,6 +1445,12 @@ msgstr "Bizim tarafımızda bir sorun oluştu. Lütfen tekrar deneyin."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "Önce yerel modeli başlatın (kaydetmek için çalışıyor olmalıdır
 msgid "Base URL and model name are required."
 msgstr "Temel URL ve model adı gereklidir."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Yerel sunucu HTTP {status} yanıtı verdi."
 
@@ -1529,11 +1541,17 @@ msgstr "Modeli API anahtarınız belirler"
 msgid "Custom"
 msgstr "Özel"
 
-msgid "Use my own API key…"
-msgstr "Kendi API anahtarımı kullan…"
-
 msgid "Change or remove my API key…"
 msgstr "API anahtarımı değiştir veya kaldır…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Düşünme"
@@ -1565,6 +1583,15 @@ msgstr "Şu anda seçili model için akıl yürütme düzeyi."
 msgid "No thinking levels for this model"
 msgstr "Bu model için düşünme düzeyi yok"
 
+msgid "Model"
+msgstr "Model"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Kendi API anahtarınız kullanılıyor — barındırılan bir model seçmek için bu menüde \"API anahtarımı değiştir veya kaldır\" seçeneğini seçin"
 
@@ -1576,9 +1603,6 @@ msgstr "Ajan için bu modeli kullanır"
 
 msgid "Provider"
 msgstr "Sağlayıcı"
-
-msgid "Model"
-msgstr "Model"
 
 msgid "Label"
 msgstr "Etiket"
@@ -1625,6 +1649,12 @@ msgstr "ChatGPT aboneliğinizi kullanır — Mixar kredisi harcanmaz."
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "YZ Sağlayıcı Ayarları"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Yalnızca metin modeli — sohbet çalışır; 3B görevler görsel geri bildirim olmadan çalışır."
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Kaldır"
 
@@ -1817,10 +1868,13 @@ msgstr "Kaldırma onayı akışını başlatır"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Kaldırma akışını iptal eder ve ana iletişim kutusuna döner"
 
-msgid "Delete the stored API key server-side"
-msgstr "Saklanan API anahtarını sunucu tarafında siler"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "Model Kataloğunu Yenile"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Sağlayıcı+model kataloğunu arka uçtan yeniden doğrular"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Ajan Modeli Sağlayıcısı"
@@ -1867,6 +1957,36 @@ msgstr "Ajan Modeli Uygun"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "Kaydedilen model planınızda kullanılamıyorsa yanlıştır"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM sağlayıcısı"
@@ -1915,6 +2035,12 @@ msgstr "BYOK Etkin"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Sunucu bu kullanıcı için byok_active bildirdiğinde doğrudur"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "İletişim Kutusu Durumu"
@@ -19020,8 +19146,8 @@ msgstr "Eskiz önizlemesi oluşturulamadı. Yeniden denemek için tekrar çizin.
 msgid "View sketch"
 msgstr "Eskizi Görüntüle"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Ajan taslağı dolu (en fazla {count} karakter)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "İşaret eklendi — altında hiçbir şey yok"
@@ -20712,8 +20838,8 @@ msgstr "Geri Yükleme Noktası Kimliği"
 msgid "Restoring checkpoint…"
 msgstr "Geri yükleme noktası geri yükleniyor…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Yapıştırılan metin çok uzun (en fazla {count} karakter)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Metni Yapıştır"
@@ -21695,6 +21821,12 @@ msgstr "Gönderilen Geri Bildirim Yorumu"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Yerel olarak gönderilen yorum; sohbette salt okunur gösterilir"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Mesaj gönderilmedi"
@@ -24933,6 +25065,33 @@ msgstr "{} · Göndermek için Enter"
 msgid "Sketch · Enter to send"
 msgstr "Eskiz · Göndermek için Enter"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "Otomatik kip açık: ajan açık seçimlere kendisi karar verir ve asla 
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Otomatik kip: ajan açık seçimlere size sormak yerine kendisi karar verir ve kararlarını özette listeler"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Kendi API anahtarınız kullanılıyor ve modeli o belirliyor. Yeniden barındırılan bir model seçmek için bu menüyü açıp \"API anahtarımı değiştir veya kaldır\" seçeneğini seçin"
-
-msgid "Choose which model the agent runs on"
-msgstr "Ajanın hangi modelde çalışacağını seçer"
 
 msgid "Agent Bubble"
 msgstr "Ajan Balonu"

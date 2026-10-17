@@ -1445,6 +1445,12 @@ msgstr "Ҳара ҳган аҿы агха ыҟан. Ишәҳәоуп, еиҭа �
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "Раԥхьа ҷыдала амодель алагара шәыҟаҵа (
 msgid "Base URL and model name are required."
 msgstr "Абазартә URL амодель ахьӡи иаҭахуп."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Ҷыдала асервер HTTP {status} ала аҭак ҟаиҵеит."
 
@@ -1529,11 +1541,17 @@ msgstr "ШәAPI ацаԥха амодель анапхгара аҿуп"
 msgid "Custom"
 msgstr "Ахатә"
 
-msgid "Use my own API key…"
-msgstr "Сара сыхатә API ацаԥха схархәоит…"
-
 msgid "Change or remove my API key…"
 msgstr "Сара сы API ацаԥха аԥсахра мамзаргьы ақәгара…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Ахәыцра"
@@ -1565,6 +1583,15 @@ msgstr "Уажәы иалху амодель азы ахәыцра аҽазыш�
 msgid "No thinking levels for this model"
 msgstr "Ари амодель азы ахәыцра аҩаӡарақәа ыҟаӡам"
 
+msgid "Model"
+msgstr "Амодель"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Шәхатә API ацаԥха ихархәоуп — ахостингтә модель алхразы ари амениу аҿы «Сара сы API ацаԥха аԥсахра мамзаргьы ақәгара» алх"
 
@@ -1576,9 +1603,6 @@ msgstr "Ари амодель агент азы шәхы иашәырхәа"
 
 msgid "Provider"
 msgstr "Апровайдер"
-
-msgid "Model"
-msgstr "Амодель"
 
 msgid "Label"
 msgstr "Адырга"
@@ -1625,6 +1649,12 @@ msgstr "Шәара шә-ChatGPT аподписка ихархәоит — Mixar 
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "AI апровайдер аиҿкаарақәа"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Аҳәоу мацара амодель — ачат иаусуеит; 3D азаданиақәа авизуалтә азгәаҭарада иҿыцуеит."
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Ақәгара"
 
@@ -1817,10 +1868,13 @@ msgstr "Ақәгара ашьақәырӷәӷәара алагара"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Ақәгара аҟәыхра, ихадоу адиалог ахь ахынҳәра"
 
-msgid "Delete the stored API key server-side"
-msgstr "Иеиқәырхоу API ацаԥха асервер аҟынтәи аныхра"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "Амодельқәа ркаталог аиҭарҿыцра"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Апровайдер+амодель акаталог асервер аҟынтәи еиҭа агәаҭара"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Агент амодель апровайдер"
@@ -1867,6 +1957,36 @@ msgstr "Агент амодель иалхар ауеит"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "Иеиқәырхоу амодель шәплан аҿы ыҟаӡамзар, иашаӡам"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM апровайдер"
@@ -1915,6 +2035,12 @@ msgstr "BYOK активтәуп"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Асервер ари ахархәаҩ азы byok_active иаҳәозар, иашауп"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Адиалог аҭагылазаашьа"
@@ -19020,8 +19146,8 @@ msgstr "Аескиз аԥхьаԥшра аԥҵара алымшеит. Еиҭа 
 msgid "View sketch"
 msgstr "Аескиз аԥшра"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Агент ачерновик ҭәуп (амаксимум {count} асимвол)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Адырга иацҵан — аҵаҩа даҟәым"
@@ -20712,8 +20838,8 @@ msgstr "Ахынҳәра Аҭыԥ ID"
 msgid "Restoring checkpoint…"
 msgstr "Ахынҳәра Аҭыԥ ахынҳәра иаҿуп…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Иҭаргылоу атекст еиҳауп (амаксимум {count} асимвол)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Атекст аҭаргылара"
@@ -21695,6 +21821,12 @@ msgstr "Ишьҭоу азҳәара акомментари"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Ҷыдала ишьҭоу акомментари, ачат аҿы аԥхьара мацара иубоит"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Аҳәамҭа ишьҭам"
@@ -24933,6 +25065,33 @@ msgstr "{} · Enter — ашьҭра"
 msgid "Sketch · Enter to send"
 msgstr "Аескиз · Enter — ашьҭра"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "Автоматла аиҿкаашьа аус ауеит: агент иа
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Автоматла аиҿкаашьа: агент иаартны иҟоу алхрақәа шәара шәазҵаара ада ихала илкаоит, нас илкаақәа аҷыпқәырга аҿы иарбоит"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Шәхатәу API Ацаԥха ахархәоуп, нас уи амодель илкаоит. Ахосттә амодель еиҭа алхразы ари амениу шәаарт нас «Сара API Ацаԥха аԥсахра ма ақәгара» шәылкаа"
-
-msgid "Choose which model the agent runs on"
-msgstr "Агент ицыз амодель шәылкаа"
 
 msgid "Agent Bubble"
 msgstr "Агент Аԥенџьыр"

@@ -1445,6 +1445,12 @@ msgstr "เกิดข้อผิดพลาดในระบบของเ
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "โปรดเริ่มโมเดลในเครื่องก
 msgid "Base URL and model name are required."
 msgstr "ต้องระบุ URL หลักและชื่อโมเดล"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "เซิร์ฟเวอร์ในเครื่องตอบกลับด้วย HTTP {status}"
 
@@ -1529,11 +1541,17 @@ msgstr "คีย์ API ของคุณเป็นตัวกำหนด�
 msgid "Custom"
 msgstr "กำหนดเอง"
 
-msgid "Use my own API key…"
-msgstr "ใช้คีย์ API ของฉันเอง…"
-
 msgid "Change or remove my API key…"
 msgstr "เปลี่ยนหรือลบคีย์ API ของฉัน…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "การคิด"
@@ -1565,6 +1583,15 @@ msgstr "ระดับการใช้เหตุผลของโมเด
 msgid "No thinking levels for this model"
 msgstr "โมเดลนี้ไม่มีระดับการคิด"
 
+msgid "Model"
+msgstr "โมเดล"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "กำลังใช้คีย์ API ของคุณเอง — เลือก \"เปลี่ยนหรือลบคีย์ API ของฉัน\" ในเมนูนี้เพื่อเลือกโมเดลที่โฮสต์ไว้"
 
@@ -1576,9 +1603,6 @@ msgstr "ใช้โมเดลนี้สำหรับเอเจนต์
 
 msgid "Provider"
 msgstr "ผู้ให้บริการ"
-
-msgid "Model"
-msgstr "โมเดล"
 
 msgid "Label"
 msgstr "ข้อความ"
@@ -1625,6 +1649,12 @@ msgstr "ใช้การสมัครใช้งาน ChatGPT ของค
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "การตั้งค่าผู้ให้บริการ AI"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "โมเดลข้อความอย่างเดียว — แชตได้ตามปกติ แต่งาน 3D จะทำงานโดยไม่มีการตอบกลับด้วยภาพ"
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "ลบ"
 
@@ -1817,10 +1868,13 @@ msgstr "เริ่มขั้นตอนยืนยันการลบ"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "ยกเลิกขั้นตอนการลบและกลับไปยังกล่องโต้ตอบหลัก"
 
-msgid "Delete the stored API key server-side"
-msgstr "ลบคีย์ API ที่จัดเก็บไว้บนเซิร์ฟเวอร์"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "รีเฟรชแค็ตตาล็อกโมเดล"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ตรวจสอบแค็ตตาล็อกผู้ให้บริการ+โมเดลจากแบ็กเอนด์อีกครั้ง"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "ผู้ให้บริการโมเดลเอเจนต์"
@@ -1867,6 +1957,36 @@ msgstr "โมเดลเอเจนต์ใช้ได้"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "เป็นเท็จเมื่อโมเดลที่บันทึกไว้ไม่มีในแพ็กเกจของคุณ"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "ผู้ให้บริการ LLM"
@@ -1915,6 +2035,12 @@ msgstr "BYOK ทำงานอยู่"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "เป็นจริงเมื่อเซิร์ฟเวอร์รายงาน byok_active สำหรับผู้ใช้นี้"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "สถานะกล่องโต้ตอบ"
@@ -19020,8 +19146,8 @@ msgstr "ไม่สามารถสร้างภาพตัวอย่า
 msgid "View sketch"
 msgstr "ดูภาพร่าง"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "ข้อความร่างของเอเจนต์เต็มแล้ว (สูงสุด {count} ตัวอักษร)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "เพิ่มเครื่องหมายแล้ว — ไม่มีสิ่งใดอยู่ใต้เครื่องหมาย"
@@ -20712,8 +20838,8 @@ msgstr "ID จุดคืนค่า"
 msgid "Restoring checkpoint…"
 msgstr "กำลังคืนค่าจุดคืนค่า…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ข้อความที่วางยาวเกินไป (สูงสุด {count} ตัวอักษร)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "วางข้อความ"
@@ -21695,6 +21821,12 @@ msgstr "ความคิดเห็นติชมที่ส่งแล้
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ความคิดเห็นที่ส่งจากเครื่อง แสดงแบบอ่านอย่างเดียวในแชท"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "ข้อความยังไม่ถูกส่ง"
@@ -24933,6 +25065,33 @@ msgstr "{} · กด Enter เพื่อส่ง"
 msgid "Sketch · Enter to send"
 msgstr "ภาพร่าง · กด Enter เพื่อส่ง"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "โหมดอัตโนมัติเปิดอยู่: เอ�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "โหมดอัตโนมัติ: เอเจนต์ตัดสินใจตัวเลือกที่ยังเปิดอยู่เองแทนการถามคุณ และแสดงรายการการตัดสินใจไว้ในสรุป"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "กำลังใช้คีย์ API ของคุณเอง ซึ่งเป็นตัวกำหนดโมเดล เปิดเมนูนี้แล้วเลือก \"เปลี่ยนหรือลบคีย์ API ของฉัน\" เพื่อเลือกโมเดลที่โฮสต์ไว้อีกครั้ง"
-
-msgid "Choose which model the agent runs on"
-msgstr "เลือกโมเดลที่เอเจนต์ใช้ทำงาน"
 
 msgid "Agent Bubble"
 msgstr "บับเบิลเอเจนต์"

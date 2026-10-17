@@ -1445,6 +1445,12 @@ msgstr "எங்கள் பக்கத்தில் ஏதோ தவறு
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "முதலில் உள்ளக மாதிரியைத் த
 msgid "Base URL and model name are required."
 msgstr "அடிப்படை URL-உம் மாதிரிப் பெயரும் தேவை."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "உள்ளகச் சேவையகம் HTTP {status} என்று பதிலளித்தது."
 
@@ -1529,11 +1541,17 @@ msgstr "உங்கள் API விசை மாதிரியைக் க�
 msgid "Custom"
 msgstr "தனிப்பயன்"
 
-msgid "Use my own API key…"
-msgstr "என் சொந்த API விசையைப் பயன்படுத்து…"
-
 msgid "Change or remove my API key…"
 msgstr "என் API விசையை மாற்று அல்லது அகற்று…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "சிந்தனை"
@@ -1565,6 +1583,15 @@ msgstr "இப்போது தேர்ந்தெடுத்த மாத�
 msgid "No thinking levels for this model"
 msgstr "இந்த மாதிரிக்குச் சிந்தனை நிலைகள் இல்லை"
 
+msgid "Model"
+msgstr "மாதிரி"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "உங்கள் சொந்த API விசை பயன்பாட்டில் உள்ளது — புரவலன் மாதிரியைத் தேர்ந்தெடுக்க இந்தப் பட்டியலில் \"என் API விசையை மாற்று அல்லது அகற்று\" என்பதைத் தேர்ந்தெடுங்கள்"
 
@@ -1576,9 +1603,6 @@ msgstr "முகவருக்கு இந்த மாதிரியைப�
 
 msgid "Provider"
 msgstr "வழங்குநர்"
-
-msgid "Model"
-msgstr "மாதிரி"
 
 msgid "Label"
 msgstr "சிட்டை"
@@ -1625,6 +1649,12 @@ msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்ப�
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "AI வழங்குநர் அமைப்புகள்"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "உரை மட்டும் மாதிரி — அரட்டை வேலை செய்யும்; 3D பணிகள் காட்சிப் பின்னூட்டம் இல்லாமல் இயங்கும்."
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "அகற்று"
 
@@ -1817,10 +1868,13 @@ msgstr "அகற்று-உறுதி ஓட்டத்தைத் தொ
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "அகற்றும் ஓட்டத்தை ரத்துசெய்து முதன்மை உரையாடலுக்குத் திரும்புகிறது"
 
-msgid "Delete the stored API key server-side"
-msgstr "சேமித்த API விசையைச் சேவையகப் பக்கத்தில் அழிக்கிறது"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "மாதிரி அட்டவணையைப் புதுப்�
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "பின்தளத்திலிருந்து வழங்குநர்+மாதிரி அட்டவணையை மீண்டும் சரிபார்க்கிறது"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "முகவர் மாதிரி வழங்குநர்"
@@ -1867,6 +1957,36 @@ msgstr "முகவர் மாதிரி தகுதி"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "சேமித்த மாதிரி உங்கள் திட்டத்தில் கிடைக்காதபோது தவறு"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM வழங்குநர்"
@@ -1915,6 +2035,12 @@ msgstr "BYOK செயலில்"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "இந்தப் பயனருக்குச் சேவையகம் byok_active என்று தெரிவிக்கும்போது உண்மை"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "உரையாடல் நிலை"
@@ -19020,8 +19146,8 @@ msgstr "வரைவு முன்னோட்டத்தை உருவா�
 msgid "View sketch"
 msgstr "வரைவைப் பார்"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "முகவர் வரைவு நிரம்பியது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "குறி சேர்க்கப்பட்டது — அதன் கீழ் எதுவும் இல்லை"
@@ -20712,8 +20838,8 @@ msgstr "மீட்டெடுப்பு புள்ளி அடையா�
 msgid "Restoring checkpoint…"
 msgstr "மீட்டெடுப்பு புள்ளி மீட்டெடுக்கப்படுகிறது…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ஒட்டிய உரை மிக நீளமானது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "உரையை ஒட்டவும்"
@@ -21695,6 +21821,12 @@ msgstr "சமர்ப்பித்த பின்னூட்டக் க�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "உள்ளகமாகச் சமர்ப்பித்த கருத்து, அரட்டையில் படிக்க மட்டும் காட்டப்படும்"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "செய்தி அனுப்பப்படவில்லை"
@@ -24933,6 +25065,33 @@ msgstr "{} · அனுப்ப Enter"
 msgid "Sketch · Enter to send"
 msgstr "வரைவு · அனுப்ப Enter"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "தானி பயன்முறை இயக்கத்தில் 
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "தானி பயன்முறை: திறந்த தேர்வுகளை உங்களிடம் கேட்பதற்குப் பதிலாக முகவரே முடிவு செய்து, அந்த முடிவுகளைச் சுருக்கத்தில் பட்டியலிடும்"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "உங்கள் சொந்த API விசை பயன்பாட்டில் உள்ளது, மாதிரியை அது முடிவு செய்கிறது. வழங்கும் மாதிரியை மீண்டும் தேர்ந்தெடுக்க இந்தப் பட்டியைத் திறந்து \"என் API விசையை மாற்று அல்லது அகற்று\" என்பதைத் தேர்ந்தெடுக்கவும்"
-
-msgid "Choose which model the agent runs on"
-msgstr "முகவர் எந்த மாதிரியில் இயங்கும் என்பதைத் தேர்ந்தெடு"
 
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"

@@ -1445,6 +1445,12 @@ msgstr "हमारी ओर से कुछ गड़बड़ हो गई
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "पहले स्थानीय मॉडल शुरू करे�
 msgid "Base URL and model name are required."
 msgstr "आधार URL और मॉडल नाम आवश्यक हैं।"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "स्थानीय सर्वर ने HTTP {status} लौटाया।"
 
@@ -1529,11 +1541,17 @@ msgstr "मॉडल आपकी API कुंजी से नियंत्�
 msgid "Custom"
 msgstr "कस्टम"
 
-msgid "Use my own API key…"
-msgstr "अपनी API कुंजी का उपयोग करें…"
-
 msgid "Change or remove my API key…"
 msgstr "मेरी API कुंजी बदलें या हटाएँ…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "चिंतन"
@@ -1565,6 +1583,15 @@ msgstr "वर्तमान में चुने गए मॉडल के 
 msgid "No thinking levels for this model"
 msgstr "इस मॉडल के लिए कोई चिंतन स्तर नहीं"
 
+msgid "Model"
+msgstr "मॉडल"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "आपकी अपनी API कुंजी उपयोग में है — होस्ट किया गया मॉडल चुनने के लिए इस मेनू में “मेरी API कुंजी बदलें या हटाएँ” चुनें"
 
@@ -1576,9 +1603,6 @@ msgstr "एजेंट के लिए इस मॉडल का उपयो
 
 msgid "Provider"
 msgstr "प्रदाता"
-
-msgid "Model"
-msgstr "मॉडल"
 
 msgid "Label"
 msgstr "सूचक पत्र"
@@ -1625,6 +1649,12 @@ msgstr "आपकी ChatGPT सदस्यता का उपयोग कर
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "AI प्रदाता सेटिंग्स"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "केवल-पाठ मॉडल — चैट काम करता है; 3D कार्य दृश्य प्रतिक्रिया के बिना चलते हैं।"
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "हटाएँ"
 
@@ -1817,10 +1868,13 @@ msgstr "हटाने की पुष्टि का क्रम शुर�
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "हटाने का क्रम रद्द करके मुख्य संवाद पर लौटता है"
 
-msgid "Delete the stored API key server-side"
-msgstr "सर्वर पर संग्रहीत API कुंजी मिटाता है"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "मॉडल कैटलॉग ताज़ा करें"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "बैकएंड से प्रदाता+मॉडल कैटलॉग का पुनः सत्यापन करता है"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "एजेंट मॉडल प्रदाता"
@@ -1867,6 +1957,36 @@ msgstr "एजेंट मॉडल पात्र"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "जब सहेजा गया मॉडल आपके प्लान में उपलब्ध न हो तब असत्य"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM प्रदाता"
@@ -1915,6 +2035,12 @@ msgstr "BYOK सक्रिय"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "जब सर्वर इस प्रयोक्ता के लिए byok_active बताता है तब सत्य"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "संवाद स्थिति"
@@ -19020,8 +19146,8 @@ msgstr "स्केच पूर्वावलोकन नहीं बना
 msgid "View sketch"
 msgstr "स्केच देखें"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "एजेंट ड्राफ़्ट भर गया है (अधिकतम {count} वर्ण)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "चिह्न जोड़ा गया — इसके नीचे कुछ नहीं"
@@ -20712,8 +20838,8 @@ msgstr "चेकपॉइंट ID"
 msgid "Restoring checkpoint…"
 msgstr "चेकपॉइंट पुनर्स्थापित हो रहा है…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "चिपकाया गया पाठ बहुत लंबा है (अधिकतम {count} वर्ण)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "पाठ चिपकाएँ"
@@ -21695,6 +21821,12 @@ msgstr "जमा की गई प्रतिक्रिया टिप्�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "स्थानीय रूप से जमा की गई टिप्पणी, चैट में केवल-पठन रूप में दिखाई गई"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "संदेश नहीं भेजा गया"
@@ -24933,6 +25065,33 @@ msgstr "{} · भेजने के लिए Enter"
 msgid "Sketch · Enter to send"
 msgstr "स्केच · भेजने के लिए Enter"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "स्वचालित रूप चालू है: एजेंट 
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "स्वचालित रूप: एजेंट आपसे पूछने के बजाय खुले विकल्प स्वयं तय करता है, और अपने निर्णय सारांश में सूचीबद्ध करता है"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "आपकी अपनी API कुंजी उपयोग में है, और वही मॉडल तय करती है। फिर से होस्ट किया गया मॉडल चुनने के लिए यह मेनू खोलें और \"मेरी API कुंजी बदलें या हटाएँ\" चुनें"
-
-msgid "Choose which model the agent runs on"
-msgstr "चुनें कि एजेंट किस मॉडल पर चलता है"
 
 msgid "Agent Bubble"
 msgstr "एजेंट बबल"

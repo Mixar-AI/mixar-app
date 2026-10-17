@@ -1445,6 +1445,12 @@ msgstr "Nešto je pošlo po krivu na našoj strani. Pokušajte ponovno."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "Najprije pokrenite lokalni model (mora raditi da bi se spremanje uspjelo
 msgid "Base URL and model name are required."
 msgstr "Osnovni URL i ime modela su obavezni."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Lokalni poslužitelj odgovorio je HTTP {status}."
 
@@ -1529,11 +1541,17 @@ msgstr "Vaš API ključ određuje model"
 msgid "Custom"
 msgstr "Prilagođeno"
 
-msgid "Use my own API key…"
-msgstr "Upotrijebi vlastiti API ključ…"
-
 msgid "Change or remove my API key…"
 msgstr "Promijeni ili ukloni moj API ključ…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "Razmišljanje"
@@ -1565,6 +1583,15 @@ msgstr "Napor razmišljanja za trenutačno odabrani model."
 msgid "No thinking levels for this model"
 msgstr "Ovaj model nema razine razmišljanja"
 
+msgid "Model"
+msgstr "Model"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "U upotrebi je vaš vlastiti API ključ — u ovom izborniku odaberite „Promijeni ili ukloni moj API ključ” da biste odabrali hostani model"
 
@@ -1576,9 +1603,6 @@ msgstr "Upotrijebi ovaj model za agenta"
 
 msgid "Provider"
 msgstr "Pružatelj"
-
-msgid "Model"
-msgstr "Model"
 
 msgid "Label"
 msgstr "Oznaka"
@@ -1625,6 +1649,12 @@ msgstr "Upotrebljava vašu pretplatu na ChatGPT — Mixar krediti se ne troše."
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "Postavke AI pružatelja"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "Model samo za tekst — razgovor radi; 3D zadaci idu bez vizualne povratne informacije."
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Ukloni"
 
@@ -1817,10 +1868,13 @@ msgstr "Pokreće tijek potvrde uklanjanja"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Odustaje od tijeka uklanjanja i vraća se na glavni dijalog"
 
-msgid "Delete the stored API key server-side"
-msgstr "Briše pohranjeni API ključ na poslužitelju"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "Osvježi katalog modela"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Ponovno provjerava katalog pružatelja i modela s pozadine"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "Pružatelj modela agenta"
@@ -1867,6 +1957,36 @@ msgstr "Model agenta prihvatljiv"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "Neistina kad spremljeni model nije dostupan na vašem planu"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM pružatelj"
@@ -1915,6 +2035,12 @@ msgstr "BYOK uključen"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Istina kad poslužitelj javlja byok_active za ovog korisnika"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Stanje dijaloga"
@@ -19020,8 +19146,8 @@ msgstr "Pretpregled skice nije bilo moguće stvoriti. Nacrtajte ponovno za novi 
 msgid "View sketch"
 msgstr "Prikaži skicu"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Nacrt agenta je pun (najviše {count} znakova)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Oznaka dodana — ispod nje nema ničega"
@@ -20712,8 +20838,8 @@ msgstr "ID kontrolne točke"
 msgid "Restoring checkpoint…"
 msgstr "Vraćanje kontrolne točke…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Zalijepljeni tekst je predug (najviše {count} znakova)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Zalijepi tekst"
@@ -21695,6 +21821,12 @@ msgstr "Poslani komentar povratne informacije"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Lokalno poslani komentar, u razgovoru prikazan samo za čitanje"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Poruka nije poslana"
@@ -24933,6 +25065,33 @@ msgstr "{} · Enter za slanje"
 msgid "Sketch · Enter to send"
 msgstr "Skica · Enter za slanje"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "Automatski način je uključen: agent sam odlučuje o otvorenim izborima
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automatski način: agent sam odlučuje o otvorenim izborima umjesto da Vas pita i nabraja odluke u sažetku"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Koristi se Vaš vlastiti API ključ i on određuje model. Otvorite ovaj izbornik i odaberite „Promijeni ili ukloni moj API ključ” da biste ponovno odabrali hostani model"
-
-msgid "Choose which model the agent runs on"
-msgstr "Odaberite model na kojem agent radi"
 
 msgid "Agent Bubble"
 msgstr "Oblačić agenta"

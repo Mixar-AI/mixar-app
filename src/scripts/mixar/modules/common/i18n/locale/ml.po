@@ -1445,6 +1445,12 @@ msgstr "ഞങ്ങളുടെ ഭാഗത്ത് എന്തോ തെറ
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "ആദ്യം ലോക്കൽ മോഡൽ ആരംഭിക്ക
 msgid "Base URL and model name are required."
 msgstr "അടിസ്ഥാന URL-ഉം മോഡൽ പേരും ആവശ്യമാണ്."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "ലോക്കൽ സെർവർ HTTP {status} മറുപടി നൽകി."
 
@@ -1529,11 +1541,17 @@ msgstr "നിങ്ങളുടെ API കീ മോഡലിനെ നിയ�
 msgid "Custom"
 msgstr "ഇഷ്ടാനുസൃതം"
 
-msgid "Use my own API key…"
-msgstr "എന്റെ സ്വന്തം API കീ ഉപയോഗിക്കുക…"
-
 msgid "Change or remove my API key…"
 msgstr "എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "ചിന്ത"
@@ -1565,6 +1583,15 @@ msgstr "ഇപ്പോൾ തിരഞ്ഞെടുത്ത മോഡലി�
 msgid "No thinking levels for this model"
 msgstr "ഈ മോഡലിന് ചിന്ത നിലകളില്ല"
 
+msgid "Model"
+msgstr "മോഡൽ"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ് — ഹോസ്റ്റ് ചെയ്ത മോഡൽ തിരഞ്ഞെടുക്കാൻ ഈ മെനുവിൽ \"എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
 
@@ -1576,9 +1603,6 @@ msgstr "ഏജന്റിന് ഈ മോഡൽ ഉപയോഗിക്കു
 
 msgid "Provider"
 msgstr "ദാതാവ്"
-
-msgid "Model"
-msgstr "മോഡൽ"
 
 msgid "Label"
 msgstr "ലേബൽ"
@@ -1625,6 +1649,12 @@ msgstr "നിങ്ങളുടെ ChatGPT സബ്സ്ക്രിപ്ഷ
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "ടെക്സ്റ്റ്-മാത്രം മോഡൽ — ചാറ്റ് പ്രവർത്തിക്കും; 3D ടാസ്കുകൾ ദൃശ്യ ഫീഡ്ബാക്കില്ലാതെ നടക്കും."
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "നീക്കം ചെയ്യുക"
 
@@ -1817,10 +1868,13 @@ msgstr "നീക്കം-സ്ഥിരീകരണ ഫ്ലോ ആരംഭ
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "നീക്കം ഫ്ലോ റദ്ദാക്കി പ്രധാന ഡയലോഗിലേക്ക് മടങ്ങുക"
 
-msgid "Delete the stored API key server-side"
-msgstr "സൂക്ഷിച്ച API കീ സെർവറിൽ നിന്ന് ഇല്ലാതാക്കുക"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "മോഡൽ കാറ്റലോഗ് പുതുക്കുക"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ബാക്ക്എൻഡിൽ നിന്ന് ദാതാവ്+മോഡൽ കാറ്റലോഗ് വീണ്ടും സാധൂകരിക്കുക"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "ഏജന്റ് മോഡൽ ദാതാവ്"
@@ -1867,6 +1957,36 @@ msgstr "ഏജന്റ് മോഡൽ യോഗ്യം"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "സംരക്ഷിച്ച മോഡൽ നിങ്ങളുടെ പ്ലാനിൽ ലഭ്യമല്ലെങ്കിൽ തെറ്റ്"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM ദാതാവ്"
@@ -1915,6 +2035,12 @@ msgstr "BYOK സജീവം"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "ഈ ഉപയോക്താവിന് സെർവർ byok_active റിപ്പോർട്ട് ചെയ്യുമ്പോൾ ശരി"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "ഡയലോഗ് നില"
@@ -19020,8 +19146,8 @@ msgstr "സ്കെച്ച് പ്രിവ്യൂ സൃഷ്ടിക�
 msgid "View sketch"
 msgstr "സ്കെച്ച് കാണുക"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "ഏജന്റ് ഡ്രാഫ്റ്റ് നിറഞ്ഞു (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "മാർക്ക് ചേർത്തു — അതിന് താഴെ ഒന്നുമില്ല"
@@ -20712,8 +20838,8 @@ msgstr "ചെക്ക്പോയിന്റ് ID"
 msgid "Restoring checkpoint…"
 msgstr "ചെക്ക്പോയിന്റ് പുനഃസ്ഥാപിക്കുന്നു…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ഒട്ടിച്ച ടെക്സ്റ്റ് വളരെ നീണ്ടതാണ് (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ടെക്സ്റ്റ് ഒട്ടിക്കുക"
@@ -21695,6 +21821,12 @@ msgstr "സമർപ്പിച്ച ഫീഡ്ബാക്ക് കുറ�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ലോക്കലായി സമർപ്പിച്ച കുറിപ്പ്, ചാറ്റിൽ വായന-മാത്രമായി കാണിക്കുന്നു"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "സന്ദേശം അയച്ചില്ല"
@@ -24933,6 +25065,33 @@ msgstr "{} · അയയ്ക്കാൻ Enter"
 msgid "Sketch · Enter to send"
 msgstr "സ്കെച്ച് · അയയ്ക്കാൻ Enter"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "ഓട്ടോ മോഡ് ഓണാണ്: തുറന്ന തി�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദിക്കുന്നതിന് പകരം തുറന്ന തിരഞ്ഞെടുപ്പുകൾ ഏജന്റ് തന്നെ തീരുമാനിക്കുന്നു, തീരുമാനങ്ങൾ സംഗ്രഹത്തിൽ പട്ടികപ്പെടുത്തുന്നു"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ്, മോഡൽ അത് തീരുമാനിക്കുന്നു. ഹോസ്റ്റ് ചെയ്ത മോഡൽ വീണ്ടും തിരഞ്ഞെടുക്കാൻ ഈ മെനു തുറന്ന് \"എന്റെ API കീ മാറ്റുക അല്ലെങ്കിൽ നീക്കം ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
-
-msgid "Choose which model the agent runs on"
-msgstr "ഏജന്റ് ഏത് മോഡലിലാണ് പ്രവർത്തിക്കുന്നതെന്ന് തിരഞ്ഞെടുക്കുക"
 
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"

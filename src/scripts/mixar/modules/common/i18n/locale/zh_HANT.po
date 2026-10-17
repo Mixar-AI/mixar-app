@@ -1445,6 +1445,12 @@ msgstr "我們這邊發生問題，請再試一次。"
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,6 +1517,12 @@ msgstr "請先啟動本機模型（必須在執行中才能儲存）。"
 msgid "Base URL and model name are required."
 msgstr "必須填寫基礎 URL 和模型名稱。"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "本機伺服器回應 HTTP {status}。"
 
@@ -1529,11 +1541,17 @@ msgstr "模型由你的 API 金鑰決定"
 msgid "Custom"
 msgstr "自訂"
 
-msgid "Use my own API key…"
-msgstr "使用我自己的 API 金鑰…"
-
 msgid "Change or remove my API key…"
 msgstr "變更或移除我的 API 金鑰…"
+
+msgid "Use my own API key…"
+msgstr ""
+
+msgid "Switch to Mixie (keep my key)"
+msgstr ""
+
+msgid "Switch back to my API key"
+msgstr ""
 
 msgid "Thinking"
 msgstr "思考"
@@ -1565,6 +1583,15 @@ msgstr "目前所選模型的推理強度。"
 msgid "No thinking levels for this model"
 msgstr "此模型沒有思考層級"
 
+msgid "Model"
+msgstr "模型"
+
+msgid "Choose which model your API key runs the agent on"
+msgstr ""
+
+msgid "No models to switch to"
+msgstr ""
+
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "正在使用你自己的 API 金鑰——請在此選單中選擇「變更或移除我的 API 金鑰」以選擇託管模型"
 
@@ -1576,9 +1603,6 @@ msgstr "智慧代理使用此模型"
 
 msgid "Provider"
 msgstr "供應商"
-
-msgid "Model"
-msgstr "模型"
 
 msgid "Label"
 msgstr "標籤"
@@ -1625,6 +1649,12 @@ msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
 msgid "Choose a Codex model."
 msgstr ""
 
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "Please try again."
+msgstr ""
+
 msgid "Removing your key…"
 msgstr ""
 
@@ -1638,6 +1668,9 @@ msgid "AI Provider Settings"
 msgstr "AI 供應商設定"
 
 msgid "Key needed on this device"
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 msgid "Active"
@@ -1671,6 +1704,21 @@ msgid "Text-only model — chat works; 3D tasks run without visual feedback."
 msgstr "純文字模型——聊天可正常運作；3D 任務將在沒有視覺回饋的情況下執行。"
 
 msgid "Remove key…"
+msgstr ""
+
+msgid "Your key is paused — Mixie is answering"
+msgstr ""
+
+msgid "Saved on this computer: {provider} · {model}"
+msgstr ""
+
+msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Codex sign-in needed on this device"
@@ -1808,6 +1856,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "移除"
 
@@ -1817,10 +1868,13 @@ msgstr "開始移除確認流程"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "取消移除流程並返回主對話框"
 
-msgid "Delete the stored API key server-side"
-msgstr "在伺服器端刪除已儲存的 API 金鑰"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1834,6 +1888,42 @@ msgstr "重新整理模型目錄"
 
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "從後端重新驗證供應商與模型目錄"
+
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgstr ""
+
+msgid "Use Custom AI"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
 
 msgid "Agent Model Provider"
 msgstr "智慧代理模型供應商"
@@ -1867,6 +1957,36 @@ msgstr "智慧代理模型可用"
 
 msgid "False when the saved model is not available on your plan"
 msgstr "已儲存的模型不適用於你的方案時為假"
+
+msgid "Agent Key Provider Label"
+msgstr ""
+
+msgid "Short name of the provider whose API key the agent uses"
+msgstr ""
+
+msgid "Agent Key Model Label"
+msgstr ""
+
+msgid "The model your API key runs the agent on"
+msgstr ""
+
+msgid "Agent Key Model Menu"
+msgstr ""
+
+msgid "The key's model can be switched from the chat composer"
+msgstr ""
+
+msgid "Agent Key Busy"
+msgstr ""
+
+msgid "A model switch, pause or resume of your API key is being saved"
+msgstr ""
+
+msgid "Agent Key Resumable"
+msgstr ""
+
+msgid "Your saved API key is paused; Custom AI switches back to it"
+msgstr ""
 
 msgid "LLM provider"
 msgstr "LLM 供應商"
@@ -1915,6 +2035,12 @@ msgstr "BYOK 作用中"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "伺服器回報此使用者為 byok_active 時為真"
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "對話框狀態"
@@ -19020,8 +19146,8 @@ msgstr "無法建立草圖預覽。請重新繪製以重試。"
 msgid "View sketch"
 msgstr "檢視草圖"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "智慧代理草稿已滿（最多 {count} 個字元）"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "已新增標記，但下方沒有任何物體"
@@ -20712,8 +20838,8 @@ msgstr "檢查點 ID"
 msgid "Restoring checkpoint…"
 msgstr "正在還原檢查點…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "貼上的文字過長（最多 {count} 個字元）"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "貼上文字"
@@ -21695,6 +21821,12 @@ msgstr "已提交的回饋意見"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "本機已提交的意見，以唯讀方式顯示在聊天中"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "訊息未送出"
@@ -24933,6 +25065,33 @@ msgstr "{} · 按 Enter 傳送"
 msgid "Sketch · Enter to send"
 msgstr "草圖 · 按 Enter 傳送"
 
+msgid "Custom AI"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
+msgstr ""
+
+msgid "Your own API key is in use, and it decides the model"
+msgstr ""
+
+msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
+msgstr ""
+
+msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
+msgstr ""
+
+msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
+msgstr ""
+
+msgid "Your own API key is in use. Click to change the provider or key"
+msgstr ""
+
 msgid "No generations yet"
 msgstr ""
 
@@ -25130,12 +25289,6 @@ msgstr "自動模式已開啟：智慧代理會自行決定待定的選擇，不
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "自動模式：智慧代理會自行決定待定的選擇而不詢問你，並在摘要中列出其決定"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "目前正在使用你自己的 API 金鑰，並由它決定模型。開啟此選單並選擇「變更或移除我的 API 金鑰」即可再次選擇託管模型"
-
-msgid "Choose which model the agent runs on"
-msgstr "選擇智慧代理所使用的模型"
 
 msgid "Agent Bubble"
 msgstr "智慧代理氣泡"
