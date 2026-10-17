@@ -25,14 +25,14 @@ def test_deselected_active_object_does_not_leave_stale_properties():
     assert selected_object(ctx) is None
 
 
-@pytest.mark.parametrize("kind", ["MESH", "LIGHT"])
+@pytest.mark.parametrize("kind", ["MESH", "LIGHT", "ARMATURE"])
 def test_selection_is_resolved_in_the_current_view_layer(kind):
     ctx = context(kind)
     assert selected_object(ctx) is ctx.object
     ctx.object.select_get.assert_called_once_with(view_layer=ctx.view_layer)
 
 
-@pytest.mark.parametrize("kind", ["CAMERA", "EMPTY", "ARMATURE"])
+@pytest.mark.parametrize("kind", ["CAMERA", "EMPTY"])
 def test_unsupported_objects_do_not_get_mesh_controls(kind):
     assert selected_object(context(kind)) is None
 
