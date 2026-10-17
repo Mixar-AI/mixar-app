@@ -34,11 +34,28 @@ def clip(name, start=1, end=49, slots=1):
                   for s in handles])])])
 
 
+class Strip:
+    """A clip strip; ``action_slot`` counts its assignments, which is how the
+    layer asks Blender to rebuild depsgraph relations after a solo/mute."""
+
+    def __init__(self, name, start, action):
+        first, last = catalog.clip_range(action, catalog.curves(action, action.slots[0]))
+        self.type, self.name, self.action = 'CLIP', name, action
+        self.frame_start, self.frame_end = float(start), float(start + last - first)
+        self._slot, self.slot_sets = action.slots[0], 0
+
+    @property
+    def action_slot(self):
+        return self._slot
+
+    @action_slot.setter
+    def action_slot(self, slot):
+        self._slot, self.slot_sets = slot, self.slot_sets + 1
+
+
 class Strips(list):
     def new(self, name, start, action):
-        first, last = catalog.clip_range(action, catalog.curves(action, action.slots[0]))
-        strip = NS(type='CLIP', name=name, action=action, action_slot=action.slots[0],
-                   frame_start=float(start), frame_end=float(start + last - first))
+        strip = Strip(name, start, action)
         self.append(strip)
         return strip
 
@@ -173,6 +190,32 @@ def test_play_adds_a_clip_from_the_file_as_a_track_at_its_own_range(blender):
     assert (track.name, strip.name, strip.frame_start) == ('Jump', 'Jump', 5.0)
     assert strip.action_slot is jump.slots[1] and track.is_solo
     assert (env.scene.frame_preview_start, env.scene.frame_preview_end) == (5, 30)
+
+
+def relation_rebuilds(rig):
+    return sum(s.slot_sets for t in rig.animation_data.nla_tracks for s in t.strips)
+
+
+def test_every_solo_or_mute_change_rebuilds_depsgraph_relations(blender):
+    """Muted tracks are left out of the depsgraph; the is_solo/mute RNA setters
+    don't tag a rebuild, so a rig with no active action never followed the
+    soloed clip during playback (its frame counter ran, its pose did not)."""
+    wave = clip('Wave')
+    rig = Rig()
+    rig.stored(wave, 'Wave').mute = True
+    rig.stored(clip('Walk'), 'Walk').mute = True
+    strip = rig.animation_data.nla_tracks[0].strips[0]
+    play(blender, rig, wave, 'Wave', 'Wave')
+    assert rig.animation_data.nla_tracks[0].is_solo
+    assert relation_rebuilds(rig) == 1 and strip.action_slot is wave.slots[0]
+    nla.stop(blender.window, blender.scene, blender.state)
+    assert relation_rebuilds(rig) == 2
+    nla.toggle_solo(rig, 'Walk', 'Walk')
+    nla.toggle_mute(rig, 'Walk', 'Walk')
+    assert relation_rebuilds(rig) == 4
+    # No solo to clear: nothing changed, so no rebuild.
+    nla.stop(blender.window, blender.scene, blender.state)
+    assert relation_rebuilds(rig) == 4
 
 
 def test_play_turns_nla_evaluation_on(blender):

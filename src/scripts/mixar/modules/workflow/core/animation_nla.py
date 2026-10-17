@@ -66,6 +66,25 @@ def add_strip(target, action, slot):
     return track, strip
 
 
+def tag_relations(target):
+    """Make the depsgraph pick up a solo or mute change.
+
+    The depsgraph builder leaves every disabled track (muted, or not the
+    solo) out of the graph (``deg_builder_relations.cc``,
+    ``build_animdata_curves``), so a rig whose only time dependency is a
+    stashed clip has no time relation until relations are rebuilt. The NLA
+    editor's star and checkbox tag that rebuild
+    (``anim_channels_defines.cc``); the ``is_solo`` and ``mute`` RNA setters
+    only tag the animation (``rna_NlaStrip_update``), so a merged character
+    with no active action kept its pose while the frame counter ran.
+    Re-assigning a strip's own slot is the one strip RNA update that tags
+    relations (``rna_NlaStrip_dependency_update``) without changing data.
+    """
+    for _track, strip, _nested in catalog.track_strips(target):
+        strip.action_slot = strip.action_slot
+        return
+
+
 def _playback_running(window):
     return bool(window and window.screen and window.screen.is_animation_playing)
 
@@ -89,6 +108,7 @@ def _remember_range(state, scene, window, target):
         soloed = catalog.soloed_track(previous) if previous != target else None
         if soloed is not None and not previous.animation_data.use_tweak_mode:
             soloed.is_solo = False
+            tag_relations(previous)
         return
     state.range_saved = True
     state.range_scene = scene.session_uid
@@ -127,6 +147,7 @@ def play(window, scene, state, target, action, slot, track_name='', strip_name='
         target.animation_data.use_nla = True
         track.is_solo = True
         first, last = strip.frame_start, strip.frame_end
+    tag_relations(target)
     _set_preview_range(scene, int(math.floor(first)), int(math.ceil(last)))
     state.play_target = target.name
     with bpy.context.temp_override(window=window):
@@ -170,6 +191,7 @@ def stop(window, scene, state):
     # to manage, so it stays.
     if soloed is not None and not target.animation_data.use_tweak_mode:
         soloed.is_solo = False
+        tag_relations(target)
     if state.range_saved and state.range_scene == scene.session_uid:
         _set_preview_range(scene, state.range_start, state.range_end)
         scene.use_preview_range = state.range_use
@@ -181,12 +203,14 @@ def toggle_solo(target, track_name, strip_name):
     check_editable(target)
     track = _track(target, track_name, strip_name, allow_nested=True)[0]
     track.is_solo = not track.is_solo
+    tag_relations(target)
 
 
 def toggle_mute(target, track_name, strip_name):
     check_editable(target)
     track = _track(target, track_name, strip_name, allow_nested=True)[0]
     track.mute = not track.mute
+    tag_relations(target)
 
 
 def delete(target, track_name, strip_name):
