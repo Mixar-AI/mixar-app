@@ -249,10 +249,11 @@ def _apply_identity(wm, scene, user_info: dict) -> bool:
 def _apply_account_hooks(user_info: dict, is_guest: bool) -> None:
     """The post-login fetches. Routes a guest cannot call (the generation
     catalog, sounds, telemetry) are skipped rather than answered 403; the
-    agent settings are a guest's own (its key, the catalog, its pick)."""
+    agent settings are a guest's own (its key, the catalog, its pick).
+    Onboarding is per device, so a guest's first launch gets the tour."""
     if not is_guest:
         refresh_generation_caches()
-        maybe_show_onboarding(user_info["data"].get("email", ""))
+    maybe_show_onboarding(user_info["data"].get("email", ""))
     _auto_connect_websocket()
     refresh_agent_settings()
 

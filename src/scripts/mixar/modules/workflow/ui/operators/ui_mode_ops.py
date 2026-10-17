@@ -95,11 +95,11 @@ def _interactive_tour_active() -> bool:
 def _restart_onboarding_after_mode():
     """Start the first-run tour once the user has picked a mode.
 
-    ``maybe_show_for_user`` gates on the per-user ``onboarding_seen.json``
-    file (returning users never see it again) and on a pending schedule,
-    so a tour already queued by the auth-success hook is not doubled. If
-    the user isn't signed in yet (no email), the auth-success hook starts
-    the tour when login completes.
+    ``maybe_show_tour`` gates on the per-device ``onboarding_seen.json``
+    flag (a device that has seen it never sees it again) and on a pending
+    schedule, so a tour already queued by the auth-success hook is not
+    doubled. With no session yet (no email), the auth-success hook starts
+    the tour once one exists.
 
     While the tour runs, a mode switch (its own or the user's) must not
     schedule it again on top.
@@ -113,8 +113,8 @@ def _restart_onboarding_after_mode():
     if not email:
         return
     try:
-        from mixar.modules.onboarding.core import maybe_show_for_user
-        maybe_show_for_user(email)
+        from mixar.modules.onboarding.core import maybe_show_tour
+        maybe_show_tour(email)
     except Exception as exc:  # noqa: BLE001 — onboarding is best-effort
         _logger.debug("mode onboarding trigger failed: %s", exc)
 
