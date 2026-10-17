@@ -47,7 +47,7 @@ def popup():
         'draw_tooltip': lambda layout, text: layout.mixar_tooltip(text=text),
         'node_service_key': lambda node: getattr(node, 'service_key_id', ''),
         'node_model_slug': lambda node: getattr(node, 'model_slug', ''),
-        'draw_model_description': lambda layout, service, model: layout.events.append(
+        'draw_model_description': lambda layout, service, model, width=None: layout.events.append(
             ('description', (service, model), layout.active())),
         'redraw_moodboard_canvases': Mock(),
         'is_moodboard_context': Mock(return_value=True),

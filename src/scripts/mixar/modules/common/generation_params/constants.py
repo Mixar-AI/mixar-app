@@ -61,7 +61,10 @@ UNBOUNDED_FLOAT_MIN = -1.0e18
 UNBOUNDED_FLOAT_MAX = 1.0e18
 
 # The selected model's catalog description is drawn as muted wrapped lines
-# under a Model dropdown (core/draw.py:draw_model_description). Columns are
-# sized for the narrowest host (the moodboard sidebar / node settings popup).
-MODEL_DESCRIPTION_WRAP_COLUMNS = 42
+# under a Model dropdown (core/draw.py:draw_model_description), measured to
+# the host's width less MODEL_DESCRIPTION_MARGIN (UI units: popup/box padding
+# plus the label's own inset). Columns are the fallback when the width or the
+# font cannot be measured.
+MODEL_DESCRIPTION_MARGIN = 40
+MODEL_DESCRIPTION_WRAP_COLUMNS = 32
 MODEL_DESCRIPTION_SCALE_Y = 0.8

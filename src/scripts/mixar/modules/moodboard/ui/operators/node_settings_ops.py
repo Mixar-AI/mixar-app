@@ -105,7 +105,7 @@ def _draw_parameter(layout, parameter, spec=None):
     draw_tooltip(field, parameter_help(parameter, spec))
 
 
-def _draw_settings(layout, node, scene=None):
+def _draw_settings(layout, node, scene=None, width=None):
     if hasattr(layout, 'mixar_surface'):
         layout = layout.mixar_surface(theme='ZEN')
     layout.use_property_split = False
@@ -135,7 +135,8 @@ def _draw_settings(layout, node, scene=None):
     draw_tooltip(model, MODEL_HELP)
     # The picked model's catalog text (server-localized), after the tooltip so
     # its lines are not given the generic Model help.
-    draw_model_description(model, node_service_key(node), node_model_slug(node))
+    draw_model_description(model, node_service_key(node), node_model_slug(node),
+                           width=width)
     specs = parameter_specs(node)
     for parameter in node.parameters:
         if parameter.visible:
@@ -187,6 +188,10 @@ class MIXIE_OT_moodboard_node_settings(Operator):
     anchored_overlay: bpy.props.BoolProperty(
         default=False, options={'HIDDEN', 'SKIP_SAVE'}
     )
+    # The popup's width (UI units), so wrapped text fits the card-sized popup.
+    popup_width: bpy.props.IntProperty(
+        default=0, options={'HIDDEN', 'SKIP_SAVE'}
+    )
 
     def invoke(self, context, event):
         node = _popup_node(context, self.node_id)
@@ -215,6 +220,7 @@ class MIXIE_OT_moodboard_node_settings(Operator):
                 int(region.x + left + 12 * scale - event.mouse_x),
                 int(region.y + top - 52 * scale - event.mouse_y),
             )
+        self.popup_width = width
         return context.window_manager.invoke_popup(self, width=width)
 
     def draw(self, context):
@@ -222,7 +228,7 @@ class MIXIE_OT_moodboard_node_settings(Operator):
         if node is None:
             self.layout.label(text="This inference node is no longer available", icon='INFO')
             return
-        _draw_settings(self.layout, node, context.scene)
+        _draw_settings(self.layout, node, context.scene, width=self.popup_width)
 
     def check(self, context):
         node = _popup_node(context, self.node_id)

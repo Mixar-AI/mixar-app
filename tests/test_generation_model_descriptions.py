@@ -106,6 +106,29 @@ def test_description_lines_are_wrapped_muted_and_untranslated(catalog):
     assert " ".join(texts) == LONG
 
 
+def test_description_wraps_to_the_measured_host_width(catalog, monkeypatch):
+    """With a known width each line fits it in the UI font (a label ellipsizes overflow)."""
+    import sys
+    from mixar.modules.common.generation_params.constants import MODEL_DESCRIPTION_MARGIN
+
+    char_px = 6
+    blf = NS(size=lambda *_a: None, dimensions=lambda _f, text: (len(text) * char_px, 10))
+    monkeypatch.setitem(sys.modules, "blf", blf)
+    prefs = NS(ui_styles=[NS(widget=NS(points=12))], system=NS(ui_scale=1.0))
+    monkeypatch.setattr(sys.modules["bpy"], "context", NS(preferences=prefs, region=None),
+                        raising=False)
+    catalog([{"slug": "a", "label": "Model A", "description": LONG}])
+    for width in (240, 480):
+        layout = Layout()
+        assert draw.draw_model_description(layout, "svc", "a", width=width) is True
+        texts = [kw["text"] for _, kw, _ in layout.events[1:]]
+        assert all(len(t) * char_px <= width - MODEL_DESCRIPTION_MARGIN for t in texts)
+        assert " ".join(texts) == LONG
+        if width == 480:
+            assert len(texts) < narrow
+        narrow = len(texts)
+
+
 @pytest.mark.parametrize("service, slug", [("svc", "b"), ("svc", "missing"), ("", "a"),
                                            ("svc", ""), ("other", "a")])
 def test_no_description_draws_nothing(catalog, service, slug):
