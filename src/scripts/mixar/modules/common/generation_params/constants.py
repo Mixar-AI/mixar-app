@@ -59,3 +59,9 @@ UNBOUNDED_INT_MIN = -(2**31)
 UNBOUNDED_INT_MAX = 2**31 - 1
 UNBOUNDED_FLOAT_MIN = -1.0e18
 UNBOUNDED_FLOAT_MAX = 1.0e18
+
+# The selected model's catalog description is drawn as muted wrapped lines
+# under a Model dropdown (core/draw.py:draw_model_description). Columns are
+# sized for the narrowest host (the moodboard sidebar / node settings popup).
+MODEL_DESCRIPTION_WRAP_COLUMNS = 42
+MODEL_DESCRIPTION_SCALE_Y = 0.8

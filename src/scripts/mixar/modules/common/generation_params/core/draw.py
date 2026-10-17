@@ -9,12 +9,17 @@ parameter schema as Blender widgets, honoring the catalog's ``widget``,
 ``order``, ``group``, ``visible`` and ``visible_if`` fields. Returns False
 when the engine has no group for the model (catalog not loaded) so callers
 can fall back to their legacy hardcoded widgets.
+``draw_model_description(layout, service_key, model_slug)`` adds the selected
+model's catalog description under its Model dropdown.
 """
 
+import textwrap
 from typing import Any, Dict
 
 from mixar.config.logging_config import get_logger
 from ..constants import (
+    MODEL_DESCRIPTION_SCALE_Y,
+    MODEL_DESCRIPTION_WRAP_COLUMNS,
     MULTI_SELECT_ACTIVE_SUFFIX,
     WIDGET_DROPDOWN,
     WIDGET_SEGMENTED,
@@ -133,4 +138,38 @@ def draw_service_params(
             except Exception as exc:
                 logger.debug("Param draw failed for %s: %s", entry["attr"], exc)
 
+    return True
+
+
+def model_description(service_key: str, model_slug: str) -> str:
+    """The catalog ``description`` of (service, model); "" when it has none.
+
+    Server text, already localized by the backend (``X-Mixar-Locale``): it is
+    shown as is, never through ``iface_``/``tip_``.
+    """
+    if not service_key or not model_slug:
+        return ""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        text = (get_model(service_key, model_slug) or {}).get("description")
+    except Exception:
+        return ""
+    return text.strip() if isinstance(text, str) else ""
+
+
+def draw_model_description(layout, service_key: str, model_slug: str) -> bool:
+    """Muted, wrapped description lines under a Model dropdown.
+
+    Draws nothing (and returns False) when the model has no description, so
+    every catalog model picker can call it unconditionally.
+    """
+    text = model_description(service_key, model_slug)
+    if not text:
+        return False
+    col = layout.column(align=True)
+    col.active = False
+    col.scale_y = MODEL_DESCRIPTION_SCALE_Y
+    for line in textwrap.wrap(text, MODEL_DESCRIPTION_WRAP_COLUMNS):
+        col.label(text=line, translate=False)
     return True

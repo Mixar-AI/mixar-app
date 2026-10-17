@@ -9,7 +9,9 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.generation_params.core.bounds import integer_window
+from mixar.modules.common.generation_params.core.draw import draw_model_description
 from mixar.modules.common.generation_params.core.multi_select import draw_multi_select
+from mixar.modules.moodboard.core.node_schema import node_model_slug, node_service_key
 from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
@@ -131,6 +133,9 @@ def _draw_settings(layout, node, scene=None):
     model.label(text="Model")
     draw_dropdown(model, node, 'model', text="")
     draw_tooltip(model, MODEL_HELP)
+    # The picked model's catalog text (server-localized), after the tooltip so
+    # its lines are not given the generic Model help.
+    draw_model_description(model, node_service_key(node), node_model_slug(node))
     specs = parameter_specs(node)
     for parameter in node.parameters:
         if parameter.visible:

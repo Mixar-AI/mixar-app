@@ -10,6 +10,7 @@ Public surface:
         has_params,               # engine has a group for (service, model)?
         collect_params,           # current values -> plain dict for payloads
         draw_service_params,      # render a model's params into a layout
+        draw_model_description,   # model's catalog description under its dropdown
         unregister_all_param_groups,
         # Capability mode selector (Mode → Model → params)
         get_service_enum_items,   # Mode dropdown items for a capability
@@ -34,7 +35,7 @@ from .core.engine import (
     rebuild_from_catalog,
     unregister_all_param_groups,
 )
-from .core.draw import draw_service_params
+from .core.draw import draw_model_description, draw_service_params
 from .core.selector import (
     catalog_default_model,
     draw_capability_selector,
@@ -52,6 +53,7 @@ __all__ = (
     "rebuild_from_catalog",
     "unregister_all_param_groups",
     "draw_service_params",
+    "draw_model_description",
     "get_param_enum_items",
     "get_service_enum_items",
     "resolve_service_key",

@@ -171,7 +171,11 @@ get_credit_cost = _queries.get_credit_cost
 
 def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
     """(id, label, desc) tuples for a service's models, with LOADING/ERROR
-    placeholder states matching the existing caches."""
+    placeholder states matching the existing caches.
+
+    ``desc`` (the hover tooltip of each dropdown row) is the model's catalog
+    ``description`` — server text, already localized — or the label when the
+    row has none / the backend predates the field."""
     with _lock:
         loading = _is_loading
         loaded = _catalog is not None
@@ -194,7 +198,10 @@ def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
         for m in models:
             slug = m.get("slug") or ""
             label = m.get("label") or slug
-            built.append((slug, label, label))
+            description = m.get("description")
+            if not isinstance(description, str) or not description.strip():
+                description = label
+            built.append((slug, label, description.strip()))
         return built
 
     return _enum_cached("model", service_key, version, _build)
