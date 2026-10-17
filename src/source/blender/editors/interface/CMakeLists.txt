@@ -79,6 +79,7 @@ set(SRC
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
   interface_mixar_sheet.cc
+  interface_mixar_sheet_blocks.cc
   interface_mixar_sheet_controls.cc
   interface_mixar_tab_rects.cc
   interface_mixar_theme.cc

@@ -5,9 +5,11 @@
 /** \file
  * \ingroup edinterface
  *
- * AI Provider settings sheet — the text kit, the framed backdrop and the
- * tags. The painters (text elements, close, rows, chips, pills) are in
- * `interface_mixar_sheet_controls.cc`; the design is described in
+ * The sheet dialogs (AI Provider settings, Connect MCP) — the text kit,
+ * the framed backdrop and the tags. The painters (text elements, close,
+ * rows, chips, pills) are in `interface_mixar_sheet_controls.cc`, the
+ * snippet, switch, status dot and foot glyphs in
+ * `interface_mixar_sheet_blocks.cc`; the design is described in
  * `interface_mixar_sheet.hh`.
  *
  * Text is drawn straight through BLF rather than #fontstyle_draw: the sheet
@@ -234,6 +236,12 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
       return MixarCardElement::SheetInput;
     case 15:
       return MixarCardElement::SheetDropdown;
+    case 16:
+      return MixarCardElement::SheetSnippet;
+    case 17:
+      return MixarCardElement::SheetSwitch;
+    case 18:
+      return MixarCardElement::SheetStatusDot;
     default:
       return MixarCardElement::None;
   }
@@ -241,7 +249,7 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
 
 bool UI_mixar_sheet_element_is(const MixarCardElement element)
 {
-  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetDropdown;
+  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetStatusDot;
 }
 
 void UI_layout_mixar_sheet_frame(Layout *layout, const float header_dp, const float sidebar_dp)
@@ -337,8 +345,15 @@ float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text
       weight = weight_regular;
       break;
     case MixarCardElement::SheetBody:
+    case MixarCardElement::SheetSwitch:
+      /* A switch's label (Python adds the track and its gap). */
       size = body_size;
       weight = weight_regular;
+      break;
+    case MixarCardElement::SheetSnippet:
+      size = snippet_size;
+      weight = weight_regular;
+      mono = true;
       break;
     case MixarCardElement::SheetPrimary:
     case MixarCardElement::SheetSecondary:
@@ -452,6 +467,15 @@ bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardE
       break;
     case MixarCardElement::SheetDropdown:
       UI_mixar_sheet_dropdown_draw(but, rect);
+      break;
+    case MixarCardElement::SheetSnippet:
+      draw_snippet(but, rect);
+      break;
+    case MixarCardElement::SheetSwitch:
+      draw_switch(but, rect);
+      break;
+    case MixarCardElement::SheetStatusDot:
+      draw_status_dot(but, rect);
       break;
     default:
       break;

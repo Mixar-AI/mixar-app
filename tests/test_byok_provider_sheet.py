@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""AI Provider settings sheet — the designer's artboard (`byok_sheet`) and its
+"""AI Provider settings sheet — the designer's artboard (`common/sheet/kit`) and its
 painters (`interface_mixar_sheet*.cc`). The one-action contract and the
 state flow are pinned by test_byok_dialog_ui.py, whose fake layout this
 reuses."""
@@ -18,7 +18,8 @@ from test_byok_dialog_ui import (  # noqa: E402
 )
 
 from mixar.modules.byok.core import model_suggestions  # noqa: E402
-from mixar.modules.byok.ui.operators import byok_dialog_ui, byok_sheet  # noqa: E402
+from mixar.modules.byok.ui.operators import byok_dialog_ui  # noqa: E402
+from mixar.modules.common.sheet import kit as byok_sheet  # noqa: E402
 
 RNA_WM_MIXAR_POPUP = ROOT / "src" / "source" / "blender" / "makesrna" / "intern" / "rna_wm_mixar_popup.cc"
 SHEET_CC = INTERFACE_DIR / "interface_mixar_sheet.cc"

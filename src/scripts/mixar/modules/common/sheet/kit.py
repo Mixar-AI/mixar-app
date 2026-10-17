@@ -3,7 +3,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""AI Provider settings — the sheet kit the dialog's states are built with.
+"""The sheet kit: the framed two-column card dialog AI Provider settings
+(`byok`) and Connect MCP (`mcp_bridge`) are built with.
 
 Measured in design px (2x: a 1440 dp sheet is 720 UI px wide), from the
 designer's artboard tightened to the Agent island's proportions; its text
@@ -21,6 +22,8 @@ Every primitive degrades to a stock widget on a build whose C++ predates
 the sheet painters (`hasattr`-guarded), so the dialog never loses
 functionality — it just stops looking like the artboard.
 """
+
+import textwrap
 
 from mixar.modules.common.i18n import n_
 
@@ -81,6 +84,18 @@ BOTTOM = 30              # below the key field
 STRIP_H = 40             # one "in use" / error line above the prompt
 GAP = 14
 
+# Snippet: a monospace code block on the key field's backdrop.
+SNIPPET_LINE_H = 28
+SNIPPET_PAD_X = 22
+SNIPPET_PAD_Y = 18
+SNIPPET_COLUMNS = 72     # wrap width on a build without the painters
+# Switch: a track and knob, its label after SWITCH_GAP.
+SWITCH_W = 45
+SWITCH_GAP = 16
+# Status dot: a STATUS_DOT dp disc, the line's text STATUS_GAP after it.
+STATUS_DOT = 11
+STATUS_GAP = 16
+
 # Bright-span marker the caption painter understands (never drawn).
 MARK = "\x1f"
 
@@ -90,6 +105,15 @@ TITLE, CLOSE_KIND, CAPTION, PROVIDER_ROW, FOOTER_ROW, CHIP = (
 PROMPT, NOTE, BODY, DANGER_TEXT = 'PROMPT', 'NOTE', 'BODY', 'DANGER_TEXT'
 PRIMARY, SECONDARY, DANGER_BUTTON, INPUT, DROPDOWN = (
     'PRIMARY', 'SECONDARY', 'DANGER_BUTTON', 'INPUT', 'DROPDOWN')
+SNIPPET, SWITCH, STATUS_DOT_KIND = 'SNIPPET', 'SWITCH', 'STATUS_DOT'
+
+# FOOTER_ROW glyphs (the tag's ``extra``): Local model's monitor, a terminal.
+FOOT_MONITOR, FOOT_TERMINAL = 0.0, 1.0
+# Status dot colours: lit green, danger, dim.
+STATUS_ON, STATUS_DANGER, STATUS_DIM = 'ON', 'DANGER', 'DIM'
+# A pill's docked payload: inside the field before it (full height), or in
+# the top-right corner of a taller block (a snippet), at its own height.
+DOCK_FIELD, DOCK_CORNER = 1.0, 2.0
 
 # The active-default flag rides on the card-button restyle (it sets OR
 # clears the flag); the sheet tag is applied afterwards and keeps the flag.
@@ -181,7 +205,7 @@ def button(layout, operator_id, text, kind=SECONDARY, default=False, docked=Fals
     properties."""
     props = layout.operator(operator_id, text=text, icon=icon, translate=False)
     _flag(layout, kind, default)
-    tag(layout, kind, extra=1.0 if docked else 0.0)
+    tag(layout, kind, extra=DOCK_FIELD if docked else 0.0)
     return props
 
 
@@ -193,18 +217,20 @@ def dismiss(layout, text, kind=SECONDARY, default=False, docked=False):
         return
     layout.template_popup_confirm("", text="", cancel_text=text, translate=False)
     _flag(layout, kind, default)
-    tag(layout, kind, extra=1.0 if docked else 0.0)
+    tag(layout, kind, extra=DOCK_FIELD if docked else 0.0)
 
 
-def choice(layout, operator_id, text, kind, lit, provider="", model=""):
-    """A pickable row / chip: `mixar_byok.pick` with the choice it makes.
-    ``text`` is a catalog name or already-translated text: never translated here."""
+def choice(layout, operator_id, text, kind, lit, extra=0.0, **choice_props):
+    """A pickable row / chip: a pick operator with the choice it makes
+    (``provider=`` / ``model=`` for `mixar_byok.pick`; empty values are left
+    unset). ``extra`` is the kind's payload (FOOTER_ROW: FOOT_MONITOR /
+    FOOT_TERMINAL). ``text`` is a catalog name or already-translated text:
+    never translated here."""
     props = layout.operator(operator_id, text=text, translate=False)
-    if provider:
-        props.provider = provider
-    if model:
-        props.model = model
-    tag(layout, kind, lit=lit)
+    for name, value in choice_props.items():
+        if value:
+            setattr(props, name, value)
+    tag(layout, kind, lit=lit, extra=extra)
 
 
 def input_field(layout, data, prop, docked_w=0.0, activate=False):
@@ -221,6 +247,122 @@ def input_field(layout, data, prop, docked_w=0.0, activate=False):
 def dropdown(layout, data, prop):
     layout.prop(data, prop, text="")
     tag(layout, DROPDOWN)
+
+
+def switch(layout, operator_id, text, on):
+    """A toggle drawn as a switch: track and knob (green while ``on``) with
+    ``text`` (already translated) after it; the whole slot is the button.
+    Returns the operator properties. Stock fallback: a checkbox glyph."""
+    if not available(layout):
+        return layout.operator(operator_id, text=text, translate=False, emboss=False,
+                               icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT')
+    slot = sized(layout, SWITCH_W + SWITCH_GAP + text_width(layout, SWITCH, text))
+    props = slot.operator(operator_id, text=text, translate=False)
+    tag(slot, SWITCH, lit=on)
+    return props
+
+
+def status_dot(layout, state):
+    """The disc leading a status line: STATUS_ON (green), STATUS_DANGER or
+    STATUS_DIM; the line's text follows STATUS_GAP after it. Stock
+    fallback: the matching icon."""
+    if not available(layout):
+        icons = {STATUS_ON: 'CHECKMARK', STATUS_DANGER: 'ERROR'}
+        layout.label(text="", icon=icons.get(state, 'TIME'))
+        return
+    slot = sized(layout, STATUS_DOT + STATUS_GAP)
+    slot.mixar_sheet_label(text="", kind=STATUS_DOT_KIND, lit=state == STATUS_ON,
+                           extra=1.0 if state == STATUS_DANGER else 0.0, translate=False)
+
+
+# ---------------------------------------------------------------------------
+# Snippet (code block)
+# ---------------------------------------------------------------------------
+
+def snippet_columns(layout, width_dp):
+    """Characters per line that fit ``width_dp`` of snippet text room: the
+    monospace face's measured advance (SNIPPET_COLUMNS without the painters)."""
+    if not hasattr(layout, 'mixar_sheet_text_width'):
+        return SNIPPET_COLUMNS
+    sample = "0" * 32
+    advance = max(1.0, (text_width(layout, SNIPPET, sample) - TEXT_SLACK) / len(sample))
+    # One column of headroom for the painter's whole-px rounding.
+    return max(16, int(width_dp / advance) - 1)
+
+
+def wrap_code(text, columns):
+    """Hard-wrap code at ``columns``: a continuation is indented four past its
+    line's own indent, and a long token (a path) breaks anywhere."""
+    lines = []
+    for line in text.splitlines():
+        indent = len(line) - len(line.lstrip())
+        lines += textwrap.wrap(line, columns, subsequent_indent=" " * (indent + 4),
+                               break_long_words=True, break_on_hyphens=False) or [""]
+    return lines
+
+
+def snippet_height(n_lines):
+    """The code block's height: its lines and padding, never under a field's."""
+    return max(INPUT_H, 2 * SNIPPET_PAD_Y + n_lines * SNIPPET_LINE_H)
+
+
+def snippet_dock_width(layout, text):
+    """Width of the corner-docked pill's slot: label, padding, inset. A plain
+    label like every other sheet pill — a stock glyph ahead of it outgrew
+    the measured slot and ellipsised "Copy" to "C…"."""
+    return text_width(layout, SECONDARY, text) + BUTTON_PAD + DOCK_INSET
+
+
+def snippet(parent, lines, left=0.0, right=0.0, dock=None):
+    """A code block of ``lines`` (see `wrap_code`) in the monospace face on
+    the key field's backdrop, `snippet_height` tall. ``dock`` =
+    ``(operator_id, text)`` docks a secondary pill in the box's
+    top-right corner — DOCK_INSET in from its top and right edges and
+    BUTTON_H tall however many lines the box holds; the box's text stops
+    short of it. Returns that pill's operator properties (None without a
+    dock). Stock fallback: a box of labels and a plain button under it."""
+    if not available(parent):
+        box = parent.box().column(align=True)
+        for line in lines:
+            box.label(text=line, translate=False)
+        if dock is None:
+            return None
+        return parent.row().operator(dock[0], text=dock[1], translate=False, icon='COPYDOWN')
+    height = snippet_height(len(lines))
+    line = row(parent, height, left=left, right=right)
+    dock_w = snippet_dock_width(line, dock[1]) if dock is not None else 0.0
+    # The backdrop runs under the docked column (the tag's payload).
+    line.mixar_sheet_label(text="\n".join(lines), kind=SNIPPET, extra=dock_w, translate=False)
+    if dock is None:
+        return None
+    side = line.column(align=True)
+    side.ui_units_x = units(dock_w)
+    top = side.row(align=True)
+    # Row scales multiply through nested layouts: relative to the block's.
+    top.scale_y = (DOCK_INSET + BUTTON_H) / height
+    props = top.operator(dock[0], text=dock[1], translate=False)
+    _flag(top, SECONDARY, False)
+    tag(side, SECONDARY, extra=DOCK_CORNER)   # also pins the column to its width
+    return props
+
+
+def wrap(layout, kind, text, width_dp):
+    """Word-wrap ``text`` into lines that fit ``width_dp`` in ``kind``'s face
+    (labels never wrap on their own). One line on a build without the
+    painters: nothing measures there, and a stock label clips by itself."""
+    if not hasattr(layout, 'mixar_sheet_text_width'):
+        return [text] if text else []
+    lines, current = [], ""
+    for word in text.split():
+        candidate = f"{current} {word}".strip()
+        if current and text_width(layout, kind, candidate) > width_dp:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines
 
 
 # ---------------------------------------------------------------------------

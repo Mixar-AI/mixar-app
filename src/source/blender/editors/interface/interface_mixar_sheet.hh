@@ -5,10 +5,11 @@
 /** \file
  * \ingroup edinterface
  *
- * The AI Provider settings sheet: the designer's framed two-column card
- * (title and subtitle over a header divider, a provider sidebar with its
- * Local Model foot, model chips, the key field with Save & Activate docked
- * inside it) painted onto an ordinary props dialog.
+ * The sheet dialogs (AI Provider settings, Connect MCP): the designer's
+ * framed two-column card (title and subtitle over a header divider, a
+ * sidebar of rows with a foot row, chips, the key field with its primary
+ * docked inside, code snippets, switches and status lines) painted onto an
+ * ordinary props dialog.
  *
  * The dialog stays a native block built from Python through the ordinary
  * layout API — Blender keeps events, text editing, RNA and the operator
@@ -21,7 +22,7 @@
  * (1440 x 700 design px for a 720 x 350 UI-px dialog, taller when its content
  * needs it), so every token below is a design px and `mixar_sheet::px` turns
  * it into region pixels. Python lays the rows out in the same units
- * (`byok/ui/operators/byok_sheet.py`: WIDTH, HEIGHT, HEADER, SIDEBAR), so the
+ * (`modules/common/sheet/kit.py`: WIDTH, HEIGHT, HEADER, SIDEBAR), so the
  * two sides never disagree about a measurement.
  */
 
@@ -106,11 +107,15 @@ inline constexpr uchar row_fill_b[4] = {0x31, 0x32, 0x35, 255};
 inline constexpr uchar row_text_off[4] = {0x9C, 0x9C, 0x9F, 255};
 inline constexpr uchar row_dot[4] = {0x7D, 0xDB, 0x8E, 255};
 
-/* -- Sidebar foot (Local model): a row like the providers, with a glyph -- */
+/* -- Sidebar foot (Local model, Other app): a row with a glyph ---------- */
 inline constexpr float footer_h = 64.0f;
 inline constexpr float footer_icon = 18.0f;
 inline constexpr float footer_icon_stroke = 1.5f;
 inline constexpr float footer_icon_gap = 14.0f;
+/** The foot's payload (`progress`) at or above this draws the terminal
+ * glyph (a rounded screen holding `>_`) instead of the monitor. */
+inline constexpr float footer_terminal = 1.0f;
+inline constexpr float footer_terminal_h = 15.0f;
 
 /* -- Model chip: 40 tall, 16 padding ------------------------------------ */
 inline constexpr float chip_h = 40.0f;
@@ -143,6 +148,28 @@ inline constexpr uchar secondary_fill[4] = {0x2E, 0x2F, 0x31, 255};
 inline constexpr uchar secondary_fill_hover[4] = {0x3A, 0x3B, 0x3E, 255};
 inline constexpr uchar danger_fill[4] = {0x3B, 0x22, 0x24, 255};
 inline constexpr uchar danger_fill_hover[4] = {0x4C, 0x2A, 0x2D, 255};
+/** A pill's payload (`progress`) at or above this docks it in the top-right
+ * corner of a taller block (a snippet), #button_dock_inset in from the top
+ * and right edges and #button_h tall; from 0.5 it docks full-height inside
+ * the key field. */
+inline constexpr float dock_corner = 2.0f;
+
+/* -- Snippet: a monospace code block on the key field's backdrop -------- */
+inline constexpr float snippet_size = 0.82f;  /* x body, monospace */
+inline constexpr float snippet_line_h = 28.0f;
+inline constexpr float snippet_pad_x = 22.0f;
+inline constexpr float snippet_pad_y = 18.0f;
+
+/* -- Switch: a 45 x 26 track, a 19 knob, the label 16 after it ---------- */
+inline constexpr float switch_w = 45.0f;
+inline constexpr float switch_h = 26.0f;
+inline constexpr float switch_knob = 19.0f;
+inline constexpr float switch_gap = 16.0f;
+inline constexpr uchar switch_track_off[4] = {0x3A, 0x3B, 0x3E, 255};
+inline constexpr uchar switch_track_off_hover[4] = {0x45, 0x46, 0x4A, 255};
+
+/* -- Status dot: the disc leading a status line (green / danger / dim) -- */
+inline constexpr float status_dot = 11.0f;
 
 /* Private kit shared by the two painter files. */
 
@@ -167,6 +194,14 @@ void stroke(float x0, float y0, float x1, float y1, float width, const uchar col
 /** The button's block as a region-pixel rect (popups map 1:1). */
 rctf block_rect(const Button *but);
 
+/* Shared by the painter files (`interface_mixar_sheet_controls.cc`). */
+const char *but_label(const Button *but);
+bool but_disabled(const Button *but);
+void lerp_col(uchar out[4], const uchar a[4], const uchar b[4], float t);
+/** Hover and press as one 0..1 cue. */
+float hover_cue(float hover, float press);
+float line_px();
+
 /* Painters (`interface_mixar_sheet_controls.cc`). */
 void draw_title(Button *but, const rcti *rect);
 void draw_caption(Button *but, const rcti *rect);
@@ -180,6 +215,11 @@ void draw_provider_row(Button *but, const rcti *rect);
 void draw_footer_row(Button *but, const rcti *rect);
 void draw_chip(Button *but, const rcti *rect);
 void draw_pill(Button *but, const rcti *rect, MixarCardElement element);
+/* `interface_mixar_sheet_blocks.cc`. */
+void draw_snippet(Button *but, const rcti *rect);
+void draw_switch(Button *but, const rcti *rect);
+void draw_status_dot(Button *but, const rcti *rect);
+void draw_footer_glyph(Button *but, float x, float cy, const uchar col[4]);
 
 }  // namespace mixar_sheet
 
@@ -192,7 +232,7 @@ bool UI_mixar_sheet_element_is(MixarCardElement element);
 /**
  * Mark \a layout's block as a sheet and record its chrome: the header divider
  * \a header_dp below the top edge and a sidebar \a sidebar_dp wide (design px).
- * Python always passes `byok_sheet.HEADER` / `SIDEBAR` (140 / 400); the RNA
+ * Python always passes `kit.HEADER` / `SIDEBAR` (140 / 400); the RNA
  * defaults of `layout.mixar_sheet_frame` (182 / 442) are the first artboard's
  * and are never used.
  */
@@ -201,9 +241,11 @@ void UI_layout_mixar_sheet_frame(Layout *layout, float header_dp, float sidebar_
 /**
  * Tag the most recently created button of \a layout's block as sheet
  * \a element. \a lit marks the current choice (provider row, chip);
- * \a extra is the kind's payload: for an input the design-px width of the
- * control docked after it that its field must run underneath, for a pill
- * 1.0 when it is docked inside the field.
+ * \a extra is the kind's payload: for an input (or a snippet) the design-px
+ * width of the control docked after it that its backdrop must run
+ * underneath, for a pill 1.0 when it is docked inside the field (2.0 in a
+ * snippet's corner), for the footer row 1.0 for the terminal glyph, for a
+ * status dot 1.0 for danger.
  */
 void UI_layout_mixar_sheet_tag_last(Layout *layout,
                                     MixarCardElement element,

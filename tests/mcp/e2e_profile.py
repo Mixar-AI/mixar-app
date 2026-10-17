@@ -4,7 +4,7 @@
 
 Event-simulate QA app on the loopback fixture (e2e_launch.py without
 --normal-input). No model or paid tool calls. Checks: Help has no MCP entry; the
-profile card (native, and its Python fallback) offers Connect AI Apps (MCP),
+profile card (native, and its Python fallback) offers Connect MCP,
 aligned with the other actions at 100% and 150% UI scale, and it opens the
 setup dialog; signed out, the dialog offers only Sign In and enabling, Add to
 and Copy refuse; signed in, Copy saves the tool list at once. ``--fallback-only``
@@ -19,7 +19,7 @@ import time
 
 from e2e_scene import load_qa
 
-LABEL = "Connect AI Apps (MCP)"
+LABEL = "Connect MCP"
 CONNECT = {"op": "MIXAR_OT_connect_ai", "popup": True}
 PROFILE = {"but_type": "Popover", "area_type": "TOPBAR"}
 WM = "bpy.context.window_manager"
@@ -73,14 +73,14 @@ def profile_layout(qa, output):
     return layouts
 
 
-#: The MCP switch's label (a checkbox: checked while MCP is on).
-SWITCH = "Allow AI apps to use Mixar (MCP)"
+#: The status line's pill while MCP is on (the sheet's only MCP switch).
+SWITCH = "Turn off"
+SIGN_IN = "Sign in to connect MCP."
 
 
 def signed_out_setup(qa, output, fixture):
-    """Signed out: the dialog offers Sign In, plus the MCP switch (only in its
-    "off" direction) while MCP is still on (the session expired); enabling
-    paths refuse."""
+    """Signed out: the sheet offers Sign in, plus Turn off on its status line
+    while MCP is still on (the session expired); enabling paths refuse."""
     saved = fixture / "connector" / "tools.json"
     mcp_on = "__import__('mixar.modules.mcp_bridge.core.runtime',fromlist=['x']).enabled()"
     assert qa.eval("result = list(bpy.ops.mixar.set_mcp_enabled(enabled=True))") == ["FINISHED"]
@@ -89,12 +89,12 @@ def signed_out_setup(qa, output, fixture):
     saved.unlink(missing_ok=True)
     qa.eval("result = list(bpy.ops.mixar.connect_ai('INVOKE_DEFAULT'))")
     time.sleep(0.8)
-    assert qa.find(text="Sign in to Mixar to connect AI apps.", popup=True)["total"] == 1
+    assert qa.find(text=SIGN_IN, popup=True)["total"] == 1
     assert qa.find(op="MIXIE_CHAT_OT_login", popup=True)["total"] == 1
     toggles = qa.find(op="MIXAR_OT_set_mcp_enabled", popup=True)["widgets"]
     assert [w["text"] for w in toggles] == [SWITCH], toggles  # Turning off needs no account.
     assert qa.find(op="MIXAR_OT_copy_mcp_setup", popup=True)["total"] == 0
-    snap(qa, output / "setup-signed-out.png", {"text": "Sign in to Mixar to connect AI apps.", "popup": True})
+    snap(qa, output / "setup-signed-out.png", {"text": SIGN_IN, "popup": True})
     qa.click(op="MIXAR_OT_set_mcp_enabled", popup=True)
     qa.wait(f"not {mcp_on}", timeout=10)
     signed_out_disable = True

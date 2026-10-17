@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Replay the Connect AI Apps (MCP) dialog's status line: signed in and
+"""Replay the Connect MCP dialog's status line: signed in and
 connected, then signed out with MCP still on.
 
 The dialog once said "MCP is on: AI apps can connect to this Mixar." under its
 own "Sign in to Mixar" notice, because the line only checked that the local
-relay existed. Event-simulate QA app from e2e_launch.py on a fixture backend
+relay existed. The sheet's status line ("MCP is on · ...") keeps that rule. Event-simulate QA app from e2e_launch.py on a fixture backend
 with guest accounts off (the default), so signing out stays signed out.
 Spends no credits. Read the emitted PNGs before claiming visual acceptance.
 """
@@ -17,10 +17,9 @@ import time
 
 from e2e_scene import load_qa
 
-READY = "MCP is on: AI apps can connect to this Mixar."
-NOT_READY = "MCP is on. AI apps can use Mixar once it's signed in and connected."
-SIGN_IN = "Sign in to Mixar to connect AI apps."
-CREDITS = "AI generation uses credits and needs a Mixar account."
+READY = "MCP is on · AI apps can connect to this Mixar"
+NOT_READY = "MCP is on · AI apps can use Mixar once it's signed in and connected"
+SIGN_IN = "Sign in to connect MCP."
 STATE = ("from mixar.modules.mcp_bridge.core import runtime\nwm=bpy.context.window_manager\n"
          "result={'mcp':runtime.enabled(),'running':runtime.is_running(),"
          "'connected':bool(runtime.snapshot().get('connected')),"
@@ -84,7 +83,7 @@ def main():
     texts = open_dialog("signed-in-connected.png")
     check("signed_in_connected_says_ai_apps_can_connect",
           state == {"mcp": True, "running": True, "connected": True, "signed_in": True}
-          and READY in texts and NOT_READY not in texts and CREDITS in texts and SIGN_IN not in texts,
+          and READY in texts and NOT_READY not in texts and SIGN_IN not in texts,
           {"state": state, "texts": texts})
 
     qa.eval("result = list(bpy.ops.mixie_chat.logout())")
@@ -96,8 +95,7 @@ def main():
           state["mcp"] and state["running"] and not state["signed_in"]
           and SIGN_IN in texts and NOT_READY in texts and READY not in texts,
           {"state": state, "texts": texts})
-    check("signed_out_can_still_turn_mcp_off",
-          any("Allow AI apps to use Mixar (MCP)" in text for text in texts), texts)
+    check("signed_out_can_still_turn_mcp_off", "Turn off" in texts, texts)
     failed = [name for name, entry in verdict["checks"].items() if not entry["ok"]]
     verdict["ok"] = not failed
     (out / "status-verdict.json").write_text(json.dumps(verdict, indent=2, default=str))

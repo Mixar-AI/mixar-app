@@ -112,7 +112,7 @@ def test_mcp_switched_off_in_mixar_is_named_not_mistaken_for_a_closed_mixar(desk
     assert client.readiness() == ("disabled", connector.DISABLED)
     with pytest.raises(RuntimeError, match="turned off in Mixar") as refusal:
         client.call("scene_overview", {}, "call-1")
-    assert "Connect AI Apps" in str(refusal.value) and not started
+    assert "Connect MCP" in str(refusal.value) and not started
     assert client.readiness()[0] == "disabled"  # The same answer on every attempt.
 
 

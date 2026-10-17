@@ -27,7 +27,8 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.byok.core import credential_state, key_prompt  # noqa: E402
-from mixar.modules.byok.ui.operators import byok_dialog_ui, byok_sheet  # noqa: E402
+from mixar.modules.byok.ui.operators import byok_dialog_ui  # noqa: E402
+from mixar.modules.common.sheet import kit as byok_sheet  # noqa: E402
 from mixar.modules.space_mixie_chat.constants import SessionState  # noqa: E402
 from mixar.modules.space_mixie_chat.core import byok_card, byok_notice, byok_resend, composer_send  # noqa: E402
 

@@ -6,7 +6,7 @@
 """Provider / model rows of the AI Provider Settings dialog.
 
 The sheet draws each provider as a sidebar pill and each model as a chip
-(`byok_sheet`). The sheet painters style plain operator buttons — an enum
+(`common/sheet/kit`). The sheet painters style plain operator buttons — an enum
 item button is a different widget type — so each row and chip is this
 operator, which writes the same form properties the save path reads. Assigning ``byok_form_provider`` still runs its update
 callback, which resets the model to the provider's first entry.

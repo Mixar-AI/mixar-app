@@ -7,7 +7,7 @@
 Split out of byok_ops.py (500-line rule): the dialog form
 (``byok_provider_settings_ui``) and the Save operator dispatch here when
 the selected provider is ``local``. Drawing uses the sheet kit
-(``byok_sheet``) so the branch matches the rest of the dialog. Data + save orchestration live in ``byok/core/local_provider.py``;
+(``common/sheet/kit``) so the branch matches the rest of the dialog. Data + save orchestration live in ``byok/core/local_provider.py``;
 the managed download/start/stop operators live in
 ``modules/local_models/ui/operators/local_models_ops.py`` — this file
 only draws and validates.
@@ -20,7 +20,7 @@ from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...constants import LOCAL_MODE_ITEMS
 from ...core import key_prompt, local_provider
-from . import byok_sheet as S
+from mixar.modules.common.sheet import kit as S
 from .byok_state_ops import ensure_dialog_redraw_pump
 
 logger = get_logger(__name__)

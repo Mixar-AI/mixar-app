@@ -1981,24 +1981,44 @@ void RNA_api_ui_layout(StructRNA *srna)
                   "Make this the dialog's default button (Return activates it; suppresses the "
                   "automatic OK/Cancel row in operator dialogs)");
 
-  /* Mixar AI Provider settings sheet. Values must match
+  /* Mixar sheet dialogs (AI Provider settings, Connect MCP). Values must match
    * `UI_mixar_sheet_element_from_kind` (interface_mixar_sheet.cc). */
   static const EnumPropertyItem mixar_sheet_kind_items[] = {
       {1, "TITLE", 0, "Title", "Sheet title; a subtitle follows a newline"},
       {2, "CLOSE", 0, "Close", "Square close button with a cross"},
       {3, "CAPTION", 0, "Caption", "Dim section caption; spans wrapped in \x1f are bright"},
       {4, "PROVIDER_ROW", 0, "Provider Row", "Sidebar row; the lit one is the graded pill"},
-      {5, "FOOTER_ROW", 0, "Footer Row", "The sidebar's full-bleed foot (Local Model)"},
+      {5,
+       "FOOTER_ROW",
+       0,
+       "Footer Row",
+       "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"},
       {6, "CHIP", 0, "Chip", "Model chip; the lit one is filled"},
       {7, "PROMPT", 0, "Prompt", "Field prompt text"},
       {8, "NOTE", 0, "Note", "Small supporting text"},
       {9, "BODY", 0, "Body", "Body text"},
       {10, "DANGER_TEXT", 0, "Danger Text", "Danger-tinted text"},
-      {11, "PRIMARY", 0, "Primary", "Green pill; extra 1.0 docks it inside the field before it"},
+      {11,
+       "PRIMARY",
+       0,
+       "Primary",
+       "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"},
       {12, "SECONDARY", 0, "Secondary", "Outlined grey pill"},
       {13, "DANGER_BUTTON", 0, "Danger Button", "Danger-tinted pill"},
       {14, "INPUT", 0, "Input", "Key field backdrop; extra is the docked control's design-px width"},
       {15, "DROPDOWN", 0, "Dropdown", "Menu backdrop with a chevron"},
+      {16,
+       "SNIPPET",
+       0,
+       "Snippet",
+       "Monospace code block (lines split on newlines) on the key field's backdrop; extra is "
+       "the corner-docked control's design-px width"},
+      {17, "SWITCH", 0, "Switch", "Track-and-knob toggle with its label after it; lit is on"},
+      {18,
+       "STATUS_DOT",
+       0,
+       "Status Dot",
+       "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   func = RNA_def_function(srna, "mixar_sheet_frame", "rna_uiLayoutMixarSheetFrame");

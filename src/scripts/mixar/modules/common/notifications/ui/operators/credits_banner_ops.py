@@ -14,7 +14,7 @@ Python place:
 * ``REFER`` — the dashboard's referrals page, signed in through a handoff;
 * ``CREATOR`` — the public Creator Program page (the Help menu's link);
 * ``BYOK`` — the AI Provider Settings dialog (run the agent on the user's own key);
-* ``MCP`` — the Connect AI Apps (MCP) dialog;
+* ``MCP`` — the Connect MCP dialog;
 * ``DISMISS`` — ✕, Esc or a backdrop click.
 """
 

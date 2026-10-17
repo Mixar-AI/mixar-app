@@ -6,7 +6,7 @@
 """AI Provider settings dialog — the sheet and its states.
 
 One framed card for every state (the designer's artboard, see
-`byok_sheet`): title and subtitle over the header divider, the provider
+`common/sheet/kit`): title and subtitle over the header divider, the provider
 sidebar with its LOCAL MODEL foot, and a right column whose contents follow
 ``wm.byok_dialog_state``:
 
@@ -16,7 +16,7 @@ sidebar with its LOCAL MODEL foot, and a right column whose contents follow
   SAVED / REMOVED        a recap with one Done
 
 The one-action contract: every state marks exactly ONE button as the
-dialog's active default (`byok_sheet.button(default=True)` /
+dialog's active default (`kit.button(default=True)` /
 `dismiss(default=True)`), which keeps the props dialog's automatic
 OK/Cancel row away and gives Return one meaning. Dialog-closing buttons (the
 ✕, Done) are ``template_popup_confirm`` cancel buttons, so closing runs the
@@ -30,7 +30,7 @@ from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
 from . import byok_provider_settings_ui as form
-from . import byok_sheet as S
+from mixar.modules.common.sheet import kit as S
 
 # Operator idnames as literals — byok_ops imports this module for its draw()
 # body, so importing the classes back would be circular.

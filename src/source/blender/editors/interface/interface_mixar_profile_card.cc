@@ -421,7 +421,7 @@ void add_actions(Layout *layout, const bool logged_in)
   Layout &connect = grid.row(true);
   connect.scale_y_set(ROW_ACTION);
   connect.operator_context_set(wm::OpCallContext::InvokeDefault);
-  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect AI Apps (MCP)"),
+  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect MCP"),
              MixarCardIcon::Plug, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);

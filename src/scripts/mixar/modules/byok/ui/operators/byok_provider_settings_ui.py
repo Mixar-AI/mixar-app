@@ -22,7 +22,7 @@ Status lines over the prompt, one per fact about the saved key:
 - the error, wrapped.
 
 Rows and chips are `mixar_byok.pick` buttons writing the same form
-properties the save path reads. Geometry comes from `byok_sheet` (design
+properties the save path reads. Geometry comes from `common/sheet/kit` (design
 px); this module only decides what goes where.
 """
 
@@ -30,7 +30,7 @@ from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...constants import LOCAL_PROVIDER_ID
 from ...core import catalog_labels, key_prompt, model_suggestions
-from . import byok_sheet as S
+from mixar.modules.common.sheet import kit as S
 
 OP_PICK = "mixar_byok.pick"
 OP_SAVE = "mixar_byok.save"
