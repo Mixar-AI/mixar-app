@@ -374,15 +374,38 @@ def test_a_key_mutation_in_flight_holds_the_composer(monkeypatch):
     assert not composer_send.model_change_pending(SimpleNamespace(mixie_chat_mode='GENERATE'))
 
 
-def test_a_record_for_another_provider_cannot_pause_the_active_key(pick):
+def test_a_record_for_another_provider_is_never_paused_as_the_active_key(pick):
     """This device holds an Anthropic record but the account's active key is
-    OpenAI (saved elsewhere): a Mixie pick must not pause it."""
+    OpenAI (saved elsewhere): the key is not pausable here (resuming would
+    send a different key). Its OpenAI key is missing on this computer, so a
+    Mixie pick turns the account's key off and leaves the record alone."""
     run, calls, wm = pick
     credential_state.apply_from_payload({"byok_active": True, "items": [{"provider": "openai", "model": "gpt-6-sol"}]}, wm)
     credential_state.set_resumable({"provider": "anthropic", "model": "claude-opus-5-5"})
+    credential_state.set_device_key_missing(True)
     assert not credential_state.pausable()
     assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'FINISHED'}
-    assert calls.pause == [] and calls.dialog == [True]
+    assert len(calls.pause) == 1 and calls.dialog == []
+    calls.pause[0]()  # the key is off: the hosted pick follows
+    assert calls.set == [("anthropic", "claude-sonnet-5-5", "")]
+
+
+def test_a_mixie_pick_with_the_key_missing_here_switches_to_mixie(pick):
+    """Key needed on this computer (no record here): picking Mixar default or
+    a hosted model turns the account's key off and applies the pick, like the
+    chat card's "Use Mixar credits instead" — it no longer bounces to AI
+    Provider Settings."""
+    run, calls, wm = pick
+    credential_state.apply_from_payload({"byok_active": True, "items": [{"provider": "codex", "model": "gpt-6-astra"}]}, wm)
+    credential_state.set_device_key_missing(True)
+    assert run(TAB_MIXIE) == {'FINISHED'}                      # Mixar default
+    assert len(calls.pause) == 1 and calls.dialog == []
+    # Mixar default is already the hosted pick: turning the key off is all it takes.
+    assert calls.pause[0]() is True and calls.reset == [] and calls.set == []
+    # Local still opens the settings (its Start / Stop live there).
+    credential_state.apply_from_payload({"byok_active": True, "items": [{"provider": "local", "model": "llama3"}]}, wm)
+    assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'FINISHED'}
+    assert calls.dialog == [True]
 
 
 # ---------------------------------------------------------------------------

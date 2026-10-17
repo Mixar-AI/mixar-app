@@ -87,8 +87,12 @@ class MIXAR_OT_agent_pick(Operator):
             if not state["hosted_ok"]:
                 return {'CANCELLED'}  # Mixar's models need an account (the card says so).
             if state["source"] != TAB_MIXIE or preference_state.snapshot()["mixar_agent_model_byok_active"]:
-                if not state["pausable"]:
+                if not state["pausable"] and not state["key_missing"]:
                     return _open_settings()
+                # Key needed on this computer: there is no copy here to keep,
+                # so the pick just turns the account's key off (as the chat
+                # card's "Use Mixar credits instead" does) and applies the
+                # hosted pick — the computer holding the key can resume it.
                 hosted = _hosted(wm, provider, model, thinking, state)
                 return {'FINISHED'} if byok_toggle_ops.pause(wm, then=hosted) else {'CANCELLED'}
             return {'FINISHED'} if _hosted(wm, provider, model, thinking, state)() else {'CANCELLED'}
