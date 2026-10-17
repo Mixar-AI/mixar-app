@@ -190,7 +190,9 @@ def _run_resave(monkeypatch, record, model='claude-sonnet-5-5', response=None, r
         return record
 
     monkeypatch.setattr(key_store, 'load', load)
-    monkeypatch.setattr(key_store, 'update', lambda changes, user_id=None: updates.append(changes) or True)
+    monkeypatch.setattr(key_store, 'current_user_id', lambda: 'user-at-submit')
+    monkeypatch.setattr(key_store, 'update',
+                        lambda changes, user_id=None: updates.append((changes, user_id)) or True)
     monkeypatch.setattr(key_store, 'materialize',
                         lambda rec: (live, None) if live is not None else (rec, None))
     monkeypatch.setattr(codex_auth, 'needs_refresh', lambda token, now=None: False)
@@ -206,7 +208,10 @@ def test_a_cloud_record_is_resent_sealed_on_the_new_model(monkeypatch):
                       'api_key': 'sealed:sk-ant-x', 'base_url': None, 'supports_vision': None,
                       'account_id': None}]
     assert results == [(True, _payload(model='claude-sonnet-5-5'), None)]
-    assert updates == [{'model': 'claude-sonnet-5-5'}]  # a later resume re-sends this model
+    # A later resume re-sends this model; written for the account the record
+    # was loaded for, never the token of the moment (a logout + sign-in
+    # inside the round trip).
+    assert updates == [({'model': 'claude-sonnet-5-5'}, 'user-at-submit')]
     assert not byok_client.mutation_in_flight()
 
 

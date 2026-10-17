@@ -161,11 +161,10 @@ _SIGNED_OUT_MSG = n_("Signed out before the request finished.")
 
 
 def _account_epoch() -> int:
-    """The credential lifecycle epoch (bumped by logout). Captured on the
-    main thread when a request is submitted and compared on the worker right
-    before the network call: a logout + sign-in as another account inside
-    that window (a Codex refresh can take seconds) must never send the first
-    account's key or delete the second account's rows with the new token."""
+    """The credential lifecycle epoch (bumped by logout): captured at submit,
+    compared on the worker before the network call, so a logout + sign-in
+    as another account inside that window (a Codex refresh can take seconds)
+    never sends the first account's key with the second account's token."""
     from . import credential_state
 
     return credential_state.current_epoch()
@@ -177,9 +176,8 @@ def mutation_in_flight() -> bool:
 
 
 def _track(on_done: Callable) -> Callable:
-    """Count a request until its callback runs. The release happens before
-    the caller's callback, so even a raising callback cannot leave it stuck;
-    `_run_worker` guarantees the callback is delivered."""
+    """Count a request until its callback runs (released BEFORE the caller's
+    callback, so a raising callback cannot leave it stuck)."""
     global _mutations_in_flight
     _mutations_in_flight += 1
     generation = _in_flight_generation
@@ -202,14 +200,12 @@ def _track(on_done: Callable) -> Callable:
 
 def hold() -> Callable[[], None]:
     """Count a save that starts with local work before its HTTP call (the
-    Local custom endpoint's ping); call the returned release once that work
-    ends, then send the request (which counts itself)."""
+    Local ping); release once that work ends, then send (which counts itself)."""
     return _track(lambda *args: None).release
 
 
 def reset_in_flight() -> None:
-    """Logout: the next account must not wait on the previous one's request
-    (its late callback is epoch-guarded and never drives the count negative)."""
+    """Logout: the next account must not wait on the previous one's request."""
     global _mutations_in_flight, _in_flight_generation
     _mutations_in_flight = 0
     _in_flight_generation += 1
@@ -218,11 +214,9 @@ def reset_in_flight() -> None:
 def _run_worker(name: str, work: Callable[[], tuple], on_done: Callable,
                 failure: tuple) -> None:
     """Run ``work`` off the main thread and ALWAYS deliver ``on_done(*result)``
-    on the main thread — ``failure`` when anything at all goes wrong (even the
-    error classification itself), on the calling (main) thread when no worker
-    can be started. A request that never answers would otherwise leave the
-    dialog busy and every key action refused for the session. (With no timer
-    at all only the in-flight count is released: bpy is main-thread.)"""
+    on the main thread — ``failure`` when anything goes wrong (even the error
+    classification), on the calling thread when no worker can start; with no
+    timer at all only the in-flight count is released (bpy is main-thread)."""
     def _deliver(result):
         try:
             _schedule_on_main(on_done, *result)
@@ -311,9 +305,12 @@ def save_credentials(
     on_done = _track(on_done)
 
     def _work():
+        from . import key_store
+
+        user_id = key_store.current_user_id()  # before the call: never the next account's
         success, data, err = _put_sealed(provider, model, api_key, base_url,
                                          supports_vision, account_id)
-        if success and not _store_local_key(provider, api_key, codex_auth_path, model):
+        if success and not _store_local_key(provider, api_key, codex_auth_path, model, user_id):
             success, err = False, _LOCAL_STORE_FAILED_MSG
         return success, data, err
 
@@ -342,7 +339,8 @@ def resave_stored_key(
     def _work():
         from . import codex_auth, key_store, turn_credentials
 
-        record = key_store.load()
+        user_id = key_store.current_user_id()
+        record = key_store.load(user_id)
         if record is None or (record.get("provider") or "") in ("", LOCAL_PROVIDER_ID):
             return False, None, _NO_STORED_KEY_MSG
         provider = record["provider"]
@@ -356,7 +354,7 @@ def resave_stored_key(
         if resolution.blocked:
             return False, None, resolution.error
         if resolution.record_changes and not key_store.persist_changes(
-                live, resolution.record_changes):
+                live, resolution.record_changes, user_id):
             # The grant rotated the refresh token and the file could not take
             # it: the next turn will refresh with a stale token and read as
             # revoked. Say so in the log; the turn path has the same gap.
@@ -368,7 +366,7 @@ def resave_stored_key(
         if epoch != _account_epoch():
             return False, None, _SIGNED_OUT_MSG
         success, data, err = _put_sealed(provider, target, api_key, None, None, account_id)
-        if success and not key_store.update({"model": target}):
+        if success and not key_store.update({"model": target}, user_id):
             # The server runs the new model; only a later resume would re-send
             # the old one. Not an error the user can act on.
             logger.warning("BYOK model switched, but this device's record kept the old model")
@@ -440,15 +438,18 @@ def delete_credentials(
     epoch = _account_epoch()
 
     def _work():
+        from . import key_store
+
         if epoch != _account_epoch():
             return False, 0, _SIGNED_OUT_MSG
+        user_id = key_store.current_user_id()  # before the call: never the next account's
         response = get_agent_service().delete_credentials_all()
         success, data, err = _translate(response)
         if not success:
             return False, 0, err
         removed = data.get("removed", 0) if isinstance(data, dict) else 0
         if forget_local:
-            _forget_local_key()
+            _forget_local_key(user_id)
         return True, removed if isinstance(removed, int) else 0, None
 
     _run_worker("MixarBYOKDelete", _work, on_done,
@@ -476,14 +477,15 @@ def forget_stored_key(on_done: Callable[[bool], None]) -> None:
 # This device's copy of the key (worker thread; the store blocks)
 # ---------------------------------------------------------------------------
 
-def _store_local_key(provider, api_key, codex_auth_path, model) -> bool:
+def _store_local_key(provider, api_key, codex_auth_path, model, user_id=None) -> bool:
     """True when the record is in this device's store (Codex: the file
-    reference only — never the tokens)."""
+    reference only — never the tokens), under ``user_id`` (the account the
+    request was made as; None resolves the current token)."""
     try:
         from . import key_store
 
         record = key_store.make_record(provider, api_key, auth_path=codex_auth_path, model=model)
-        if key_store.save(record):
+        if key_store.save(record, user_id):
             return True
         logger.warning("BYOK key was validated but could not be stored on this device")
     except Exception as e:  # noqa: BLE001 — the server state is already saved
@@ -491,10 +493,10 @@ def _store_local_key(provider, api_key, codex_auth_path, model) -> bool:
     return False
 
 
-def _forget_local_key() -> None:
+def _forget_local_key(user_id=None) -> None:
     try:
         from . import key_store
 
-        key_store.delete()
+        key_store.delete(user_id)
     except Exception as e:  # noqa: BLE001
         logger.warning("BYOK local key store delete failed: %s", type(e).__name__)
