@@ -251,9 +251,7 @@ def _shape_exception(exc: Exception, failure: tuple) -> tuple:
     if len(failure) != 3:
         return failure
     success, data, err = _translate_exception(exc)
-    if isinstance(failure[1], int):
-        return False, 0, err  # delete's (success, removed_count, error)
-    return success, data, err
+    return (False, 0, err) if isinstance(failure[1], int) else (success, data, err)
 
 
 # ---------------------------------------------------------------------------
@@ -458,8 +456,7 @@ def delete_credentials(
 
 def forget_stored_key(on_done: Callable[[bool], None]) -> None:
     """Delete this device's key record only (a paused key the user no longer
-    wants kept). Nothing is sent: the server holds nothing for a paused
-    key. ``on_done(deleted)`` on the main thread."""
+    wants kept); nothing is sent. ``on_done(deleted)`` on the main thread."""
     on_done = _track(on_done)
     epoch = _account_epoch()
 
