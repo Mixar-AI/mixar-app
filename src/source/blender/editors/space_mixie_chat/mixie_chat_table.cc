@@ -257,7 +257,7 @@ static void draw_cell_text(const char *text,
 
 float chat_ui_calc_table_height(const MarkdownSegment *seg,
                                  const ChatBubbleStyle *style,
-                                 float content_width,
+                                 float /*content_width*/,
                                  float scale_factor)
 {
   if (!seg->text[0]) {

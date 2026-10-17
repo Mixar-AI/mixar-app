@@ -29,8 +29,8 @@ Design notes, each one a failure this replaces:
   finish.
 
 Paths reach PowerShell through environment variables set by the script
-rather than through its command line, so there is no second layer of
-quoting to get wrong.
+rather than through its command line. Start-Process still joins its
+ArgumentList into one command line, so each path needs explicit quotes.
 """
 
 import os
@@ -63,11 +63,25 @@ _CREATE_BREAKAWAY_FROM_JOB = 0x01000000
 _UNSAFE_BATCH_CHARS = ('"', "%", "^", "&", "|", "<", ">", "\r", "\n")
 
 _PS_INSTALL = (
-    "$a=@('/i',$env:MSI,'/qb!','/norestart','REBOOT=ReallySuppress',"
-    "'LAUNCHAPP=0','/l*v',$env:MSILOG);"
+    "$q=[char]34;"
+    "$a=@('/i',($q+$env:MSI+$q),'/qb!','/norestart','REBOOT=ReallySuppress',"
+    "'LAUNCHAPP=0','/l*v',($q+$env:MSILOG+$q));"
+    "try{"
     "$p=Start-Process -FilePath 'msiexec.exe' -ArgumentList $a "
-    "-Verb RunAs -Wait -PassThru;"
+    "-Verb RunAs -Wait -PassThru -ErrorAction Stop;"
+    # A launch failure must never become `exit $null` (success). Preserve
+    # msiexec's actual status, including success-with-reboot (3010).
+    "if($null -eq $p -or $null -eq $p.ExitCode){exit 1};"
     "exit $p.ExitCode"
+    "}catch{"
+    # PowerShell can wrap the Win32 exception; normalise UAC cancellation
+    # to MSI's existing user-cancelled result so the next-start toast agrees.
+    "$e=$_.Exception;"
+    "while($e -and -not ($e -is [System.ComponentModel.Win32Exception]))"
+    "{$e=$e.InnerException};"
+    "if($e -and $e.NativeErrorCode -eq 1223){exit 1602};"
+    "[Console]::Error.WriteLine($_.Exception.Message);exit 1"
+    "}"
 )
 
 _PS_VERIFY = (

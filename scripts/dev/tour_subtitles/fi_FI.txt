@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Hei, olen Naman Mixarilta.
+Hei, olen Naman.
 Esittelen sovelluksen muutamassa minuutissa.
 Tämä on 3D-näkymäsi.
 Kolmiulotteinen tila, jossa voit liikkua.
@@ -26,9 +26,9 @@ Yhdistä oma kirjastosi, jotta agentti voi käyttää aineistoasi,
 ja säästät krediittejä.
 Vasemmassa yläkulmassa on kohtauspaneeli.
 Jokaisella kohtauksella on oma välilehti ja Mixie-agentti.
-Suorita tehtäviä rinnakkain ja vaihda niiden välillä milloin vain.
-Kun kohtaus on valmis, siirry Cinema Modeen
-ohjataksesi kameraa ja luodaksesi videotyönkulkuja.
+Suorita tehtäviä rinnakkain ja vaihda milloin vain – aitoa rinnakkaisuutta.
+Kun olet valmis kuvaamaan, siirry Cinema Modeen
+ohjataksesi kameraa ja luodaksesi ammattitason videoita.
 Ideat alkavat 2D:stä.
 Vedä moodboard esiin oikealta tai paina tildeä.
 Se on pohja viitteille ja ideoille.
@@ -40,6 +40,6 @@ Koko Blender-työtila on käytössä paneeleineen ja pikanäppäimineen.
 Mixie toimii molemmissa. Valitse sinulle sopiva.
 Palataan Zen Modeen.
 Luovien kumppanien ohjelmamme tarjoaa krediittejä
-ja yhteisön, joka muovaa tekoälyn ja 3D:n tulevaisuutta.
+ja yhteisön, joka muovaa tekoälyn tulevaisuutta mediassa.
 Siinä kaikki. Nyt tiedät, mistä kaikki löytyy.
 Luodaan 3D:tä yhdessä.

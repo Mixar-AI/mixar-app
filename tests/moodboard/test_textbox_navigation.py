@@ -18,7 +18,8 @@ def modal(kind):
     navigation = next(n for n in constants.body if isinstance(n, ast.Assign)
                       and any(isinstance(t, ast.Name) and t.id == 'TEXTBOX_NAVIGATION_EVENTS'
                               for t in n.targets))
-    tree = ast.parse((MODULE / 'ui/operators/textbox_ops.py').read_text())
+    source = 'textbox_add_ops.py' if kind == 'add' else 'textbox_ops.py'
+    tree = ast.parse((MODULE / 'ui/operators' / source).read_text())
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef)
                and n.name == f'MIXIE_OT_moodboard_{kind}_textbox')
     fn = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == 'modal')

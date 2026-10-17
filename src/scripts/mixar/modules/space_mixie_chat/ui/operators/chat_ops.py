@@ -10,8 +10,7 @@ Core send-message operator for Agent mode with WebSocket streaming.
 Generate mode is delegated to generate_ops.py.
 """
 
-import os
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ThreadPoolExecutor
 
 import bpy
 from bpy.types import Operator
@@ -19,15 +18,17 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
+from mixar.modules.common.analytics.essential_events import capture_agent_message, capture_generate_message
 from mixar.modules.common.i18n import iface_, rpt_
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
 from ...core.performance_metrics import get_metrics
 from ...core import (
-    encode_attachment_for_upload,
     get_session_manager,
 )
+from ...core.attachment_encoding import encode_outgoing_attachments
 from ...core.attachment_names import resolve_attachment_names
+from ...core.attachment_pairing import legacy_attachment_names, pair_names_with_images
 from ...core.composer_send import (
     HINT_QUEUED,
     OutgoingMessage,
@@ -117,11 +118,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Check if Generate mode - delegate to generate_ops
         if scene.mixie_chat_mode == 'GENERATE':
-            capture(EVENT_MESSAGE_SENT, {
-                "mode": "generate",
-                "has_attachments": bool(len(scene.mixie_chat_pending_attachments)),
-                "generate_type": getattr(scene, "mixie_chat_generate_type", "") or None,
-            }, context=context)
+            capture_generate_message(context)
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
@@ -231,18 +228,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
             )
             return {'CANCELLED'}
 
-        capture(EVENT_MESSAGE_SENT, {
-            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
-            "has_attachments": bool(len(pending_attachments)),
-            "is_modify": is_modify,
-            "is_awaiting_input": is_awaiting_input,
-            "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
-            "auto_mode": bool(getattr(scene, "mixie_chat_auto_mode", False)),
-            "model": getattr(scene, "mixie_chat_model", "") or None,
-        }, context=context)
-
         # Dev mode: simulate response without backend
         if DEV_MODE:
+            capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input,
+                                  message_bytes=len(message_text.encode('utf-8')))
             return self._execute_dev_mode(context, message_text)
 
         connection_manager = get_connection_manager()
@@ -271,6 +260,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 # message because the marks could not be assembled.
                 logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
 
+        # The finalized outgoing payload determines usage, not merely opening
+        # Sketch or keeping a previously sent drawing in the scene.
+        capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context,
+                              message_bytes=len(message_text.encode('utf-8')))
+
         fresh_turn = not (is_modify or is_awaiting_input or interjecting)
         if fresh_turn:
             # A fresh turn is the reliable point to sweep asset-picker
@@ -294,6 +288,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
+        user_index = len(scene.mixie_chat_messages) - 1
         user_msg.sender = 'USER'
         user_msg.text = message_text
         if interjecting:
@@ -318,78 +313,38 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # interjection answers inside the turn already streaming.
         if fresh_turn:
             add_turn_placeholder(scene)
+            # A collection add() reallocates the IDProperty array: every item
+            # reference taken before it points into freed memory (ASAN,
+            # 2026-09-30: heap-use-after-free writing request_id through the
+            # stale bubble). Resolve the user bubble again by index.
+            user_msg = scene.mixie_chat_messages[user_index]
 
         # Trigger immediate redraw to show user message + loader together
         metrics.start_timer('optimistic_ui_redraw')
         redraw_chat_areas()
         metrics.stop_timer('optimistic_ui_redraw')
 
-        # Encode pending attachments to base64 asynchronously
-        encoded_attachments = []
-        if not is_modify and not is_awaiting_input and len(outgoing_attachments) > 0:
-            metrics.start_timer('image_encoding_total')
-            executor = get_image_encoder()
-
-            # Submit encoding tasks to thread pool
-            encoding_futures = []
-            attachment_data = []  # Store (path, source) tuples
-
-            for att in outgoing_attachments:
-                att_data = (att.image_path, att.image_source)
-                attachment_data.append(att_data)
-
-                if att.image_source == 'FILE':
-                    # FILE images (read + PIL compress) are safe off the main thread
-                    future = executor.submit(
-                        encode_attachment_for_upload, att.image_path, att.image_source
-                    )
-                    encoding_futures.append(future)
-                else:
-                    # BLEND_DATA images access bpy.data — must stay on main thread
-                    encoding_futures.append(None)
-
-            # Per-image budget. Compression bounds the work (a 12MP photo is
-            # decoded at reduced scale and re-encoded in well under a second),
-            # so a timeout here means something is genuinely wrong with that
-            # one image — drop it and send the rest, never the whole set.
-            timeout_per_image = 10.0
-
-            for idx, future in enumerate(encoding_futures):
-                att_path, att_source = attachment_data[idx]
-                try:
-                    if future is None:
-                        # BLEND_DATA: encode on main thread (bpy.data access)
-                        encoded = encode_attachment_for_upload(att_path, att_source)
-                    else:
-                        encoded = future.result(timeout=timeout_per_image)
-                except FuturesTimeoutError:
-                    logger.error(f"Image encoding timeout for {att_path}")
-                    self.report({'WARNING'}, rpt_("Skipped slow image: {name}").format(
-                        name=os.path.basename(att_path)))
-                    continue
-                except Exception as e:
-                    logger.error(f"Image encoding error for {att_path}: {e}")
-                    self.report({'WARNING'}, rpt_("Image encoding failed: {error}").format(error=e))
-                    continue
-
-                if encoded:
-                    b64, mime_type = encoded
-                    encoded_attachments.append({"base64": b64, "mime_type": mime_type})
-                else:
-                    logger.warning(f"Failed to encode attachment index {idx}")
-
-            total_encode_time = metrics.stop_timer('image_encoding_total')
-            if encoded_attachments and total_encode_time is not None:
-                logger.info(f"Encoded {len(encoded_attachments)} image attachment(s) in {total_encode_time*1000:.1f}ms")
-
-        # Stable bpy.data.images names (and #1268 imported object names) the
-        # backend inlines into the user message — core/attachment_names.py.
+        # Encode the outgoing attachments (one slot per attachment, None when
+        # skipped) and resolve their stable bpy.data.images names (plus #1268
+        # imported object names). Each name then rides with exactly the image
+        # it was resolved for — core/attachment_pairing.py — so one skipped
+        # image can never shift the labels of the rest.
+        encoded_attachments: list = []
         attachment_names: list = []
         imported_object_names: list = []
         if not is_modify and not is_awaiting_input and len(outgoing_attachments) > 0:
-            attachment_names, imported_object_names = resolve_attachment_names(
+            metrics.start_timer('image_encoding_total')
+            encoded = encode_outgoing_attachments(
+                outgoing_attachments, get_image_encoder(), self.report
+            )
+            names, imported_object_names = resolve_attachment_names(
                 outgoing_attachments
             )
+            encoded_attachments = pair_names_with_images(encoded, names)
+            attachment_names = legacy_attachment_names(encoded_attachments)
+            total_encode_time = metrics.stop_timer('image_encoding_total')
+            if encoded_attachments and total_encode_time is not None:
+                logger.info(f"Encoded {len(encoded_attachments)} image attachment(s) in {total_encode_time*1000:.1f}ms")
 
         metrics.start_timer('agent_send')
 

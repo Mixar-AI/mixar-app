@@ -47,8 +47,12 @@ def picker(qa, out, op, path, *, video=False, confirm=True):
                        f"p.directory={str(path.parent).encode()!r}\np.filename={path.name!r}\n"
                        "result={'glob':p.filter_glob,'movies':p.use_filter_movie}")
     glob = selected['glob'].lower()
-    assert ('*.mp4' in glob) == video, selected
-    assert '*.png' in glob, selected
+    if op == OTHER_UPLOADS['AGENT']:
+        # The Agent picker lists every file: non-images become context-file chips.
+        assert glob == '', selected
+    else:
+        assert ('*.mp4' in glob) == video, selected
+        assert '*.png' in glob, selected
     # Commit the native field to finish File Browser directory navigation;
     # assigning RNA alone leaves its asynchronous file list at Loading.
     qa.click(area_type='FILE_BROWSER', prop='directory')
@@ -89,6 +93,12 @@ def non_video_mode(qa, out, mode, movie):
     pause(qa)
     assert movie.name not in references(qa), (mode, references(qa))
     assert qa.eval(f'result=not {SCENE}.mixie_chat_pending_attachments')
+    if mode == 'AGENT':
+        # The Agent picker turns a movie into a context-file chip (never a pill);
+        # detach it so the later steps start clean.
+        qa.wait(f'{movie.name!r} in [w["text"] for w in drv.find(surface="reference_file")]', timeout=8)
+        qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_remove_context_file')
+        qa.wait(f'not {SCENE}.mixie_context_files', timeout=5)
 
 
 def restored_draft(qa, out, movie):
@@ -103,7 +113,7 @@ def restored_draft(qa, out, movie):
         qa.wait("bool(drv.find(surface='reference_preview'))", timeout=6)
         result = qa.eval("from mixar.modules.space_mixie_chat.core.composer_send import can_send\n"
                          f"result=can_send({SCENE})")
-        assert result[0] is False and 'Video mode' in result[1], result
+        assert result[0] is False and 'context' in result[1], result  # legacy pill guard
         # Clicking the native disabled action cannot create a user message.
         qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')
         assert qa.eval('import chat_send_probe as probe; result=len(probe.calls)') == 0
@@ -114,15 +124,19 @@ def restored_draft(qa, out, movie):
     assert qa.eval(f'from mixar.modules.space_mixie_chat.core.composer_send import can_send; result=can_send({SCENE})[0]') is True
 
 
-def from_blend_rejection(qa, movie):
+def from_blend_context_file(qa, movie):
+    # A movie datablock is listed and routes to a context-file chip, not a pill.
     result = qa.eval("from mixar.modules.space_mixie_chat.core.image_utils import get_blend_images\n"
-                     f"assert {movie.name!r} not in [i['name'] for i in get_blend_images()]\n"
+                     f"assert {movie.name!r} in [i['name'] for i in get_blend_images()]\n"
                      "h=drv.find(area_type='AGENT_BUBBLE',text='Agent chat')[0]\n"
                      "with bpy.context.temp_override(window=h['_win']):\n"
                      f"    status=bpy.ops.mixie_chat.add_image_from_blend(dropped_image_name={movie.name!r})\n"
                      "result=list(status)")
-    assert result == ['CANCELLED'], result
+    assert result == ['FINISHED'], result
     assert qa.eval(f'result=not {SCENE}.mixie_chat_pending_attachments')
+    qa.wait(f'{movie.name!r} in [i.name for i in {SCENE}.mixie_context_files]', timeout=5)
+    qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_remove_context_file')
+    qa.wait(f'not {SCENE}.mixie_context_files', timeout=5)
 
 
 def run(qa):
@@ -175,9 +189,12 @@ def run(qa):
         qa.wait("not drv.find(surface='reference_preview')", timeout=5)
         tab(qa, 'AGENT')
         qa.wait(f'not {SCENE}.mixie_chat_pending_attachments', timeout=5)
-        qa.step('agent-native-video-drop-refused', batch_drop, qa, [movie], chat=True)
+        qa.step('agent-native-video-drop-attaches-context-file', batch_drop, qa, [movie], chat=True)
         assert qa.eval(f'result=not {SCENE}.mixie_chat_pending_attachments')
-        qa.step('agent-from-blend-refused', from_blend_rejection, qa, movie)
+        qa.wait(f'{movie.name!r} in [i.name for i in {SCENE}.mixie_context_files]', timeout=8)
+        qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_remove_context_file')
+        qa.wait(f'not {SCENE}.mixie_context_files', timeout=5)
+        qa.step('agent-from-blend-attaches-context-file', from_blend_context_file, qa, movie)
         qa.step('restored-video-drafts-cannot-send', restored_draft, qa, out, movie)
         assert qa.eval('import chat_send_probe as probe; result=len(probe.calls)') == 0
         verdict = {'video_picker':True,'video_preview':True,'non_video_modes':list(OTHER_UPLOADS),

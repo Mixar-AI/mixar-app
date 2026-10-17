@@ -20,6 +20,8 @@
 #include <climits>
 #include <cstdint>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -45,6 +47,9 @@
 #include "WM_types.hh"
 
 #include "BLI_rect.h"
+
+#include "agent_ui_model_card.hh"
+#include "agent_ui_provider.hh"
 
 #include "UI_interface.hh"
 #include "UI_resources.hh"
@@ -167,6 +172,14 @@ namespace blender {
  * island's rounded corners are not clipped square by a tighter frame. */
 #define AGENT_BUBBLE_CORNER_RADIUS 14.0f
 
+#ifdef __linux__
+extern "C" void Mixar_WindowSetCustomDecoration(void *window_handle, int width, int height, float radius);
+extern "C" bool Mixar_WindowBeginNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowUpdateNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowEndNativeDrag(void *window_handle);
+extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int height);
+#endif
+
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
  * GHOST_SystemWin32.cc (Windows). Declared here as extern "C" so we
  * don't need a fresh GHOST header just for these (the editor build
@@ -234,6 +247,7 @@ extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
+extern "C" void Mixar_AppActivate(void *window_handle);
 extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle);
 extern "C" void Mixar_DispatchMainAfter(float delay_seconds,
                                         void (*callback)(void *),
@@ -266,7 +280,10 @@ void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
 static void agent_bubble_island_panel_color(float r_rgba[4])
 {
   if (agent_bubble_island_bed_is_transparent()) {
-    const float wash[4] = AGENT_COL_GLASS_WASH;
+    float wash[4] = AGENT_COL_GLASS_WASH;
+#if defined(WIN32) || defined(__linux__)
+    agent_bubble_composited_island_wash(wash);
+#endif
     r_rgba[0] = wash[0] * wash[3];
     r_rgba[1] = wash[1] * wash[3];
     r_rgba[2] = wash[2] * wash[3];
@@ -641,12 +658,13 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   }
 
   agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
-  /* A small menu (context_folder/ui/menus/attach_menu.py): an image or 3D
-   * file through `mixie_chat.add_image_from_file`, or a folder the agent
-   * uses as context. Dropping a file on the island still attaches it. */
+  /* A small menu (context_folder/ui/menus/attach_menu.py): any files through
+   * `mixie_chat.add_image_from_file` (images become pills, models import,
+   * everything else becomes a context-file chip), or a folder the agent uses
+   * as context. Dropping a file on the island still attaches it. */
   uiDefButO(block, ui::ButtonType::But, "mixie_chat.attach",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-            TIP_("Attach a reference image or 3D file, or a folder the agent can use as context"));
+            TIP_("Attach files or a folder the agent can use as context"));
 
   /* --- Scribble chips, right of Upload ---
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
@@ -709,34 +727,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                 TIP_("Auto mode: the agent decides open choices itself instead of asking you, "
                      "and lists its decisions in the summary"));
 
-  /* --- Model, right of Auto ---
-   * Pops the Python menu that owns the whole picker (catalog projection,
-   * preference state, the PUT); C++ only draws the chip and reads the
-   * WindowManager mirror. A pulldown is anchored to this chip. A free popup
-   * opened downward from the cursor on this bottom row, and its last item
-   * covered Upload Reference. The chip is absent until the Python half
-   * registers the mirror, and an empty rect means the width budget dropped it. */
-  if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
-    agent_bubble_rect_to_region(region, layout->chip_model, &bx, &by, &bw, &bh);
-    uiDefMenuBut(
-        block,
-        [](bContext *C, ui::Layout *menu_layout, void * /*arg*/) {
-          MenuType *mt = WM_menutype_find("MIXIE_CHAT_MT_agent_model", false);
-          if (mt != nullptr) {
-            ui::menutype_draw(C, mt, menu_layout);
-          }
-        },
-        nullptr,
-        "",
-        bx,
-        by,
-        bw,
-        bh,
-        state->model_byok_active ?
-            TIP_("Your own API key is in use, and it decides the model. Open this menu "
-                 "and pick \"Change or remove my API key\" to choose a hosted model again") :
-            TIP_("Choose which model the agent runs on"));
-  }
+  /* --- The model chip, right of Auto: one button opening the model card ---
+   * (agent_ui_provider.cc). Absent until the Python half registers the
+   * mirror; an empty rect means the budget dropped it. */
+  agent_bubble_provider_buttons(C, block, region, *layout, *state);
 
   if (!agent_bubble_references_visible(C)) {
     agent_bubble_send_button(C, region, block, *layout, *state);
@@ -883,7 +877,10 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   if (agent_bubble_island_bed_is_transparent()) {
     /* A replacement bed, unlike alpha blending, must premultiply itself. */
-    const float wash[4] = AGENT_COL_GLASS_WASH;
+    float wash[4] = AGENT_COL_GLASS_WASH;
+#if defined(WIN32) || defined(__linux__)
+    agent_bubble_composited_island_wash(wash);
+#endif
     agent_bubble_replace_frost_wash(&r, wash);
     return;
   }
@@ -1228,6 +1225,10 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
       mixie_chat_history_read_visible(CTX_wm_manager(C)))
   {
+#if defined(WIN32) || defined(__linux__)
+    const float transcript_wash[4] = AGENT_COL_GLASS_WASH;
+    agent_bubble_composited_transcript_color(panel_bg, transcript_wash);
+#endif
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
     mixie_chat_clear_bg_override();
@@ -1467,6 +1468,10 @@ static void agent_bubble_composer_region_layout(const bContext *C, ARegion * /*r
 
 static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region)
 {
+  /* The model chip re-records its rect below only when this draw paints it;
+   * every other draw (pill, another tab, a failed begin) leaves the anchor
+   * invalid, so an open model card closes on its next tick. */
+  agent_model_card_anchor(CTX_wm_window(C), rctf{}, 0.0f, false);
   if (agent_bubble_window_is_pill(C)) {
     return;
   }
@@ -1784,10 +1789,12 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
   if (attachments_prop == nullptr) {
     return 0;
   }
-  /* Attached context folders show as chips in the same reference column. */
+  /* Attached context folders and files show as chips in the same reference column. */
   PropertyRNA *folders_prop = RNA_struct_find_property(&scene_ptr, "mixie_context_folders");
+  PropertyRNA *files_prop = RNA_struct_find_property(&scene_ptr, "mixie_context_files");
   return RNA_property_collection_length(&scene_ptr, attachments_prop) +
-         (folders_prop ? RNA_property_collection_length(&scene_ptr, folders_prop) : 0);
+         (folders_prop ? RNA_property_collection_length(&scene_ptr, folders_prop) : 0) +
+         (files_prop ? RNA_property_collection_length(&scene_ptr, files_prop) : 0);
 }
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)
@@ -2555,6 +2562,7 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
   if (ghostwin == g_bubble_ghostwin) {
     ++g_bubble_motion_generation;
     g_bubble_minimise_pending = false;
+    g_bubble_grown_for_chat = false;
     g_bubble_seat_valid = false;
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
@@ -2858,7 +2866,10 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
   /* Replace the complete region with the premultiplied native-frost wash. */
-  const float wash[4] = AGENT_COL_GLASS_WASH;
+  float wash[4] = AGENT_COL_GLASS_WASH;
+#if defined(WIN32) || defined(__linux__)
+  agent_bubble_composited_island_wash(wash);
+#endif
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {
     agent_bubble_replace_frost_wash(&region_rect, wash);
@@ -2887,11 +2898,6 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   else {
     agent_ui_cat_scheduler_forget(region);
   }
-
-  return;
-  /* Header TH_BACK resolves to ts->header from the Agent Bubble theme,
-   * so no manual override is needed here. */
-  ED_region_header(C, region);
 }
 
 /* Overlay pass — runs on EVERY window composite, drawing straight into the
@@ -3046,6 +3052,17 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     BKE_report(op->reports, RPT_ERROR, "Failed to open Agent Bubble window");
     return OPERATOR_CANCELLED;
   }
+
+#ifdef __linux__
+  /* Below this floor the island can no longer draw usable controls. Enforce
+   * its usable size in the window manager itself, before interactive resizing. */
+  Mixar_WindowSetCustomDecoration(
+      win->runtime->ghostwin, AGENT_BUBBLE_MIN_WIDTH, AGENT_BUBBLE_DEFAULT_HEIGHT,
+      AGENT_BUBBLE_CORNER_RADIUS);
+  agent_bubble_glass_reset(win->runtime->ghostwin);
+  agent_bubble_glass_request(C, win->runtime->ghostwin, false);
+  WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32)
   if (win->runtime->ghostwin != nullptr) {
@@ -3453,6 +3470,47 @@ void MIXAR_OT_agent_bubble_purge_windows(wmOperatorType *ot)
               INT_MAX);
 }
 
+/* Bring Mixar in front of every other application. The sign-in flow calls
+ * it (Python idname: mixar.activate_app) once a browser SSO login has
+ * SUCCEEDED, so the user lands back in the app they were signing into;
+ * it is never called on a failed or cancelled login. macOS activates the
+ * app, Windows foregrounds the main window, elsewhere it is a no-op
+ * (OPERATOR_CANCELLED, which the Python wrapper reads as "not done").
+ * Window order and the bubble's own activation rules are untouched. */
+static wmOperatorStatus mixar_activate_app_exec(bContext *C, wmOperator * /*op*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  wmWindowManager *wm = CTX_wm_manager(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (win == nullptr && wm != nullptr) {
+    win = static_cast<wmWindow *>(wm->windows.first);
+  }
+  /* Walk up to the top-level window: a timer may run with a bubble or
+   * dialog window in context, and the foreground target is the main one. */
+  while (win != nullptr && win->parent != nullptr) {
+    win = win->parent;
+  }
+  void *ghostwin = nullptr;
+  if (win != nullptr && win->runtime != nullptr) {
+    ghostwin = win->runtime->ghostwin;
+  }
+  Mixar_AppActivate(ghostwin);
+  return OPERATOR_FINISHED;
+#else
+  UNUSED_VARS(C);
+  return OPERATOR_CANCELLED;
+#endif
+}
+
+void MIXAR_OT_activate_app(wmOperatorType *ot)
+{
+  ot->name = "Activate Mixar";
+  ot->idname = "MIXAR_OT_activate_app";
+  ot->description = "Bring Mixar in front of other applications";
+
+  ot->exec = mixar_activate_app_exec;
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -3484,10 +3542,14 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
 #  ifdef __APPLE__
   Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
+#elif defined(__linux__)
+  if (!Mixar_WindowSetNativeSize(win->runtime->ghostwin,
+                                std::max(width, AGENT_BUBBLE_MIN_WIDTH),
+                                std::max(height, AGENT_BUBBLE_DEFAULT_HEIGHT)))
+  {
+    return OPERATOR_CANCELLED;
+  }
 #else
-  /* Non-macOS: best-effort no-op for now. Windows / Linux GHOST
-   * doesn't have the same chrome-stripping pipeline as Cocoa, so
-   * resize would need its own platform implementation. */
   (void)width;
   (void)height;
 #endif
@@ -3628,6 +3690,31 @@ static bool agent_bubble_scribble_active(const bContext *C)
   return false;
 }
 
+static const ARegion *agent_bubble_header_for_drag(const bContext *C)
+{
+  const ARegion *region = CTX_wm_region(C);
+  if (region != nullptr && region->regiontype == RGN_TYPE_HEADER) {
+    return region;
+  }
+  /* Window-level LEFTMOUSE can arrive with a stale context region when
+   * the press is an XTest/XI2 synthetic event. Hit-test HEADER by the
+   * eventstate coordinate — the island header starts at the client top. */
+  ScrArea *area = CTX_wm_area(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (area == nullptr || win == nullptr || win->runtime == nullptr ||
+      win->runtime->eventstate == nullptr)
+  {
+    return nullptr;
+  }
+  const int *xy = win->runtime->eventstate->xy;
+  for (ARegion &other : area->regionbase) {
+    if (other.regiontype == RGN_TYPE_HEADER && BLI_rcti_isect_pt_v(&other.winrct, xy)) {
+      return &other;
+    }
+  }
+  return nullptr;
+}
+
 static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
@@ -3638,8 +3725,8 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
   /* Content owns text selection, scrolling and asset gestures. A press
    * passed through by a region handler must never turn into a window move.
    * The resting pill also uses HEADER, so its click/drag gesture is retained. */
-  const ARegion *region = CTX_wm_region(C);
-  if (region == nullptr || region->regiontype != RGN_TYPE_HEADER) {
+  const ARegion *region = agent_bubble_header_for_drag(C);
+  if (region == nullptr) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3651,7 +3738,7 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
    * it here hands the gesture to AppKit's native window drag, which swallows
    * every following mouse-move, so the tile's asset drag never begins and the
    * window moves instead. */
-  if (UI_mixar_region_active_but_is_draggable(CTX_wm_region(C))) {
+  if (UI_mixar_region_active_but_is_draggable(const_cast<ARegion *>(region))) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3664,6 +3751,20 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
   if (mixie_chat_ink_read_visible(CTX_wm_manager(C))) {
     return OPERATOR_CANCELLED;
   }
+
+#ifdef __linux__
+  if (std::getenv("MIXAR_BUBBLE_DRAG_TRACE") && std::getenv("MIXAR_BUBBLE_DRAG_TRACE")[0] != '0') {
+    const wmEvent *event = win->runtime->eventstate;
+    fprintf(stderr,
+            "[mixar-bubble-drag] header hit winrct=%d,%d %dx%d event_xy=%d,%d\n",
+            region->winrct.xmin,
+            region->winrct.ymin,
+            BLI_rcti_size_x(&region->winrct) + 1,
+            BLI_rcti_size_y(&region->winrct) + 1,
+            event ? event->xy[0] : -1,
+            event ? event->xy[1] : -1);
+  }
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32)
   if (win->runtime->ghostwin == g_pill_ghostwin) {
@@ -3691,6 +3792,10 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
     }
   }
   Mixar_WindowBeginDrag(win->runtime->ghostwin);
+#elif defined(__linux__)
+  if (!Mixar_WindowBeginNativeDrag(win->runtime->ghostwin)) {
+    return OPERATOR_CANCELLED;
+  }
 #endif
 
   return OPERATOR_FINISHED;
@@ -3713,6 +3818,10 @@ static wmOperatorStatus mixar_bubble_window_update_drag_exec(bContext *C,
   }
 #ifdef _WIN32
   Mixar_WindowUpdateDrag(win->runtime->ghostwin);
+#elif defined(__linux__)
+  if (!Mixar_WindowUpdateNativeDrag(win->runtime->ghostwin)) {
+    return OPERATOR_CANCELLED;
+  }
 #endif
   return OPERATOR_FINISHED;
 }
@@ -3737,6 +3846,8 @@ static wmOperatorStatus mixar_bubble_window_end_drag_exec(bContext *C,
   if (win->runtime->ghostwin == g_pill_ghostwin && g_bubble_minimised) {
     pill_remember_user_seat();
   }
+#elif defined(__linux__)
+  Mixar_WindowEndNativeDrag(win->runtime->ghostwin);
 #endif
   return OPERATOR_FINISHED;
 }
@@ -3829,6 +3940,12 @@ static void minimise_anim_finish(void *user_data)
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
+#ifdef __APPLE__
+    /* Detached only now that the fade is over (see mixar_bubble_minimise_exec). */
+    if (g_host_ghostwin != nullptr) {
+      Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
+    }
+#endif
     Mixar_WindowOrderOut(g_bubble_ghostwin);
     Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
   }
@@ -3987,12 +4104,12 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
-   * hides or it will vanish too). */
+   * hides or it will vanish too). The bubble itself stays a child of the
+   * host until minimise_anim_finish: detached now, nothing keeps it above
+   * the host, the host (just clicked) covers it at once and the sink-and-fade
+   * plays unseen — the island blinked out for ~0.3 s before the pill showed. */
   if (g_pill_ghostwin != nullptr) {
     Mixar_WindowDetachFromParent(g_pill_ghostwin, g_bubble_ghostwin);
-  }
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #endif
 
@@ -4302,6 +4419,7 @@ static void agent_bubble_operatortypes()
   mixie_chat_operatortypes();
   WM_operatortype_append(MIXAR_OT_agent_bubble_show_window);
   WM_operatortype_append(MIXAR_OT_agent_bubble_purge_windows);
+  WM_operatortype_append(MIXAR_OT_activate_app);
   WM_operatortype_append(MIXAR_OT_bubble_set_size);
   WM_operatortype_append(MIXAR_OT_bubble_sync_attachment_size);
   WM_operatortype_append(MIXAR_OT_bubble_window_begin_drag);
@@ -4317,6 +4435,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_queue_navigate);
   WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
+  agent_model_card_register();
   WM_operatortype_append(MIXAR_OT_preview_sketch);
 }
 

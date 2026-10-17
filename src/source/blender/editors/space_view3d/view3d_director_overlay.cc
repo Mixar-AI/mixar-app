@@ -14,11 +14,13 @@
 #include "BLI_rect.h"
 
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 
 #include "BLT_translation.hh"
 
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
+#include "DNA_screen_types.h"
 
 #include "ED_screen.hh"
 
@@ -32,6 +34,7 @@
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
+#include "view3d_intern.hh"
 #include "view3d_director_cinema.hh"
 #include "view3d_director_cinema_phone.hh"
 #include "view3d_director_minimap.hh"
@@ -159,18 +162,33 @@ void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, c
 
 void draw_context_actions(ui::Block *block,
                           const bContext *C,
-                          const ARegion *region,
+                          ARegion *region,
                           const DirectorViewState &state,
                           const int unit,
                           const int gap)
 {
+  /* Respect ordinary overlapping headers. Zen's adaptive TOOL_HEADER holds
+   * floating selection controls below the actual HEADER toolbar, so its
+   * legacy reserved top band is not another toolbar to subtract here. */
+  const rcti *visible_rect = ED_region_visible_rect(region);
+  int action_top = visible_rect->ymax + 1;
+  const ScrArea *area = CTX_wm_area(C);
+  if (area && ui::mixar_area_floats_viewport_chrome(area)) {
+    action_top = region->winy;
+    const ARegion *header = BKE_area_find_region_type(area, RGN_TYPE_HEADER);
+    if (header && !(header->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)) &&
+        RGN_ALIGN_ENUM_FROM_MASK(header->alignment) == RGN_ALIGN_TOP)
+    {
+      action_top = std::min(action_top, header->winrct.ymin - region->winrct.ymin);
+    }
+  }
+  const int action_y = action_top - unit * 2 - gap * 2;
   if (state.has_shot && state.explore_mode) {
     /* Free-fly exploration: the shot camera is parked, so capturing makes no
      * sense — the primary action is planting a new shot camera at this view,
      * which is how directors cover ground inside imported worlds. */
     const int action_w = unit * 9;
     const int action_x = (region->winx - action_w) / 2;
-    const int action_y = region->winy - unit * 2 - gap * 2;
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_new_shot",
                                      ICON_ADD,
@@ -193,8 +211,6 @@ void draw_context_actions(ui::Block *block,
   else if (state.has_shot) {
     const int action_w = unit * 8;
     const int action_x = (region->winx - action_w) / 2;
-    /* Keep the primary action in the top safe area, above the camera gate. */
-    const int action_y = region->winy - unit * 2 - gap * 2;
     const char *operator_id = state.locked ? "MIXAR_OT_director_new_take" :
                                              "MIXAR_OT_director_capture_beat";
     const int icon = state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT;
@@ -330,6 +346,12 @@ void director_overlay_disable_button(ui::Button *button, const bool disabled)
 
 void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 {
+  /* The agent-working halo shares this overlay pass (view3d_agent_halo.cc);
+   * it is independent of the Director state read below. */
+  view3d_agent_halo_overlay_draw(C, region);
+  /* One-shot display shader pre-warm (view3d_display_prewarm.cc). */
+  view3d_display_shader_prewarm(C);
+
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     cinema_release_chat_seat(C);

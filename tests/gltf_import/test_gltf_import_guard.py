@@ -124,7 +124,7 @@ def test_children_skins_and_animations_are_remapped(guard):
             {"name": "joint"},
         ],
         "meshes": [{"name": "foreign_mesh"}, {"name": "body_mesh"}],
-        "skins": [{"joints": [4, 3], "skeleton": 0}, {"joints": [3]}],
+        "skins": [{"joints": [4], "skeleton": 0}, {"joints": [3]}],
         "animations": [
             {"name": "walk", "channels": [
                 {"sampler": 0, "target": {"node": 4, "path": "rotation"}},
@@ -142,6 +142,80 @@ def test_children_skins_and_animations_are_remapped(guard):
     assert doc["skins"] == [{"joints": [2], "skeleton": 0}]
     assert [a["name"] for a in doc["animations"]] == ["walk"]
     assert doc["animations"][0]["channels"] == [{"sampler": 0, "target": {"node": 2, "path": "rotation"}}]
+
+
+def _pointer(sampler, pointer):
+    return {"sampler": sampler, "target": {"path": "pointer",
+                                           "extensions": {"KHR_animation_pointer": {"pointer": pointer}}}}
+
+
+def test_skin_joints_outside_the_default_scene_are_kept_whole(guard):
+    # 0 body (skinned, in Kept) ; 1 armature (Other root) -> 2 hip -> 3 spine -> 4 hand_prop (skinned)
+    # 1 armature -> 5 foreign_cube (sibling of the joints) ; 6 other_root (Other) ; 7 prop_bone (orphan joint)
+    doc = {
+        "asset": {"version": "2.0"}, "scene": 0,
+        "scenes": [{"name": "Kept", "nodes": [0]}, {"name": "Other", "nodes": [1, 6]}],
+        "nodes": [
+            {"name": "body", "mesh": 0, "skin": 0},
+            {"name": "armature", "children": [2, 5]},
+            {"name": "hip", "children": [3]},
+            {"name": "spine", "children": [4]},
+            {"name": "hand_prop", "mesh": 1, "skin": 1},
+            {"name": "foreign_cube", "mesh": 2},
+            {"name": "other_root", "mesh": 3},
+            {"name": "prop_bone"},
+        ],
+        "meshes": [{"name": "body_mesh"}, {"name": "prop_mesh"}, {"name": "cube_mesh"}, {"name": "other_mesh"}],
+        "skins": [{"joints": [2, 3], "skeleton": 2, "inverseBindMatrices": 0}, {"joints": [7]}],
+    }
+    stripped = guard.m.strip_gltf_json(doc)
+    assert stripped.scenes == ["Other"] and stripped.nodes == ["foreign_cube", "other_root"]
+    # kept 0,1,2,3,4,7 -> 0..5; the joint roots join the scene; the joints' sibling stays dropped
+    assert doc["scenes"] == [{"name": "Kept", "nodes": [0, 1, 5]}]
+    assert [n["name"] for n in doc["nodes"]] == ["body", "armature", "hip", "spine", "hand_prop", "prop_bone"]
+    assert doc["nodes"][1]["children"] == [2]
+    assert doc["nodes"][4] == {"name": "hand_prop", "mesh": 1, "skin": 1}
+    assert doc["skins"] == [{"joints": [2, 3], "skeleton": 2, "inverseBindMatrices": 0}, {"joints": [5]}]
+    assert [m["name"] for m in doc["meshes"]] == ["body_mesh", "prop_mesh"]
+    assert not guard.m.strip_gltf_json(doc)                                                    # idempotent
+
+
+def test_a_skin_with_an_invalid_joint_is_dropped_whole(guard):
+    doc = {
+        "asset": {"version": "2.0"}, "scene": 0,
+        "scenes": [{"nodes": [0]}, {"nodes": [1]}],
+        "nodes": [{"name": "mesh", "mesh": 0, "skin": 0}, {"name": "other"}],
+        "meshes": [{"name": "m"}],
+        "skins": [{"joints": [0, 9]}],
+    }
+    guard.m.strip_gltf_json(doc)
+    assert doc["nodes"] == [{"name": "mesh", "mesh": 0}] and "skins" not in doc
+
+
+def test_pointer_channels_are_remapped_or_dropped(guard):
+    doc = {
+        "asset": {"version": "2.0"}, "scene": 0,
+        "scenes": [{"name": "Kept", "nodes": [1]}, {"name": "Other", "nodes": [0]}],
+        "nodes": [{"name": "foreign", "mesh": 0}, {"name": "kept", "mesh": 1}],
+        "meshes": [{"name": "foreign_mesh"}, {"name": "kept_mesh"}],
+        "materials": [{"name": "shared"}],
+        "animations": [
+            {"name": "mixed", "samplers": [{}, {}, {}, {}], "channels": [
+                _pointer(0, "/nodes/1/rotation"),
+                _pointer(1, "/nodes/0/translation"),
+                _pointer(2, "/meshes/1/weights"),
+                _pointer(3, "/materials/0/pbrMetallicRoughness/baseColorFactor"),
+            ]},
+            {"name": "foreign_only", "samplers": [{}], "channels": [_pointer(0, "/meshes/0/weights")]},
+        ],
+    }
+    guard.m.strip_gltf_json(doc)
+    assert [a["name"] for a in doc["animations"]] == ["mixed"]
+    assert doc["animations"][0]["channels"] == [
+        _pointer(0, "/nodes/0/rotation"),
+        _pointer(2, "/meshes/0/weights"),
+        _pointer(3, "/materials/0/pbrMetallicRoughness/baseColorFactor"),
+    ]
 
 
 # --- keep_default_scene ----------------------------------------------------
@@ -171,6 +245,19 @@ def test_unparseable_file_is_left_unchanged(guard, tmp_path):
     assert not guard.m.keep_default_scene(str(path))
     assert path.read_bytes() == b"glTF" + b"\x00" * 3
     assert not guard.m.keep_default_scene(str(tmp_path / "missing.glb"))
+
+
+def test_a_failed_write_keeps_the_original_and_leaves_no_tmp(guard, tmp_path, monkeypatch):
+    path = tmp_path / "model.glb"
+    original = _glb(_doc(["A", "B"], default=0))
+    path.write_bytes(original)
+
+    def locked(_src, _dst):
+        raise PermissionError("file in use")
+    monkeypatch.setattr(guard.m.os, "replace", locked)
+    assert not guard.m.keep_default_scene(str(path))
+    assert path.read_bytes() == original
+    assert not (tmp_path / "model.glb.tmp").exists()
 
 
 # --- import_gltf -----------------------------------------------------------

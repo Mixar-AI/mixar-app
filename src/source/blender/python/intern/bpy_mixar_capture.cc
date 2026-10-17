@@ -12,6 +12,10 @@
 #endif
 #ifdef __APPLE__
 extern "C" int Mixar_MicrophonePermission(bool request);
+/* Apple deprecates OpenAL in favor of AVAudioEngine. Dictation still captures
+ * through the bundled OpenAL device. */
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 namespace blender {
@@ -158,3 +162,7 @@ void mixar_capture_register(PyObject *module)
 #endif
 }
 }  // namespace blender
+
+#ifdef __APPLE__
+#  pragma clang diagnostic pop
+#endif

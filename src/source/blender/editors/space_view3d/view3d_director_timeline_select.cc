@@ -244,8 +244,12 @@ bool director_timeline_selection_event(bContext *C,
   }
 
   /* ---- Select all / none ---- */
-  if (event->type == EVT_AKEY && event->val == KM_PRESS) {
-    select_keys(C, {}, (event->modifier & KM_ALT) ? "NONE" : "ALL");
+  /* Bare A selects all and Alt+A none; any other modifier (Cmd/Ctrl+A,
+   * Shift+A) is someone else's shortcut and falls through. */
+  if (event->type == EVT_AKEY && event->val == KM_PRESS &&
+      ELEM(event->modifier, 0, KM_ALT))
+  {
+    select_keys(C, {}, event->modifier == KM_ALT ? "NONE" : "ALL");
     ED_region_tag_redraw(region);
     return true;
   }

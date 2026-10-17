@@ -109,6 +109,10 @@ msgid "How strongly the generation follows its guidance. Higher values emphasize
 msgstr "How strongly the generation follows its guidance. Higher values emphasise that guidance."
 
 # derived
+msgid "Animate is unavailable in the generation catalog"
+msgstr "Animate is unavailable in the generation catalogue"
+
+# derived
 msgid "Character Parts is unavailable in the generation catalog"
 msgstr "Character Parts is unavailable in the generation catalogue"
 
@@ -171,6 +175,10 @@ msgstr "Segment a UV-unwrapped mesh into labelled parts"
 # derived
 msgid "Catalog choice"
 msgstr "Catalogue choice"
+
+# derived
+msgid "Any number of catalog choices, sent as a list"
+msgstr "Any number of catalogue choices, sent as a list"
 
 # derived
 msgid "Generation service supplied by the backend catalog"
@@ -236,6 +244,10 @@ msgstr "Catalogue input config is incomplete"
 # derived
 msgid "World Labs catalog settings are unavailable"
 msgstr "World Labs catalogue settings are unavailable"
+
+# derived
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr "Comma-separated preset values from the animation catalogue, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
 
 # derived
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
@@ -1018,24 +1030,6 @@ msgstr "The serialised mark — region, gesture and resolved objects"
 # derived
 msgid "The serialized frozen frame this mark was drawn on"
 msgstr "The serialised frozen frame this mark was drawn on"
-
-# derived
-msgid ""
-"Profile / account dropdown — opened from the global top bar.\n"
-"\n"
-"The contents are drawn natively by `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
-"rather than a menu. Python still owns registration and every\n"
-"operator the card invokes — C++ owns only pixels.\n"
-msgstr ""
-"Profile / account dropdown — opened from the global top bar.\n"
-"\n"
-"The contents are drawn natively by `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage metre and the account actions, laid out as one card\n"
-"rather than a menu. Python still owns registration and every\n"
-"operator the card invokes — C++ owns only pixels.\n"
 
 # derived
 msgid "The generate sub-type — a generation-catalog service key (e.g. image_gen, model_3d)"

@@ -431,7 +431,7 @@ void mixie_chat_render_messages(const bContext *C,
                                           smixie->sel_start, smixie->sel_end,
                                           seg_hit.font_size, sel_font, line_h,
                                           seg_hit.mono ? BLFWrapMode::HardLimit :
-                                                         BLFWrapMode::Minimal);
+                                                         CHAT_PROSE_WRAP);
             }
           }
         }
@@ -453,9 +453,13 @@ void mixie_chat_render_messages(const bContext *C,
             layout.y_pos + layout.bubble_height - layout.style.v_padding;
 
         for (const AttachmentLayout &att : layout.attachments) {
+          /* Same left edge and column as the bubble text. Pixel-space
+           * blits (PixelBitmapDrawer) ignore View2D and clip a tall sheet
+           * to a sliver; the attachment widget draws a View2D quad. */
           chat_ui_draw_image_attachment(bmain, att.path, att.source,
-                                        layout.bubble_x, att_y,
-                                        layout.bubble_width, &image_style);
+                                        layout.bubble_x + layout.style.h_padding,
+                                        att_y, layout.content_width,
+                                        &image_style);
           att_y -= att.height;
         }
       }

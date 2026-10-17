@@ -62,6 +62,9 @@ class FakeLayout:
         self.alert = False
         self.alignment = 'EXPAND'
         self.scale_y = 1.0
+        self.ui_units_x = 0.0
+        self.ui_units_y = 0.0
+        self.activate_init = False
         self.use_property_split = False
         self.use_property_decorate = False
 
@@ -83,18 +86,31 @@ class FakeLayout:
         return self._sub()
 
     # -- items --
-    def label(self, text="", icon='NONE'):
+    def label(self, text="", icon='NONE', translate=True):
         self._log.append(f"label:{text}")
 
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE'):
+    def operator(self, op, text="", icon='NONE', translate=True):
         self._log.append(f"op:{op}")
-        return SimpleNamespace()
+        log = self._log
+
+        class _Props(SimpleNamespace):
+            def __setattr__(self, key, value):
+                log.append(f"pick:{key}:{value}:{text}")
+                super().__setattr__(key, value)
+
+        return _Props()
 
     def separator(self, factor=1.0):
         pass
+
+    def prop_enum(self, data, prop, value, text="", icon='NONE'):
+        self._log.append(f"enum:{prop}:{value}:{text}")
+
+    def grid_flow(self, **_kwargs):
+        return self._sub()
 
     # -- Mixar card API (conditionally present) --
     def __getattr__(self, name):
@@ -105,6 +121,11 @@ class FakeLayout:
             'mixar_dropdown',
             'mixar_input',
             'template_popup_confirm',
+            'mixar_cinema_row',
+            'mixar_sheet_frame',
+            'mixar_sheet',
+            'mixar_sheet_label',
+            'mixar_sheet_text_width',
         ):
             if not self.__dict__['_card_api']:
                 raise AttributeError(name)
@@ -117,6 +138,9 @@ class FakeLayout:
     def _impl_mixar_card_button(self, kind='CARD', active_default=False):
         self._log.append(f"card_button:{kind}:{active_default}")
 
+    def _impl_mixar_cinema_row(self, kind='OPTION'):
+        self._log.append(f"cinema_row:{kind}")
+
     def _impl_mixar_section(self):
         self._log.append("section")
         return self._sub()
@@ -127,8 +151,21 @@ class FakeLayout:
     def _impl_mixar_input(self, data, prop, text=""):
         self._log.append(f"input:{prop}")
 
-    def _impl_template_popup_confirm(self, operator, text="", cancel_text=""):
+    def _impl_template_popup_confirm(self, operator, text="", cancel_text="", translate=True):
         self._log.append(f"popup_confirm:{cancel_text}")
+
+    def _impl_mixar_sheet_frame(self, header=182.0, sidebar=442.0):
+        self._log.append(f"sheet_frame:{header}:{sidebar}")
+
+    def _impl_mixar_sheet(self, kind='CHIP', lit=False, extra=0.0):
+        self._log.append(f"sheet:{kind}:{lit}")
+
+    def _impl_mixar_sheet_label(self, text="", kind='BODY', lit=False, extra=0.0,
+                                translate=True):
+        self._log.append(f"sheet_label:{kind}:{text}")
+
+    def _impl_mixar_sheet_text_width(self, kind='CHIP', text=""):
+        return 7.0 * len(text)
 
 
 def _wm(state='IDLE', **extra):
@@ -143,7 +180,7 @@ def _wm(state='IDLE', **extra):
         byok_form_model='NONE',
         byok_form_api_key='',
         byok_form_openrouter_model='',
-        byok_form_codex_bundle='',
+        byok_form_codex_path='',
         byok_form_local_mode='MANAGED',
         byok_form_local_model='NONE',
         byok_form_local_detected='NONE',
@@ -169,23 +206,41 @@ def _draw(state, card_api, **wm_extra):
 # ---------------------------------------------------------------------------
 
 
-def test_every_state_marks_exactly_one_active_default_button():
+# Every form branch and status strip the one-action contract must hold for.
+DEFAULT_VARIANTS = {
+    'cloud_in_use': dict(byok_is_active=True, byok_current_provider='anthropic',
+                         byok_current_model='m', byok_form_provider='anthropic'),
+    'local_managed': dict(byok_form_provider='local', byok_form_local_mode='MANAGED'),
+    'local_custom': dict(byok_form_provider='local', byok_form_local_mode='CUSTOM'),
+    'codex': dict(byok_is_active=True, byok_current_provider='codex',
+                  byok_current_model='gpt-5', byok_form_provider='codex'),
+    'openrouter': dict(byok_form_provider='openrouter', byok_form_openrouter_model='a/b'),
+    'key_needed': dict(byok_is_active=True, byok_device_key_missing=True,
+                       byok_current_provider='anthropic', byok_current_model='m',
+                       byok_form_provider='anthropic'),
+    'paused': dict(byok_key_resumable=True, byok_form_provider='anthropic'),
+}
+
+
+def test_every_state_marks_exactly_one_active_default_button(monkeypatch):
     """The active-default button is what suppresses the native OK/Cancel
     row — zero would resurrect the redundant pair, two would make Return
-    ambiguous."""
-    for state in ALL_STATES:
-        log = _draw(state, card_api=True, byok_is_active=True,
-                    byok_current_provider='anthropic', byok_current_model='m')
-        defaults = [e for e in log if e.startswith("card_button:") and e.endswith(":True")]
-        assert len(defaults) == 1, f"{state}: expected 1 default button, log={log}"
+    ambiguous. Holds for every provider branch and every status strip."""
+    from mixar.modules.byok.core import credential_state
+    monkeypatch.setattr(credential_state, "resume_target", lambda: ('anthropic', 'm'))
+    for name, extra in DEFAULT_VARIANTS.items():
+        for state in ALL_STATES:
+            log = _draw(state, card_api=True, **extra)
+            defaults = [e for e in log if e.startswith("card_button:") and e.endswith(":True")]
+            assert len(defaults) == 1, f"{name}/{state}: expected 1 default, log={log}"
 
 
 def test_footer_actions_per_state():
-    # IDLE with an active config: Cancel + Save, and Remove lives in the
-    # config card (not the footer) — three distinct, unambiguous actions.
+    # IDLE with an active config: the ✕ closes, Save & Activate is the
+    # default, and Remove sits on the "In use" line — three distinct actions.
     log = _draw('IDLE', card_api=True, byok_is_active=True,
                 byok_current_provider='anthropic', byok_current_model='m')
-    assert "popup_confirm:Cancel" in log
+    assert "popup_confirm:✕" in log
     assert f"op:{byok_dialog_ui.OP_SAVE}" in log
     assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
     assert "card_button:ACCENT:True" in log
@@ -235,7 +290,7 @@ def test_all_provider_branches_render_in_both_modes():
     for provider, extra in (
         ('anthropic', {}),
         ('openrouter', {'byok_form_openrouter_model': 'a/b'}),
-        ('codex', {'byok_form_codex_bundle': 'x' * 10}),
+        ('codex', {'byok_form_codex_path': ''}),
         ('local', {'byok_form_local_mode': 'MANAGED'}),
         ('local', {'byok_form_local_mode': 'CUSTOM'}),
     ):
@@ -334,8 +389,12 @@ def test_remove_flow_walks_confirm_removing_removed(monkeypatch):
     assert wm.byok_current_provider == ''
 
 
-def test_remove_failure_lands_on_error(monkeypatch):
-    wm = _wm('CONFIRM_REMOVE', byok_is_active=True)
+def test_remove_failure_returns_to_the_confirm_step_with_a_retry(monkeypatch):
+    """A failed DELETE must stay recoverable: back on CONFIRM_REMOVE with the
+    error shown, Remove retries and Keep backs out. (The form's ERROR hid
+    Remove and its Try Again ran Save with an empty key.)"""
+    wm = _wm('CONFIRM_REMOVE', byok_is_active=True, byok_current_provider='anthropic',
+             byok_current_model='m', byok_last_error='')
     context = SimpleNamespace(window_manager=wm)
     monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
     monkeypatch.setattr(byok_ops.bpy.context, "window_manager", wm, raising=False)
@@ -344,9 +403,35 @@ def test_remove_failure_lands_on_error(monkeypatch):
         lambda on_done: on_done(False, 0, "server said no"),
     )
     byok_ops.MIXAR_BYOK_OT_confirm_remove().execute(context)
-    assert wm.byok_dialog_state == 'ERROR'
+    assert wm.byok_dialog_state == 'CONFIRM_REMOVE'
     assert wm.byok_last_error == "server said no"
     assert wm.byok_is_active is True  # config untouched on failure
+
+    log = []
+    byok_dialog_ui.draw_dialog(FakeLayout(log, card_api=True), wm)
+    assert "sheet_label:DANGER_TEXT:server said no" in log
+    assert f"op:{byok_dialog_ui.OP_CONFIRM_REMOVE}" in log
+    assert f"op:{byok_dialog_ui.OP_SAVE}" not in log
+
+    # Keeping the key (or asking again) starts from a clean slate.
+    byok_ops.MIXAR_BYOK_OT_cancel_remove().execute(context)
+    assert (wm.byok_dialog_state, wm.byok_last_error) == ('IDLE', '')
+    wm.byok_last_error = "stale save error"
+    byok_ops.MIXAR_BYOK_OT_request_remove().execute(context)
+    assert (wm.byok_dialog_state, wm.byok_last_error) == ('CONFIRM_REMOVE', '')
+
+
+def test_error_keeps_the_active_configuration_visible():
+    """A failed re-save never touches the stored key, so the dialog must
+    not suggest the active configuration has gone away."""
+    for card_api in (True, False):
+        log = _draw('ERROR', card_api, byok_is_active=True,
+                    byok_current_provider='anthropic', byok_current_model='m')
+        assert any("In use:" in e for e in log), log
+        assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
+
+    log = _draw('ERROR', card_api=True)
+    assert not any("In use:" in e for e in log)
 
 
 # ---------------------------------------------------------------------------
@@ -360,30 +445,6 @@ def test_rna_defines_the_card_reuse_functions():
     assert '"mixar_card_button", "rna_uiLayoutMixarCardButton"' in source
     # active_default is the OK/Cancel-suppression channel.
     assert '"active_default"' in source
-
-
-def test_rna_kind_items_cover_every_kind_python_uses():
-    rna = RNA_UI_API.read_text(encoding="utf-8")
-    label_items = re.search(
-        r"mixar_card_label_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
-    button_items = re.search(
-        r"mixar_card_button_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
-
-    byok_dir = SCRIPTS / "mixar" / "modules" / "byok"
-    python = "\n".join(
-        p.read_text(encoding="utf-8") for p in byok_dir.rglob("*.py")
-    )
-    # No trailing \): multi-line calls end with a comma before the paren.
-    label_kinds = set(re.findall(r"card_label\([^)]*?'([A-Z_]+)'", python))
-    button_kinds = set(
-        re.findall(r"(?:op_button|style_last_button|dismiss_button)\("
-                   r"[^)]*?'([A-Z_]+)'", python))
-    assert label_kinds, "no card_label kinds found — regex went stale"
-    assert button_kinds, "no button kinds found — regex went stale"
-    for kind in label_kinds:
-        assert f'"{kind}"' in label_items, f"label kind {kind} missing from RNA items"
-    for kind in button_kinds:
-        assert f'"{kind}"' in button_items, f"button kind {kind} missing from RNA items"
 
 
 def test_rna_switches_map_every_declared_item():
@@ -434,3 +495,20 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+def test_a_guest_is_never_promised_mixar_models_or_credits():
+    """Removing a guest's key cannot "go back" to Mixar's models or credits —
+    a guest has neither. The confirm step and the recap say what does happen."""
+    promised = ("Mixar's models again", "Mixar credits again")
+    for state in ('CONFIRM_REMOVE', 'REMOVED'):
+        account = " ".join(_draw(state, card_api=True, byok_is_active=True,
+                                 byok_current_provider='codex', byok_current_model='gpt-5',
+                                 mixie_chat_is_logged_in=True, mixie_chat_is_guest=False))
+        assert any(p in account for p in promised), state
+        for who in (dict(mixie_chat_is_logged_in=True, mixie_chat_is_guest=True),
+                    dict(mixie_chat_is_logged_in=False, mixie_chat_is_guest=False)):
+            text = " ".join(_draw(state, card_api=True, byok_is_active=True,
+                                  byok_current_provider='codex', byok_current_model='gpt-5', **who))
+            assert not any(p in text for p in promised), (state, who)
+            assert "Sign in to use Mixar models instead." in text, (state, who)

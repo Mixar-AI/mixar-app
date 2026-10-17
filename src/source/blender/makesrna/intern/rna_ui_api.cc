@@ -72,6 +72,7 @@ enum class TextAlignAnchor : int {
 /* Mixar custom section widget. */
 #  include "../../editors/interface/interface_mixar_profile_card.hh"
 #  include "../../editors/interface/interface_mixar_section.hh"
+#  include "../../editors/interface/interface_mixar_sheet.hh"
 #  include "UI_mixar.hh"
 
 namespace blender {
@@ -1211,6 +1212,54 @@ static void rna_uiLayoutMixarTopbarElement(Layout *layout, int kind, bool active
   ui::UI_layout_mixar_card_tag_last(layout, element, active ? 1.0f : 0.0f);
 }
 
+/* AI Provider settings sheet (`interface_mixar_sheet.hh`). Kind values are
+ * mapped by #UI_mixar_sheet_element_from_kind so the enum below and the
+ * painter's switch are the only two places that know them. */
+static void rna_uiLayoutMixarSheetFrame(Layout *layout, float header, float sidebar)
+{
+  ui::UI_layout_mixar_sheet_frame(layout, header, sidebar);
+}
+
+/* A sub-layout given `ui_units_x` is only pinned to it by Blender when a
+ * labelled item lands in it while it is not expand-aligned; the sheet sizes
+ * its chips, pills and spacers that way from Python, so tagging an item pins
+ * its layout outright. */
+static void rna_uiLayoutMixarSheetPin(Layout *layout)
+{
+  if (layout->ui_units_x() > 0.0f) {
+    layout->fixed_size_set(true);
+  }
+}
+
+static void rna_uiLayoutMixarSheet(Layout *layout, int kind, bool lit, float extra)
+{
+  rna_uiLayoutMixarSheetPin(layout);
+  ui::UI_layout_mixar_sheet_tag_last(
+      layout, ui::UI_mixar_sheet_element_from_kind(kind), lit, extra);
+}
+
+static void rna_uiLayoutMixarSheetLabel(Layout *layout,
+                                        const char *text,
+                                        int kind,
+                                        bool lit,
+                                        float extra,
+                                        const char *text_ctxt,
+                                        bool translate)
+{
+  /* Translated like #rna_uiItemL: callers pass UI literals (`text="..."`). */
+  std::optional<StringRefNull> label = rna_translate_ui_text(
+      text, text_ctxt, nullptr, nullptr, translate);
+  layout->label(label.value_or(""), ICON_NONE);
+  rna_uiLayoutMixarSheetPin(layout);
+  ui::UI_layout_mixar_sheet_tag_last(
+      layout, ui::UI_mixar_sheet_element_from_kind(kind), lit, extra);
+}
+
+static float rna_uiLayoutMixarSheetTextWidth(Layout * /*layout*/, int kind, const char *text)
+{
+  return ui::UI_mixar_sheet_text_width(ui::UI_mixar_sheet_element_from_kind(kind), text);
+}
+
 static void rna_uiLayoutMixarCardButton(Layout *layout, int kind, bool active_default)
 {
   ui::MixarCardElement element = ui::MixarCardElement::CardButton;
@@ -1931,6 +1980,83 @@ void RNA_api_ui_layout(StructRNA *srna)
                   "Active Default",
                   "Make this the dialog's default button (Return activates it; suppresses the "
                   "automatic OK/Cancel row in operator dialogs)");
+
+  /* Mixar sheet dialogs (AI Provider settings, Connect MCP). Values must match
+   * `UI_mixar_sheet_element_from_kind` (interface_mixar_sheet.cc). */
+  static const EnumPropertyItem mixar_sheet_kind_items[] = {
+      {1, "TITLE", 0, "Title", "Sheet title; a subtitle follows a newline"},
+      {2, "CLOSE", 0, "Close", "Square close button with a cross"},
+      {3, "CAPTION", 0, "Caption", "Dim section caption; spans wrapped in \x1f are bright"},
+      {4, "PROVIDER_ROW", 0, "Provider Row", "Sidebar row; the lit one is the graded pill"},
+      {5,
+       "FOOTER_ROW",
+       0,
+       "Footer Row",
+       "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"},
+      {6, "CHIP", 0, "Chip", "Model chip; the lit one is filled"},
+      {7, "PROMPT", 0, "Prompt", "Field prompt text"},
+      {8, "NOTE", 0, "Note", "Small supporting text"},
+      {9, "BODY", 0, "Body", "Body text"},
+      {10, "DANGER_TEXT", 0, "Danger Text", "Danger-tinted text"},
+      {11,
+       "PRIMARY",
+       0,
+       "Primary",
+       "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"},
+      {12, "SECONDARY", 0, "Secondary", "Outlined grey pill"},
+      {13, "DANGER_BUTTON", 0, "Danger Button", "Danger-tinted pill"},
+      {14, "INPUT", 0, "Input", "Key field backdrop; extra is the docked control's design-px width"},
+      {15, "DROPDOWN", 0, "Dropdown", "Menu backdrop with a chevron"},
+      {16,
+       "SNIPPET",
+       0,
+       "Snippet",
+       "Monospace code block (lines split on newlines) on the key field's backdrop; extra is "
+       "the corner-docked control's design-px width"},
+      {17, "SWITCH", 0, "Switch", "Track-and-knob toggle with its label after it; lit is on"},
+      {18,
+       "STATUS_DOT",
+       0,
+       "Status Dot",
+       "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_sheet_frame", "rna_uiLayoutMixarSheetFrame");
+  RNA_def_function_ui_description(func,
+                                  "Paint this block as the AI Provider settings sheet: framed "
+                                  "card, header divider and sidebar divider (Mixar custom widget)");
+  RNA_def_float(func, "header", 182.0f, 0.0f, FLT_MAX, "Header",
+                "Header height in design px (2x artboard)", 0.0f, FLT_MAX);
+  RNA_def_float(func, "sidebar", 442.0f, 0.0f, FLT_MAX, "Sidebar",
+                "Sidebar width in design px (2x artboard)", 0.0f, FLT_MAX);
+
+  func = RNA_def_function(srna, "mixar_sheet", "rna_uiLayoutMixarSheet");
+  RNA_def_function_ui_description(
+      func, "Restyle the most recently added item as an AI Provider sheet element");
+  parm = RNA_def_enum(func, "kind", mixar_sheet_kind_items, 6, "Kind", "Element kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  RNA_def_boolean(func, "lit", false, "Lit", "The current choice");
+  RNA_def_float(func, "extra", 0.0f, -FLT_MAX, FLT_MAX, "Extra", "Kind payload", -FLT_MAX, FLT_MAX);
+
+  func = RNA_def_function(srna, "mixar_sheet_label", "rna_uiLayoutMixarSheetLabel");
+  RNA_def_function_ui_description(func, "Text element of the AI Provider sheet");
+  parm = RNA_def_string(func, "text", nullptr, 0, "Text", "Text to draw");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  parm = RNA_def_enum(func, "kind", mixar_sheet_kind_items, 9, "Kind", "Element kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  RNA_def_boolean(func, "lit", false, "Lit", "The current choice");
+  RNA_def_float(func, "extra", 0.0f, -FLT_MAX, FLT_MAX, "Extra", "Kind payload", -FLT_MAX, FLT_MAX);
+  api_ui_item_common_translation(func);
+
+  func = RNA_def_function(srna, "mixar_sheet_text_width", "rna_uiLayoutMixarSheetTextWidth");
+  RNA_def_function_ui_description(
+      func, "Width of text in a sheet element's face, in 1x UI pixels");
+  parm = RNA_def_enum(func, "kind", mixar_sheet_kind_items, 6, "Kind", "Element kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  parm = RNA_def_string(func, "text", nullptr, 0, "Text", "Text to measure");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  parm = RNA_def_float(func, "width", 0.0f, 0.0f, FLT_MAX, "Width", "Width in 1x UI px", 0.0f, FLT_MAX);
+  RNA_def_function_return(func, parm);
 
   /* Mixar topbar chrome: the animated Zen/Engine slider halves and the
    * Cinema Mode pill. Values must match `rna_uiLayoutMixarTopbarElement`. */

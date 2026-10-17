@@ -25,6 +25,11 @@ HALO_PERIOD_S = 2.6
 HALO_FALLOFF_EXP = 2.8
 HALO_STEPS = 8
 
+# WindowManager ID properties the native overlay painter reads
+# (editors/space_view3d/view3d_agent_halo.cc): on/off and the pixels hidden
+# by the opaque Zen toolbar at the top of the viewport.
+HALO_ACTIVE_WM_PROP = "mixar_agent_halo_active"
+HALO_INSET_WM_PROP = "mixar_agent_halo_inset"
 # Redraw cadence while executing (drives the breathing animation).
 HALO_TICK_ACTIVE_S = 0.05
 HALO_TICK_IDLE_S = 0.3

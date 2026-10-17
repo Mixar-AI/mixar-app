@@ -101,11 +101,41 @@ static bool region_socket_hit(View2D *v2d,
   return dx * dx + dy * dy <= radius * radius;
 }
 
+bool moodboard_graph_point_covered_above(const MoodboardGraphCache &cache,
+                                         const char *owner_id,
+                                         const float x,
+                                         const float y)
+{
+  if (!owner_id || owner_id[0] == '\0') {
+    return false;
+  }
+  const int *owner = cache.body_index.lookup_ptr(owner_id);
+  if (!owner) {
+    return false;
+  }
+  for (int index = *owner + 1; index < cache.bodies.size(); index++) {
+    const MoodboardGraphBody &body = cache.bodies[index];
+    float local_x, local_y;
+    moodboard_inverse_rotate_point(x,
+                                   y,
+                                   BLI_rctf_cent_x(&body.rect),
+                                   BLI_rctf_cent_y(&body.rect),
+                                   body.rotation_deg,
+                                   &local_x,
+                                   &local_y);
+    if (BLI_rctf_isect_pt(&body.rect, local_x, local_y)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool collection_output_hit(PointerRNA *scene_ptr,
                                   View2D *v2d,
                                   const char *collection_name,
                                   const int mouse_x,
                                   const int mouse_y,
+                                  const MoodboardGraphCache &cache,
                                   MoodboardGraphSocketHit *r_hit)
 {
   PropertyRNA *collection = RNA_struct_find_property(scene_ptr, collection_name);
@@ -119,14 +149,20 @@ static bool collection_output_hit(PointerRNA *scene_ptr,
     rect.xmax = rect.xmin + RNA_float_get(&node, "width");
     rect.ymax = rect.ymin + RNA_float_get(&node, "height");
     const float output_x = rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
-    if (region_socket_hit(v2d, mouse_x, mouse_y, output_x, BLI_rctf_cent_y(&rect), true)) {
-      mixie_rna_string_get_clamped(
-          &node, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
-      BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
-      r_hit->x = output_x;
-      r_hit->y = BLI_rctf_cent_y(&rect);
-      return true;
+    const float output_y = BLI_rctf_cent_y(&rect);
+    if (!region_socket_hit(v2d, mouse_x, mouse_y, output_x, output_y, true)) {
+      continue;
     }
+    mixie_rna_string_get_clamped(&node, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
+    /* The handle is painted under a later card: the user cannot see it, so
+     * the click belongs to whatever is visible there. */
+    if (moodboard_graph_point_covered_above(cache, r_hit->node_id, output_x, output_y)) {
+      continue;
+    }
+    BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
+    r_hit->x = output_x;
+    r_hit->y = output_y;
+    return true;
   }
   return false;
 }
@@ -137,17 +173,23 @@ bool moodboard_find_output_socket_under_mouse(PointerRNA *scene_ptr,
                                                const int mouse_y,
                                                MoodboardGraphSocketHit *r_hit)
 {
+  /* One pass over the collections, as the link hit-test does: the covered
+   * test needs every body in paint order, not just the one under test. */
+  MoodboardGraphCache cache;
+  moodboard_graph_cache_build(scene_ptr, &cache);
   if (collection_output_hit(scene_ptr,
                             v2d,
                             "mixie_moodboard_action_nodes",
                             mouse_x,
                             mouse_y,
+                            cache,
                             r_hit) ||
       collection_output_hit(scene_ptr,
                             v2d,
                             "mixie_moodboard_asset_nodes",
                             mouse_x,
                             mouse_y,
+                            cache,
                             r_hit))
   {
     return true;
@@ -169,21 +211,24 @@ bool moodboard_find_output_socket_under_mouse(PointerRNA *scene_ptr,
       continue;
     }
     rctf rect{};
-    if (moodboard_graph_media_rect(&item, &rect) &&
-        region_socket_hit(v2d,
-                          mouse_x,
-                          mouse_y,
-                          rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
-                          BLI_rctf_cent_y(&rect),
-                          true))
-    {
-      mixie_rna_string_get_clamped(
-          &item, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
-      BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
-      r_hit->x = rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
-      r_hit->y = BLI_rctf_cent_y(&rect);
-      return true;
+    if (!moodboard_graph_media_rect(&item, &rect)) {
+      continue;
     }
+    const float output_x = rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
+    const float output_y = BLI_rctf_cent_y(&rect);
+    if (!region_socket_hit(v2d, mouse_x, mouse_y, output_x, output_y, true)) {
+      continue;
+    }
+    mixie_rna_string_get_clamped(&item, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
+    /* A picture dropped over this one hides its handle (the painter skips it
+     * too): the click reaches the picture the user is looking at instead. */
+    if (moodboard_graph_point_covered_above(cache, r_hit->node_id, output_x, output_y)) {
+      continue;
+    }
+    BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
+    r_hit->x = output_x;
+    r_hit->y = output_y;
+    return true;
   }
   return false;
 }

@@ -22,6 +22,7 @@ from mixar.modules.common.job_queue import get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 from mixar.modules.common.job_queue.core.job import JobState, TERMINAL_STATES
 from mixar.modules.common.job_queue import SyncImageJob
+from mixar.modules.common.job_queue.core.queue_download import pinned_to_job
 
 logger = get_logger(__name__)
 
@@ -49,6 +50,7 @@ class _SceneReconImageGenJob(SyncImageJob):
         prompt = self._stored_prompt or self.prompt_text
         recon = dict(self._recon_params)
         sidebar_avail = self._sidebar_available
+        job = self
 
         def _bg_download():
             try:
@@ -62,34 +64,42 @@ class _SceneReconImageGenJob(SyncImageJob):
                 img = load_image_from_url(urls[0], f"scene_recon_{timestamp}")
 
                 def _chain():
+                    # Pinned to the tab that queued the image: the image, the
+                    # recon collection and the chained job (stamped at submit
+                    # from the current scene) all belong there, not to the
+                    # tab the window shows when this timer runs.
                     try:
-                        add_image_to_moodboard(img, prompt)
-                        logger.info(
-                            "Generated image added to moodboard: %s", img.name,
-                        )
-                        image_bytes = compress_image_for_upload(img)
-
-                        scene = bpy.context.scene
-                        sidebar_tab = None
-                        if sidebar_avail and hasattr(scene, "mixie_moodboard_sidebar"):
-                            sidebar = scene.mixie_moodboard_sidebar
-                            if hasattr(sidebar, "tab_scene_recon"):
-                                sidebar_tab = sidebar.tab_scene_recon
-                                sidebar_tab.stage_name = n_("Starting reconstruction...")
-                                sidebar_tab.stage_detail = ""
-
-                        from mixar.modules.moodboard.core.scene_recon_submission import (
-                            submit_recon_job,
-                        )
-
-                        submit_recon_job(
-                            scene, sidebar_tab, image_bytes, **recon,
-                        )
-                        on_done(img.name)
+                        with pinned_to_job(job):
+                            _chain_into_recon()
                     except Exception as e:
                         logger.error("Error chaining scene recon: %s", e)
                         on_error(rpt_("Error: {error}").format(error=e))
                     return None
+
+                def _chain_into_recon():
+                    add_image_to_moodboard(img, prompt)
+                    logger.info(
+                        "Generated image added to moodboard: %s", img.name,
+                    )
+                    image_bytes = compress_image_for_upload(img)
+
+                    scene = bpy.context.scene
+                    sidebar_tab = None
+                    if sidebar_avail and hasattr(scene, "mixie_moodboard_sidebar"):
+                        sidebar = scene.mixie_moodboard_sidebar
+                        if hasattr(sidebar, "tab_scene_recon"):
+                            sidebar_tab = sidebar.tab_scene_recon
+                            sidebar_tab.stage_name = n_("Starting reconstruction...")
+                            sidebar_tab.stage_detail = ""
+
+                    from mixar.modules.moodboard.core.scene_recon_submission import (
+                        submit_recon_job,
+                    )
+
+                    submit_recon_job(
+                        scene, sidebar_tab, image_bytes, **recon,
+                    )
+                    on_done(img.name)
 
                 bpy.app.timers.register(_chain, first_interval=0.0)
             except Exception as e:

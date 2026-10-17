@@ -1112,6 +1112,9 @@ msgstr "നില പരിശോധന പരാജയപ്പെട്ടു:
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "അസറ്റ് ലൈബ്രറികൾ സ്കാൻ ചെയ്ത് മാറ്റങ്ങൾ പരിശോധിക്കുക, പുതിയ പ്രിവ്യൂകൾ മാത്രം റെൻഡർ ചെയ്ത് പരിശീലന API-യിലേക്ക് അയയ്ക്കുക"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "ആരംഭിക്കുന്നു…"
 
@@ -1433,11 +1436,47 @@ msgstr "ഇഷ്ടാനുസൃത ലോക്കൽ സെർവർ"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "നിങ്ങൾ ഇതിനകം പ്രവർത്തിപ്പിക്കുന്ന OpenAI-അനുയോജ്യ സെർവറിലേക്ക് Mixar ചൂണ്ടുക (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "ഫോം ഡാറ്റ അസാധുവാണ് — ദയവായി പിന്തുണയുമായി ബന്ധപ്പെടുക."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "ഞങ്ങളുടെ ഭാഗത്ത് എന്തോ തെറ്റ് സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "ലോക്കൽ മോഡൽ കാറ്റലോഗ് വായിക്കുന്നു"
@@ -1481,26 +1520,20 @@ msgstr "ആദ്യം ലോക്കൽ മോഡൽ ആരംഭിക്ക
 msgid "Base URL and model name are required."
 msgstr "അടിസ്ഥാന URL-ഉം മോഡൽ പേരും ആവശ്യമാണ്."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "ലോക്കൽ സെർവർ HTTP {status} മറുപടി നൽകി."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "ലോക്കൽ സെർവറിലെത്താനായില്ല. അത് പ്രവർത്തിക്കുന്നുണ്ടെന്നും അടിസ്ഥാന URL ശരിയാണെന്നും പരിശോധിക്കുക."
 
-msgid "No models available — contact support"
-msgstr "മോഡലുകൾ ലഭ്യമല്ല — പിന്തുണയുമായി ബന്ധപ്പെടുക"
-
-msgid "Your API key controls the model"
-msgstr "നിങ്ങളുടെ API കീ മോഡലിനെ നിയന്ത്രിക്കുന്നു"
-
 msgid "Custom"
 msgstr "ഇഷ്ടാനുസൃതം"
-
-msgid "Use my own API key…"
-msgstr "എന്റെ സ്വന്തം API കീ ഉപയോഗിക്കുക…"
-
-msgid "Change or remove my API key…"
-msgstr "എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക…"
 
 msgid "Thinking"
 msgstr "ചിന്ത"
@@ -1508,53 +1541,80 @@ msgstr "ചിന്ത"
 msgid "Thinking: {level}"
 msgstr "ചിന്ത: {level}"
 
-msgid "Your key: {name}"
-msgstr "നിങ്ങളുടെ കീ: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "സ്ഥിരം"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "മോഡലുകൾ ലഭ്യമല്ല — പിന്തുണയുമായി ബന്ധപ്പെടുക"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "ഏജന്റ് മോഡൽ സംരക്ഷിക്കുന്നു… അയയ്ക്കുന്നതിനോ മോഡലുകൾ മാറ്റുന്നതിനോ മുമ്പ് കാത്തിരിക്കുക."
 
-msgid "Agent Model"
-msgstr "ഏജന്റ് മോഡൽ"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "ഏജന്റ് ഏത് മോഡൽ പ്രവർത്തിപ്പിക്കണമെന്ന് തിരഞ്ഞെടുക്കുക."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "ഇപ്പോൾ തിരഞ്ഞെടുത്ത മോഡലിന്റെ യുക്തിചിന്ത ശ്രമം."
-
-msgid "No thinking levels for this model"
-msgstr "ഈ മോഡലിന് ചിന്ത നിലകളില്ല"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ് — ഹോസ്റ്റ് ചെയ്ത മോഡൽ തിരഞ്ഞെടുക്കാൻ ഈ മെനുവിൽ \"എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
-
-msgid "Set Agent Model"
-msgstr "ഏജന്റ് മോഡൽ സജ്ജമാക്കുക"
-
-msgid "Use this model for the agent"
-msgstr "ഏജന്റിന് ഈ മോഡൽ ഉപയോഗിക്കുക"
-
-msgid "Provider"
-msgstr "ദാതാവ്"
-
-msgid "Model"
-msgstr "മോഡൽ"
-
-msgid "Label"
-msgstr "ലേബൽ"
-
-msgid "Thinking Level"
-msgstr "ചിന്ത നില"
-
-msgid "No model selected"
-msgstr "മോഡൽ തിരഞ്ഞെടുത്തിട്ടില്ല"
-
-msgid "Reset Agent Model"
-msgstr "ഏജന്റ് മോഡൽ പുനഃക്രമീകരിക്കുക"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "സംരക്ഷിച്ച മോഡൽ മായ്ച്ച് Mixar തിരഞ്ഞെടുക്കാൻ അനുവദിക്കുക"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "മോഡൽ മാറ്റാനായില്ല"
@@ -1562,113 +1622,107 @@ msgstr "മോഡൽ മാറ്റാനായില്ല"
 msgid "Could not reset model"
 msgstr "മോഡൽ പുനഃക്രമീകരിക്കാനായില്ല"
 
-msgid "Removing your key…"
-msgstr "നിങ്ങളുടെ കീ നീക്കം ചെയ്യുന്നു…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "ദാതാവിനൊപ്പം സാധൂകരിക്കുന്നു…"
+msgid "Use this model for the agent"
+msgstr "ഏജന്റിന് ഈ മോഡൽ ഉപയോഗിക്കുക"
 
-msgid "AI Provider Settings"
-msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "സജീവം"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "ക്രമീകരിച്ചിട്ടില്ല"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixar ഏജന്റിനെ നിങ്ങളുടെ സ്വന്തം ദാതാവിൽ പ്രവർത്തിപ്പിക്കുക — സജീവമായിരിക്കുമ്പോൾ Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "നിലവിലെ ക്രമീകരണം"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "അക്കൗണ്ട്"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT സബ്സ്ക്രിപ്ഷൻ"
 
-msgid "API Key"
-msgstr "API കീ"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "സുരക്ഷിതമായി സൂക്ഷിച്ചു"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "ടെക്സ്റ്റ്-മാത്രം മോഡൽ — ചാറ്റ് പ്രവർത്തിക്കും; 3D ടാസ്കുകൾ ദൃശ്യ ഫീഡ്ബാക്കില്ലാതെ നടക്കും."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API കീ നീക്കം ചെയ്യുക…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "ദാതാവ് സജ്ജീകരണം"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "എൻക്രിപ്റ്റ് ചെയ്ത് സൂക്ഷിക്കുന്നു, Mixar ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് മാത്രം ഉപയോഗിക്കുന്നു — സംരക്ഷിച്ച ശേഷം മറച്ച പ്രിവ്യൂ മാത്രം കാണിക്കും."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "ടൂൾ / ഫംഗ്ഷൻ കോളിംഗ് പിന്തുണയുള്ള മോഡൽ തിരഞ്ഞെടുക്കുക — ഏജന്റിന് അത് വേണം."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് സ്ലഗും, ഉദാ. anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ൽ നിന്ന് ലോഡ് ചെയ്യുക"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…അല്ലെങ്കിൽ കൈകൊണ്ട് ഒട്ടിക്കുക"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} അക്ഷരങ്ങൾ ഒട്ടിച്ചു"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "ശൂന്യം — നിങ്ങളുടെ auth.json ഒട്ടിക്കുക"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ടെർമിനലിൽ  codex login  പ്രവർത്തിപ്പിക്കുക, പിന്നെ പൂർണ്ണമായി ലോഡ് ചെയ്യുകയോ ഒട്ടിക്കുകയോ ചെയ്യുക"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-ന്റെ ഉള്ളടക്കം (ഒട്ടിക്കൽ ബട്ടൺ നിങ്ങളുടെ ക്ലിപ്പ്ബോർഡ് വായിക്കുന്നു)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "നിങ്ങളുടെ ChatGPT സബ്സ്ക്രിപ്ഷൻ ഉപയോഗിക്കുന്നു — Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "നിങ്ങളുടെ മാറ്റങ്ങൾ പ്രയോഗിക്കാനായില്ല"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "നിങ്ങളുടെ API കീ നീക്കം ചെയ്യണോ?"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "ഏജന്റ് വീണ്ടും Mixar-ന്റെ സ്ഥിര ദാതാവ് ഉപയോഗിക്കും."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "ഭാവി ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് Mixar ക്രെഡിറ്റുകൾ ഈടാക്കും."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar ഏജന്റ് ഇപ്പോൾ നിങ്ങളുടെ ദാതാവിൽ പ്രവർത്തിക്കുന്നു — Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API കീ നീക്കം ചെയ്തു"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "ഏജന്റ് വീണ്ടും Mixar-ന്റെ സ്ഥിര ദാതാവിലാണ്."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് Mixar ക്രെഡിറ്റുകൾ വീണ്ടും ഈടാക്കുന്നു."
-
-msgid "Try Again"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
-
-msgid "Save & Activate"
-msgstr "സംരക്ഷിച്ച് സജീവമാക്കുക"
-
-msgid "Keep My Key"
-msgstr "എന്റെ കീ നിലനിർത്തുക"
-
-msgid "Remove API Key"
-msgstr "API കീ നീക്കം ചെയ്യുക"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "ലോക്കൽ AI റൺടൈം അൺപാക്ക് ചെയ്യുന്നു…"
@@ -1691,8 +1745,14 @@ msgstr "ഡൗൺലോഡ് ചെയ്തു — പ്രവർത്തി
 msgid "Not downloaded"
 msgstr "ഡൗൺലോഡ് ചെയ്തിട്ടില്ല"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "പൂർണമായും ഈ കമ്പ്യൂട്ടറിൽ പ്രവർത്തിക്കുന്നു — Mixar-ന്റെ ഏജന്റ് ഓർക്കസ്ട്രേഷൻ വഴിയല്ലാതെ നിങ്ങളുടെ പ്രോംപ്റ്റുകൾ ഇവിടെ നിന്ന് പുറത്തുപോകില്ല."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "മോഡൽ"
 
 msgid "Cancel Download"
 msgstr "ഡൗൺലോഡ് റദ്ദാക്കുക"
@@ -1718,9 +1778,6 @@ msgstr "അടിസ്ഥാന URL"
 msgid "API Key (optional)"
 msgstr "API കീ (ഐച്ഛികം)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "ഈ കമ്പ്യൂട്ടറിലെ ഏത് OpenAI-അനുയോജ്യ സെർവറും — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "ലോക്കൽ ദാതാവിനെ സംരക്ഷിക്കാനായില്ല."
 
@@ -1730,53 +1787,32 @@ msgstr "ലോക്കൽ ആപ്പുകൾ വീണ്ടും സ്ക
 msgid "Rescan this computer for running local AI apps"
 msgstr "പ്രവർത്തിക്കുന്ന ലോക്കൽ AI ആപ്പുകൾക്കായി ഈ കമ്പ്യൂട്ടർ വീണ്ടും സ്കാൻ ചെയ്യുക"
 
+msgid "AI Provider Settings"
+msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar ഏജന്റിന് നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗിക്കുക. സജീവമായിരിക്കുമ്പോൾ ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
 
 msgid "Validate with the provider and save your API key"
 msgstr "ദാതാവിനൊപ്പം സാധൂകരിച്ച് നിങ്ങളുടെ API കീ സംരക്ഷിക്കുക"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "ഈ ദാതാവിന് ഒരു മോഡൽ തിരഞ്ഞെടുത്ത് ഒരു API കീ നൽകുക."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "മോഡൽ സ്ലഗും API കീയും ആവശ്യമാണ്."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "ഒരു Codex മോഡൽ തിരഞ്ഞെടുത്ത് നിങ്ങളുടെ auth.json ബണ്ടിൽ ലോഡ് ചെയ്യുക."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "സംരക്ഷണം പരാജയപ്പെട്ടു."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "ഈ മെഷീനിലെ ~/.codex/auth.json ഫീൽഡിലേക്ക് വായിക്കുക"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json കണ്ടെത്തിയില്ല — ആദ്യം `codex login` പ്രവർത്തിപ്പിക്കുക"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json വായിക്കാനായില്ല"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ശൂന്യമാണ്"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ഈ ഫീൽഡിന് വളരെ വലുതാണ്, മുറിച്ചു — ശരിയായി സംരക്ഷിക്കില്ല"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ലോഡ് ചെയ്തു"
-
-msgid "Paste auth.json"
-msgstr "auth.json ഒട്ടിക്കുക"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "ക്ലിപ്പ്ബോർഡിലെ ~/.codex/auth.json ഫീൽഡിലേക്ക് ഒട്ടിക്കുക"
-
-msgid "Clipboard is empty"
-msgstr "ക്ലിപ്പ്ബോർഡ് ശൂന്യമാണ്"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ഒട്ടിച്ച auth.json ഈ ഫീൽഡിന് വളരെ വലുതാണ്, മുറിച്ചു — ശരിയായി സംരക്ഷിക്കില്ല"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "നീക്കം ചെയ്യുക"
@@ -1787,11 +1823,110 @@ msgstr "നീക്കം-സ്ഥിരീകരണ ഫ്ലോ ആരംഭ
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "നീക്കം ഫ്ലോ റദ്ദാക്കി പ്രധാന ഡയലോഗിലേക്ക് മടങ്ങുക"
 
-msgid "Delete the stored API key server-side"
-msgstr "സൂക്ഷിച്ച API കീ സെർവറിൽ നിന്ന് ഇല്ലാതാക്കുക"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "നീക്കം പരാജയപ്പെട്ടു."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "വിച്ഛേദിക്കുക"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "ലോക്കൽ മോഡൽ"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് സ്ലഗും, ഉദാ. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK നില പുതുക്കുക"
@@ -1805,11 +1940,38 @@ msgstr "മോഡൽ കാറ്റലോഗ് പുതുക്കുക"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ബാക്ക്എൻഡിൽ നിന്ന് ദാതാവ്+മോഡൽ കാറ്റലോഗ് വീണ്ടും സാധൂകരിക്കുക"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "ഏജന്റ് മോഡൽ ദാതാവ്"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "സംരക്ഷിച്ച ഹോസ്റ്റഡ്-ഏജന്റ് മോഡൽ തിരഞ്ഞെടുപ്പിന്റെ ദാതാവ് id"
+
+msgid "Agent Model"
+msgstr "ഏജന്റ് മോഡൽ"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "സംരക്ഷിച്ച ഹോസ്റ്റഡ്-ഏജന്റ് മോഡൽ തിരഞ്ഞെടുപ്പിന്റെ മോഡൽ id"
@@ -1838,11 +2000,29 @@ msgstr "ഏജന്റ് മോഡൽ യോഗ്യം"
 msgid "False when the saved model is not available on your plan"
 msgstr "സംരക്ഷിച്ച മോഡൽ നിങ്ങളുടെ പ്ലാനിൽ ലഭ്യമല്ലെങ്കിൽ തെറ്റ്"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "ദാതാവ്"
+
 msgid "LLM provider"
 msgstr "LLM ദാതാവ്"
 
 msgid "Model to use with the selected provider"
 msgstr "തിരഞ്ഞെടുത്ത ദാതാവിനൊപ്പം ഉപയോഗിക്കേണ്ട മോഡൽ"
+
+msgid "API Key"
+msgstr "API കീ"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "നിങ്ങളുടെ API കീ എൻക്രിപ്റ്റ് ചെയ്ത് സൂക്ഷിക്കുന്നു, Mixar ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് മാത്രം ഉപയോഗിക്കുന്നു. സംരക്ഷിച്ച ശേഷം മറച്ച പ്രിവ്യൂ മാത്രം കാണിക്കും."
@@ -1850,20 +2030,14 @@ msgstr "നിങ്ങളുടെ API കീ എൻക്രിപ്റ്റ
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് മോഡൽ സ്ലഗും (ഉദാ. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-ന്റെ ഉള്ളടക്കം (ആദ്യം `codex login` പ്രവർത്തിപ്പിക്കുക)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ലോക്കൽ മോഡ്"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar കൈകാര്യം ചെയ്യുന്നു, അല്ലെങ്കിൽ നിങ്ങളുടെ സ്വന്തം ലോക്കൽ സെർവർ"
-
-msgid "Local model"
-msgstr "ലോക്കൽ മോഡൽ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "ഈ കമ്പ്യൂട്ടറിൽ ഡൗൺലോഡ് ചെയ്ത് പ്രവർത്തിപ്പിക്കേണ്ട തിരഞ്ഞെടുത്ത മോഡൽ"
@@ -1885,6 +2059,15 @@ msgstr "BYOK സജീവം"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "ഈ ഉപയോക്താവിന് സെർവർ byok_active റിപ്പോർട്ട് ചെയ്യുമ്പോൾ ശരി"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "ഡയലോഗ് നില"
@@ -1976,6 +2159,27 @@ msgstr "ജനറേഷൻ പരാജയപ്പെട്ടു — ദയവ
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA ആട്രിബ്യൂട്ട് കീ ചെയ്ത കാറ്റലോഗ് visible_if"
 
+msgid "Nothing selected"
+msgstr "ഒന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "വാല്യൂ"
+
+msgid "Label"
+msgstr "ലേബൽ"
+
+msgid "Group"
+msgstr "ഗ്രൂപ്പ്"
+
+msgid "Selected"
+msgstr "തിരഞ്ഞെടുത്തത്"
+
 msgid "No modes"
 msgstr "മോഡുകളില്ല"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} ജനറേഷനുകൾ തയ്യാർ"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "നിങ്ങളുടെ ക്രെഡിറ്റുകൾ തീർന്നു — തുടരാൻ പ്ലാൻ അപ്ഗ്രേഡ് ചെയ്യുക"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "ആധികാരികത ആവശ്യമാണ് — ദയവായി സൈൻ ഇൻ ചെയ്യുക"
@@ -2125,6 +2332,9 @@ msgstr "ജനറേറ്റ് ചെയ്ത ഫലം ഇമ്പോർട
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "റദ്ദാക്കി (ജനറേഷൻ സെർവറിൽ പൂർത്തിയായേക്കാം)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "സെർവർ പ്രതികരണം പ്രോസസ് ചെയ്യാനായില്ല"
@@ -2236,6 +2446,9 @@ msgstr "ഏജന്റ് ദ്വീപ് ക്യൂ ലഭ്യമല്
 
 msgid "Show every job"
 msgstr "എല്ലാ ജോലിയും കാണിക്കുക"
+
+msgid "Active"
+msgstr "സജീവം"
 
 msgid "Show pending or running jobs"
 msgstr "കാത്തിരിക്കുന്നതോ പ്രവർത്തിക്കുന്നതോ ആയ ജോലികൾ കാണിക്കുക"
@@ -2612,9 +2825,6 @@ msgstr "അനുയോജ്യതാ പ്രൊഫൈൽ"
 msgid "Density"
 msgstr "സാന്ദ്രത"
 
-msgid "Default"
-msgstr "സ്ഥിരം"
-
 msgid "Generation-pane control spacing"
 msgstr "ജനറേഷൻ-പെയിൻ നിയന്ത്രണ ഇടം"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "അക്കൗണ്ട് പേര്"
 
 msgid "Display name for the account greeting"
 msgstr "അക്കൗണ്ട് ആശംസയുടെ പ്രദർശന പേര്"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "പുതിയ ഫയൽ പതിപ്പ്"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "ഫയലുകൾ"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "ഒറിജിൻ"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "ഓട്ടോ റിഗ് പരാജയപ്പെട്ടു"
 msgid "Animate failed"
 msgstr "ആനിമേറ്റ് പരാജയപ്പെട്ടു"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "തിരഞ്ഞെടുത്ത മെഷിന് {count:,} ഫേസുകൾ ഉണ്ട് (പരമാവധി {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "ലോക്കൽ സെർവർ മോഡൽ"
 msgid "Local model last error"
 msgstr "ലോക്കൽ മോഡൽ അവസാന പിശക്"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "പകർത്തുക"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "കമാൻഡ്"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "പകർത്തുക"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "ഫോർമാറ്റ്"
 
 msgid "Processing..."
 msgstr "പ്രോസസ് ചെയ്യുന്നു..."
@@ -5312,6 +5702,9 @@ msgstr "മെഷ് സെഗ്മെന്റേഷൻ"
 msgid "Auto Rig"
 msgstr "ഓട്ടോ റിഗ്"
 
+msgid "Animate"
+msgstr "ആനിമേറ്റ് ചെയ്യുക"
+
 msgid "Add Mesh"
 msgstr "മെഷ് ചേർക്കുക"
 
@@ -5413,6 +5806,15 @@ msgstr "ജനറേഷനിടെ ഉപയോഗിക്കുന്ന ശ�
 
 msgid "The file format used to store the generated image."
 msgstr "ജനറേറ്റ് ചെയ്ത ചിത്രം സൂക്ഷിക്കാൻ ഉപയോഗിക്കുന്ന ഫയൽ ഫോർമാറ്റ്."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "ഓട്ടോ (പേരിൽ നിന്ന്)"
@@ -5642,14 +6044,14 @@ msgstr "BaseColor ടെക്സ്ചർ ഡൗൺലോഡ് ചെയ്യ
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor ടെക്സ്ചർ ലോഡ് ചെയ്യാനായില്ല: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "ടെക്സ്ചർ ഡൗൺലോഡിനിടെ അപ്രതീക്ഷിത പിശക്: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "ഒരു ഒബ്ജക്റ്റിലും ടെക്സ്ചറുകൾ പ്രയോഗിക്കാനായില്ല"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "ലുക്ക്ഡെവ് 360: PBR ടെക്സ്ചറുകൾ പ്രയോഗിക്കുക"
 
 msgid "Both refined and guide masks are required"
 msgstr "ശുദ്ധീകരിച്ച മാസ്കും ഗൈഡ് മാസ്കും ആവശ്യമാണ്"
@@ -5732,6 +6134,15 @@ msgstr "കഥാപാത്രം അസംബിൾ ചെയ്യുക"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ജനറേറ്റ് ചെയ്ത ഭാഗങ്ങൾ റിഗ് ചെയ്തതോ സാധാരണമോ ആയ ശരീരത്തിൽ ലോക്കലായി അറ്റാച്ച് ചെയ്യുക"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "ചിത്ര ശൈലി മാത്രം ഉപയോഗിക്കുക"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ ചിത്രത്തിന്റെ കലാപരമായ ശൈലി മാത്രം കൈമാറുന്നു (പ്രോംപ്റ്റ് അപ്പോഴും ബാധകം). പ്രവർത്തനരഹിതമാക്കുമ്പോൾ ചിത്രം ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു"
+
 msgid "Enter a prompt in the image node"
 msgstr "ചിത്ര നോഡിൽ ഒരു പ്രോംപ്റ്റ് നൽകുക"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ജനറേഷൻ കാറ്റലോഗിൽ മോഡൽ ജനറേഷൻ ലഭ്യമല്ല"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ഈ മോഡൽ ജനറേഷൻ മോഡ് ഇൻഫറൻസ് നോഡുകൾ ഇതുവരെ പിന്തുണയ്ക്കുന്നില്ല"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "പ്രവർത്തനക്ഷമമായ 3D ജനറേഷൻ മോഡൽ ലഭ്യമല്ല"
@@ -5884,6 +6295,9 @@ msgstr "ആദ്യം '{name}' ജനറേറ്റ് ചെയ്യുക 
 
 msgid "Mesh"
 msgstr "മെഷ്"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "റഫറൻസ് {number}"
@@ -6053,11 +6467,11 @@ msgstr "SceneGen ഇമ്പോർട്ട് പരാജയപ്പെട�
 msgid "No image URLs in server response"
 msgstr "സെർവർ പ്രതികരണത്തിൽ ചിത്ര URL-കളില്ല"
 
-msgid "Starting reconstruction..."
-msgstr "പുനർനിർമാണം ആരംഭിക്കുന്നു..."
-
 msgid "Error: {error}"
 msgstr "പിശക്: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "പുനർനിർമാണം ആരംഭിക്കുന്നു..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "ജനറേറ്റ് ചെയ്ത ചിത്രം ഡൗൺലോഡ് ചെയ്യാനായില്ല: {error}"
@@ -6280,9 +6694,6 @@ msgstr "ലോകം ഡൗൺലോഡ്/പരിവർത്തനം ചെ
 
 msgid "World imported but produced no objects"
 msgstr "ലോകം ഇമ്പോർട്ട് ചെയ്തു, പക്ഷേ ഒബ്ജക്റ്റുകൾ ഉണ്ടായില്ല"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: ലോകം ഇമ്പോർട്ട് ചെയ്യുക"
 
 msgid "Failed to import world: {error}"
 msgstr "ലോകം ഇമ്പോർട്ട് ചെയ്യാനായില്ല: {error}"
@@ -6833,9 +7244,6 @@ msgstr "ഇഷ്ടാനുസൃത കളർ ഉപയോഗിക്കു�
 msgid "Custom Colour"
 msgstr "ഇഷ്ടാനുസൃത കളർ"
 
-msgid "Selected"
-msgstr "തിരഞ്ഞെടുത്തത്"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "ക്ലിക്ക് ചെയ്യുമ്പോൾ ഈ ഫ്രെയിമിന്റെ അതിർത്തിയും ഉൾഭാഗവും അവഗണിക്കുക, അതിനാൽ അംഗങ്ങളെ മാത്രം തിരഞ്ഞെടുക്കാം"
 
@@ -6844,6 +7252,18 @@ msgstr "ചുരുക്കിയത്"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ഫ്രെയിം ഒരു തലക്കെട്ട് ബാറായി വരച്ച് ബോഡി മറയ്ക്കുക"
+
+msgid "Unavailable"
+msgstr "ലഭ്യമല്ല"
+
+msgid "No supported 3D service is available"
+msgstr "പിന്തുണയുള്ള 3D സേവനം ലഭ്യമല്ല"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "ചിത്ര മോഡലുകൾ മാസ്ക് ഗൈഡൻസും രണ്ട് റഫറൻസുകളും പ്രഖ്യാപിക്കണം"
+
+msgid "Attachment settings"
+msgstr "അറ്റാച്ച്മെന്റ് ക്രമീകരണങ്ങൾ"
 
 msgid "No choices published"
 msgstr "തിരഞ്ഞെടുപ്പുകൾ പ്രസിദ്ധീകരിച്ചിട്ടില്ല"
@@ -6862,18 +7282,6 @@ msgstr "പൂർത്തി"
 
 msgid "Generation completed"
 msgstr "ജനറേഷൻ പൂർത്തിയായി"
-
-msgid "Unavailable"
-msgstr "ലഭ്യമല്ല"
-
-msgid "No supported 3D service is available"
-msgstr "പിന്തുണയുള്ള 3D സേവനം ലഭ്യമല്ല"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "ചിത്ര മോഡലുകൾ മാസ്ക് ഗൈഡൻസും രണ്ട് റഫറൻസുകളും പ്രഖ്യാപിക്കണം"
-
-msgid "Attachment settings"
-msgstr "അറ്റാച്ച്മെന്റ് ക്രമീകരണങ്ങൾ"
 
 msgid "Parameter ID"
 msgstr "പാരാമീറ്റർ ID"
@@ -6899,14 +7307,14 @@ msgstr "ബൂളിയൻ വാല്യൂ"
 msgid "Catalog choice"
 msgstr "കാറ്റലോഗ് തിരഞ്ഞെടുപ്പ്"
 
-msgid "Widget"
-msgstr "വിജറ്റ്"
-
-msgid "Group"
-msgstr "ഗ്രൂപ്പ്"
-
 msgid "Choices"
 msgstr "തിരഞ്ഞെടുപ്പുകൾ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "വിജറ്റ്"
 
 msgid "Visibility Condition"
 msgstr "ദൃശ്യതാ വ്യവസ്ഥ"
@@ -6926,11 +7334,14 @@ msgstr "കുറഞ്ഞത്"
 msgid "Maximum"
 msgstr "കൂടിയത്"
 
-msgid "Value"
-msgstr "വാല്യൂ"
-
 msgid "Value Label"
 msgstr "വാല്യൂ ലേബൽ"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "സോക്കറ്റ് ID"
@@ -7948,12 +8359,6 @@ msgstr "ശൈലി കൈമാറ്റ ചിത്രം - ജനറേറ�
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "റഫറൻസ് ചിത്രം - ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു (പ്രോംപ്റ്റ് അവഗണിക്കുന്നു)"
 
-msgid "Use Image Style Only"
-msgstr "ചിത്ര ശൈലി മാത്രം ഉപയോഗിക്കുക"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ ചിത്രത്തിന്റെ കലാപരമായ ശൈലി മാത്രം കൈമാറുന്നു (പ്രോംപ്റ്റ് അപ്പോഴും ബാധകം). പ്രവർത്തനരഹിതമാക്കുമ്പോൾ ചിത്രം ടെക്സ്ചർ ജനറേഷനെ നേരിട്ട് നയിക്കുന്നു"
-
 msgid "Output texture resolution in pixels"
 msgstr "പിക്സലുകളിലെ ഔട്ട്പുട്ട് ടെക്സ്ചർ റെസല്യൂഷൻ"
 
@@ -8452,9 +8857,6 @@ msgstr "യഥാർത്ഥ മെഷ് മറച്ചിരിക്കു�
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan ആരംഭിച്ചിട്ടില്ല"
 
-msgid "Format"
-msgstr "ഫോർമാറ്റ്"
-
 msgid "Inputs"
 msgstr "ഇൻപുട്ടുകൾ"
 
@@ -8548,26 +8950,23 @@ msgstr "വ്യൂകളായി ചേർക്കാൻ മൂഡ്ബോ�
 msgid "Generates as one multi-view job"
 msgstr "ഒരു മൾട്ടി-വ്യൂ ജോലിയായി ജനറേറ്റ് ചെയ്യുന്നു"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} കൂടി)"
+
 msgid "Video Gen tab not available"
 msgstr "വീഡിയോ ജെൻ ടാബ് ലഭ്യമല്ല"
 
 msgid "Selected References"
 msgstr "തിരഞ്ഞെടുത്ത റഫറൻസുകൾ"
 
-msgid "Images: {count}"
-msgstr "ചിത്രങ്ങൾ: {count}"
-
-msgid "Videos: {count}"
-msgstr "വീഡിയോകൾ: {count}"
+msgid "No references selected — text-to-video"
+msgstr "റഫറൻസുകളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല — ടെക്സ്റ്റ്-ടു-വീഡിയോ"
 
 msgid "A selected video source file is missing"
 msgstr "തിരഞ്ഞെടുത്ത ഒരു വീഡിയോ ഉറവിട ഫയൽ കാണുന്നില്ല"
 
-msgid "No references selected — text-to-video"
-msgstr "റഫറൻസുകളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല — ടെക്സ്റ്റ്-ടു-വീഡിയോ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "റോളുകൾ നൽകുമ്പോൾ പ്രോംപ്റ്റിൽ ചിത്ര/വീഡിയോ ക്രമം പരാമർശിക്കുക"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "റഫറൻസ് പരിധികൾ"
@@ -8644,6 +9043,33 @@ msgstr "എല്ലാം ഫ്രെയിം ചെയ്യുക"
 msgid "Clear Board"
 msgstr "ബോർഡ് മായ്ക്കുക"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ഒബ്ജക്റ്റ് പേര്"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ആനിമേഷനുകൾ"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ഏജന്റ് ഓട്ടോ റിഗ്"
 
@@ -8665,8 +9091,8 @@ msgstr "സ്കെലിറ്റൺ തരം: auto / biped / quadruped / hex
 msgid "Skeleton Spec"
 msgstr "സ്കെലിറ്റൺ സ്പെക്ക്"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "സ്കെലിറ്റൺ കൺവെൻഷൻ: 'tripo' അല്ലെങ്കിൽ 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "ബോൺ നാമകരണം: tripo, mixamo, actorcore, unity, unreal അല്ലെങ്കിൽ vrm (tripo മാത്രമേ Tripo പ്രീസെറ്റ് ആനിമേഷനുകൾ പിന്തുണയ്ക്കൂ)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "ഏജന്റ് PBR ജനറേഷൻ"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "നൽകിയ മെഷ് ഒബ്ജക്റ്റിന് Tripo ഉപയോഗിച്ച് PBR ടെക്സ്ചറുകൾ ജനറേറ്റ് ചെയ്യുക"
-
-msgid "Object Name"
-msgstr "ഒബ്ജക്റ്റ് പേര്"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "ടെക്സ്ചർ ചെയ്യേണ്ട സീനിലെ മെഷ് ഒബ്ജക്റ്റിന്റെ പേര്"
@@ -8917,11 +9340,11 @@ msgstr "മൂഡ്ബോർഡ്→ചാറ്റ് അറ്റാച്�
 msgid "Sync failed: {error}"
 msgstr "സിങ്ക് പരാജയപ്പെട്ടു: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} വീഡിയോ ഒഴിവാക്കി: ഏജന്റ് നിശ്ചല ചിത്രങ്ങൾ മാത്രം സ്വീകരിക്കുന്നു. ക്ലിപ്പുകൾക്ക് മൂഡ്ബോർഡിലെ വീഡിയോ ജെൻ ഉപയോഗിക്കുക"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} വീഡിയോകൾ ഒഴിവാക്കി: ഏജന്റ് നിശ്ചല ചിത്രങ്ങൾ മാത്രം സ്വീകരിക്കുന്നു. ക്ലിപ്പുകൾക്ക് മൂഡ്ബോർഡിലെ വീഡിയോ ജെൻ ഉപയോഗിക്കുക"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "മൂഡ്ബോർഡ് ചിത്രങ്ങളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
@@ -9219,9 +9642,6 @@ msgstr "ഡയറക്ടറി"
 
 msgid "Directory of the selected file(s)"
 msgstr "തിരഞ്ഞെടുത്ത ഫയലുകളുടെ ഡയറക്ടറി"
-
-msgid "Files"
-msgstr "ഫയലുകൾ"
 
 msgid "Failed to load media: {filepath}"
 msgstr "മീഡിയ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "ഒരു ഇൻഫറൻസ് നോഡ് തിരഞ്ഞെടു
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "പ്രോംപ്റ്റ് തിരുത്തുക, തുടർന്ന് Enter അമർത്തുക അല്ലെങ്കിൽ ജനറേറ്റ് ചെയ്യുക"
 
-msgid "Node added to the generation queue"
-msgstr "നോഡ് ജനറേഷൻ ക്യൂവിൽ ചേർത്തു"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "വീണ്ടും ക്രമീകരിച്ച് പ്രവർത്തിപ്പിക്കാൻ ഈ നോഡിന്റെ ക്രമീകരണങ്ങളും പ്രോംപ്റ്റും കാണിക്കുക; തിരുത്തൽ റദ്ദാക്കി ഫലത്തിലേക്ക് മടങ്ങാൻ വീണ്ടും ക്ലിക്ക് ചെയ്യുക"
@@ -10839,9 +11259,6 @@ msgstr "ജനറേറ്റ് ചെയ്ത മെറ്റീരിയൽ 
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "മെറ്റീരിയൽ ജനറേറ്റ് ചെയ്തു, പക്ഷേ പ്രയോഗിക്കാൻ കഴിഞ്ഞില്ല: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "പ്രൊസീജറൽ മെറ്റീരിയൽ ജനറേറ്റ് ചെയ്യുക"
 
 msgid "Material generation failed"
 msgstr "മെറ്റീരിയൽ ജനറേഷൻ പരാജയപ്പെട്ടു"
@@ -11877,9 +12294,6 @@ msgstr "കളർ ക്വാണ്ടൈസേഷൻ ബിറ്റുകൾ"
 
 msgid "Generic Quantization Bits"
 msgstr "പൊതു ക്വാണ്ടൈസേഷൻ ബിറ്റുകൾ"
-
-msgid "Animations"
-msgstr "ആനിമേഷനുകൾ"
 
 msgid "Animation Mode"
 msgstr "ആനിമേഷൻ മോഡ്"
@@ -17496,12 +17910,6 @@ msgstr "GPU ലഭ്യമാണെങ്കിൽ എപ്പോഴും അ
 msgid "Always render on the CPU"
 msgstr "എപ്പോഴും CPU-യിൽ റെൻഡർ ചെയ്യുക"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "സ്വതേ പുറത്ത് ബേക്ക് പ്രാപ്തമാക്കുക"
 
@@ -17579,6 +17987,12 @@ msgstr "ആനിമേഷൻ ഫ്രെയിം എപ്പോഴും വ
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ഓരോ ആനിമേഷൻ ഫ്രെയിം മാറ്റത്തിലും നോഡ് ട്രീ വിലയിരുത്തുക"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ചാനൽ ഓപ്ഷനുകൾ"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "സ്കെച്ച് പ്രിവ്യൂ സൃഷ്ടിക�
 msgid "View sketch"
 msgstr "സ്കെച്ച് കാണുക"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "ഏജന്റ് ഡ്രാഫ്റ്റ് നിറഞ്ഞു (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "മാർക്ക് ചേർത്തു — അതിന് താഴെ ഒന്നുമില്ല"
@@ -19109,9 +19523,6 @@ msgstr "ടൂൾബാർ"
 
 msgid "Sidebar"
 msgstr "സൈഡ്ബാർ"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV മെഷ് സെഗ്മെന്റേഷൻ പാനൽ"
@@ -19536,8 +19947,8 @@ msgstr "മാറ്റം വരുത്തുന്നു..."
 msgid "Awaiting Input..."
 msgstr "ഇൻപുട്ടിനായി കാത്തിരിക്കുന്നു..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "വീഡിയോകൾക്ക് വീഡിയോ മോഡ് വേണം. ഏജന്റിലേക്ക് അയയ്ക്കാൻ വീഡിയോ നീക്കം ചെയ്യുക."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ഉപയോക്തൃ ID"
@@ -19547,6 +19958,78 @@ msgstr "Mixie ചാറ്റ് ലോഗിനുള്ള ഉപയോക്�
 
 msgid "Agent expects: {formats}"
 msgstr "ഏജന്റ് പ്രതീക്ഷിക്കുന്നത്: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "മന്ദഗതിയിലുള്ള ചിത്രം ഒഴിവാക്കി: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "ചിത്ര എൻകോഡിങ് പരാജയപ്പെട്ടു: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*നിർത്തി*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "അപ്ഗ്രേഡ് ചെയ്യുക"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "ഫീഡ്ബാക്ക് കുറിപ്പ് ശൂന്യമാണ്"
@@ -19730,6 +20222,27 @@ msgstr "‘{name}’ ഇനി അസറ്റ് ഫയലിലില്ല."
 
 msgid "Could not add the asset to the scene."
 msgstr "അസറ്റ് സീനിലേക്ക് ചേർക്കാനായില്ല."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "ചിന്തിക്കുന്നു..."
@@ -19880,9 +20393,6 @@ msgstr "{count} മാറ്റി"
 
 msgid "{count} deleted"
 msgstr "{count} ഇല്ലാതാക്കി"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} കൂടി)"
 
 msgid "Created: {names}"
 msgstr "സൃഷ്ടിച്ചത്: {names}"
@@ -20046,6 +20556,15 @@ msgstr "ലോഗിൻ"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ചാറ്റിനുള്ള ലോഗിൻ പാനൽ"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Mixar അക്കൗണ്ട് ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക"
+
 msgid "Session expired"
 msgstr "സെഷൻ കാലഹരണപ്പെട്ടു"
 
@@ -20055,31 +20574,27 @@ msgstr "വീണ്ടും ലോഗിൻ ചെയ്യുക."
 msgid "Login Failed"
 msgstr "ലോഗിൻ പരാജയപ്പെട്ടു"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar അക്കൗണ്ട് ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "ബ്രൗസറിനായി കാത്തിരിക്കുന്നു..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ബ്രൗസർ വഴി ലോഗിൻ ചെയ്യുക"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"പ്രൊഫൈൽ / അക്കൗണ്ട് ഡ്രോപ്പ്ഡൗൺ — ആഗോള ടോപ്പ് ബാറിൽ നിന്ന് തുറക്കുന്നു.\n"
-"\n"
-"ഉള്ളടക്കം `layout.mixar_profile_card()` നേറ്റീവായി വരയ്ക്കുന്നു\n"
-"(`interface_mixar_profile_card.cc`): ആശംസ, പ്ലാൻ ചിപ്പ്,\n"
-"ക്രെഡിറ്റ് ഉപയോഗ മീറ്റർ, അക്കൗണ്ട് പ്രവർത്തനങ്ങൾ, ഒരു മെനുവിന് പകരം ഒരു കാർഡായി\n"
-"ക്രമീകരിച്ചത്. രജിസ്ട്രേഷനും കാർഡ് വിളിക്കുന്ന ഓരോ\n"
-"ഓപ്പറേറ്ററും Python-ന്റേതാണ് — C++-ന് പിക്സലുകൾ മാത്രം.\n"
 
 msgid "Dashboard"
 msgstr "ഡാഷ്ബോർഡ്"
@@ -20309,12 +20824,6 @@ msgstr "മാർക്കുകൾ: {note}"
 msgid "Sketch"
 msgstr "സ്കെച്ച്"
 
-msgid "Skipped slow image: {name}"
-msgstr "മന്ദഗതിയിലുള്ള ചിത്രം ഒഴിവാക്കി: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "ചിത്ര എൻകോഡിങ് പരാജയപ്പെട്ടു: {error}"
-
 msgid "Message sent"
 msgstr "സന്ദേശം അയച്ചു"
 
@@ -20536,8 +21045,8 @@ msgstr "ചെക്ക്പോയിന്റ് ID"
 msgid "Restoring checkpoint…"
 msgstr "ചെക്ക്പോയിന്റ് പുനഃസ്ഥാപിക്കുന്നു…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ഒട്ടിച്ച ടെക്സ്റ്റ് വളരെ നീണ്ടതാണ് (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ടെക്സ്റ്റ് ഒട്ടിക്കുക"
@@ -20728,11 +21237,14 @@ msgstr "ഇല്ലാതാക്കേണ്ട ആർക്കൈവ് ച�
 msgid "Chat removed from history"
 msgstr "ചാറ്റ് ചരിത്രത്തിൽ നിന്ന് നീക്കം ചെയ്തു"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} ചേർക്കാനാവില്ല: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) എത്തി"
@@ -20740,14 +21252,14 @@ msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) 
 msgid "Skipped {name}: {error}"
 msgstr "{name} ഒഴിവാക്കി: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} ചേർക്കാനാവില്ല: {error}"
-
 msgid "These references are already attached"
 msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
 
 msgid "Added {count} image(s)"
 msgstr "{count} ചിത്രം ചേർത്തു"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "ബ്ലെൻഡിൽ നിന്ന് ചേർക്കുക"
@@ -20764,6 +21276,9 @@ msgstr "{size} - ഡാറ്റയുണ്ട്"
 msgid "{size} - No data"
 msgstr "{size} - ഡാറ്റയില്ല"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "ബ്ലെൻഡ് ഫയലിൽ നിന്ന് ചിത്രം തിരഞ്ഞെടുക്കുക"
 
@@ -20772,6 +21287,12 @@ msgstr "ചിത്രം ഇതിനകം ചേർത്തു"
 
 msgid "Image not found in blend file"
 msgstr "ബ്ലെൻഡ് ഫയലിൽ ചിത്രം കണ്ടെത്തിയില്ല"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "ചിത്രം ഇതിനകം അറ്റാച്ച് ചെയ്തു"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "സ്ക്രീൻഷോട്ട് പിടിക്കുക"
 
@@ -21103,9 +21627,6 @@ msgstr "ബന്ധിപ്പിക്കാനായില്ല"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Dev മോഡ്: ഡമ്മി ഡാറ്റയുമായി ബന്ധിപ്പിച്ചു"
 
-msgid "Disconnect"
-msgstr "വിച്ഛേദിക്കുക"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie ഏജന്റ് സെർവറിൽ നിന്ന് വിച്ഛേദിക്കുക"
 
@@ -21115,14 +21636,14 @@ msgstr "Dev മോഡ്: വിച്ഛേദിച്ചു"
 msgid "Disconnected from server"
 msgstr "സെർവറിൽ നിന്ന് വിച്ഛേദിച്ചു"
 
+msgid "Could not save the chat to History"
+msgstr "ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല"
+
 msgid "New Chat"
 msgstr "പുതിയ ചാറ്റ്"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "ഒരു പുതിയ ചാറ്റ് തുടങ്ങുക (നിലവിലെ ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കുന്നു)"
-
-msgid "Could not save the chat to History"
-msgstr "ചാറ്റ് ചരിത്രത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല"
 
 msgid "Started new chat session"
 msgstr "പുതിയ ചാറ്റ് സെഷൻ തുടങ്ങി"
@@ -21160,6 +21681,12 @@ msgstr "മുൻ ടാസ്ക് തുടരുന്നു..."
 msgid "Could not resume the previous task"
 msgstr "മുൻ ടാസ്ക് തുടരാനായില്ല"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "സമർപ്പിച്ച ഫീഡ്ബാക്ക് കുറ�
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ലോക്കലായി സമർപ്പിച്ച കുറിപ്പ്, ചാറ്റിൽ വായന-മാത്രമായി കാണിക്കുന്നു"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "സന്ദേശം അയച്ചില്ല"
 
@@ -21522,6 +22058,15 @@ msgstr "ചാറ്റ് ഇൻപുട്ട്"
 
 msgid "Type your message here"
 msgstr "സന്ദേശം ഇവിടെ ടൈപ്പ് ചെയ്യുക"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "ചാറ്റ് സന്ദേശങ്ങൾ"
@@ -21660,6 +22205,12 @@ msgstr "ലോഗിൻ ചെയ്തിട്ടുണ്ട്"
 
 msgid "Whether user is currently logged in"
 msgstr "ഉപയോക്താവ് ഇപ്പോൾ ലോഗിൻ ചെയ്തിട്ടുണ്ടോ"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ലോഗിൻ ചെയ്യുന്നു"
@@ -21861,9 +22412,6 @@ msgstr "എഴുത്ത്"
 
 msgid "File write"
 msgstr "ഫയൽ എഴുത്ത്"
-
-msgid "Command"
-msgstr "കമാൻഡ്"
 
 msgid "Shell command"
 msgstr "ഷെൽ കമാൻഡ്"
@@ -23620,9 +24168,6 @@ msgstr "കഴ്സർ സ്നാപ്പ് ചെയ്യുക"
 msgid "Snap 2D cursor"
 msgstr "2D കഴ്സർ സ്നാപ്പ് ചെയ്യുക"
 
-msgid "Origin"
-msgstr "ഒറിജിൻ"
-
 msgid "Mirror selected UVs"
 msgstr "തിരഞ്ഞെടുത്ത UV-കൾ മിറർ ചെയ്യുക"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "മുമ്പത്തേതിലേക്ക് മടങ്ങുക"
 
 msgid "Grid & Relationship Lines"
 msgstr "ഗ്രിഡും ബന്ധരേഖകളും"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "റെൻഡർ എഞ്ചിൻ"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "റെൻഡർ ക്രമീകരണങ്ങൾ"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "പുതിയ Mixar പതിപ്പ് (%d.%d) സംരക്ഷിച്ച ഫയൽ, ചില ഡാറ്റ നഷ്ടപ്പെട്ടേക്കാം"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "ഫയൽ പുതിയ പതിപ്പിൽ സംരക്ഷിച്ചതാണ്, Mixar %s അല്ലെങ്കിൽ അതിന് ശേഷമുള്ളതിൽ തുറക്കുക"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "പെയിന്റ് തുടങ്ങാൻ ലെയറുകൾ പാനലിൽ ഒരു പെയിന്റ് ലെയർ ചേർക്കുക"
 
@@ -24409,7 +25179,43 @@ msgstr "സ്കെച്ച് ഡ്രാഫ്റ്റിലേക്ക�
 msgid "Stop the running turn"
 msgstr "നടക്കുന്ന ടേൺ നിർത്തുക"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"പഴയപടിയാക്കുക\n"
+"\n"
+"മെച്ചപ്പെടുത്തുന്നതിന് മുമ്പ് നിങ്ങൾ എഴുതിയ പ്രോംപ്റ്റ് പുനഃസ്ഥാപിക്കുക."
+
+msgid "Refining this prompt..."
+msgstr "ഈ പ്രോംപ്റ്റ് മെച്ചപ്പെടുത്തുന്നു..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"വീണ്ടും മെച്ചപ്പെടുത്തുക\n"
+"\n"
+"അയയ്ക്കുന്ന മോഡലിന് അനുയോജ്യമായി ഈ പ്രോംപ്റ്റ് ഒരിക്കൽ കൂടി മാറ്റിയെഴുതുക. പഴയപടിയാക്കുക നിങ്ങളുടെ സ്വന്തം വാചകം തിരികെ തരും, മുമ്പത്തെ മെച്ചപ്പെടുത്തൽ അല്ല."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"മെച്ചപ്പെടുത്തുക\n"
+"\n"
+"അയയ്ക്കുന്ന മോഡൽ പ്രതികരിക്കുന്ന വിശദാംശങ്ങൾ ചേർത്ത് ഈ പ്രോംപ്റ്റ് ആ മോഡലിന് അനുയോജ്യമായി മാറ്റിയെഴുതുക."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "റഫറൻസ് നീക്കം ചെയ്യുക"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ഈ സ്കെച്ചും ക്യൂവിലുള്ള വരയും ഉപേക്ഷിക്കുക"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "ക്യൂ തുറക്കുക"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "ഒന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ടാബുകൾ മാറുന്നതിന് മുമ്പ് സ്കെച്ചോ ഡിക്റ്റേഷനോ പൂർത്തിയാക്കുക"
 
@@ -24607,6 +25413,15 @@ msgstr "%d ദിവസം മുമ്പ്"
 msgid "%dw ago"
 msgstr "%d ആഴ്ച മുമ്പ്"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "ജനറേറ്റ് ചെയ്യുന്നു (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · അയയ്ക്കാൻ Enter"
 
 msgid "Sketch · Enter to send"
 msgstr "സ്കെച്ച് · അയയ്ക്കാൻ Enter"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "നിയമങ്ങൾ — ഏജന്റിനുള്ള പ്ര
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "ഓട്ടോ മോഡ് ഓണാണ്: തുറന്ന തി�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദിക്കുന്നതിന് പകരം തുറന്ന തിരഞ്ഞെടുപ്പുകൾ ഏജന്റ് തന്നെ തീരുമാനിക്കുന്നു, തീരുമാനങ്ങൾ സംഗ്രഹത്തിൽ പട്ടികപ്പെടുത്തുന്നു"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ്, മോഡൽ അത് തീരുമാനിക്കുന്നു. ഹോസ്റ്റ് ചെയ്ത മോഡൽ വീണ്ടും തിരഞ്ഞെടുക്കാൻ ഈ മെനു തുറന്ന് \"എന്റെ API കീ മാറ്റുക അല്ലെങ്കിൽ നീക്കം ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
-
-msgid "Choose which model the agent runs on"
-msgstr "ഏജന്റ് ഏത് മോഡലിലാണ് പ്രവർത്തിക്കുന്നതെന്ന് തിരഞ്ഞെടുക്കുക"
 
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
@@ -24858,6 +25670,12 @@ msgstr "അടച്ച എണ്ണം"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "അടച്ച ഏജന്റ് ബബിൾ വിൻഡോകളുടെ എണ്ണം"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "ഏജന്റ് ബബിൾ വിൻഡോ വലുപ്പം സജ്ജമാക്കുക"
@@ -25336,6 +26154,9 @@ msgstr "ക്യൂവിൽ..."
 msgid "Click to edit the prompt and try again"
 msgstr "പ്രോംപ്റ്റ് തിരുത്തി വീണ്ടും ശ്രമിക്കാൻ ക്ലിക്ക് ചെയ്യുക"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "പ്രോംപ്റ്റ്\n"
 "\n"
 "ജനറേറ്റ് ചെയ്യേണ്ടത് വിവരിക്കുക. ഈ നോഡ് സമർപ്പിക്കാൻ Enter അമർത്തുക."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"പഴയപടിയാക്കുക\n"
-"\n"
-"മെച്ചപ്പെടുത്തുന്നതിന് മുമ്പ് നിങ്ങൾ എഴുതിയ പ്രോംപ്റ്റ് പുനഃസ്ഥാപിക്കുക."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"വീണ്ടും മെച്ചപ്പെടുത്തുക\n"
-"\n"
-"അയയ്ക്കുന്ന മോഡലിന് അനുയോജ്യമായി ഈ പ്രോംപ്റ്റ് ഒരിക്കൽ കൂടി മാറ്റിയെഴുതുക. പഴയപടിയാക്കുക നിങ്ങളുടെ സ്വന്തം വാചകം തിരികെ തരും, മുമ്പത്തെ മെച്ചപ്പെടുത്തൽ അല്ല."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"മെച്ചപ്പെടുത്തുക\n"
-"\n"
-"അയയ്ക്കുന്ന മോഡൽ പ്രതികരിക്കുന്ന വിശദാംശങ്ങൾ ചേർത്ത് ഈ പ്രോംപ്റ്റ് ആ മോഡലിന് അനുയോജ്യമായി മാറ്റിയെഴുതുക."
-
-msgid "Refining this prompt..."
-msgstr "ഈ പ്രോംപ്റ്റ് മെച്ചപ്പെടുത്തുന്നു..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "ടെക്സ്ചർ സെറ്റ് സ്പേസ്"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ടെക്സ്ചർ സെറ്റുകൾ കൈകാര്യം ചെയ്യാൻ സൈഡ്ബാർ പാനലുകൾ ഉപയോഗിക്കുക"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ആദ്യത്തേതിലേക്ക് മടങ്ങുക"
 
@@ -26557,9 +27354,6 @@ msgstr "സുരക്ഷിത മേഖലകൾ"
 msgid "Select a character to animate"
 msgstr "ആനിമേറ്റ് ചെയ്യാൻ ഒരു കഥാപാത്രം തിരഞ്ഞെടുക്കുക"
 
-msgid "Animate"
-msgstr "ആനിമേറ്റ് ചെയ്യുക"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "പ്ലേഹെഡിൽ നിന്ന് ഈ ബ്ലോക്കിങ്-ലെവൽ ചലനം കീ ചെയ്യുക"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "വർക്ക്സ്പേസ് ടാസ്ക് ഐഡന്റിറ്റി"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "അപകട-നിറമുള്ള പ്രവർത്തന ബട
 msgid "Borderless quiet action button"
 msgstr "ബോർഡറില്ലാത്ത ശാന്ത പ്രവർത്തന ബട്ടൺ"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "ചിപ്പ്"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "മോഡ് സ്ലൈഡർ ഇടത്"
 
@@ -27126,9 +28019,6 @@ msgstr "ഗ്ലിഫ്"
 
 msgid "Header glyph"
 msgstr "ഹെഡർ ഗ്ലിഫ്"
-
-msgid "Chip"
-msgstr "ചിപ്പ്"
 
 msgid "Chip track"
 msgstr "ചിപ്പ് ട്രാക്ക്"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "ഫയൽ എക്സ്റ്റൻഷൻ ഫിൽറ്റർ"
 
 msgid "Write compressed .mixar file"
 msgstr "കംപ്രസ് ചെയ്ത .mixar ഫയൽ എഴുതുക"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ഫയലായി സംരക്ഷിക്കുക"

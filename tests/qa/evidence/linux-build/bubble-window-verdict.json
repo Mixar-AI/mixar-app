@@ -1,0 +1,373 @@
+{
+  "background_opacity_floor": 0.88,
+  "backend": "OpenGL, X11/XWayland",
+  "targeted_tests_passed": 56,
+  "baseline": {
+    "baseline": true,
+    "native_properties": "_MOTIF_WM_HINTS(_MOTIF_WM_HINTS) = 0x1, 0x36, 0x0, 0x0\n_NET_FRAME_EXTENTS(CARDINAL) = 0, 0, 37, 0\nWM_NORMAL_HINTS(WM_SIZE_HINTS):\n\t\tprogram specified location: 568, 460\n\t\tprogram specified size: 678 by 230\n\t\tprogram specified minimum size: 320 by 240\n\t\tprogram specified maximum size: 65535 by 65535\n",
+    "sizes": [
+      {
+        "width": 320,
+        "height": 240,
+        "regions": [
+          [
+            "HEADER",
+            320,
+            81
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            320,
+            43
+          ],
+          [
+            "WINDOW",
+            320,
+            116
+          ]
+        ],
+        "pixel_stddev": 2.3642850399222173,
+        "requested": [
+          100,
+          80
+        ]
+      },
+      {
+        "width": 800,
+        "height": 500,
+        "regions": [
+          [
+            "HEADER",
+            800,
+            96
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            800,
+            51
+          ],
+          [
+            "WINDOW",
+            800,
+            353
+          ]
+        ],
+        "pixel_stddev": 15.385807907341102,
+        "requested": [
+          800,
+          500
+        ]
+      },
+      {
+        "width": 320,
+        "height": 240,
+        "regions": [
+          [
+            "HEADER",
+            320,
+            96
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            320,
+            51
+          ],
+          [
+            "WINDOW",
+            320,
+            93
+          ]
+        ],
+        "pixel_stddev": 2.449489742783178,
+        "requested": [
+          320,
+          240
+        ]
+      },
+      {
+        "width": 560,
+        "height": 240,
+        "regions": [
+          [
+            "HEADER",
+            560,
+            67
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            560,
+            36
+          ],
+          [
+            "WINDOW",
+            560,
+            137
+          ]
+        ],
+        "pixel_stddev": 21.630937278868853,
+        "requested": [
+          560,
+          230
+        ]
+      },
+      {
+        "width": 678,
+        "height": 300,
+        "regions": [
+          [
+            "HEADER",
+            678,
+            81
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            678,
+            43
+          ],
+          [
+            "WINDOW",
+            678,
+            176
+          ]
+        ],
+        "pixel_stddev": 19.423311425371303,
+        "requested": [
+          678,
+          300
+        ]
+      }
+    ]
+  },
+  "fixed": {
+    "baseline": false,
+    "native_properties": "_MOTIF_WM_HINTS(_MOTIF_WM_HINTS) = 0x2, 0x0, 0x0, 0x0\n_NET_FRAME_EXTENTS:  not found.\nWM_NORMAL_HINTS(WM_SIZE_HINTS):\n\t\tprogram specified location: 568, 460\n\t\tprogram specified size: 678 by 230\n\t\tprogram specified minimum size: 560 by 230\n\t\tprogram specified maximum size: 65535 by 65535\n",
+    "sizes": [
+      {
+        "width": 560,
+        "height": 230,
+        "regions": [
+          [
+            "HEADER",
+            560,
+            67
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            560,
+            36
+          ],
+          [
+            "WINDOW",
+            560,
+            127
+          ]
+        ],
+        "pixel_stddev": 21.364020433448683,
+        "requested": [
+          100,
+          80
+        ]
+      },
+      {
+        "width": 800,
+        "height": 500,
+        "regions": [
+          [
+            "HEADER",
+            800,
+            96
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            800,
+            51
+          ],
+          [
+            "WINDOW",
+            800,
+            353
+          ]
+        ],
+        "pixel_stddev": 15.542988022090336,
+        "requested": [
+          800,
+          500
+        ]
+      },
+      {
+        "width": 560,
+        "height": 240,
+        "regions": [
+          [
+            "HEADER",
+            560,
+            67
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            560,
+            36
+          ],
+          [
+            "WINDOW",
+            560,
+            137
+          ]
+        ],
+        "pixel_stddev": 20.99748743337496,
+        "requested": [
+          320,
+          240
+        ]
+      },
+      {
+        "width": 560,
+        "height": 230,
+        "regions": [
+          [
+            "HEADER",
+            560,
+            67
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            560,
+            36
+          ],
+          [
+            "WINDOW",
+            560,
+            127
+          ]
+        ],
+        "pixel_stddev": 21.364020433448683,
+        "requested": [
+          560,
+          230
+        ]
+      },
+      {
+        "width": 1000,
+        "height": 230,
+        "regions": [
+          [
+            "HEADER",
+            1000,
+            120
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            1000,
+            64
+          ],
+          [
+            "WINDOW",
+            1000,
+            46
+          ]
+        ],
+        "pixel_stddev": 22.065855389780456,
+        "requested": [
+          1000,
+          230
+        ]
+      },
+      {
+        "width": 678,
+        "height": 300,
+        "regions": [
+          [
+            "HEADER",
+            678,
+            81
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            678,
+            43
+          ],
+          [
+            "WINDOW",
+            678,
+            176
+          ]
+        ],
+        "pixel_stddev": 19.15229430027054,
+        "requested": [
+          678,
+          300
+        ]
+      }
+    ],
+    "drag": {
+      "before": [
+        568,
+        460
+      ],
+      "after": [
+        648,
+        510
+      ]
+    },
+    "glass_mean_difference": [
+      11.219508357915437,
+      0.0,
+      11.216396263520158
+    ]
+  }
+}

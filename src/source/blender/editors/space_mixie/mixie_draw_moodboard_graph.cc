@@ -251,8 +251,11 @@ static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
                           (state == 4 ? IFACE_("Generation failed") : IFACE_("Cancelled"));
   draw_text_centered_clipped(title, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
   if (ELEM(state, 4, 5)) {
-    draw_text_centered_clipped(
-        IFACE_("Click to edit the prompt and try again"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    /* A promptless card (Auto Rig, Animate, ...) has no prompt to edit. */
+    const char *retry = RNA_boolean_get(node, "show_prompt") ?
+                            IFACE_("Click to edit the prompt and try again") :
+                            IFACE_("Check its input and settings, then try again");
+    draw_text_centered_clipped(retry, center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     if (state == 4) {
       draw_error_line(node, center_x, center_y - 52.0f, max_width);
     }
@@ -467,11 +470,19 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
                             BLI_rctf_size_x(media_rect),
                             BLI_rctf_size_y(media_rect)))
         {
-          PointerRNA image_ptr = RNA_pointer_get(&media, "image");
-          Image *image = static_cast<Image *>(image_ptr.data);
-          moodboard_draw_output_handle(v2d, media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
-                                       BLI_rctf_cent_y(media_rect),
-                                       moodboard_media_output_color(image));
+          const float handle_x = media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
+          const float handle_y = BLI_rctf_cent_y(media_rect);
+          /* This pass runs after every picture and card, so without the test
+           * a handle would float over the picture dropped on top of its
+           * owner — a "+" for an image the user cannot see, which the
+           * hit-test refuses for the same reason. Card handles need no test:
+           * they are painted inline, under whatever follows them. */
+          if (!moodboard_graph_point_covered_above(*cache, media_id, handle_x, handle_y)) {
+            PointerRNA image_ptr = RNA_pointer_get(&media, "image");
+            Image *image = static_cast<Image *>(image_ptr.data);
+            moodboard_draw_output_handle(
+                v2d, handle_x, handle_y, moodboard_media_output_color(image));
+          }
         }
       }
       RNA_property_collection_next(&iter);

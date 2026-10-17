@@ -72,7 +72,9 @@ def test_presets_cover_every_use_case_and_exporter():
             elif family == "gltf":
                 assert kwargs["use_selection"] and kwargs["export_yup"] is True
                 assert kwargs["use_active_scene"] is True  # never another scene's objects
-                assert kwargs["export_cameras"] is False and kwargs["export_lights"] is False
+                # Only the three.js preset carries the scene's camera and lights.
+                staged = use_case == "web"
+                assert kwargs["export_cameras"] is staged and kwargs["export_lights"] is staged
                 assert kwargs["export_draco_mesh_compression_enable"] is False
             elif family == "usd":
                 assert kwargs["selected_objects_only"] and kwargs["export_cameras"] is False
@@ -93,7 +95,12 @@ def test_preset_table_matches_the_contract_rows():
     godot = export_presets.preset_kwargs("godot", "glb")
     assert godot["export_apply"] is True and godot["export_tangents"] is True
     assert godot["export_image_format"] == "AUTO"
-    assert export_presets.preset_kwargs("web", "glb") == godot
+    web = export_presets.preset_kwargs("web", "glb")
+    assert {k: v for k, v in web.items() if k in godot} == {
+        **godot, "export_cameras": True, "export_lights": True}
+    assert web["export_import_convert_lighting_mode"] == "SPEC"  # three.js r155+ units
+    assert web["export_extras"] is True  # custom properties → Object3D.userData
+    assert export_presets.preset_kwargs("web", "fbx") == unity
     assert export_presets.preset_kwargs("other", "fbx")["apply_scale_options"] == "FBX_SCALE_ALL"
     ar = export_presets.preset_kwargs("ar", "usdz")
     assert ar["convert_orientation"] is True and ar["export_textures_mode"] == "NEW"
@@ -114,6 +121,9 @@ def test_preset_report_carries_the_documented_keys():
     glb = export_presets.preset_report("web", "glb", export_presets.preset_kwargs("web", "glb"), "none")
     assert glb["axis_up"] == "Y" and glb["draco"] is False and glb["embed_textures"] is True
     assert glb["active_scene_only"] is True
+    assert glb["cameras"] is True and glb["lights"] is True and glb["custom_properties"] is True
+    godot = export_presets.preset_report("godot", "glb", export_presets.preset_kwargs("godot", "glb"), "none")
+    assert godot["cameras"] is False and godot["lights"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -760,3 +770,4 @@ def test_preflight_after_a_resume_uses_the_remembered_targets(preflight_scene, m
     export_preflight.clear_repair_cache()
     with pytest.raises(ValueError):
         export_preflight.run_preflight(spec)
+

@@ -89,6 +89,15 @@ class MIXIE_OT_train_asset_model(Operator):
         return not (state and state.is_training)
 
     def execute(self, context):
+        # A guest has no asset index: /train/prepare answers 403 login_required
+        # and the run would fall back to a full render + upload that the
+        # backend refuses again. The auto path stays silent; a click says why.
+        from mixar.modules.auth.core.guest import is_guest
+        if is_guest():
+            if not self.auto:
+                self.report({'WARNING'}, rpt_("Sign in to Mixar to use this."))
+            return {'CANCELLED'}
+
         state = context.scene.mixie_asset_training
         state.is_training = True
         state.progress = 0.0

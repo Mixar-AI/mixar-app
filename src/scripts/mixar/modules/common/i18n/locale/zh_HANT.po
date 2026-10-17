@@ -1112,6 +1112,9 @@ msgstr "狀態檢查失敗：{error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "掃描素材藏庫、檢查變更、僅算繪新的預覽，並傳送至訓練 API"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "正在開始…"
 
@@ -1433,11 +1436,47 @@ msgstr "自訂本機伺服器"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "讓 Mixar 連線至你已在執行的 OpenAI 相容伺服器（Ollama、LM Studio、llama.cpp...）"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "表單資料無效——請聯絡支援團隊。"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "我們這邊發生問題，請再試一次。"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "正在讀取本機模型目錄"
@@ -1481,26 +1520,20 @@ msgstr "請先啟動本機模型（必須在執行中才能儲存）。"
 msgid "Base URL and model name are required."
 msgstr "必須填寫基礎 URL 和模型名稱。"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "本機伺服器回應 HTTP {status}。"
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "無法連線至本機伺服器。請確認伺服器正在執行且基礎 URL 正確。"
 
-msgid "No models available — contact support"
-msgstr "沒有可用的模型——請聯絡支援團隊"
-
-msgid "Your API key controls the model"
-msgstr "模型由你的 API 金鑰決定"
-
 msgid "Custom"
 msgstr "自訂"
-
-msgid "Use my own API key…"
-msgstr "使用我自己的 API 金鑰…"
-
-msgid "Change or remove my API key…"
-msgstr "變更或移除我的 API 金鑰…"
 
 msgid "Thinking"
 msgstr "思考"
@@ -1508,53 +1541,80 @@ msgstr "思考"
 msgid "Thinking: {level}"
 msgstr "思考：{level}"
 
-msgid "Your key: {name}"
-msgstr "你的金鑰：{name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "預設"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "沒有可用的模型——請聯絡支援團隊"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "正在儲存智慧代理模型…傳送或變更模型前請稍候。"
 
-msgid "Agent Model"
-msgstr "智慧代理模型"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "選擇執行智慧代理的模型。"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "目前所選模型的推理強度。"
-
-msgid "No thinking levels for this model"
-msgstr "此模型沒有思考層級"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "正在使用你自己的 API 金鑰——請在此選單中選擇「變更或移除我的 API 金鑰」以選擇託管模型"
-
-msgid "Set Agent Model"
-msgstr "設定智慧代理模型"
-
-msgid "Use this model for the agent"
-msgstr "智慧代理使用此模型"
-
-msgid "Provider"
-msgstr "供應商"
-
-msgid "Model"
-msgstr "模型"
-
-msgid "Label"
-msgstr "標籤"
-
-msgid "Thinking Level"
-msgstr "思考層級"
-
-msgid "No model selected"
-msgstr "未選取模型"
-
-msgid "Reset Agent Model"
-msgstr "重設智慧代理模型"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "清除已儲存的模型，交由 Mixar 選擇"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "無法變更模型"
@@ -1562,113 +1622,107 @@ msgstr "無法變更模型"
 msgid "Could not reset model"
 msgstr "無法重設模型"
 
-msgid "Removing your key…"
-msgstr "正在移除你的金鑰…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "正在向供應商驗證…"
+msgid "Use this model for the agent"
+msgstr "智慧代理使用此模型"
 
-msgid "AI Provider Settings"
-msgstr "AI 供應商設定"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "作用中"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "未設定"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "在你自己的供應商上執行 Mixar 智慧代理——啟用期間不會扣除 Mixar 點數。"
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "目前設定"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "帳號"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT 訂閱方案"
 
-msgid "API Key"
-msgstr "API 金鑰"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "已安全儲存"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "純文字模型——聊天可正常運作；3D 任務將在沒有視覺回饋的情況下執行。"
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "移除 API 金鑰…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "供應商設定"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "加密儲存，僅用於 Mixar 智慧代理要求——儲存後只會顯示遮蔽的預覽。"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "請選擇支援工具 / 函式呼叫的模型——智慧代理需要此功能。"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "從 ~/.codex/auth.json 載入"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…或手動貼上"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "已貼上 {count} 個字元"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "空白——請貼上你的 auth.json"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "在終端機中執行  codex login  ，然後載入或貼上完整的"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json 內容（貼上按鈕會讀取你的剪貼簿）。"
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "使用你的 ChatGPT 訂閱方案——不會扣除 Mixar 點數。"
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "無法套用你的變更"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "要移除你的 API 金鑰嗎？"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "智慧代理將再次使用 Mixar 的預設供應商。"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "之後的智慧代理要求將扣除 Mixar 點數。"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar 智慧代理現在於你的供應商上執行——不會扣除 Mixar 點數。"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "已移除 API 金鑰"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "智慧代理已改回使用 Mixar 的預設供應商。"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "智慧代理要求將再次扣除 Mixar 點數。"
-
-msgid "Try Again"
-msgstr "再試一次"
-
-msgid "Save & Activate"
-msgstr "儲存並啟用"
-
-msgid "Keep My Key"
-msgstr "保留我的金鑰"
-
-msgid "Remove API Key"
-msgstr "移除 API 金鑰"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "正在解壓縮本機 AI 執行環境…"
@@ -1691,8 +1745,14 @@ msgstr "已下載——未執行"
 msgid "Not downloaded"
 msgstr "未下載"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "完全在此電腦上執行——除了透過 Mixar 的智慧代理協調外，你的提示詞絕不會離開此電腦。"
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "模型"
 
 msgid "Cancel Download"
 msgstr "取消下載"
@@ -1718,9 +1778,6 @@ msgstr "基礎 URL"
 msgid "API Key (optional)"
 msgstr "API 金鑰（選用）"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "此電腦上任何 OpenAI 相容伺服器——Ollama、LM Studio、llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "無法儲存本機供應商。"
 
@@ -1730,53 +1787,32 @@ msgstr "重新掃描本機應用程式"
 msgid "Rescan this computer for running local AI apps"
 msgstr "重新掃描此電腦上執行中的本機 AI 應用程式"
 
+msgid "AI Provider Settings"
+msgstr "AI 供應商設定"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "為 Mixar 智慧代理使用你自己的 API 金鑰。啟用期間，智慧代理要求不會扣除 Mixar 點數。"
 
 msgid "Validate with the provider and save your API key"
 msgstr "向供應商驗證並儲存你的 API 金鑰"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "請為此供應商選擇模型並輸入 API 金鑰。"
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "必須填寫模型代號和 API 金鑰。"
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "請選擇 Codex 模型並載入你的 auth.json 檔案。"
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "儲存失敗。"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "從此電腦讀取 ~/.codex/auth.json 至欄位"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "找不到 ~/.codex/auth.json——請先執行 `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "無法讀取 ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json 是空的"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
-
-msgid "Loaded auth.json"
-msgstr "已載入 auth.json"
-
-msgid "Paste auth.json"
-msgstr "貼上 auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "從剪貼簿將你的 ~/.codex/auth.json 貼上至欄位"
-
-msgid "Clipboard is empty"
-msgstr "剪貼簿為空白"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "貼上的 auth.json 超出此欄位大小而遭截斷——將無法正確儲存"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "移除"
@@ -1787,11 +1823,110 @@ msgstr "開始移除確認流程"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "取消移除流程並返回主對話框"
 
-msgid "Delete the stored API key server-side"
-msgstr "在伺服器端刪除已儲存的 API 金鑰"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "移除失敗。"
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "斷開連接"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "本機模型"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models 中的任何模型代號，例如 anthropic/claude-opus-4.8。"
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "再試一次"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "重新整理 BYOK 狀態"
@@ -1805,11 +1940,38 @@ msgstr "重新整理模型目錄"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "從後端重新驗證供應商與模型目錄"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "智慧代理模型供應商"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "已儲存的託管智慧代理模型選擇的供應商 ID"
+
+msgid "Agent Model"
+msgstr "智慧代理模型"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "已儲存的託管智慧代理模型選擇的模型 ID"
@@ -1838,11 +2000,29 @@ msgstr "智慧代理模型可用"
 msgid "False when the saved model is not available on your plan"
 msgstr "已儲存的模型不適用於你的方案時為假"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "供應商"
+
 msgid "LLM provider"
 msgstr "LLM 供應商"
 
 msgid "Model to use with the selected provider"
 msgstr "與所選供應商搭配使用的模型"
+
+msgid "API Key"
+msgstr "API 金鑰"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "你的 API 金鑰會加密儲存，且僅用於 Mixar 智慧代理要求。儲存後只會顯示遮蔽的預覽。"
@@ -1850,20 +2030,14 @@ msgstr "你的 API 金鑰會加密儲存，且僅用於 Mixar 智慧代理要求
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models 中的任何模型代號（例如 anthropic/claude-opus-4.8）"
 
-msgid "Codex auth.json"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json 的內容（請先執行 `codex login`）"
 
 msgid "Local mode"
 msgstr "本機模式"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "由 Mixar 管理，或使用你自己的本機伺服器"
-
-msgid "Local model"
-msgstr "本機模型"
 
 msgid "Curated model to download and run on this computer"
 msgstr "要在此電腦上下載並執行的精選模型"
@@ -1885,6 +2059,15 @@ msgstr "BYOK 作用中"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "伺服器回報此使用者為 byok_active 時為真"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "對話框狀態"
@@ -1976,6 +2159,27 @@ msgstr "生成失敗——請再試一次"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "依 RNA 屬性索引的目錄 visible_if"
 
+msgid "Nothing selected"
+msgstr "未有選取"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "值"
+
+msgid "Label"
+msgstr "標籤"
+
+msgid "Group"
+msgstr "群組"
+
+msgid "Selected"
+msgstr "所選項"
+
 msgid "No modes"
 msgstr "無模式"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} 個生成已完成"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "點數已用完——請升級方案以繼續"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "需要驗證——請登入"
@@ -2125,6 +2332,9 @@ msgstr "匯入生成結果"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "已取消（伺服器上的生成可能仍會完成）"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "無法處理伺服器回應"
@@ -2236,6 +2446,9 @@ msgstr "無法使用智慧代理島佇列"
 
 msgid "Show every job"
 msgstr "顯示所有任務"
+
+msgid "Active"
+msgstr "作用中"
 
 msgid "Show pending or running jobs"
 msgstr "顯示待處理或執行中的任務"
@@ -2612,9 +2825,6 @@ msgstr "相容性設定檔"
 msgid "Density"
 msgstr "密度"
 
-msgid "Default"
-msgstr "預設"
-
 msgid "Generation-pane control spacing"
 msgstr "生成窗格控制項間距"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "帳號名稱"
 
 msgid "Display name for the account greeting"
 msgstr "帳號問候語中的顯示名稱"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "較新的檔案版本"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "檔案"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "原點"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "自動綁定失敗"
 msgid "Animate failed"
 msgstr "動畫製作失敗"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "所選網格有 {count:,} 個面（上限 {max_faces:,}）"
 
@@ -4973,6 +5270,24 @@ msgstr "本機伺服器模型"
 msgid "Local model last error"
 msgstr "本機模型最後錯誤"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "複製"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "命令"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "複製"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "格式"
 
 msgid "Processing..."
 msgstr "處理中..."
@@ -5312,6 +5702,9 @@ msgstr "網格分割"
 msgid "Auto Rig"
 msgstr "自動綁定"
 
+msgid "Animate"
+msgstr "製作動畫"
+
 msgid "Add Mesh"
 msgstr "加入網格"
 
@@ -5413,6 +5806,15 @@ msgstr "生成期間使用的精修步數。步數越多，耗時可能越長。
 
 msgid "The file format used to store the generated image."
 msgstr "用於儲存生成影像的檔案格式。"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "自動（依名稱）"
@@ -5642,14 +6044,14 @@ msgstr "無法下載 BaseColor 紋理：{error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "無法載入 BaseColor 紋理：{error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "下載紋理時發生未預期的錯誤：{error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "無法將紋理套用至任何物體"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360：套用 PBR 紋理"
 
 msgid "Both refined and guide masks are required"
 msgstr "需要精修遮罩與引導遮罩"
@@ -5732,6 +6134,15 @@ msgstr "組裝角色"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "在本機將生成的部件附加至已綁定或一般的身體"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "僅使用影像風格"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
+
 msgid "Enter a prompt in the image node"
 msgstr "請在影像節點中輸入提示詞"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "生成編目中無法使用「模型生成」"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "推論節點尚不支援此「模型生成」模式"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "沒有可用的已啟用 3D 生成模型"
@@ -5884,6 +6295,9 @@ msgstr "請先生成「{name}」——此卡片會使用其結果"
 
 msgid "Mesh"
 msgstr "網格"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "參考 {number}"
@@ -6053,11 +6467,11 @@ msgstr "SceneGen 匯入失敗"
 msgid "No image URLs in server response"
 msgstr "伺服器回應中沒有影像 URL"
 
-msgid "Starting reconstruction..."
-msgstr "正在開始重建..."
-
 msgid "Error: {error}"
 msgstr "錯誤：{error}"
+
+msgid "Starting reconstruction..."
+msgstr "正在開始重建..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "無法下載生成的影像：{error}"
@@ -6280,9 +6694,6 @@ msgstr "無法下載／轉換世界：{error}"
 
 msgid "World imported but produced no objects"
 msgstr "已匯入世界，但未產生任何物體"
-
-msgid "World Labs: Import World"
-msgstr "World Labs：匯入世界"
 
 msgid "Failed to import world: {error}"
 msgstr "無法匯入世界：{error}"
@@ -6833,9 +7244,6 @@ msgstr "使用自訂色彩"
 msgid "Custom Colour"
 msgstr "自訂色彩"
 
-msgid "Selected"
-msgstr "所選項"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "點擊時忽略此框的邊框與內部，因此只能選取其成員"
 
@@ -6844,6 +7252,18 @@ msgstr "已收合"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "將框繪製為帶標題的列並隱藏其主體"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "No supported 3D service is available"
+msgstr "沒有可用的受支援 3D 服務"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "影像模型必須宣告支援遮罩引導與兩個參考"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "未發布任何選項"
@@ -6862,18 +7282,6 @@ msgstr "完成"
 
 msgid "Generation completed"
 msgstr "生成已完成"
-
-msgid "Unavailable"
-msgstr "不可用"
-
-msgid "No supported 3D service is available"
-msgstr "沒有可用的受支援 3D 服務"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "影像模型必須宣告支援遮罩引導與兩個參考"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "參數 ID"
@@ -6899,14 +7307,14 @@ msgstr "布林值"
 msgid "Catalog choice"
 msgstr "編目選項"
 
-msgid "Widget"
-msgstr "元件"
-
-msgid "Group"
-msgstr "群組"
-
 msgid "Choices"
 msgstr "選項"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "元件"
 
 msgid "Visibility Condition"
 msgstr "可見性條件"
@@ -6926,11 +7334,14 @@ msgstr "最小值"
 msgid "Maximum"
 msgstr "最大值"
 
-msgid "Value"
-msgstr "值"
-
 msgid "Value Label"
 msgstr "值標籤"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "接口 ID"
@@ -7948,12 +8359,6 @@ msgstr "風格轉換影像 - 將藝術風格套用至生成的紋理"
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "參考影像 - 直接驅動紋理生成（忽略提示詞）"
 
-msgid "Use Image Style Only"
-msgstr "僅使用影像風格"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "啟用時，只會轉換影像的藝術風格（提示詞仍適用）。停用時，影像會直接驅動紋理生成"
-
 msgid "Output texture resolution in pixels"
 msgstr "輸出紋理解析度（像素）"
 
@@ -8452,9 +8857,6 @@ msgstr "原始網格會被隱藏，而不是刪除"
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan 尚未初始化"
 
-msgid "Format"
-msgstr "格式"
-
 msgid "Inputs"
 msgstr "輸入"
 
@@ -8548,26 +8950,23 @@ msgstr "選取情緒板影像以將其加入為檢視"
 msgid "Generates as one multi-view job"
 msgstr "以單一多重檢視任務生成"
 
+msgid "… (+{count} more)"
+msgstr "…（另有 {count} 個）"
+
 msgid "Video Gen tab not available"
 msgstr "視訊生成分頁標籤無法使用"
 
 msgid "Selected References"
 msgstr "所選參考"
 
-msgid "Images: {count}"
-msgstr "影像：{count}"
-
-msgid "Videos: {count}"
-msgstr "視訊：{count}"
+msgid "No references selected — text-to-video"
+msgstr "未選取參考 — 文字轉視訊"
 
 msgid "A selected video source file is missing"
 msgstr "某個所選視訊的來源檔案遺失"
 
-msgid "No references selected — text-to-video"
-msgstr "未選取參考 — 文字轉視訊"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "指派角色時，請在提示詞中註明影像／視訊的順序"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "參考限制"
@@ -8644,6 +9043,33 @@ msgstr "聚焦視窗中所有物件"
 msgid "Clear Board"
 msgstr "清除畫板"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "物體名稱"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "動畫"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "智慧代理自動綁定"
 
@@ -8665,8 +9091,8 @@ msgstr "骨架類型：auto / biped / quadruped / hexapod / octopod / avian / se
 msgid "Skeleton Spec"
 msgstr "骨架規格"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "骨架慣例：'tripo' 或 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "骨骼命名：tripo、mixamo、actorcore、unity、unreal 或 vrm（只有 tripo 支援 Tripo 預設動畫）"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "智慧代理 PBR 生成"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "使用 Tripo 為指定的網格物體生成 PBR 紋理"
-
-msgid "Object Name"
-msgstr "物體名稱"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "場景中要上紋理的網格物體名稱"
@@ -8917,11 +9340,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "同步失敗：{error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "已略過 {count} 段視訊：智慧代理只接受靜態影像。視訊片段請使用情緒板上的「視訊生成」"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "已略過 {count} 段視訊：智慧代理只接受靜態影像。視訊片段請使用情緒板上的「視訊生成」"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "未選取情緒板影像"
@@ -9219,9 +9642,6 @@ msgstr "目錄"
 
 msgid "Directory of the selected file(s)"
 msgstr "所選檔案的目錄"
-
-msgid "Files"
-msgstr "檔案"
 
 msgid "Failed to load media: {filepath}"
 msgstr "無法載入媒體：{filepath}"
@@ -9823,8 +10243,8 @@ msgstr "請選取推論節點"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "編輯提示詞，然後按 Enter 或「生成」"
 
-msgid "Node added to the generation queue"
-msgstr "節點已加入生成佇列"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "顯示此節點的設定與提示詞，以便調整後再次執行；再次點擊可取消編輯並返回結果"
@@ -10839,9 +11259,6 @@ msgstr "生成的材質回應未包含腳本"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "已生成材質，但無法套用：{result}"
-
-msgid "Generate Procedural Material"
-msgstr "生成程序化材質"
 
 msgid "Material generation failed"
 msgstr "材質生成失敗"
@@ -11877,9 +12294,6 @@ msgstr "色彩量化位元數"
 
 msgid "Generic Quantization Bits"
 msgstr "通用量化位元數"
-
-msgid "Animations"
-msgstr "動畫"
 
 msgid "Animation Mode"
 msgstr "動畫模式"
@@ -17496,12 +17910,6 @@ msgstr "有可用的 GPU 時一律以 GPU 算繪"
 msgid "Always render on the CPU"
 msgstr "一律以 CPU 算繪"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "預設啟用外置烘培"
 
@@ -17579,6 +17987,12 @@ msgstr "永遠評估影格"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "每次影格變更時評估節點樹"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "通道選項"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "無法建立草圖預覽。請重新繪製以重試。"
 msgid "View sketch"
 msgstr "檢視草圖"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "智慧代理草稿已滿（最多 {count} 個字元）"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "已新增標記，但下方沒有任何物體"
@@ -19109,9 +19523,6 @@ msgstr "工具列"
 
 msgid "Sidebar"
 msgstr "側欄"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV 網格分割面板"
@@ -19536,8 +19947,8 @@ msgstr "修改中..."
 msgid "Awaiting Input..."
 msgstr "等待輸入..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "視訊需要視訊模式。請移除視訊後再傳送給智慧代理。"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "使用者 ID"
@@ -19547,6 +19958,78 @@ msgstr "Mixie 聊天登入用的使用者 ID"
 
 msgid "Agent expects: {formats}"
 msgstr "智慧代理預期的格式：{formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "已略過處理緩慢的影像：{name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "影像編碼失敗：{error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*已停止*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "升級"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "回饋意見是空的"
@@ -19730,6 +20222,27 @@ msgstr "「{name}」已不在素材檔案中。"
 
 msgid "Could not add the asset to the scene."
 msgstr "無法將素材加入場景。"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "思考中..."
@@ -19880,9 +20393,6 @@ msgstr "已修改 {count} 個"
 
 msgid "{count} deleted"
 msgstr "已刪除 {count} 個"
-
-msgid "… (+{count} more)"
-msgstr "…（另有 {count} 個）"
 
 msgid "Created: {names}"
 msgstr "已建立：{names}"
@@ -20046,6 +20556,15 @@ msgstr "登入"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie 聊天的登入面板"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "使用你的 Mixar 帳號登入"
+
 msgid "Session expired"
 msgstr "工作階段已過期"
 
@@ -20055,31 +20574,27 @@ msgstr "請重新登入。"
 msgid "Login Failed"
 msgstr "登入失敗"
 
-msgid "Sign in with your Mixar account"
-msgstr "使用你的 Mixar 帳號登入"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "正在等待瀏覽器..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "使用瀏覽器登入"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"個人資料／帳號下拉選單，從全域頂部列開啟。\n"
-"\n"
-"其內容由 `layout.mixar_profile_card()` 原生繪製\n"
-"（`interface_mixar_profile_card.cc`）：問候語、方案標籤、\n"
-"點數用量計量表與帳號操作，排列成一張卡片\n"
-"而非選單。Python 仍負責註冊以及卡片所呼叫的\n"
-"每個操作器；C++ 只負責像素。\n"
 
 msgid "Dashboard"
 msgstr "儀表板"
@@ -20309,12 +20824,6 @@ msgstr "標記：{note}"
 msgid "Sketch"
 msgstr "草圖"
 
-msgid "Skipped slow image: {name}"
-msgstr "已略過處理緩慢的影像：{name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "影像編碼失敗：{error}"
-
 msgid "Message sent"
 msgstr "訊息已傳送"
 
@@ -20536,8 +21045,8 @@ msgstr "檢查點 ID"
 msgid "Restoring checkpoint…"
 msgstr "正在還原檢查點…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "貼上的文字過長（最多 {count} 個字元）"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "貼上文字"
@@ -20728,11 +21237,14 @@ msgstr "要刪除的已封存工作階段"
 msgid "Chat removed from history"
 msgstr "已從歷史中移除聊天"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "無法加入 {name}：{error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "已達附件上限（{count}）"
@@ -20740,14 +21252,14 @@ msgstr "已達附件上限（{count}）"
 msgid "Skipped {name}: {error}"
 msgstr "已略過 {name}：{error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "無法加入 {name}：{error}"
-
 msgid "These references are already attached"
 msgstr "這些參考已附加"
 
 msgid "Added {count} image(s)"
 msgstr "已加入 {count} 張影像"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "從 Blend 加入"
@@ -20764,6 +21276,9 @@ msgstr "{size} - 有資料"
 msgid "{size} - No data"
 msgstr "{size} - 無資料"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "從 Blend 檔案選取影像"
 
@@ -20772,6 +21287,12 @@ msgstr "影像已加入"
 
 msgid "Image not found in blend file"
 msgstr "在 Blend 檔案中找不到影像"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "影像已附加"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "擷取螢幕截圖"
 
@@ -21103,9 +21627,6 @@ msgstr "連線失敗"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "開發模式：已使用虛擬資料連線"
 
-msgid "Disconnect"
-msgstr "斷開連接"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "中斷與 Mixie 智慧代理伺服器的連線"
 
@@ -21115,14 +21636,14 @@ msgstr "開發模式：已中斷連線"
 msgid "Disconnected from server"
 msgstr "已中斷與伺服器的連線"
 
+msgid "Could not save the chat to History"
+msgstr "無法將聊天儲存至歷史"
+
 msgid "New Chat"
 msgstr "新聊天"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "開始新的聊天（目前的聊天會儲存至歷史）"
-
-msgid "Could not save the chat to History"
-msgstr "無法將聊天儲存至歷史"
 
 msgid "Started new chat session"
 msgstr "已開始新的聊天工作階段"
@@ -21160,6 +21681,12 @@ msgstr "正在繼續先前的任務..."
 msgid "Could not resume the previous task"
 msgstr "無法繼續先前的任務"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "已提交的回饋意見"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "本機已提交的意見，以唯讀方式顯示在聊天中"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "訊息未送出"
 
@@ -21522,6 +22058,15 @@ msgstr "聊天輸入"
 
 msgid "Type your message here"
 msgstr "在此輸入訊息"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "聊天訊息"
@@ -21660,6 +22205,12 @@ msgstr "已登入"
 
 msgid "Whether user is currently logged in"
 msgstr "使用者目前是否已登入"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "正在登入"
@@ -21861,9 +22412,6 @@ msgstr "寫入"
 
 msgid "File write"
 msgstr "檔案寫入"
-
-msgid "Command"
-msgstr "命令"
 
 msgid "Shell command"
 msgstr "Shell 命令"
@@ -23620,9 +24168,6 @@ msgstr "吸附游標"
 msgid "Snap 2D cursor"
 msgstr "吸附 2D 游標"
 
-msgid "Origin"
-msgstr "原點"
-
 msgid "Mirror selected UVs"
 msgstr "鏡像所選 UV"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "返回"
 
 msgid "Grid & Relationship Lines"
 msgstr "格線與關係線"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "算繪引擎"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "算繪設定"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "檔案由較新版本的 Mixar（%d.%d）儲存，部分資料可能會遺失"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "此檔案由較新版本儲存，請使用 Mixar %s 或更新版本開啟"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "請在「層」面板中加入繪製層以開始繪製"
 
@@ -24409,7 +25179,43 @@ msgstr "開始或停止聽寫至草圖草稿"
 msgid "Stop the running turn"
 msgstr "停止執行中的回合"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"還原\n"
+"\n"
+"還原精修前你所寫的提示詞。"
+
+msgid "Refining this prompt..."
+msgstr "正在精修此提示詞..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"再次精修\n"
+"\n"
+"針對將接收此提示詞的模型再次改寫。「還原」仍會還原你自己的措辭，而非上一次的精修結果。"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"精修\n"
+"\n"
+"針對將接收此提示詞的模型改寫，並加入該模型能有效回應的細節。"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "移除參考"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "捨棄此草圖及其佇列中的繪圖"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "開啟佇列"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "未有選取"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "切換分頁前請先完成草圖或聽寫"
 
@@ -24607,6 +25413,15 @@ msgstr "%d 天前"
 msgid "%dw ago"
 msgstr "%d 週前"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "生成中（%d）"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · 按 Enter 傳送"
 
 msgid "Sketch · Enter to send"
 msgstr "草圖 · 按 Enter 傳送"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "規則 — 編輯智慧代理的專案與全域規則"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "自動模式已開啟：智慧代理會自行決定待定的選擇，不
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "自動模式：智慧代理會自行決定待定的選擇而不詢問你，並在摘要中列出其決定"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "目前正在使用你自己的 API 金鑰，並由它決定模型。開啟此選單並選擇「變更或移除我的 API 金鑰」即可再次選擇託管模型"
-
-msgid "Choose which model the agent runs on"
-msgstr "選擇智慧代理所使用的模型"
 
 msgid "Agent Bubble"
 msgstr "智慧代理氣泡"
@@ -24858,6 +25670,12 @@ msgstr "已關閉數量"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "已關閉的智慧代理氣泡視窗數量"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "設定智慧代理氣泡視窗大小"
@@ -25336,6 +26154,9 @@ msgstr "已排入佇列..."
 msgid "Click to edit the prompt and try again"
 msgstr "點擊以編輯提示詞並重試"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "提示詞\n"
 "\n"
 "描述要生成的內容。按 Enter 提交此節點。"
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"還原\n"
-"\n"
-"還原精修前你所寫的提示詞。"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"再次精修\n"
-"\n"
-"針對將接收此提示詞的模型再次改寫。「還原」仍會還原你自己的措辭，而非上一次的精修結果。"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"精修\n"
-"\n"
-"針對將接收此提示詞的模型改寫，並加入該模型能有效回應的細節。"
-
-msgid "Refining this prompt..."
-msgstr "正在精修此提示詞..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "紋理集空間"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "使用側邊欄面板管理紋理集"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "回到第一個"
 
@@ -26557,9 +27354,6 @@ msgstr "安全區域"
 msgid "Select a character to animate"
 msgstr "選取要製作動畫的角色"
 
-msgid "Animate"
-msgstr "製作動畫"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "從播放頭插入此粗略階段運動的關鍵影格"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "工作空間任務識別碼"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "危險色動作按鈕"
 msgid "Borderless quiet action button"
 msgstr "無邊框的低調動作按鈕"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "標籤"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "模式滑桿左側"
 
@@ -27126,9 +28019,6 @@ msgstr "圖形符號"
 
 msgid "Header glyph"
 msgstr "標頭欄圖形符號"
-
-msgid "Chip"
-msgstr "標籤"
 
 msgid "Chip track"
 msgstr "標籤軌道"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "副檔名過濾器"
 
 msgid "Write compressed .mixar file"
 msgstr "寫入壓縮的 .mixar 檔案"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "儲存為 .mixar 檔案"

@@ -215,6 +215,25 @@ def list_sessions(user_email: str = "") -> list:
     ]
 
 
+def reassign_owner(old_email: str, new_email: str) -> int:
+    """Re-file ``old_email``'s archived chats under ``new_email``.
+
+    A claimed guest's chats belong to the account now (the backend accepts
+    its records under the account token); the index is what the History
+    popover filters on, and the next upsert rewrites the record itself.
+    """
+    if not old_email or old_email == new_email:
+        return 0
+    index = _load_index()
+    moved = [meta for meta in index.values() if meta.get("user_email") == old_email]
+    for meta in moved:
+        meta["user_email"] = new_email
+    if moved:
+        _write_index(index)
+        invalidate_cache()
+    return len(moved)
+
+
 def load_session(session_id: str):
     """Full archived record (with messages), or None."""
     record = _read_json(_record_path(session_id))

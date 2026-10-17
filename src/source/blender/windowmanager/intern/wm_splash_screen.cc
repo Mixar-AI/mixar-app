@@ -47,14 +47,11 @@
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_types.hh"
 
 #include "wm.hh"
 
-#if defined(__APPLE__) || defined(_WIN32)
-extern "C" void Mixar_FloatingDocksSuppressForModal();
-extern "C" void Mixar_FloatingDocksRestoreAfterModal();
-#endif
 
 namespace blender {
 
@@ -62,18 +59,19 @@ namespace blender {
 /** \name Splash Screen
  * \{ */
 
-static void wm_mixar_floating_docks_suppress_for_modal()
+/* The splash's floating-dock hold. Its buttons release it and so does the
+ * pop-up's free callback; the owner key makes the second release a no-op
+ * instead of undoing another dialog's hold (wm_mixar_modal_dialog.cc). */
+static const char wm_mixar_splash_dock_owner = 0;
+
+static void wm_mixar_floating_docks_suppress_for_modal(bContext *C)
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksSuppressForModal();
-#endif
+  Mixar_floating_docks_hold(C, &wm_mixar_splash_dock_owner);
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksRestoreAfterModal();
-#endif
+  Mixar_floating_docks_release(&wm_mixar_splash_dock_owner);
 }
 
 /* Mixar: number of splash popups currently alive. Incremented on invoke and
@@ -434,7 +432,7 @@ static wmOperatorStatus wm_splash_invoke(bContext *C,
                                          wmOperator * /*op*/,
                                          const wmEvent * /*event*/)
 {
-  wm_mixar_floating_docks_suppress_for_modal();
+  wm_mixar_floating_docks_suppress_for_modal(C);
   g_mixar_splash_open_count++;
   ui::popup_block_invoke(
       C, wm_block_splash_create, nullptr, wm_mixar_floating_docks_restore_after_modal_free);

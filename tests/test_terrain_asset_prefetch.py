@@ -14,6 +14,7 @@ for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
 from mixar.modules.common.agent_execution import asset_cache
+from mixar.modules.common.agent_execution import asset_cache_directory
 from mixar.modules.space_mixie_chat.core import script_prefetch
 from mixar.modules.space_mixie_chat.core.sandbox_modules import RESTRICTED_URLLIB
 
@@ -22,7 +23,8 @@ URL = "https://bucket.s3.amazonaws.com/tree.blend?X-Amz-Signature=secret"
 
 @pytest.fixture(autouse=True)
 def cache_dir(monkeypatch, tmp_path):
-    monkeypatch.setattr(asset_cache.tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(asset_cache_directory.tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(asset_cache, "_DIRECTORY", None)
 
 
 def test_queued_terrain_warms_the_same_cache_without_main_thread_network(monkeypatch):
@@ -132,13 +134,15 @@ def test_real_handshake_advertises_the_forest_runtime(monkeypatch, role):
     import json
     from types import SimpleNamespace
     from mixar.modules.space_mixie_chat.core import socket_connection, machine_info
+    from mixar.modules.space_mixie_chat.core.socket_diagnostics import SocketDiagnostics
 
     monkeypatch.setattr(machine_info, 'machine_block', lambda: {})
     monkeypatch.setattr(socket_connection, 'wait_for_handshake',
                         lambda *a, **kw: (socket_connection.HANDSHAKE_OK, None))
     client = SimpleNamespace(_next_request_id=lambda: 'review', _blender_version=None,
         _addon_version=None, _role=role, _device_id='', _parent_instance_id='parent',
-        _ws=MagicMock(), _set_server_capabilities=lambda result: None)
+        _ws=MagicMock(), _set_server_capabilities=lambda result: None,
+        _diag=SocketDiagnostics(), _note_server_close=lambda *a, **kw: None)
     assert socket_connection.SocketConnection._perform_handshake(client) == socket_connection.HANDSHAKE_OK
     frame = json.loads(client._ws.send.call_args.args[0])
     assert 'forest_runtime_v1' in frame['params']['capabilities']

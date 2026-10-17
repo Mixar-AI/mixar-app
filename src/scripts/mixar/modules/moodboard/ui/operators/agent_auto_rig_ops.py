@@ -13,8 +13,9 @@ import (with ``guess_original_bind_pose=False``) are all shared.
 
 ``model`` picks the rig engine by catalog slug on the ``tripo_rig``
 service (empty or unknown = the catalog default, Tripo). ``rig_type`` /
-``spec`` are Tripo's knobs; ``height_meters`` is sent only when > 0 and
-the chosen model's catalog schema declares it (e.g. Meshy Auto Rig).
+``spec`` / ``height_meters`` are sent only when the chosen model's catalog
+schema declares them (``core/auto_rig_params.build_rig_params``; height only
+when > 0); with no catalog, rig_type/spec keep the legacy Tripo behaviour.
 
 Contract with the agent's ``enqueue_generation`` tool: on success return
 ``{'FINISHED'}``; on any refusal set
@@ -30,13 +31,6 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-_RIG_TYPES = {
-    "auto", "biped", "quadruped", "hexapod", "octopod",
-    "avian", "serpentine", "aquatic",
-}
-_SPECS = {"tripo", "mixamo"}
-
-
 def _fail(context, reason: str):
     """Record the reason for the agent and cancel."""
     try:
@@ -44,18 +38,6 @@ def _fail(context, reason: str):
     except Exception:
         pass
     return {'CANCELLED'}
-
-
-def _model_declares(model_slug: str, param_name: str) -> bool:
-    """Whether the rig model's catalog schema declares *param_name*."""
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_model
-        from mixar.modules.hunyuan.constants import ANIMATE_RIG_SERVICE
-
-        model = get_model(ANIMATE_RIG_SERVICE, model_slug) or {}
-        return param_name in (model.get("parameters") or {})
-    except Exception:
-        return False
 
 
 class MIXIE_OT_agent_auto_rig(Operator):
@@ -81,7 +63,8 @@ class MIXIE_OT_agent_auto_rig(Operator):
     )
     spec: StringProperty(
         name="Skeleton Spec",
-        description="Skeleton convention: 'tripo' or 'mixamo'",
+        description="Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm "
+                    "(only tripo takes Tripo animation presets)",
         default="tripo",
     )
     model: StringProperty(
@@ -145,20 +128,6 @@ class MIXIE_OT_agent_auto_rig(Operator):
         if not meshes:
             return _fail(context, "No mesh objects to auto-rig")
 
-        rig_type = (self.rig_type or "auto").strip().lower()
-        if rig_type not in _RIG_TYPES:
-            return _fail(
-                context,
-                f"Invalid rig_type '{self.rig_type}'. Expected one of: "
-                f"{', '.join(sorted(_RIG_TYPES))}.",
-            )
-        skel = (self.spec or "tripo").strip().lower()
-        if skel not in _SPECS:
-            return _fail(
-                context,
-                f"Invalid spec '{self.spec}'. Expected 'tripo' or 'mixamo'.",
-            )
-
         # Resolve the requested catalog model slug (an empty/unknown one falls
         # back to the catalog default, then to the constant when the catalog
         # isn't loaded); enqueue_rig_jobs sends it as the model slug and the
@@ -172,9 +141,16 @@ class MIXIE_OT_agent_auto_rig(Operator):
         except Exception:
             pass
 
-        params = {"rig_type": rig_type, "spec": skel}
-        if self.height_meters > 0 and _model_declares(model, "height_meters"):
-            params["height_meters"] = float(self.height_meters)
+        # Each param is sent only when the chosen model's catalog schema
+        # declares it (enum-validated against that schema); an unknown catalog
+        # keeps the legacy Tripo rig_type/spec behaviour.
+        from mixar.modules.moodboard.core.auto_rig_params import build_rig_params
+
+        params, reason = build_rig_params(
+            model, self.rig_type, self.spec, self.height_meters,
+        )
+        if params is None:
+            return _fail(context, reason)
         try:
             enqueued = enqueue_rig_jobs(
                 context=context,

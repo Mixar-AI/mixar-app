@@ -4,11 +4,12 @@
 
 """Refine / Revert operators for generation prompts.
 
-Two operators serve both surfaces — the moodboard N-panel tabs and the
-inference-graph node cards — because they are the same action on two kinds of
-field. Which field is addressed by ``node_id`` (a canvas node) or ``owner``
-(the RNA identifier of the tab PropertyGroup that owns the prompt); the
-engine in ``core.prompt_refine`` resolves either into one slot.
+Two operators serve every surface — the moodboard N-panel tabs, the
+inference-graph node cards and the Agent island's chat composer — because they
+are the same action on different kinds of field. Which field is addressed by
+``chat`` (the composer), ``node_id`` (a canvas node) or ``owner`` (the RNA
+identifier of the tab PropertyGroup that owns the prompt); the engine in
+``core.prompt_refine`` resolves each into one slot.
 
 Both properties are ``SKIP_SAVE``: these are ``REGISTER`` operators, so
 Blender would otherwise refill an unset property from the previous run and a
@@ -27,11 +28,15 @@ from bpy.types import Operator
 from mixar.modules.moodboard.core import prompt_refine
 
 
-def _resolve_slot(context, node_id: str, owner: str):
+def _resolve_slot(context, node_id: str, owner: str, chat: bool = False):
     """The slot addressed by this invocation, or None."""
     scene = getattr(context, "scene", None)
     if scene is None:
         return None
+    if chat:
+        from mixar.modules.moodboard.core.prompt_refine_chat import chat_slot
+
+        return chat_slot(scene)
     if node_id:
         return prompt_refine.node_slot(scene, node_id)
     return prompt_refine.sidebar_slot(scene, owner)
@@ -50,9 +55,10 @@ class MIXIE_OT_refine_prompt(Operator):
 
     node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
     owner: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
+    chat: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
 
     def execute(self, context):
-        slot = _resolve_slot(context, self.node_id, self.owner)
+        slot = _resolve_slot(context, self.node_id, self.owner, self.chat)
         if slot is None:
             self.report({'WARNING'}, "No prompt to refine here")
             return {'CANCELLED'}
@@ -83,9 +89,10 @@ class MIXIE_OT_revert_prompt(Operator):
 
     node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
     owner: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
+    chat: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
 
     def execute(self, context):
-        slot = _resolve_slot(context, self.node_id, self.owner)
+        slot = _resolve_slot(context, self.node_id, self.owner, self.chat)
         if slot is not None and slot.is_running():
             self.report({'WARNING'}, "Wait for the refinement to finish")
             return {'CANCELLED'}

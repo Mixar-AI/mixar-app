@@ -134,6 +134,7 @@ def test_harness_mirrors_the_theme_metrics():
         "SEG_X": "AGENT_SEG_X",
         "SEND_W": "AGENT_BTN_GENERATE_W",
         "CHIP_GAP": "AGENT_CHIP_GAP",
+        "CHIP_H": "AGENT_CHIP_H",
         "CHIP_ICON": "AGENT_CHIP_ICON",
         "CHIP_ICON_GAP": "AGENT_CHIP_ICON_GAP",
         "CHIP_PAD_X": "AGENT_CHIP_PAD_X",
@@ -152,7 +153,10 @@ def test_layout_measures_with_the_island_font_and_places_the_fit():
     assert "agent_chip_forms(" in body
     assert "ui::mixar_text_width(label, size)" in body
     assert "agent_chip_fit(chips, span, gap)" in body
-    assert "layout.btn_generate.xmin - layout.chip_upload.xmin" in body
+    # The span ends at Send, or at Refine / Revert where the chat shows them
+    # (tests/test_island_prompt_refine.py).
+    assert "float row_end = layout.btn_generate.xmin;" in body
+    assert "row_end - layout.chip_upload.xmin" in body
     assert "std::copy_n(fit.form" in body
     assert "int chip_form[AGENT_CHIP_SLOT_COUNT];" in LAYOUT_HH
 
@@ -494,3 +498,17 @@ def test_new_sources_are_built():
     for name in ("agent_bubble_pill_voice.cc", "agent_ui_voice_paint.cc", "agent_ui_chip_fit.hh",
                  "agent_ui_voice_motion.hh", "agent_ui_voice_paint.hh"):
         assert f"  {name}\n" in CMAKE, name
+
+
+def test_a_long_model_name_elides_before_the_chip_drops_to_its_badge():
+    """The model chip's ladder: Full, Full with the name elided, Label, Icon.
+    A long name must pass through the elided rung on the way down instead of
+    jumping straight from the whole name to the badge alone."""
+    rows = [r for r in _fit_rows() if r["scenario"] == "long_model" and r["counts"][MODEL]]
+    forms = {r["forms"][MODEL] for r in rows}
+    assert 0 in forms and 1 in forms, sorted(forms)
+    for size in {r["size"] for r in rows}:
+        ladder = [r["forms"][MODEL] for r in sorted(rows, key=lambda r: -r["window"])
+                  if r["size"] == size]
+        if 0 in ladder and max(ladder) >= 2:
+            assert 1 in ladder, (size, ladder)

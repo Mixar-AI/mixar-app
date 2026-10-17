@@ -41,6 +41,7 @@ from .exceptions import (
     ConnectionError,
     HTTPClientError,
     InsufficientCreditsError,
+    LoginRequiredError,
     NotFoundError,
     RateLimitError,
     ServerError,
@@ -266,6 +267,18 @@ class HTTPClient:
                 **error_kwargs,
             )
         elif status == 403:
+            # A guest on a signed-in-only route: a typed refusal with its
+            # own CTA, never the permission error and never a refresh.
+            from mixar.modules.auth.core.guest import login_required_fields
+
+            refusal = login_required_fields(data)
+            if refusal:
+                error_kwargs["message"] = refusal["message"] or message
+                return LoginRequiredError(
+                    cta=refusal["cta"],
+                    action_label=refusal["action_label"] or None,
+                    **error_kwargs,
+                )
             return AuthorizationError(**error_kwargs)
         elif status == 404:
             return NotFoundError(**error_kwargs)

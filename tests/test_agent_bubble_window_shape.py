@@ -406,7 +406,9 @@ class TestIslandWindowTranslucency:
         assert styled == 2, (
             f"both island styling sites must call it after the corner radius, found {styled}"
         )
-        assert src.count(call) == 2, "only creation and repair queue native setup"
+        assert src.count(call) == 3, (
+            "macOS/Windows creation and repair, plus Linux creation, queue native setup"
+        )
 
     def test_macos_glass_embeds_the_retained_metal_view(self) -> None:
         """The real GPU view is the glass content, preserving its GHOST context."""
@@ -433,7 +435,7 @@ class TestIslandWindowTranslucency:
         wm = (ROOT / "src/source/blender/windowmanager/intern/wm_window.cc").read_text()
         body = wm[wm.index("void WM_window_decoration_style_apply("):]
         body = body[:body.index("\n}")]
-        assert "if (wm_window_contains_agent_bubble_space(win)) {\n    return;" in body
+        assert "if (Mixar_window_has_agent_bubble(win)) {\n    return;" in body
         assert body.index("return;") < body.index("applyWindowDecorationStyle()")
 
     def test_metal_present_keeps_framebuffer_alpha(self) -> None:
@@ -484,9 +486,9 @@ class TestIslandWindowTranslucency:
     def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
         theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")
         assert theme.count("#define AGENT_COL_GLASS_WASH") == 1
-        assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}" in theme
+        assert "AGENT_COL_GLASS_WASH MIXAR_THEME_BRACE(GlassWash)" in theme
         assert theme.count("#define AGENT_COL_GLASS_FIELD_UCHAR") == 1
         assert "AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}" in theme
         assert "#ifdef _WIN32" not in theme
-        assert _read(SPACE).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 3
-        assert _read(PILL_DRAW).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 2
+        assert _read(SPACE).count("float wash[4] = AGENT_COL_GLASS_WASH;") == 3
+        assert _read(PILL_DRAW).count("float wash[4] = AGENT_COL_GLASS_WASH;") == 2

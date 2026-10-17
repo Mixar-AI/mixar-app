@@ -58,6 +58,43 @@ from mixar.modules.common.analytics.bubble_events import capture_bubble_state
 _IS_WINDOWS = sys.platform == "win32"
 
 
+def _linux_client_drag_followup() -> bool:
+    """True when the X11 GHOST backend will move the window from modal
+    updates. Wayland's begin_drag already called xdg_toplevel_move, so
+    update_drag fails closed and this returns False."""
+    if not sys.platform.startswith("linux"):
+        return False
+    try:
+        return bpy.ops.mixar.bubble_window_update_drag() == {'FINISHED'}
+    except Exception:  # noqa: BLE001 - missing operator in tests / early init
+        return False
+
+
+def _event_hits_header(area, event) -> bool:
+    """True when the press is inside the HEADER region's window rect.
+
+    The island header starts at the client top (tab strip). At the
+    default 678-wide window that band is ~81 px; 8 px from the top at
+    the horizontal center is inside it and away from the tab buttons.
+    """
+    if area is None or event is None:
+        return False
+    mx = getattr(event, "mouse_x", None)
+    my = getattr(event, "mouse_y", None)
+    if mx is None or my is None:
+        return False
+    for region in getattr(area, "regions", ()):
+        if getattr(region, "type", None) != "HEADER":
+            continue
+        x = getattr(region, "x", 0)
+        y = getattr(region, "y", 0)
+        width = getattr(region, "width", 0)
+        height = getattr(region, "height", 0)
+        if x <= mx < x + width and y <= my < y + height:
+            return True
+    return False
+
+
 def _is_pill_window(area) -> bool:
     """The pill window has only a HEADER region (WINDOW and TOOLS are removed
     at creation in space_agent_bubble.cc); the island always has TOOLS."""
@@ -87,6 +124,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
     _pill_press = None
     _pill_press_at = 0.0
     _pill_dragging = False
+    _timer = None
 
     @classmethod
     def poll(cls, context):
@@ -112,7 +150,9 @@ class MIXAR_OT_bubble_header_drag(Operator):
 
         # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region
-        if region is None or region.type != 'HEADER':
+        if (region is None or region.type != 'HEADER') and not _event_hits_header(
+            area, event
+        ):
             return {'PASS_THROUGH'}
 
         # Handwriting owns LEFTMOUSE. Falling through here
@@ -139,21 +179,42 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
+        if _linux_client_drag_followup():
+            # X11 GHOST drives the move itself. Wayland already handed
+            # the pointer to xdg_toplevel_move and must not go modal.
+            # A timer is required: after XI2 ungrab, XTest motion often
+            # never arrives as MOUSEMOVE / INBETWEEN_MOUSEMOVE.
+            self._timer = context.window_manager.event_timer_add(0.01, window=context.window)
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+
         # macOS: AppKit handles tracking natively after begin_drag.
         return {'FINISHED'}
+
+    def _stop_linux_followup(self, context):
+        if self._timer is not None:
+            try:
+                context.window_manager.event_timer_remove(self._timer)
+            except Exception:  # noqa: BLE001
+                pass
+            self._timer = None
 
     def modal(self, context, event):
         if self._pill_press is not None and not self._pill_dragging:
             return self._modal_pill_undecided(context, event)
 
-        if event.type == 'MOUSEMOVE':
+        if event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE', 'TIMER'}:
             try:
-                bpy.ops.mixar.bubble_window_update_drag()
+                result = bpy.ops.mixar.bubble_window_update_drag()
+                if sys.platform.startswith("linux") and result == {'CANCELLED'}:
+                    self._stop_linux_followup(context)
+                    return {'FINISHED'}
             except Exception:  # noqa: BLE001
                 pass
             return {'RUNNING_MODAL'}
 
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            self._stop_linux_followup(context)
             try:
                 bpy.ops.mixar.bubble_window_end_drag()
             except Exception:  # noqa: BLE001
@@ -161,6 +222,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
             return {'FINISHED'}
 
         if event.type in {'RIGHTMOUSE', 'ESC'}:
+            self._stop_linux_followup(context)
             try:
                 bpy.ops.mixar.bubble_window_end_drag()
             except Exception:  # noqa: BLE001
@@ -219,10 +281,13 @@ class MIXAR_OT_bubble_header_drag(Operator):
             return {'CANCELLED'}
         self._pill_dragging = True
         if _IS_WINDOWS:
-            # The shared drag branch of modal() drives update/end from here.
             return {'RUNNING_MODAL'}
-        # macOS: AppKit's window-server drag owns the gesture from here and
-        # hands this modal no further events — same hand-off as the island.
+        if _linux_client_drag_followup():
+            # Already modal from the undecided pill press; only arm the pump.
+            self._timer = context.window_manager.event_timer_add(0.01, window=context.window)
+            return {'RUNNING_MODAL'}
+        # macOS / Wayland: the native compositor owns the gesture from here
+        # and hands this modal no further events — same hand-off as the island.
         return {'FINISHED'}
 
     def _pill_click(self, context):

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Hai, saya Naman dari Mixar.
+Hai, saya Naman.
 Dalam beberapa menit, saya akan memperkenalkan aplikasi ini.
 Ini viewport Anda.
 Ruang 3D yang dapat Anda jelajahi.
@@ -26,9 +26,9 @@ Hubungkan pustaka sendiri agar agen memakai aset Anda,
 sehingga menghemat kredit.
 Di kiri atas ada laci adegan.
 Setiap adegan memiliki tab dan agen Mixie sendiri.
-Jalankan tugas berdampingan dan beralih kapan saja.
-Setelah adegan siap, beralihlah ke Cinema Mode
-untuk mengarahkan kamera dan membuat alur kerja video.
+Jalankan tugas berdampingan dan beralih kapan saja, benar-benar paralel.
+Saat siap merekam, buka Cinema Mode
+untuk mengarahkan kamera dan membuat video berkualitas produksi.
 Ide dimulai dari 2D.
 Tarik moodboard dari kanan atau tekan tilde.
 Ini kanvas untuk referensi dan konsep.
@@ -40,6 +40,6 @@ Seluruh ruang kerja Blender tersedia, lengkap dengan panel dan pintasannya.
 Mixie bekerja di keduanya. Pilih yang paling nyaman.
 Mari kembali ke Zen Mode.
 Program mitra kreatif kami memberi Anda kredit
-dan komunitas yang membentuk masa depan AI dan 3D.
+dan komunitas yang membentuk masa depan AI di dunia media.
 Selesai. Kini Anda tahu letak semuanya.
 Mari membuat 3D bersama.

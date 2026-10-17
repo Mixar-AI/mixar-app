@@ -62,3 +62,23 @@ def test_out_of_order_replies_keep_their_original_message(transport):
     assert second.delivery_hint == '' and first.delivery_hint == 'queued'
     turn_events._consume('agent.command.result', {'command_id': first.bubble_id, 'uncertain': True})
     assert first.delivery_hint == 'delivery uncertain' and second.delivery_hint == ''
+
+
+def test_send_holds_the_frame_until_the_server_answers(transport):
+    scene, calls = transport
+    # A message into an open run (the first-message naming path needs a real scene).
+    scene.mixie_chat_state, scene.mixie_run_open = 'BUSY', True
+    msg = scene.mixie_chat_messages.add()
+    msg.sender = 'USER'
+    assert composer_send.send_user_message(scene, composer_send.OutgoingMessage(
+        'remove background', user_message=msg))[0]
+    (method, payload, ack), kw = calls[0]
+    cid = kw['command_id']
+    assert turn_events._outbox[cid]['payload'] is payload
+    ack({'code': -32020, 'data': {'uncertain': True, 'disconnected': True}})
+    turn_events._drain()
+    assert cid in turn_events._outbox and msg.delivery_hint == 'delivery uncertain'
+    turn_events._outbox[cid]['attempts'] = 1  # resent on the next socket ...
+    ack({'command_id': cid, 'state': 'accepted'})  # ... and admitted there
+    turn_events._drain()
+    assert cid not in turn_events._outbox and msg.delivery_hint == ''

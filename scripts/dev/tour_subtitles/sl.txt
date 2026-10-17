@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Živjo, sem Naman iz Mixarja.
+Živjo, sem Naman.
 V nekaj minutah vam bom pokazal aplikacijo.
 To je vaš 3D-pogled.
 Prostor 3D, po katerem se lahko premikate.
@@ -26,9 +26,9 @@ Povežite svojo knjižnico, da agent uporablja vaše vire,
 in prihranite kredite.
 Zgoraj levo je predal s prizori.
 Vsak prizor ima svoj zavihek in agenta Mixie.
-Izvajajte naloge vzporedno in kadar koli preklapljajte med njimi.
-Ko je prizor pripravljen, preklopite v Cinema Mode,
-da upravljate kamero in ustvarjate video poteke.
+Izvajajte naloge vzporedno in kadar koli preklapljajte – prava vzporednost.
+Ko ste pripravljeni na snemanje, preklopite v Cinema Mode,
+da upravljate kamero in ustvarjate videe profesionalne kakovosti.
 Ideje se začnejo v 2D.
 Povlecite moodboard z desne ali pritisnite tildo.
 To je platno za reference in koncepte.
@@ -40,6 +40,6 @@ Na voljo je celoten delovni prostor Blenderja z vsemi ploščami in bližnjicami
 Mixie deluje v obeh. Izberite, kar vam ustreza.
 Vrnimo se v Zen Mode.
 Naš program ustvarjalnih partnerjev vam ponuja kredite
-in skupnost, ki oblikuje prihodnost umetne inteligence in 3D.
+in skupnost, ki oblikuje prihodnost umetne inteligence v medijih.
 To je vse. Zdaj veste, kje je kaj.
 Ustvarjajmo 3D skupaj.

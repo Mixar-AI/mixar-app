@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Hola, soc en Naman de Mixar.
+Hola, soc en Naman.
 En uns minuts et mostraré l'aplicació.
 Aquesta és la teva vista 3D.
 Un espai 3D pel qual et pots moure.
@@ -26,9 +26,9 @@ Connecta la teva biblioteca perquè l'agent utilitzi els teus recursos,
 i estalviïs crèdits.
 A dalt a l'esquerra hi ha el calaix d'escenes.
 Cada escena té la seva pestanya i el seu agent Mixie.
-Executa tasques en paral·lel i canvia entre elles quan vulguis.
-Quan l'escena estigui llesta, passa a Cinema Mode
-per dirigir la càmera i crear fluxos de vídeo.
+Executa tasques en paral·lel i canvia quan vulguis, amb paral·lelisme real.
+Quan estiguis a punt per rodar, ves a Cinema Mode
+per dirigir la càmera i crear vídeos de qualitat professional.
 Les idees comencen en 2D.
 Treu el moodboard des de la dreta o prem la titlla.
 És un llenç per a referències i conceptes.
@@ -40,6 +40,6 @@ Hi ha tot l'espai de treball de Blender, amb cada panell i drecera.
 La Mixie funciona en tots dos. Tria el que et vagi millor.
 Tornem a Zen Mode.
 El nostre programa de socis creatius ofereix crèdits
-i una comunitat que construeix el futur de la IA i el 3D.
+i una comunitat que construeix el futur de la IA als mitjans.
 Ja està. Ara saps on és tot.
 Creem 3D plegats.

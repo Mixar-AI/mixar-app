@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "BLI_rect.h"
 #include "BLI_vector.hh"
 
@@ -479,6 +481,11 @@ struct MixieChatRuntime {
 
   /** Layout cache invalidation: previous scene layout epoch. */
   int prev_layout_epoch = -1;
+
+  /** Layout cache invalidation: chat theme + UI scale the cache was built
+   * with (chat_ui_theme_signature). The cache bakes each bubble's colours,
+   * font size and padding, so a Preferences theme edit must rebuild it. */
+  uint64_t prev_theme_signature = 0;
 
   /** Layout cache invalidation: whether streaming was active last frame. */
   bool prev_had_active_stream = false;

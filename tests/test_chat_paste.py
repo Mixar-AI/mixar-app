@@ -97,13 +97,32 @@ class TestClipboardTextAppend:
         larger wire limit — otherwise RNA truncates silently first."""
         monkeypatch.setattr(clipboard_ops, "redraw_chat_areas", lambda: None)
         limit = clipboard_ops.CHAT_INPUT_MAXLEN
-        assert limit == 10000
+        assert limit == 65536
         reports = []
         ctx = _fake_context("x" * (limit + 50))
         assert clipboard_ops.append_clipboard_text_to_input(
             ctx, lambda kind, msg: reports.append((kind, msg))
         ) is True
+        # RNA keeps exactly maxlen bytes.
         assert len(ctx.scene.mixie_chat_input) == limit
+        assert reports and 'WARNING' in reports[0][0]
+        assert "50" in reports[0][1]
+
+    def test_clamp_counts_bytes_not_characters(self, monkeypatch):
+        """A paste of multi-byte text must not be cut mid-character by RNA."""
+        monkeypatch.setattr(clipboard_ops, "redraw_chat_areas", lambda: None)
+        monkeypatch.setattr(clipboard_ops, "CHAT_INPUT_MAXLEN", 7)
+        reports = []
+        ctx = _fake_context("héllo")  # 6 bytes; 7 fit
+        assert clipboard_ops.append_clipboard_text_to_input(
+            ctx, lambda kind, msg: reports.append((kind, msg))
+        ) is True
+        assert ctx.scene.mixie_chat_input == "héllo" and not reports
+        ctx = _fake_context("ééééé")  # 10 bytes; 7 fit -> 3 whole chars
+        assert clipboard_ops.append_clipboard_text_to_input(
+            ctx, lambda kind, msg: reports.append((kind, msg))
+        ) is True
+        assert ctx.scene.mixie_chat_input == "ééé"
         assert reports and 'WARNING' in reports[0][0]
 
     def test_submit_marker_is_stripped(self):

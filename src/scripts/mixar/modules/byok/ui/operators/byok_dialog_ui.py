@@ -3,190 +3,60 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""AI Provider Settings dialog — card-styled rendering.
+"""AI Provider settings dialog — the sheet and its states.
 
-Draws the BYOK dialog with the profile menu's design language: the
-account-card text/pill/divider painters (``layout.mixar_card_label``),
-its action-button variants (``layout.mixar_card_button``) and the
-``mixar_section`` / ``mixar_dropdown`` / ``mixar_input`` widget family.
-Every primitive degrades to stock Blender widgets on a build whose C++
-predates them, so the dialog never loses functionality.
+One framed card for every state (the designer's artboard, see
+`common/sheet/kit`): title and subtitle over the header divider, the provider
+sidebar with its LOCAL MODEL foot, and a right column whose contents follow
+``wm.byok_dialog_state``:
 
-The one-action contract (the fix for the redundant Save + OK buttons):
-the dialog draws its own footer and always marks exactly one button as
-the active default. ``wm_block_dialog_create`` only appends its
-automatic OK/Cancel pair when the block has no active-default button,
-so the native row disappears and Return triggers the primary action.
-Dialog-closing buttons (Cancel / Done) are ``template_popup_confirm``
-cancel buttons: closing through them runs the dialog operator's
-``cancel()``, which wipes transient secrets — same as Esc.
+  IDLE / ERROR / SAVING  the form (`byok_provider_settings_ui.FormPlan`)
+  CONFIRM_REMOVE         the key, what removing it means, Keep / Remove
+  REMOVING               the key and a busy pill until the DELETE lands
+  SAVED / REMOVED        a recap with one Done
+
+The one-action contract: every state marks exactly ONE button as the
+dialog's active default (`kit.button(default=True)` /
+`dismiss(default=True)`), which keeps the props dialog's automatic
+OK/Cancel row away and gives Return one meaning. Dialog-closing buttons (the
+✕, Done) are ``template_popup_confirm`` cancel buttons, so closing runs the
+operator's ``cancel()`` secret wipe exactly like Esc.
 
 State machine lives on WindowManager (see ui/properties/byok_props.py);
 operators and async flow live in byok_ops.py. This module only draws.
 """
 
-from mixar.modules.common.ui.constants import (
-    CARD_ROW_CTA,
-    CARD_ROW_DIVIDER,
-    CARD_ROW_FIELD,
-    CARD_ROW_HEADING,
-)
-
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
+from . import byok_provider_settings_ui as form
+from mixar.modules.common.sheet import kit as S
 
-# Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
-# Footer actions use the CTA recipe (1.7), not the profile action rows (1.9).
-HEADER_SCALE_Y = CARD_ROW_HEADING
-FIELD_SCALE_Y = CARD_ROW_FIELD
-ACTION_SCALE_Y = CARD_ROW_CTA
-DIVIDER_SCALE_Y = CARD_ROW_DIVIDER
-
-# Word-wrap width for inline error text (Blender labels don't wrap).
-ERROR_WRAP_CHARS = 72
-
-# Operator idnames as literals — byok_ops imports this module for its
-# draw() body, so importing the classes back would be circular.
-OP_SAVE = "mixar_byok.save"
-OP_REQUEST_REMOVE = "mixar_byok.request_remove"
+# Operator idnames as literals — byok_ops imports this module for its draw()
+# body, so importing the classes back would be circular.
+OP_SAVE = form.OP_SAVE
+OP_USE_KEY = form.OP_USE_KEY
+OP_FORGET_KEY = form.OP_FORGET_KEY
+OP_REQUEST_REMOVE = form.OP_REQUEST_REMOVE
 OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
 OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
-OP_CODEX_LOAD_FILE = "mixar_byok.codex_load_file"
-OP_CODEX_PASTE = "mixar_byok.codex_paste"
 
+# The sheet's width in UI px (the artboard is a 2x export).
+SHEET_WIDTH = S.WIDTH // 2
+CLOSE_GLYPH = S.CLOSE_GLYPH
+BUSY_STATES = ('SAVING', 'REMOVING')
+BODY_ROW = 40
 
-# ---------------------------------------------------------------------------
-# Primitives (profile-card painters, with stock fallbacks)
-# ---------------------------------------------------------------------------
-
-def card_label(layout, text, kind='MUTED'):
-    """Card-painted text element; falls back to a themed stock label."""
-    if hasattr(layout, 'mixar_card_label'):
-        layout.mixar_card_label(text=text, kind=kind)
-        return
-    if kind == 'DIVIDER':
-        layout.separator()
-        return
-    row = layout.row()
-    if kind in ('MUTED', 'SECTION', 'META'):
-        row.enabled = False
-    if kind in ('META', 'PILL'):
-        row.alignment = 'RIGHT'
-    if kind == 'DANGER':
-        row.alert = True
-    row.label(text=text)
-
-
-def card_divider(layout):
-    row = layout.row()
-    row.scale_y = DIVIDER_SCALE_Y
-    card_label(row, "", 'DIVIDER')
-
-
-def section(layout):
-    """Accent-bordered card section; stock box when unavailable."""
-    if hasattr(layout, 'mixar_section'):
-        return layout.mixar_section()
-    return layout.box()
-
-
-def section_title(col, text):
-    card_label(col, text, 'SECTION')
-
-
-def field_label(col, text):
-    row = col.row()
-    row.scale_y = 0.9
-    card_label(row, text, 'MUTED')
-
-
-def field_input(col, data, prop):
-    """Tall styled text input row. Returns the row for trailing buttons."""
-    row = col.row(align=True)
-    row.scale_y = FIELD_SCALE_Y
-    if hasattr(row, 'mixar_input'):
-        row.mixar_input(data, prop, text="")
-    else:
-        row.prop(data, prop, text="")
-    return row
-
-
-def field_dropdown(col, data, prop):
-    """Tall styled enum dropdown row. Returns the row for trailing buttons."""
-    row = col.row(align=True)
-    row.scale_y = FIELD_SCALE_Y
-    if hasattr(row, 'mixar_dropdown'):
-        row.mixar_dropdown(data, prop, text="")
-    else:
-        row.prop(data, prop, text="")
-    return row
-
-
-def style_last_button(layout, kind='CARD', default=False):
-    """Restyle the button just added to *layout* as a card action button.
-
-    ``default=True`` also makes it the dialog's default button, which is
-    what keeps the native OK/Cancel row suppressed — every rendered
-    state must pass it on exactly one button.
-    """
-    if hasattr(layout, 'mixar_card_button'):
-        layout.mixar_card_button(kind=kind, active_default=default)
-
-
-def op_button(layout, operator_id, text, kind='CARD', default=False):
-    """Operator button drawn as a card action button."""
-    props = layout.operator(operator_id, text=text)
-    style_last_button(layout, kind, default)
-    return props
-
-
-def dismiss_button(layout, text=n_("Cancel"), kind='GHOST', default=False):
-    """One button that just closes the dialog.
-
-    Built on ``template_popup_confirm`` with no confirm operator: the
-    button closes the popup through the dialog's cancel path, so the
-    operator's ``cancel()`` wipes transient secrets exactly like Esc.
-    ``template_popup_confirm`` hands its button the active-default flag
-    when nothing holds it yet; ``style_last_button`` then sets or
-    *clears* it to match ``default``, so a later primary action can own
-    Return. On builds without the card styling the template's flag is
-    left in place — the native OK/Cancel row stays suppressed either way.
-    """
-    if not hasattr(layout, 'template_popup_confirm'):
-        return
-    layout.template_popup_confirm("", text="", cancel_text=text)
-    style_last_button(layout, kind, default)
-
-
-# ---------------------------------------------------------------------------
-# Catalog label lookups (raw IDs only as a fallback) — shared with the picker
-# menu's BYOK note, so they live bpy-free in `core/catalog_labels`.
-# ---------------------------------------------------------------------------
+BYOK_GUIDE_URL = form.BYOK_GUIDE_URL
 
 lookup_provider_label = catalog_labels.lookup_provider_label
 lookup_model_label = catalog_labels.lookup_model_label
-
-
-def _wrap(text, width):
-    """Dumb word-wrap for error rendering (labels don't wrap on their own)."""
-    words = text.split()
-    lines = []
-    current = ""
-    for word in words:
-        if len(current) + len(word) + 1 > width:
-            if current:
-                lines.append(current)
-            current = word if len(word) <= width else word[:width]
-        else:
-            current = f"{current} {word}".strip()
-    if current:
-        lines.append(current)
-    return lines or [""]
+_device_key_missing = form.device_key_missing
+_key_paused = form.key_paused
 
 
 # ---------------------------------------------------------------------------
-# Dialog composition
+# Entry point
 # ---------------------------------------------------------------------------
 
 def draw_dialog(layout, wm):
@@ -195,275 +65,188 @@ def draw_dialog(layout, wm):
     layout.use_property_decorate = False
     state = wm.byok_dialog_state
 
-    col = layout.column()
-    _draw_header(col, wm, state)
+    sheet = layout.column(align=True)
+    if hasattr(sheet, 'mixar_sheet_frame'):
+        sheet.mixar_sheet_frame(header=S.HEADER, sidebar=S.SIDEBAR)
+    _draw_header(sheet, state)
 
+    plan = _plan(sheet, wm, state)
+    geo = S.Geometry(form.sidebar_rows(), plan.need, plan.bottom)
+    body = sheet.split(factor=S.SPLIT_FACTOR, align=True)
+    form.draw_sidebar(body.column(align=True), wm, geo,
+                      enabled=state in ('IDLE', 'ERROR') and not form.device_key_missing(wm))
+    plan.build(S.fixed(body.column(align=True), geo.right), geo)
+
+
+def _plan(layout, wm, state):
     if state == 'CONFIRM_REMOVE':
-        _draw_current_config(col, wm, with_remove=False)
-        col.separator(factor=0.6)
-        _draw_remove_warning(col)
-        _footer_confirm_remove(layout)
-        return
-
+        return _ConfirmRemovePlan(wm)
     if state == 'REMOVING':
-        _draw_current_config(col, wm, with_remove=False)
-        _footer_busy(layout, n_("Removing your key…"))
-        return
-
+        return _RemovingPlan(wm)
     if state == 'SAVED':
-        _draw_saved_body(col, wm)
-        _footer_done(layout)
-        return
-
+        return _RecapPlan(wm, saved=True)
     if state == 'REMOVED':
-        _draw_removed_body(col)
-        _footer_done(layout)
+        return _RecapPlan(wm, saved=False)
+    return form.FormPlan(layout, wm, state)
+
+
+# ---------------------------------------------------------------------------
+# Header
+# ---------------------------------------------------------------------------
+
+def _draw_header(sheet, state):
+    header = sheet.row(align=True)
+    title = header.row(align=True)
+    title.scale_y = S.units(S.HEADER)
+    S.label(title,
+            iface_("AI Provider settings") + "\n"
+            + iface_("Use Mixar with your own provider - you won't be charged Mixar credits."),
+            S.TITLE, translate=False)
+    if state in BUSY_STATES:
+        # Busy states keep the dialog until the request lands.
         return
+    # The ✕: a cancel-path dismiss, so Esc and this both wipe transient
+    # secrets. A CLOSE-wide slot, CLOSE_RIGHT from the right, reaching down
+    # from the sheet's top edge; the painter puts the CLOSE square at its
+    # foot, CLOSE_TOP below the edge (the slot's top is the sheet's top).
+    slot = S.sized(header, S.CLOSE)
+    slot.scale_y = S.units(S.CLOSE_TOP + S.CLOSE)
+    S.dismiss(slot, CLOSE_GLYPH, S.CLOSE_KIND)
+    S.gap(header, S.CLOSE_RIGHT)
 
-    # IDLE / SAVING / ERROR — the form states.
-    if wm.byok_is_active and state != 'ERROR':
-        _draw_current_config(col, wm, with_remove=(state == 'IDLE'))
-        col.separator(factor=0.6)
-    _draw_form(col, wm, disabled=(state == 'SAVING'))
-    if state == 'ERROR' and wm.byok_last_error:
-        _draw_error(col, wm)
 
-    if state == 'SAVING':
-        _footer_busy(layout, n_("Validating with provider…"))
+# ---------------------------------------------------------------------------
+# Confirm / recap states (right column)
+# ---------------------------------------------------------------------------
+
+def _config_lines(wm):
+    provider = wm.byok_current_provider
+    lines = [
+        iface_("Provider: {provider}").format(provider=lookup_provider_label(provider)),
+        iface_("Model: {model}").format(model=lookup_model_label(provider, wm.byok_current_model)),
+    ]
+    if model_suggestions.is_codex(provider):
+        lines.append(iface_("Account: {account}").format(
+            account=wm.byok_key_preview or iface_("ChatGPT subscription")))
     else:
-        _footer_save(layout, state)
-
-
-def _draw_header(col, wm, state):
-    row = col.row()
-    heading = row.row()
-    heading.scale_y = HEADER_SCALE_Y
-    card_label(heading, n_("AI Provider Settings"), 'HEADING')
-
-    pill = row.row()
-    pill.scale_y = HEADER_SCALE_Y
-    active = wm.byok_is_active and state != 'REMOVED'
-    card_label(pill, n_("Active") if active else n_("Not configured"), 'PILL')
-
-    card_label(
-        col,
-        n_("Run the Mixar agent on your own provider — Mixar credits are "
-           "not charged while active."),
-        'MUTED',
-    )
-    card_divider(col)
-
-
-def _draw_current_config(col, wm, with_remove):
-    box = section(col)
-    bcol = box.column()
-    section_title(bcol, n_("Current Configuration"))
-    bcol.separator(factor=0.4)
-
-    provider_label = lookup_provider_label(wm.byok_current_provider)
-    model_label = lookup_model_label(wm.byok_current_provider, wm.byok_current_model)
-    _value_row(bcol, n_("Provider"), provider_label)
-    _value_row(bcol, n_("Model"), model_label)
-    if model_suggestions.is_codex(wm.byok_current_provider):
-        _value_row(bcol, n_("Account"), wm.byok_key_preview or n_("ChatGPT subscription"))
-    else:
-        _value_row(bcol, n_("API Key"), wm.byok_key_preview or n_("Stored securely"))
-
+        lines.append(iface_("API key: {key}").format(
+            key=wm.byok_key_preview or iface_("stored securely")))
     if not wm.byok_current_supports_vision:
-        bcol.separator(factor=0.3)
-        card_label(
-            bcol,
-            n_("Text-only model — chat works; 3D tasks run without visual feedback."),
-            'MUTED',
-        )
-
-    if with_remove:
-        # The destructive action lives beside the thing it removes, not
-        # in the footer where it competed with Save.
-        bcol.separator(factor=0.55)
-        rrow = bcol.row()
-        rrow.scale_y = 1.4
-        op_button(rrow, OP_REQUEST_REMOVE, n_("Remove API Key…"), 'DANGER')
+        lines.append(iface_("Text-only model - chat works; 3D tasks run without visual feedback."))
+    return lines
 
 
-def _value_row(col, label, value):
-    row = col.split(factor=0.28)
-    row.scale_y = 1.1
-    card_label(row, label, 'MUTED')
-    row.label(text=value)
+def _hosted_ok(wm):
+    """Mixar's own models need an account (not a guest, not signed out)."""
+    return (bool(getattr(wm, 'mixie_chat_is_logged_in', True))
+            and not getattr(wm, 'mixie_chat_is_guest', False))
 
 
-def _draw_form(col, wm, disabled):
-    box = section(col)
-    bcol = box.column()
-    section_title(bcol, n_("Provider Setup"))
-
-    body = bcol.column()
-    body.enabled = not disabled
-    body.separator(factor=0.45)
-
-    field_label(body, n_("Provider"))
-    field_dropdown(body, wm, 'byok_form_provider')
-    body.separator(factor=0.45)
-
-    if model_suggestions.is_openrouter(wm.byok_form_provider):
-        _draw_openrouter_fields(body, wm)
-    elif model_suggestions.is_codex(wm.byok_form_provider):
-        _draw_codex_fields(body, wm)
-    elif model_suggestions.is_local(wm.byok_form_provider):
-        from . import byok_local_ops
-        byok_local_ops.draw_local_fields(body, wm)
-    else:
-        _draw_cloud_fields(body, wm)
+def _lines(area, lines, kind=S.BODY):
+    for line in lines:
+        S.label(S.row(area, BODY_ROW, left=S.RIGHT_INSET), line, kind, translate=False)
 
 
-def _draw_cloud_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
-    field_input(body, wm, 'byok_form_api_key')
-    body.separator(factor=0.5)
-    card_label(
-        body,
-        n_("Stored encrypted, used only for Mixar agent requests — only a "
-           "masked preview is shown after saving."),
-        'MUTED',
-    )
+def _foot_row(col):
+    """The right column's foot, where the key field sits in the form."""
+    S.sep(col, S.NOTE_TO_INPUT)
+    return S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN, align='RIGHT')
 
 
-def _draw_openrouter_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_input(body, wm, 'byok_form_openrouter_model')
-    body.separator(factor=0.45)
-    field_label(body, n_("API Key"))
-    field_input(body, wm, 'byok_form_api_key')
-    body.separator(factor=0.5)
-    card_label(
-        body,
-        n_("Pick a model that supports tool / function calling — the agent needs it."),
-        'DANGER',
-    )
-    card_label(
-        body,
-        n_("Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."),
-        'MUTED',
-    )
+class _ConfirmRemovePlan:
+    """CONFIRM_REMOVE: what removing the key means; keeping it is the default.
+    A failed DELETE lands back here with its error over the buttons, so
+    Remove is the retry."""
+
+    bottom = S.action_block_height()
+
+    def __init__(self, wm):
+        self.wm = wm
+        # Static messages are stored as msgids; formatted ones arrive translated.
+        self.errors = form.wrap(rpt_(wm.byok_last_error), form.ERROR_WRAP_CHARS)[:2] \
+            if wm.byok_last_error else []
+        self.need = (7 + len(self.errors)) * BODY_ROW + S.GAP
+
+    def build(self, col, geo):
+        S.sep(col, S.CAPTION_TOP)
+        signs_in = form.signs_in(self.wm.byok_current_provider)
+        S.caption(col, n_("DISCONNECT THIS SIGN-IN?") if signs_in
+                  else n_("REMOVE YOUR API KEY?"), S.RIGHT_INSET)
+        S.sep(col, S.CAPTION_TO_CHIPS)
+        area = S.fixed(col, geo.area)
+        _lines(area, _config_lines(self.wm))
+        S.sep(area, S.GAP)
+        if _hosted_ok(self.wm):
+            after = [iface_("The agent will use Mixar's models again."),
+                     iface_("Agent chats will use Mixar credits again.")]
+        else:
+            # A guest (or signed out) has no Mixar models to fall back on.
+            after = [iface_("The agent stops answering until you add a key again."),
+                     iface_("Sign in to use Mixar models instead.")]
+        _lines(area, after, S.NOTE)
+        _lines(area, self.errors, S.DANGER_TEXT)
+        line = _foot_row(col)
+        keep = iface_("Stay connected") if signs_in else iface_("Keep my key")
+        for op, text, kind, default in ((OP_CANCEL_REMOVE, keep, S.SECONDARY, True),
+                                        (OP_CONFIRM_REMOVE, form.remove_text(self.wm.byok_current_provider),
+                                         S.DANGER_BUTTON, False)):
+            width = max(S.SAVE_W * 0.7, S.text_width(line, kind, text) + 2 * S.BUTTON_PAD)
+            S.button(S.sized(line, width), op, text, kind, default=default)
+            S.gap(line, S.GAP)
 
 
-def _draw_codex_fields(body, wm):
-    field_label(body, n_("Model"))
-    field_dropdown(body, wm, 'byok_form_model')
-    body.separator(factor=0.45)
+class _RemovingPlan:
+    """REMOVING: the key being deleted and a busy pill until the DELETE lands."""
 
-    load_row = body.row()
-    load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
-    body.separator(factor=0.35)
+    need = 7 * BODY_ROW + S.GAP
+    bottom = S.action_block_height()
 
-    field_label(body, n_("…or paste it manually"))
-    paste_row = field_input(body, wm, 'byok_form_codex_bundle')
-    paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
+    def __init__(self, wm):
+        self.wm = wm
 
-    n = len(wm.byok_form_codex_bundle or "")
-    card_label(
-        body,
-        iface_("{count} characters pasted").format(count=n) if n
-        else n_("Empty — paste your auth.json"),
-        'MUTED',
-    )
-    body.separator(factor=0.5)
-    for line in (
-        n_("Run  codex login  in your terminal, then load or paste the full"),
-        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
-        n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
-    ):
-        card_label(body, line, 'MUTED')
+    def build(self, col, geo):
+        S.sep(col, S.CAPTION_TOP)
+        signs_in = form.signs_in(self.wm.byok_current_provider)
+        S.caption(col, n_("DISCONNECTING") if signs_in else n_("REMOVING YOUR API KEY"),
+                  S.RIGHT_INSET)
+        S.sep(col, S.CAPTION_TO_CHIPS)
+        area = S.fixed(col, geo.area)
+        _lines(area, _config_lines(self.wm))
+        busy = S.sized(_foot_row(col), S.SAVE_W)
+        busy.enabled = False
+        # A disabled pill keeps the primary slot (and the active-default flag)
+        # while the delete is in flight; Return does nothing on it.
+        S.button(busy, OP_SAVE, iface_("Disconnecting…") if signs_in
+                 else iface_("Removing your key…"), S.PRIMARY, default=True)
 
 
-def _draw_error(col, wm):
-    col.separator(factor=0.55)
-    box = section(col)
-    bcol = box.column()
-    card_label(bcol, n_("Couldn't apply your changes"), 'DANGER')
-    bcol.separator(factor=0.25)
-    # Static messages are stored as msgids; formatted ones arrive translated.
-    for line in _wrap(rpt_(wm.byok_last_error), ERROR_WRAP_CHARS):
-        card_label(bcol, line, 'MUTED')
+class _RecapPlan:
+    """SAVED / REMOVED: the explicit "it landed" moment with one Done."""
 
+    need = 6 * BODY_ROW + S.GAP
+    bottom = S.action_block_height()
 
-def _draw_remove_warning(col):
-    box = section(col)
-    bcol = box.column()
-    card_label(bcol, n_("Remove your API key?"), 'DANGER')
-    bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent will use Mixar's default provider again."), 'MUTED')
-    card_label(bcol, n_("Mixar credits will be charged for future agent requests."), 'MUTED')
+    def __init__(self, wm, saved):
+        self.wm = wm
+        self.saved = saved
 
-
-def _draw_saved_body(col, wm):
-    box = section(col)
-    bcol = box.column()
-    section_title(bcol, n_("Saved"))
-    bcol.separator(factor=0.25)
-    card_label(
-        bcol,
-        n_("The Mixar agent now runs on your provider — Mixar credits are "
-           "not charged."),
-        'MUTED',
-    )
-    col.separator(factor=0.6)
-    _draw_current_config(col, wm, with_remove=False)
-
-
-def _draw_removed_body(col):
-    box = section(col)
-    bcol = box.column()
-    section_title(bcol, n_("API key removed"))
-    bcol.separator(factor=0.25)
-    card_label(bcol, n_("The agent is back on Mixar's default provider."), 'MUTED')
-    card_label(bcol, n_("Mixar credits are charged for agent requests again."), 'MUTED')
-
-
-# ---------------------------------------------------------------------------
-# Footers — every state renders exactly one primary (active-default) action
-# ---------------------------------------------------------------------------
-
-def _footer_save(layout, state):
-    layout.separator(factor=0.9)
-    row = layout.row(align=True)
-    row.scale_y = ACTION_SCALE_Y
-    dismiss_button(row, n_("Cancel"), 'GHOST')
-    label = n_("Try Again") if state == 'ERROR' else n_("Save & Activate")
-    op_button(row, OP_SAVE, label, 'ACCENT', default=True)
-
-
-def _footer_busy(layout, text):
-    layout.separator(factor=0.9)
-    row = layout.row()
-    row.scale_y = ACTION_SCALE_Y
-    sub = row.row()
-    sub.enabled = False
-    # A disabled button-as-progress-pill: it keeps the primary-action
-    # slot (and the active-default flag that suppresses the native OK
-    # row) while the async request runs; Return does nothing on it.
-    op_button(sub, OP_SAVE, text, 'ACCENT', default=True)
-
-
-def _footer_confirm_remove(layout):
-    layout.separator(factor=0.9)
-    row = layout.row(align=True)
-    row.scale_y = ACTION_SCALE_Y
-    # Keeping the key is the safe default — Return backs out.
-    op_button(row, OP_CANCEL_REMOVE, n_("Keep My Key"), 'CARD', default=True)
-    op_button(row, OP_CONFIRM_REMOVE, n_("Remove API Key"), 'DANGER')
-
-
-def _footer_done(layout):
-    layout.separator(factor=0.9)
-    row = layout.row()
-    row.scale_y = ACTION_SCALE_Y
-    dismiss_button(row, n_("Done"), 'ACCENT', default=True)
+    def build(self, col, geo):
+        S.sep(col, S.CAPTION_TOP)
+        S.caption(col, n_("SAVED") if self.saved else n_("REMOVED"), S.RIGHT_INSET)
+        S.sep(col, S.CAPTION_TO_CHIPS)
+        area = S.fixed(col, geo.area)
+        if self.saved:
+            _lines(area, [iface_("You are set. Agent chats now run on your own provider.")])
+            S.sep(area, S.GAP)
+            _lines(area, _config_lines(self.wm), S.NOTE)
+        elif _hosted_ok(self.wm):
+            _lines(area, [iface_("The agent uses Mixar's models again.")])
+            _lines(area, [iface_("Agent chats use Mixar credits again.")], S.NOTE)
+        else:
+            _lines(area, [iface_("Add a key to talk to the agent again.")])
+            _lines(area, [iface_("Sign in to use Mixar models instead.")], S.NOTE)
+        S.dismiss(S.sized(_foot_row(col), S.SAVE_W), iface_(S.DONE_TEXT), S.PRIMARY,
+                  default=True)
 
 
 # Auto-discovery imports every file under ui/ — nothing to register here.

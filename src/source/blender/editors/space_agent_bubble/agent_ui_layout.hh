@@ -89,9 +89,9 @@ struct AgentIslandState;
  * dropped entirely — before Upload is allowed below its icon-only floor.
  */
 enum class AgentModelChipForm {
-  Full = 0, /* Icon + model label + chevron. */
-  Label,    /* Icon + model label. */
-  Icon,     /* Icon alone. */
+  Full = 0, /* Badge + name + chevron (the name elided into the width). */
+  Label,    /* Name + chevron. */
+  Icon,     /* The badge alone. */
 };
 
 struct AgentIslandLayout {
@@ -149,27 +149,25 @@ struct AgentIslandLayout {
   /* Auto mode switch, right of Voice (closes the gap with it when Voice is
    * absent). Always drawn: the flag is a plain scene property. */
   rctf chip_auto;
-  /* Hosted model pick, right of Auto. Empty when the Python half has not
-   * registered its WindowManager mirror yet, or when the row is too narrow
-   * to carry it without eating Upload Reference. */
+  /* The model chip (who answers, which model), right of Auto. Empty when the
+   * Python half has not registered its WindowManager mirror yet, or when the
+   * row is too narrow to carry it without eating Upload Reference. */
   rctf chip_model;
-  AgentModelChipForm model_form;
+  AgentModelChipForm model_form; /* Full: badge + name; Label: name; Icon: badge. */
   /* Form each chip was fitted at (#agent_chip_fit): 0 is the full label; a
    * higher index sheds text down to the chip's icon. Painters read this. */
   int chip_form[AGENT_CHIP_SLOT_COUNT];
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;
+  /* Refine (and, once a rewrite has landed, Revert) left of Send — the same
+   * pair as a moodboard node's prompt, square because Send must stay the
+   * obvious action. Chat tabs only; empty elsewhere. The chip row is budgeted
+   * up to the leftmost of them. */
+  rctf btn_refine;
+  rctf btn_revert;
 };
 
-void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
-
-/**
- * Resolve the island against `region`, anchored to the region's top-left.
- *
- * `agent_mode_active` is kept in the signature for ABI stability but unused
- * covers; `active_tab` picks the filled pill.
- */
 void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
 
 /**
@@ -186,7 +184,8 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
  * default-width unit in `window_w` and the pad window's REAL width in
  * `pad_real_w` (0 otherwise): the unit stays the island's, the geometry
  * re-flows to the pad. Keeping the unit line untouched is deliberate — the
- * chrome-scaling contract pins it.
+ * chrome-scaling contract pins it. `active_tab` picks the filled pill;
+ * `agent_mode_active` is kept in the signature but unused.
  */
 void agent_ui_layout_build(int window_w,
                            int window_h,

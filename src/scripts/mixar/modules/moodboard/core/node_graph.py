@@ -13,6 +13,7 @@ from mixar.modules.common.i18n import rpt_
 from ..constants import GRAPH_NODE_ID_MAXLEN
 from .media_utils import is_still_item
 from .moodboard_utils import get_moodboard_image_display_size
+from .video_duration_seed import seed_video_duration
 from .node_schema import (
     output_type_for_action,
     refresh_node_height,
@@ -254,6 +255,10 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
     source_action = getattr(action_node_by_id(scene, from_node_id), 'action_type', '')
     if target.action_type == source_action == 'ASSEMBLE':
         raise ValueError(rpt_("An Assemble card cannot feed another Assemble card"))
+    if target.action_type == 'ANIMATE':
+        from .animate_node import require_rig_source
+
+        require_rig_source(scene, from_node_id)
     accepted = {item for item in socket.accepted_types.split(",") if item}
     if source_type not in accepted:
         raise ValueError(rpt_("This input does not accept {kind} nodes").format(
@@ -291,6 +296,10 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
         input_order=socket_index,
     )
     refresh_node_socket_visibility(scene, target)
+    if source_type == 'VIDEO':
+        # Only a video changes what "as long as the input" means; a still
+        # reference must leave the duration the user sees untouched.
+        seed_video_duration(target, input_media_items(scene, target))
     return link
 
 
@@ -409,9 +418,13 @@ _ACCEPTED_SOURCE_TYPES = {
     'MESH_SEGMENT': {'MESH'},
     'AUTO_RIG': {'MESH'},
     'ASSEMBLE': {'MESH'},
+    # A MESH that carries a rig: an Auto Rig / Animate card, or a rigged
+    # import. ``connect_nodes`` enforces the rig part.
+    'ANIMATE': {'MESH'},
 }
 
-MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE'})
+MESH_FEATURE_ACTIONS = frozenset(
+    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE'})
 
 
 def _graph_node_by_id(scene, node_id: str):

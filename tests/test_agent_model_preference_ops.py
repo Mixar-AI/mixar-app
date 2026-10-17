@@ -37,9 +37,6 @@ from mixar.modules.byok.core import model_menu, model_suggestions, preference_st
 from mixar.modules.byok.ui.operators import agent_model_ops
 from mixar.modules.common.api.services.agent_service import AgentService
 
-MENU_SOURCE = (
-    SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "menus" / "agent_model_menu.py"
-)
 PROPS_SOURCE = (
     SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "properties" / "agent_model_props.py"
 )
@@ -58,7 +55,6 @@ WM_PROPS = (
     "mixar_agent_model_eligible",
 )
 
-MENU_BL_IDNAME = "MIXIE_CHAT_MT_agent_model"
 
 
 def _record(model_id, **overrides):
@@ -147,21 +143,12 @@ def test_the_delete_endpoints_are_role_scoped_and_wholesale():
 
 
 # ---------------------------------------------------------------------------
-# Operators
+# set_hosted / reset_hosted (run by the island card's `mixar.agent_pick`)
 # ---------------------------------------------------------------------------
 
-def _make_set_op(provider="anthropic", model="m", label="Anthropic · M",
-                 thinking_level=""):
-    op = agent_model_ops.MIXAR_OT_agent_model_set()
-    op.provider, op.model, op.label = provider, model, label
-    op.thinking_level = thinking_level
-    op.reported = []
-    op.report = lambda kinds, message: op.reported.append((kinds, message))
-    return op
-
-
-def _context():
-    return SimpleNamespace(window_manager=SimpleNamespace())
+def _set(provider="anthropic", model="m", label="Anthropic · M", thinking_level=""):
+    return agent_model_ops.set_hosted(SimpleNamespace(), provider, model, thinking_level,
+                                      label=label)
 
 
 @pytest.fixture
@@ -176,7 +163,7 @@ def captured_save(monkeypatch):
 
 
 def test_setting_a_model_writes_the_mirror_before_the_request_lands(captured_save):
-    assert _make_set_op().execute(_context()) == {'FINISHED'}
+    assert _set() is True
 
     snapshot = preference_state.snapshot()
     assert snapshot["mixar_agent_model_id"] == "m"
@@ -187,7 +174,7 @@ def test_setting_a_model_writes_the_mirror_before_the_request_lands(captured_sav
 
 
 def test_a_thinking_row_forwards_its_level(captured_save):
-    _make_set_op(thinking_level="high").execute(_context())
+    _set(thinking_level="high")
 
     assert captured_save[0]["thinking_level"] == "high"
     assert preference_state.snapshot()["mixar_agent_model_thinking"] == "high"
@@ -206,7 +193,7 @@ def test_the_optimistic_write_reverts_on_a_400(captured_save, monkeypatch):
     })
     before = preference_state.snapshot()
 
-    _make_set_op().execute(_context())
+    _set()
     assert preference_state.snapshot()["mixar_agent_model_id"] == "m"
 
     captured_save[0]["on_done"](False, None, "Model not available: claude-x")
@@ -220,7 +207,7 @@ def test_a_422_reverts_the_same_way(captured_save, monkeypatch):
     monkeypatch.setattr(agent_model_ops, "_notify_failure", lambda *_a: None)
     before = preference_state.snapshot()
 
-    _make_set_op().execute(_context())
+    _set()
     captured_save[0]["on_done"](False, None, "Invalid form data — please reach out to support.")
 
     assert preference_state.snapshot() == before
@@ -231,7 +218,7 @@ def test_a_success_echo_is_adopted_without_a_second_round_trip(captured_save,
     refreshed = []
     monkeypatch.setattr(preference_state, "refresh", lambda: refreshed.append(1))
 
-    _make_set_op().execute(_context())
+    _set()
     captured_save[0]["on_done"](True, {
         "byok_active": False,
         "items": [{
@@ -250,7 +237,7 @@ def test_a_success_echo_is_adopted_without_a_second_round_trip(captured_save,
 def test_a_late_success_after_logout_is_a_no_op(captured_save):
     """The epoch guard: restoring the logged-out account's pick in front of the
     next user is worse than leaving the cleared default."""
-    _make_set_op().execute(_context())
+    _set()
 
     preference_state.clear()  # logout bumps the epoch
     captured_save[0]["on_done"](True, {
@@ -266,21 +253,12 @@ def test_a_late_failure_after_logout_does_not_revert_the_cleared_state(
         captured_save, monkeypatch):
     monkeypatch.setattr(agent_model_ops, "_notify_failure", lambda *_a: None)
     preference_state.apply_local({"mixar_agent_model_id": "previous"})
-    _make_set_op().execute(_context())
+    _set()
 
     preference_state.clear()
     captured_save[0]["on_done"](False, None, "Model not available: m")
 
     assert preference_state.snapshot()["mixar_agent_model_id"] == ""
-
-
-def test_the_picker_refuses_to_write_while_byok_is_active(captured_save):
-    preference_state.apply_local({"mixar_agent_model_byok_active": True})
-    op = _make_set_op()
-
-    assert op.execute(_context()) == {'CANCELLED'}
-    assert captured_save == []
-    assert op.reported and "API key" in op.reported[0][1]
 
 
 def test_reset_clears_the_mirror_and_calls_delete(monkeypatch):
@@ -295,18 +273,15 @@ def test_reset_clears_the_mirror_and_calls_delete(monkeypatch):
         "mixar_agent_model_id": "m", "mixar_agent_model_label": "M",
     })
 
-    op = agent_model_ops.MIXAR_OT_agent_model_reset()
-    op.report = lambda *_a: None
-    assert op.execute(_context()) == {'FINISHED'}
+    assert agent_model_ops.reset_hosted(SimpleNamespace()) is True
 
     assert preference_state.snapshot()["mixar_agent_model_label"] == ""
     assert calls and "on_done" in calls[0]
 
 
-def test_the_operators_are_auto_registered_through_a_classes_tuple():
-    assert agent_model_ops.classes == (
-        agent_model_ops.MIXAR_OT_agent_model_set,
-        agent_model_ops.MIXAR_OT_agent_model_reset,
-    )
-    assert agent_model_ops.MIXAR_OT_agent_model_set.bl_idname == "mixar.agent_model_set"
-    assert agent_model_ops.MIXAR_OT_agent_model_reset.bl_idname == "mixar.agent_model_reset"
+def test_no_operator_is_left_beside_the_island_cards_pick():
+    """`mixar.agent_model_set` / `_reset` had no caller once the island card
+    ran every pick through `mixar.agent_pick`; the module keeps the writes."""
+    assert agent_model_ops.classes == ()
+    assert not any(name.startswith("MIXAR_OT_") for name in vars(agent_model_ops))
+    assert callable(agent_model_ops.set_hosted) and callable(agent_model_ops.reset_hosted)

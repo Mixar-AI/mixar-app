@@ -4,8 +4,10 @@
 """Execute production window matching with inaccessible outgoing screens.
 
 The native fixture supplies only Blender's surrounding infrastructure. The
-classification, snapshot, matching and fallback functions are extracted from
-wm_files.cc, so restoring a post-Main-free screen lookup fails this test.
+snapshot, matching and fallback functions are extracted from wm_files.cc and
+the bubble-window classification from wm_mixar_modal_dialog.cc (the one check
+wm_files.cc shares), so restoring a post-Main-free screen lookup fails this
+test.
 """
 
 from pathlib import Path
@@ -17,6 +19,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WM_FILES = ROOT / 'src/source/blender/windowmanager/intern/wm_files.cc'
+WM_MODAL = ROOT / 'src/source/blender/windowmanager/intern/wm_mixar_modal_dialog.cc'
 FIXTURE = ROOT / 'tests/native/file_read_window_lifetime.cc'
 
 
@@ -29,7 +32,8 @@ def _definition(source, signature):
 def _program(source):
     definitions = [
         _definition(source, 'struct wmFileReadWMSetupData') + ';',
-        _definition(source, 'static bool wm_window_contains_agent_bubble_space('),
+        _definition(WM_MODAL.read_text(encoding='utf-8'),
+                    'bool Mixar_window_has_agent_bubble('),
         _definition(source, 'static wmFileReadWMSetupData *wm_file_read_setup_wm_init('),
         _definition(source, 'static void wm_file_read_setup_wm_use_new('),
     ]

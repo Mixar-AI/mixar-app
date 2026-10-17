@@ -1112,6 +1112,9 @@ msgstr "Kiểm tra trạng thái thất bại: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Quét thư viện tài sản, kiểm tra thay đổi, chỉ kết xuất ảnh xem trước mới, rồi gửi đến API huấn luyện"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Đang bắt đầu…"
 
@@ -1433,11 +1436,47 @@ msgstr "Máy chủ cục bộ tùy chỉnh"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Trỏ Mixar đến một máy chủ tương thích OpenAI mà bạn đang chạy (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Dữ liệu biểu mẫu không hợp lệ — vui lòng liên hệ bộ phận hỗ trợ."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Đã xảy ra lỗi từ phía chúng tôi. Vui lòng thử lại."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Đang đọc danh mục mô hình cục bộ"
@@ -1481,26 +1520,20 @@ msgstr "Hãy khởi động mô hình cục bộ trước (mô hình phải đan
 msgid "Base URL and model name are required."
 msgstr "Cần có URL cơ sở và tên mô hình."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Máy chủ cục bộ trả về HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Không thể kết nối đến máy chủ cục bộ. Hãy kiểm tra máy chủ đang chạy và URL cơ sở chính xác."
 
-msgid "No models available — contact support"
-msgstr "Không có mô hình khả dụng — hãy liên hệ bộ phận hỗ trợ"
-
-msgid "Your API key controls the model"
-msgstr "Khóa API của bạn quyết định mô hình"
-
 msgid "Custom"
 msgstr "Tùy Chỉnh"
-
-msgid "Use my own API key…"
-msgstr "Dùng khóa API của tôi…"
-
-msgid "Change or remove my API key…"
-msgstr "Đổi hoặc xóa khóa API của tôi…"
 
 msgid "Thinking"
 msgstr "Suy Nghĩ"
@@ -1508,53 +1541,80 @@ msgstr "Suy Nghĩ"
 msgid "Thinking: {level}"
 msgstr "Suy nghĩ: {level}"
 
-msgid "Your key: {name}"
-msgstr "Khóa của bạn: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Mặc Định"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Không có mô hình khả dụng — hãy liên hệ bộ phận hỗ trợ"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Đang lưu mô hình tác nhân… Vui lòng chờ trước khi gửi hoặc đổi mô hình."
 
-msgid "Agent Model"
-msgstr "Mô Hình Tác Nhân"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "Chọn mô hình chạy tác nhân."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Mức độ suy luận cho mô hình đang được chọn."
-
-msgid "No thinking levels for this model"
-msgstr "Mô hình này không có mức độ suy nghĩ"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Khóa API riêng của bạn đang được dùng — chọn \"Đổi hoặc xóa khóa API của tôi\" trong trình đơn này để chọn mô hình trên máy chủ"
-
-msgid "Set Agent Model"
-msgstr "Đặt Mô Hình Tác Nhân"
-
-msgid "Use this model for the agent"
-msgstr "Dùng mô hình này cho tác nhân"
-
-msgid "Provider"
-msgstr "Nhà Cung Cấp"
-
-msgid "Model"
-msgstr "Mô Hình"
-
-msgid "Label"
-msgstr "Nhãn Hiệu"
-
-msgid "Thinking Level"
-msgstr "Mức Độ Suy Nghĩ"
-
-msgid "No model selected"
-msgstr "Chưa chọn mô hình"
-
-msgid "Reset Agent Model"
-msgstr "Hoàn Lại Mô Hình Tác Nhân"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Xóa mô hình đã lưu và để Mixar tự chọn"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "Không thể đổi mô hình"
@@ -1562,113 +1622,107 @@ msgstr "Không thể đổi mô hình"
 msgid "Could not reset model"
 msgstr "Không thể hoàn lại mô hình"
 
-msgid "Removing your key…"
-msgstr "Đang xóa khóa của bạn…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Đang xác thực với nhà cung cấp…"
+msgid "Use this model for the agent"
+msgstr "Dùng mô hình này cho tác nhân"
 
-msgid "AI Provider Settings"
-msgstr "Sắp Đặt Nhà Cung Cấp AI"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "Đang Hoạt Động"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Chưa cấu hình"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Chạy tác nhân Mixar trên nhà cung cấp của riêng bạn — không trừ tín dụng Mixar khi đang bật."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Cấu Hình Hiện Tại"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "Tài Khoản"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Gói đăng ký ChatGPT"
 
-msgid "API Key"
-msgstr "Khóa API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Được lưu an toàn"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Mô hình chỉ văn bản — trò chuyện hoạt động; nhiệm vụ 3D chạy mà không có phản hồi hình ảnh."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Xóa Khóa API…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Thiết Lập Nhà Cung Cấp"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Được lưu dạng mã hóa, chỉ dùng cho các yêu cầu tác nhân Mixar — sau khi lưu chỉ hiển thị bản xem trước đã che."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Chọn mô hình hỗ trợ gọi công cụ / hàm — tác nhân cần tính năng này."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Nạp từ ~/.codex/auth.json"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…hoặc dán thủ công"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Đã dán {count} ký tự"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Trống — hãy dán auth.json của bạn"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Chạy  codex login  trong terminal, sau đó nạp hoặc dán toàn bộ"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "nội dung của ~/.codex/auth.json (nút dán đọc từ bảng nhớ tạm của bạn)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Dùng gói đăng ký ChatGPT của bạn — không trừ tín dụng Mixar."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Không thể áp dụng thay đổi của bạn"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Xóa khóa API của bạn?"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Tác nhân sẽ dùng lại nhà cung cấp mặc định của Mixar."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Tín dụng Mixar sẽ bị trừ cho các yêu cầu tác nhân sau này."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Tác nhân Mixar hiện chạy trên nhà cung cấp của bạn — không trừ tín dụng Mixar."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Đã xóa khóa API"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "Tác nhân đã trở lại nhà cung cấp mặc định của Mixar."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Tín dụng Mixar lại bị trừ cho các yêu cầu tác nhân."
-
-msgid "Try Again"
-msgstr "Thử Lại"
-
-msgid "Save & Activate"
-msgstr "Lưu & Kích Hoạt"
-
-msgid "Keep My Key"
-msgstr "Giữ Khóa của Tôi"
-
-msgid "Remove API Key"
-msgstr "Xóa Khóa API"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Đang giải nén môi trường chạy AI cục bộ…"
@@ -1691,8 +1745,14 @@ msgstr "Đã tải xuống — chưa chạy"
 msgid "Not downloaded"
 msgstr "Chưa tải xuống"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Chạy hoàn toàn trên máy tính này — lời nhắc của bạn không bao giờ rời khỏi máy trừ khi qua cơ chế điều phối tác nhân của Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "Mô Hình"
 
 msgid "Cancel Download"
 msgstr "Hủy Tải Xuống"
@@ -1718,9 +1778,6 @@ msgstr "URL Cơ Sở"
 msgid "API Key (optional)"
 msgstr "Khóa API (tùy chọn)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bất kỳ máy chủ tương thích OpenAI nào trên máy tính này — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Không thể lưu nhà cung cấp cục bộ."
 
@@ -1730,53 +1787,32 @@ msgstr "Quét Lại Ứng Dụng Cục Bộ"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Quét lại máy tính này để tìm các ứng dụng AI cục bộ đang chạy"
 
+msgid "AI Provider Settings"
+msgstr "Sắp Đặt Nhà Cung Cấp AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Dùng khóa API riêng của bạn cho tác nhân Mixar. Khi đang bật, tín dụng Mixar không bị trừ cho các yêu cầu tác nhân."
 
 msgid "Validate with the provider and save your API key"
 msgstr "Xác thực với nhà cung cấp và lưu khóa API của bạn"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Chọn mô hình cho nhà cung cấp này và nhập khóa API."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Cần có slug mô hình và khóa API."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Chọn một mô hình Codex và nạp gói auth.json của bạn."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Lưu thất bại."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Đọc ~/.codex/auth.json từ máy này vào trường"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Không tìm thấy ~/.codex/auth.json — hãy chạy `codex login` trước"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Không thể đọc ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json trống"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
-
-msgid "Loaded auth.json"
-msgstr "Đã nạp auth.json"
-
-msgid "Paste auth.json"
-msgstr "Dán auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Dán ~/.codex/auth.json của bạn từ bảng nhớ tạm vào trường"
-
-msgid "Clipboard is empty"
-msgstr "Bộ nhớ tạm hiện thời là trống rỗng"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json đã dán quá lớn cho trường này và đã bị cắt bớt — sẽ không được lưu đúng"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "Xóa/Loại Bỏ"
@@ -1787,11 +1823,110 @@ msgstr "Bắt đầu quy trình xác nhận xóa"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Hủy quy trình xóa và trở về hộp thoại chính"
 
-msgid "Delete the stored API key server-side"
-msgstr "Xóa khóa API đã lưu phía máy chủ"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "Xóa thất bại."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Ngắt mạch"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Mô hình cục bộ"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Thử Lại"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Làm Tươi Trạng Thái BYOK"
@@ -1805,11 +1940,38 @@ msgstr "Làm Tươi Danh Mục Mô Hình"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Xác thực lại danh mục nhà cung cấp+mô hình từ nền phụ trợ"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Nhà Cung Cấp Mô Hình Tác Nhân"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "ID nhà cung cấp của lựa chọn mô hình tác nhân trên máy chủ đã lưu"
+
+msgid "Agent Model"
+msgstr "Mô Hình Tác Nhân"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "ID mô hình của lựa chọn mô hình tác nhân trên máy chủ đã lưu"
@@ -1838,11 +2000,29 @@ msgstr "Mô Hình Tác Nhân Đủ Điều Kiện"
 msgid "False when the saved model is not available on your plan"
 msgstr "Sai khi mô hình đã lưu không khả dụng trong gói của bạn"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "Nhà Cung Cấp"
+
 msgid "LLM provider"
 msgstr "Nhà cung cấp LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Mô hình dùng với nhà cung cấp đã chọn"
+
+msgid "API Key"
+msgstr "Khóa API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Khóa API của bạn được lưu dạng mã hóa và chỉ dùng cho các yêu cầu tác nhân Mixar. Sau khi lưu, chỉ hiển thị bản xem trước đã che."
@@ -1850,20 +2030,14 @@ msgstr "Khóa API của bạn được lưu dạng mã hóa và chỉ dùng cho 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bất kỳ slug mô hình nào từ openrouter.ai/models (ví dụ anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json của Codex"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Nội dung của ~/.codex/auth.json (hãy chạy `codex login` trước)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Chế độ cục bộ"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Do Mixar quản lý, hoặc máy chủ cục bộ của riêng bạn"
-
-msgid "Local model"
-msgstr "Mô hình cục bộ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Mô hình được tuyển chọn để tải xuống và chạy trên máy tính này"
@@ -1885,6 +2059,15 @@ msgstr "BYOK Đang Hoạt Động"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Đúng khi máy chủ báo byok_active cho người dùng này"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Trạng Thái Hộp Thoại"
@@ -1976,6 +2159,27 @@ msgstr "Sinh tạo thất bại — vui lòng thử lại"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if của danh mục theo thuộc tính RNA"
 
+msgid "Nothing selected"
+msgstr "Chưa chọn cái gì cả"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Giá Trị"
+
+msgid "Label"
+msgstr "Nhãn Hiệu"
+
+msgid "Group"
+msgstr "Nhóm"
+
+msgid "Selected"
+msgstr "Đã Chọn"
+
 msgid "No modes"
 msgstr "Không có chế độ"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} lượt sinh tạo đã sẵn sàng"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Bạn đã hết tín dụng — hãy nâng cấp gói để tiếp tục"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "Cần xác thực — vui lòng đăng nhập"
@@ -2125,6 +2332,9 @@ msgstr "Nhập Khẩu Kết Quả Sinh Tạo"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Đã hủy (sinh tạo vẫn có thể hoàn tất trên máy chủ)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Không thể xử lý phản hồi của máy chủ"
@@ -2236,6 +2446,9 @@ msgstr "Hàng Đợi của Đảo Tác Nhân không khả dụng"
 
 msgid "Show every job"
 msgstr "Hiển thị mọi tác vụ"
+
+msgid "Active"
+msgstr "Đang Hoạt Động"
 
 msgid "Show pending or running jobs"
 msgstr "Hiển thị các tác vụ đang chờ hoặc đang chạy"
@@ -2612,9 +2825,6 @@ msgstr "Hồ sơ tương thích"
 msgid "Density"
 msgstr "Mật Độ"
 
-msgid "Default"
-msgstr "Mặc Định"
-
 msgid "Generation-pane control spacing"
 msgstr "Khoảng cách điều khiển trong ngăn sinh tạo"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "Tên Tài Khoản"
 
 msgid "Display name for the account greeting"
 msgstr "Tên hiển thị trong lời chào tài khoản"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "Phiên Bản Tập Tin Mới Hơn"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Tập Tin"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Tọa Độ Gốc"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "Dàn Dựng Tự Động thất bại"
 msgid "Animate failed"
 msgstr "Tạo hoạt họa thất bại"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Khung lưới đã chọn có {count:,} mặt (tối đa {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "Mô hình của máy chủ cục bộ"
 msgid "Local model last error"
 msgstr "Lỗi gần nhất của mô hình cục bộ"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "Sao Chép"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "Lệnh"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "Sao Chép"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "Định Dạng/Hình Thức"
 
 msgid "Processing..."
 msgstr "Đang xử lý..."
@@ -5312,6 +5702,9 @@ msgstr "Phân Đoạn Khung Lưới"
 msgid "Auto Rig"
 msgstr "Dàn Dựng Tự Động"
 
+msgid "Animate"
+msgstr "Hoạt Họa"
+
 msgid "Add Mesh"
 msgstr "Thêm Khung Lưới"
 
@@ -5413,6 +5806,15 @@ msgstr "Số bước tinh chỉnh dùng trong quá trình sinh tạo. Nhiều b�
 
 msgid "The file format used to store the generated image."
 msgstr "Định dạng tập tin dùng để lưu hình ảnh được sinh tạo."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Tự động (từ tên)"
@@ -5642,14 +6044,14 @@ msgstr "Không thể tải xuống chất liệu BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Không thể nạp chất liệu BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Lỗi không mong muốn khi tải xuống chất liệu: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "Không thể áp dụng chất liệu cho đối tượng nào"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Áp Dụng Chất Liệu PBR"
 
 msgid "Both refined and guide masks are required"
 msgstr "Cần cả màn chắn lọc đã tinh chỉnh và màn chắn lọc hướng dẫn"
@@ -5732,6 +6134,15 @@ msgstr "Lắp Ráp Nhân Vật"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Gắn các bộ phận đã sinh tạo vào cơ thể có hoặc không có khung rối, ngay trên máy"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "Chỉ Dùng Phong Cách Hình Ảnh"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Khi bật, chỉ phong cách nghệ thuật của hình ảnh được chuyển (lời nhắc vẫn áp dụng). Khi tắt, hình ảnh trực tiếp dẫn dắt sinh tạo chất liệu"
+
 msgid "Enter a prompt in the image node"
 msgstr "Hãy nhập lời nhắc trong nút hình ảnh"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Sinh Tạo Mô Hình không có trong danh mục sinh tạo"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Chế độ Sinh Tạo Mô Hình này chưa được các nút suy luận hỗ trợ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Không có mô hình sinh tạo 3D nào được bật"
@@ -5884,6 +6295,9 @@ msgstr "Hãy sinh tạo '{name}' trước — thẻ này dùng kết quả của
 
 msgid "Mesh"
 msgstr "Khung Lưới"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Tham Chiếu {number}"
@@ -6053,11 +6467,11 @@ msgstr "Nhập khẩu SceneGen thất bại"
 msgid "No image URLs in server response"
 msgstr "Không có URL hình ảnh trong phản hồi của máy chủ"
 
-msgid "Starting reconstruction..."
-msgstr "Đang bắt đầu tái tạo..."
-
 msgid "Error: {error}"
 msgstr "Lỗi: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Đang bắt đầu tái tạo..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Không thể tải xuống hình ảnh đã sinh tạo: {error}"
@@ -6280,9 +6694,6 @@ msgstr "Không thể tải xuống/chuyển đổi thế giới: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Đã nhập khẩu thế giới nhưng không tạo ra đối tượng nào"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Nhập Khẩu Thế Giới"
 
 msgid "Failed to import world: {error}"
 msgstr "Không thể nhập khẩu thế giới: {error}"
@@ -6833,9 +7244,6 @@ msgstr "Dùng Màu Tùy Chỉnh"
 msgid "Custom Colour"
 msgstr "Màu Tùy Chỉnh"
 
-msgid "Selected"
-msgstr "Đã Chọn"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Bỏ qua viền và phần bên trong của khung này khi bấm, để chỉ các thành viên của nó mới có thể được chọn"
 
@@ -6844,6 +7252,18 @@ msgstr "Thu Gọn"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Vẽ khung dưới dạng thanh có tiêu đề và ẩn phần thân"
+
+msgid "Unavailable"
+msgstr "Không Khả Dụng"
+
+msgid "No supported 3D service is available"
+msgstr "Không có dịch vụ 3D được hỗ trợ nào khả dụng"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Mô hình hình ảnh phải công bố hỗ trợ hướng dẫn màn chắn lọc và hai tham chiếu"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Không có lựa chọn nào được công bố"
@@ -6862,18 +7282,6 @@ msgstr "Hoàn Tất"
 
 msgid "Generation completed"
 msgstr "Đã sinh tạo xong"
-
-msgid "Unavailable"
-msgstr "Không Khả Dụng"
-
-msgid "No supported 3D service is available"
-msgstr "Không có dịch vụ 3D được hỗ trợ nào khả dụng"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Mô hình hình ảnh phải công bố hỗ trợ hướng dẫn màn chắn lọc và hai tham chiếu"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID Tham Số"
@@ -6899,14 +7307,14 @@ msgstr "Giá trị Boolean"
 msgid "Catalog choice"
 msgstr "Lựa chọn trong danh mục"
 
-msgid "Widget"
-msgstr "Thành Tố Điều Khiển"
-
-msgid "Group"
-msgstr "Nhóm"
-
 msgid "Choices"
 msgstr "Các Lựa Chọn"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Thành Tố Điều Khiển"
 
 msgid "Visibility Condition"
 msgstr "Điều Kiện Hiển Thị"
@@ -6926,11 +7334,14 @@ msgstr "Tối Thiểu"
 msgid "Maximum"
 msgstr "Tối Đa"
 
-msgid "Value"
-msgstr "Giá Trị"
-
 msgid "Value Label"
 msgstr "Nhãn Giá Trị"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID Ổ Cắm"
@@ -7948,12 +8359,6 @@ msgstr "Hình ảnh chuyển phong cách - áp dụng phong cách nghệ thuật
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Hình ảnh tham chiếu - trực tiếp dẫn dắt sinh tạo chất liệu (bỏ qua lời nhắc)"
 
-msgid "Use Image Style Only"
-msgstr "Chỉ Dùng Phong Cách Hình Ảnh"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Khi bật, chỉ phong cách nghệ thuật của hình ảnh được chuyển (lời nhắc vẫn áp dụng). Khi tắt, hình ảnh trực tiếp dẫn dắt sinh tạo chất liệu"
-
 msgid "Output texture resolution in pixels"
 msgstr "Độ phân giải chất liệu đầu ra tính bằng điểm ảnh"
 
@@ -8452,9 +8857,6 @@ msgstr "Khung lưới gốc bị ẩn, không bị xóa"
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan chưa được khởi tạo"
 
-msgid "Format"
-msgstr "Định Dạng/Hình Thức"
-
 msgid "Inputs"
 msgstr "Đầu Vào"
 
@@ -8548,26 +8950,23 @@ msgstr "Chọn hình ảnh trong bảng cảm hứng để thêm chúng làm gó
 msgid "Generates as one multi-view job"
 msgstr "Sinh tạo thành một tác vụ đa góc nhìn"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} nữa)"
+
 msgid "Video Gen tab not available"
 msgstr "Thẻ Sinh Tạo Video không khả dụng"
 
 msgid "Selected References"
 msgstr "Tham Chiếu Đã Chọn"
 
-msgid "Images: {count}"
-msgstr "Hình ảnh: {count}"
-
-msgid "Videos: {count}"
-msgstr "Video: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Chưa chọn tham chiếu — văn bản sang video"
 
 msgid "A selected video source file is missing"
 msgstr "Thiếu một tập tin nguồn video đã chọn"
 
-msgid "No references selected — text-to-video"
-msgstr "Chưa chọn tham chiếu — văn bản sang video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Nêu thứ tự hình ảnh/video trong lời nhắc khi phân vai trò"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Giới Hạn Tham Chiếu"
@@ -8644,6 +9043,33 @@ msgstr "Toàn Bộ Khung Hình"
 msgid "Clear Board"
 msgstr "Xóa Sạch Bảng"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Tên Đối Tượng"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Hoạt Họa"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Dàn Dựng Tự Động (Tác Nhân)"
 
@@ -8665,8 +9091,8 @@ msgstr "Thể loại bộ xương: auto / biped / quadruped / hexapod / octopod 
 msgid "Skeleton Spec"
 msgstr "Quy Chuẩn Bộ Xương"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Quy ước bộ xương: 'tripo' hoặc 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Cách đặt tên xương: tripo, mixamo, actorcore, unity, unreal hoặc vrm (chỉ tripo mới hỗ trợ các hoạt ảnh dựng sẵn của Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "Sinh Tạo PBR (Tác Nhân)"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Sinh tạo chất liệu PBR cho đối tượng khung lưới đã cho bằng Tripo"
-
-msgid "Object Name"
-msgstr "Tên Đối Tượng"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Tên của đối tượng khung lưới trong cảnh cần áp chất liệu"
@@ -8917,11 +9340,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Đồng bộ thất bại: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Đã bỏ qua {count} video: tác nhân chỉ chấp nhận hình ảnh tĩnh. Hãy dùng Sinh Tạo Video trên bảng cảm hứng cho các đoạn phim"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Đã bỏ qua {count} video: tác nhân chỉ chấp nhận hình ảnh tĩnh. Hãy dùng Sinh Tạo Video trên bảng cảm hứng cho các đoạn phim"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Chưa chọn hình ảnh bảng cảm hứng nào"
@@ -9219,9 +9642,6 @@ msgstr "Thư Mục"
 
 msgid "Directory of the selected file(s)"
 msgstr "Thư mục của các tập tin đã chọn"
-
-msgid "Files"
-msgstr "Tập Tin"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Không thể nạp phương tiện: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "Hãy chọn một nút suy luận"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Biên soạn lời nhắc, rồi bấm Enter hoặc Sinh Tạo"
 
-msgid "Node added to the generation queue"
-msgstr "Đã thêm nút vào hàng đợi sinh tạo"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Hiển thị sắp đặt và lời nhắc của nút này để có thể điều chỉnh và chạy lại; bấm lần nữa để hủy biên soạn và quay lại kết quả"
@@ -10839,9 +11259,6 @@ msgstr "Phản hồi nguyên vật liệu đã sinh tạo không kèm tập lệ
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Đã sinh tạo nguyên vật liệu nhưng không thể áp dụng: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Sinh Tạo Nguyên Vật Liệu Thủ Tục"
 
 msgid "Material generation failed"
 msgstr "Sinh tạo nguyên vật liệu thất bại"
@@ -11877,9 +12294,6 @@ msgstr "Số Bit Lượng Tử Hóa Màu"
 
 msgid "Generic Quantization Bits"
 msgstr "Số Bit Lượng Tử Hóa Phổ Thông"
-
-msgid "Animations"
-msgstr "Hoạt Họa"
 
 msgid "Animation Mode"
 msgstr "Chế Độ Hoạt Họa"
@@ -17496,12 +17910,6 @@ msgstr "Luôn kết xuất trên GPU khi có sẵn"
 msgid "Always render on the CPU"
 msgstr "Luôn kết xuất trên CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Bật Nướng Bên Ngoài theo Mặc Định"
 
@@ -17579,6 +17987,12 @@ msgstr "Luôn Tính Toán Khung Hình"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Tính toán lại cây nút mỗi khi khung hình thay đổi"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Tùy Chọn Kênh"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "Không thể tạo bản xem trước phác thảo. Hãy vẽ lại đ�
 msgid "View sketch"
 msgstr "Xem phác thảo"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Bản nháp cho tác nhân đã đầy (tối đa {count} ký tự)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Đã thêm dấu — không có gì bên dưới"
@@ -19109,9 +19523,6 @@ msgstr "Thanh Công Cụ"
 
 msgid "Sidebar"
 msgstr "Thanh Bên"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "Bảng phân đoạn khung lưới UV"
@@ -19536,8 +19947,8 @@ msgstr "Đang Sửa Đổi..."
 msgid "Awaiting Input..."
 msgstr "Đang Chờ Nhập..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Video cần chế độ Video. Hãy xóa video để gửi cho Tác Nhân."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID Người Dùng"
@@ -19547,6 +19958,78 @@ msgstr "ID người dùng để đăng nhập Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Tác nhân chấp nhận: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "Đã bỏ qua hình ảnh xử lý chậm: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Mã hóa hình ảnh thất bại: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Đã dừng*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Nâng Cấp"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Nhận xét phản hồi đang trống"
@@ -19730,6 +20222,27 @@ msgstr "'{name}' không còn trong tập tin tài sản."
 
 msgid "Could not add the asset to the scene."
 msgstr "Không thể thêm tài sản vào cảnh."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Đang suy nghĩ..."
@@ -19880,9 +20393,6 @@ msgstr "Đã sửa đổi {count}"
 
 msgid "{count} deleted"
 msgstr "Đã xóa {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} nữa)"
 
 msgid "Created: {names}"
 msgstr "Đã tạo: {names}"
@@ -20046,6 +20556,15 @@ msgstr "Đăng Nhập"
 msgid "Login panel for Mixie Chat"
 msgstr "Bảng đăng nhập cho Mixie Chat"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Đăng nhập bằng tài khoản Mixar"
+
 msgid "Session expired"
 msgstr "Phiên đã hết hạn"
 
@@ -20055,31 +20574,27 @@ msgstr "Hãy đăng nhập lại."
 msgid "Login Failed"
 msgstr "Đăng Nhập Thất Bại"
 
-msgid "Sign in with your Mixar account"
-msgstr "Đăng nhập bằng tài khoản Mixar"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "Đang chờ trình duyệt..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Đăng Nhập bằng Trình Duyệt"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Trình đơn thả xuống hồ sơ / tài khoản — mở từ thanh trên cùng toàn cục.\n"
-"\n"
-"Nội dung được vẽ gốc bằng `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): lời chào, nhãn gói, thước đo\n"
-"mức sử dụng tín dụng và các thao tác tài khoản, bố trí thành một thẻ\n"
-"thay vì trình đơn. Python vẫn quản lý việc đăng ký và mọi\n"
-"thao tác mà thẻ gọi — C++ chỉ quản lý điểm ảnh.\n"
 
 msgid "Dashboard"
 msgstr "Bảng Điều Khiển"
@@ -20309,12 +20824,6 @@ msgstr "Dấu: {note}"
 msgid "Sketch"
 msgstr "Phác Thảo"
 
-msgid "Skipped slow image: {name}"
-msgstr "Đã bỏ qua hình ảnh xử lý chậm: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Mã hóa hình ảnh thất bại: {error}"
-
 msgid "Message sent"
 msgstr "Đã gửi tin nhắn"
 
@@ -20536,8 +21045,8 @@ msgstr "ID Điểm Khôi Phục"
 msgid "Restoring checkpoint…"
 msgstr "Đang quay về điểm khôi phục…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Văn bản dán quá dài (tối đa {count} ký tự)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Dán Văn Bản"
@@ -20728,11 +21237,14 @@ msgstr "Phiên đã lưu trữ cần xóa"
 msgid "Chat removed from history"
 msgstr "Đã xóa cuộc trò chuyện khỏi lịch sử"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Không thể thêm {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Đã đạt giới hạn tệp đính kèm ({count})"
@@ -20740,14 +21252,14 @@ msgstr "Đã đạt giới hạn tệp đính kèm ({count})"
 msgid "Skipped {name}: {error}"
 msgstr "Đã bỏ qua {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Không thể thêm {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Các tham chiếu này đã được đính kèm"
 
 msgid "Added {count} image(s)"
 msgstr "Đã thêm {count} hình ảnh"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Thêm từ Blend"
@@ -20764,6 +21276,9 @@ msgstr "{size} - Có dữ liệu"
 msgid "{size} - No data"
 msgstr "{size} - Không có dữ liệu"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Chọn hình ảnh từ tập tin blend"
 
@@ -20772,6 +21287,12 @@ msgstr "Hình ảnh đã được thêm"
 
 msgid "Image not found in blend file"
 msgstr "Không tìm thấy hình ảnh trong tập tin blend"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Hình ảnh đã được đính kèm"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Chụp Ảnh Màn Hình"
 
@@ -21103,9 +21627,6 @@ msgstr "Kết nối thất bại"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Chế Độ Dev: Đã kết nối với dữ liệu giả"
 
-msgid "Disconnect"
-msgstr "Ngắt mạch"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Ngắt kết nối khỏi máy chủ tác nhân Mixie"
 
@@ -21115,14 +21636,14 @@ msgstr "Chế Độ Dev: Đã ngắt kết nối"
 msgid "Disconnected from server"
 msgstr "Đã ngắt kết nối khỏi máy chủ"
 
+msgid "Could not save the chat to History"
+msgstr "Không thể lưu cuộc trò chuyện vào Lịch Sử"
+
 msgid "New Chat"
 msgstr "Trò Chuyện Mới"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Bắt đầu cuộc trò chuyện mới (cuộc trò chuyện hiện tại được lưu vào Lịch Sử)"
-
-msgid "Could not save the chat to History"
-msgstr "Không thể lưu cuộc trò chuyện vào Lịch Sử"
 
 msgid "Started new chat session"
 msgstr "Đã bắt đầu phiên trò chuyện mới"
@@ -21160,6 +21681,12 @@ msgstr "Đang tiếp tục tác vụ trước..."
 msgid "Could not resume the previous task"
 msgstr "Không thể tiếp tục tác vụ trước"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "Nhận Xét Phản Hồi Đã Gửi"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Nhận xét đã gửi cục bộ, hiển thị chỉ đọc trong cuộc trò chuyện"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "Chưa gửi tin nhắn"
 
@@ -21522,6 +22058,15 @@ msgstr "Ô Nhập Trò Chuyện"
 
 msgid "Type your message here"
 msgstr "Nhập tin nhắn tại đây"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Tin Nhắn Trò Chuyện"
@@ -21660,6 +22205,12 @@ msgstr "Đã Đăng Nhập"
 
 msgid "Whether user is currently logged in"
 msgstr "Người dùng hiện có đang đăng nhập hay không"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Đang Đăng Nhập"
@@ -21861,9 +22412,6 @@ msgstr "Viết"
 
 msgid "File write"
 msgstr "Ghi tập tin"
-
-msgid "Command"
-msgstr "Lệnh"
 
 msgid "Shell command"
 msgstr "Lệnh shell"
@@ -23620,9 +24168,6 @@ msgstr "Bắt Dính Con Trỏ"
 msgid "Snap 2D cursor"
 msgstr "Bắt dính con trỏ 2D"
 
-msgid "Origin"
-msgstr "Tọa Độ Gốc"
-
 msgid "Mirror selected UVs"
 msgstr "Phản chiếu đối xứng các UV đã chọn"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Trở Lại Trước"
 
 msgid "Grid & Relationship Lines"
 msgstr "Khung Lưới & Đường Liên Hệ"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "Động Cơ Kết Xuất"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "Sắp Đặt Kết Xuất"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Tập tin được lưu bởi phiên bản Mixar mới hơn (%d.%d), một số dữ liệu có thể bị mất"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Tập tin được lưu bởi một phiên bản mới hơn, hãy mở bằng Mixar %s hoặc mới hơn"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Thêm một Tầng Lớp Sơn trong bảng Tầng Lớp để bắt đầu sơn"
 
@@ -24409,7 +25179,43 @@ msgstr "Bắt đầu hoặc dừng đọc chính tả vào bản nháp phác th�
 msgid "Stop the running turn"
 msgstr "Dừng lượt đang chạy"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Quay trở lại\n"
+"\n"
+"Khôi phục lời nhắc bạn đã viết trước khi được tinh chỉnh."
+
+msgid "Refining this prompt..."
+msgstr "Đang tinh chỉnh lời nhắc này..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Tinh chỉnh lại\n"
+"\n"
+"Viết lại lời nhắc này thêm một lần nữa cho mô hình sẽ nhận nó. Quay Trở Lại vẫn khôi phục cách diễn đạt của chính bạn, không phải lần tinh chỉnh trước đó."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Tinh chỉnh\n"
+"\n"
+"Viết lại lời nhắc này cho mô hình sẽ nhận nó, bổ sung những chi tiết mà mô hình đó phản hồi tốt."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "Xóa tham chiếu"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Hủy bỏ phác thảo này và nét vẽ đang chờ của nó"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "Mở Hàng Đợi"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Chưa chọn cái gì cả"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Hãy hoàn tất phác thảo hoặc đọc chính tả trước khi chuyển thẻ"
 
@@ -24607,6 +25413,15 @@ msgstr "%d ngày trước"
 msgid "%dw ago"
 msgstr "%d tuần trước"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Đang Sinh Tạo (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter để gửi"
 
 msgid "Sketch · Enter to send"
 msgstr "Phác Thảo · Enter để gửi"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "Quy tắc — biên soạn quy tắc dự án và quy tắc toàn cục 
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "Chế độ tự động đang bật: tác nhân tự quyết định c�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Chế độ tự động: tác nhân tự quyết định các lựa chọn còn mở thay vì hỏi bạn, và liệt kê các quyết định trong phần tóm tắt"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Đang dùng khóa API của riêng bạn, và khóa này quyết định mô hình. Mở trình đơn này và chọn \"Thay đổi hoặc xóa khóa API của tôi\" để chọn lại một mô hình được lưu trữ trên máy chủ"
-
-msgid "Choose which model the agent runs on"
-msgstr "Chọn mô hình mà tác nhân sử dụng"
 
 msgid "Agent Bubble"
 msgstr "Bong Bóng Tác Nhân"
@@ -24858,6 +25670,12 @@ msgstr "Số Lượng Đã Đóng"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Số cửa sổ Bong Bóng Tác Nhân đã đóng"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Đặt Kích Thước Cửa Sổ Bong Bóng Tác Nhân"
@@ -25336,6 +26154,9 @@ msgstr "Đang chờ..."
 msgid "Click to edit the prompt and try again"
 msgstr "Bấm để biên soạn lời nhắc và thử lại"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "Lời nhắc\n"
 "\n"
 "Mô tả thứ cần sinh tạo. Nhấn Enter để gửi nút này."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Quay trở lại\n"
-"\n"
-"Khôi phục lời nhắc bạn đã viết trước khi được tinh chỉnh."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Tinh chỉnh lại\n"
-"\n"
-"Viết lại lời nhắc này thêm một lần nữa cho mô hình sẽ nhận nó. Quay Trở Lại vẫn khôi phục cách diễn đạt của chính bạn, không phải lần tinh chỉnh trước đó."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Tinh chỉnh\n"
-"\n"
-"Viết lại lời nhắc này cho mô hình sẽ nhận nó, bổ sung những chi tiết mà mô hình đó phản hồi tốt."
-
-msgid "Refining this prompt..."
-msgstr "Đang tinh chỉnh lời nhắc này..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "Không Gian Bộ Chất Liệu"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Dùng các bảng ở thanh bên để quản lý bộ chất liệu"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Về đầu tiên"
 
@@ -26557,9 +27354,6 @@ msgstr "Vùng An Toàn"
 msgid "Select a character to animate"
 msgstr "Chọn một nhân vật để tạo hoạt họa"
 
-msgid "Animate"
-msgstr "Hoạt Họa"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Tạo khung khóa cho chuyển động mức phác dựng này từ đầu chơi"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Định danh tác vụ của không gian làm việc"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "Nút hành động tô màu nguy hiểm"
 msgid "Borderless quiet action button"
 msgstr "Nút hành động kín đáo không viền"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "Thẻ Nhỏ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Thanh Trượt Chế Độ Trái"
 
@@ -27126,9 +28019,6 @@ msgstr "Ký Hiệu"
 
 msgid "Header glyph"
 msgstr "Ký hiệu tiêu đề"
-
-msgid "Chip"
-msgstr "Thẻ Nhỏ"
 
 msgid "Chip track"
 msgstr "Rãnh thẻ nhỏ"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "Bộ lọc phần mở rộng tập tin"
 
 msgid "Write compressed .mixar file"
 msgstr "Ghi tập tin .mixar được nén"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Lưu thành tập tin .mixar"

@@ -17,17 +17,23 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-import bpy
-
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
 from mixar.modules.common.i18n import n_, rpt_
-from mixar.modules.common.job_queue import Job, JobState, get_queue
+from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
+from mixar.modules.common.job_queue.core.helpers import (
+    create_scene_flag_listener,
+    fire_failed_job_callbacks,
+)
+from mixar.modules.common.job_queue.core.queue_download import (
+    job_scene,
+    pinned_to_job,
+)
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 from .scene_recon_constants import (
     POLL_INTERVAL_PHASE1,
@@ -161,7 +167,8 @@ class SceneReconJob(Job):
 
         if self._on_complete_callback:
             try:
-                self._on_complete_callback(total, succeeded, failed_count)
+                with pinned_to_job(self):
+                    self._on_complete_callback(total, succeeded, failed_count)
             except Exception as e:
                 logger.error("[SceneRecon] Completion callback error: %s", e)
 
@@ -191,17 +198,17 @@ class SceneReconJob(Job):
         # Update tab UI
         stage_name = data.get("stage_name", "")
         stage_detail = data.get("stage_detail", "")
-        _update_tab_status(stage_name, stage_detail)
+        _update_tab_status(self, stage_name, stage_detail)
 
         if job_status == "failed":
             self.error = data.get("error", n_("Job failed"))
             self.user_message = data.get("user_message", "") or n_("Scene reconstruction failed")
-            _update_tab_status(error=self.error)
+            _update_tab_status(self, error=self.error)
             return ("FAIL", [])
         if job_status in TERMINAL_JOB_STATUSES and job_status != "completed":
             self.error = rpt_("Job ended: {status}").format(status=job_status)
             self.user_message = data.get("user_message", "") or n_("Scene reconstruction failed")
-            _update_tab_status(error=self.error)
+            _update_tab_status(self, error=self.error)
             return ("FAIL", [])
 
         if gq_status in ("SUBMITTED", "POLLING"):
@@ -236,11 +243,12 @@ class SceneReconJob(Job):
         # Update tab UI
         if phase == "model_generation":
             _update_tab_status(
+                self,
                 rpt_("Generating 3D Models ({completed}/{total})").format(
                     completed=completed, total=total), "",
             )
         elif phase == "completed":
-            _update_tab_status(rpt_("Scene Complete ({total} objects)").format(total=total), "")
+            _update_tab_status(self, rpt_("Scene Complete ({total} objects)").format(total=total), "")
 
         # Scan for newly completed objects to download
         for obj in objects:
@@ -289,24 +297,34 @@ class SceneReconJob(Job):
         return ("RUN", [])
 
     def _emit_bbox_placeholders(self, objects: list) -> None:
-        """Emit bbox placeholders for generate_mesh=false flow."""
-        bbox_count = 0
-        for obj in objects:
-            center = obj.get("center")
-            dims = obj.get("dimensions")
-            if center and dims:
-                idx = obj.get("index", bbox_count)
-                label = obj.get("label", f"object_{idx}")
-                rotation = obj.get("rotation", [1.0, 0.0, 0.0, 0.0])
-                scale = obj.get("scale", 1.0)
-                bbox_matrix = obj.get("bbox_pose_matrix")
-                try:
-                    self._on_bbox_ready(
-                        center, dims, rotation, scale, idx, label, bbox_matrix,
-                    )
-                    bbox_count += 1
-                except Exception as e:
-                    logger.error("[SceneRecon] bbox_ready failed for %s: %s", idx, e)
+        """Emit bbox placeholders for generate_mesh=false flow.
+
+        One pin for the whole batch: each pin flips the window's scene and
+        back, so pinning per placeholder flickered N times.
+        """
+        if not any(obj.get("center") and obj.get("dimensions") for obj in objects):
+            return
+        try:
+            with pinned_to_job(self):
+                bbox_count = 0
+                for obj in objects:
+                    center = obj.get("center")
+                    dims = obj.get("dimensions")
+                    if center and dims:
+                        idx = obj.get("index", bbox_count)
+                        label = obj.get("label", f"object_{idx}")
+                        rotation = obj.get("rotation", [1.0, 0.0, 0.0, 0.0])
+                        scale = obj.get("scale", 1.0)
+                        bbox_matrix = obj.get("bbox_pose_matrix")
+                        try:
+                            self._on_bbox_ready(
+                                center, dims, rotation, scale, idx, label, bbox_matrix,
+                            )
+                            bbox_count += 1
+                        except Exception as e:
+                            logger.error("[SceneRecon] bbox_ready failed for %s: %s", idx, e)
+        except Exception as e:  # noqa: BLE001 — the job's tab is gone
+            logger.error("[SceneRecon] bbox placeholders dropped: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -315,11 +333,11 @@ class SceneReconJob(Job):
 
 
 def _update_tab_status(
-    stage_name: str = "", stage_detail: str = "", error: str = "",
+    job, stage_name: str = "", stage_detail: str = "", error: str = "",
 ) -> None:
-    """Update tab UI properties with current status."""
+    """Update the job's tab UI properties with current status."""
     try:
-        scene = bpy.context.scene
+        scene = job_scene(job)
         if not scene or not hasattr(scene, "mixie_moodboard_sidebar"):
             return
         sidebar = scene.mixie_moodboard_sidebar
@@ -386,42 +404,16 @@ def enqueue_scene_recon_job(
 
 _listener_attached = False
 
+# Flags the tabs that submitted the active jobs, never the shown tab.
+_sync_generating_flag = create_scene_flag_listener("mixie_scene_recon_is_generating")
+
 
 def _on_queue_changed(queue: FeatureQueue) -> None:
     """Sync scene recon progress to queue activity."""
-    try:
-        scene = bpy.context.scene
-    except Exception:
-        return
-    if scene is None:
-        return
-
-    has_work = queue.has_active_work()
-    was_generating = bool(getattr(scene, "mixie_scene_recon_is_generating", False))
-
-    if has_work and not was_generating:
-        try:
-            scene.mixie_scene_recon_is_generating = True
-        except (AttributeError, TypeError):
-            pass
-        return
-
-    if not has_work and was_generating:
-        try:
-            scene.mixie_scene_recon_is_generating = False
-        except (AttributeError, TypeError):
-            pass
-
+    _sync_generating_flag(queue)
+    if not queue.has_active_work():
         # Invoke error callbacks for failed jobs so the user sees the popup
-        snapshot = queue.snapshot()
-        for j in snapshot:
-            if j.state == JobState.FAILED and hasattr(j, '_on_error_callback'):
-                cb = j._on_error_callback
-                if cb:
-                    try:
-                        cb(j.error or n_("Scene reconstruction failed"))
-                    except Exception:
-                        pass
+        fire_failed_job_callbacks(queue, n_("Scene reconstruction failed"))
 
 
 def _get_scene_recon_queue() -> FeatureQueue:

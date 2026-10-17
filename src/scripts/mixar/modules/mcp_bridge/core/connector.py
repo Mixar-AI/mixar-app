@@ -14,11 +14,11 @@ MAX_BODY = 8 * 1024 * 1024
 LOCAL_PREFIXES = ("mixar_ui_", "mixar_scene", "mixar_project")
 REBINDS = {"mixar_scene_new", "mixar_scene_switch", "mixar_project_open"}
 REPORTS_BINDING = {"mixar_ui_context", "mixar_scenes", *REBINDS}
-#: The switch in Mixar's Connect AI Apps (MCP) dialog is off: its relay stops and
+#: MCP is off in Mixar's "Connect MCP" sheet: its relay stops and
 #: its launcher manifest says so. "Mixar is not open" sent users (and their AI
 #: app) looking for a closed app while Mixar sat open on the same screen.
 DISABLED = ("MCP is turned off in Mixar. Ask the user to open Mixar's profile menu, "
-            "choose Connect AI Apps (MCP) and turn on \"Allow AI apps to use Mixar\", then try again")
+            "choose \"Connect MCP\" and click Turn on beside \"MCP is off\", then try again")
 
 
 def request(record, method, path, payload=None, headers=None, timeout=10):
@@ -30,7 +30,7 @@ def request(record, method, path, payload=None, headers=None, timeout=10):
         conn.request(method, path, body=body, headers={
             "Authorization": "Bearer " + record["token"], "Content-Type": "application/json", **(headers or {})})
         response = conn.getresponse()
-        raw = response.read(MAX_BODY+1)
+        raw = discovery.read_body(response, MAX_BODY)
         if len(raw) > MAX_BODY:
             raise ValueError("MCP response exceeds the local transport limit")
         if not 200 <= response.status < 300:

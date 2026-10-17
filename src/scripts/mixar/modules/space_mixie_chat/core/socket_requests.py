@@ -11,6 +11,10 @@ from ..constants import JSONRPCMethod
 logger = get_logger(__name__)
 
 
+def _ignore(result):
+    pass
+
+
 class SocketRequests:
     def _expire_pending(self):
         now = time.monotonic()
@@ -32,6 +36,7 @@ class SocketRequests:
         params: dict,
         on_result: Optional[Callable[[Any], None]] = None,
         timeout: float = 35.0,
+        expect_ack: bool = False,
     ) -> str:
         """Send a JSON-RPC request and optionally register a response callback.
 
@@ -40,6 +45,8 @@ class SocketRequests:
             params: Method parameters
             on_result: Callback invoked with the result (or error dict) when
                        the server responds. Called on the WS thread.
+            expect_ack: the server answers at once (a command); a silent wait
+                        past WS_ACK_TIMEOUT probes the path early.
 
         Returns:
             The request ID string.
@@ -65,6 +72,9 @@ class SocketRequests:
                 self._pending_callbacks.pop(request_id, None)
                 self._pending_deadlines.pop(request_id, None)
             raise
+        if expect_ack and on_result is not None:
+            from .socket_liveness import await_ack
+            await_ack(self, request_id)
         logger.debug(f"Queued request {request_id} ({method})")
         return request_id
 
@@ -94,12 +104,24 @@ class SocketRequests:
             "method": JSONRPCMethod.SYSTEM_PING,
             "id": request_id,
         }
-        self._enqueue_frame(ping, required=True)
+        # Watched like a command: unanswered while the server's own pings keep
+        # arriving is a path dead upstream only (socket_liveness.py).
+        with self._pending_lock:
+            self._pending_callbacks[request_id] = _ignore
+            self._pending_deadlines[request_id] = time.monotonic() + 35.0
+        if self._enqueue_frame(ping, required=True):
+            from .socket_liveness import await_ack
+            await_ack(self, request_id)
+        else:
+            with self._pending_lock:
+                self._pending_callbacks.pop(request_id, None)
+                self._pending_deadlines.pop(request_id, None)
         self._last_ping_time = time.time()
         logger.debug("Sent ping")
 
     def _enqueue_frame(self, frame, *, required=False):
         """Never block the UI or reader on backpressure; force recovery if needed."""
+        encoded = ''
         try:
             encoded = json.dumps(frame)
             if len(encoded.encode('utf-8')) > 32 * 1024 * 1024:
@@ -109,6 +131,9 @@ class SocketRequests:
         except (Full, ValueError):
             if required and self._ws:
                 # A tool result cannot be silently lost or replayed as execution.
+                self._diag.end('backpressure', queued=self._outbound.qsize(),
+                               queued_bytes=getattr(self._outbound, 'queued_bytes', None),
+                               frame_bytes=len(encoded.encode('utf-8')))
                 self._connected = False
                 threading.Thread(target=self._ws.close, daemon=True).start()
             return False

@@ -86,8 +86,10 @@ bool mixie_chat_layout_text_rect(const MessageLayoutData *layout, rctf *r_rect)
   r_rect->xmax = r_rect->xmin + layout->content_width;
 
   if (layout->is_markdown_content) {
-    /* Markdown content draws top-down from the bubble's top padding. */
-    r_rect->ymax = layout->y_pos + layout->bubble_height - layout->style.v_padding;
+    /* Markdown content draws top-down from the bubble's top padding,
+     * below any attachments so the thumbnail keeps the text column. */
+    r_rect->ymax = layout->y_pos + layout->bubble_height - layout->style.v_padding -
+                   layout->attachments_height;
     r_rect->ymin = r_rect->ymax - layout->text_height;
   }
   else {
@@ -121,8 +123,8 @@ static int wrapped_text_byte_offset(const char *text,
 {
   BLF_size(font_id, font_size);
 
-  const blender::Vector<blender::StringRef> lines =
-      BLF_string_wrap(font_id, text, int(wrap_width), wrap_mode);
+  blender::Vector<blender::StringRef> lines;
+  chat_ui_wrap_lines(font_id, text, int(wrap_width), wrap_mode, lines);
   if (lines.is_empty()) {
     return 0;
   }
@@ -224,7 +226,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
     const int font_id = hit.mono ? chat_ui_mono_font() : BLF_default();
     /* Code cards draw with HardLimit wrap (unbreakable tokens fold at the
      * card edge) — the mapping must wrap the same way. */
-    const BLFWrapMode wrap_mode = hit.mono ? BLFWrapMode::HardLimit : BLFWrapMode::Minimal;
+    const BLFWrapMode wrap_mode = hit.mono ? BLFWrapMode::HardLimit : CHAT_PROSE_WRAP;
     *r_message_index = hit.message_index;
     *r_seg_index = hit.seg_index;
     *r_char_offset = wrapped_text_byte_offset(seg_text,
@@ -281,7 +283,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
                                               -1.0f,
                                               local_x,
                                               y_from_top,
-                                              BLFWrapMode::Minimal);
+                                              CHAT_PROSE_WRAP);
     return true;
   }
 

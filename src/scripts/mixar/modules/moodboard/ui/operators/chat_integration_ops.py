@@ -49,15 +49,6 @@ def get_all_image_indices_to_send(scene):
     return image_indices
 
 
-def count_selected_videos(scene) -> int:
-    """Selected board videos the chat sync leaves behind."""
-    return sum(
-        1
-        for img in getattr(scene, "mixie_moodboard_images", [])
-        if getattr(img, "selected", False) and is_video_item(img)
-    )
-
-
 class MIXIE_OT_moodboard_send_to_chat(Operator):
     """Force the moodboard→chat sync to run immediately."""
     bl_idname = "mixie.moodboard_send_to_chat"
@@ -89,9 +80,13 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
                 _reconcile_attachments,
                 _collect_selected_image_names,
             )
+            from mixar.modules.moodboard.core.chat_sync_videos import sync_selected_videos
             selected = _collect_selected_image_names(scene)
             force_resync(scene)
             _reconcile_attachments(scene, selected, animate=True)
+            # Selected videos become context files (the chat has no video pill);
+            # board-owned chips of deselected videos go.
+            attached_videos, _detached = sync_selected_videos(scene)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, rpt_("Sync failed: {error}").format(error=e))
             return {'CANCELLED'}
@@ -100,19 +95,13 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
             1 for att in scene.mixie_chat_pending_attachments
             if getattr(att, "is_moodboard", False)
         )
-        skipped_videos = count_selected_videos(scene)
-        if skipped_videos:
-            # The sync silently leaves videos on the board (the chat has no
-            # video content part); tell the user instead of doing nothing.
+        if attached_videos:
             self.report(
-                {'WARNING'},
-                (rpt_("Skipped {count} video: the agent accepts still images only. "
-                      "Use Video Gen on the moodboard for clips") if skipped_videos == 1
-                 else rpt_("Skipped {count} videos: the agent accepts still images only. "
-                           "Use Video Gen on the moodboard for clips")
-                 ).format(count=skipped_videos),
+                {'INFO'},
+                (rpt_("Attached {count} video as context") if attached_videos == 1
+                 else rpt_("Attached {count} videos as context")).format(count=attached_videos),
             )
-        if selected_count == 0 and not skipped_videos:
+        if selected_count == 0 and not attached_videos:
             self.report({'INFO'}, "No moodboard images selected")
         elif selected_count:
             self.report(

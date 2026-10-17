@@ -11,7 +11,7 @@ def selected_object(context):
     obj = getattr(context, "object", None)
     if (workspace is None or workspace.name != BASIC_WORKSPACE_NAME
             or context.mode != "OBJECT" or obj is None
-            or obj.type not in {"MESH", "LIGHT"}):
+            or obj.type not in {"MESH", "LIGHT", "ARMATURE"}):
         return None
     if not obj.select_get(view_layer=context.view_layer):
         return None

@@ -1112,6 +1112,9 @@ msgstr "நிலைச் சரிபார்ப்பு தோல்வி:
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "சொத்து நூலகங்களை வருடி, மாற்றங்களைச் சரிபார்த்து, புதிய முன்னோட்டங்களை மட்டும் வழங்கி, பயிற்சி API-க்கு அனுப்புகிறது"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "தொடங்குகிறது…"
 
@@ -1433,11 +1436,47 @@ msgstr "தனிப்பயன் உள்ளகச் சேவையகம�
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "நீங்கள் ஏற்கெனவே இயக்கும் OpenAI-இணக்கச் சேவையகத்தை Mixar நோக்கிச் சுட்டுங்கள் (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "படிவத் தரவு தவறானது — ஆதரவைத் தொடர்புகொள்ளுங்கள்."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "எங்கள் பக்கத்தில் ஏதோ தவறு நேர்ந்தது. மீண்டும் முயலுங்கள்."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "உள்ளக மாதிரி அட்டவணையைப் படிக்கிறது"
@@ -1481,26 +1520,20 @@ msgstr "முதலில் உள்ளக மாதிரியைத் த
 msgid "Base URL and model name are required."
 msgstr "அடிப்படை URL-உம் மாதிரிப் பெயரும் தேவை."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "உள்ளகச் சேவையகம் HTTP {status} என்று பதிலளித்தது."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "உள்ளகச் சேவையகத்தை அடைய முடியவில்லை. அது இயங்குகிறதா என்றும் அடிப்படை URL சரியா என்றும் சரிபாருங்கள்."
 
-msgid "No models available — contact support"
-msgstr "மாதிரிகள் எதுவும் கிடைக்கவில்லை — ஆதரவைத் தொடர்புகொள்ளுங்கள்"
-
-msgid "Your API key controls the model"
-msgstr "உங்கள் API விசை மாதிரியைக் கட்டுப்படுத்துகிறது"
-
 msgid "Custom"
 msgstr "தனிப்பயன்"
-
-msgid "Use my own API key…"
-msgstr "என் சொந்த API விசையைப் பயன்படுத்து…"
-
-msgid "Change or remove my API key…"
-msgstr "என் API விசையை மாற்று அல்லது அகற்று…"
 
 msgid "Thinking"
 msgstr "சிந்தனை"
@@ -1508,53 +1541,80 @@ msgstr "சிந்தனை"
 msgid "Thinking: {level}"
 msgstr "சிந்தனை: {level}"
 
-msgid "Your key: {name}"
-msgstr "உங்கள் விசை: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "இயல்புநிலை"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "மாதிரிகள் எதுவும் கிடைக்கவில்லை — ஆதரவைத் தொடர்புகொள்ளுங்கள்"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "முகவர் மாதிரியைச் சேமிக்கிறது… அனுப்புவதற்கு அல்லது மாதிரிகளை மாற்றுவதற்கு முன் காத்திருங்கள்."
 
-msgid "Agent Model"
-msgstr "முகவர் மாதிரி"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "முகவரை எந்த மாதிரி இயக்கும் என்பதைத் தேர்ந்தெடுக்கிறது."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "இப்போது தேர்ந்தெடுத்த மாதிரிக்கான பகுத்தறிவு முயற்சி."
-
-msgid "No thinking levels for this model"
-msgstr "இந்த மாதிரிக்குச் சிந்தனை நிலைகள் இல்லை"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "உங்கள் சொந்த API விசை பயன்பாட்டில் உள்ளது — புரவலன் மாதிரியைத் தேர்ந்தெடுக்க இந்தப் பட்டியலில் \"என் API விசையை மாற்று அல்லது அகற்று\" என்பதைத் தேர்ந்தெடுங்கள்"
-
-msgid "Set Agent Model"
-msgstr "முகவர் மாதிரியை அமை"
-
-msgid "Use this model for the agent"
-msgstr "முகவருக்கு இந்த மாதிரியைப் பயன்படுத்துகிறது"
-
-msgid "Provider"
-msgstr "வழங்குநர்"
-
-msgid "Model"
-msgstr "மாதிரி"
-
-msgid "Label"
-msgstr "சிட்டை"
-
-msgid "Thinking Level"
-msgstr "சிந்தனை நிலை"
-
-msgid "No model selected"
-msgstr "மாதிரி தேர்ந்தெடுக்கப்படவில்லை"
-
-msgid "Reset Agent Model"
-msgstr "முகவர் மாதிரியை மீட்டமை"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "சேமித்த மாதிரியை அழித்து Mixar தேர்ந்தெடுக்க விடுகிறது"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "மாதிரியை மாற்ற முடியவில்லை"
@@ -1562,113 +1622,107 @@ msgstr "மாதிரியை மாற்ற முடியவில்ல�
 msgid "Could not reset model"
 msgstr "மாதிரியை மீட்டமைக்க முடியவில்லை"
 
-msgid "Removing your key…"
-msgstr "உங்கள் விசையை அகற்றுகிறது…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "வழங்குநரிடம் சரிபார்க்கிறது…"
+msgid "Use this model for the agent"
+msgstr "முகவருக்கு இந்த மாதிரியைப் பயன்படுத்துகிறது"
 
-msgid "AI Provider Settings"
-msgstr "AI வழங்குநர் அமைப்புகள்"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "செயலில்"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "அமைக்கப்படவில்லை"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "உங்கள் சொந்த வழங்குநரில் Mixar முகவரை இயக்குங்கள் — இயக்கத்தில் இருக்கும்போது Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "நடப்பு அமைவு"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "கணக்கு"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT சந்தா"
 
-msgid "API Key"
-msgstr "API விசை"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "பாதுகாப்பாகச் சேமிக்கப்பட்டது"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "உரை மட்டும் மாதிரி — அரட்டை வேலை செய்யும்; 3D பணிகள் காட்சிப் பின்னூட்டம் இல்லாமல் இயங்கும்."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API விசையை அகற்று…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "வழங்குநர் அமைப்பு"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "மறைகுறியாக்கிச் சேமிக்கப்படும், Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும் — சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "கருவி / செயல்கூறு அழைப்பை ஆதரிக்கும் மாதிரியைத் தேர்ந்தெடுங்கள் — முகவருக்கு அது தேவை."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-இலிருந்து ஏற்று"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…அல்லது கைமுறையாக ஒட்டுங்கள்"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "ஒட்டிய எழுத்துகள்: {count}"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "காலி — உங்கள் auth.json-ஐ ஒட்டுங்கள்"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "உங்கள் முனையத்தில்  codex login  இயக்கி, முழுவதையும் ஏற்றுங்கள் அல்லது ஒட்டுங்கள்"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (ஒட்டு பொத்தான் உங்கள் இடைநிலைப் பலகையைப் படிக்கும்)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "உங்கள் ChatGPT சந்தாவைப் பயன்படுத்துகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "உங்கள் மாற்றங்களைப் பயன்படுத்த முடியவில்லை"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "உங்கள் API விசையை அகற்றவா?"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "முகவர் மீண்டும் Mixar-இன் இயல்புநிலை வழங்குநரைப் பயன்படுத்தும்."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "வரும் முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படும்."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar முகவர் இப்போது உங்கள் வழங்குநரில் இயங்குகிறது — Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API விசை அகற்றப்பட்டது"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "முகவர் மீண்டும் Mixar-இன் இயல்புநிலை வழங்குநரில் உள்ளது."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் மீண்டும் வசூலிக்கப்படும்."
-
-msgid "Try Again"
-msgstr "மீண்டும் முயல்"
-
-msgid "Save & Activate"
-msgstr "சேமித்து இயக்கு"
-
-msgid "Keep My Key"
-msgstr "என் விசையை வை"
-
-msgid "Remove API Key"
-msgstr "API விசையை அகற்று"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "உள்ளக AI இயக்க நேரத்தை விரித்துக் கொள்கிறது…"
@@ -1691,8 +1745,14 @@ msgstr "பதிவிறக்கப்பட்டது — இயங்க�
 msgid "Not downloaded"
 msgstr "பதிவிறக்கப்படவில்லை"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "முழுவதும் இந்தக் கணினியிலேயே இயங்கும் — Mixar-இன் முகவர் ஒருங்கிணைப்பு வழியாகத் தவிர உங்கள் ப்ராம்ப்ட்கள் இதை விட்டு வெளியேறாது."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "மாதிரி"
 
 msgid "Cancel Download"
 msgstr "பதிவிறக்கம் ரத்துசெய்"
@@ -1718,9 +1778,6 @@ msgstr "அடிப்படை URL"
 msgid "API Key (optional)"
 msgstr "API விசை (விருப்பம்)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "இந்தக் கணினியில் உள்ள ஏதேனும் OpenAI-இணக்கச் சேவையகம் — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "உள்ளக வழங்குநரைச் சேமிக்க முடியவில்லை."
 
@@ -1730,53 +1787,32 @@ msgstr "உள்ளகப் பயன்பாடுகளை மீண்ட�
 msgid "Rescan this computer for running local AI apps"
 msgstr "இயங்கும் உள்ளக AI பயன்பாடுகளுக்காக இந்தக் கணினியை மீண்டும் வருடுகிறது"
 
+msgid "AI Provider Settings"
+msgstr "AI வழங்குநர் அமைப்புகள்"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar முகவருக்கு உங்கள் சொந்த API விசையைப் பயன்படுத்துங்கள். இயக்கத்தில் இருக்கும்போது முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
 
 msgid "Validate with the provider and save your API key"
 msgstr "வழங்குநரிடம் சரிபார்த்து உங்கள் API விசையைச் சேமிக்கிறது"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "இந்த வழங்குநருக்கு ஒரு மாதிரியைத் தேர்ந்தெடுத்து ஒரு API விசையை உள்ளிடுங்கள்."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "மாதிரி ஸ்லக்கும் API விசையும் தேவை."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "ஒரு Codex மாதிரியைத் தேர்ந்தெடுத்து உங்கள் auth.json தொகுப்பை ஏற்றுங்கள்."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "சேமிப்பு தோல்வி."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "இந்த இயந்திரத்திலிருந்து ~/.codex/auth.json-ஐ புலத்துக்குள் படிக்கிறது"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json இல்லை — முதலில் `codex login` இயக்குங்கள்"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json-ஐ படிக்க முடியவில்லை"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json காலியாக உள்ளது"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ஏற்றப்பட்டது"
-
-msgid "Paste auth.json"
-msgstr "auth.json-ஐ ஒட்டு"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "இடைநிலைப் பலகையிலிருந்து உங்கள் ~/.codex/auth.json-ஐ புலத்துக்குள் ஒட்டுகிறது"
-
-msgid "Clipboard is empty"
-msgstr "கிளிப்போர்டு காலியாக உள்ளது"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ஒட்டிய auth.json இந்தப் புலத்துக்கு மிகப் பெரியது, வெட்டப்பட்டது — சரியாகச் சேமிக்காது"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "அகற்று"
@@ -1787,11 +1823,110 @@ msgstr "அகற்று-உறுதி ஓட்டத்தைத் தொ
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "அகற்றும் ஓட்டத்தை ரத்துசெய்து முதன்மை உரையாடலுக்குத் திரும்புகிறது"
 
-msgid "Delete the stored API key server-side"
-msgstr "சேமித்த API விசையைச் சேவையகப் பக்கத்தில் அழிக்கிறது"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "அகற்றுதல் தோல்வி."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "துண்டிக்கவும்"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "உள்ளக மாதிரி"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் ஸ்லக், எ.கா. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "மீண்டும் முயல்"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK நிலையைப் புதுப்பி"
@@ -1805,11 +1940,38 @@ msgstr "மாதிரி அட்டவணையைப் புதுப்�
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "பின்தளத்திலிருந்து வழங்குநர்+மாதிரி அட்டவணையை மீண்டும் சரிபார்க்கிறது"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "முகவர் மாதிரி வழங்குநர்"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "சேமித்த புரவலன்-முகவர் மாதிரித் தேர்வின் வழங்குநர் அடையாளம்"
+
+msgid "Agent Model"
+msgstr "முகவர் மாதிரி"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "சேமித்த புரவலன்-முகவர் மாதிரித் தேர்வின் மாதிரி அடையாளம்"
@@ -1838,11 +2000,29 @@ msgstr "முகவர் மாதிரி தகுதி"
 msgid "False when the saved model is not available on your plan"
 msgstr "சேமித்த மாதிரி உங்கள் திட்டத்தில் கிடைக்காதபோது தவறு"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "வழங்குநர்"
+
 msgid "LLM provider"
 msgstr "LLM வழங்குநர்"
 
 msgid "Model to use with the selected provider"
 msgstr "தேர்ந்தெடுத்த வழங்குநருடன் பயன்படுத்த வேண்டிய மாதிரி"
+
+msgid "API Key"
+msgstr "API விசை"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "உங்கள் API விசை மறைகுறியாக்கிச் சேமிக்கப்பட்டு Mixar முகவர் கோரிக்கைகளுக்கு மட்டுமே பயன்படும். சேமித்த பிறகு மறைத்த முன்னோட்டம் மட்டும் காட்டப்படும்."
@@ -1850,20 +2030,14 @@ msgstr "உங்கள் API விசை மறைகுறியாக்க
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் மாதிரி ஸ்லக் (எ.கா. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json-இன் உள்ளடக்கம் (முதலில் `codex login` இயக்குங்கள்)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "உள்ளகப் பயன்முறை"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar நிர்வகிக்கும், அல்லது உங்கள் சொந்த உள்ளகச் சேவையகம்"
-
-msgid "Local model"
-msgstr "உள்ளக மாதிரி"
 
 msgid "Curated model to download and run on this computer"
 msgstr "இந்தக் கணினியில் பதிவிறக்கி இயக்க தேர்ந்தெடுத்த மாதிரி"
@@ -1885,6 +2059,15 @@ msgstr "BYOK செயலில்"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "இந்தப் பயனருக்குச் சேவையகம் byok_active என்று தெரிவிக்கும்போது உண்மை"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "உரையாடல் நிலை"
@@ -1976,6 +2159,27 @@ msgstr "உருவாக்கம் தோல்வி — மீண்டு
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA பண்பால் திறவுகோலிடப்பட்ட அட்டவணை visible_if"
 
+msgid "Nothing selected"
+msgstr "எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "மதிப்பு"
+
+msgid "Label"
+msgstr "சிட்டை"
+
+msgid "Group"
+msgstr "குழு"
+
+msgid "Selected"
+msgstr "தேர்ந்தெடுக்கப்பட்டது"
+
 msgid "No modes"
 msgstr "பயன்முறைகள் இல்லை"
 
@@ -2035,6 +2239,9 @@ msgstr "தயாரான உருவாக்கங்கள்: {count}"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "உங்கள் கிரெடிட்கள் தீர்ந்துவிட்டன — தொடர உங்கள் திட்டத்தை மேம்படுத்துங்கள்"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "அங்கீகாரம் தேவை — உள்நுழையுங்கள்"
@@ -2125,6 +2332,9 @@ msgstr "உருவாக்கிய முடிவை இறக்கும�
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "ரத்துசெய்யப்பட்டது (உருவாக்கம் சேவையகத்தில் இன்னும் முடியலாம்)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "சேவையகப் பதிலைச் செயலாக்க முடியவில்லை"
@@ -2236,6 +2446,9 @@ msgstr "முகவர் தீவு வரிசை கிடைக்கவ
 
 msgid "Show every job"
 msgstr "ஒவ்வொரு பணியையும் காட்டு"
+
+msgid "Active"
+msgstr "செயலில்"
 
 msgid "Show pending or running jobs"
 msgstr "நிலுவை அல்லது இயங்கும் பணிகளைக் காட்டுகிறது"
@@ -2612,9 +2825,6 @@ msgstr "இணக்கப் பக்கவரை"
 msgid "Density"
 msgstr "அடர்த்தி"
 
-msgid "Default"
-msgstr "இயல்புநிலை"
-
 msgid "Generation-pane control spacing"
 msgstr "உருவாக்கப் பலகக் கட்டுப்பாட்டு இடைவெளி"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "கணக்குப் பெயர்"
 
 msgid "Display name for the account greeting"
 msgstr "கணக்கு வாழ்த்துக்கான காட்சிப் பெயர்"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "புதிய கோப்புப் பதிப்பு"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "கோப்புகள்"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "தோற்றம்"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "தானியங்கி ரிக் தோல்வி"
 msgid "Animate failed"
 msgstr "இயக்கம் தோல்வி"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "தேர்ந்தெடுத்த கண்ணியில் முகங்கள்: {count:,} (அதிகபட்சம் {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "உள்ளகச் சேவையக மாதிரி"
 msgid "Local model last error"
 msgstr "உள்ளக மாதிரியின் கடைசிப் பிழை"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "நகலெடு"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "கட்டளை"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "நகலெடு"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "வடிவம்"
 
 msgid "Processing..."
 msgstr "செயலாக்குகிறது..."
@@ -5312,6 +5702,9 @@ msgstr "கண்ணிப் பிரிவாக்கம்"
 msgid "Auto Rig"
 msgstr "தானியங்கி ரிக்"
 
+msgid "Animate"
+msgstr "இயங்குபடமாக்கு"
+
 msgid "Add Mesh"
 msgstr "கண்ணியைச் சேர்"
 
@@ -5413,6 +5806,15 @@ msgstr "உருவாக்கத்தின் போது பயன்ப�
 
 msgid "The file format used to store the generated image."
 msgstr "உருவாக்கிய படத்தைச் சேமிக்கப் பயன்படும் கோப்பு வடிவம்."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "தானி (பெயரிலிருந்து)"
@@ -5642,14 +6044,14 @@ msgstr "BaseColor அமைப்பைப் பதிவிறக்க மு
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor அமைப்பை ஏற்ற முடியவில்லை: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "அமைப்புப் பதிவிறக்கத்தின் போது எதிர்பாராத பிழை: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "எந்தப் பொருளிலும் அமைப்புகளை இட முடியவில்லை"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "லுக்டேவ் 360: PBR அமைப்புகளை இடு"
 
 msgid "Both refined and guide masks are required"
 msgstr "செம்மைப்படுத்திய முகமூடியும் வழிகாட்டி முகமூடியும் இரண்டும் தேவை"
@@ -5732,6 +6134,15 @@ msgstr "பாத்திரத்தைப் பொருத்து"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "உருவாக்கிய பகுதிகளை ரிக் செய்த அல்லது சாதாரண உடலில், உள்ளகமாக இணைக்கிறது"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "படப் பாணியை மட்டும் பயன்படுத்து"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "இயக்கினால், படத்தின் கலைப் பாணி மட்டும் மாற்றப்படும் (ப்ராம்ப்ட் இன்னும் பொருந்தும்). அணைத்தால், படம் அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும்"
+
 msgid "Enter a prompt in the image node"
 msgstr "பட முனையில் ஒரு ப்ராம்ப்ட்டை உள்ளிடுங்கள்"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "உருவாக்க அட்டவணையில் மாதிரி உருவாக்கம் கிடைக்கவில்லை"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "இந்த மாதிரி உருவாக்கப் பயன்முறையை அனுமான முனைகள் இன்னும் ஆதரிக்கவில்லை"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "இயக்கப்பட்ட 3D உருவாக்க மாதிரி எதுவும் இல்லை"
@@ -5884,6 +6295,9 @@ msgstr "முதலில் '{name}'-ஐ உருவாக்குங்க�
 
 msgid "Mesh"
 msgstr "கண்ணி"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "குறிப்பு {number}"
@@ -6053,11 +6467,11 @@ msgstr "SceneGen இறக்குமதி தோல்வி"
 msgid "No image URLs in server response"
 msgstr "சேவையகப் பதிலில் பட URLகள் இல்லை"
 
-msgid "Starting reconstruction..."
-msgstr "புனரமைப்பு தொடங்குகிறது..."
-
 msgid "Error: {error}"
 msgstr "பிழை: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "புனரமைப்பு தொடங்குகிறது..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "உருவாக்கிய படத்தைப் பதிவிறக்க முடியவில்லை: {error}"
@@ -6280,9 +6694,6 @@ msgstr "உலகத்தைப் பதிவிறக்க/மாற்ற 
 
 msgid "World imported but produced no objects"
 msgstr "உலகம் இறக்குமதி செய்யப்பட்டது ஆனால் பொருள்கள் எதுவும் வரவில்லை"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: உலகத்தை இறக்குமதி செய்"
 
 msgid "Failed to import world: {error}"
 msgstr "உலகத்தை இறக்குமதி செய்ய முடியவில்லை: {error}"
@@ -6833,9 +7244,6 @@ msgstr "தனிப்பயன் நிறத்தைப் பயன்ப�
 msgid "Custom Colour"
 msgstr "தனிப்பயன் நிறம்"
 
-msgid "Selected"
-msgstr "தேர்ந்தெடுக்கப்பட்டது"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "சொடுக்கும்போது இந்தச் சட்டகத்தின் எல்லையையும் உட்புறத்தையும் புறக்கணிக்கிறது, அதனால் அதன் உறுப்பினர்களை மட்டும் தேர்ந்தெடுக்க முடியும்"
 
@@ -6844,6 +7252,18 @@ msgstr "சுருக்கப்பட்டது"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "சட்டகத்தைத் தலைப்புப் பட்டையாக வரைந்து அதன் உடலை மறைக்கிறது"
+
+msgid "Unavailable"
+msgstr "கிடைக்கவில்லை"
+
+msgid "No supported 3D service is available"
+msgstr "ஆதரிக்கப்படும் 3D சேவை எதுவும் இல்லை"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "பட மாதிரிகள் முகமூடி வழிகாட்டுதலையும் இரண்டு குறிப்புகளையும் அறிவிக்க வேண்டும்"
+
+msgid "Attachment settings"
+msgstr "இணைப்புக் கோப்பு அமைவுகள்"
 
 msgid "No choices published"
 msgstr "தேர்வுகள் வெளியிடப்படவில்லை"
@@ -6862,18 +7282,6 @@ msgstr "முடிந்தது"
 
 msgid "Generation completed"
 msgstr "உருவாக்கம் முடிந்தது"
-
-msgid "Unavailable"
-msgstr "கிடைக்கவில்லை"
-
-msgid "No supported 3D service is available"
-msgstr "ஆதரிக்கப்படும் 3D சேவை எதுவும் இல்லை"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "பட மாதிரிகள் முகமூடி வழிகாட்டுதலையும் இரண்டு குறிப்புகளையும் அறிவிக்க வேண்டும்"
-
-msgid "Attachment settings"
-msgstr "இணைப்புக் கோப்பு அமைவுகள்"
 
 msgid "Parameter ID"
 msgstr "அளவுரு அடையாளம்"
@@ -6899,14 +7307,14 @@ msgstr "பூலியன் மதிப்பு"
 msgid "Catalog choice"
 msgstr "அட்டவணைத் தேர்வு"
 
-msgid "Widget"
-msgstr "விட்செட்"
-
-msgid "Group"
-msgstr "குழு"
-
 msgid "Choices"
 msgstr "தேர்வுகள்"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "விட்செட்"
 
 msgid "Visibility Condition"
 msgstr "தெரிவு நிபந்தனை"
@@ -6926,11 +7334,14 @@ msgstr "குறைந்தபட்சம்"
 msgid "Maximum"
 msgstr "அதிகபட்சம்"
 
-msgid "Value"
-msgstr "மதிப்பு"
-
 msgid "Value Label"
 msgstr "மதிப்புச் சிட்டை"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "சாக்கெட் அடையாளம்"
@@ -7948,12 +8359,6 @@ msgstr "பாணி மாற்றப் படம் - உருவாகு�
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "குறிப்புப் படம் - அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும் (ப்ராம்ப்ட் புறக்கணிக்கப்படும்)"
 
-msgid "Use Image Style Only"
-msgstr "படப் பாணியை மட்டும் பயன்படுத்து"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "இயக்கினால், படத்தின் கலைப் பாணி மட்டும் மாற்றப்படும் (ப்ராம்ப்ட் இன்னும் பொருந்தும்). அணைத்தால், படம் அமைப்பு உருவாக்கத்தை நேரடியாக இயக்கும்"
-
 msgid "Output texture resolution in pixels"
 msgstr "வெளியீட்டு அமைப்புத் தெளிவுத்திறன், படப்புள்ளிகளில்"
 
@@ -8452,9 +8857,6 @@ msgstr "அசல் கண்ணி மறைக்கப்படும், �
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan தொடங்கப்படவில்லை"
 
-msgid "Format"
-msgstr "வடிவம்"
-
 msgid "Inputs"
 msgstr "உள்ளீடுகள்"
 
@@ -8548,26 +8950,23 @@ msgstr "பார்வைகளாகச் சேர்க்க மூட்�
 msgid "Generates as one multi-view job"
 msgstr "ஒரே பல பார்வைப் பணியாக உருவாக்கப்படும்"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} மேலும்)"
+
 msgid "Video Gen tab not available"
 msgstr "காணொளி உருவாக்கத் தாவல் கிடைக்கவில்லை"
 
 msgid "Selected References"
 msgstr "தேர்ந்தெடுத்த குறிப்புகள்"
 
-msgid "Images: {count}"
-msgstr "படங்கள்: {count}"
-
-msgid "Videos: {count}"
-msgstr "காணொளிகள்: {count}"
+msgid "No references selected — text-to-video"
+msgstr "குறிப்புகள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை — உரையிலிருந்து காணொளி"
 
 msgid "A selected video source file is missing"
 msgstr "தேர்ந்தெடுத்த காணொளி மூலக் கோப்பு இல்லை"
 
-msgid "No references selected — text-to-video"
-msgstr "குறிப்புகள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை — உரையிலிருந்து காணொளி"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "பாத்திரங்களை ஒதுக்கும்போது ப்ராம்ப்டில் படம்/காணொளி வரிசையைக் குறிப்பிடவும்"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "குறிப்பு வரம்புகள்"
@@ -8644,6 +9043,33 @@ msgstr "எல்லாவற்றையும் சட்டகம்"
 msgid "Clear Board"
 msgstr "பலகையைத் துடை"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "பொருள் பெயர்"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "அனிமேசன்கள்"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "முகவர் தானியங்கி ரிக்"
 
@@ -8665,8 +9091,8 @@ msgstr "எலும்புக்கூட்டு வகை: தானி / 
 msgid "Skeleton Spec"
 msgstr "எலும்புக்கூட்டு விவரம்"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "எலும்புக்கூட்டு மரபு: 'tripo' அல்லது 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "எலும்புப் பெயரிடல்: tripo, mixamo, actorcore, unity, unreal அல்லது vrm (tripo மட்டுமே Tripo முன்னமைவு அனிமேஷன்களை ஆதரிக்கும்)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "முகவர் PBR உருவாக்கம்"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "கொடுக்கப்பட்ட கண்ணிப் பொருளுக்கு Tripo மூலம் PBR அமைப்புகளை உருவாக்கும்"
-
-msgid "Object Name"
-msgstr "பொருள் பெயர்"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "அமைப்பு இட வேண்டிய காட்சிக் கண்ணிப் பொருளின் பெயர்"
@@ -8917,11 +9340,11 @@ msgstr "மூட்போர்டு→அரட்டை இணைப்ப�
 msgid "Sync failed: {error}"
 msgstr "ஒத்திசைவு தோல்வி: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளி தவிர்க்கப்பட்டது: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} காணொளிகள் தவிர்க்கப்பட்டன: முகவர் நிலைப் படங்களை மட்டுமே ஏற்கும். காணொளிகளுக்கு மூட்போர்டில் காணொளி உருவாக்கத்தைப் பயன்படுத்தவும்"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "மூட்போர்டு படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
@@ -9219,9 +9642,6 @@ msgstr "அடைவு"
 
 msgid "Directory of the selected file(s)"
 msgstr "தேர்ந்தெடுத்த கோப்புகளின் அடைவு"
-
-msgid "Files"
-msgstr "கோப்புகள்"
 
 msgid "Failed to load media: {filepath}"
 msgstr "ஊடகத்தை ஏற்ற முடியவில்லை: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "ஒரு அனுமான முனையைத் தேர்ந்
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "ப்ராம்ப்டைத் திருத்தி, பின்னர் Enter அல்லது உருவாக்கு அழுத்தவும்"
 
-msgid "Node added to the generation queue"
-msgstr "முனை உருவாக்க வரிசையில் சேர்க்கப்பட்டது"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "மீண்டும் சரிசெய்து இயக்க இந்த முனையின் அமைப்புகளையும் ப்ராம்ப்டையும் காட்டும்; திருத்தத்தை ரத்துசெய்து முடிவுக்குத் திரும்ப மீண்டும் சொடுக்கவும்"
@@ -10839,9 +11259,6 @@ msgstr "உருவாக்கிய மூலப்பொருள் பத�
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "மூலப்பொருள் உருவாக்கப்பட்டது, ஆனால் இட முடியவில்லை: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "செயல்முறை மூலப்பொருளை உருவாக்கு"
 
 msgid "Material generation failed"
 msgstr "மூலப்பொருள் உருவாக்கம் தோல்வியடைந்தது"
@@ -11877,9 +12294,6 @@ msgstr "வண்ண அளவீட்டு பிட்கள்"
 
 msgid "Generic Quantization Bits"
 msgstr "பொதுவான அளவீட்டு பிட்கள்"
-
-msgid "Animations"
-msgstr "அனிமேசன்கள்"
 
 msgid "Animation Mode"
 msgstr "அனிமேசன் பயன்முறை"
@@ -17496,12 +17910,6 @@ msgstr "GPU கிடைத்தால் எப்போதும் அதி
 msgid "Always render on the CPU"
 msgstr "எப்போதும் CPU-இல் வழங்குகிறது"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "இயல்பாக வெளியே சுடப்பட்டதை இயக்கு"
 
@@ -17579,6 +17987,12 @@ msgstr "பிரேமை எப்போதும் மதிப்பிட�
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ஒவ்வொரு பிரேம் மாற்றத்திலும் முனை மரத்தை மதிப்பிடுகிறது"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "சேனல் விருப்பங்கள்"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "வரைவு முன்னோட்டத்தை உருவா�
 msgid "View sketch"
 msgstr "வரைவைப் பார்"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "முகவர் வரைவு நிரம்பியது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "குறி சேர்க்கப்பட்டது — அதன் கீழ் எதுவும் இல்லை"
@@ -19109,9 +19523,6 @@ msgstr "கருவிப்பட்டி"
 
 msgid "Sidebar"
 msgstr "பக்கப்பட்டி"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV கண்ணி பிரிவாக்கப் பேனல்"
@@ -19536,8 +19947,8 @@ msgstr "மாற்றுகிறது..."
 msgid "Awaiting Input..."
 msgstr "உள்ளீட்டிற்காகக் காத்திருக்கிறது..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "காணொளிகளுக்குக் காணொளி பயன்முறை தேவை. முகவருக்கு அனுப்பக் காணொளியை அகற்றவும்."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "பயனர் அடையாளம்"
@@ -19547,6 +19958,78 @@ msgstr "Mixie அரட்டை உள்நுழைவுக்கான ப�
 
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "மெதுவான படம் தவிர்க்கப்பட்டது: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "பட குறியாக்கம் தோல்வி: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*நிறுத்தப்பட்டது*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "மேம்படுத்து"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "பின்னூட்டக் கருத்து காலியாக உள்ளது"
@@ -19730,6 +20222,27 @@ msgstr "'{name}' இனி சொத்துக் கோப்பில் இ
 
 msgid "Could not add the asset to the scene."
 msgstr "சொத்தைக் காட்சியில் சேர்க்க முடியவில்லை."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "சிந்திக்கிறது..."
@@ -19880,9 +20393,6 @@ msgstr "{count} மாற்றப்பட்டது"
 
 msgid "{count} deleted"
 msgstr "{count} அழிக்கப்பட்டது"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} மேலும்)"
 
 msgid "Created: {names}"
 msgstr "உருவாக்கப்பட்டது: {names}"
@@ -20046,6 +20556,15 @@ msgstr "உள்நுழைவு"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie அரட்டைக்கான உள்நுழைவுப் பேனல்"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "உங்கள் Mixar கணக்கில் உள்நுழையவும்"
+
 msgid "Session expired"
 msgstr "அமர்வு காலாவதியானது"
 
@@ -20055,31 +20574,27 @@ msgstr "மீண்டும் உள்நுழையவும்."
 msgid "Login Failed"
 msgstr "உள்நுழைவு தோல்வி"
 
-msgid "Sign in with your Mixar account"
-msgstr "உங்கள் Mixar கணக்கில் உள்நுழையவும்"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "உலாவிக்காகக் காத்திருக்கிறது..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "உலாவியில் உள்நுழை"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"சுயவிவரம் / கணக்கு கீழ்தோன்றல் — பொது மேல் பட்டியிலிருந்து திறக்கப்படுகிறது.\n"
-"\n"
-"உள்ளடக்கம் `layout.mixar_profile_card()` மூலம் இயல்பாக வரையப்படுகிறது\n"
-"(`interface_mixar_profile_card.cc`): வாழ்த்து, திட்டச் சில்லு,\n"
-"கிரெடிட் பயன்பாட்டு மீட்டர் மற்றும் கணக்குச் செயல்கள், பட்டிக்குப் பதிலாக\n"
-"ஒரே அட்டையாக அமைக்கப்பட்டுள்ளன. பதிவும் அட்டை அழைக்கும் ஒவ்வொரு\n"
-"ஆபரேட்டரும் Python-இடம்தான் — C++ பிக்சல்களை மட்டும் வைத்திருக்கிறது.\n"
 
 msgid "Dashboard"
 msgstr "டாஷ்போர்டு"
@@ -20309,12 +20824,6 @@ msgstr "குறிகள்: {note}"
 msgid "Sketch"
 msgstr "வரைவு"
 
-msgid "Skipped slow image: {name}"
-msgstr "மெதுவான படம் தவிர்க்கப்பட்டது: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "பட குறியாக்கம் தோல்வி: {error}"
-
 msgid "Message sent"
 msgstr "செய்தி அனுப்பப்பட்டது"
 
@@ -20536,8 +21045,8 @@ msgstr "மீட்டெடுப்பு புள்ளி அடையா�
 msgid "Restoring checkpoint…"
 msgstr "மீட்டெடுப்பு புள்ளி மீட்டெடுக்கப்படுகிறது…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ஒட்டிய உரை மிக நீளமானது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "உரையை ஒட்டவும்"
@@ -20728,11 +21237,14 @@ msgstr "அழிக்க வேண்டிய காப்பக அமர்
 msgid "Chat removed from history"
 msgstr "அரட்டை வரலாற்றிலிருந்து அகற்றப்பட்டது"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
@@ -20740,14 +21252,14 @@ msgstr "இணைப்புக் கோப்பு வரம்பு ({coun
 msgid "Skipped {name}: {error}"
 msgstr "{name} தவிர்க்கப்பட்டது: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
-
 msgid "These references are already attached"
 msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
 
 msgid "Added {count} image(s)"
 msgstr "{count} படம்(கள்) சேர்க்கப்பட்டன"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-இலிருந்து சேர்"
@@ -20764,6 +21276,9 @@ msgstr "{size} - தரவு உள்ளது"
 msgid "{size} - No data"
 msgstr "{size} - தரவு இல்லை"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend கோப்பிலிருந்து படத்தைத் தேர்ந்தெடு"
 
@@ -20772,6 +21287,12 @@ msgstr "படம் ஏற்கெனவே சேர்க்கப்பட�
 
 msgid "Image not found in blend file"
 msgstr "blend கோப்பில் படம் காணவில்லை"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "படம் ஏற்கெனவே இணைக்கப்பட்டது"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "திரைப்பிடிப்பைப் பிடி"
 
@@ -21103,9 +21627,6 @@ msgstr "இணைக்கத் தவறியது"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Dev பயன்முறை: போலித் தரவுடன் இணைக்கப்பட்டது"
 
-msgid "Disconnect"
-msgstr "துண்டிக்கவும்"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie முகவர் சேவையகத்திலிருந்து துண்டி"
 
@@ -21115,14 +21636,14 @@ msgstr "Dev பயன்முறை: துண்டிக்கப்பட்
 msgid "Disconnected from server"
 msgstr "சேவையகத்திலிருந்து துண்டிக்கப்பட்டது"
 
+msgid "Could not save the chat to History"
+msgstr "அரட்டையை வரலாற்றில் சேமிக்க முடியவில்லை"
+
 msgid "New Chat"
 msgstr "புதிய அரட்டை"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "புதிய அரட்டையைத் தொடங்குகிறது (நடப்பு அரட்டை வரலாற்றில் சேமிக்கப்படும்)"
-
-msgid "Could not save the chat to History"
-msgstr "அரட்டையை வரலாற்றில் சேமிக்க முடியவில்லை"
 
 msgid "Started new chat session"
 msgstr "புதிய அரட்டை அமர்வு தொடங்கியது"
@@ -21160,6 +21681,12 @@ msgstr "முந்தைய பணி தொடர்கிறது..."
 msgid "Could not resume the previous task"
 msgstr "முந்தைய பணியைத் தொடர முடியவில்லை"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "சமர்ப்பித்த பின்னூட்டக் க�
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "உள்ளகமாகச் சமர்ப்பித்த கருத்து, அரட்டையில் படிக்க மட்டும் காட்டப்படும்"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "செய்தி அனுப்பப்படவில்லை"
 
@@ -21522,6 +22058,15 @@ msgstr "அரட்டை உள்ளீடு"
 
 msgid "Type your message here"
 msgstr "உங்கள் செய்தியை இங்கே தட்டச்சு செய்யுங்கள்"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "அரட்டைச் செய்திகள்"
@@ -21660,6 +22205,12 @@ msgstr "உள்நுழைந்துள்ளாரா"
 
 msgid "Whether user is currently logged in"
 msgstr "பயனர் தற்போது உள்நுழைந்துள்ளாரா"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "உள்நுழைகிறது"
@@ -21861,9 +22412,6 @@ msgstr "எழுதுங்கள்"
 
 msgid "File write"
 msgstr "கோப்பு எழுதுதல்"
-
-msgid "Command"
-msgstr "கட்டளை"
 
 msgid "Shell command"
 msgstr "ஷெல் கட்டளை"
@@ -23620,9 +24168,6 @@ msgstr "ச்னாப் கர்சர்"
 msgid "Snap 2D cursor"
 msgstr "2D கர்சரை ஸ்னாப் செய்"
 
-msgid "Origin"
-msgstr "தோற்றம்"
-
 msgid "Mirror selected UVs"
 msgstr "தேர்ந்தெடுத்த UV-களைக் கண்ணாடி செய்"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "மீண்டும் முந்தைய"
 
 msgid "Grid & Relationship Lines"
 msgstr "கட்டம் மற்றும் உறவுக் கோடுகள்"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "வழங்குதல் எஞ்சின்"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "வழங்கல் அமைப்புகள்"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "புதிய Mixar பதிப்பால் சேமித்த கோப்பு (%d.%d), சில தரவு இழக்கப்படலாம்"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "கோப்பு புதிய பதிப்பால் சேமிக்கப்பட்டது, அதை Mixar %s அல்லது அதற்குப் பின் திறக்கவும்"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "வண்ணம் தீட்டத் தொடங்க அடுக்குகள் பேனலில் ஒரு வண்ணப்பூச்சு அடுக்கைச் சேர்க்கவும்"
 
@@ -24409,7 +25179,43 @@ msgstr "வரைவு வரைவில் குரல் தட்டச்
 msgid "Stop the running turn"
 msgstr "இயங்கும் திருப்பத்தை நிறுத்து"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"திரும்பப்பெறு\n"
+"\n"
+"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
+
+msgid "Refining this prompt..."
+msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"மீண்டும் செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"செம்மைப்படுத்து\n"
+"\n"
+"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "குறிப்பை அகற்று"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "இந்த வரைவையும் அதன் வரிசை வரைவையும் நிராகரி"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "வரிசையைத் திற"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "தாவல்களை மாற்றுவதற்கு முன் வரைவையோ குரல் தட்டச்சையோ முடிக்கவும்"
 
@@ -24607,6 +25413,15 @@ msgstr "%dநா முன்"
 msgid "%dw ago"
 msgstr "%dவா முன்"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "உருவாக்குகிறது (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · அனுப்ப Enter"
 
 msgid "Sketch · Enter to send"
 msgstr "வரைவு · அனுப்ப Enter"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "விதிகள் — முகவருக்கான திட்
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "தானி பயன்முறை இயக்கத்தில் 
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "தானி பயன்முறை: திறந்த தேர்வுகளை உங்களிடம் கேட்பதற்குப் பதிலாக முகவரே முடிவு செய்து, அந்த முடிவுகளைச் சுருக்கத்தில் பட்டியலிடும்"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "உங்கள் சொந்த API விசை பயன்பாட்டில் உள்ளது, மாதிரியை அது முடிவு செய்கிறது. வழங்கும் மாதிரியை மீண்டும் தேர்ந்தெடுக்க இந்தப் பட்டியைத் திறந்து \"என் API விசையை மாற்று அல்லது அகற்று\" என்பதைத் தேர்ந்தெடுக்கவும்"
-
-msgid "Choose which model the agent runs on"
-msgstr "முகவர் எந்த மாதிரியில் இயங்கும் என்பதைத் தேர்ந்தெடு"
 
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"
@@ -24858,6 +25670,12 @@ msgstr "மூடிய எண்ணிக்கை"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "மூடிய முகவர் குமிழிச் சாளரங்களின் எண்ணிக்கை"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "முகவர் குமிழிச் சாளர அளவை அமை"
@@ -25336,6 +26154,9 @@ msgstr "வரிசையில்..."
 msgid "Click to edit the prompt and try again"
 msgstr "ப்ராம்ப்டைத் தொகுத்து மீண்டும் முயலச் சொடுக்கவும்"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "ப்ராம்ப்ட்\n"
 "\n"
 "எதை உருவாக்குவது என்பதை விவரிக்கவும். இந்த முனையைச் சமர்ப்பிக்க Enter அழுத்தவும்."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"திரும்பப்பெறு\n"
-"\n"
-"செம்மைப்படுத்தும் முன் நீங்கள் எழுதிய ப்ராம்ப்டை மீட்டெடுக்கிறது."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"மீண்டும் செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீண்டும் ஒருமுறை மீளெழுதுகிறது. திரும்பப்பெறு உங்கள் சொந்தச் சொற்களை மீட்டெடுக்கும், முந்தைய செம்மையை அல்ல."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"செம்மைப்படுத்து\n"
-"\n"
-"அனுப்பப்படும் மாதிரிக்கு இந்தப் ப்ராம்ப்டை மீளெழுதுகிறது, அந்த மாதிரி பதிலளிக்கும் விவரத்தைச் சேர்க்கும்."
-
-msgid "Refining this prompt..."
-msgstr "இந்தப் ப்ராம்ப்ட் செம்மைப்படுத்தப்படுகிறது..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "அமைப்புத் தொகுப்புகள் இடம�
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "அமைப்புத் தொகுப்புகளை நிர்வகிக்க பக்கப்பட்டிப் பேனல்களைப் பயன்படுத்து"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "முதலுக்குத் திரும்பு"
 
@@ -26557,9 +27354,6 @@ msgstr "பாதுகாப்பான பகுதிகள்"
 msgid "Select a character to animate"
 msgstr "இயக்க ஒரு கதாபாத்திரத்தைத் தேர்ந்தெடு"
 
-msgid "Animate"
-msgstr "இயங்குபடமாக்கு"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "இயக்கத் தலையிலிருந்து இந்தப் பிளாக்கிங் இயக்கத்தைக் குறிக்கிறது"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "பணியிடப் பணி அடையாளம்"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "அபாயச் சாயல் செயல் பொத்தான
 msgid "Borderless quiet action button"
 msgstr "எல்லையற்ற அமைதியான செயல் பொத்தான்"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "சிப்"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "பயன்முறை சறுக்கி இடது"
 
@@ -27126,9 +28019,6 @@ msgstr "குறியுரு"
 
 msgid "Header glyph"
 msgstr "தலைப்புக் குறியுரு"
-
-msgid "Chip"
-msgstr "சிப்"
 
 msgid "Chip track"
 msgstr "சிப் தடம்"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "கோப்பு நீட்டிப்பு வடிகட்ட�
 
 msgid "Write compressed .mixar file"
 msgstr "சுருக்கப்பட்ட .mixar கோப்பை எழுது"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar கோப்பாகச் சேமி"

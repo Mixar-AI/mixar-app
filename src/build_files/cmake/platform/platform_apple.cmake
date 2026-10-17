@@ -539,12 +539,10 @@ if(PLATFORM_BUNDLED_LIBRARIES)
   unset(_library_paths)
 endif()
 
-# Same as `CFBundleIdentifier` in Info.plist.
-if(DEFINED ENV{MIXAR_VERSION})
-  string(REPLACE "." ";" _mixar_ver "$ENV{MIXAR_VERSION}")
-  list(GET _mixar_ver 0 _MIXAR_MAJOR)
-  list(GET _mixar_ver 1 _MIXAR_MINOR)
-  set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.mixar.mixar-${_MIXAR_MAJOR}-${_MIXAR_MINOR}")
-else()
-  set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.mixar.mixar")
-endif()
+# Same as `CFBundleIdentifier` in Info.plist. Never versioned: the bundle id is
+# part of the app's code-signing identity, which every Keychain item's access
+# list is bound to. A `com.mixar.mixar-4-2` build is a different app from
+# `com.mixar.mixar-4-3` to the Keychain, so each minor release re-prompted
+# ("Mixar wants to access…") for every stored credential and would lock a
+# data-protection keychain access group to one release.
+set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.mixar.mixar")

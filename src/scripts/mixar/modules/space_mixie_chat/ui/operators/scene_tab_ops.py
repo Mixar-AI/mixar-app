@@ -30,9 +30,10 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
+from mixar.modules.common.agent_execution.document import ensure_scene_id
 from mixar.modules.common.utils.undo import push_undo_step
 
-from ...constants import SessionState, is_lane_scene
+from ...constants import SessionState, is_internal_scene, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
 from ...core.scene_identity import ACCOUNT_PROPS, inherit_account  # noqa: F401 — re-exported for callers
 from ...core.scene_tab_snapshot import snapshot_shown_tab
@@ -80,8 +81,9 @@ def reorder_scene_tab(scene, index: int) -> bool:
 
 
 def real_scenes() -> list:
-    """The user's tabs: every scene that is not an agent worker lane."""
-    return [s for s in bpy.data.scenes if not is_lane_scene(s)]
+    """The user's tabs: every scene that is not an agent worker lane or a
+    private preview-render scene."""
+    return [s for s in bpy.data.scenes if not is_lane_scene(s) and not is_internal_scene(s)]
 
 
 def switch_all_windows(scene, showing=None) -> None:
@@ -184,6 +186,7 @@ def new_scene_tab(name: str = "") -> object:
     # A fresh tab: no session yet (minted on the first message), no chat, but
     # the same signed-in account and settings as the tab it was opened from.
     scene.mixie_session_id = ""
+    ensure_scene_id(scene)  # the per-scene undo epoch key, stable across renames
     inherit_account(source, scene)
     inherit_settings(source, scene)
     furnish_scene(scene)
@@ -193,15 +196,54 @@ def new_scene_tab(name: str = "") -> object:
         session.set_connected(scene)          # IDLE: the composer accepts a message
     else:
         session.set_disconnected(scene)
+    leave_modes_for_switch(source if source is not scene else None)
     snapshot_shown_tab()                   # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     renumber_tabs(existing + [scene])      # the new tab takes the last slot
     # The tab's birth is an undo step of its own: one Ctrl-Z after "+ New
     # scene" takes back the tab, not the previous tab's last edit, and the
     # history shows where the tab begins.
-    push_undo_step(f"New scene tab: {scene.name}")
+    push_undo_step(f"New scene tab: {scene.name}", scene=scene)   # tagged with the new tab, from any caller
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
     return scene
+
+
+_MODE_LABEL = {"EDIT": "Edit", "SCULPT": "Sculpt", "TEXTURE_PAINT": "Texture Paint",
+               "VERTEX_PAINT": "Vertex Paint", "WEIGHT_PAINT": "Weight Paint"}
+
+
+def leave_modes_for_switch(scene) -> bool:
+    """Bring the tab the user leaves back to object mode, as one undo step of that
+    tab ("Leave Edit Mode"). A tab's edit, sculpt or paint state lives in data no
+    other tab's undo may touch; with no tab but the shown one in such a mode, the
+    whole class of cross-tab mode-state undo bugs cannot arise (the 2026-10-02
+    review lost a hidden tab's edit-mode work twice before it was fixed in C).
+    Only for a user's switch (never the executor's routing pin), only with per-tab
+    undo on, never while the tab's own agent works. Returns True when a mode was
+    left. Never raises: a switch must never fail on it."""
+    try:
+        wm = bpy.context.window_manager
+        if scene is None or is_lane_scene(scene) or not getattr(wm, "mixar_per_tab_undo", False):
+            return False
+        if _running(scene):
+            return False
+        view_layer = scene.view_layers[0] if scene.view_layers else None
+        active = view_layer.objects.active if view_layer is not None else None
+        in_mode = [o for o in scene.objects if o.mode != 'OBJECT']
+        if not in_mode:
+            return False
+        ob = active if active is not None and active.mode != 'OBJECT' else in_mode[0]
+        mode = ob.mode
+        window = next((w for w in wm.windows if w.scene is scene), None) or bpy.context.window
+        with bpy.context.temp_override(window=window, scene=scene, view_layer=view_layer,
+                                       active_object=ob, object=ob):
+            bpy.ops.object.mode_set(mode='OBJECT')
+        push_undo_step(f"Leave {_MODE_LABEL.get(mode, mode.title())} Mode", scene=scene)
+        slog("tab.leave_mode", scene, mode=mode, object=ob.name)
+        return True
+    except Exception:  # noqa: BLE001
+        logger.debug("leaving the mode before a tab switch failed", exc_info=True)
+        return False
 
 
 def switch_scene_tab(scene, was=None) -> bool:
@@ -209,6 +251,7 @@ def switch_scene_tab(scene, was=None) -> bool:
     if scene is None or is_lane_scene(scene):
         return False
     if was is not scene:
+        leave_modes_for_switch(was)
         snapshot_shown_tab()               # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     slog("tab.switch", scene, was=getattr(was, "name", ""))
@@ -233,7 +276,7 @@ def stop_scene_tab(scene, sid: str) -> None:
     session.set_run(scene, "", False)
     session.set_state(scene, SessionState.IDLE)
     if sid:
-        send_cancel_request_async(sid)
+        send_cancel_request_async(sid, 'tab_closed')
     slog("tab.close.cancel", scene)
 
 
@@ -361,7 +404,11 @@ class MIXIE_CHAT_OT_send_to_scene_tab(Operator):
     bl_idname = "mixie_chat.send_to_scene_tab"
     bl_label = "Send Selection to Scene"
     bl_description = "Copy the selected objects (with their mesh and materials) into another tab"
-    bl_options = {'REGISTER', 'UNDO'}
+    # No UNDO flag: the operator's own step would be filed under the SOURCE tab,
+    # whose undo cannot take back copies that live in the target tab (a dead
+    # Ctrl-Z there, and nothing to undo in the target). The step is pushed for
+    # the target tab instead (review 2026-10-02).
+    bl_options = {'REGISTER'}
 
     scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
 
@@ -378,6 +425,7 @@ class MIXIE_CHAT_OT_send_to_scene_tab(Operator):
         if not made:
             self.report({'WARNING'}, "Nothing was copied")
             return {'CANCELLED'}
+        push_undo_step(f"Copied from {context.scene.name}", scene=target)
         self.report({'INFO'}, f"Copied {len(made)} object(s) to {target.name}")
         return {'FINISHED'}
 

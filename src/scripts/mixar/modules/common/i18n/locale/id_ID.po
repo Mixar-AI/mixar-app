@@ -1112,6 +1112,9 @@ msgstr "Pemeriksaan status gagal: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Memindai perpustakaan aset, memeriksa perubahan, merender hanya pratinjau baru, lalu mengirimkannya ke API pelatihan"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Memulai…"
 
@@ -1433,11 +1436,47 @@ msgstr "Server lokal kustom"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Mengarahkan Mixar ke server kompatibel OpenAI yang sudah Anda jalankan (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Data formulir tidak valid — silakan hubungi dukungan."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Terjadi kesalahan di pihak kami. Silakan coba lagi."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Membaca katalog model lokal"
@@ -1481,26 +1520,20 @@ msgstr "Jalankan model lokal terlebih dahulu (model harus berjalan agar dapat di
 msgid "Base URL and model name are required."
 msgstr "URL dasar dan nama model wajib diisi."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Server lokal merespons HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Tidak dapat menjangkau server lokal. Pastikan server berjalan dan URL dasar sudah benar."
 
-msgid "No models available — contact support"
-msgstr "Tidak ada model yang tersedia — hubungi dukungan"
-
-msgid "Your API key controls the model"
-msgstr "Kunci API Anda menentukan model"
-
 msgid "Custom"
 msgstr "Kustom"
-
-msgid "Use my own API key…"
-msgstr "Gunakan kunci API saya sendiri…"
-
-msgid "Change or remove my API key…"
-msgstr "Ubah atau hapus kunci API saya…"
 
 msgid "Thinking"
 msgstr "Berpikir"
@@ -1508,53 +1541,80 @@ msgstr "Berpikir"
 msgid "Thinking: {level}"
 msgstr "Berpikir: {level}"
 
-msgid "Your key: {name}"
-msgstr "Kunci Anda: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Default"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Tidak ada model yang tersedia — hubungi dukungan"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Menyimpan model agen… Harap tunggu sebelum mengirim atau mengganti model."
 
-msgid "Agent Model"
-msgstr "Model Agen"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "Memilih model yang menjalankan agen."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Upaya penalaran untuk model yang sedang dipilih."
-
-msgid "No thinking levels for this model"
-msgstr "Tidak ada tingkat berpikir untuk model ini"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Kunci API Anda sendiri sedang digunakan — pilih \"Ubah atau hapus kunci API saya\" di menu ini untuk memilih model terhosting"
-
-msgid "Set Agent Model"
-msgstr "Atur Model Agen"
-
-msgid "Use this model for the agent"
-msgstr "Menggunakan model ini untuk agen"
-
-msgid "Provider"
-msgstr "Penyedia"
-
-msgid "Model"
-msgstr "Model"
-
-msgid "Label"
-msgstr "Label"
-
-msgid "Thinking Level"
-msgstr "Tingkat Berpikir"
-
-msgid "No model selected"
-msgstr "Tidak ada model yang dipilih"
-
-msgid "Reset Agent Model"
-msgstr "Setel Ulang Model Agen"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Mengosongkan model tersimpan dan membiarkan Mixar memilih"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "Tidak dapat mengganti model"
@@ -1562,113 +1622,107 @@ msgstr "Tidak dapat mengganti model"
 msgid "Could not reset model"
 msgstr "Tidak dapat menyetel ulang model"
 
-msgid "Removing your key…"
-msgstr "Menghapus kunci Anda…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Memvalidasi dengan penyedia…"
+msgid "Use this model for the agent"
+msgstr "Menggunakan model ini untuk agen"
 
-msgid "AI Provider Settings"
-msgstr "Pengaturan Penyedia AI"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "Aktif"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Belum dikonfigurasi"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Jalankan agen Mixar di penyedia Anda sendiri — kredit Mixar tidak dikenakan selama aktif."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Konfigurasi Saat Ini"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "Akun"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Langganan ChatGPT"
 
-msgid "API Key"
-msgstr "Kunci API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Disimpan dengan aman"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model khusus teks — obrolan berfungsi; tugas 3D berjalan tanpa umpan balik visual."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Hapus Kunci API…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Penyiapan Penyedia"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Disimpan terenkripsi, hanya digunakan untuk permintaan agen Mixar — hanya pratinjau tersamar yang ditampilkan setelah disimpan."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Pilih model yang mendukung pemanggilan tool / fungsi — agen memerlukannya."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Muat dari ~/.codex/auth.json"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…atau tempel secara manual"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "{count} karakter ditempel"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Kosong — tempel auth.json Anda"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Jalankan  codex login  di terminal Anda, lalu muat atau tempel seluruh"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "isi ~/.codex/auth.json (tombol tempel membaca papan klip Anda)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Menggunakan langganan ChatGPT Anda — kredit Mixar tidak dikenakan."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Tidak dapat menerapkan perubahan Anda"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Hapus kunci API Anda?"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Agen akan kembali menggunakan penyedia bawaan Mixar."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Kredit Mixar akan dikenakan untuk permintaan agen berikutnya."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Agen Mixar kini berjalan di penyedia Anda — kredit Mixar tidak dikenakan."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Kunci API dihapus"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "Agen kembali menggunakan penyedia bawaan Mixar."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Kredit Mixar kembali dikenakan untuk permintaan agen."
-
-msgid "Try Again"
-msgstr "Coba Lagi"
-
-msgid "Save & Activate"
-msgstr "Simpan & Aktifkan"
-
-msgid "Keep My Key"
-msgstr "Pertahankan Kunci Saya"
-
-msgid "Remove API Key"
-msgstr "Hapus Kunci API"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Mengekstrak runtime AI lokal…"
@@ -1691,8 +1745,14 @@ msgstr "Terunduh — tidak berjalan"
 msgid "Not downloaded"
 msgstr "Belum diunduh"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Berjalan sepenuhnya di komputer ini — prompt Anda tidak pernah keluar darinya kecuali melalui orkestrasi agen Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "Model"
 
 msgid "Cancel Download"
 msgstr "Batalkan Unduhan"
@@ -1718,9 +1778,6 @@ msgstr "URL Dasar"
 msgid "API Key (optional)"
 msgstr "Kunci API (opsional)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Server apa pun yang kompatibel dengan OpenAI di komputer ini — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Tidak dapat menyimpan penyedia lokal."
 
@@ -1730,53 +1787,32 @@ msgstr "Pindai Ulang Aplikasi Lokal"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Memindai ulang komputer ini untuk mencari aplikasi AI lokal yang berjalan"
 
+msgid "AI Provider Settings"
+msgstr "Pengaturan Penyedia AI"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Menggunakan kunci API Anda sendiri untuk agen Mixar. Selama aktif, kredit Mixar tidak dikenakan untuk permintaan agen."
 
 msgid "Validate with the provider and save your API key"
 msgstr "Memvalidasi dengan penyedia dan menyimpan kunci API Anda"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Pilih model untuk penyedia ini dan masukkan kunci API."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Slug model dan kunci API wajib diisi."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Pilih model Codex dan muat bundel auth.json Anda."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Gagal menyimpan."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Membaca ~/.codex/auth.json dari mesin ini ke dalam kolom"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json tidak ditemukan — jalankan `codex login` terlebih dahulu"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Tidak dapat membaca ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json kosong"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json terlalu besar untuk kolom ini dan telah dipotong — tidak akan tersimpan dengan benar"
-
-msgid "Loaded auth.json"
-msgstr "auth.json dimuat"
-
-msgid "Paste auth.json"
-msgstr "Tempel auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Menempelkan ~/.codex/auth.json Anda dari papan klip ke dalam kolom"
-
-msgid "Clipboard is empty"
-msgstr "Papan klip kosong"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json yang ditempel terlalu besar untuk kolom ini dan telah dipotong — tidak akan tersimpan dengan benar"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "Hapus"
@@ -1787,11 +1823,110 @@ msgstr "Memulai alur konfirmasi penghapusan"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Membatalkan alur penghapusan dan kembali ke dialog utama"
 
-msgid "Delete the stored API key server-side"
-msgstr "Menghapus kunci API yang tersimpan di sisi server"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "Gagal menghapus."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Putuskan"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Model lokal"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Coba Lagi"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Segarkan Status BYOK"
@@ -1805,11 +1940,38 @@ msgstr "Segarkan Katalog Model"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Memvalidasi ulang katalog penyedia+model dari backend"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Penyedia Model Agen"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "ID penyedia dari pilihan model agen terhosting yang disimpan"
+
+msgid "Agent Model"
+msgstr "Model Agen"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "ID model dari pilihan model agen terhosting yang disimpan"
@@ -1838,11 +2000,29 @@ msgstr "Model Agen Memenuhi Syarat"
 msgid "False when the saved model is not available on your plan"
 msgstr "Bernilai salah saat model tersimpan tidak tersedia di paket Anda"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "Penyedia"
+
 msgid "LLM provider"
 msgstr "Penyedia LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Model yang digunakan dengan penyedia terpilih"
+
+msgid "API Key"
+msgstr "Kunci API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Kunci API Anda disimpan terenkripsi dan hanya digunakan untuk permintaan agen Mixar. Setelah disimpan, hanya pratinjau tersamar yang ditampilkan."
@@ -1850,20 +2030,14 @@ msgstr "Kunci API Anda disimpan terenkripsi dan hanya digunakan untuk permintaan
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Slug model apa pun dari openrouter.ai/models (mis. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json Codex"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Isi ~/.codex/auth.json (jalankan `codex login` terlebih dahulu)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Mode lokal"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Dikelola oleh Mixar, atau server lokal Anda sendiri"
-
-msgid "Local model"
-msgstr "Model lokal"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Model pilihan untuk diunduh dan dijalankan di komputer ini"
@@ -1885,6 +2059,15 @@ msgstr "BYOK Aktif"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Bernilai benar saat server melaporkan byok_active untuk pengguna ini"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Status Dialog"
@@ -1976,6 +2159,27 @@ msgstr "Generasi gagal — silakan coba lagi"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if katalog yang dikunci berdasarkan atribut RNA"
 
+msgid "Nothing selected"
+msgstr "Tidak ada yang terseleksi"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Nilai"
+
+msgid "Label"
+msgstr "Label"
+
+msgid "Group"
+msgstr "Kelompok"
+
+msgid "Selected"
+msgstr "Terseleksi"
+
 msgid "No modes"
 msgstr "Tidak ada mode"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} generasi siap"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Kredit Anda habis — tingkatkan paket Anda untuk melanjutkan"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "Autentikasi diperlukan — silakan masuk"
@@ -2125,6 +2332,9 @@ msgstr "Impor Hasil Generasi"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Dibatalkan (generasi mungkin tetap selesai di server)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Gagal memproses respons server"
@@ -2236,6 +2446,9 @@ msgstr "Antrean pulau Agen tidak tersedia"
 
 msgid "Show every job"
 msgstr "Menampilkan setiap tugas"
+
+msgid "Active"
+msgstr "Aktif"
 
 msgid "Show pending or running jobs"
 msgstr "Menampilkan tugas yang tertunda atau berjalan"
@@ -2612,9 +2825,6 @@ msgstr "Profil kompatibilitas"
 msgid "Density"
 msgstr "Kepadatan"
 
-msgid "Default"
-msgstr "Default"
-
 msgid "Generation-pane control spacing"
 msgstr "Jarak kontrol panel generasi"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "Nama Akun"
 
 msgid "Display name for the account greeting"
 msgstr "Nama tampilan untuk sapaan akun"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "Versi Berkas Lebih Baru"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Berkas"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Asal"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "Rig Otomatis gagal"
 msgid "Animate failed"
 msgstr "Animasi gagal"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Jaring 3D terseleksi memiliki {count:,} bidang (maks {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "Model server lokal"
 msgid "Local model last error"
 msgstr "Galat terakhir model lokal"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "Salin"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "Perintah"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "Salin"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "Format"
 
 msgid "Processing..."
 msgstr "Memproses..."
@@ -5312,6 +5702,9 @@ msgstr "Segmentasi Jaring 3D"
 msgid "Auto Rig"
 msgstr "Rig Otomatis"
 
+msgid "Animate"
+msgstr "Animasikan"
+
 msgid "Add Mesh"
 msgstr "Tambah Jaring 3D"
 
@@ -5413,6 +5806,15 @@ msgstr "Jumlah langkah penyempurnaan yang digunakan selama generasi. Lebih banya
 
 msgid "The file format used to store the generated image."
 msgstr "Format berkas yang digunakan untuk menyimpan gambar yang dihasilkan."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Otomatis (dari nama)"
@@ -5642,14 +6044,14 @@ msgstr "Gagal mengunduh tekstur BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Gagal memuat tekstur BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Galat tak terduga saat mengunduh tekstur: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "Gagal menerapkan tekstur ke objek mana pun"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Terapkan Tekstur PBR"
 
 msgid "Both refined and guide masks are required"
 msgstr "Masker yang disempurnakan dan masker panduan keduanya diperlukan"
@@ -5732,6 +6134,15 @@ msgstr "Rakit Karakter"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Memasang bagian yang dihasilkan ke tubuh yang sudah di-rig atau polos, secara lokal"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "Gunakan Gaya Gambar Saja"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Jika dihidupkan, hanya gaya artistik gambar yang ditransfer (prompt tetap berlaku). Jika dimatikan, gambar langsung mengarahkan generasi tekstur"
+
 msgid "Enter a prompt in the image node"
 msgstr "Masukkan prompt di simpul gambar"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Generasi Model tidak tersedia di katalog generasi"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Mode Generasi Model ini belum didukung oleh simpul inferensi"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Tidak ada model generasi 3D aktif yang tersedia"
@@ -5884,6 +6295,9 @@ msgstr "Hasilkan '{name}' terlebih dahulu — kartu ini menggunakan hasilnya"
 
 msgid "Mesh"
 msgstr "Jaring 3D"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referensi {number}"
@@ -6053,11 +6467,11 @@ msgstr "Impor SceneGen gagal"
 msgid "No image URLs in server response"
 msgstr "Tidak ada URL gambar dalam respons server"
 
-msgid "Starting reconstruction..."
-msgstr "Memulai rekonstruksi..."
-
 msgid "Error: {error}"
 msgstr "Galat: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Memulai rekonstruksi..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Gagal mengunduh gambar yang dihasilkan: {error}"
@@ -6280,9 +6694,6 @@ msgstr "Gagal mengunduh/mengonversi dunia: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Dunia diimpor tetapi tidak menghasilkan objek"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Impor Dunia"
 
 msgid "Failed to import world: {error}"
 msgstr "Gagal mengimpor dunia: {error}"
@@ -6833,9 +7244,6 @@ msgstr "Gunakan Warna Kustom"
 msgid "Custom Colour"
 msgstr "Warna Kustom"
 
-msgid "Selected"
-msgstr "Terseleksi"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Mengabaikan batas dan bagian dalam bingkai ini saat diklik, sehingga hanya anggotanya yang dapat diseleksi"
 
@@ -6844,6 +7252,18 @@ msgstr "Diciutkan"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Menggambar bingkai sebagai bilah berjudul dan menyembunyikan badannya"
+
+msgid "Unavailable"
+msgstr "Tidak Tersedia"
+
+msgid "No supported 3D service is available"
+msgstr "Tidak ada layanan 3D yang didukung yang tersedia"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Model gambar harus menyatakan dukungan panduan masker dan dua referensi"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Tidak ada pilihan yang diterbitkan"
@@ -6862,18 +7282,6 @@ msgstr "Selesai"
 
 msgid "Generation completed"
 msgstr "Generasi selesai"
-
-msgid "Unavailable"
-msgstr "Tidak Tersedia"
-
-msgid "No supported 3D service is available"
-msgstr "Tidak ada layanan 3D yang didukung yang tersedia"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Model gambar harus menyatakan dukungan panduan masker dan dua referensi"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID Parameter"
@@ -6899,14 +7307,14 @@ msgstr "Nilai boolean"
 msgid "Catalog choice"
 msgstr "Pilihan katalog"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Kelompok"
-
 msgid "Choices"
 msgstr "Pilihan"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Kondisi Visibilitas"
@@ -6926,11 +7334,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maksimum"
 
-msgid "Value"
-msgstr "Nilai"
-
 msgid "Value Label"
 msgstr "Label Nilai"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID Soket"
@@ -7948,12 +8359,6 @@ msgstr "Gambar transfer gaya - menerapkan gaya artistik pada tekstur yang dihasi
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Gambar referensi - langsung mengarahkan generasi tekstur (prompt diabaikan)"
 
-msgid "Use Image Style Only"
-msgstr "Gunakan Gaya Gambar Saja"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Jika dihidupkan, hanya gaya artistik gambar yang ditransfer (prompt tetap berlaku). Jika dimatikan, gambar langsung mengarahkan generasi tekstur"
-
 msgid "Output texture resolution in pixels"
 msgstr "Resolusi tekstur keluaran dalam piksel"
 
@@ -8452,9 +8857,6 @@ msgstr "Jaring 3D asli disembunyikan, tidak dihapus"
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan belum diinisialisasi"
 
-msgid "Format"
-msgstr "Format"
-
 msgid "Inputs"
 msgstr "Masukan"
 
@@ -8548,26 +8950,23 @@ msgstr "Pilih gambar moodboard untuk menambahkannya sebagai tampak"
 msgid "Generates as one multi-view job"
 msgstr "Dihasilkan sebagai satu tugas multi-tampak"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} lainnya)"
+
 msgid "Video Gen tab not available"
 msgstr "Tab Generasi Video tidak tersedia"
 
 msgid "Selected References"
 msgstr "Referensi Terseleksi"
 
-msgid "Images: {count}"
-msgstr "Gambar: {count}"
-
-msgid "Videos: {count}"
-msgstr "Video: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Tidak ada referensi terseleksi — teks-ke-video"
 
 msgid "A selected video source file is missing"
 msgstr "Salah satu berkas sumber video terseleksi tidak ditemukan"
 
-msgid "No references selected — text-to-video"
-msgstr "Tidak ada referensi terseleksi — teks-ke-video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Sebutkan urutan gambar/video di prompt saat menetapkan peran"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Batas Referensi"
@@ -8644,6 +9043,33 @@ msgstr "Bingkai Semua"
 msgid "Clear Board"
 msgstr "Kosongkan Papan"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Data Objek"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animasi"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Rig Otomatis Agen"
 
@@ -8665,8 +9091,8 @@ msgstr "Tipe kerangka: auto / biped / quadruped / hexapod / octopod / avian / se
 msgid "Skeleton Spec"
 msgstr "Spesifikasi Kerangka"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konvensi kerangka: 'tripo' atau 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Penamaan tulang: tripo, mixamo, actorcore, unity, unreal atau vrm (hanya tripo yang mendukung animasi preset Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "Generasi PBR Agen"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Menghasilkan tekstur PBR untuk objek jaring 3D yang diberikan menggunakan Tripo"
-
-msgid "Object Name"
-msgstr "Data Objek"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Nama objek jaring 3D di adegan yang akan diberi tekstur"
@@ -8917,11 +9340,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "Sinkronisasi gagal: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} video dilewati: agen hanya menerima gambar diam. Gunakan Generasi Video di moodboard untuk klip"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} video dilewati: agen hanya menerima gambar diam. Gunakan Generasi Video di moodboard untuk klip"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Tidak ada gambar moodboard terseleksi"
@@ -9219,9 +9642,6 @@ msgstr "Direktori"
 
 msgid "Directory of the selected file(s)"
 msgstr "Direktori berkas terseleksi"
-
-msgid "Files"
-msgstr "Berkas"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Gagal memuat media: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "Pilih simpul inferensi"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Sunting prompt, lalu tekan Enter atau Hasilkan"
 
-msgid "Node added to the generation queue"
-msgstr "Simpul ditambahkan ke antrean generasi"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Menampilkan pengaturan dan prompt simpul ini agar dapat disesuaikan dan dijalankan lagi; klik lagi untuk membatalkan penyuntingan dan kembali ke hasil"
@@ -10839,9 +11259,6 @@ msgstr "Respons bahan yang dihasilkan tidak menyertakan skrip"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Bahan berhasil dihasilkan tetapi gagal diterapkan: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Hasilkan Bahan Prosedural"
 
 msgid "Material generation failed"
 msgstr "Generasi bahan gagal"
@@ -11877,9 +12294,6 @@ msgstr "Bit Kuantisasi Warna"
 
 msgid "Generic Quantization Bits"
 msgstr "Bit Kuantisasi Generik"
-
-msgid "Animations"
-msgstr "Animasi"
 
 msgid "Animation Mode"
 msgstr "Mode Animasi"
@@ -17496,12 +17910,6 @@ msgstr "Selalu render di GPU jika tersedia"
 msgid "Always render on the CPU"
 msgstr "Selalu render di CPU"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Hidupkan Hasil Panggang di Luar secara Bawaan"
 
@@ -17579,6 +17987,12 @@ msgstr "Selalu Evaluasi Bingkai"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Mengevaluasi pohon simpul pada setiap perubahan bingkai"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Opsi Saluran"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "Tidak dapat membuat pratinjau sketsa. Gambar lagi untuk mencoba ulang."
 msgid "View sketch"
 msgstr "Lihat sketsa"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Draf Agen sudah penuh (maks. {count} karakter)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Tanda ditambahkan — tidak ada apa pun di bawahnya"
@@ -19109,9 +19523,6 @@ msgstr "Bilah Alat"
 
 msgid "Sidebar"
 msgstr "Bar Sisi (Sidebar)"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "Panel Segmentasi UV Jaring 3D"
@@ -19536,8 +19947,8 @@ msgstr "Mengubah..."
 msgid "Awaiting Input..."
 msgstr "Menunggu Masukan..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Video memerlukan mode Video. Hapus video untuk mengirim ke Agen."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ID Pengguna"
@@ -19547,6 +19958,78 @@ msgstr "ID pengguna untuk masuk ke Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Agen mengharapkan: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "Gambar lambat dilewati: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Pengodean gambar gagal: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Dihentikan*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Tingkatkan"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Komentar umpan balik kosong"
@@ -19730,6 +20222,27 @@ msgstr "'{name}' tidak lagi ada di berkas aset."
 
 msgid "Could not add the asset to the scene."
 msgstr "Tidak dapat menambahkan aset ke adegan."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Berpikir..."
@@ -19880,9 +20393,6 @@ msgstr "{count} diubah"
 
 msgid "{count} deleted"
 msgstr "{count} dihapus"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} lainnya)"
 
 msgid "Created: {names}"
 msgstr "Dibuat: {names}"
@@ -20046,6 +20556,15 @@ msgstr "Masuk"
 msgid "Login panel for Mixie Chat"
 msgstr "Panel masuk untuk Obrolan Mixie"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Masuk dengan akun Mixar Anda"
+
 msgid "Session expired"
 msgstr "Sesi kedaluwarsa"
 
@@ -20055,31 +20574,27 @@ msgstr "Silakan masuk lagi."
 msgid "Login Failed"
 msgstr "Gagal Masuk"
 
-msgid "Sign in with your Mixar account"
-msgstr "Masuk dengan akun Mixar Anda"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "Menunggu browser..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Masuk dengan Browser"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Dropdown profil / akun — dibuka dari bilah atas global.\n"
-"\n"
-"Isinya digambar secara native oleh `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): sapaan, chip paket,\n"
-"meteran penggunaan kredit, dan tindakan akun, ditata sebagai satu kartu,\n"
-"bukan menu. Python tetap menangani registrasi dan setiap\n"
-"operator yang dipanggil kartu — C++ hanya menangani piksel.\n"
 
 msgid "Dashboard"
 msgstr "Dasbor"
@@ -20309,12 +20824,6 @@ msgstr "Tanda: {note}"
 msgid "Sketch"
 msgstr "Sketsa"
 
-msgid "Skipped slow image: {name}"
-msgstr "Gambar lambat dilewati: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Pengodean gambar gagal: {error}"
-
 msgid "Message sent"
 msgstr "Pesan terkirim"
 
@@ -20536,8 +21045,8 @@ msgstr "ID Titik Pemulihan"
 msgid "Restoring checkpoint…"
 msgstr "Memulihkan titik pemulihan…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Teks yang ditempel terlalu panjang (maks. {count} karakter)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Tekstur"
@@ -20728,11 +21237,14 @@ msgstr "Sesi terarsip yang akan dihapus"
 msgid "Chat removed from history"
 msgstr "Obrolan dihapus dari riwayat"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Tidak dapat menambahkan {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Batas lampiran ({count}) tercapai"
@@ -20740,14 +21252,14 @@ msgstr "Batas lampiran ({count}) tercapai"
 msgid "Skipped {name}: {error}"
 msgstr "{name} dilewati: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Tidak dapat menambahkan {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Referensi ini sudah terlampir"
 
 msgid "Added {count} image(s)"
 msgstr "{count} gambar ditambahkan"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Tambah dari Blend"
@@ -20764,6 +21276,9 @@ msgstr "{size} - Ada data"
 msgid "{size} - No data"
 msgstr "{size} - Tidak ada data"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Memilih gambar dari berkas blend"
 
@@ -20772,6 +21287,12 @@ msgstr "Gambar sudah ditambahkan"
 
 msgid "Image not found in blend file"
 msgstr "Gambar tidak ditemukan di berkas blend"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Gambar sudah terlampir"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Ambil Tangkapan Layar"
 
@@ -21103,9 +21627,6 @@ msgstr "Gagal terhubung"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Mode Dev: Terhubung dengan data tiruan"
 
-msgid "Disconnect"
-msgstr "Putuskan"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Memutuskan koneksi dari server agen Mixie"
 
@@ -21115,14 +21636,14 @@ msgstr "Mode Dev: Terputus"
 msgid "Disconnected from server"
 msgstr "Terputus dari server"
 
+msgid "Could not save the chat to History"
+msgstr "Tidak dapat menyimpan obrolan ke Riwayat"
+
 msgid "New Chat"
 msgstr "Obrolan Baru"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Memulai obrolan baru (obrolan saat ini disimpan ke Riwayat)"
-
-msgid "Could not save the chat to History"
-msgstr "Tidak dapat menyimpan obrolan ke Riwayat"
 
 msgid "Started new chat session"
 msgstr "Sesi obrolan baru dimulai"
@@ -21160,6 +21681,12 @@ msgstr "Melanjutkan tugas sebelumnya..."
 msgid "Could not resume the previous task"
 msgstr "Tidak dapat melanjutkan tugas sebelumnya"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "Komentar Umpan Balik Terkirim"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Komentar yang dikirim secara lokal, ditampilkan hanya-baca di obrolan"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "Pesan tidak terkirim"
 
@@ -21522,6 +22058,15 @@ msgstr "Masukan Obrolan"
 
 msgid "Type your message here"
 msgstr "Ketik pesan Anda di sini"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Pesan Obrolan"
@@ -21660,6 +22205,12 @@ msgstr "Sudah Masuk"
 
 msgid "Whether user is currently logged in"
 msgstr "Apakah pengguna saat ini sudah masuk"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Sedang Masuk"
@@ -21861,9 +22412,6 @@ msgstr "Tulis"
 
 msgid "File write"
 msgstr "Tulis berkas"
-
-msgid "Command"
-msgstr "Perintah"
 
 msgid "Shell command"
 msgstr "Perintah shell"
@@ -23620,9 +24168,6 @@ msgstr "Jepret Kursor"
 msgid "Snap 2D cursor"
 msgstr "Melakukan snap pada kursor 2D"
 
-msgid "Origin"
-msgstr "Asal"
-
 msgid "Mirror selected UVs"
 msgstr "Mencerminkan UV terseleksi"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Gambar Latar"
 
 msgid "Grid & Relationship Lines"
 msgstr "Kisi & Garis Relasi"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "Mesin Render"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "Pengaturan Render"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Berkas disimpan oleh versi Mixar yang lebih baru (%d.%d), sebagian data mungkin hilang"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Berkas disimpan oleh versi yang lebih baru, buka dengan Mixar %s atau yang lebih baru"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Tambahkan Lapis Cat di panel Lapis untuk mulai mengecat"
 
@@ -24409,7 +25179,43 @@ msgstr "Memulai atau menghentikan dikte ke draf sketsa"
 msgid "Stop the running turn"
 msgstr "Menghentikan giliran yang sedang berjalan"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Kembalikan\n"
+"\n"
+"Memulihkan prompt yang Anda tulis sebelum disempurnakan."
+
+msgid "Refining this prompt..."
+msgstr "Menyempurnakan prompt ini..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Sempurnakan Lagi\n"
+"\n"
+"Menulis ulang prompt ini sekali lagi untuk model tujuannya. Kembalikan tetap memulihkan kata-kata Anda sendiri, bukan penyempurnaan sebelumnya."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Sempurnakan\n"
+"\n"
+"Menulis ulang prompt ini untuk model tujuannya, dengan menambahkan detail yang direspons model tersebut."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "Menghapus referensi"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Membuang sketsa ini beserta gambarnya yang sedang mengantre"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "Buka Antrean"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Tidak ada yang terseleksi"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Selesaikan sketsa atau dikte sebelum berpindah tab"
 
@@ -24607,6 +25413,15 @@ msgstr "%d hr lalu"
 msgid "%dw ago"
 msgstr "%d mgg lalu"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Menghasilkan (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter untuk mengirim"
 
 msgid "Sketch · Enter to send"
 msgstr "Sketsa · Enter untuk mengirim"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "Aturan — mengedit aturan proyek dan global untuk agen"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "Mode otomatis aktif: agen memutuskan sendiri pilihan terbuka dan tidak p
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Mode otomatis: agen memutuskan sendiri pilihan terbuka alih-alih bertanya kepada Anda, dan mencantumkan keputusannya di ringkasan"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Kunci API milik Anda sedang digunakan, dan kunci tersebut menentukan modelnya. Buka menu ini dan pilih \"Ubah atau hapus kunci API saya\" untuk memilih model yang di-hosting lagi"
-
-msgid "Choose which model the agent runs on"
-msgstr "Memilih model yang digunakan agen"
 
 msgid "Agent Bubble"
 msgstr "Gelembung Agen"
@@ -24858,6 +25670,12 @@ msgstr "Jumlah yang Ditutup"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Jumlah jendela Gelembung Agen yang ditutup"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Tetapkan Ukuran Jendela Gelembung Agen"
@@ -25336,6 +26154,9 @@ msgstr "Mengantre..."
 msgid "Click to edit the prompt and try again"
 msgstr "Klik untuk mengedit prompt dan mencoba lagi"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "Prompt\n"
 "\n"
 "Jelaskan apa yang akan dihasilkan. Tekan Enter untuk mengirim simpul ini."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Kembalikan\n"
-"\n"
-"Memulihkan prompt yang Anda tulis sebelum disempurnakan."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Sempurnakan Lagi\n"
-"\n"
-"Menulis ulang prompt ini sekali lagi untuk model tujuannya. Kembalikan tetap memulihkan kata-kata Anda sendiri, bukan penyempurnaan sebelumnya."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Sempurnakan\n"
-"\n"
-"Menulis ulang prompt ini untuk model tujuannya, dengan menambahkan detail yang direspons model tersebut."
-
-msgid "Refining this prompt..."
-msgstr "Menyempurnakan prompt ini..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "Ruang Set Tekstur"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Gunakan panel bilah sisi untuk mengelola set tekstur"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Kembali ke awal"
 
@@ -26557,9 +27354,6 @@ msgstr "Area Aman"
 msgid "Select a character to animate"
 msgstr "Seleksi karakter untuk dianimasikan"
 
-msgid "Animate"
-msgstr "Animasikan"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Menjadikan gerakan tingkat blocking ini bingkai kunci dari playhead"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Identitas tugas ruang kerja"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "Tombol aksi berwarna bahaya"
 msgid "Borderless quiet action button"
 msgstr "Tombol aksi senyap tanpa garis tepi"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chip"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Penggeser Mode Kiri"
 
@@ -27126,9 +28019,6 @@ msgstr "Glif"
 
 msgid "Header glyph"
 msgstr "Glif kepala"
-
-msgid "Chip"
-msgstr "Chip"
 
 msgid "Chip track"
 msgstr "Jalur chip"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "Filter ekstensi berkas"
 
 msgid "Write compressed .mixar file"
 msgstr "Menulis berkas .mixar terkompresi"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Menyimpan sebagai berkas .mixar"

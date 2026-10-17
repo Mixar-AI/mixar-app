@@ -167,6 +167,19 @@ void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, cons
     stroke_path(lip, 2, cx, cy, size, weight, false, color);
     return;
   }
+  if (icon == AGENT_ICON_SPARKLE) {
+    /* One large four-point star and a small one above right: the outline
+     * pinches between the points, so it reads as a sparkle, not a cross. */
+    static const float big[][2] = {
+        {-.08f, .38f}, {.02f, .06f}, {.30f, -.04f}, {.02f, -.14f},
+        {-.08f, -.42f}, {-.18f, -.14f}, {-.44f, -.04f}, {-.18f, .06f}};
+    static const float small[][2] = {
+        {.28f, .44f}, {.31f, .31f}, {.42f, .28f}, {.31f, .25f},
+        {.28f, .12f}, {.25f, .25f}, {.14f, .28f}, {.25f, .31f}};
+    stroke_path(big, 8, cx, cy, size, weight, true, color);
+    stroke_path(small, 8, cx, cy, size, weight * 0.8f, true, color);
+    return;
+  }
   if (icon == AGENT_ICON_ADDON) {
     /* A puzzle piece: a square with one tab on top and one on the right. */
     static const float piece[][2] = {
