@@ -179,7 +179,13 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         modal = getattr(wm, "mixar_invoke_modal_dialog", None)
         if modal is not None:
             try:
-                return modal(self, width=CARD_DIALOG_WIDTH)
+                # The designer's sheet (byok_dialog_ui): no title row, no
+                # padding, the framed card drawn behind the layout.
+                return modal(self, width=byok_dialog_ui.SHEET_WIDTH, sheet=True)
+            except TypeError:
+                # A binary whose modal dialog predates `sheet`: the same
+                # layout on a plain dialog (no frame, stock fallbacks).
+                return modal(self, width=byok_dialog_ui.SHEET_WIDTH)
             except Exception:
                 _dialog_open = False
                 raise

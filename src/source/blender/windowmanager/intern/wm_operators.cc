@@ -1487,6 +1487,10 @@ struct wmOpPopUp {
    * callback, and #popup_handler_remove when a file load or window close
    * tears the pop-up down), so the release lives in the destructor. */
   bool mixar_docks_held = false;
+  /* Mixar: the AI Provider settings sheet. The block gets BLOCK_MIXAR_SHEET
+   * and no title row, padding or spacer rows, so the operator's layout IS the
+   * card and the sheet backdrop places its dividers from the layout's edges. */
+  bool mixar_sheet = false;
 
   ~wmOpPopUp()
   {
@@ -1555,6 +1559,9 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
   }
 
   block_flag_enable(block, ui::BLOCK_KEEP_OPEN | ui::BLOCK_NUMSELECT | ui::BLOCK_POPUP);
+  if (data->mixar_sheet) {
+    block_flag_enable(block, ui::BLOCK_MIXAR_SHEET);
+  }
 
   ui::fontstyle_set(&style->widget);
   /* Width based on the text lengths. */
@@ -1625,11 +1632,15 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
   }
 
   if (data->include_properties) {
-    layout.separator(0.5f);
+    if (!data->mixar_sheet) {
+      layout.separator(0.5f);
+    }
     uiTemplateOperatorPropertyButs(C, &layout, op, ui::BUT_LABEL_ALIGN_SPLIT_COLUMN, 0);
   }
 
-  layout.separator(small ? 0.1f : 1.8f);
+  if (!data->mixar_sheet) {
+    layout.separator(small ? 0.1f : 1.8f);
+  }
 
   /* Clear so the OK button is left alone. */
   block_func_set(block, nullptr, nullptr, nullptr);
@@ -1692,7 +1703,7 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
     button_flag_enable((data->cancel_default) ? cancel_but : confirm_but, ui::BUT_ACTIVE_DEFAULT);
   }
 
-  const int padding = (small ? 7 : 14) * UI_SCALE_FAC;
+  const int padding = data->mixar_sheet ? 0 : int((small ? 7 : 14) * UI_SCALE_FAC);
 
   if (data->position == WM_POPUP_POSITION_MOUSE) {
     const float button_center_x = windows_layout ? -0.4f : -0.90f;
@@ -1941,7 +1952,10 @@ wmOperatorStatus WM_operator_props_dialog_popup(bContext *C,
  * hidden with the island otherwise). Opt-in per operator; no operator is
  * named here.
  */
-wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C, wmOperator *op, int width)
+wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
+                                                   wmOperator *op,
+                                                   int width,
+                                                   const bool sheet)
 {
   wmWindow *win_ctx = CTX_wm_window(C);
   ScrArea *area_ctx = CTX_wm_area(C);
@@ -1958,7 +1972,8 @@ wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C, wmOperator *op, 
   data->width = int(float(width) * UI_SCALE_FAC * ui::style_get()->widget.points /
                     UI_DEFAULT_TEXT_POINTS);
   data->free_op = true;
-  data->title = WM_operatortype_name(op->type, op->ptr);
+  /* The sheet draws its own title inside the card (`layout.mixar_sheet_frame`). */
+  data->title = sheet ? std::string() : WM_operatortype_name(op->type, op->ptr);
   data->confirm_text = IFACE_("OK");
   data->icon = ui::AlertIcon::None;
   data->size = WM_POPUP_SIZE_SMALL;
@@ -1966,6 +1981,7 @@ wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C, wmOperator *op, 
   data->cancel_default = false;
   data->mouse_move_quit = false;
   data->include_properties = true;
+  data->mixar_sheet = sheet;
   data->mixar_docks_held = true;
   Mixar_floating_docks_hold(data);
 

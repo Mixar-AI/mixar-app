@@ -74,8 +74,9 @@ void request_redraw(wmWindow *win)
 
 void set_tab(State &state, const int index)
 {
+  /* An action tab is a button: only a click runs it (card_modal). */
   if (index < 0 || index >= int(state.tabs.size()) || !state.tabs[index].enabled ||
-      state.tabs[index].id == state.tab)
+      state.tabs[index].id == state.tab || !state.tabs[index].action.empty())
   {
     return;
   }
@@ -305,6 +306,9 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
             0.0f, layout.max_scroll);
       }
       else if (hit.tab >= 0) {
+        if (state->tabs[hit.tab].action == "settings" && state->tabs[hit.tab].enabled) {
+          return run_footer(C, op); /* "Add a key": straight to the settings. */
+        }
         set_tab(*state, hit.tab);
       }
       else {

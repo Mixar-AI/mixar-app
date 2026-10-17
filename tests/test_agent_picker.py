@@ -81,7 +81,9 @@ def test_no_key_mixie_default(catalog):
     rows = picker.build_rows(s, catalog)
     assert _kinds(rows, TAB_MIXIE)[0] == ("model", "Mixar default", True, True)
     assert ("model", "GPT 6 Astra", False, False) in _kinds(rows, TAB_MIXIE)  # not on the plan: greyed, not hidden
-    assert _kinds(rows, TAB_KEY) == [("footer", "Add a key…", False, True), ("footer", "Set up local model…", False, True)]
+    # No key saved: the tab is the action itself (one click to the settings), no page behind it.
+    assert tabs[1].action == picker.ACTION_SETTINGS
+    assert _kinds(rows, TAB_KEY) == []
 
 
 def test_hosted_pick_with_thinking_names_the_model_and_offers_levels(catalog):

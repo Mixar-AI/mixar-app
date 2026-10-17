@@ -78,6 +78,8 @@ set(SRC
   interface_mixar_profile_card.cc
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
+  interface_mixar_sheet.cc
+  interface_mixar_sheet_controls.cc
   interface_mixar_tab_rects.cc
   interface_mixar_theme.cc
   interface_mixar_topbar.cc
@@ -159,6 +161,7 @@ set(SRC
   interface_mixar_palette.hh
   interface_mixar_profile_card.hh
   interface_mixar_section.hh
+  interface_mixar_sheet.hh
   interface_mixar_tab_rects.hh
   interface_qa_inspect.hh
   templates/interface_templates_intern.hh

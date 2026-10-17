@@ -1,0 +1,463 @@
+/* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/** \file
+ * \ingroup edinterface
+ *
+ * AI Provider settings sheet — the text kit, the framed backdrop, the tags
+ * and the text elements. Controls (close, rows, chips, pills) are in
+ * `interface_mixar_sheet_controls.cc`; the design is described in
+ * `interface_mixar_sheet.hh`.
+ *
+ * Text is drawn straight through BLF rather than #fontstyle_draw: the sheet
+ * face is Clash Grotesk, which is not one of the UI fonts a #uiFontStyle can
+ * name, and the artboard positions type by baseline and cap height, which the
+ * style painter's ascender/descender centring cannot reproduce.
+ */
+
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <string>
+
+#include "BLI_math_color.h"
+#include "BLI_rect.h"
+#include "BLI_utildefines.h"
+
+#include "BLF_api.hh"
+
+#include "DNA_userdef_types.h"
+
+#include "GPU_immediate.hh"
+#include "GPU_state.hh"
+
+#include "UI_interface_c.hh"
+#include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_motion.hh"
+#include "UI_resources.hh"
+
+#include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
+#include "interface_mixar_sheet.hh"
+#include "mixar/cinema_label.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
+
+namespace mixar_sheet {
+
+float px(const float design_px)
+{
+  return design_px * 0.5f * UI_SCALE_FAC;
+}
+
+int font(const float size_dp)
+{
+  int id = mixar_clash_grotesk_font();
+  if (id < 0) {
+    id = BLF_default();
+  }
+  BLF_size(id, px(size_dp * text_scale));
+  return id;
+}
+
+float text_width(const int font_id, const char *text)
+{
+  if (text == nullptr || text[0] == '\0') {
+    return 0.0f;
+  }
+  return BLF_width(font_id, text, strlen(text));
+}
+
+/** Cap height of the face at its current size: the artboard centres labels
+ * on their caps, not on the ascender/descender box. */
+static float cap_height(const int font_id)
+{
+  rcti box;
+  BLF_boundbox(font_id, "H", 1, &box);
+  return float(std::max(box.ymax, 1));
+}
+
+void text_at(
+    const int font_id, const float x, const float baseline, const char *text, const uchar col[4])
+{
+  if (text == nullptr || text[0] == '\0') {
+    return;
+  }
+  BLF_color4ubv(font_id, col);
+  BLF_position(font_id, std::round(x), std::round(baseline), 0.0f);
+  BLF_draw(font_id, text, strlen(text));
+}
+
+/** \a text shortened with a tail ellipsis to \a max_w px. */
+static std::string fit(const int font_id, const char *text, const float max_w)
+{
+  const size_t len = strlen(text);
+  if (max_w <= 0.0f) {
+    return "";
+  }
+  if (BLF_width(font_id, text, len) <= max_w) {
+    return text;
+  }
+  const char *ellipsis = "\xe2\x80\xa6";
+  const float ellipsis_w = BLF_width(font_id, ellipsis, 3);
+  size_t keep = BLF_width_to_strlen(
+      font_id, text, len, std::max(0.0f, max_w - ellipsis_w), nullptr);
+  /* Back to a code-point boundary, then off any trailing space. */
+  while (keep > 0 && (uchar(text[keep]) & 0xC0) == 0x80) {
+    keep--;
+  }
+  while (keep > 0 && text[keep - 1] == ' ') {
+    keep--;
+  }
+  return std::string(text, keep) + ellipsis;
+}
+
+void text_in(const int font_id,
+             const rctf &rect,
+             const char *text,
+             const uchar col[4],
+             const bool centre)
+{
+  if (text == nullptr || text[0] == '\0') {
+    return;
+  }
+  const std::string shown = fit(font_id, text, BLI_rctf_size_x(&rect));
+  const float w = BLF_width(font_id, shown.c_str(), shown.size());
+  const float x = centre ? BLI_rctf_cent_x(&rect) - w * 0.5f : rect.xmin;
+  const float baseline = BLI_rctf_cent_y(&rect) - cap_height(font_id) * 0.5f;
+  text_at(font_id, x, baseline, shown.c_str(), col);
+}
+
+void stroke(const float x0,
+            const float y0,
+            const float x1,
+            const float y1,
+            const float width,
+            const uchar col[4],
+            const float alpha)
+{
+  /* The polyline shader anti-aliases at the real width; GPU_line_width is a
+   * hairline on Metal. */
+  float viewport[4];
+  GPU_viewport_size_get_f(viewport);
+  float c[4];
+  rgba_uchar_to_float(c, col);
+  c[3] *= alpha;
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_UNIFORM_COLOR);
+  immUniform2fv("viewportSize", &viewport[2]);
+  immUniform1f("lineWidth", std::max(width, 1.0f));
+  immUniform1i("lineSmooth", 1);
+  immUniformColor4fv(c);
+  immBegin(GPU_PRIM_LINES, 2);
+  immVertex2f(pos, x0, y0);
+  immVertex2f(pos, x1, y1);
+  immEnd();
+  immUnbindProgram();
+}
+
+rctf block_rect(const Button *but)
+{
+  /* Popup blocks project 1:1 onto their region, so block space is region
+   * pixel space here (`block_to_region_fl` with the popup's ortho winmat). */
+  return but->block->rect;
+}
+
+static const char *label(const Button *but)
+{
+  return but->str.empty() ? but->drawstr.c_str() : but->str.c_str();
+}
+
+static bool disabled(const Button *but)
+{
+  return (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
+}
+
+static void dim(uchar col[4], const float alpha)
+{
+  col[3] = uchar(std::lround(float(col[3]) * alpha));
+}
+
+/* -- Text elements ------------------------------------------------------- */
+
+/** "Title\nSubtitle": the title on the artboard's baseline below the sheet's
+ * top edge, the subtitle on its own, both from the sheet's left margin. */
+static void draw_title(Button *but, const rcti *rect)
+{
+  const std::string text = label(but);
+  const size_t nl = text.find('\n');
+  const std::string title = text.substr(0, nl);
+  const std::string subtitle = nl == std::string::npos ? "" : text.substr(nl + 1);
+  const float x = float(rect->xmin) + px(title_x);
+  const float top = float(rect->ymax);
+  text_at(font(title_size), x, top - px(title_baseline), title.c_str(), text_bright);
+  if (!subtitle.empty()) {
+    text_at(font(subtitle_size), x, top - px(subtitle_baseline), subtitle.c_str(), text_dim);
+  }
+}
+
+/** Dim caption with bright spans: "ALL SUPPORTED \x1fANTHROPIC\x1f MODELS". */
+static void draw_caption(Button *but, const rcti *rect)
+{
+  const int font_id = font(caption_size);
+  const std::string text = label(but);
+  rctf box;
+  BLI_rctf_rcti_copy(&box, rect);
+  const float baseline = BLI_rctf_cent_y(&box) - cap_height(font_id) * 0.5f;
+  const float fade = disabled(but) ? 0.5f : 1.0f;
+  uchar dim_col[4], bright_col[4];
+  memcpy(dim_col, text_dim, 4);
+  memcpy(bright_col, text_bright, 4);
+  dim(dim_col, fade);
+  dim(bright_col, fade);
+
+  float x = float(rect->xmin);
+  bool bright = false;
+  size_t start = 0;
+  while (start <= text.size()) {
+    size_t end = text.find(caption_bright_mark, start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    const std::string segment = text.substr(start, end - start);
+    if (!segment.empty()) {
+      text_at(font_id, x, baseline, segment.c_str(), bright ? bright_col : dim_col);
+      x += text_width(font_id, segment.c_str());
+    }
+    bright = !bright;
+    start = end + 1;
+  }
+}
+
+static void draw_text(Button *but, const rcti *rect, const float size_dp, const uchar col_in[4])
+{
+  uchar col[4];
+  memcpy(col, col_in, 4);
+  dim(col, disabled(but) ? 0.5f : 1.0f);
+  rctf box;
+  BLI_rctf_rcti_copy(&box, rect);
+  text_in(font(size_dp), box, label(but), col, false);
+}
+
+}  // namespace mixar_sheet
+
+using namespace mixar_sheet;
+
+/* -- Public API ---------------------------------------------------------- */
+
+MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
+{
+  /* Values match `mixar_sheet_kind_items` in rna_ui_api.cc. */
+  switch (kind) {
+    case 1:
+      return MixarCardElement::SheetTitle;
+    case 2:
+      return MixarCardElement::SheetClose;
+    case 3:
+      return MixarCardElement::SheetCaption;
+    case 4:
+      return MixarCardElement::SheetProviderRow;
+    case 5:
+      return MixarCardElement::SheetFooterRow;
+    case 6:
+      return MixarCardElement::SheetChip;
+    case 7:
+      return MixarCardElement::SheetPrompt;
+    case 8:
+      return MixarCardElement::SheetNote;
+    case 9:
+      return MixarCardElement::SheetBody;
+    case 10:
+      return MixarCardElement::SheetDangerText;
+    case 11:
+      return MixarCardElement::SheetPrimary;
+    case 12:
+      return MixarCardElement::SheetSecondary;
+    case 13:
+      return MixarCardElement::SheetDangerButton;
+    case 14:
+      return MixarCardElement::SheetInput;
+    case 15:
+      return MixarCardElement::SheetDropdown;
+    default:
+      return MixarCardElement::None;
+  }
+}
+
+bool UI_mixar_sheet_element_is(const MixarCardElement element)
+{
+  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetDropdown;
+}
+
+void UI_layout_mixar_sheet_frame(Layout *layout, const float header_dp, const float sidebar_dp)
+{
+  Block *block = layout->block();
+  block_flag_enable(block, BLOCK_MIXAR_SHEET);
+  block->mixar_sheet_header = px(header_dp);
+  block->mixar_sheet_sidebar = px(sidebar_dp);
+}
+
+void UI_layout_mixar_sheet_tag_last(Layout *layout,
+                                    const MixarCardElement element,
+                                    const bool lit,
+                                    const float extra)
+{
+  Block *block = layout->block();
+  if (block->buttons_ptrs.is_empty() || !UI_mixar_sheet_element_is(element)) {
+    return;
+  }
+  Button *but = block->buttons_ptrs.last().get();
+  MixarButtonStyle &style = but->mixar_style;
+  if (ELEM(element, MixarCardElement::SheetInput, MixarCardElement::SheetDropdown)) {
+    /* Native Text / Menu buttons: keep the stock input and text passes and
+     * pick only the backdrop (see the ButtonType::Text / Menu cases in
+     * `draw_button`). `mixar_style_button` refuses a type it cannot style. */
+    const MixarComponent component = element == MixarCardElement::SheetInput ?
+                                         MixarComponent::Input :
+                                         MixarComponent::Dropdown;
+    mixar_style_button(but, component, MixarVariant::Primary);
+    if (style.component == component) {
+      style.card = element;
+      style.progress = extra;
+    }
+    return;
+  }
+  style.component = MixarComponent::LegacyCard;
+  style.card = element;
+  style.lit = lit;
+  style.progress = extra;
+  if (!style.explicit_theme) {
+    style.theme = MixarTheme::LegacyMixar;
+  }
+}
+
+float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text)
+{
+  float size = label_size;
+  switch (element) {
+    case MixarCardElement::SheetTitle:
+      size = title_size;
+      break;
+    case MixarCardElement::SheetCaption:
+    case MixarCardElement::SheetDangerText:
+      size = caption_size;
+      break;
+    case MixarCardElement::SheetPrompt:
+      size = prompt_size;
+      break;
+    case MixarCardElement::SheetNote:
+      size = note_size;
+      break;
+    case MixarCardElement::SheetBody:
+      size = body_size;
+      break;
+    default:
+      break;
+  }
+  return text_width(font(size), text) / UI_SCALE_FAC;
+}
+
+void UI_mixar_sheet_draw_back(const Block *block, const rcti *rect)
+{
+  rctf frame;
+  BLI_rctf_rcti_copy(&frame, rect);
+  const float rad = px(frame_radius);
+  const float line = std::max(float(U.pixelsize), px(frame_line));
+  float fill[4], border[4];
+  rgba_uchar_to_float(fill, frame_fill);
+  rgba_uchar_to_float(border, frame_border);
+
+  GPU_blend(GPU_BLEND_ALPHA);
+
+  /* The soft shadow every popup gets, under the card. */
+  rctf shadow = frame;
+  BLI_rctf_pad(&shadow, -float(U.pixelsize), -float(U.pixelsize));
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_dropshadow(&shadow,
+                  rad,
+                  float(theme::get_menu_shadow_width()),
+                  1.0f,
+                  theme::theme_get()->tui.menu_shadow_fac);
+
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv_ex(&frame, fill, fill, 0.0f, border, line, rad);
+
+  /* Header divider across the card, sidebar divider down to the foot. */
+  const float header = block->mixar_sheet_header;
+  const float sidebar = block->mixar_sheet_sidebar;
+  if (header > 0.0f) {
+    const rctf rule = {
+        frame.xmin + line, frame.xmax - line, frame.ymax - header - line * 0.5f, frame.ymax - header + line * 0.5f};
+    draw_roundbox_4fv(&rule, true, 0.0f, border);
+  }
+  if (sidebar > 0.0f) {
+    const rctf rule = {frame.xmin + sidebar - line * 0.5f,
+                       frame.xmin + sidebar + line * 0.5f,
+                       frame.ymin + line,
+                       header > 0.0f ? frame.ymax - header : frame.ymax - line};
+    draw_roundbox_4fv(&rule, true, 0.0f, border);
+  }
+
+  GPU_blend(GPU_BLEND_NONE);
+}
+
+bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardElement element)
+{
+  if (!UI_mixar_sheet_element_is(element)) {
+    return false;
+  }
+  GPU_blend(GPU_BLEND_ALPHA);
+  switch (element) {
+    case MixarCardElement::SheetTitle:
+      draw_title(but, rect);
+      break;
+    case MixarCardElement::SheetClose:
+      draw_close(but, rect);
+      break;
+    case MixarCardElement::SheetCaption:
+      draw_caption(but, rect);
+      break;
+    case MixarCardElement::SheetProviderRow:
+      draw_provider_row(but, rect);
+      break;
+    case MixarCardElement::SheetFooterRow:
+      draw_footer_row(but, rect);
+      break;
+    case MixarCardElement::SheetChip:
+      draw_chip(but, rect);
+      break;
+    case MixarCardElement::SheetPrompt:
+      draw_text(but, rect, prompt_size, text_dim);
+      break;
+    case MixarCardElement::SheetNote:
+      draw_text(but, rect, note_size, text_dim);
+      break;
+    case MixarCardElement::SheetBody:
+      draw_text(but, rect, body_size, text_body);
+      break;
+    case MixarCardElement::SheetDangerText:
+      draw_text(but, rect, caption_size, text_danger);
+      break;
+    case MixarCardElement::SheetPrimary:
+    case MixarCardElement::SheetSecondary:
+    case MixarCardElement::SheetDangerButton:
+      draw_pill(but, rect, element);
+      break;
+    case MixarCardElement::SheetInput:
+      UI_mixar_sheet_input_draw(but, rect);
+      break;
+    case MixarCardElement::SheetDropdown:
+      UI_mixar_sheet_dropdown_draw(but, rect);
+      break;
+    default:
+      break;
+  }
+  GPU_blend(GPU_BLEND_NONE);
+  return true;
+}
+
+}  // namespace blender::ui

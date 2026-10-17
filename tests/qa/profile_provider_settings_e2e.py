@@ -170,21 +170,22 @@ def open_picker(qa, area_type, active):
     expected = 2 if active else 3  # the key's two models | Mixar default + two hosted
     if len(models) != expected or not all(enabled for _, enabled in models):
         raise ScenarioFail(f'{area_type} model rows do not match BYOK={active}: {models}')
-    if not active:
-        mp.show_tab(qa, 'KEY')
-    settings = qa.find(**mp.SETTINGS_ROW)['widgets']
-    if len(settings) != 1 or not settings[0]['enabled']:
-        raise ScenarioFail(f'{area_type} shared settings route unavailable')
+    if active:
+        settings = qa.find(**mp.SETTINGS_ROW)['widgets']
+        if len(settings) != 1 or not settings[0]['enabled']:
+            raise ScenarioFail(f'{area_type} shared settings route unavailable')
 
 
 def island_settings(qa):
     import model_popup as mp
-    mp.settings(qa)
+    mp.open_settings(qa)
 
 
 def save(qa, model, name):
-    qa.step(name + '_model', qa.cmd, 'choose',
-            widget={'prop': 'byok_form_model', 'popup': True}, item=model)
+    # The sheet: models are chips (mixar_byok.pick), not a dropdown.
+    qa.step(name + '_model', qa.click, op='MIXAR_BYOK_OT_pick', text=model, popup=True)
+    qa.wait(f"{WM}.byok_form_model and drv.find(op='MIXAR_BYOK_OT_pick', text={model!r}, popup=True)",
+            timeout=5)
     qa.step(name + '_key', qa.cmd, 'set_text',
             widget={'prop': 'byok_form_api_key', 'popup': True},
             text='qa-synthetic-key', enter=False)
@@ -226,7 +227,7 @@ def run(qa):
         qa.step('island_shared_dialog', island_settings, qa)
         check_dialog(qa)
         qa.wait(f"{WM}.byok_current_model == 'qa-one' and {WM}.byok_form_model == 'qa-one'", timeout=5)
-        snaps.append(snap(qa, 'island_sees_profile_save', {'prop': 'byok_form_model', 'popup': True}))
+        snaps.append(snap(qa, 'island_sees_profile_save', {'op': 'MIXAR_BYOK_OT_save', 'popup': True}))
         remove(qa, 'island_remove')
         snaps.append(open_profile(qa, 'after_island_remove'))
         qa.wait(f"not {WM}.byok_is_active", timeout=5)
@@ -239,7 +240,7 @@ def run(qa):
         save(qa, 'QA Model Two', 'bubble_save')
         snaps.append(open_profile(qa, 'after_bubble_save'))
         qa.wait(f"{WM}.byok_current_model == 'qa-two' and {WM}.byok_form_model == 'qa-two'", timeout=5)
-        snaps.append(snap(qa, 'profile_sees_bubble_save', {'prop': 'byok_form_model', 'popup': True}))
+        snaps.append(snap(qa, 'profile_sees_bubble_save', {'op': 'MIXAR_BYOK_OT_save', 'popup': True}))
         remove(qa, 'profile_remove')
         qa.step('bubble_reflects_profile_remove', open_picker, qa, 'AGENT_BUBBLE', False)
         import model_popup as mp

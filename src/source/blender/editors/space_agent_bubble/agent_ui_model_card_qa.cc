@@ -66,6 +66,7 @@ void qa_targets(const wmWindow *win,
     t.index = i;
     t.sel = state->tabs[i].id == state->tab;
     t.enabled = state->tabs[i].enabled;
+    t.detail = state->tabs[i].action;
   }
   for (int i = 0; i < int(state->lines.size()); i++) {
     rctf r;

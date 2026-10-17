@@ -18,8 +18,9 @@ clicks, every transition a user can make:
      offers the paused key's models;
   5. a key-tab row with a paused key RESUMES it: the record is re-sent;
   6. a failed pause leaves the key in use and raises a toast;
-  7. the key tab's "Manage key…" while paused opens settings that say
-     "Paused", name the key, and "Use my key" resumes it from there;
+  7. the key tab's "Manage key…" while paused opens the settings sheet, whose
+     line says "Paused, Mixie is answering" and names the key; "Use my key"
+     resumes it from there;
   8. Remove key (two clicks) deletes the rows AND the record; the chip lands
      on Mixie and the key tab is "Add a key" again.
 
@@ -118,9 +119,13 @@ def snap(qa, name, target, margin=1500):
 
 
 def open_settings_from_tab(qa, tab_id, text):
-    """Open AI Provider Settings from a popup tab's footer row."""
-    mp.show_tab(qa, tab_id)
-    mp.settings(qa, text)
+    """Open AI Provider Settings from the card: "Add a key" is one click on
+    the tab itself; otherwise the tab's footer row (``text``)."""
+    if text == 'Add a key…':
+        mp.open_settings(qa)
+    else:
+        mp.show_tab(qa, tab_id)
+        mp.settings(qa, text)
     qa.wait(f"{OPS}._dialog_open", timeout=5)
 
 
@@ -245,15 +250,15 @@ def run(qa):
         qa.wait(f"{WM}.byok_key_resumable", timeout=5)
         qa.step('manage_paused_key', open_settings_from_tab, qa, 'KEY', 'Manage key…')
         check_dialog(qa)
-        qa.wait("bool(drv.find(text='Paused', popup=True)) and "
-                "bool(drv.find(text='Your key is paused', contains=True, popup=True))", timeout=5)
+        qa.wait("bool(drv.find(text='Paused, Mixie is answering', contains=True, popup=True))",
+                timeout=5)
         qa.wait(f"bool(drv.find(**{USE_MY_KEY!r})) and bool(drv.find(**{FORGET!r}))", timeout=5)
         if qa.eval(f"result={WM}.byok_form_provider") != 'openai':
             raise ScenarioFail('The paused key did not prefill the form')
         snaps.append(snap(qa, 'settings_while_paused', USE_MY_KEY))
         qa.step('use_my_key', qa.click, **USE_MY_KEY)
         qa.wait(f"len({FIXTURE}.puts) == 5 and {WM}.byok_is_active", timeout=10)
-        qa.wait("bool(drv.find(text='Current Configuration', popup=True))", timeout=5)
+        qa.wait("bool(drv.find(text='In use:', contains=True, popup=True))", timeout=5)
 
         # 8. Remove key: two clicks delete the rows and the record.
         remove(qa, 'remove')

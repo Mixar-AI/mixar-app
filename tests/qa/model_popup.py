@@ -85,3 +85,16 @@ def pick(qa, text, contains=False):
 def settings(qa, text=None):
     """Click a footer action (AI Provider Settings)."""
     qa.click(**dict(SETTINGS_ROW, **({'text': text} if text else {})))
+
+
+def open_settings(qa):
+    """AI Provider Settings from the card, the way a person gets there: with
+    no key saved the key tab is itself the action (one click); otherwise its
+    footer ("Manage key…" / "Enter key…")."""
+    open_popup(qa)
+    action = qa.eval(f"result=next((w['detail'] for w in drv.find(**{TAB!r}) if w['value'] == 'KEY'), '')")
+    if action == 'settings':
+        qa.click(**TAB, value='KEY')
+        return
+    show_tab(qa, 'KEY')
+    settings(qa)

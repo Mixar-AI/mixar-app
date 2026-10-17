@@ -7,6 +7,10 @@ struct rcti;
 struct rctf;
 
 namespace blender::ui {
+/** The bundled Clash Grotesk display face as a BLF font id, or -1 when the
+ * datafile is missing. Resolved by path on every call so no stale id survives
+ * a UI-font reload; the Cinema label and the AI Provider sheet share it. */
+int mixar_clash_grotesk_font();
 /** Shared Cinema capsule: one visible height, inset, radius, fill and border
  * in both hosts, independent of their native header hit-target heights. */
 void mixar_cinema_background(const rctf &bounds, float selected, float emphasis);

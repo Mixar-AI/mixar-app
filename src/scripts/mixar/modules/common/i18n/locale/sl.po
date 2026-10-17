@@ -1592,9 +1592,6 @@ msgstr ""
 msgid "Enter key…"
 msgstr ""
 
-msgid "Add a key…"
-msgstr ""
-
 msgid "Set up local model…"
 msgstr ""
 
@@ -1664,124 +1661,40 @@ msgstr ""
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Uporablja vašo naročnino ChatGPT — krediti Mixar se ne zaračunajo."
-
 msgid "Choose a Codex model."
 msgstr ""
 
 msgid "Please try again."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Nastavitve ponudnika AI"
-
-msgid "Key needed on this device"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Paused"
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Active"
-msgstr "Aktivno"
-
-msgid "Not configured"
-msgstr "Ni nastavljeno"
-
-msgid "Guide"
-msgstr ""
-
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
-msgstr ""
-
-msgid "Current Configuration"
-msgstr "Trenutna nastavitev"
-
-msgid "Account"
-msgstr "Račun"
 
 msgid "ChatGPT subscription"
 msgstr "Naročnina ChatGPT"
 
-msgid "API Key"
-msgstr "Ključ API"
-
-msgid "Stored securely"
-msgstr "Shranjeno varno"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Model samo za besedilo — klepet deluje; opravila 3D tečejo brez vidne povratne informacije."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Your key is paused — Mixie is answering"
+msgid "stored securely"
 msgstr ""
 
-msgid "Saved on this computer: {provider} · {model}"
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Pick one of its models from the model chip in the chat bar to switch back. Saving a key below replaces it."
-msgstr ""
-
-msgid "Use my key"
-msgstr ""
-
-msgid "Forget saved key"
-msgstr ""
-
-msgid "Codex sign-in needed on this device"
-msgstr ""
-
-msgid "Run  codex login  on this computer, then save below."
-msgstr ""
-
-msgid "Enter your API key to continue"
-msgstr ""
-
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Nastavitev ponudnika"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1790,25 +1703,31 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Keep my key"
 msgstr ""
 
-msgid "Key removed"
+msgid "Remove key"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "API KEY REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Poskusi znova"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1832,8 +1751,8 @@ msgstr "Preneseno — ne teče"
 msgid "Not downloaded"
 msgstr "Ni prenesen"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Teče v celoti na tem računalniku — vaši pozivi ga ne zapustijo, razen prek orkestracije agenta Mixar."
+msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Prekliči prenos"
@@ -1859,9 +1778,6 @@ msgstr "Osnovni URL"
 msgid "API Key (optional)"
 msgstr "Ključ API (neobvezno)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Kateri koli strežnik, združljiv z OpenAI, na tem računalniku — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Krajevnega ponudnika ni bilo mogoče shraniti."
 
@@ -1870,6 +1786,9 @@ msgstr "Znova preišči krajevne aplikacije"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "Znova preišče ta računalnik za zagnanimi krajevnimi aplikacijami AI"
+
+msgid "AI Provider Settings"
+msgstr "Nastavitve ponudnika AI"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Uporabite lasten ključ API za agenta Mixar. Dokler je aktiven, se za zahteve agenta krediti Mixar ne zaračunajo."
@@ -1907,6 +1826,99 @@ msgstr ""
 msgid "Couldn't remove your API key"
 msgstr ""
 
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "LOCAL MODEL"
+msgstr ""
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file (empty = the default ~/.codex/auth.json)"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {provider} · {model} · {key}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Remove API Key"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Poskusi znova"
+
+msgid "Save & Activate"
+msgstr ""
+
 msgid "Refresh BYOK State"
 msgstr "Osveži stanje BYOK"
 
@@ -1941,6 +1953,9 @@ msgid "Use My Key"
 msgstr ""
 
 msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
 msgstr ""
 
 msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
@@ -2009,6 +2024,9 @@ msgstr "Ponudnik LLM"
 msgid "Model to use with the selected provider"
 msgstr "Model za uporabo z izbranim ponudnikom"
 
+msgid "API Key"
+msgstr "Ključ API"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Vaš ključ API je shranjen šifrirano in se uporablja le za zahteve agenta Mixar. Po shranjevanju je prikazan le zamaskiran predogled."
 
@@ -2050,6 +2068,9 @@ msgstr "BYOK aktiven"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Drži, ko strežnik za tega uporabnika javi byok_active"
+
+msgid "Key needed on this device"
+msgstr ""
 
 msgid "Saved key paused"
 msgstr ""
@@ -2413,6 +2434,9 @@ msgstr "Čakalna vrsta otoka agenta ni na voljo"
 
 msgid "Show every job"
 msgstr "Pokaži vsako opravilo"
+
+msgid "Active"
+msgstr "Aktivno"
 
 msgid "Show pending or running jobs"
 msgstr "Pokaži čakajoča ali tekoča opravila"
@@ -27423,6 +27447,66 @@ msgstr "Z nevarnostjo obarvan gumb dejanja"
 msgid "Borderless quiet action button"
 msgstr "Tihi gumb dejanja brez obrobe"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Značka"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Drsnik načina levo"
 
@@ -27587,9 +27671,6 @@ msgstr "Glif"
 
 msgid "Header glyph"
 msgstr "Glif glave"
-
-msgid "Chip"
-msgstr "Značka"
 
 msgid "Chip track"
 msgstr "Tirnica značke"

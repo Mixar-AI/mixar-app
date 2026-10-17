@@ -27,6 +27,7 @@ from mixar.modules.common.i18n import iface_, n_
 from . import catalog_labels, model_menu, model_suggestions
 
 TAB_MIXIE, TAB_KEY, TAB_LOCAL = "MIXIE", "KEY", "LOCAL"
+ACTION_SETTINGS = "settings"
 TABS = (TAB_MIXIE, TAB_KEY, TAB_LOCAL)
 RS, FS = "\x1e", "\x1f"
 
@@ -51,7 +52,6 @@ EMPTY_NOTE = n_("No models available — contact support")
 NOT_ON_PLAN = n_("Not on your plan")
 MANAGE_KEY = n_("Manage key…")
 ENTER_KEY = n_("Enter key…")
-ADD_KEY = n_("Add a key…")
 SETUP_LOCAL = n_("Set up local model…")
 CHANGE_SLUG = n_("Change model slug…")
 OPENROUTER_META = n_("OpenRouter")
@@ -66,6 +66,9 @@ class Tab:
     cost: str = ""
     note: str = ""
     heading: str = ""
+    #: "settings": the tab is an action, not a page — a click opens AI
+    #: Provider Settings at once (no key saved: nothing to pick from).
+    action: str = ""
 
 
 @dataclass(frozen=True)
@@ -132,7 +135,7 @@ def build_tabs(state: Dict[str, Any]) -> List[Tab]:
                         cost=iface_(COST_FREE), note=iface_(PAUSED_NOTE), heading=iface_(HEADING_KEY)))
     else:
         tabs.append(Tab(TAB_KEY, iface_(ADD_KEY_TAB), cost=iface_(COST_FREE),
-                        heading=iface_(HEADING_ADD_KEY)))
+                        heading=iface_(HEADING_ADD_KEY), action=ACTION_SETTINGS))
     if state["source"] == TAB_LOCAL:
         tabs.append(Tab(TAB_LOCAL, iface_(LOCAL_LABEL), cost=iface_(COST_FREE),
                         heading=iface_(HEADING_LOCAL)))
@@ -180,9 +183,7 @@ def _key_rows(state) -> List[Row]:
     rows: List[Row] = []
     provider = state["key_provider"] or (state["resume_provider"] if state["resumable"] else "")
     if not provider:
-        rows.append(Row(TAB_KEY, ROW_FOOTER, iface_(ADD_KEY)))
-        rows.append(Row(TAB_KEY, ROW_FOOTER, iface_(SETUP_LOCAL)))
-        return rows
+        return rows  # The tab itself opens the settings (Tab.action).
     paused = not state["key_provider"]
     current_model = state["resume_model"] if paused else state["key_model"]
     live = not state["key_missing"]
@@ -256,7 +257,7 @@ def _clean(text: str) -> str:
 
 def encode_tabs(tabs: Sequence[Tab]) -> str:
     return RS.join(FS.join([t.id, _clean(t.label), "1" if t.enabled else "0", _clean(t.cost), _clean(t.note),
-                            _clean(t.heading)])
+                            _clean(t.heading), t.action])
                    for t in tabs)
 
 
@@ -273,7 +274,7 @@ def decode_tabs(text: str) -> List[Tab]:
         if not rec:
             continue
         f = rec.split(FS)
-        out.append(Tab(f[0], f[1], f[2] == "1", f[3], f[4], f[5]))
+        out.append(Tab(f[0], f[1], f[2] == "1", f[3], f[4], f[5], f[6] if len(f) > 6 else ""))
     return out
 
 

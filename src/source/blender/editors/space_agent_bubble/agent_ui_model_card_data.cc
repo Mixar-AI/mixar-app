@@ -176,7 +176,7 @@ void refresh(bContext *C, State &state, const bool force)
   for (const std::string &rec : split(tabs, RS)) {
     const std::vector<std::string> f = split(rec, FS);
     if (f.size() >= 6) {
-      state.tabs.push_back({f[0], f[1], f[3], f[4], f[5], f[2] == "1"});
+      state.tabs.push_back({f[0], f[1], f[3], f[4], f[5], f[2] == "1", f.size() > 6 ? f[6] : ""});
     }
   }
   state.rows.clear();

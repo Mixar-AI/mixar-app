@@ -26,7 +26,7 @@
 
 namespace blender::ui {
 
-static int cinema_font()
+int mixar_clash_grotesk_font()
 {
   const auto dir = BKE_appdir_folder_id(BLENDER_DATAFILES, BLF_DATAFILES_FONTS_DIR);
   if (!dir) {
@@ -177,7 +177,7 @@ void mixar_cinema_label(const rcti &bounds,
    * UI_SCALE_FAC below applies the user's UI scale and display density. */
   constexpr float label_scale = 1.47f * 0.80f;
   const uiFontStyle style = mixar_card_font(label_scale, 0);
-  const int custom_font = cinema_font();
+  const int custom_font = mixar_clash_grotesk_font();
   const int font = custom_font >= 0 ? custom_font : BLF_default();
   if (font < 0) {
     return;

@@ -150,8 +150,7 @@ def snap(qa, name):
 def open_from_island(qa):
     # The model chip's popup; its key tab's footer is the settings route
     # ("Add a key…" / "Manage key…" / "Enter key…", whichever applies).
-    mp.show_tab(qa, 'KEY')
-    mp.settings(qa)
+    mp.open_settings(qa)
     qa.wait(DIALOG_OPEN, timeout=10)
     return True
 

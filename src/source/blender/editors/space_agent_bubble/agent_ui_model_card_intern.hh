@@ -24,10 +24,13 @@ struct wmWindow;
 
 namespace agent_model_card {
 
-/** One source tab: `id|label|enabled|cost|note|heading` on the wire. */
+/** One source tab: `id|label|enabled|cost|note|heading|action` on the wire.
+ * `action == "settings"`: the tab is a button, not a page — a click opens AI
+ * Provider Settings (no key saved: there is nothing to pick from). */
 struct Tab {
   std::string id, label, cost, note, heading;
   bool enabled = true;
+  std::string action;
 };
 
 /** One row: `tab|kind|label|meta|current|enabled|provider|model|thinking`. */

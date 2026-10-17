@@ -554,6 +554,6 @@ def test_the_dialog_names_the_paused_key_and_prefills_it(env):
     assert byok_dialog_support.saved_provider_model(wm) == ("anthropic", "claude-opus-5-5")
     assert byok_dialog_ui._key_paused(wm)
     source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
-              / "byok_dialog_ui.py").read_text(encoding="utf-8")
+              / "byok_provider_settings_ui.py").read_text(encoding="utf-8")
     assert 'OP_USE_KEY = "mixar_byok.use_key"' in source
     assert 'OP_FORGET_KEY = "mixar_byok.forget_stored_key"' in source
