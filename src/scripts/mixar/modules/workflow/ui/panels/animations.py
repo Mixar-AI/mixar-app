@@ -60,25 +60,18 @@ class MIXAR_PT_animations(bpy.types.Panel):
         if state.preview_name:
             layout.separator()
             player = layout.box()
-            player.label(text='Preparing preview…' if state.preparing else 'Previewing',
-                         icon='TIME' if state.preparing else 'PLAY')
+            player.label(text='Previewing', icon='PLAY')
             player.label(text=state.preview_name, translate=False)
             controls = player.row(align=True)
-            pause = controls.row(align=True)
-            pause.enabled = not state.preparing
-            pause.operator('mixar.animation_pause', text='',
-                           icon='PAUSE' if state.playing else 'PLAY')
+            controls.operator('mixar.animation_pause', text='',
+                              icon='PAUSE' if state.playing else 'PLAY')
             controls.prop(state, 'loop', toggle=True)
             controls.operator('mixar.animation_stop', icon='SNAP_FACE')
             if session and session.target.type == 'ARMATURE':
-                visibility = player.row()
-                visibility.enabled = not state.preparing
-                visibility.prop(state, 'hide_rig', toggle=True,
-                                icon='HIDE_ON' if state.hide_rig else 'HIDE_OFF')
-            scrub = player.row()
-            scrub.enabled = not state.preparing
-            scrub.prop(state, 'position', text='Position', slider=True)
-            player.label(text='Preview only · your scene is unchanged')
+                player.row().prop(state, 'hide_rig', toggle=True,
+                                  icon='HIDE_ON' if state.hide_rig else 'HIDE_OFF')
+            player.row().prop(state, 'position', text='Position', slider=True)
+            player.label(text='Stop restores the original animation')
 
 
 classes = (MIXAR_PT_animations,)

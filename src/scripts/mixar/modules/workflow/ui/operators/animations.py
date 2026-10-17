@@ -4,9 +4,12 @@
 import bpy
 from bpy.props import IntProperty, StringProperty
 
+from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_, tip_
 from ...constants import BASIC_WORKSPACE_NAME
 from ...core import animation_browser as browser, animation_preview as preview
+
+_logger = get_logger(__name__)
 
 
 class MIXAR_OT_animations_open(bpy.types.Operator):
@@ -38,13 +41,13 @@ class MIXAR_OT_animation_refresh(bpy.types.Operator):
 class MIXAR_OT_animation_preview(bpy.types.Operator):
     bl_idname = 'mixar.animation_preview'
     bl_label = 'Preview Animation'
-    bl_description = 'Play this animation in a temporary copy; your project stays unchanged'
+    bl_description = 'Play this animation on the object; Stop restores its original animation'
     action_name: StringProperty(options={'SKIP_SAVE'})
     slot_handle: IntProperty(options={'SKIP_SAVE'})
 
     @classmethod
     def description(cls, context, properties):
-        return tip_("Preview {animation} without changing your scene").format(
+        return tip_("Preview {animation}; Stop restores the original animation").format(
             animation=properties.action_name)
 
     @classmethod
@@ -52,9 +55,8 @@ class MIXAR_OT_animation_preview(bpy.types.Operator):
         if bpy.app.is_job_running('RENDER'):
             cls.poll_message_set('Wait for the render to finish')
             return False
-        scene = preview.current().source if preview.current() else context.scene
-        if (getattr(scene, 'mixie_chat_is_busy', False)
-                or getattr(scene, 'mixie_run_open', False)):
+        if (getattr(context.scene, 'mixie_chat_is_busy', False)
+                or getattr(context.scene, 'mixie_run_open', False)):
             cls.poll_message_set('Wait for the agent to finish')
             return False
         if context.mode != 'OBJECT':
@@ -67,11 +69,17 @@ class MIXAR_OT_animation_preview(bpy.types.Operator):
         try:
             preview.start(context, self.action_name, self.slot_handle)
             bpy.ops.mixar.animation_preview_controls('INVOKE_DEFAULT')
-        except (ValueError, RuntimeError, ReferenceError) as exc:
+        except Exception as exc:
+            # start() restores its own partial changes; this covers the modal.
             if preview.current() is not previous:
                 preview.stop()
+            if isinstance(exc, (ValueError, RuntimeError, ReferenceError)):
+                reason = rpt_(str(exc))
+            else:
+                _logger.exception('Animation preview could not start')
+                reason = rpt_("Unexpected error")
             self.report({'WARNING'}, rpt_("Could not preview animation: {reason}").format(
-                reason=rpt_(str(exc))))
+                reason=reason))
             browser.invalidate()
             return {'CANCELLED'}
         return {'FINISHED'}
@@ -80,7 +88,7 @@ class MIXAR_OT_animation_preview(bpy.types.Operator):
 class MIXAR_OT_animation_stop(bpy.types.Operator):
     bl_idname = 'mixar.animation_stop'
     bl_label = 'Stop Preview'
-    bl_description = 'Return to your scene and its original animation'
+    bl_description = 'Stop the preview and restore the original animation'
 
     @classmethod
     def poll(cls, context):
@@ -98,7 +106,7 @@ class MIXAR_OT_animation_pause(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return preview.current() is not None and preview.current().ready
+        return preview.current() is not None
 
     def execute(self, context):
         preview.pause()
@@ -119,11 +127,15 @@ class MIXAR_OT_animation_preview_controls(bpy.types.Operator):
         session = preview.current()
         if session is None or session is not self.session:
             return {'FINISHED'}
+        window, area = preview.host()
+        if window is None:
+            preview.stop()
+            return {'FINISHED', 'PASS_THROUGH'}
         if event.value != 'PRESS':
             return {'PASS_THROUGH'}
         # This modal was installed by a popover button and can run before the
         # popup handler. Let the live browser own text entry and its first Esc.
-        if session.window.mixar_refresh_popover('MIXAR_PT_animations'):
+        if window.mixar_refresh_popover('MIXAR_PT_animations'):
             return {'PASS_THROUGH'}
         if event.type == 'SPACE':
             preview.pause()
@@ -131,19 +143,9 @@ class MIXAR_OT_animation_preview_controls(bpy.types.Operator):
         if event.type == 'ESC':
             preview.stop()
             return {'FINISHED'}
-        if event.type == 'Z' and (event.ctrl or event.oskey):
-            preview.stop()
-            # Per-tab undo refuses internal scenes before undo_pre runs.
-            # Restore the source first, then invoke the real undo/redo operator.
-            region = next(r for r in session.area.regions if r.type == 'WINDOW')
-            with context.temp_override(window=session.window, area=session.area, region=region):
-                if event.shift:
-                    bpy.ops.ed.redo()
-                else:
-                    bpy.ops.ed.undo()
-            return {'FINISHED'}
-        # Navigation remains native. Editing shortcuts first return to the
-        # project, so Add/Delete/G/etc cannot create disposable user edits.
+        # Navigation remains native. Editing shortcuts (and Ctrl/Cmd-Z) stop
+        # first: the clip was assigned without an undo push, so the edit or
+        # the native undo/redo then starts from the user's own animation.
         navigation = {'MIDDLEMOUSE', 'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE',
                       'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'TRACKPADPAN', 'TRACKPADZOOM',
                       'LEFT_SHIFT', 'RIGHT_SHIFT', 'LEFT_CTRL', 'RIGHT_CTRL',
@@ -152,9 +154,9 @@ class MIXAR_OT_animation_preview_controls(bpy.types.Operator):
             return {'PASS_THROUGH'}
         if event.type == 'LEFTMOUSE':
             # Keep the preview's transport/browser interactive. Menus outside
-            # the viewport (File/Edit/etc) operate on the original document.
-            if (session.area.x <= event.mouse_x < session.area.x + session.area.width
-                    and session.area.y <= event.mouse_y < session.area.y + session.area.height):
+            # the viewport (File/Edit/etc) stop the preview first.
+            if (area.x <= event.mouse_x < area.x + area.width
+                    and area.y <= event.mouse_y < area.y + area.height):
                 return {'PASS_THROUGH'}
         if event.type not in {'TIMER', 'WINDOW_DEACTIVATE'}:
             preview.stop()

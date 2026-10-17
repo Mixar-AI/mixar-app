@@ -6,8 +6,9 @@
 QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4899 \
 QA_SCENARIO_OUT=/tmp/animation-parenting python3 tests/qa/animation_parenting_e2e.py
 
-Checks evaluated skinned vertices and bone-parented props against the original
-scene at the same clip/frame, including nested nonidentity parent inverses.
+The clip plays on the real rig, so skinned vertices and bone-parented props
+must match assigning the same clip/frame by hand, including nested nonidentity
+parent inverses; Stop must leave parenting and world transforms as they were.
 """
 import os
 from pathlib import Path
@@ -76,8 +77,7 @@ result=expected
 """
 
 SNAPSHOT = BASE + """
-p=preview.current()
-s=p.source if p else w.scene
+s=w.scene
 result={obj.name:{'parent':obj.parent.name if obj.parent else '',
                  'type':obj.parent_type,'bone':obj.parent_bone,
                  'inverse':[list(row) for row in obj.matrix_parent_inverse],
@@ -86,13 +86,18 @@ result={obj.name:{'parent':obj.parent.name if obj.parent else '',
 """
 
 GEOMETRY = BASE + """
-p=preview.current()
 with bpy.context.temp_override(window=w,area=a,region=r):
     deps=bpy.context.evaluated_depsgraph_get()
     result={obj.name:[list(ev.matrix_world @ v.co) for v in ev.data.vertices]
-            for obj,copy in p.copies.items() if copy.type=='MESH'
-            for ev in [copy.evaluated_get(deps)]}
+            for obj in w.scene.objects if obj.type=='MESH'
+            for ev in [obj.evaluated_get(deps)]}
 """
+
+
+def links(snapshot):
+    """Parenting only: bone-parented props move with the clip during preview."""
+    return {name: {k: v for k, v in data.items() if k != 'world'}
+            for name, data in snapshot.items()}
 
 
 def run(qa):
@@ -118,20 +123,13 @@ def run(qa):
         errors={name:max(abs(a-b) for point,reference in zip(points,expected[clip][name])
                          for a,b in zip(point,reference)) for name,points in actual.items()}
         assert max(errors.values())<1e-4, errors
-        links=qa.eval(BASE+"""
-p=preview.current()
-result=all(copy.parent==p.copies[obj.parent] and
-           copy.matrix_parent_inverse==obj.matrix_parent_inverse and
-           copy.parent_type==obj.parent_type and copy.parent_bone==obj.parent_bone
-           for obj,copy in p.copies.items() if obj.parent in p.copies)
-""")
-        assert links
-        assert qa.eval(SNAPSHOT)==original
+        assert qa.eval(BASE+"result=w.scene.objects['QA Robot Rig'].animation_data.action.name")==clip
+        assert links(qa.eval(SNAPSHOT))==links(original)
         qa.click(op='MIXAR_OT_animation_stop',region_type='HEADER')
         assert qa.eval(SNAPSHOT)==original
         assert qa.eval(COUNTS)==counts
     qa.step('skinned_mesh_and_bone_props_remain_attached',lambda:True)
-    return {'clips':['Wave','Walk'],'source_unchanged':True,
+    return {'clips':['Wave','Walk'],'original_restored':True,
             'max_vertex_error':max(errors.values()),'evidence':str(OUT)}
 
 

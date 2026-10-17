@@ -1,22 +1,27 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Disposable, time-budgeted scene preview. Source animation is never assigned.
+"""NLA-style preview: the clip temporarily drives the real target in its scene.
 
-The original window scene/view layer and playback remain pinned until Stop.
-Save, load, undo and workspace changes tear down the copy. The browser may
-close while playback continues; the toolbar always keeps Pause and Stop.
-All bpy work is on a timer/main thread; each copy pass yields after 4 ms.
+Like the NLA editor's preview, Play assigns the clip to the target (the rig of
+a skinned mesh) without an undo push; Stop restores the snapshot taken first
+(``animation_snapshot``), the frame/subframe, rig visibility and prior playback.
+Switching clips keeps that original snapshot. Save, load, undo/redo, editing
+keys and leaving Zen stop the preview. The browser may close while playback
+continues; the toolbar always keeps Pause and Stop.
+
+The session keeps ID references and window/area *pointers*: raw wmWindow and
+ScrArea RNA is not invalidated when freed, so both are re-resolved on use.
 """
 import time
 from types import SimpleNamespace
 
 import bpy
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
-from mixar.modules.common.render_coordinator.constants import INTERNAL_ANIMATION_SCENE_PROP
 from . import animation_catalog as catalog
-from . import animation_preview_data as preview_data
+from . import animation_snapshot as snapshots
 
 _session = None
 _logger = get_logger(__name__)
@@ -24,6 +29,34 @@ _logger = get_logger(__name__)
 
 def current():
     return _session
+
+
+def find_host(window_ptr, area_ptr):
+    """(window, area) still open at these addresses, else (None, None)."""
+    for window in bpy.context.window_manager.windows:
+        if window.as_pointer() == window_ptr:
+            area = next((a for a in window.screen.areas if a.as_pointer() == area_ptr), None)
+            return (window, area) if area is not None else (None, None)
+    return None, None
+
+
+def host(session=None):
+    session = session or _session
+    return find_host(session.window_ptr, session.area_ptr) if session else (None, None)
+
+
+def is_host(context):
+    session = _session
+    return bool(session and context.window and context.area
+                and session.window_ptr == context.window.as_pointer()
+                and session.area_ptr == context.area.as_pointer())
+
+
+def _alive(obj):
+    try:
+        return obj is not None and bool(obj.name)
+    except ReferenceError:
+        return False
 
 
 def _playback(window, start):
@@ -34,136 +67,107 @@ def _playback(window, start):
             bpy.ops.screen.animation_play()
 
 
-def _remap(owner, copies):
-    """Retarget only copied object references; mesh/material data stay linked."""
-    for prop in owner.bl_rna.properties:
-        if prop.type != 'POINTER' or prop.is_readonly:
-            continue
-        value = getattr(owner, prop.identifier, None)
-        if isinstance(value, bpy.types.Object) and value in copies:
-            setattr(owner, prop.identifier, copies[value])
-
-
-def _copy_objects(session):
-    for obj in session.source.objects:
-        copy = obj.copy()
-        session.objects.append(copy)
-        session.copies[obj] = copy
-        session.scene.collection.objects.link(copy)
-        preview_data.isolate_object(obj, copy, session)
-        # Preview is inspectable and navigable, never an editable project.
-        copy.hide_select = True
-        yield
-    references = session.copies | session.data_copies
-    for original, copy in session.copies.items():
-        if original.parent in session.copies:
-            copy.parent = session.copies[original.parent]
-            # Blender's parent setter resets parent inverse to identity.
-            # Restore the binding offset after remapping, including bone and
-            # nested import-root parenting, so meshes stay aligned to the rig.
-            copy.matrix_parent_inverse = original.matrix_parent_inverse.copy()
-        for owner in (*copy.modifiers, *copy.constraints):
-            _remap(owner, session.copies)
-        if copy.pose:
-            for bone in copy.pose.bones:
-                for constraint in bone.constraints:
-                    _remap(constraint, session.copies)
-        preview_data.remap_drivers(copy, references)
-        # Flattening into the preview's root collection loses collection and
-        # layer exclusions. Preserve effective viewport visibility, not just
-        # the object's own Hide flag (rig helpers often rely on collections).
-        copy.hide_set(not original.visible_get(view_layer=session.layer,
-                                              viewport=session.area.spaces.active),
-                      view_layer=session.scene.view_layers[0])
-        yield
-    for data in session.data_copies.values():
-        preview_data.remap_drivers(data, references)
-        yield
+def _view_layer(session):
+    return session.scene.view_layers.get(session.layer_name)
 
 
 def start(context, action_name, slot_handle):
     global _session
     previous = _session
+    window, area = context.window, context.area
+    # A clip switch carries the session's snapshot only within its own view layer.
+    if previous is not None and not (
+            window is not None and _alive(previous.target)
+            and previous.scene == window.scene
+            and previous.layer_name == window.view_layer.name):
+        stop()
+        previous = None
+    # Everything that can refuse runs before the first mutation.
     target = previous.target if previous else catalog.selected_target(context)
     action = bpy.data.actions.get(action_name)
     slot = catalog.resolve(action, slot_handle)
-    reason = catalog.compatibility(target, slot, catalog.curves(action, slot))
+    fcurves = catalog.curves(action, slot)
+    reason = catalog.compatibility(target, slot, fcurves)
     if reason:
         raise ValueError(reason)
-    stop(resume=False)
-    window = context.window
-    source = window.scene
-    playing = previous.was_playing if previous else window.screen.is_animation_playing
-    _playback(window, False)
-    first, last = catalog.clip_range(action, catalog.curves(action, slot))
-    scene = bpy.data.scenes.new('~Animation preview')
-    scene[INTERNAL_ANIMATION_SCENE_PROP] = True
-    _session = session = SimpleNamespace(
-        window=window, source=source, layer=window.view_layer, target=target,
-        control_object=(previous.control_object if previous
-                        else context.view_layer.objects.active),
-        target_visible=target.visible_get(view_layer=window.view_layer,
-                                          viewport=context.area.spaces.active),
-        scene=scene, objects=[], copies={}, action=action, slot=slot,
-        data=[], data_copies={}, static_data=set(),
-        first=first, last=max(first, last), was_playing=playing,
-        ready=False, paused=False, origin=time.monotonic(), offset=0.0,
-        area=context.area, workspace=window.workspace, frame=None,
-        last_refresh=0.0,
-    )
+    if target.animation_data is not None and target.animation_data.use_tweak_mode:
+        raise ValueError(n_("Leave NLA tweak mode to preview animations"))
+    if window is None or area is None or area.type != 'VIEW_3D':
+        raise ValueError(n_("Open a 3D viewport to preview animations"))
+    scene, layer = window.scene, window.view_layer
+    first, last = catalog.clip_range(action, fcurves)
+    state = context.window_manager.mixar_animations
+    rig = target.type == 'ARMATURE'
+    if previous is None:
+        session = SimpleNamespace(
+            snapshot=snapshots.capture(target, scene, fcurves),
+            was_playing=window.screen.is_animation_playing,
+            rig_hidden=rig and target.hide_get(view_layer=layer),
+            rig_selected=rig and target.select_get(view_layer=layer),
+            control_object=context.view_layer.objects.active)
+    else:
+        # Keep the original snapshot; only channels this clip adds are read.
+        snapshots.extend(previous.snapshot, target, fcurves)
+        session = SimpleNamespace(
+            snapshot=previous.snapshot, was_playing=previous.was_playing,
+            rig_hidden=previous.rig_hidden, rig_selected=previous.rig_selected,
+            control_object=previous.control_object)
+    # A new namespace per clip retires the previous transport modal.
+    session.__dict__.update(
+        target=target, scene=scene, layer_name=layer.name,
+        workspace=window.workspace, window_ptr=window.as_pointer(),
+        area_ptr=area.as_pointer(), action=action, slot=slot,
+        first=first, last=max(first, last), paused=False,
+        origin=time.monotonic(), offset=0.0, frame=None, last_refresh=0.0)
     try:
-        scene.render.engine = source.render.engine
-        scene.render.fps = source.render.fps
-        scene.render.fps_base = source.render.fps_base
-        scene.world = preview_data.isolate(source.world, session)
-        scene.frame_start = int(first)
-        scene.frame_end = max(scene.frame_start, int(last))
-        scene.tool_settings.use_keyframe_insert_auto = False
-        session.builder = _copy_objects(session)
-        state = context.window_manager.mixar_animations
+        _session = session
+        if previous is None:
+            _playback(window, False)
+        snapshots.assign(target, action, slot)
+        scene.frame_set(int(first), subframe=first % 1)
+        session.frame = int(first)
+        update_rig_visibility()
         state.error = False
         state.preview_name = action.name
         state.active_index = next((i for i, item in enumerate(state.clips)
                                    if item.action_name == action.name
                                    and item.slot_handle == slot_handle), 0)
-        state.preparing = True
         state.playing = True
         if not bpy.app.timers.is_registered(_tick):
             bpy.app.timers.register(_tick, first_interval=0.01)
+        window.mixar_refresh_popover("MIXAR_PT_animations")
     except Exception:
         stop()
         raise
 
 
-def _finish_build(session):
-    copy = session.copies[session.target]
-    anim = copy.animation_data_create()
-    anim.action = session.action
-    if session.slot:
-        anim.action_slot = session.slot
-    anim.use_nla = False
-    anim.action_blend_type = 'REPLACE'
-    anim.action_influence = 1.0
-    anim.action_extrapolation = 'HOLD'
-    session.scene.camera = session.copies.get(session.source.camera)
-    session.scene.frame_set(int(session.first), subframe=session.first % 1)
-    session.window.scene = session.scene
-    session.ready = True
-    update_rig_visibility()
-    session.origin = time.monotonic()
-    bpy.context.window_manager.mixar_animations.preparing = False
-    session.window.mixar_refresh_popover("MIXAR_PT_animations")
-
-
 def update_rig_visibility(_owner=None, _context=None):
-    """Only hide the copied rig's display; its deformation keeps evaluating."""
+    """Hide Rig hides only the armature's display; deformation keeps evaluating."""
     session = _session
-    if session is None or not session.ready or session.target.type != 'ARMATURE':
+    try:
+        if session is None or session.target.type != 'ARMATURE':
+            return
+        layer = _view_layer(session)
+        hide = bpy.context.window_manager.mixar_animations.hide_rig or session.rig_hidden
+        if layer is not None and session.target.hide_get(view_layer=layer) != hide:
+            session.target.hide_set(hide, view_layer=layer)
+    except ReferenceError:
         return
-    hide = bpy.context.window_manager.mixar_animations.hide_rig
-    session.copies[session.target].hide_set(hide or not session.target_visible,
-                                          view_layer=session.scene.view_layers[0])
-    session.area.tag_redraw()
+    _window, area = host()
+    if area is not None:
+        area.tag_redraw()
+
+
+def _restore_rig(session):
+    layer = _view_layer(session)
+    target = session.target
+    if layer is None or target.type != 'ARMATURE':
+        return
+    if target.hide_get(view_layer=layer) != session.rig_hidden:
+        target.hide_set(session.rig_hidden, view_layer=layer)
+        # Hidden objects lose selection; a selected rig comes back selected.
+        if session.rig_selected and not session.rig_hidden:
+            target.select_set(True, view_layer=layer)
 
 
 def _tick():
@@ -171,20 +175,13 @@ def _tick():
     if session is None:
         return None
     try:
-        if (session.window.workspace != session.workspace
-                or session.window.scene not in (session.source, session.scene)
-                or session.area.type != 'VIEW_3D'):
+        window, area = host()
+        if (window is None or window.workspace != session.workspace
+                or window.scene != session.scene or area.type != 'VIEW_3D'
+                or not _alive(session.target)
+                or not (session.control_object is None or _alive(session.control_object))):
             stop()
             return None
-        if not session.ready:
-            deadline = time.perf_counter() + .004
-            while time.perf_counter() < deadline:
-                try:
-                    next(session.builder)
-                except StopIteration:
-                    _finish_build(session)
-                    break
-            return .01
         if session.paused:
             return .25
         state = bpy.context.window_manager.mixar_animations
@@ -201,7 +198,7 @@ def _tick():
             session.scene.frame_set(int(frame))
             session.frame = int(frame)
         if time.monotonic() - session.last_refresh >= .1:
-            session.window.mixar_refresh_popover("MIXAR_PT_animations")
+            window.mixar_refresh_popover("MIXAR_PT_animations")
             session.last_refresh = time.monotonic()
         return min(1 / fps, 1 / 30)
     except Exception:
@@ -213,7 +210,7 @@ def _tick():
 
 def pause():
     session = _session
-    if session is None or not session.ready:
+    if session is None:
         return
     session.paused = not session.paused
     session.offset = session.scene.frame_current - session.first
@@ -221,58 +218,67 @@ def pause():
         session.offset = 0
     session.origin = time.monotonic()
     bpy.context.window_manager.mixar_animations.playing = not session.paused
-    session.window.mixar_refresh_popover("MIXAR_PT_animations")
+    window, _area = host()
+    if window is not None:
+        window.mixar_refresh_popover("MIXAR_PT_animations")
 
 
 def position():
     session = _session
-    if not session or not session.ready or session.last <= session.first:
+    if not session or session.last <= session.first:
         return 0.0
-    return (session.scene.frame_current - session.first) / (session.last - session.first)
+    try:
+        return (session.scene.frame_current - session.first) / (session.last - session.first)
+    except ReferenceError:
+        return 0.0
 
 
 def seek(value):
     session = _session
-    if session and session.ready:
+    if session:
         session.offset = value * (session.last - session.first)
         session.origin = time.monotonic()
-        session.scene.frame_set(round(session.first + session.offset))
+        session.frame = round(session.first + session.offset)
+        session.scene.frame_set(session.frame)
 
 
 def stop(*, resume=True):
+    """Restore everything the preview changed. Never raises; always clears."""
     global _session
     session, _session = _session, None
     if session is None:
         return
+    window = None
     try:
-        if session.window.scene == session.scene:
-            _playback(session.window, False)
-            session.window.scene = session.source
-            session.window.view_layer = session.layer
-        if resume and session.was_playing and session.window.scene == session.source:
-            _playback(session.window, True)
-    except (ReferenceError, RuntimeError):
-        pass
-    # Free the scene's evaluated depsgraph before its referenced object IDs.
-    # Viewport cache maintenance can visit inactive scenes' depsgraphs too.
+        window, _area = host(session)
+        if window is not None:
+            _playback(window, False)
+    except Exception:
+        _logger.exception('Could not cancel animation preview playback')
     try:
-        bpy.data.scenes.remove(session.scene)
-    except (ReferenceError, RuntimeError):
+        if not snapshots.restore(session.snapshot, session.target, session.scene):
+            _logger.warning('Animation preview restored only part of the original state')
+    except Exception:
+        _logger.exception('Could not restore the original animation')
+    try:
+        _restore_rig(session)
+    except ReferenceError:
         pass
-    # Free precisely our allocations. No global sweep of the user's IDs.
-    for obj in session.objects:
-        try:
-            bpy.data.objects.remove(obj, do_unlink=True)
-        except (ReferenceError, RuntimeError):
-            pass
-    if session.data:
-        bpy.data.batch_remove(ids=session.data)
+    except Exception:
+        _logger.exception('Could not restore rig visibility')
+    try:
+        if (resume and session.was_playing and window is not None
+                and window.scene == session.scene):
+            _playback(window, True)
+    except Exception:
+        _logger.exception('Could not resume playback after animation preview')
     state = getattr(bpy.context.window_manager, 'mixar_animations', None)
     if state:
         state.preview_name = ''
-        state.preparing = False
         state.playing = False
     try:
-        session.window.mixar_refresh_popover("MIXAR_PT_animations")
+        if window is not None:
+            window.mixar_refresh_popover("MIXAR_PT_animations")
     except ReferenceError:
         pass
+

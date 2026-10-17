@@ -28,20 +28,24 @@ a=next(a for a in w.screen.areas if a.type=='VIEW_3D')
 r=next(r for r in a.regions if r.type=='WINDOW')
 from mixar.modules.workflow.core import animation_preview as preview, animation_browser as browser
 """
+# The user's state that Stop must bring back exactly. Preview plays the clip
+# on the real rig in this scene, so compare it only once no preview runs.
 SNAPSHOT = BASE + """
-p=preview.current()
-s=p.source if p else w.scene
+s=w.scene
 rig=s.objects.get('QA Robot Rig')
+anim=rig.animation_data
 result={'scene':s.name, 'frame':s.frame_current, 'subframe':s.frame_subframe,
         'range':[s.frame_start,s.frame_end,s.use_preview_range],
-        'action':rig.animation_data.action.name,
-        'slot':rig.animation_data.action_slot_handle,
+        'action':anim.action.name,
+        'slot':anim.action_slot_handle,
+        'settings':[anim.use_nla,anim.action_blend_type,anim.action_influence,
+                    anim.action_extrapolation,anim.last_slot_identifier],
         'tracks':[(t.name,t.mute,t.is_solo,[(x.name,x.action.name,x.action_slot_handle,x.frame_start,x.frame_end) for x in t.strips]) for t in rig.animation_data.nla_tracks],
         'root':list(rig.pose.bones['Root'].location),
         'arm':list(rig.pose.bones['Arm'].rotation_euler),
         'shape_key':s.objects['QA Robot Body'].data.shape_keys.key_blocks['Blink'].value,
         'light':s.objects['QA Animated Light'].data.energy,
-        'selection':[o.name for o in s.objects if o.select_get(view_layer=p.layer if p else w.view_layer)],
+        'selection':[o.name for o in s.objects if o.select_get(view_layer=w.view_layer)],
         'sidebar':a.spaces.active.show_region_ui}
 """
 
@@ -63,9 +67,13 @@ def search(qa, text):
 
 def play(qa, name):
     qa.click(op='MIXAR_OT_animation_preview', popup=True,
-             text=f'Preview {name} without changing your scene')
-    qa.wait(f"__import__({MODULE!r},fromlist=['current']).current() is not None and "
-            f"__import__({MODULE!r},fromlist=['current']).current().ready", timeout=10)
+             text=f'Preview {name}; Stop restores the original animation')
+    qa.wait(f"__import__({MODULE!r},fromlist=['current']).current() is not None", timeout=10)
+    # NLA-style: the clip drives the real rig in the user's own scene.
+    assert qa.eval(BASE + "\nrig=w.scene.objects['QA Robot Rig']\n"
+                   "result=[w.scene.name, rig.animation_data.action.name, "
+                   "rig.animation_data.use_nla, preview.current().scene==w.scene]") == [
+        'QA Animations', name, False, True]
 
 
 def run(qa):
@@ -103,21 +111,21 @@ def run(qa):
     qa.step('search_and_empty_state', lambda: True)
 
     play(qa, 'Wave')
-    assert qa.eval(SNAPSHOT) == baseline
+    assert qa.eval(COUNTS) == counts
     qa.click(op='MIXAR_OT_animation_pause', popup=True)
     qa.cmd('set_text', widget={'prop':'position','popup':True}, text='0.5')
     data = qa.eval(BASE + """
-p=preview.current()
-result={'frame':p.scene.frame_current, 'angle':p.copies[p.target].pose.bones['Arm'].rotation_euler.y,
-        'private':bool(p.scene.get('mixar_internal_animation_scene')),
-        'original':p.target.animation_data.action.name,
-        'chat':p.scene.mixie_session_id}
+s=w.scene
+rig=s.objects['QA Robot Rig']
+result={'scene':s.name, 'frame':s.frame_current,
+        'angle':rig.pose.bones['Arm'].rotation_euler.y,
+        'action':rig.animation_data.action.name}
 """)
-    assert data['private'] and not data['chat'] and data['original'] == 'Idle', data
+    assert data['scene'] == baseline['scene'] and data['action'] == 'Wave', data
     assert data['frame'] == 25 and data['angle'] > 1.2, data
-    assert qa.eval(SNAPSHOT) == baseline
+    assert qa.eval(COUNTS) == counts
     snap(qa, '04-wave-preview')
-    qa.step('preview_scrub_and_source_unchanged', lambda: data)
+    qa.step('preview_plays_real_rig_in_the_users_scene', lambda: data)
 
     qa.press('ESC')
     qa.click(op='MIXAR_OT_animation_pause', region_type='HEADER')
@@ -149,9 +157,10 @@ result={'frame':p.scene.frame_current, 'angle':p.copies[p.target].pose.bones['Ar
     qa.press('ESC')
     path = str(OUT / 'preview-safe-save.mixar')
     qa.eval(BASE + f"\nwith bpy.context.temp_override(window=w,area=a,region=r):\n    bpy.ops.wm.save_as_mainfile(filepath={path!r},check_existing=False)\nresult=True")
+    assert qa.eval(BASE + 'result=preview.current() is None')
     assert qa.eval(SNAPSHOT) == baseline
-    assert qa.eval("result=not any(s.get('mixar_internal_animation_scene') for s in bpy.data.scenes)")
-    qa.step('save_stops_preview_and_leaves_no_temporary_ids', lambda: True)
+    assert qa.eval(COUNTS) == counts
+    qa.step('save_stops_preview_and_saves_original_animation', lambda: True)
 
     # Explicit user deselection must not leave stale character clips visible.
     qa.eval(BASE + "\nfor obj in w.view_layer.objects: obj.select_set(False)\nw.view_layer.objects.active=None\nbrowser.invalidate()\nresult=True")
@@ -162,7 +171,7 @@ result={'frame':p.scene.frame_current, 'angle':p.copies[p.target].pose.bones['Ar
     qa.press('ESC')
     assert not qa.eval(BASE + '\nresult=a.spaces.active.show_region_ui')
     qa.step('no_selection_and_n_panel_untouched', lambda: True)
-    return {'source_unchanged': True, 'temporary_ids_removed': True,
+    return {'original_restored': True, 'no_new_ids': True,
             'n_panel_untouched': True, 'evidence': str(OUT), 'platform': sys.platform}
 
 

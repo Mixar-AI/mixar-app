@@ -21,7 +21,7 @@ class MIXAR_UL_animations(bpy.types.UIList):
         op = play.operator('mixar.animation_preview', text='', icon='PLAY')
         op.action_name = item.action_name
         op.slot_handle = item.slot_handle
-        play.mixar_tooltip(text=tip_("Preview {animation} without changing your scene").format(
+        play.mixar_tooltip(text=tip_("Preview {animation}; Stop restores the original animation").format(
             animation=title))
 
 

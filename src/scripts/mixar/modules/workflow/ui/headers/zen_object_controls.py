@@ -21,10 +21,9 @@ def _section(row, panel, label):
 
 
 def draw_object_controls(layout, context):
-    session = animation_preview.current()
-    previewing = bool(session and session.window == context.window
-                      and session.area == context.area)
-    obj = session.control_object if previewing else selected_object(context)
+    previewing = animation_preview.is_host(context)
+    obj = (animation_preview.current().control_object if previewing
+           else selected_object(context))
     if obj is None:
         return
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row(align=True)

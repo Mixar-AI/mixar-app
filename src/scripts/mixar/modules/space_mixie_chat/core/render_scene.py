@@ -87,7 +87,7 @@ def remove(scene) -> None:
     if scene is None:
         return
     try:
-        if scene.get(INTERNAL_RENDER_SCENE_PROP):
+        if is_internal_scene(scene):
             bpy.data.scenes.remove(scene, do_unlink=True)
     except (ReferenceError, RuntimeError):
         pass
@@ -100,7 +100,7 @@ def sweep(keep=None) -> int:
     its job ended. Returns how many were removed.
     """
     removed = 0
-    for scene in [s for s in bpy.data.scenes if s.get(INTERNAL_RENDER_SCENE_PROP)]:
+    for scene in [s for s in bpy.data.scenes if is_internal_scene(s)]:
         try:
             if keep is not None and scene == keep:
                 continue

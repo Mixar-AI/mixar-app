@@ -87,7 +87,7 @@ def run(qa):
     geometry = BASE + """
 p=preview.current()
 with bpy.context.temp_override(window=w,area=a,region=r):
-    obj=p.copies[p.source.objects['QA Robot Arm']]
+    obj=w.scene.objects['QA Robot Arm']
     ev=obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     result=[list(ev.matrix_world @ v.co) for v in ev.data.vertices]
 """
@@ -96,18 +96,18 @@ with bpy.context.temp_override(window=w,area=a,region=r):
     second = qa.eval(geometry)
     movement = max(abs(x-y) for a,b in zip(first,second) for x,y in zip(a,b))
     assert movement > .1, movement
+    # Hide Rig hides the real rig's display only; the mesh keeps deforming.
     rig_visibility = BASE + """
 p=preview.current()
-result=[p.copies[p.target].visible_get(view_layer=w.view_layer),
-        p.target.visible_get(view_layer=p.layer)]
+result=[p.target.visible_get(view_layer=w.view_layer), p.target.hide_viewport]
 """
-    assert qa.eval(rig_visibility) == [False, True]
+    assert qa.eval(rig_visibility) == [False, False]
     snap(qa, '04-hide-rig-panel')
     qa.press('ESC')
     snap(qa, '05-rig-hidden-preview')
     qa.click(text='Animations', **STRIP)
     qa.click(prop='hide_rig', popup=True)
-    assert qa.eval(rig_visibility) == [True, True]
+    assert qa.eval(rig_visibility) == [True, False]
     visible_geometry = qa.eval(geometry)
     assert max(abs(x-y) for a,b in zip(second,visible_geometry) for x,y in zip(a,b)) < 1e-5
     qa.click(prop='hide_rig', popup=True)
@@ -119,12 +119,12 @@ result=[p.copies[p.target].visible_get(view_layer=w.view_layer),
     play(qa, 'Walk')
     qa.press('ESC')
     assert qa.eval(BASE + "result=preview.current().control_object.name") == 'QA Robot Body'
-    assert qa.eval(rig_visibility) == [False, True]
+    assert qa.eval(rig_visibility) == [False, False]
     qa.click(op='MIXAR_OT_animation_stop', region_type='HEADER')
     assert qa.eval(BASE + "result=w.scene.objects['QA Robot Rig'].visible_get(view_layer=w.view_layer)")
     assert qa.find(text='Modifier', enabled=True, **STRIP)['total'] == 1
     qa.step('mesh_preview_pins_source_and_disables_editing', lambda: True)
-    qa.step('hide_rig_keeps_skinning_and_source_visibility', lambda: True)
+    qa.step('hide_rig_keeps_skinning_and_stop_restores_visibility', lambda: True)
 
     # An ordinary unanimated mesh still provides discovery through All in file.
     qa.eval(BASE + """

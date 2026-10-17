@@ -10,7 +10,7 @@ from bpy.app.handlers import persistent
 from ..constants import BASIC_WORKSPACE_NAME
 from . import animation_catalog as catalog, animation_preview as preview
 
-_host = None
+_host = None  # (window, area) pointers; RNA for either may be freed between ticks
 _signature = None
 _scan = None
 _owner = object()
@@ -25,7 +25,7 @@ def invalidate(_owner=None, _context=None):
 
 def open_browser(context):
     global _host
-    _host = (context.window, context.area)
+    _host = (context.window.as_pointer(), context.area.as_pointer())
     invalidate()
     _watch()
     if not bpy.app.timers.is_registered(_watch):
@@ -62,14 +62,16 @@ def _refresh(state, target):
 def _watch():
     global _signature, _scan, _host
     if not _host:
-        _host = next(((w, a) for w in bpy.context.window_manager.windows
+        _host = next(((w.as_pointer(), a.as_pointer())
+                      for w in bpy.context.window_manager.windows
                       if w.workspace.name == BASIC_WORKSPACE_NAME
                       for a in w.screen.areas if a.type == 'VIEW_3D'), None)
         if not _host:
             return None
-    window, area = _host
+    window, area = preview.find_host(*_host)
     try:
-        if window.workspace.name != BASIC_WORKSPACE_NAME or area.type != 'VIEW_3D':
+        if (window is None or window.workspace.name != BASIC_WORKSPACE_NAME
+                or area.type != 'VIEW_3D'):
             close()
             return None
         state = bpy.context.window_manager.mixar_animations

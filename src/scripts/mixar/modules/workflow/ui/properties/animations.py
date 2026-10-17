@@ -31,11 +31,10 @@ class MixarAnimationBrowser(bpy.types.PropertyGroup):
     loading: BoolProperty(options={'SKIP_SAVE'})
     error: BoolProperty(options={'SKIP_SAVE'})
     preview_name: StringProperty(options={'SKIP_SAVE'})
-    preparing: BoolProperty(options={'SKIP_SAVE'})
     playing: BoolProperty(options={'SKIP_SAVE'})
     loop: BoolProperty(name="Loop", default=True, options={'SKIP_SAVE'})
     hide_rig: BoolProperty(name="Hide Rig", default=False,
-                           description="Hide the preview rig while the character keeps animating",
+                           description="Hide the rig while the character keeps animating; Stop shows it again",
                            options={'SKIP_SAVE'}, update=preview.update_rig_visibility)
     position: FloatProperty(name="Position", min=0, max=1, subtype='FACTOR',
                             get=lambda self: preview.position(),

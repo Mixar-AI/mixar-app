@@ -24354,6 +24354,12 @@ msgstr ""
 msgid "The animation slot is no longer available"
 msgstr ""
 
+msgid "Leave NLA tweak mode to preview animations"
+msgstr ""
+
+msgid "Open a 3D viewport to preview animations"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Revenir au précédent"
 
@@ -24390,7 +24396,7 @@ msgstr ""
 msgid "{seconds:.1f}s"
 msgstr ""
 
-msgid "Preview {animation} without changing your scene"
+msgid "Preview {animation}; Stop restores the original animation"
 msgstr ""
 
 msgid "Menu"
@@ -24441,7 +24447,10 @@ msgstr ""
 msgid "Preview Animation"
 msgstr ""
 
-msgid "Play this animation in a temporary copy; your project stays unchanged"
+msgid "Play this animation on the object; Stop restores its original animation"
+msgstr ""
+
+msgid "Unexpected error"
 msgstr ""
 
 msgid "Could not preview animation: {reason}"
@@ -24450,7 +24459,7 @@ msgstr ""
 msgid "Stop Preview"
 msgstr ""
 
-msgid "Return to your scene and its original animation"
+msgid "Stop the preview and restore the original animation"
 msgstr ""
 
 msgid "Play / Pause Preview"
@@ -24561,13 +24570,10 @@ msgstr ""
 msgid "Select an object to preview its clips."
 msgstr ""
 
-msgid "Preparing preview…"
-msgstr ""
-
 msgid "Previewing"
 msgstr ""
 
-msgid "Preview only · your scene is unchanged"
+msgid "Stop restores the original animation"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24699,7 +24705,7 @@ msgstr ""
 msgid "Hide Rig"
 msgstr ""
 
-msgid "Hide the preview rig while the character keeps animating"
+msgid "Hide the rig while the character keeps animating; Stop shows it again"
 msgstr ""
 
 msgid "Active Modifier"

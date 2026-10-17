@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Clip ownership, slot isolation and the private scene lifecycle boundary."""
+"""Clip ownership, slot isolation and discovery; preview contracts live in
+``test_animation_preview.py``."""
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock
 
 from mixar.modules.workflow.core import animation_catalog as catalog
 from mixar.modules.common.render_coordinator.constants import (
-    INTERNAL_ANIMATION_SCENE_PROP, INTERNAL_RENDER_SCENE_PROP, is_internal_scene,
+    INTERNAL_RENDER_SCENE_PROP, is_internal_scene,
 )
 from mixar.modules.space_mixie_chat.core import render_scene
 
@@ -86,12 +87,13 @@ def test_manual_range_wins_over_other_slots_and_curve_extents():
     assert catalog.clip_range(clip, [curve(end=100)]) == (5, 15)
 
 
-def test_internal_preview_is_not_a_tab_and_render_sweep_cannot_delete_it(monkeypatch):
-    user, render, animation = {}, {INTERNAL_RENDER_SCENE_PROP: True}, {INTERNAL_ANIMATION_SCENE_PROP: True}
-    assert not is_internal_scene(user)
-    assert is_internal_scene(render) and is_internal_scene(animation)
+def test_render_sweep_removes_only_private_render_scenes(monkeypatch):
+    # Animation preview no longer creates scenes; only render scenes are internal.
+    user, render = {}, {INTERNAL_RENDER_SCENE_PROP: True}
+    assert not is_internal_scene(user) and is_internal_scene(render)
+    assert not is_internal_scene({'mixar_internal_animation_scene': True})
     scenes = MagicMock()
-    scenes.__iter__.return_value = iter([user, render, animation])
+    scenes.__iter__.return_value = iter([user, render])
     monkeypatch.setattr(render_scene, 'bpy', NS(data=NS(scenes=scenes)))
     render_scene.sweep()
     scenes.remove.assert_called_once_with(render, do_unlink=True)
@@ -104,34 +106,3 @@ def test_selected_mesh_resolves_its_rig_but_deselected_active_id_does_not():
     assert catalog.selected_target(context) is rig
     mesh.select_get = lambda **kw: False
     assert catalog.selected_target(context) is None
-
-
-def test_preview_rig_toggle_preserves_source_and_initial_visibility(monkeypatch):
-    from mixar.modules.workflow.core import animation_preview as preview
-    rig = MagicMock(type='ARMATURE')
-    copy = MagicMock()
-    layer = object()
-    state = NS(hide_rig=True)
-    session = NS(ready=True, target=rig, copies={rig: copy}, target_visible=True,
-                 scene=NS(view_layers=[layer]), area=MagicMock())
-    monkeypatch.setattr(preview, '_session', session)
-    monkeypatch.setattr(preview, 'bpy', NS(context=NS(window_manager=NS(mixar_animations=state))))
-    preview.update_rig_visibility()
-    copy.hide_set.assert_called_with(True, view_layer=layer)
-    state.hide_rig = False
-    preview.update_rig_visibility()
-    copy.hide_set.assert_called_with(False, view_layer=layer)
-    session.target_visible = False
-    preview.update_rig_visibility()
-    copy.hide_set.assert_called_with(True, view_layer=layer)
-    rig.hide_set.assert_not_called()
-
-
-def test_preview_rig_toggle_ignores_unready_and_non_rig_previews(monkeypatch):
-    from mixar.modules.workflow.core import animation_preview as preview
-    monkeypatch.setattr(preview, '_session', None)
-    preview.update_rig_visibility()
-    monkeypatch.setattr(preview, '_session', NS(ready=False))
-    preview.update_rig_visibility()
-    monkeypatch.setattr(preview, '_session', NS(ready=True, target=NS(type='MESH')))
-    preview.update_rig_visibility()

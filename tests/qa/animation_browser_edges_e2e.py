@@ -53,7 +53,7 @@ result=True
     assert qa.eval(COUNTS) == counts
     qa.step('space_and_escape_transport', lambda: True)
 
-    # Undo must act on the source project, never a temporary evaluation scene.
+    # Undo must step from the user's state: the modal stops (restores) first.
     qa.eval(BASE + """
 with bpy.context.temp_override(window=w,area=a,region=r):
     bpy.ops.ed.undo_push(message='Before preview undo test')
@@ -68,7 +68,8 @@ result=True
     qa.wait(f'not {STATE}.preview_name',timeout=5)
     assert qa.eval('result=drv.main_window().scene.name') == original
     assert qa.eval("result=drv.main_window().scene.get('qa_animation_undo')") is None
-    assert qa.eval("result=not any(s.get('mixar_internal_animation_scene') for s in bpy.data.scenes)")
+    assert qa.eval("result=drv.main_window().scene.objects['QA Robot Rig']"
+                   ".animation_data.action.name") == 'Idle'
     qa.step('undo_while_previewing', lambda: True)
 
     open_browser(qa)
@@ -77,6 +78,8 @@ result=True
     qa.press('G')
     qa.wait(f'not {STATE}.preview_name',timeout=5)
     assert qa.eval('result=drv.main_window().scene.name') == original
+    assert qa.eval("result=drv.main_window().scene.objects['QA Robot Rig']"
+                   ".animation_data.action.name") == 'Idle'
     qa.press('ESC')  # Cancel the native transform on the original object.
     qa.step('editing_shortcut_returns_to_project',lambda:True)
 
