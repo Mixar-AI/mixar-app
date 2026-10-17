@@ -2171,6 +2171,24 @@ msgstr "A generálás sikertelen — próbálja újra"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "A katalógus visible_if mezője RNA-attribútumhoz kötött"
 
+msgid "Nothing selected"
+msgstr "Nincs kijelölés"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Érték"
+
+msgid "Group"
+msgstr "Csoport"
+
+msgid "Selected"
+msgstr "Kijelölve"
+
 msgid "No modes"
 msgstr "Nincs mód"
 
@@ -4775,6 +4793,45 @@ msgstr "Az automatikus riggelés sikertelen"
 msgid "Animate failed"
 msgstr "Az animálás sikertelen"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "A kijelölt térhálónak {count:,} oldallapja van (max. {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "Térháló-szegmentálás"
 msgid "Auto Rig"
 msgstr "Automatikus riggelés"
 
+msgid "Animate"
+msgstr "Animálás"
+
 msgid "Add Mesh"
 msgstr "Térháló hozzáadása"
 
@@ -5662,6 +5722,15 @@ msgstr "A generálás során használt finomítási lépések száma. Több lép
 
 msgid "The file format used to store the generated image."
 msgstr "A generált kép tárolásához használt fájlformátum."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Automatikus (a névből)"
@@ -5981,6 +6050,9 @@ msgstr "Karakter összeállítása"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "A generált részek csatolása riggelt vagy sima testhez, helyben"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Csak a kép stílusának használata"
 
@@ -6139,6 +6211,9 @@ msgstr "Először generálja a(z) „{name}” elemet — ez a kártya annak az 
 
 msgid "Mesh"
 msgstr "Térháló"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referencia {number}"
@@ -7085,9 +7160,6 @@ msgstr "Egyéni szín használata"
 msgid "Custom Colour"
 msgstr "Egyéni szín"
 
-msgid "Selected"
-msgstr "Kijelölve"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Kattintáskor a keret szegélyének és belsejének figyelmen kívül hagyása, hogy csak a tagjai legyenek kijelölhetők"
 
@@ -7096,6 +7168,18 @@ msgstr "Összecsukva"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "A keret rajzolása feliratos sávként, a törzse elrejtésével"
+
+msgid "Unavailable"
+msgstr "Nem érhető el"
+
+msgid "No supported 3D service is available"
+msgstr "Nincs támogatott 3D szolgáltatás"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "A képmodelleknek maszkkövetést és két referenciát kell hirdetniük"
+
+msgid "Attachment settings"
+msgstr "Mellékletbeállítások"
 
 msgid "No choices published"
 msgstr "Nincs közzétett választás"
@@ -7114,18 +7198,6 @@ msgstr "Kész"
 
 msgid "Generation completed"
 msgstr "A generálás befejeződött"
-
-msgid "Unavailable"
-msgstr "Nem érhető el"
-
-msgid "No supported 3D service is available"
-msgstr "Nincs támogatott 3D szolgáltatás"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "A képmodelleknek maszkkövetést és két referenciát kell hirdetniük"
-
-msgid "Attachment settings"
-msgstr "Mellékletbeállítások"
 
 msgid "Parameter ID"
 msgstr "Paraméterazonosító"
@@ -7151,14 +7223,14 @@ msgstr "Logikai érték"
 msgid "Catalog choice"
 msgstr "Katalógusválasztás"
 
-msgid "Widget"
-msgstr "Vezérlő"
-
-msgid "Group"
-msgstr "Csoport"
-
 msgid "Choices"
 msgstr "Választások"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Vezérlő"
 
 msgid "Visibility Condition"
 msgstr "Láthatósági feltétel"
@@ -7178,11 +7250,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maximum"
 
-msgid "Value"
-msgstr "Érték"
-
 msgid "Value Label"
 msgstr "Értékfelirat"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Aljzatazonosító"
@@ -8890,6 +8965,33 @@ msgstr "Összes keretezése"
 msgid "Clear Board"
 msgstr "Tábla törlése"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objektumnév"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animációk"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Ügynöki automatikus riggelés"
 
@@ -8911,8 +9013,8 @@ msgstr "Csontváztípus: auto / biped / quadruped / hexapod / octopod / avian / 
 msgid "Skeleton Spec"
 msgstr "Csontváz-specifikáció"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Csontváz-konvenció: 'tripo' vagy 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Csontelnevezés: tripo, mixamo, actorcore, unity, unreal vagy vrm (csak a tripo támogatja az előre beállított Tripo-animációkat)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "Ügynöki PBR-generálás"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "PBR-textúrák generálása a megadott térhálóobjektumhoz a Tripo segítségével"
-
-msgid "Object Name"
-msgstr "Objektumnév"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "A textúrázandó jelenetbeli térhálóobjektum neve"
@@ -10066,8 +10165,8 @@ msgstr "Jelöljön ki egy következtetési csomópontot"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Szerkessze a promptot, majd nyomja meg az Entert, vagy válassza a Generálást"
 
-msgid "Node added to the generation queue"
-msgstr "A csomópont a generálási várólistára került"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "A csomópont beállításainak és promptjának megjelenítése, hogy állítható és újrafuttatható legyen; újbóli kattintás elveti a szerkesztést, és visszatér az eredményhez"
@@ -12117,9 +12216,6 @@ msgstr "Színkvantálás bitjei"
 
 msgid "Generic Quantization Bits"
 msgstr "Általános kvantálás bitjei"
-
-msgid "Animations"
-msgstr "Animációk"
 
 msgid "Animation Mode"
 msgstr "Animációs mód"
@@ -24999,9 +25095,6 @@ msgstr "Várólista megnyitása"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Nincs kijelölés"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Fejezze be a vázlatot vagy a diktálást, mielőtt lapot vált"
 
@@ -25826,6 +25919,9 @@ msgstr "Várólistán..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Kattintson a prompt szerkesztéséhez, és próbálja újra"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "Biztonsági területek"
 
 msgid "Select a character to animate"
 msgstr "Válasszon karaktert az animáláshoz"
-
-msgid "Animate"
-msgstr "Animálás"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "A blokkolási szintű mozdulat kulcsolása a lejátszófejtől"

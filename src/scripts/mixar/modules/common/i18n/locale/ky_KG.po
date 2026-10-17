@@ -2171,6 +2171,24 @@ msgstr "Генерация ишке ашкан жок — кайра араке�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA атрибуту боюнча ачкычталган visible_if каталогу"
 
+msgid "Nothing selected"
+msgstr "Эч нерсе тандалган жок"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Мааниси"
+
+msgid "Group"
+msgstr "Топ"
+
+msgid "Selected"
+msgstr "Тандалган"
+
 msgid "No modes"
 msgstr "Режим жок"
 
@@ -4775,6 +4793,45 @@ msgstr "Авто риг ишке ашкан жок"
 msgid "Animate failed"
 msgstr "Анимациялоо ишке ашкан жок"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Тандалган политордо {count:,} каптал бар (эң көп {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "Политор сегментациясы"
 msgid "Auto Rig"
 msgstr "Авто риг"
 
+msgid "Animate"
+msgstr "Анимациялоо"
+
 msgid "Add Mesh"
 msgstr "Политор кошуу"
 
@@ -5662,6 +5722,15 @@ msgstr "Генерация учурунда колдонулган тактоо 
 
 msgid "The file format used to store the generated image."
 msgstr "Генерацияланган сүрөттү сактоо үчүн колдонулган файл форматы."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Авто (аттан)"
@@ -5981,6 +6050,9 @@ msgstr "Каарманды чогултуу"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Генерацияланган бөлүктөрдү ригделген же жөнөкөй денеге жергиликтүү бекитет"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Сүрөттүн стилин гана колдонуу"
 
@@ -6139,6 +6211,9 @@ msgstr "Адегенде '{name}' генерациялаңыз — бул кар
 
 msgid "Mesh"
 msgstr "Политор"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number}-үлгү"
@@ -7085,9 +7160,6 @@ msgstr "Ыңгайлаштырылган түстү колдонуу"
 msgid "Custom Colour"
 msgstr "Ыңгайлаштырылган түс"
 
-msgid "Selected"
-msgstr "Тандалган"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Басканда бул алкактын чегин жана ичин этибар албайт, ошондуктан мүчөлөрү гана тандалат"
 
@@ -7096,6 +7168,18 @@ msgstr "Жыйыштырылган"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Алкакты аталыштуу тилке катары тартып, денесин жашырат"
+
+msgid "Unavailable"
+msgstr "Жеткиликсиз"
+
+msgid "No supported 3D service is available"
+msgstr "Колдоого алынган 3D кызмат жеткиликсиз"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Сүрөт модельдери маска багыттоосун жана эки үлгүнү жарыялоого тийиш"
+
+msgid "Attachment settings"
+msgstr "Тиркеме ырастоолору"
 
 msgid "No choices published"
 msgstr "Жарыяланган тандоо жок"
@@ -7114,18 +7198,6 @@ msgstr "Бүттү"
 
 msgid "Generation completed"
 msgstr "Генерация бүттү"
-
-msgid "Unavailable"
-msgstr "Жеткиликсиз"
-
-msgid "No supported 3D service is available"
-msgstr "Колдоого алынган 3D кызмат жеткиликсиз"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Сүрөт модельдери маска багыттоосун жана эки үлгүнү жарыялоого тийиш"
-
-msgid "Attachment settings"
-msgstr "Тиркеме ырастоолору"
 
 msgid "Parameter ID"
 msgstr "Параметр ID'си"
@@ -7151,14 +7223,14 @@ msgstr "Логикалык маани"
 msgid "Catalog choice"
 msgstr "Каталог тандоосу"
 
-msgid "Widget"
-msgstr "Виджет"
-
-msgid "Group"
-msgstr "Топ"
-
 msgid "Choices"
 msgstr "Тандоолор"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Виджет"
 
 msgid "Visibility Condition"
 msgstr "Көрүнүү шарты"
@@ -7178,11 +7250,14 @@ msgstr "Минимум"
 msgid "Maximum"
 msgstr "Максимум"
 
-msgid "Value"
-msgstr "Мааниси"
-
 msgid "Value Label"
 msgstr "Маани белгиси"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Сокет ID'си"
@@ -8890,6 +8965,33 @@ msgstr "Баарын алкактоо"
 msgid "Clear Board"
 msgstr "Тактаны тазалоо"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Объекттин аты"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Анимациялар"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Агент: Авто риг"
 
@@ -8911,8 +9013,8 @@ msgstr "Скелет түрү: auto / biped / quadruped / hexapod / octopod / av
 msgid "Skeleton Spec"
 msgstr "Скелет спецификациясы"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Скелет келишими: 'tripo' же 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Сөөк аталыштары: tripo, mixamo, actorcore, unity, unreal же vrm (Tripo даяр анимацияларын tripo гана колдойт)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "Агент: PBR генерациясы"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Берилген политор объектиси үчүн Tripo аркылуу PBR текстураларды генерациялайт"
-
-msgid "Object Name"
-msgstr "Объекттин аты"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Текстуралана турган сахнадагы политор объектисинин аты"
@@ -10066,8 +10165,8 @@ msgstr "Инференс түйүнүн тандаңыз"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Промптту оңдоп, анан Enter же Генерациялоону басыңыз"
 
-msgid "Node added to the generation queue"
-msgstr "Түйүн генерация кезегине кошулду"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Бул түйүндүн ырастоолорун жана промптун көрсөтөт, аларды тууралап, кайра иштетсе болот; оңдоону жокко чыгарып, натыйжага кайтуу үчүн кайра чыкылдатыңыз"
@@ -12117,9 +12216,6 @@ msgstr "Түс квантташтыруу биттери"
 
 msgid "Generic Quantization Bits"
 msgstr "Жалпы квантташтыруу биттери"
-
-msgid "Animations"
-msgstr "Анимациялар"
 
 msgid "Animation Mode"
 msgstr "Анимация режими"
@@ -24999,9 +25095,6 @@ msgstr "Кезекти ачуу"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Эч нерсе тандалган жок"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Өтмөктөрдү которуудан мурун эскизди же үн менен жазууну бүтүрүңүз"
 
@@ -25826,6 +25919,9 @@ msgstr "Кезекте..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Промптту оңдоп, кайра аракет кылуу үчүн басыңыз."
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "Коопсуз аймактар"
 
 msgid "Select a character to animate"
 msgstr "Анимациялоо үчүн каарман тандаңыз."
-
-msgid "Animate"
-msgstr "Анимациялоо"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Ойнотуу башынан бул блоктоо деңгээлиндеги кыймылды белгилейт."

@@ -2171,6 +2171,24 @@ msgstr "בוש תוסנל אנ — הלשכנ הריציה"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ןייפאמ יפל גולטקה לש RNA"
 
+msgid "Nothing selected"
+msgstr "רבד רחבנ אל"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "ךרע"
+
+msgid "Group"
+msgstr "הצובק"
+
+msgid "Selected"
+msgstr "רחבנ"
+
 msgid "No modes"
 msgstr "םיבצמ ןיא"
 
@@ -4775,6 +4793,45 @@ msgstr "לשכנ יטמוטואה גירה"
 msgid "Animate failed"
 msgstr "הלשכנ השפנהה"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "({max_faces:,} םומיסקמ) תואפ {count:,} שי הרחבנש הרוצל"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "הרוצ חוליפ"
 msgid "Auto Rig"
 msgstr "יטמוטוא גיר"
 
+msgid "Animate"
+msgstr "השפנה"
+
 msgid "Add Mesh"
 msgstr "הרוצ ףסוה"
 
@@ -5662,6 +5722,15 @@ msgstr ".ןמז רתוי תחקל םילוכי םיבלש רתוי .הריציה
 
 msgid "The file format used to store the generated image."
 msgstr ".תרצונש הנומתה ןוסחאל שומישבש ץבוקה טמרופ"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "(םשהמ) יטמוטוא"
@@ -5981,6 +6050,9 @@ msgstr "תומד תבכרה"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "תימוקמ ,טושפ ףוגל וא גיר םע ףוגל ורצונש םיקלח רוביח"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "דבלב הנומתה ןונגסב שמתשה"
 
@@ -6139,6 +6211,9 @@ msgstr "ולש האצותב שמתשמ הז סיטרכ — '{name}' תא הלי�
 
 msgid "Mesh"
 msgstr "הרוצ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number} סנרפר"
@@ -7085,9 +7160,6 @@ msgstr "םאתומ עבצב שומיש"
 msgid "Custom Colour"
 msgstr "םאתומ עבצ"
 
-msgid "Selected"
-msgstr "רחבנ"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "הריחבל םינתינ ויהי הלש םירבחה קרש ידכ ,הציחלב וז תרגסמ לש םינפהמו תרגסמהמ תומלעתה"
 
@@ -7096,6 +7168,18 @@ msgstr "ץווכמ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "הלש ףוגה תרתסהו תרתוכ םע ספכ תרגסמה רויצ"
+
+msgid "Unavailable"
+msgstr "ןימז אל"
+
+msgid "No supported 3D service is available"
+msgstr "ןימז ךמתנ דממ-תלת תוריש ןיא"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "םיסנרפר ינשו הכסמ תייחנה םסרפל םיבייח הנומת ילדומ"
+
+msgid "Attachment settings"
+msgstr "ףרוצמ ץבוק תורדגה"
 
 msgid "No choices published"
 msgstr "תויורשפא ומסרופ אל"
@@ -7114,18 +7198,6 @@ msgstr "םלשוה"
 
 msgid "Generation completed"
 msgstr "המלשוה הריציה"
-
-msgid "Unavailable"
-msgstr "ןימז אל"
-
-msgid "No supported 3D service is available"
-msgstr "ןימז ךמתנ דממ-תלת תוריש ןיא"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "םיסנרפר ינשו הכסמ תייחנה םסרפל םיבייח הנומת ילדומ"
-
-msgid "Attachment settings"
-msgstr "ףרוצמ ץבוק תורדגה"
 
 msgid "Parameter ID"
 msgstr "רטמרפ ההזמ"
@@ -7151,14 +7223,14 @@ msgstr "ינאילוב ךרע"
 msgid "Catalog choice"
 msgstr "גולטק תורשפא"
 
-msgid "Widget"
-msgstr "ביכר"
-
-msgid "Group"
-msgstr "הצובק"
-
 msgid "Choices"
 msgstr "תויורשפא"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ביכר"
 
 msgid "Visibility Condition"
 msgstr "תוארנ יאנת"
@@ -7178,11 +7250,14 @@ msgstr "םומינימ"
 msgid "Maximum"
 msgstr "םומיסקמ"
 
-msgid "Value"
-msgstr "ךרע"
-
 msgid "Value Label"
 msgstr "ךרע תיוות"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "עקש ההזמ"
@@ -8890,6 +8965,33 @@ msgstr "לוכה רגסמ"
 msgid "Clear Board"
 msgstr "חול הקנ"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "טקייבוא םש"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "תויצמינא"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ןכוסה לש יטמוטוא גיר"
 
@@ -8911,8 +9013,8 @@ msgstr "auto / biped / quadruped / hexapod / octopod / avian / serpentine / aqua
 msgid "Skeleton Spec"
 msgstr "דלש טרפמ"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "'mixamo' וא 'tripo' :דלש תמכסומ"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "(Tripo לש תונכומה תויצמינאב ךמות tripo קר) vrm וא tripo, mixamo, actorcore, unity, unreal :תומצע תומש"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "ןכוסה לש PBR תריצי"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo תועצמאב ןותנה הרוצה טקייבואל PBR ימקרמ תריצי"
-
-msgid "Object Name"
-msgstr "טקייבוא םש"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "םקרמ תפסוהל הנצסב הרוצה טקייבוא םש"
@@ -10066,8 +10165,8 @@ msgstr "הקסה תמוצ רוחבל שי"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "רוצ לע וא Enter לע ץוחלל זאו ,היחנהה תא ךורעל שי"
 
-msgid "Node added to the generation queue"
-msgstr "הריציה רותל ףסונ תמוצה"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "האצותל תרזוחו הכירעה תא תלטבמ תפסונ הציחל ;בוש ץירהלו ןנווכל היהי רשפאש ידכ תמוצה לש היחנההו תורדגהה תא גיצמ"
@@ -12117,9 +12216,6 @@ msgstr "עבצ תומיכ תויביס"
 
 msgid "Generic Quantization Bits"
 msgstr "תויללכ תומיכ תויביס"
-
-msgid "Animations"
-msgstr "תויצמינא"
 
 msgid "Animation Mode"
 msgstr "היצמינא בצמ"
@@ -24999,9 +25095,6 @@ msgstr "רותה תחיתפ"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "רבד רחבנ אל"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "תוינושל תפלחה ינפל הבתכה וא הציקס םייסל שי"
 
@@ -25826,6 +25919,9 @@ msgstr "...רותב"
 
 msgid "Click to edit the prompt and try again"
 msgstr "רזוח ןויסינלו היחנהה תכירעל הציחל"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "םיחוטב םירוזא"
 
 msgid "Select a character to animate"
 msgstr "השפנהל תומד רוחבל שי"
-
-msgid "Animate"
-msgstr "השפנה"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ןוגינה שארמ גניקולב תמרב העונת עבוק"

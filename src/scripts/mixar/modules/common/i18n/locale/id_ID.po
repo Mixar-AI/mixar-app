@@ -2171,6 +2171,24 @@ msgstr "Generasi gagal — silakan coba lagi"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if katalog yang dikunci berdasarkan atribut RNA"
 
+msgid "Nothing selected"
+msgstr "Tidak ada yang terseleksi"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Nilai"
+
+msgid "Group"
+msgstr "Kelompok"
+
+msgid "Selected"
+msgstr "Terseleksi"
+
 msgid "No modes"
 msgstr "Tidak ada mode"
 
@@ -4775,6 +4793,45 @@ msgstr "Rig Otomatis gagal"
 msgid "Animate failed"
 msgstr "Animasi gagal"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Jaring 3D terseleksi memiliki {count:,} bidang (maks {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "Segmentasi Jaring 3D"
 msgid "Auto Rig"
 msgstr "Rig Otomatis"
 
+msgid "Animate"
+msgstr "Animasikan"
+
 msgid "Add Mesh"
 msgstr "Tambah Jaring 3D"
 
@@ -5662,6 +5722,15 @@ msgstr "Jumlah langkah penyempurnaan yang digunakan selama generasi. Lebih banya
 
 msgid "The file format used to store the generated image."
 msgstr "Format berkas yang digunakan untuk menyimpan gambar yang dihasilkan."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Otomatis (dari nama)"
@@ -5981,6 +6050,9 @@ msgstr "Rakit Karakter"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Memasang bagian yang dihasilkan ke tubuh yang sudah di-rig atau polos, secara lokal"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Gunakan Gaya Gambar Saja"
 
@@ -6139,6 +6211,9 @@ msgstr "Hasilkan '{name}' terlebih dahulu — kartu ini menggunakan hasilnya"
 
 msgid "Mesh"
 msgstr "Jaring 3D"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referensi {number}"
@@ -7085,9 +7160,6 @@ msgstr "Gunakan Warna Kustom"
 msgid "Custom Colour"
 msgstr "Warna Kustom"
 
-msgid "Selected"
-msgstr "Terseleksi"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Mengabaikan batas dan bagian dalam bingkai ini saat diklik, sehingga hanya anggotanya yang dapat diseleksi"
 
@@ -7096,6 +7168,18 @@ msgstr "Diciutkan"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Menggambar bingkai sebagai bilah berjudul dan menyembunyikan badannya"
+
+msgid "Unavailable"
+msgstr "Tidak Tersedia"
+
+msgid "No supported 3D service is available"
+msgstr "Tidak ada layanan 3D yang didukung yang tersedia"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Model gambar harus menyatakan dukungan panduan masker dan dua referensi"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Tidak ada pilihan yang diterbitkan"
@@ -7114,18 +7198,6 @@ msgstr "Selesai"
 
 msgid "Generation completed"
 msgstr "Generasi selesai"
-
-msgid "Unavailable"
-msgstr "Tidak Tersedia"
-
-msgid "No supported 3D service is available"
-msgstr "Tidak ada layanan 3D yang didukung yang tersedia"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Model gambar harus menyatakan dukungan panduan masker dan dua referensi"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ID Parameter"
@@ -7151,14 +7223,14 @@ msgstr "Nilai boolean"
 msgid "Catalog choice"
 msgstr "Pilihan katalog"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Kelompok"
-
 msgid "Choices"
 msgstr "Pilihan"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Kondisi Visibilitas"
@@ -7178,11 +7250,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maksimum"
 
-msgid "Value"
-msgstr "Nilai"
-
 msgid "Value Label"
 msgstr "Label Nilai"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ID Soket"
@@ -8890,6 +8965,33 @@ msgstr "Bingkai Semua"
 msgid "Clear Board"
 msgstr "Kosongkan Papan"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Data Objek"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animasi"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Rig Otomatis Agen"
 
@@ -8911,8 +9013,8 @@ msgstr "Tipe kerangka: auto / biped / quadruped / hexapod / octopod / avian / se
 msgid "Skeleton Spec"
 msgstr "Spesifikasi Kerangka"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konvensi kerangka: 'tripo' atau 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Penamaan tulang: tripo, mixamo, actorcore, unity, unreal atau vrm (hanya tripo yang mendukung animasi preset Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "Generasi PBR Agen"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Menghasilkan tekstur PBR untuk objek jaring 3D yang diberikan menggunakan Tripo"
-
-msgid "Object Name"
-msgstr "Data Objek"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Nama objek jaring 3D di adegan yang akan diberi tekstur"
@@ -10066,8 +10165,8 @@ msgstr "Pilih simpul inferensi"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Sunting prompt, lalu tekan Enter atau Hasilkan"
 
-msgid "Node added to the generation queue"
-msgstr "Simpul ditambahkan ke antrean generasi"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Menampilkan pengaturan dan prompt simpul ini agar dapat disesuaikan dan dijalankan lagi; klik lagi untuk membatalkan penyuntingan dan kembali ke hasil"
@@ -12117,9 +12216,6 @@ msgstr "Bit Kuantisasi Warna"
 
 msgid "Generic Quantization Bits"
 msgstr "Bit Kuantisasi Generik"
-
-msgid "Animations"
-msgstr "Animasi"
 
 msgid "Animation Mode"
 msgstr "Mode Animasi"
@@ -24999,9 +25095,6 @@ msgstr "Buka Antrean"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Tidak ada yang terseleksi"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Selesaikan sketsa atau dikte sebelum berpindah tab"
 
@@ -25826,6 +25919,9 @@ msgstr "Mengantre..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Klik untuk mengedit prompt dan mencoba lagi"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "Area Aman"
 
 msgid "Select a character to animate"
 msgstr "Seleksi karakter untuk dianimasikan"
-
-msgid "Animate"
-msgstr "Animasikan"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Menjadikan gerakan tingkat blocking ini bingkai kunci dari playhead"

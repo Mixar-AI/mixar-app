@@ -1983,13 +1983,12 @@ wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
   data->include_properties = true;
   data->mixar_sheet = sheet;
   data->mixar_docks_held = true;
-  Mixar_floating_docks_hold(data);
+  Mixar_floating_docks_hold(C, data);
 
   popup_block_ex(
       C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);
 
   if (redirected) {
-    Mixar_modal_dialog_focus_host(win_dialog);
     CTX_wm_window_set(C, win_ctx);
     CTX_wm_area_set(C, area_ctx);
     CTX_wm_region_set(C, region_ctx);

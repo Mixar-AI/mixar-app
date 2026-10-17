@@ -28,6 +28,9 @@ MESH_CONTINUATIONS = (
 # Local, so it has no capability. Offered only from a body it can rig parts
 # to; never from ASSEMBLE itself, whose output would re-export body + parts.
 ASSEMBLE_CONTINUATION = ('ASSEMBLE', n_("Assemble onto this body"), 'BONE_DATA', None)
+# Offered only from a character that carries an Auto Rig job (an Auto Rig or
+# Animate card, or an import stamped by one): the retarget needs that job.
+ANIMATE_CONTINUATION = ('ANIMATE', n_("Animate"), 'ACTION', "animation")
 
 
 def _is_rigged_asset(asset) -> bool:
@@ -46,8 +49,10 @@ def mesh_continuations_for(scene, source_id: str) -> list:
     The catalog-gated mesh features, plus Assemble when the source is a body
     Assemble can use: an Auto Rig result, a mesh that already has an armature,
     or a Generate-to-3D result while Auto Rig is unavailable (a static,
-    unrigged assembly). An Assemble card offers nothing.
+    unrigged assembly), plus Animate when the source carries an Auto Rig job.
+    An Assemble card offers nothing.
     """
+    from mixar.modules.moodboard.core.animate_node import source_carries_rig
     from mixar.modules.moodboard.core.node_graph import action_node_by_id, asset_node_by_id
 
     action = action_node_by_id(scene, source_id)
@@ -62,6 +67,8 @@ def mesh_continuations_for(scene, source_id: str) -> list:
         body = _is_rigged_asset(asset_node_by_id(scene, source_id))
     if body:
         entries.append(ASSEMBLE_CONTINUATION)
+    if source_carries_rig(scene, source_id) and capability_available(ANIMATE_CONTINUATION[3]):
+        entries.append(ANIMATE_CONTINUATION)
     return entries
 
 

@@ -2171,6 +2171,24 @@ msgstr "ﻯﺮﺧﺃ ﺓﺮﻣ ﺔﻟﻭﺎﺤﻤﻟﺍ ﻰﺟﺮﻳُ — ﺪ�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ﺔﻤﺳ ﺐﺴﺣ ﺱﺮﻬﻔﻣ ﺝﻮﻟﺎﺘﻜﻠﻟ RNA"
 
+msgid "Nothing selected"
+msgstr "ﺭﺎﺘﺨﻣ ءﻲﺷ ﻻ﻿"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "ﺔﻤﻴﻗ"
+
+msgid "Group"
+msgstr "ﺔﻋﻮﻤﺠﻣ"
+
+msgid "Selected"
+msgstr "ﺩﺪﺤﻣ"
+
 msgid "No modes"
 msgstr "ﻉﺎﺿﻭﺃ ﺪﺟﻮﺗ ﻻ﻿"
 
@@ -4775,6 +4793,45 @@ msgstr "ﺔﻴﺋﺎﻘﻠﺘﻟﺍ ﺔﻠﻜﻴﻬﻟﺍ ﺖﻠﺸﻓ"
 msgid "Animate failed"
 msgstr "ﻚﻳﺮﺤﺘﻟﺍ ﻞﺸﻓ"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "({max_faces:,} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﻪﺟﻭ {count:,} ﻰﻠﻋ ﺩﺪﺤﻤﻟﺍ ﻢﺴﺠﻤﻟﺍ ﻱﻮﺘﺤﻳ"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "ﻢﺴﺠﻤﻟﺍ ﺔﺋﺰﺠﺗ"
 msgid "Auto Rig"
 msgstr "ﺔﻴﺋﺎﻘﻠﺗ ﺔﻠﻜﻴﻫ"
 
+msgid "Animate"
+msgstr "ﻚﻳﺮﺤﺗ"
+
 msgid "Add Mesh"
 msgstr "ﺎﻤًﺴﺠﻣ ﻒﺿﺃ"
 
@@ -5662,6 +5722,15 @@ msgstr ".ﻝﻮﻃﺃ ﺎﺘًﻗﻭ ﺮﺜﻛﻷ﻿ﺍ ﺕﺍﻮﻄﺨﻟﺍ �
 
 msgid "The file format used to store the generated image."
 msgstr ".ﺓﺪﻟّﻮﻤﻟﺍ ﺓﺭﻮﺼﻟﺍ ﻦﻳﺰﺨﺘﻟ ﺔﻣﺪﺨﺘﺴﻤﻟﺍ ﻒﻠﻤﻟﺍ ﺔﻐﻴﺻ"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "(ﻢﺳﻻ﻿ﺍ ﻦﻣ) ﻲﺋﺎﻘﻠﺗ"
@@ -5981,6 +6050,9 @@ msgstr "ﺔﻴﺼﺨﺸﻟﺍ ﺐﻛّﺭ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺎﻴًﻠﺤﻣ ،ﻱﺩﺎﻋ ﻭﺃ ﻞﻜﻴﻬﻣ ﻢﺴﺠﺑ ﺓﺪﻟّﻮﻤﻟﺍ ءﺍﺰﺟﻷ﻿ﺍ ﻖﻓﺮﻳ"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "ﻂﻘﻓ ﺓﺭﻮﺼﻟﺍ ﻂﻤﻧ ﻡﺪﺨﺘﺳﺍ"
 
@@ -6139,6 +6211,9 @@ msgstr "ﺎﻬﺘﺠﻴﺘﻧ ﺔﻗﺎﻄﺒﻟﺍ ﻩﺬﻫ ﻡﺪﺨﺘﺴﺗ
 
 msgid "Mesh"
 msgstr "ﻢﺴﺠﻣ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number} ﻊﺟﺮﻤﻟﺍ"
@@ -7085,9 +7160,6 @@ msgstr "ﺎﺼًﺼﺨﻣ ﺎﻧًﻮﻟ ﻡﺪﺨﺘﺳﺍ"
 msgid "Custom Colour"
 msgstr "ﺺﺼﺨﻣ ﻥﻮﻟ"
 
-msgid "Selected"
-msgstr "ﺩﺪﺤﻣ"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "ﻩﺮﺻﺎﻨﻋ ﻯﻮﺳ ﺪﻳﺪﺤﺗ ﻦﻜﻤﻳ ﻻ﻿ ﺚﻴﺤﺑ ،ﺮﻘﻨﻟﺍ ﺪﻨﻋ ﻪﻠﺧﺍﺩﻭ ﺭﺎﻃﻹ﻿ﺍ ﺍﺬﻫ ﺪﺣ ﻞﻫﺎﺠﺘﻳ"
 
@@ -7096,6 +7168,18 @@ msgstr "ﻱﻮﻄﻣ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ﻩﺍﻮﺘﺤﻣ ﻲﻔﺨﻳﻭ ﻥﺍﻮﻨﻌﺑ ﻂﻳﺮﺸﻛ ﺭﺎﻃﻹ﻿ﺍ ﻢﺳﺮﻳ"
+
+msgid "Unavailable"
+msgstr "ﺡﺎﺘﻣ ﺮﻴﻏ"
+
+msgid "No supported 3D service is available"
+msgstr "ﺔﻣﻮﻋﺪﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﺔﻴﺛﻼ﻿ﺛ ﺔﻣﺪﺧ ﺮﻓﻮﺘﺗ ﻻ﻿"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "ﻦﻴﻌﺟﺮﻣﻭ ءﺎﻄﻐﻟﺎﺑ ﻪﻴﺟﻮﺘﻟﺍ ﻢﻋﺩ ﺭﻮﺼﻟﺍ ﺝﺫﺎﻤﻧ ﻦﻠﻌﺗُ ﻥﺃ ﺐﺠﻳ"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "ﺕﺍﺭﺎﻴﺧ ﻱﺃ ﺮﺸﻨﺗُ ﻢﻟ"
@@ -7114,18 +7198,6 @@ msgstr "ﻞﻤﺘﻜﻣ"
 
 msgid "Generation completed"
 msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﻞﻤﺘﻛﺍ"
-
-msgid "Unavailable"
-msgstr "ﺡﺎﺘﻣ ﺮﻴﻏ"
-
-msgid "No supported 3D service is available"
-msgstr "ﺔﻣﻮﻋﺪﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﺔﻴﺛﻼ﻿ﺛ ﺔﻣﺪﺧ ﺮﻓﻮﺘﺗ ﻻ﻿"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "ﻦﻴﻌﺟﺮﻣﻭ ءﺎﻄﻐﻟﺎﺑ ﻪﻴﺟﻮﺘﻟﺍ ﻢﻋﺩ ﺭﻮﺼﻟﺍ ﺝﺫﺎﻤﻧ ﻦﻠﻌﺗُ ﻥﺃ ﺐﺠﻳ"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ﻞﻣﺎﻌﻤﻟﺍ ﻑﺮّﻌﻣ"
@@ -7151,14 +7223,14 @@ msgstr "ﺔﻴﻘﻄﻨﻣ ﺔﻤﻴﻗ"
 msgid "Catalog choice"
 msgstr "ﺝﻮﻟﺎﺘﻜﻟﺍ ﻦﻣ ﺭﺎﻴﺧ"
 
-msgid "Widget"
-msgstr "ﺔﻬﺟﺍﻮﻟﺍ ﺮﺼﻨﻋ"
-
-msgid "Group"
-msgstr "ﺔﻋﻮﻤﺠﻣ"
-
 msgid "Choices"
 msgstr "ﺕﺍﺭﺎﻴﺨﻟﺍ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ﺔﻬﺟﺍﻮﻟﺍ ﺮﺼﻨﻋ"
 
 msgid "Visibility Condition"
 msgstr "ﺭﻮﻬﻈﻟﺍ ﻁﺮﺷ"
@@ -7178,11 +7250,14 @@ msgstr "ﻰﻧﺩﻷ﻿ﺍ ﺪﺤﻟﺍ"
 msgid "Maximum"
 msgstr "ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ"
 
-msgid "Value"
-msgstr "ﺔﻤﻴﻗ"
-
 msgid "Value Label"
 msgstr "ﺔﻤﻴﻘﻟﺍ ﺔﻴﻤﺴﺗ"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ﺲﺒﻘﻤﻟﺍ ﻑﺮّﻌﻣ"
@@ -8890,6 +8965,33 @@ msgstr "ﻞﻜﻟﺍ ﺮﻃّﺃ"
 msgid "Clear Board"
 msgstr "ﺔﺣﻮﻠﻟﺍ ﺢﺴﻣﺍ"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ﻦﺋﺎﻜﻟﺍ ﻢﺳﺍ"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ﺕﺎﻜﻳﺮﺤﺘﻟﺍ"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ﻞﻴﻛﻮﻠﻟ ﺔﻴﺋﺎﻘﻠﺘﻟﺍ ﺔﻠﻜﻴﻬﻟﺍ"
 
@@ -8911,8 +9013,8 @@ msgstr "auto / biped / quadruped / hexapod / octopod / avian / serpentine / aqua
 msgid "Skeleton Spec"
 msgstr "ﻲﻤﻈﻌﻟﺍ ﻞﻜﻴﻬﻟﺍ ﺔﻔﺻﺍﻮﻣ"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "'mixamo' ﻭﺃ 'tripo' :ﻲﻤﻈﻌﻟﺍ ﻞﻜﻴﻬﻟﺍ ﺡﻼ﻿ﻄﺻﺍ"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "(Tripo ﻦﻣ ﺓﺰﻫﺎﺠﻟﺍ ﺕﺎﻛﺮﺤﻟﺍ ﻢﻋﺪﻳ tripo ﻂﻘﻓ) vrm ﻭﺃ tripo, mixamo, actorcore, unity, unreal :ﻡﺎﻈﻌﻟﺍ ﺔﻴﻤﺴﺗ"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "ﻞﻴﻛﻮﻠﻟ PBR ﺪﻴﻟﻮﺗ"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo ﻡﺍﺪﺨﺘﺳﺎﺑ ﻰﻄﻌﻤﻟﺍ ﻢﺴﺠﻤﻟﺍ ﻦﺋﺎﻜﻟ PBR ﺞﺳﺎﻨﻣ ﺪﻟّﻮﻳ"
-
-msgid "Object Name"
-msgstr "ﻦﺋﺎﻜﻟﺍ ﻢﺳﺍ"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "ﺞﻴﺴﻨﻟﺎﺑ ﻩﺅﺎﺴﻛﺇ ﺩﺍﺮﻤﻟﺍ ﺪﻬﺸﻤﻟﺍ ﻲﻓ ﻢﺴﺠﻤﻟﺍ ﻦﺋﺎﻛ ﻢﺳﺍ"
@@ -10066,8 +10165,8 @@ msgstr "ﻝﻻ﻿ﺪﺘﺳﺍ ﺓﺪﻘﻋ ﺩﺪﺣ"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "«ﺪﻟّﻭ» ﻭﺃ Enter ﻂﻐﺿﺍ ﻢﺛ ،ﻪﺟّﻮﻤﻟﺍ ﺭﺮّﺣ"
 
-msgid "Node added to the generation queue"
-msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﺭﺎﻈﺘﻧﺍ ﺔﻤﺋﺎﻗ ﻰﻟﺇ ﺓﺪﻘﻌﻟﺍ ﺔﻓﺎﺿﺇ ﺖﻤﺗ"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "ﺔﺠﻴﺘﻨﻟﺍ ﻰﻟﺇ ﺓﺩﻮﻌﻟﺍﻭ ﺮﻳﺮﺤﺘﻟﺍ ءﺎﻐﻟﻹ﻿ ﻯﺮﺧﺃ ﺓﺮﻣ ﺮﻘﻧﺍ ؛ﺍﺩًﺪﺠﻣ ﺎﻬﻠﻴﻐﺸﺗﻭ ﺎﻬﻄﺒﻀﻟ ﺎﻬﻬﺟّﻮﻣﻭ ﺓﺪﻘﻌﻟﺍ ﻩﺬﻫ ﺕﺍﺩﺍﺪﻋﺇ ﺮﻬﻈﻳُ"
@@ -12117,9 +12216,6 @@ msgstr "ﻥﻮﻠﻟﺍ ﻢﻴﻤﻜﺗ ﺕﺎﺘﺑ"
 
 msgid "Generic Quantization Bits"
 msgstr "ﺔﻣﺎﻌﻟﺍ ﻢﻴﻤﻜﺘﻟﺍ ﺕﺎﺘﺑ"
-
-msgid "Animations"
-msgstr "ﺕﺎﻜﻳﺮﺤﺘﻟﺍ"
 
 msgid "Animation Mode"
 msgstr "ﺔﻛﺮﺤﻟﺍ ﻊﺿﻭ"
@@ -24999,9 +25095,6 @@ msgstr "ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﺢﺘﻓ"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "ﺭﺎﺘﺨﻣ ءﻲﺷ ﻻ﻿"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ﺐﻳﻮﺒﺘﻟﺍ ﺕﺎﻣﻼ﻿ﻋ ﻞﻳﺪﺒﺗ ﻞﺒﻗ ءﻼ﻿ﻣﻹ﻿ﺍ ﻭﺃ ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﻪِﻧﺃ"
 
@@ -25826,6 +25919,9 @@ msgstr "...ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﻲﻓ"
 
 msgid "Click to edit the prompt and try again"
 msgstr "ﺍﺩًﺪﺠﻣ ﺔﻟﻭﺎﺤﻤﻟﺍﻭ ﻪﺟّﻮﻤﻟﺍ ﺮﻳﺮﺤﺘﻟ ﺮﻘﻧﺍ"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "ﻪﺟﻮﻟﺍ ﺔﻘﻄﻨﻣ "
 
 msgid "Select a character to animate"
 msgstr "ﺎﻬﻜﻳﺮﺤﺘﻟ ﺔﻴﺼﺨﺷ ﺩﺪّﺣ"
-
-msgid "Animate"
-msgstr "ﻚﻳﺮﺤﺗ"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ﻞﻴﻐﺸﺘﻟﺍ ﺱﺃﺭ ﻦﻣ ﺔﻴﺋﺪﺒﻤﻟﺍ ﺔﻛﺮﺤﻟﺍ ﻩﺬﻫ ﺢﻴﺗﺎﻔﻣ ﻞﺠّﺴﻳ"

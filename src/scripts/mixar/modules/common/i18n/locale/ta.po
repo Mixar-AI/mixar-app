@@ -2171,6 +2171,24 @@ msgstr "உருவாக்கம் தோல்வி — மீண்டு
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA பண்பால் திறவுகோலிடப்பட்ட அட்டவணை visible_if"
 
+msgid "Nothing selected"
+msgstr "எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "மதிப்பு"
+
+msgid "Group"
+msgstr "குழு"
+
+msgid "Selected"
+msgstr "தேர்ந்தெடுக்கப்பட்டது"
+
 msgid "No modes"
 msgstr "பயன்முறைகள் இல்லை"
 
@@ -4775,6 +4793,45 @@ msgstr "தானியங்கி ரிக் தோல்வி"
 msgid "Animate failed"
 msgstr "இயக்கம் தோல்வி"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "தேர்ந்தெடுத்த கண்ணியில் முகங்கள்: {count:,} (அதிகபட்சம் {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "கண்ணிப் பிரிவாக்கம்"
 msgid "Auto Rig"
 msgstr "தானியங்கி ரிக்"
 
+msgid "Animate"
+msgstr "இயங்குபடமாக்கு"
+
 msgid "Add Mesh"
 msgstr "கண்ணியைச் சேர்"
 
@@ -5662,6 +5722,15 @@ msgstr "உருவாக்கத்தின் போது பயன்ப�
 
 msgid "The file format used to store the generated image."
 msgstr "உருவாக்கிய படத்தைச் சேமிக்கப் பயன்படும் கோப்பு வடிவம்."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "தானி (பெயரிலிருந்து)"
@@ -5981,6 +6050,9 @@ msgstr "பாத்திரத்தைப் பொருத்து"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "உருவாக்கிய பகுதிகளை ரிக் செய்த அல்லது சாதாரண உடலில், உள்ளகமாக இணைக்கிறது"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "படப் பாணியை மட்டும் பயன்படுத்து"
 
@@ -6139,6 +6211,9 @@ msgstr "முதலில் '{name}'-ஐ உருவாக்குங்க�
 
 msgid "Mesh"
 msgstr "கண்ணி"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "குறிப்பு {number}"
@@ -7085,9 +7160,6 @@ msgstr "தனிப்பயன் நிறத்தைப் பயன்ப�
 msgid "Custom Colour"
 msgstr "தனிப்பயன் நிறம்"
 
-msgid "Selected"
-msgstr "தேர்ந்தெடுக்கப்பட்டது"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "சொடுக்கும்போது இந்தச் சட்டகத்தின் எல்லையையும் உட்புறத்தையும் புறக்கணிக்கிறது, அதனால் அதன் உறுப்பினர்களை மட்டும் தேர்ந்தெடுக்க முடியும்"
 
@@ -7096,6 +7168,18 @@ msgstr "சுருக்கப்பட்டது"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "சட்டகத்தைத் தலைப்புப் பட்டையாக வரைந்து அதன் உடலை மறைக்கிறது"
+
+msgid "Unavailable"
+msgstr "கிடைக்கவில்லை"
+
+msgid "No supported 3D service is available"
+msgstr "ஆதரிக்கப்படும் 3D சேவை எதுவும் இல்லை"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "பட மாதிரிகள் முகமூடி வழிகாட்டுதலையும் இரண்டு குறிப்புகளையும் அறிவிக்க வேண்டும்"
+
+msgid "Attachment settings"
+msgstr "இணைப்புக் கோப்பு அமைவுகள்"
 
 msgid "No choices published"
 msgstr "தேர்வுகள் வெளியிடப்படவில்லை"
@@ -7114,18 +7198,6 @@ msgstr "முடிந்தது"
 
 msgid "Generation completed"
 msgstr "உருவாக்கம் முடிந்தது"
-
-msgid "Unavailable"
-msgstr "கிடைக்கவில்லை"
-
-msgid "No supported 3D service is available"
-msgstr "ஆதரிக்கப்படும் 3D சேவை எதுவும் இல்லை"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "பட மாதிரிகள் முகமூடி வழிகாட்டுதலையும் இரண்டு குறிப்புகளையும் அறிவிக்க வேண்டும்"
-
-msgid "Attachment settings"
-msgstr "இணைப்புக் கோப்பு அமைவுகள்"
 
 msgid "Parameter ID"
 msgstr "அளவுரு அடையாளம்"
@@ -7151,14 +7223,14 @@ msgstr "பூலியன் மதிப்பு"
 msgid "Catalog choice"
 msgstr "அட்டவணைத் தேர்வு"
 
-msgid "Widget"
-msgstr "விட்செட்"
-
-msgid "Group"
-msgstr "குழு"
-
 msgid "Choices"
 msgstr "தேர்வுகள்"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "விட்செட்"
 
 msgid "Visibility Condition"
 msgstr "தெரிவு நிபந்தனை"
@@ -7178,11 +7250,14 @@ msgstr "குறைந்தபட்சம்"
 msgid "Maximum"
 msgstr "அதிகபட்சம்"
 
-msgid "Value"
-msgstr "மதிப்பு"
-
 msgid "Value Label"
 msgstr "மதிப்புச் சிட்டை"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "சாக்கெட் அடையாளம்"
@@ -8890,6 +8965,33 @@ msgstr "எல்லாவற்றையும் சட்டகம்"
 msgid "Clear Board"
 msgstr "பலகையைத் துடை"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "பொருள் பெயர்"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "அனிமேசன்கள்"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "முகவர் தானியங்கி ரிக்"
 
@@ -8911,8 +9013,8 @@ msgstr "எலும்புக்கூட்டு வகை: தானி / 
 msgid "Skeleton Spec"
 msgstr "எலும்புக்கூட்டு விவரம்"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "எலும்புக்கூட்டு மரபு: 'tripo' அல்லது 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "எலும்புப் பெயரிடல்: tripo, mixamo, actorcore, unity, unreal அல்லது vrm (tripo மட்டுமே Tripo முன்னமைவு அனிமேஷன்களை ஆதரிக்கும்)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "முகவர் PBR உருவாக்கம்"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "கொடுக்கப்பட்ட கண்ணிப் பொருளுக்கு Tripo மூலம் PBR அமைப்புகளை உருவாக்கும்"
-
-msgid "Object Name"
-msgstr "பொருள் பெயர்"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "அமைப்பு இட வேண்டிய காட்சிக் கண்ணிப் பொருளின் பெயர்"
@@ -10066,8 +10165,8 @@ msgstr "ஒரு அனுமான முனையைத் தேர்ந்
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "ப்ராம்ப்டைத் திருத்தி, பின்னர் Enter அல்லது உருவாக்கு அழுத்தவும்"
 
-msgid "Node added to the generation queue"
-msgstr "முனை உருவாக்க வரிசையில் சேர்க்கப்பட்டது"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "மீண்டும் சரிசெய்து இயக்க இந்த முனையின் அமைப்புகளையும் ப்ராம்ப்டையும் காட்டும்; திருத்தத்தை ரத்துசெய்து முடிவுக்குத் திரும்ப மீண்டும் சொடுக்கவும்"
@@ -12117,9 +12216,6 @@ msgstr "வண்ண அளவீட்டு பிட்கள்"
 
 msgid "Generic Quantization Bits"
 msgstr "பொதுவான அளவீட்டு பிட்கள்"
-
-msgid "Animations"
-msgstr "அனிமேசன்கள்"
 
 msgid "Animation Mode"
 msgstr "அனிமேசன் பயன்முறை"
@@ -24999,9 +25095,6 @@ msgstr "வரிசையைத் திற"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "தாவல்களை மாற்றுவதற்கு முன் வரைவையோ குரல் தட்டச்சையோ முடிக்கவும்"
 
@@ -25826,6 +25919,9 @@ msgstr "வரிசையில்..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "ப்ராம்ப்டைத் தொகுத்து மீண்டும் முயலச் சொடுக்கவும்"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "பாதுகாப்பான பகுதிகள்"
 
 msgid "Select a character to animate"
 msgstr "இயக்க ஒரு கதாபாத்திரத்தைத் தேர்ந்தெடு"
-
-msgid "Animate"
-msgstr "இயங்குபடமாக்கு"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "இயக்கத் தலையிலிருந்து இந்தப் பிளாக்கிங் இயக்கத்தைக் குறிக்கிறது"

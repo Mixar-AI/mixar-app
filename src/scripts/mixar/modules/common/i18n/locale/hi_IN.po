@@ -2171,6 +2171,24 @@ msgstr "जनरेशन विफल — कृपया पुनः प्�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA गुण द्वारा कुंजीबद्ध कैटलॉग visible_if"
 
+msgid "Nothing selected"
+msgstr "कुछ भी चयनित नहीं"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "मान"
+
+msgid "Group"
+msgstr "समूह"
+
+msgid "Selected"
+msgstr "चयनित"
+
 msgid "No modes"
 msgstr "कोई रूप नहीं"
 
@@ -4775,6 +4793,45 @@ msgstr "ऑटो रिग विफल"
 msgid "Animate failed"
 msgstr "अनुप्राणन विफल"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "चयनित जाल में {count:,} फलक हैं (अधिकतम {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "जाल विभाजन"
 msgid "Auto Rig"
 msgstr "ऑटो रिग"
 
+msgid "Animate"
+msgstr "अनुप्राणित करें"
+
 msgid "Add Mesh"
 msgstr "जाल जोड़ें"
 
@@ -5662,6 +5722,15 @@ msgstr "जनरेशन के दौरान उपयोग किए ज�
 
 msgid "The file format used to store the generated image."
 msgstr "उत्पन्न छवि संग्रहीत करने के लिए उपयोग किया जाने वाला संचिका स्वरूप।"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "स्वचालित (नाम से)"
@@ -5981,6 +6050,9 @@ msgstr "पात्र असेंबल करें"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "उत्पन्न भागों को स्थानीय रूप से किसी रिग किए गए या साधारण शरीर से जोड़ता है"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "केवल छवि शैली का उपयोग करें"
 
@@ -6139,6 +6211,9 @@ msgstr "पहले '{name}' उत्पन्न करें — यह क�
 
 msgid "Mesh"
 msgstr "जाल"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "संदर्भ {number}"
@@ -7085,9 +7160,6 @@ msgstr "कस्टम रंग का उपयोग करें"
 msgid "Custom Colour"
 msgstr "कस्टम रंग"
 
-msgid "Selected"
-msgstr "चयनित"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "क्लिक करते समय इस फ़्रेम की सीमा और भीतरी भाग को अनदेखा करें, ताकि केवल इसके सदस्य चुने जा सकें"
 
@@ -7096,6 +7168,18 @@ msgstr "समेटा गया"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "फ़्रेम को शीर्षक पट्टी के रूप में चित्रित करें और उसका मुख्य भाग छिपाएँ"
+
+msgid "Unavailable"
+msgstr "अनुपलब्ध"
+
+msgid "No supported 3D service is available"
+msgstr "कोई समर्थित 3D सेवा उपलब्ध नहीं है"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "छवि मॉडलों को आवरण मार्गदर्शन और दो संदर्भ घोषित करने होंगे"
+
+msgid "Attachment settings"
+msgstr "अनुलग्नक सेटिंग्स"
 
 msgid "No choices published"
 msgstr "कोई विकल्प प्रकाशित नहीं"
@@ -7114,18 +7198,6 @@ msgstr "पूर्ण"
 
 msgid "Generation completed"
 msgstr "जनरेशन पूर्ण हुई"
-
-msgid "Unavailable"
-msgstr "अनुपलब्ध"
-
-msgid "No supported 3D service is available"
-msgstr "कोई समर्थित 3D सेवा उपलब्ध नहीं है"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "छवि मॉडलों को आवरण मार्गदर्शन और दो संदर्भ घोषित करने होंगे"
-
-msgid "Attachment settings"
-msgstr "अनुलग्नक सेटिंग्स"
 
 msgid "Parameter ID"
 msgstr "पैरामीटर ID"
@@ -7151,14 +7223,14 @@ msgstr "बूलियन मान"
 msgid "Catalog choice"
 msgstr "कैटलॉग विकल्प"
 
-msgid "Widget"
-msgstr "विजेट"
-
-msgid "Group"
-msgstr "समूह"
-
 msgid "Choices"
 msgstr "विकल्प"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "विजेट"
 
 msgid "Visibility Condition"
 msgstr "दृश्यता शर्त"
@@ -7178,11 +7250,14 @@ msgstr "न्यूनतम"
 msgid "Maximum"
 msgstr "अधिकतम"
 
-msgid "Value"
-msgstr "मान"
-
 msgid "Value Label"
 msgstr "मान सूचक पत्र"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "सॉकेट ID"
@@ -8890,6 +8965,33 @@ msgstr "सभी फ़्रेम करें"
 msgid "Clear Board"
 msgstr "बोर्ड साफ़ करें"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "वस्तु नाम"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "अनुप्राणन"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "एजेंट ऑटो रिग"
 
@@ -8911,8 +9013,8 @@ msgstr "कंकाल प्रकार: auto / biped / quadruped / hexapod /
 msgid "Skeleton Spec"
 msgstr "कंकाल विनिर्देश"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "कंकाल परिपाटी: 'tripo' या 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "बोन नामकरण: tripo, mixamo, actorcore, unity, unreal या vrm (केवल tripo ही Tripo प्रीसेट एनिमेशन सपोर्ट करता है)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "एजेंट PBR जनरेशन"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo का उपयोग करके दी गई जाल वस्तु के लिए PBR बनावटें उत्पन्न करें"
-
-msgid "Object Name"
-msgstr "वस्तु नाम"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "बनावट देने के लिए दृश्य में जाल वस्तु का नाम"
@@ -10066,8 +10165,8 @@ msgstr "एक अनुमान ग्रन्थि चुनें"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "प्रॉम्प्ट संपादित करें, फिर Enter या 'उत्पन्न करें' दबाएँ"
 
-msgid "Node added to the generation queue"
-msgstr "ग्रन्थि जनरेशन कतार में जोड़ी गई"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "इस ग्रन्थि की सेटिंग्स और प्रॉम्प्ट दिखाएँ ताकि उसे समायोजित करके फिर से चलाया जा सके; संपादन रद्द करके परिणाम पर लौटने के लिए फिर से क्लिक करें"
@@ -12117,9 +12216,6 @@ msgstr "रंग क्वांटाइज़ेशन बिट"
 
 msgid "Generic Quantization Bits"
 msgstr "सामान्य क्वांटाइज़ेशन बिट"
-
-msgid "Animations"
-msgstr "अनुप्राणन"
 
 msgid "Animation Mode"
 msgstr "अनुप्राणन रूप"
@@ -24999,9 +25095,6 @@ msgstr "कतार खोलें"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "कुछ भी चयनित नहीं"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "टैब बदलने से पहले स्केचिंग या श्रुतलेख समाप्त करें"
 
@@ -25826,6 +25919,9 @@ msgstr "कतार में..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "प्रॉम्प्ट संपादित करके फिर से प्रयास करने के लिए क्लिक करें"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "सुरक्षित क्षेत्र"
 
 msgid "Select a character to animate"
 msgstr "अनुप्राणित करने के लिए एक पात्र चुनें"
-
-msgid "Animate"
-msgstr "अनुप्राणित करें"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "प्लेहेड से इस ब्लॉकिंग-स्तर की गति को कीफ़्रेम करता है"

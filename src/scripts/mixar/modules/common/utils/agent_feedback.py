@@ -57,26 +57,12 @@ def clear_agent_ref(context=None) -> None:
         pass
 
 
-def take_agent_ref(context) -> dict:
-    """Read, CLEAR and return the agent's generation ref for this enqueue.
-
-    The backend's enqueue script sets ``mixar_agent_ref`` to a JSON blob
-    (``generation_id`` / ``session_id`` / ``run_id`` / ``task_id`` /
-    ``worker_id`` / ``job_type``) immediately before calling the generation
-    operator, so the client can report that generation's terminal outcome
-    back over the agent WebSocket instead of the agent polling for it.
-
-    The read CLEARS the property: a ref belongs to one invocation (the
-    retopology batch claims it once for all accepted siblings). A later
-    user-initiated generation must never inherit a stale one. Anything
-    unreadable/unparseable/not-an-object yields ``{}`` (reporting is
-    best-effort — it can never block an enqueue).
-    """
+def _read_agent_ref(context, clear: bool) -> dict:
     raw = ""
     try:
         wm = context.window_manager
         raw = wm.get(_REF_KEY, "") or ""
-        if _REF_KEY in wm.keys():
+        if clear and _REF_KEY in wm.keys():
             del wm[_REF_KEY]
     except Exception:
         return {}
@@ -92,6 +78,32 @@ def take_agent_ref(context) -> dict:
     if not isinstance(ref, dict) or not ref.get("generation_id"):
         return {}
     return {str(k): v for k, v in ref.items()}
+
+
+def take_agent_ref(context) -> dict:
+    """Read, CLEAR and return the agent's generation ref for this enqueue.
+
+    The backend's enqueue script sets ``mixar_agent_ref`` to a JSON blob
+    (``generation_id`` / ``session_id`` / ``run_id`` / ``task_id`` /
+    ``worker_id`` / ``job_type``) immediately before calling the generation
+    operator, so the client can report that generation's terminal outcome
+    back over the agent WebSocket instead of the agent polling for it.
+
+    The read CLEARS the property: a ref belongs to one invocation (the
+    retopology batch claims it once for all accepted siblings). A later
+    user-initiated generation must never inherit a stale one. Anything
+    unreadable/unparseable/not-an-object yields ``{}`` (reporting is
+    best-effort — it can never block an enqueue).
+    """
+    return _read_agent_ref(context, clear=True)
+
+
+def peek_agent_ref(context) -> dict:
+    """The ref ``take_agent_ref`` will claim, left in place for the enqueue.
+
+    For an operator that must judge its input against the job's session (its
+    scene) before it enqueues."""
+    return _read_agent_ref(context, clear=False)
 
 
 def take_job_origin(context) -> str:

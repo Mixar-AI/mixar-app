@@ -3705,6 +3705,13 @@ extern "C" void Mixar_WindowMakeKey(void *window_handle)
   SetForegroundWindow(hwnd);
 }
 
+/* True when the window is the foreground window (see the Cocoa twin). */
+extern "C" bool Mixar_WindowIsKey(void *window_handle)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  return hwnd != nullptr && ::GetForegroundWindow() == hwnd;
+}
+
 extern "C" void Mixar_WindowSetFloatingLevel(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);

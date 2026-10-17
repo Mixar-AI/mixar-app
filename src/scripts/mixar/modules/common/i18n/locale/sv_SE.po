@@ -2171,6 +2171,24 @@ msgstr "Genereringen misslyckades – försök igen"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Katalogens visible_if med RNA-attribut som nyckel"
 
+msgid "Nothing selected"
+msgstr "Inget valt"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Värde"
+
+msgid "Group"
+msgstr "Grupp"
+
+msgid "Selected"
+msgstr "Utvalda"
+
 msgid "No modes"
 msgstr "Inga lägen"
 
@@ -4775,6 +4793,45 @@ msgstr "Automatisk riggning misslyckades"
 msgid "Animate failed"
 msgstr "Animeringen misslyckades"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Valt nät har {count:,} ytor (max {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "Nätsegmentering"
 msgid "Auto Rig"
 msgstr "Automatisk riggning"
 
+msgid "Animate"
+msgstr "Animera"
+
 msgid "Add Mesh"
 msgstr "Lägg till nät"
 
@@ -5662,6 +5722,15 @@ msgstr "Antalet förfiningssteg som används under genereringen. Fler steg kan t
 
 msgid "The file format used to store the generated image."
 msgstr "Filformatet som används för att lagra den genererade bilden."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Auto (från namn)"
@@ -5981,6 +6050,9 @@ msgstr "Montera karaktär"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Fäster genererade delar på en riggad eller vanlig kropp, lokalt"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Använd endast bildens stil"
 
@@ -6139,6 +6211,9 @@ msgstr "Generera '{name}' först – det här kortet använder dess resultat"
 
 msgid "Mesh"
 msgstr "Nät"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referens {number}"
@@ -7085,9 +7160,6 @@ msgstr "Använd anpassad färg"
 msgid "Custom Colour"
 msgstr "Anpassad färg"
 
-msgid "Selected"
-msgstr "Utvalda"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ignorerar ramens kant och insida vid klick, så att endast dess medlemmar kan väljas"
 
@@ -7096,6 +7168,18 @@ msgstr "Hopfälld"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Ritar ramen som en namnlist och döljer dess innehåll"
+
+msgid "Unavailable"
+msgstr "Ej tillgänglig"
+
+msgid "No supported 3D service is available"
+msgstr "Ingen 3D-tjänst som stöds är tillgänglig"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Bildmodeller måste ange stöd för maskvägledning och två referenser"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Inga alternativ publicerade"
@@ -7114,18 +7198,6 @@ msgstr "Klar"
 
 msgid "Generation completed"
 msgstr "Genereringen slutförd"
-
-msgid "Unavailable"
-msgstr "Ej tillgänglig"
-
-msgid "No supported 3D service is available"
-msgstr "Ingen 3D-tjänst som stöds är tillgänglig"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Bildmodeller måste ange stöd för maskvägledning och två referenser"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "Parameter-ID"
@@ -7151,14 +7223,14 @@ msgstr "Booleskt värde"
 msgid "Catalog choice"
 msgstr "Katalogval"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Grupp"
-
 msgid "Choices"
 msgstr "Alternativ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Synlighetsvillkor"
@@ -7178,11 +7250,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maximalt"
 
-msgid "Value"
-msgstr "Värde"
-
 msgid "Value Label"
 msgstr "Värdeetikett"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Uttags-ID"
@@ -8890,6 +8965,33 @@ msgstr "Bildruta All"
 msgid "Clear Board"
 msgstr "Rensa tavlan"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objektnamn"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animationer"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Automatisk riggning (agent)"
 
@@ -8911,8 +9013,8 @@ msgstr "Skeletttyp: auto / biped / quadruped / hexapod / octopod / avian / serpe
 msgid "Skeleton Spec"
 msgstr "Skelettspecifikation"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Skelettkonvention: 'tripo' eller 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Bennamngivning: tripo, mixamo, actorcore, unity, unreal eller vrm (endast tripo stöder de förinställda Tripo-animationerna)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "PBR-generering (agent)"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Genererar PBR-texturer för det angivna nätobjektet med Tripo"
-
-msgid "Object Name"
-msgstr "Objektnamn"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Namn på nätobjektet i scenen som ska textureras"
@@ -10066,8 +10165,8 @@ msgstr "Välj en inferensnod"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Redigera prompten och tryck sedan på Enter eller Generera"
 
-msgid "Node added to the generation queue"
-msgstr "Noden lades till i genereringskön"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Visar nodens inställningar och prompt så att den kan justeras och köras igen; klicka igen för att avbryta redigeringen och gå tillbaka till resultatet"
@@ -12117,9 +12216,6 @@ msgstr "Färgkvantiseringsbitar"
 
 msgid "Generic Quantization Bits"
 msgstr "Generiska kvantiseringsbitar"
-
-msgid "Animations"
-msgstr "Animationer"
 
 msgid "Animation Mode"
 msgstr "Animationsläge"
@@ -24999,9 +25095,6 @@ msgstr "Öppna kö"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Inget valt"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Avsluta skissandet eller dikteringen innan du byter flik"
 
@@ -25826,6 +25919,9 @@ msgstr "I kö..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Klicka för att redigera prompten och försöka igen"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "Säkra områden"
 
 msgid "Select a character to animate"
 msgstr "Markera en karaktär att animera"
-
-msgid "Animate"
-msgstr "Animera"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Sätter nycklar för den här rörelsen på blockingnivå från uppspelningshuvudet"

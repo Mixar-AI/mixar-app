@@ -19,7 +19,7 @@ LEGACY_RIG_TYPES = frozenset({
     "auto", "biped", "quadruped", "hexapod", "octopod",
     "avian", "serpentine", "aquatic",
 })
-LEGACY_SPECS = frozenset({"tripo", "mixamo"})
+LEGACY_SPECS = frozenset({"tripo", "mixamo", "actorcore", "unity", "unreal", "vrm"})
 
 
 def declared_params(model_slug: str) -> Optional[Dict[str, dict]]:

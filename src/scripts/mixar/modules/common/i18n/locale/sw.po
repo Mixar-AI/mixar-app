@@ -2171,6 +2171,24 @@ msgstr "Utengenezaji umeshindwa — tafadhali jaribu tena"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ya katalogi iliyofungwa kwa sifa ya RNA"
 
+msgid "Nothing selected"
+msgstr "Hakuna kilichochaguliwa"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Thamani"
+
+msgid "Group"
+msgstr "Kundi"
+
+msgid "Selected"
+msgstr "Imechaguliwa"
+
 msgid "No modes"
 msgstr "Hakuna modi"
 
@@ -4775,6 +4793,45 @@ msgstr "Rigi otomatiki imeshindwa"
 msgid "Animate failed"
 msgstr "Uhuishaji umeshindwa"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Matundu yaliyochaguliwa yana nyuso {count:,} (upeo {max_faces:,})"
 
@@ -5297,7 +5354,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -5318,7 +5375,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
@@ -5561,6 +5618,9 @@ msgstr "Ugawaji wa matundu"
 msgid "Auto Rig"
 msgstr "Rigi otomatiki"
 
+msgid "Animate"
+msgstr "Huisha"
+
 msgid "Add Mesh"
 msgstr "Ongeza matundu"
 
@@ -5662,6 +5722,15 @@ msgstr "Idadi ya hatua za uboreshaji zinazotumika wakati wa utengenezaji. Hatua 
 
 msgid "The file format used to store the generated image."
 msgstr "Umbizo la faili linalotumika kuhifadhi taswira iliyotengenezwa."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Otomatiki (kutoka jina)"
@@ -5981,6 +6050,9 @@ msgstr "Kusanya mhusika"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Ambatisha sehemu zilizotengenezwa kwenye mwili wenye rigi au wa kawaida, ndani"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Tumia mtindo wa taswira pekee"
 
@@ -6139,6 +6211,9 @@ msgstr "Tengeneza '{name}' kwanza — kadi hii hutumia tokeo lake"
 
 msgid "Mesh"
 msgstr "Matundu"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Rejeleo {number}"
@@ -7085,9 +7160,6 @@ msgstr "Tumia rangi maalum"
 msgid "Custom Colour"
 msgstr "Rangi maalum"
 
-msgid "Selected"
-msgstr "Imechaguliwa"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Puuza mpaka na ndani ya fremu hii unapobofya, ili wanachama wake pekee waweze kuchaguliwa"
 
@@ -7096,6 +7168,18 @@ msgstr "Imekunjwa"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Chora fremu kama upau wenye kichwa na uficha mwili wake"
+
+msgid "Unavailable"
+msgstr "Haipatikani"
+
+msgid "No supported 3D service is available"
+msgstr "Hakuna huduma ya 3D inayotumika"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Modeli za taswira lazima zitangaze mwongozo wa kinyago na marejeleo mawili"
+
+msgid "Attachment settings"
+msgstr "Mipangilio ya kiambatisho"
 
 msgid "No choices published"
 msgstr "Hakuna chaguzi zilizochapishwa"
@@ -7114,18 +7198,6 @@ msgstr "Imekamilika"
 
 msgid "Generation completed"
 msgstr "Utengenezaji umekamilika"
-
-msgid "Unavailable"
-msgstr "Haipatikani"
-
-msgid "No supported 3D service is available"
-msgstr "Hakuna huduma ya 3D inayotumika"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Modeli za taswira lazima zitangaze mwongozo wa kinyago na marejeleo mawili"
-
-msgid "Attachment settings"
-msgstr "Mipangilio ya kiambatisho"
 
 msgid "Parameter ID"
 msgstr "Kitambulisho cha kigezo"
@@ -7151,14 +7223,14 @@ msgstr "Thamani ya boolean"
 msgid "Catalog choice"
 msgstr "Chaguo la katalogi"
 
-msgid "Widget"
-msgstr "Wijeti"
-
-msgid "Group"
-msgstr "Kundi"
-
 msgid "Choices"
 msgstr "Chaguzi"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Wijeti"
 
 msgid "Visibility Condition"
 msgstr "Sharti la kuonekana"
@@ -7178,11 +7250,14 @@ msgstr "Kima cha chini"
 msgid "Maximum"
 msgstr "Upeo wa juu"
 
-msgid "Value"
-msgstr "Thamani"
-
 msgid "Value Label"
 msgstr "Lebo ya thamani"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Kitambulisho cha soketi"
@@ -8890,6 +8965,33 @@ msgstr "Sura Yote"
 msgid "Clear Board"
 msgstr "Futa Ubao"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Jina la Kitu"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Uhuishaji"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Rigi Otomatiki ya Wakala"
 
@@ -8911,8 +9013,8 @@ msgstr "Aina ya kiunzi: auto / biped / quadruped / hexapod / octopod / avian / s
 msgid "Skeleton Spec"
 msgstr "Maelezo ya Kiunzi"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Kanuni ya kiunzi: 'tripo' au 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Majina ya mifupa: tripo, mixamo, actorcore, unity, unreal au vrm (tripo pekee ndiyo inaauni uhuishaji ulioandaliwa wa Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8931,9 +9033,6 @@ msgstr "Utengenezaji wa PBR wa Wakala"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tengeneza miundo ya PBR kwa kitu cha matundu kilichotolewa kwa Tripo"
-
-msgid "Object Name"
-msgstr "Jina la Kitu"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Jina la kitu cha matundu katika mandhari cha kupewa muundo"
@@ -10066,8 +10165,8 @@ msgstr "Chagua nodi ya utabiri"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Hariri maagizo, kisha bonyeza Enter au Tengeneza"
 
-msgid "Node added to the generation queue"
-msgstr "Nodi imeongezwa kwenye foleni ya utengenezaji"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Onyesha mipangilio na maagizo ya nodi hii ili iyarekebishwe na kuendeshwa tena; bofya tena kughairi uhariri na kurudi kwenye matokeo"
@@ -12117,9 +12216,6 @@ msgstr "Biti za Kuhesabu Rangi"
 
 msgid "Generic Quantization Bits"
 msgstr "Biti za Kuhesabu za Jumla"
-
-msgid "Animations"
-msgstr "Uhuishaji"
 
 msgid "Animation Mode"
 msgstr "Modi ya Uhuishaji"
@@ -24999,9 +25095,6 @@ msgstr "Fungua foleni"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Hakuna kilichochaguliwa"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Maliza kuchora au kuamuru kabla ya kubadilisha vichupo"
 
@@ -25826,6 +25919,9 @@ msgstr "Kwenye foleni..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Bofya ili kuhariri maagizo na ujaribu tena"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -27023,9 +27119,6 @@ msgstr "Maeneo Salama"
 
 msgid "Select a character to animate"
 msgstr "Chagua mhusika wa kuhuisha"
-
-msgid "Animate"
-msgstr "Huisha"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Weka mwendo huu wa mpangilio wa awali kutoka kichwa cha kucheza"

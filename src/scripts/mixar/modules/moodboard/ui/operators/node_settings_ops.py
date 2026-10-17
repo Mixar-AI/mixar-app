@@ -9,6 +9,9 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.generation_params.core.bounds import integer_window
+from mixar.modules.common.generation_params.core.draw import draw_model_description
+from mixar.modules.common.generation_params.core.multi_select import draw_multi_select
+from mixar.modules.moodboard.core.node_schema import node_model_slug, node_service_key
 from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
@@ -79,6 +82,12 @@ def _draw_parameter(layout, parameter, spec=None):
     """Caption over the control for every kind; hover either for help."""
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
+    if kind == 'ARRAY':
+        # Caption, summary and the filterable tick list in one shared widget.
+        field = layout.column(align=True)
+        draw_multi_select(field, parameter, 'choices', 'active_choice', label)
+        draw_tooltip(field, parameter_help(parameter, spec))
+        return
     field = layout.column(align=True)
     field.label(text=label)
     if kind == 'BOOLEAN':
@@ -96,7 +105,7 @@ def _draw_parameter(layout, parameter, spec=None):
     draw_tooltip(field, parameter_help(parameter, spec))
 
 
-def _draw_settings(layout, node, scene=None):
+def _draw_settings(layout, node, scene=None, width=None):
     if hasattr(layout, 'mixar_surface'):
         layout = layout.mixar_surface(theme='ZEN')
     layout.use_property_split = False
@@ -124,6 +133,10 @@ def _draw_settings(layout, node, scene=None):
     model.label(text="Model")
     draw_dropdown(model, node, 'model', text="")
     draw_tooltip(model, MODEL_HELP)
+    # The picked model's catalog text (server-localized), after the tooltip so
+    # its lines are not given the generic Model help.
+    draw_model_description(model, node_service_key(node), node_model_slug(node),
+                           width=width)
     specs = parameter_specs(node)
     for parameter in node.parameters:
         if parameter.visible:
@@ -175,12 +188,22 @@ class MIXIE_OT_moodboard_node_settings(Operator):
     anchored_overlay: bpy.props.BoolProperty(
         default=False, options={'HIDDEN', 'SKIP_SAVE'}
     )
+    # The popup's width (UI units), so wrapped text fits the card-sized popup.
+    popup_width: bpy.props.IntProperty(
+        default=0, options={'HIDDEN', 'SKIP_SAVE'}
+    )
 
     def invoke(self, context, event):
         node = _popup_node(context, self.node_id)
         if node is None:
             self.report({'WARNING'}, "This inference node is no longer available")
             return {'CANCELLED'}
+        if node.action_type == 'ANIMATE':
+            # Narrow the preset list to the connected rig's skeleton. Written
+            # here, in the operator, because the list draws read-only.
+            from mixar.modules.moodboard.core.animate_node import refresh_preset_filter
+
+            refresh_preset_filter(context.scene, node)
         # Pin the native overlay below this card's model row, over the prompt.
         # No cursor warp, saved UI state or changes to the draft are needed.
         region = context.region
@@ -197,6 +220,7 @@ class MIXIE_OT_moodboard_node_settings(Operator):
                 int(region.x + left + 12 * scale - event.mouse_x),
                 int(region.y + top - 52 * scale - event.mouse_y),
             )
+        self.popup_width = width
         return context.window_manager.invoke_popup(self, width=width)
 
     def draw(self, context):
@@ -204,7 +228,7 @@ class MIXIE_OT_moodboard_node_settings(Operator):
         if node is None:
             self.layout.label(text="This inference node is no longer available", icon='INFO')
             return
-        _draw_settings(self.layout, node, context.scene)
+        _draw_settings(self.layout, node, context.scene, width=self.popup_width)
 
     def check(self, context):
         node = _popup_node(context, self.node_id)

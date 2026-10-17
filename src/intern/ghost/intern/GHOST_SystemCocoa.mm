@@ -988,6 +988,20 @@ extern "C" void Mixar_WindowMakeKey(void *window_handle)
 }
 
 
+/* True when the window is the key window. The modal-dialog dock hold
+ * (wm_mixar_modal_dialog.cc) remembers the floating dock that had the
+ * keyboard so the last release can hand it back. */
+extern "C" bool Mixar_WindowIsKey(void *window_handle)
+{
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  return win != nil && [win isKeyWindow];
+}
+
+
 /* Detach a child window from its parent. Used before minimising
  * the bubble so the pill stays visible (otherwise AppKit would
  * orderOut the child along with the parent). The caller can later

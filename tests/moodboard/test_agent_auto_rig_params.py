@@ -19,8 +19,14 @@ OPS = ROOT / "src/scripts/mixar/modules/moodboard/ui/operators/agent_auto_rig_op
 
 TRIPO = {"slug": "tripo", "parameters": {
     "rig_type": {"type": "string", "enum": ["auto", "biped", "quadruped"]},
+    # Tripo Auto Rig 3.0's Skeleton param: six bone namings (backend catalog).
     "spec": {"type": "string", "choices": [
-        {"value": "tripo", "label": "Tripo"}, {"value": "mixamo", "label": "Mixamo"},
+        {"value": "tripo", "label": "Tripo native bone naming"},
+        {"value": "mixamo", "label": "Mixamo-compatible bone naming"},
+        {"value": "actorcore", "label": "ActorCore humanoid bone naming"},
+        {"value": "unity", "label": "Unity Humanoid bone naming"},
+        {"value": "unreal", "label": "Unreal Mannequin bone naming"},
+        {"value": "vrm", "label": "VRM 1.0 humanoid bone naming"},
     ]},
 }}
 MESHY = {"slug": "meshy", "parameters": {"height_meters": {"type": "number"}}}
@@ -43,6 +49,15 @@ def test_tripo_schema_sends_declared_enum_values(catalog):
     assert params is None and "rig_type" in reason and "quadruped" in reason
 
 
+@pytest.mark.parametrize("spec", ["actorcore", "unity", "Unreal", "vrm"])
+def test_every_catalog_bone_naming_is_accepted(catalog, spec):
+    catalog["tripo"] = TRIPO
+    params, reason = ARP.build_rig_params("tripo", "biped", spec, 0)
+    assert reason == "" and params == {"rig_type": "biped", "spec": spec.lower()}
+    params, reason = ARP.build_rig_params("tripo", "biped", "others", 0)
+    assert params is None and "spec" in reason
+
+
 def test_meshy_schema_drops_undeclared_rig_type_and_spec(catalog):
     catalog["meshy"] = MESHY
     params, reason = ARP.build_rig_params("meshy", "auto", "tripo", 1.75)
@@ -55,7 +70,9 @@ def test_no_catalog_keeps_the_legacy_tripo_behaviour(catalog):
     params, reason = ARP.build_rig_params("tripo", "", "", 1.8)
     assert reason == ""
     assert params == {"rig_type": "auto", "spec": "tripo"}  # height never sent
-    params, reason = ARP.build_rig_params("tripo", "biped", "unreal", 0)
+    assert ARP.build_rig_params("tripo", "biped", "unreal", 0)[0] == {
+        "rig_type": "biped", "spec": "unreal"}
+    params, reason = ARP.build_rig_params("tripo", "biped", "others", 0)
     assert params is None and "spec" in reason
 
 

@@ -251,8 +251,11 @@ static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
                           (state == 4 ? IFACE_("Generation failed") : IFACE_("Cancelled"));
   draw_text_centered_clipped(title, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
   if (ELEM(state, 4, 5)) {
-    draw_text_centered_clipped(
-        IFACE_("Click to edit the prompt and try again"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    /* A promptless card (Auto Rig, Animate, ...) has no prompt to edit. */
+    const char *retry = RNA_boolean_get(node, "show_prompt") ?
+                            IFACE_("Click to edit the prompt and try again") :
+                            IFACE_("Check its input and settings, then try again");
+    draw_text_centered_clipped(retry, center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     if (state == 4) {
       draw_error_line(node, center_x, center_y - 52.0f, max_width);
     }

@@ -15,6 +15,7 @@
 
 namespace blender {
 
+struct bContext;
 struct wmWindow;
 struct wmWindowManager;
 struct wmEvent;
@@ -61,8 +62,13 @@ void Mixar_window_gpu_context_pop(const wmWindowManager *wm);
  * per-dialog static): a second hold by the same owner is ignored and a
  * release only undoes an existing hold, so a pop-up may release from both
  * its button handler and its free path. No-op hiding on Linux.
+ *
+ * Hold while `C`'s window is the one the pop-up opens in: when a dock has
+ * the keyboard, the first hold makes that window's host
+ * (#Mixar_modal_dialog_host_window) key, and the last release gives the
+ * keyboard back to the dock.
  */
-void Mixar_floating_docks_hold(const void *owner);
+void Mixar_floating_docks_hold(bContext *C, const void *owner);
 void Mixar_floating_docks_release(const void *owner);
 /** Any modal dialog holds the docks hidden: the island must not treat a press
  * in that dialog as an outside click (it would come back minimised). */
@@ -74,7 +80,7 @@ bool Mixar_floating_docks_held();
  * its top-level main window.
  */
 wmWindow *Mixar_modal_dialog_host_window(wmWindowManager *wm, wmWindow *win);
-/** Make the re-hosted dialog's window the OS key window (macOS / Windows). */
-void Mixar_modal_dialog_focus_host(wmWindow *win);
+/** `win`'s active screen has an Agent Bubble area (the island or the pill). */
+bool Mixar_window_has_agent_bubble(const wmWindow *win);
 
 }  // namespace blender

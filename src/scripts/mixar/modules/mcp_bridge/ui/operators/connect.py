@@ -51,7 +51,13 @@ def _enable(op):
     _save_tools_now()
 
 
-def _draw_switch(layout):
+def _ready(context):
+    """AI apps can use Mixar only with a session (a guest's counts) and the agent
+    server connected; the local relay alone refuses every scene call."""
+    return _signed_in(context) and runtime.is_running() and bool(runtime.snapshot().get("connected"))
+
+
+def _draw_switch(layout, ready):
     """The MCP switch drawn as the checkbox it is, with what AI apps see right now.
 
     It used to be an "MCP enabled" tick beside a "Disable" button: a user who
@@ -67,10 +73,10 @@ def _draw_switch(layout):
     if not on:
         layout.label(text="MCP is off: AI apps report Mixar as not connected until you turn it on.",
                      icon='ERROR')
-    elif runtime.is_running():
+    elif ready:
         layout.label(text="MCP is on: AI apps can connect to this Mixar.", icon='CHECKMARK')
     else:
-        layout.label(text="MCP is on, waiting for Mixar's server connection.", icon='TIME')
+        layout.label(text="MCP is on. AI apps can use Mixar once it's signed in and connected.", icon='TIME')
 
 
 def _snippet_lines(text):
@@ -100,11 +106,11 @@ class MIXAR_OT_mcp_setup(Operator):
             layout.operator("mixie_chat.login", text="Sign In")
             if runtime.enabled():
                 # Turning MCP off never needs an account (the session may have expired).
-                _draw_switch(layout)
+                _draw_switch(layout, False)
             return
-        layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
+        layout.label(text="AI generation uses credits and needs a Mixar account.")
         layout.label(text="Your AI app can start Mixar when needed.")
-        _draw_switch(layout)
+        _draw_switch(layout, _ready(context))
         on = runtime.ui_control_enabled()
         row = layout.row()
         row.alignment = 'LEFT'

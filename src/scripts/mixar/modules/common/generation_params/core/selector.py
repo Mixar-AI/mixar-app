@@ -15,7 +15,8 @@ A "mode" is one service of a catalog capability surfaced in a moodboard tab
   valid service key (falling back to the capability's first service).
 - ``draw_capability_selector()`` — renders the Mode dropdown (hidden when
   the capability has a single service), the Model dropdown (optionally
-  with a refresh button) and the selected model's schema params. Returns
+  with a refresh button), the selected model's catalog description (when it
+  has one) and its schema params. Returns
   False when the catalog isn't loaded so callers can fall back to their
   legacy hardcoded UI.
 
@@ -28,7 +29,7 @@ from typing import List, Optional, Tuple
 
 from mixar.modules.common.i18n import n_
 
-from .draw import draw_service_params
+from .draw import draw_model_description, draw_service_params
 
 # Enum identifiers that are placeholder states, never real catalog keys.
 PLACEHOLDER_IDS = ("LOADING", "ERROR", "NONE", "")
@@ -241,7 +242,7 @@ def draw_capability_selector(
     surface: str = "moodboard",
     model_refresh_op: Optional[str] = None,
 ) -> bool:
-    """Render Mode dropdown → Model dropdown → schema params into *layout*.
+    """Render Mode dropdown → Model dropdown (+ description) → schema params.
 
     *data* is the tab PropertyGroup owning the mode/model EnumProperties.
     The Mode dropdown is hidden when the capability has exactly one
@@ -278,5 +279,6 @@ def draw_capability_selector(
     )
     model_slug = getattr(data, model_prop, "")
     if service_key and model_slug and model_slug not in PLACEHOLDER_IDS:
+        draw_model_description(layout, service_key, model_slug)
         draw_service_params(layout, service_key, model_slug)
     return True

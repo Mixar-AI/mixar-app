@@ -12,15 +12,18 @@ Provider Settings is its first user):
 
 * is centred (`WM_POPUP_POSITION_CENTER`);
 * re-targets out of an Agent Bubble window to the bubble's top-level host,
-  mirroring the close-file dialog, and makes that window key so its fields
-  get the keyboard;
+  mirroring the close-file dialog;
 * holds the floating docks hidden for the lifetime of its `wmOpPopUp`, whose
   destructor releases the hold — every close path (OK, Cancel, Escape,
   click-away, a file load tearing the pop-up down) ends in a `MEM_delete`.
 
 Holds are keyed by owner so the splash and close-file dialogs, which reach
 their restore from both a button and the pop-up's free callback, can no longer
-release a hold that belongs to another open dialog.
+release a hold that belongs to another open dialog. The keyboard follows the
+holds: the first one makes the dialog's host key while a floating dock has the
+keyboard (a suppressed island is only transparent on macOS and kept it), and
+the last release hands it back to that dock, so after Cancel the island
+composer types again instead of the viewport taking the keys as shortcuts.
 """
 
 import ast
@@ -60,9 +63,11 @@ def test_modal_dialog_is_centred_hosted_out_of_the_island_and_holds_docks():
     assert "CTX_wm_window_set(C, win_dialog);" in body
     # The caller's context comes back after the pop-up is registered.
     assert body.index("popup_block_ex(") < body.index("CTX_wm_window_set(C, win_ctx);")
-    assert "Mixar_modal_dialog_focus_host(win_dialog);" in body
+    assert "focus_host" not in body and "Mixar_WindowMakeKey" not in body
     assert "data->mixar_docks_held = true;" in body
-    assert "Mixar_floating_docks_hold(data);" in body
+    # Held while the context window is the host, so the hold can key it.
+    assert body.index("CTX_wm_window_set(C, win_dialog);") < body.index(
+        "Mixar_floating_docks_hold(C, data);") < body.index("CTX_wm_window_set(C, win_ctx);")
     assert "wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op" in body
     # Generic: no operator is singled out.
     assert not re.search(r"byok|BYOK|MIXAR_BYOK", body)
@@ -91,7 +96,7 @@ def test_upstream_props_dialog_keeps_mouse_positioning():
 def test_host_window_mirrors_the_close_file_dialog():
     host = _code(_function(WM_MODAL.read_text(),
                            "wmWindow *Mixar_modal_dialog_host_window("))
-    assert "!window_has_agent_bubble(win)" in host
+    assert "!Mixar_window_has_agent_bubble(win)" in host
     assert "win->parent" in host and "win_main->parent" in host
     assert "WM_window_is_temp_screen(&iter_win)" in host
     assert "intern/wm_mixar_modal_dialog.cc" in WM_CMAKE.read_text()
@@ -101,7 +106,7 @@ def test_host_window_mirrors_the_close_file_dialog():
 
 def test_holds_are_keyed_and_idempotent():
     src = _code(WM_MODAL.read_text())
-    hold = _function(src, "void Mixar_floating_docks_hold(const void *owner)")
+    hold = _function(src, "void Mixar_floating_docks_hold(bContext *C, const void *owner)")
     release = _function(src, "void Mixar_floating_docks_release(const void *owner)")
     assert "!dock_holders().add(owner)" in hold
     assert "Mixar_FloatingDocksSuppressForModal();" in hold
@@ -113,8 +118,41 @@ def test_holds_are_keyed_and_idempotent():
         "Mixar_FloatingDocksSuppressForModal")
     for name in ("Mixar_floating_docks_hold", "Mixar_floating_docks_release",
                  "Mixar_floating_docks_held", "Mixar_modal_dialog_host_window",
-                 "Mixar_modal_dialog_focus_host"):
+                 "Mixar_window_has_agent_bubble"):
         assert name in WM_MIXAR_HH.read_text(), name
+
+
+def test_the_keyboard_follows_the_first_hold_and_the_last_release():
+    src = _code(WM_MODAL.read_text())
+    hold = _function(src, "void Mixar_floating_docks_hold(bContext *C, const void *owner)")
+    release = _function(src, "void Mixar_floating_docks_release(const void *owner)")
+    # First hold only: remember the dock that had the keyboard — asked BEFORE
+    # hiding (Windows moves the foreground off a hidden window) — then key the
+    # dialog's host.
+    assert "dock_holders().size() == 1" in hold
+    assert "key_floating_dock(wm)" in hold
+    assert "Mixar_modal_dialog_host_window(wm, CTX_wm_window(C))" in hold
+    assert hold.index("key_floating_dock(wm)") < hold.index(
+        "Mixar_FloatingDocksSuppressForModal();") < hold.index("Mixar_WindowMakeKey(")
+    assert "g_key_dock = dock;" in hold
+    finder = _function(src, "static wmWindow *key_floating_dock(wmWindowManager *wm)")
+    assert "Mixar_window_has_agent_bubble(&win) && Mixar_WindowIsKey(ghostwin)" in finder
+    # Last release only, and only to a dock that still exists (pointer + id).
+    assert release.index("Mixar_FloatingDocksRestoreAfterModal();") < release.index(
+        "if (dock_holders().is_empty()) {") < release.index("take_key_dock()")
+    take = _function(src, "static wmWindow *take_key_dock()")
+    assert "g_key_dock = nullptr;" in take
+    assert "&win == dock && win.winid == winid" in take
+    for ghost in ("src/intern/ghost/intern/GHOST_SystemCocoa.mm",
+                  "src/intern/ghost/intern/GHOST_SystemWin32.cc"):
+        assert 'extern "C" bool Mixar_WindowIsKey(void *window_handle)' in (ROOT / ghost).read_text()
+
+
+def test_every_dialog_holds_with_its_context():
+    for path, call in ((WM_SPLASH, "Mixar_floating_docks_hold(C, &wm_mixar_splash_dock_owner);"),
+                       (WM_FILES, "Mixar_floating_docks_hold(C, close_file_dialog_name);"),
+                       (WM_OPERATORS, "Mixar_floating_docks_hold(C, data);")):
+        assert call in _code(path.read_text()), path.name
 
 
 def test_splash_and_close_file_go_through_keyed_holds():
@@ -126,7 +164,7 @@ def test_splash_and_close_file_go_through_keyed_holds():
         code = _code(path.read_text())
         assert "Mixar_FloatingDocksSuppressForModal" not in code, path.name
         assert "Mixar_FloatingDocksRestoreAfterModal" not in code, path.name
-        assert f"Mixar_floating_docks_hold({owner});" in code, path.name
+        assert f"Mixar_floating_docks_hold(C, {owner});" in code, path.name
         assert f"Mixar_floating_docks_release({owner});" in code, path.name
 
 
