@@ -1,7 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Slot-aware, read-only animation discovery. Never run scans from draw()."""
+"""Slot-aware, read-only animation discovery. Never run scans from draw().
+
+A row is one of three kinds: ``ACTION`` (the target's active action),
+``STRIP`` (an NLA strip on the target; its track carries Solo/Mute) or
+``FILE`` (a clip from All in file that is not on the target yet).
+"""
 from types import SimpleNamespace
 from collections import deque
 
@@ -20,20 +25,53 @@ def selected_target(context):
     return obj
 
 
-def bindings(target):
-    """Active and stashed/NLA bindings, including strips inside meta strips."""
+def hidable_rig(context):
+    """The rig of a selected skinned mesh; a selected rig itself is not hidden
+    (hiding deselects it, which would empty the browser)."""
+    target = selected_target(context)
+    if (target is None or target.type != 'ARMATURE'
+            or target == context.view_layer.objects.active):
+        return None
+    return target
+
+
+def track_strips(target):
+    """(track, strip, nested) for every clip strip, including meta contents."""
     anim = getattr(target, 'animation_data', None)
     if anim is None:
         return
-    if anim.action:
+    for track in anim.nla_tracks:
+        pending = deque((strip, False) for strip in track.strips)
+        while pending:
+            strip, nested = pending.popleft()
+            if strip.type == 'META':
+                pending.extend((child, True) for child in strip.strips)
+            elif strip.action:
+                yield track, strip, nested
+
+
+def bindings(target):
+    """Active and NLA bindings: everything that can make a row 'used'."""
+    anim = getattr(target, 'animation_data', None)
+    if anim is not None and anim.action:
         yield anim
-    pending = deque(strip for track in anim.nla_tracks for strip in track.strips)
-    while pending:
-        strip = pending.popleft()
-        if strip.type == 'META':
-            pending.extend(strip.strips)
-        elif strip.action:
-            yield strip
+    for _track, strip, _nested in track_strips(target):
+        yield strip
+
+
+def find_strip(target, track_name, strip_name):
+    """(track, strip, nested) by name, or (None, None, False)."""
+    for track, strip, nested in track_strips(target):
+        if track.name == track_name and strip.name == strip_name:
+            return track, strip, nested
+    return None, None, False
+
+
+def soloed_track(target):
+    anim = getattr(target, 'animation_data', None)
+    if anim is None:
+        return None
+    return next((track for track in anim.nla_tracks if track.is_solo), None)
 
 
 def curves(action, slot):
@@ -69,26 +107,56 @@ def clip_range(action, fcurves):
     return min(r[0] for r in ranges), max(r[1] for r in ranges)
 
 
-def entries(target, actions, all_in_file=False):
-    """One row per action/slot; repeated strips don't duplicate the source clip.
+def _row(target, action, slot, kind, **extra):
+    fcurves = curves(action, slot)
+    start, end = clip_range(action, fcurves)
+    row = dict(action_name=action.name, slot_handle=slot.handle if slot else 0,
+               slot_name=slot.name_display if slot and len(action.slots) > 1 else '',
+               start=start, end=end, used=kind != 'FILE', kind=kind,
+               track_name='', strip_name='', nested=False,
+               reason=compatibility(target, slot, fcurves))
+    row.update(extra)
+    return row
 
-    Selected scope means proven ownership (active or NLA). All in file is
-    explicit discovery, with incompatible slots visible but unplayable.
+
+def _strip_row(target, track, strip, nested):
+    return _row(target, strip.action, strip.action_slot, 'STRIP',
+                track_name=track.name, strip_name=strip.name, nested=nested,
+                start=float(strip.frame_start), end=float(strip.frame_end))
+
+
+def entries(target, actions, all_in_file=False):
+    """Selected scope: the active action, then every strip on the target.
+
+    All in file lists each action/slot once: as its first strip on the target
+    when there is one, else as the active action, else as a FILE row that Add
+    or Play puts on the target. Incompatible slots stay visible but disabled.
     """
-    owned = {}
-    for binding in bindings(target):
-        slot = binding.action_slot
-        owned[(binding.action.name, slot.handle if slot else 0)] = (binding.action, slot)
-    candidates = (((a, s) for a in actions for s in (list(a.slots) or [None]))
-                  if all_in_file else list(owned.values()))
-    for action, slot in candidates:
-        key = (action.name, slot.handle if slot else 0)
-        fcurves = curves(action, slot)
-        start, end = clip_range(action, fcurves)
-        yield dict(action_name=action.name, slot_handle=key[1],
-                   slot_name=slot.name_display if slot and len(action.slots) > 1 else '',
-                   start=start, end=end, used=key in owned,
-                   reason=compatibility(target, slot, fcurves))
+    anim = getattr(target, 'animation_data', None)
+    active = None
+    if anim is not None and anim.action:
+        active = (anim.action.name, anim.action_slot.handle if anim.action_slot else 0)
+    strips = list(track_strips(target))
+    if not all_in_file:
+        if active:
+            yield _row(target, anim.action, anim.action_slot, 'ACTION')
+        for track, strip, nested in strips:
+            yield _strip_row(target, track, strip, nested)
+        return
+    first = {}
+    for track, strip, nested in strips:
+        slot = strip.action_slot
+        first.setdefault((strip.action.name, slot.handle if slot else 0),
+                         (track, strip, nested))
+    for action in actions:
+        for slot in (list(action.slots) or [None]):
+            key = (action.name, slot.handle if slot else 0)
+            if key in first:
+                yield _strip_row(target, *first[key])
+            elif key == active:
+                yield _row(target, action, slot, 'ACTION')
+            else:
+                yield _row(target, action, slot, 'FILE')
 
 
 def resolve(action, handle):

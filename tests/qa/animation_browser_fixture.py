@@ -7,9 +7,13 @@ from mathutils import Quaternion
 w = drv.main_window()
 a = next(a for a in w.screen.areas if a.type == 'VIEW_3D')
 r = next(r for r in a.regions if r.type == 'WINDOW')
-from mixar.modules.workflow.core import animation_browser, animation_preview
-animation_preview.stop()
-animation_browser.close()
+from mixar.modules.workflow.core import animation_browser
+with bpy.context.temp_override(window=w):
+    if w.screen.is_animation_playing:
+        bpy.ops.screen.animation_cancel(restore_frame=False)
+# Forget a previous scenario's saved preview range; the fixture scene is new.
+bpy.context.window_manager.mixar_animations.range_saved = False
+bpy.context.window_manager.mixar_animations.play_target = ''
 w.scene = bpy.data.scenes.new('QA Animations')
 s = w.scene
 s.render.fps = 24
@@ -85,7 +89,8 @@ with bpy.context.temp_override(window=w, area=a, region=r):
         lamp.keyframe_insert(data_path='energy', frame=frame)
     body.select_set(True)
     w.view_layer.objects.active = body
-    s.frame_set(7, subframe=.25)
+    s.frame_set(7)
+    s.playback_loop_mode = 'INFINITE'
     a.spaces.active.shading.type = 'SOLID'
     a.spaces.active.overlay.show_overlays = False
     a.spaces.active.region_3d.view_location = (0,0,1.1)

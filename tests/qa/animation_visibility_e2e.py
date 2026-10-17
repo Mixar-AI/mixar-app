@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""No-credit regression: preview must not change any object's visibility.
+"""No-credit regression: playing a clip must not change any object's visibility.
 
 QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4899 \
 QA_SCENARIO_OUT=/tmp/animation-visibility python3 tests/qa/animation_visibility_e2e.py
 
 Reproduces an enclosing low-poly helper sphere hidden through collection or
-view-layer visibility. Preview plays the real rig in the user's scene, so the
-visibility seen during and after preview must equal the original. Setup uses
-eval; playback uses the real toolbar UI.
+view-layer visibility. Play only solos an NLA track and sets the preview
+range, so the visibility seen while playing and after Stop must equal the
+original. Setup uses eval; playback uses the real browser and toolbar UI.
 """
 import os
 from pathlib import Path
@@ -17,7 +17,8 @@ import sys
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import ensure_scenes_drawer, run_scenario
-from animation_browser_e2e import BASE, COUNTS, FIXTURE, OUT, STATE, open_browser, play, snap
+from animation_browser_e2e import (BASE, COUNTS, FIXTURE, OUT, freeze_at, nla, open_browser,
+                                   play, snap)
 
 
 HELPERS = BASE + """
@@ -74,8 +75,8 @@ def run(qa):
     qa.eval('exec(compile(open('+repr(str(FIXTURE))+ ").read(),'animation fixture','exec'))")
     qa.eval(HELPERS)
     ensure_scenes_drawer(qa)
-    qa.wait(f'len({STATE}.clips)==3',timeout=8)
     original=qa.eval(VISIBILITY)
+    baseline=nla(qa)
     counts=qa.eval(COUNTS)
     assert original['QA Robot Body'] and original['QA Helper multi linked']
     assert not any(visible for name,visible in original.items()
@@ -83,15 +84,16 @@ def run(qa):
     snap(qa,'01-hidden-helpers-source')
     for clip in ('Wave','Walk'):
         open_browser(qa)
-        play(qa,clip)
-        qa.click(op='MIXAR_OT_animation_pause',popup=True)
-        qa.cmd('set_text',widget={'prop':'position','popup':True},text='0.5')
+        play(qa,clip,clip+' stored')
+        freeze_at(qa,25)
         qa.press('ESC')
-        snap(qa,'02-'+clip.lower()+'-preview')
+        snap(qa,'02-'+clip.lower()+'-soloed')
         during=qa.eval(VISIBILITY)
-        assert during==original, {'source':original,'preview':during}
+        assert during==original, {'source':original,'playing':during}
         qa.click(op='MIXAR_OT_animation_stop',region_type='HEADER')
         assert qa.eval(VISIBILITY)==original
+        stopped=nla(qa)
+        assert stopped['tracks']==baseline['tracks'] and stopped['preview']==baseline['preview']
         assert qa.eval(COUNTS)==counts
     qa.step('collection_and_layer_visibility_preserved',lambda:True)
     snap(qa,'03-restored-source')

@@ -4,7 +4,20 @@
 import bpy
 from mixar.modules.common.i18n import iface_
 from ...constants import BASIC_WORKSPACE_NAME
-from ...core import animation_catalog, animation_preview
+from ...core import animation_browser, animation_catalog, animation_nla as nla
+
+
+def _playing_name(context, state):
+    """What the transport shows, read from the NLA: the soloed track, else the
+    target's active action."""
+    target = nla.play_target(context.scene, state)
+    if target is None:
+        return ''
+    soloed = animation_catalog.soloed_track(target)
+    if soloed is not None:
+        return soloed.name
+    anim = target.animation_data
+    return anim.action.name if anim and anim.action else ''
 
 
 class MIXAR_PT_animations(bpy.types.Panel):
@@ -20,20 +33,18 @@ class MIXAR_PT_animations(bpy.types.Panel):
         return context.workspace and context.workspace.name == BASIC_WORKSPACE_NAME
 
     def draw(self, context):
+        animation_browser.bind(context)
         state = context.window_manager.mixar_animations
-        session = animation_preview.current()
-        target = session.target if session else animation_catalog.selected_target(context)
+        target = animation_catalog.selected_target(context)
         target_name = target.name if target else ''
         layout = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
         title = layout.row(align=True)
         title.label(text='Animations', icon='ACTION')
         title.operator('mixar.animation_refresh', text='', icon='FILE_REFRESH')
-        layout.label(text=target_name or iface_('Select an object to preview'),
+        layout.label(text=target_name or iface_('Select an object to see its animations'),
                      translate=False, icon='OUTLINER_OB_ARMATURE')
         layout.prop(state, 'scope', text='')
         layout.prop(state, 'search', text='', icon='VIEWZOOM')
-        if state.error:
-            layout.label(text='Preview failed. Try another clip.', icon='ERROR')
         if state.loading:
             layout.label(text='Finding animations…', icon='TIME')
         if state.clips and (target or state.scope == 'ALL'):
@@ -42,13 +53,7 @@ class MIXAR_PT_animations(bpy.types.Panel):
             clips.template_list('MIXAR_UL_animations', '', state, 'clips',
                                  state, 'active_index', rows=min(6, len(state.clips)), maxrows=6)
             if 0 <= state.active_index < len(state.clips):
-                clip = state.clips[state.active_index]
-                detail = layout.column()
-                detail.label(text=clip.action_name, translate=False)
-                if clip.reason:
-                    detail.label(text=iface_(clip.reason), translate=False, icon='INFO')
-                elif clip.used:
-                    detail.label(text='Used in scene', icon='CHECKMARK')
+                self.draw_detail(layout, state.clips[state.active_index])
         elif not state.loading:
             if state.search:
                 layout.label(text='No matching animations', icon='VIEWZOOM')
@@ -56,22 +61,43 @@ class MIXAR_PT_animations(bpy.types.Panel):
                 layout.label(text='No animations assigned', icon='INFO')
                 layout.label(text='Try All in file to find other clips.')
             else:
-                layout.label(text='Select an object to preview its clips.')
-        if state.preview_name:
-            layout.separator()
-            player = layout.box()
-            player.label(text='Previewing', icon='PLAY')
-            player.label(text=state.preview_name, translate=False)
-            controls = player.row(align=True)
-            controls.operator('mixar.animation_pause', text='',
-                              icon='PAUSE' if state.playing else 'PLAY')
-            controls.prop(state, 'loop', toggle=True)
-            controls.operator('mixar.animation_stop', icon='SNAP_FACE')
-            if session and session.target.type == 'ARMATURE':
-                player.row().prop(state, 'hide_rig', toggle=True,
-                                  icon='HIDE_ON' if state.hide_rig else 'HIDE_OFF')
-            player.row().prop(state, 'position', text='Position', slider=True)
-            player.label(text='Stop restores the original animation')
+                layout.label(text='Select an object to see its clips.')
+        rig = animation_catalog.hidable_rig(context)
+        if rig is not None:
+            hidden = rig.hide_get(view_layer=context.view_layer)
+            layout.operator('mixar.animation_hide_rig', depress=hidden,
+                            text='Show Rig' if hidden else 'Hide Rig',
+                            icon='HIDE_ON' if hidden else 'HIDE_OFF')
+        if nla.is_playing(context.window, context.scene, state):
+            self.draw_transport(layout, context, state)
+
+    @staticmethod
+    def draw_detail(layout, clip):
+        detail = layout.column()
+        detail.label(text=clip.action_name, translate=False)
+        if clip.reason:
+            detail.label(text=iface_(clip.reason), translate=False, icon='INFO')
+        elif clip.kind == 'STRIP':
+            detail.label(text=iface_("NLA track: {track}").format(track=clip.track_name),
+                         translate=False, icon='NLA')
+        elif clip.kind == 'ACTION':
+            detail.label(text='Active action', icon='ACTION')
+        else:
+            detail.label(text='Not on this object yet; Play or Add puts it on a new track',
+                         icon='INFO')
+
+    @staticmethod
+    def draw_transport(layout, context, state):
+        layout.separator()
+        player = layout.box()
+        player.label(text=iface_("Playing {animation}").format(
+            animation=_playing_name(context, state)), translate=False, icon='PLAY')
+        controls = player.row(align=True)
+        controls.operator('mixar.animation_pause', text='',
+                          icon='PAUSE' if context.screen.is_animation_playing else 'PLAY')
+        controls.operator('mixar.animation_stop', icon='SNAP_FACE')
+        player.prop(context.scene, 'playback_loop_mode', text='')
+        player.prop(context.scene, 'frame_current', text='Frame')
 
 
 classes = (MIXAR_PT_animations,)

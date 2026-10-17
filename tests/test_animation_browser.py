@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Clip ownership, slot isolation and discovery; preview contracts live in
-``test_animation_preview.py``."""
+"""Clip rows, slot isolation and discovery; the NLA actions behind the row
+buttons live in ``test_animation_nla.py``."""
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock
 
@@ -23,63 +23,87 @@ def action(name, slots):
                   NS(slot_handle=s.handle, fcurves=curves) for s, curves in slots])])])
 
 
-def target(bindings=(), valid=('location',)):
+def strip(action, slot, name=None, start=1, end=25):
+    return NS(type='CLIP', action=action, action_slot=slot, name=name or action.name,
+              frame_start=start, frame_end=end)
+
+
+def track(name, *strips, solo=False, mute=False):
+    return NS(name=name, strips=list(strips), is_solo=solo, mute=mute)
+
+
+def target(active=None, tracks=(), valid=('location',)):
     def resolve(path):
         if path not in valid:
             raise ValueError(path)
         return [0, 0, 0]
     return NS(id_type='OBJECT', path_resolve=resolve,
-              animation_data=NS(action=bindings[0].action if bindings else None,
-                                action_slot=bindings[0].action_slot if bindings else None,
-                                nla_tracks=[NS(strips=list(bindings[1:]))]))
+              animation_data=NS(action=active[0] if active else None,
+                                action_slot=active[1] if active else None,
+                                nla_tracks=list(tracks)))
 
 
-def binding(action, slot):
-    return NS(type='CLIP', action=action, action_slot=slot)
-
-
-def test_selected_scope_includes_active_and_stashed_actions_without_duplicates():
+def test_selected_scope_lists_active_action_then_every_strip_with_its_track():
     slot = NS(handle=11, target_id_type='OBJECT', name_display='Character')
     idle = action('Idle', [(slot, [curve()])])
     walk = action('Walk', [(slot, [curve()])])
-    owned = target([binding(idle, slot), binding(walk, slot), binding(walk, slot)])
+    owned = target((idle, slot), [track('Walk stored', strip(walk, slot, start=10, end=34),
+                                        strip(walk, slot, 'Walk.001', 40, 64), mute=True)])
     rows = list(catalog.entries(owned, [idle, walk]))
-    assert [r['action_name'] for r in rows] == ['Idle', 'Walk']
+    assert [(r['kind'], r['action_name'], r['track_name'], r['strip_name']) for r in rows] == [
+        ('ACTION', 'Idle', '', ''), ('STRIP', 'Walk', 'Walk stored', 'Walk'),
+        ('STRIP', 'Walk', 'Walk stored', 'Walk.001')]
     assert all(r['used'] and not r['reason'] for r in rows)
+    # A strip row's range is the strip on the timeline: what Play previews.
+    assert (rows[2]['start'], rows[2]['end']) == (40.0, 64.0)
 
 
-def test_all_file_includes_unassigned_actions_but_checks_bone_paths():
+def test_all_in_file_marks_clips_on_the_target_and_checks_bone_paths():
     slot = NS(handle=11, target_id_type='OBJECT', name_display='Rig')
+    idle = action('Idle', [(slot, [curve()])])
     walk = action('Walk', [(slot, [curve()])])
+    jump = action('Jump', [(slot, [curve()])])
     wings = action('Flap', [(slot, [curve('pose.bones["Wing"].rotation_euler')])])
-    rows = list(catalog.entries(target(), [walk, wings], all_in_file=True))
-    assert not rows[0]['reason'] and not rows[0]['used']
-    assert rows[1]['reason'] and not rows[1]['used']
+    owner = target((idle, slot), [track('Walk', strip(walk, slot))])
+    rows = {r['action_name']: r for r in catalog.entries(
+        owner, [idle, walk, jump, wings], all_in_file=True)}
+    assert rows['Idle']['kind'] == 'ACTION' and rows['Walk']['kind'] == 'STRIP'
+    assert rows['Walk']['track_name'] == 'Walk'
+    assert rows['Jump']['kind'] == 'FILE' and not rows['Jump']['used']
+    assert not rows['Jump']['reason'] and rows['Flap']['reason']
 
 
 def test_multi_slot_clip_range_and_compatibility_never_read_sibling_curves():
     body = NS(handle=11, target_id_type='OBJECT', name_display='Body')
     light = NS(handle=22, target_id_type='LIGHT', name_display='Light')
     shared = action('Take', [(body, [curve(end=49)]), (light, [curve('energy', end=999)])])
-    rows = list(catalog.entries(target([binding(shared, body)]), [shared]))
+    rows = list(catalog.entries(target((shared, body)), [shared]))
     assert len(rows) == 1 and rows[0]['end'] == 49 and not rows[0]['reason']
+    assert rows[0]['slot_name'] == 'Body'
     all_rows = list(catalog.entries(target(), [shared], all_in_file=True))
     assert len(all_rows) == 2 and all_rows[1]['reason']
 
 
-def test_no_selection_cannot_preview_and_empty_slot_is_disabled():
+def test_no_selection_cannot_play_and_empty_slot_is_disabled():
     slot = NS(handle=11, target_id_type='OBJECT', name_display='Rig')
     empty = action('Empty', [(slot, [])])
     assert next(catalog.entries(None, [empty], True))['reason']
     assert next(catalog.entries(target(), [empty], True))['reason']
 
 
-def test_nested_meta_strips_are_discovered():
+def test_nested_meta_strips_are_discovered_and_flagged():
     slot = NS(handle=1, target_id_type='OBJECT', name_display='Rig')
     walk = action('Walk', [(slot, [curve()])])
-    owner = target()
-    owner.animation_data.nla_tracks = [NS(strips=[NS(type='META', strips=[binding(walk, slot)])])]
-    assert next(catalog.entries(owner, []))['action_name'] == 'Walk'
+    owner = target(tracks=[track('Combo', NS(type='META', strips=[strip(walk, slot)]))])
+    row = next(catalog.entries(owner, []))
+    assert (row['action_name'], row['track_name'], row['nested']) == ('Walk', 'Combo', True)
+    assert catalog.find_strip(owner, 'Combo', 'Walk')[2] is True
+
+
+def test_soloed_track_reads_the_nla_flag():
+    owner = target(tracks=[track('A'), track('B', solo=True)])
+    assert catalog.soloed_track(owner).name == 'B'
+    assert catalog.soloed_track(target()) is None
 
 
 def test_manual_range_wins_over_other_slots_and_curve_extents():
@@ -88,7 +112,7 @@ def test_manual_range_wins_over_other_slots_and_curve_extents():
 
 
 def test_render_sweep_removes_only_private_render_scenes(monkeypatch):
-    # Animation preview no longer creates scenes; only render scenes are internal.
+    # The animation browser never creates scenes; only render scenes are internal.
     user, render = {}, {INTERNAL_RENDER_SCENE_PROP: True}
     assert not is_internal_scene(user) and is_internal_scene(render)
     assert not is_internal_scene({'mixar_internal_animation_scene': True})
@@ -100,9 +124,17 @@ def test_render_sweep_removes_only_private_render_scenes(monkeypatch):
 
 
 def test_selected_mesh_resolves_its_rig_but_deselected_active_id_does_not():
-    rig = NS(name='Rig')
+    rig = NS(name='Rig', type='ARMATURE')
     mesh = NS(type='MESH', select_get=lambda **kw: True, find_armature=lambda: rig)
     context = NS(view_layer=NS(objects=NS(active=mesh)), scene=NS(objects={'Rig': rig}))
     assert catalog.selected_target(context) is rig
+    assert catalog.hidable_rig(context) is rig
     mesh.select_get = lambda **kw: False
     assert catalog.selected_target(context) is None
+
+
+def test_a_selected_rig_is_never_offered_hide_rig():
+    rig = NS(name='Rig', type='ARMATURE', select_get=lambda **kw: True)
+    context = NS(view_layer=NS(objects=NS(active=rig)), scene=NS(objects={'Rig': rig}))
+    assert catalog.selected_target(context) is rig
+    assert catalog.hidable_rig(context) is None

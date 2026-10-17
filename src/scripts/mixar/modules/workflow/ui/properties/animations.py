@@ -5,7 +5,7 @@ import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty,
                        IntProperty, PointerProperty, StringProperty)
 
-from ...core import animation_browser as browser, animation_preview as preview
+from ...core import animation_browser as browser
 
 
 class MixarAnimationClip(bpy.types.PropertyGroup):
@@ -16,6 +16,11 @@ class MixarAnimationClip(bpy.types.PropertyGroup):
     end: FloatProperty()
     used: BoolProperty()
     reason: StringProperty()
+    kind: EnumProperty(items=(('ACTION', 'Active action', ''), ('STRIP', 'Strip', ''),
+                              ('FILE', 'In file', '')))
+    track_name: StringProperty()
+    strip_name: StringProperty()
+    nested: BoolProperty()
 
 
 class MixarAnimationBrowser(bpy.types.PropertyGroup):
@@ -25,21 +30,17 @@ class MixarAnimationBrowser(bpy.types.PropertyGroup):
     search: StringProperty(name="Search animations", options={'SKIP_SAVE'},
                            update=browser.invalidate)
     scope: EnumProperty(name="Animations", items=(
-        ('SELECTED', 'Selected object', 'Animations assigned to this object or its rig'),
-        ('ALL', 'All in file', 'Browse every animation; only matching slots can be previewed'),
+        ('SELECTED', 'Selected object', 'The active action and NLA strips of this object or its rig'),
+        ('ALL', 'All in file', 'Browse every animation; only matching slots can be played'),
     ), options={'SKIP_SAVE'}, update=browser.invalidate)
     loading: BoolProperty(options={'SKIP_SAVE'})
-    error: BoolProperty(options={'SKIP_SAVE'})
-    preview_name: StringProperty(options={'SKIP_SAVE'})
-    playing: BoolProperty(options={'SKIP_SAVE'})
-    loop: BoolProperty(name="Loop", default=True, options={'SKIP_SAVE'})
-    hide_rig: BoolProperty(name="Hide Rig", default=False,
-                           description="Hide the rig while the character keeps animating; Stop shows it again",
-                           options={'SKIP_SAVE'}, update=preview.update_rig_visibility)
-    position: FloatProperty(name="Position", min=0, max=1, subtype='FACTOR',
-                            get=lambda self: preview.position(),
-                            set=lambda self, value: preview.seek(value),
-                            options={'SKIP_SAVE'})
+    # The preview range a browser Play replaced; Stop puts it back.
+    play_target: StringProperty(options={'SKIP_SAVE'})
+    range_saved: BoolProperty(options={'SKIP_SAVE'})
+    range_scene: IntProperty(options={'SKIP_SAVE'})
+    range_use: BoolProperty(options={'SKIP_SAVE'})
+    range_start: IntProperty(options={'SKIP_SAVE'})
+    range_end: IntProperty(options={'SKIP_SAVE'})
 
 
 classes = (MixarAnimationClip, MixarAnimationBrowser)

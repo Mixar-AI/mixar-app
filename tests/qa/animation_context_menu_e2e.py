@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import ensure_scenes_drawer, run_scenario
-from animation_browser_e2e import BASE, FIXTURE, OUT, STATE, open_browser, play, snap
+from animation_browser_e2e import BASE, FIXTURE, OUT, STATE, freeze_at, open_browser, play, snap
 
 STRIP = {'region_type': 'TOOL_HEADER', 'area_type': 'VIEW_3D'}
 
@@ -57,74 +57,73 @@ def run(qa):
     qa.step('mesh_menu_and_close_restore', lambda: True)
 
     select(qa, 'QA Robot Rig')
-    qa.wait(f"{STATE}.target_name=='QA Robot Rig'", timeout=5)
+    qa.wait("not drv.find(text='Modifier',region_type='TOOL_HEADER')", timeout=5)
     assert qa.find(text='Animations', **STRIP)['total'] == 1
     assert qa.find(text='Modifier', **STRIP)['total'] == 0
     assert qa.find(text='Textures', **STRIP)['total'] == 0
     open_browser(qa)
-    play(qa, 'Wave')
+    assert qa.eval(f"result={STATE}.target_name") == 'QA Robot Rig'
+    # A selected rig is never offered Hide Rig: hiding would deselect it.
+    assert qa.find(op='MIXAR_OT_animation_hide_rig', popup=True)['total'] == 0
+    play(qa, 'Wave', 'Wave stored')
     qa.press('ESC')
     qa.wait("bool(drv.find(text='Animations',region_type='TOOL_HEADER'))", timeout=5)
-    assert qa.find(op='MIXAR_OT_zen_object_controls_show', enabled=False, **STRIP)['total'] == 1
-    # Reopen during preview, then switch clips without losing the source object.
+    # Nothing is pinned or locked while a clip plays: it is ordinary NLA data.
+    assert qa.find(op='MIXAR_OT_zen_object_controls_show', enabled=True, **STRIP)['total'] == 1
+    # Reopen while playing, then switch clips: solo moves to the other track.
     qa.click(text='Animations', **STRIP)
-    play(qa, 'Walk')
+    play(qa, 'Walk', 'Walk stored')
     qa.press('ESC')
-    assert qa.eval(BASE + "result=preview.current().control_object.name") == 'QA Robot Rig'
-    snap(qa, '02-rig-preview-context-menu')
+    snap(qa, '02-rig-playing-context-menu')
     qa.click(op='MIXAR_OT_animation_stop', region_type='HEADER')
-    qa.step('rig_selection_and_preview_reopen', lambda: True)
+    qa.step('rig_selection_and_clip_switch', lambda: True)
 
     select(qa, 'QA Robot Body')
+    qa.wait("bool(drv.find(text='Modifier',region_type='TOOL_HEADER',enabled=True))", timeout=5)
     open_browser(qa)
-    play(qa, 'Wave')
-    qa.click(op='MIXAR_OT_animation_pause', popup=True)
-    qa.press('ESC')
-    snap(qa, '03-rig-visible-preview')
-    qa.click(text='Animations', **STRIP)
-    qa.click(prop='hide_rig', popup=True)
-    qa.cmd('set_text', widget={'prop': 'position', 'popup': True}, text='0')
+    play(qa, 'Wave', 'Wave stored')
+    freeze_at(qa, 1)
     geometry = BASE + """
-p=preview.current()
 with bpy.context.temp_override(window=w,area=a,region=r):
     obj=w.scene.objects['QA Robot Arm']
     ev=obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     result=[list(ev.matrix_world @ v.co) for v in ev.data.vertices]
 """
     first = qa.eval(geometry)
-    qa.cmd('set_text', widget={'prop': 'position', 'popup': True}, text='0.5')
+    qa.click(op='MIXAR_OT_animation_hide_rig', popup=True)
+    rig_visibility = BASE + """
+rig=w.scene.objects['QA Robot Rig']
+result=[rig.visible_get(view_layer=w.view_layer), rig.hide_viewport]
+"""
+    # Hide Rig is the view-layer hide flag; hide_viewport (which would stop
+    # deformation) is untouched.
+    qa.wait("not drv.main_window().scene.objects['QA Robot Rig']"
+            ".visible_get(view_layer=drv.main_window().view_layer)", timeout=5)
+    assert qa.eval(rig_visibility) == [False, False]
+    qa.cmd('set_text', widget={'prop': 'frame_current', 'popup': True}, text='25')
+    qa.wait("drv.main_window().scene.frame_current == 25", timeout=5)
     second = qa.eval(geometry)
     movement = max(abs(x-y) for a,b in zip(first,second) for x,y in zip(a,b))
     assert movement > .1, movement
-    # Hide Rig hides the real rig's display only; the mesh keeps deforming.
-    rig_visibility = BASE + """
-p=preview.current()
-result=[p.target.visible_get(view_layer=w.view_layer), p.target.hide_viewport]
-"""
-    assert qa.eval(rig_visibility) == [False, False]
     snap(qa, '04-hide-rig-panel')
     qa.press('ESC')
-    snap(qa, '05-rig-hidden-preview')
+    snap(qa, '05-rig-hidden-playing')
     qa.click(text='Animations', **STRIP)
-    qa.click(prop='hide_rig', popup=True)
+    qa.click(op='MIXAR_OT_animation_hide_rig', popup=True)
+    qa.wait("drv.main_window().scene.objects['QA Robot Rig']"
+            ".visible_get(view_layer=drv.main_window().view_layer)", timeout=5)
     assert qa.eval(rig_visibility) == [True, False]
     visible_geometry = qa.eval(geometry)
     assert max(abs(x-y) for a,b in zip(second,visible_geometry) for x,y in zip(a,b)) < 1e-5
-    qa.click(prop='hide_rig', popup=True)
     qa.press('ESC')
-    assert qa.find(text='Modifier', enabled=False, **STRIP)['total'] == 1
-    assert qa.find(text='Textures', enabled=False, **STRIP)['total'] == 1
-    assert qa.find(text='Animations', enabled=True, **STRIP)['total'] == 1
-    qa.click(text='Animations', **STRIP)
-    play(qa, 'Walk')
-    qa.press('ESC')
-    assert qa.eval(BASE + "result=preview.current().control_object.name") == 'QA Robot Body'
-    assert qa.eval(rig_visibility) == [False, False]
-    qa.click(op='MIXAR_OT_animation_stop', region_type='HEADER')
-    assert qa.eval(BASE + "result=w.scene.objects['QA Robot Rig'].visible_get(view_layer=w.view_layer)")
+    # Editing stays available while the clip is soloed.
     assert qa.find(text='Modifier', enabled=True, **STRIP)['total'] == 1
-    qa.step('mesh_preview_pins_source_and_disables_editing', lambda: True)
-    qa.step('hide_rig_keeps_skinning_and_stop_restores_visibility', lambda: True)
+    assert qa.find(text='Textures', enabled=True, **STRIP)['total'] == 1
+    qa.click(op='MIXAR_OT_animation_stop', region_type='HEADER')
+    assert not qa.eval(BASE + "result=any(t.is_solo for t in w.scene.objects['QA Robot Rig']"
+                       ".animation_data.nla_tracks)")
+    qa.step('mesh_selection_plays_its_rig_and_keeps_editing', lambda: True)
+    qa.step('hide_rig_keeps_skinning', lambda: movement)
 
     # An ordinary unanimated mesh still provides discovery through All in file.
     qa.eval(BASE + """
@@ -144,7 +143,7 @@ result=True
         qa.wait("not drv.find(text='Animations',region_type='TOOL_HEADER')", timeout=5)
     qa.step('empty_mesh_and_context_visibility', lambda: True)
     return {'topbar_entry_removed': True, 'mesh_and_rig': True,
-            'preview_reopen': True, 'hide_rig': True, 'evidence': str(OUT)}
+            'clip_switch': True, 'hide_rig': True, 'evidence': str(OUT)}
 
 
 if __name__ == '__main__':
