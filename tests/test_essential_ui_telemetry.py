@@ -103,4 +103,32 @@ def test_scribble_signal_is_a_boolean_on_one_existing_send_event():
     assert '/private' not in str([call.args for call in emit.call_args_list])
     assert set(emit.call_args.args[1]) == {
         'mode', 'has_attachments', 'is_modify', 'is_awaiting_input',
-        'plan_enabled', 'auto_mode', 'model', 'has_scribble'}
+        'plan_enabled', 'auto_mode', 'model', 'has_scribble', 'length_bucket'}
+
+
+def test_send_event_carries_a_coarse_length_bucket_not_a_length():
+    ctx = context()
+    ctx.scene.mixie_chat_mode = 'AGENT'
+    with patch.object(essential, 'capture') as emit:
+        for n in (0, 999, 1_000, 9_999, 10_000, 32_767, 32_768, 65_536, 65_537, None):
+            essential.capture_agent_message(ctx, [], False, False, None, message_bytes=n)
+    buckets = [call.args[1]['length_bucket'] for call in emit.call_args_list]
+    assert buckets == ['<1k', '<1k', '1-10k', '1-10k', '10-32k', '10-32k',
+                       '32-64k', '32-64k', '>64k', None]
+    assert not any(isinstance(b, int) for b in buckets)
+
+
+def test_composer_cap_hit_is_sizes_only():
+    with patch.object(essential, 'capture') as emit:
+        essential.capture_composer_cap_hit('paste', 65_536, 120)
+        essential.capture_composer_cap_hit('typed', 65_536)
+    assert [call.args[0] for call in emit.call_args_list] == ['agent.composer_cap_hit'] * 2
+    first = emit.call_args_list[0].args[1]
+    assert first == {'source': 'paste', 'cap_bytes': 65_536,
+                     'draft_bytes': 65_536, 'dropped_chars': 120}
+    assert emit.call_args_list[1].args[1]['dropped_chars'] == 0
+
+
+def test_composer_cap_hit_never_raises():
+    with patch.object(essential, 'capture', side_effect=RuntimeError('offline')):
+        essential.capture_composer_cap_hit('voice', 10)

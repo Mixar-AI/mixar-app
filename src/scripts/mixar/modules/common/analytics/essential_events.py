@@ -6,7 +6,7 @@
 import time
 
 from .capture import capture, _has_auth_token
-from .constants import EVENT_MESSAGE_SENT, EVENT_UI_ACTION
+from .constants import EVENT_COMPOSER_CAP_HIT, EVENT_MESSAGE_SENT, EVENT_UI_ACTION
 from .preferences import is_enabled
 
 _cinema_started = {}
@@ -69,9 +69,26 @@ def capture_scene_drawer_open(context):
         pass
 
 
+# Message size as a coarse UTF-8 byte bucket, never a length that could
+# fingerprint a prompt. The top buckets exist to show the composer cap
+# (CHAT_INPUT_MAXLEN, 64 KB) being approached before anyone hits it.
+_LENGTH_BUCKETS = ((1_000, '<1k'), (10_000, '1-10k'), (32_768, '10-32k'))
+
+
+def length_bucket(n_bytes):
+    """'<1k' | '1-10k' | '10-32k' | '32-64k' | '>64k'; None when unknown."""
+    if n_bytes is None:
+        return None
+    for ceiling, label in _LENGTH_BUCKETS:
+        if n_bytes < ceiling:
+            return label
+    return '32-64k' if n_bytes <= 65_536 else '>64k'
+
+
 def capture_agent_message(context, attachments, is_modify, is_awaiting_input,
-                          mark_context=None):
-    """Keep the existing send event; add only actual outgoing Scribble use."""
+                          mark_context=None, message_bytes=None):
+    """Keep the existing send event; add only actual outgoing Scribble use
+    and the message's size bucket."""
     scene = context.scene
     capture(EVENT_MESSAGE_SENT, {
         'mode': 'addon_project' if scene.mixie_chat_mode == 'ADDON_PROJECT' else 'agent',
@@ -81,7 +98,27 @@ def capture_agent_message(context, attachments, is_modify, is_awaiting_input,
         'auto_mode': bool(getattr(scene, 'mixie_chat_auto_mode', False)),
         'model': getattr(scene, 'mixie_chat_model', '') or None,
         'has_scribble': bool(mark_context),
+        'length_bucket': length_bucket(message_bytes),
     }, context=context)
+
+
+def capture_composer_cap_hit(source, draft_bytes, dropped_chars=0, *, context=None):
+    """The chat composer refused input because its buffer is full.
+
+    ``source`` names the path: typed | paste | voice | sketch. Sizes only —
+    the draft itself never travels. This is how a too-small
+    CHAT_INPUT_MAXLEN becomes visible in the field instead of a support mail.
+    """
+    try:
+        from mixar.modules.space_mixie_chat.constants import CHAT_INPUT_MAXLEN
+        capture(EVENT_COMPOSER_CAP_HIT, {
+            'source': source,
+            'cap_bytes': int(CHAT_INPUT_MAXLEN),
+            'draft_bytes': int(draft_bytes),
+            'dropped_chars': int(dropped_chars),
+        }, context=context)
+    except Exception:
+        pass
 
 
 def capture_generate_message(context):

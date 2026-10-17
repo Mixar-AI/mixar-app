@@ -5,6 +5,7 @@
 
 from mixar.modules.common.i18n import rpt_
 from mixar.modules.space_mixie_chat.constants import CHAT_INPUT_MAXLEN
+from mixar.modules.space_mixie_chat.core import composer_limit
 
 
 def handle(context, event, report):
@@ -52,10 +53,12 @@ def handle(context, event, report):
     scribble.release_composer()
     current = context.scene.mixie_chat_input
     value = current[:-1] if erase else current + text
-    if len(value) > CHAT_INPUT_MAXLEN:
-        report({"WARNING"}, rpt_("Agent draft is full (max {count} characters)").format(
-            count=CHAT_INPUT_MAXLEN))
-        value = value[:CHAT_INPUT_MAXLEN]
+    value, dropped = composer_limit.clamp(value, CHAT_INPUT_MAXLEN)
+    if dropped:
+        from mixar.modules.common.analytics.essential_events import capture_composer_cap_hit
+        capture_composer_cap_hit("sketch", len(value.encode("utf-8")), dropped, context=context)
+        report({"WARNING"}, rpt_("Agent draft is full ({kb} KB)").format(
+            kb=CHAT_INPUT_MAXLEN // 1024))
     context.scene.mixie_chat_input = value
     redraw_chat_areas()
     return True

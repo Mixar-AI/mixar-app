@@ -28,6 +28,7 @@ from mixar.modules.common.i18n import n_
 
 from ...common.api import APIResponse, get_agent_service
 from ...common.network import classify_network_error, log_network_failure
+from ..constants import LOCAL_PROVIDER_ID
 
 logger = get_logger(__name__)
 
@@ -196,7 +197,14 @@ def save_credentials(
     plaintext — sealing is transport only. A 409 ``byok_transport_key_stale``
     (the server rotated its key inside our cache window) drops the cached
     key and repeats the PUT once with a fresh envelope.
+
+    A local ``model`` that is a filesystem path is sent as its basename;
+    every local save funnels through here before transport sealing.
     """
+    if provider == LOCAL_PROVIDER_ID:
+        from mixar.modules.local_models.core.model_name import safe_model_name
+        model = safe_model_name(model)
+
     def _thread():
         success, data, err = _put_sealed(provider, model, api_key, base_url,
                                          supports_vision, account_id)

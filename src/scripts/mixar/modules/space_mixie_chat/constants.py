@@ -276,7 +276,16 @@ CHAT_INPUT_PLACEHOLDER = "Type your message..."
 # PROPERTY DEFAULTS
 
 CHAT_INPUT_DEFAULT = ""
-CHAT_INPUT_MAXLEN = 10000
+# RNA buffer of the composer (scene.mixie_chat_input, the quick prompt and the
+# Refine stash). Blender's ``maxlen`` is a BYTE count: the draft holds at
+# most CHAT_INPUT_MAXLEN UTF-8 bytes (measured live on the 5.2 fork) and the
+# text editor silently refuses keystrokes past that. Sized to the chat-history
+# ``text`` slot (65536) and well under MAX_MESSAGE_LENGTH, the send-time wire
+# check, so rules + draft can never overflow a send. No C++ buffer is sized
+# from this value: the bubble reads the draft through clamped
+# ``read_string_prop`` calls into its own fixed tails. Byte-aware clamping and
+# the "draft is full" check live in core/composer_limit.py.
+CHAT_INPUT_MAXLEN = 65536
 
 # Project rules (scene.mixie_chat_rules) — persisted in the file and
 # prepended to the first message of every new chat session. Bounded well

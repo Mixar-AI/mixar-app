@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Pure draft bookkeeping. Explicit send intent never survives an edit."""
 from ...constants import CHAT_INPUT_MAXLEN
+from .. import composer_limit
 
 
 class Draft:
@@ -21,6 +22,9 @@ class Draft:
         send = self.pending_send and current == self.base
         sep = '' if not current or current[-1].isspace() else ' '
         value = current + sep + text
-        if len(value) > CHAT_INPUT_MAXLEN:
+        if not composer_limit.fits(value, CHAT_INPUT_MAXLEN):
+            from mixar.modules.common.analytics.essential_events import capture_composer_cap_hit
+            capture_composer_cap_hit('voice', len(value.encode('utf-8')),
+                                     max(len(value) - len(current), 0))
             raise ValueError('Voice text exceeds the composer limit. Shorten the draft and try again.')
         return value, send
