@@ -224,8 +224,9 @@ def test_cloud_save_model_is_untouched(monkeypatch):
 
 
 def test_custom_save_sends_and_remembers_the_basename(monkeypatch):
-    monkeypatch.setattr(local_provider.threading, "Thread", InlineThread)
-    monkeypatch.setattr(local_provider, "_schedule_on_main",
+    # The ping runs through byok_client's always-answering worker now.
+    monkeypatch.setattr(byok_client.threading, "Thread", InlineThread)
+    monkeypatch.setattr(byok_client, "_schedule_on_main",
                         lambda callback, *args: callback(*args))
     monkeypatch.setattr(local_provider, "_ping_models_endpoint", lambda _b: None)
     saved, registered = {}, {}

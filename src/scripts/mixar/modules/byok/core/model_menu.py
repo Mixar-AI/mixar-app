@@ -21,6 +21,9 @@ Row kinds:
     RESET     drop the saved pick and fall back to the server default
     SENTINEL  the empty-catalog dead end
     BYOK      open the AI Provider Settings dialog shared with the profile menu
+              (only while a key is saved: in use, or paused on this computer)
+    USE_MIXIE pause the key in use (the island toggle's Mixie half)
+    USE_KEY   resume the paused key (its Custom AI half)
 
 Also home to the two pure wording rules the island chip and the BYOK note
 share: `chip_label()` (what the WM `mixar_agent_model_label` mirror holds) and
@@ -56,11 +59,18 @@ CHIP_SEPARATOR = " · "
 
 RESET_TEXT = "Mixie"
 
-#: The chat's route to the dialog also offered in the profile menu. Keep it
-#: enabled while BYOK is active so users can clear the key overriding their
-#: hosted pick, including when the model catalog is empty.
-BYOK_SETUP_TEXT = n_("Use my own API key…")
+#: The route to the saved key's settings, only while a key is saved (in use
+#: or paused) — enabled even then, so the key overriding the hosted pick can be
+#: changed or cleared, empty catalog included. With no key there is no row:
+#: this dropdown is Mixie's; adding a key is the island's Custom AI half (and
+#: AI Provider Settings in the profile menu). The one exception is a guest,
+#: who can pick nothing hosted: the setup row is the menu's only way forward.
 BYOK_MANAGE_TEXT = n_("Change or remove my API key…")
+BYOK_SETUP_TEXT = n_("Use my own API key…")
+#: The island toggle's two moves, also offered here: when the island row is
+#: fitted down to its icon this menu is the only control left on it.
+USE_MIXIE_TEXT = n_("Switch to Mixie (keep my key)")
+USE_KEY_TEXT = n_("Switch back to my API key")
 
 @dataclass(frozen=True)
 class MenuRow:
@@ -140,6 +150,8 @@ def build_rows(
     byok_active: bool = False,
     byok_provider_label: str = "",
     byok_model_label: str = "",
+    byok_stored: bool = False,
+    byok_resumable: bool = False,
     guest: bool = False,
 ) -> List[MenuRow]:
     """Rows for the picker, in the order the backend returned the models.
@@ -151,7 +163,12 @@ def build_rows(
     admin dashboard.
 
     ``byok_provider_label`` / ``byok_model_label`` are the key's catalog
-    labels (or raw ids) and only shape the NOTE row's wording.
+    labels (or raw ids) and only shape the NOTE row's wording. ``byok_stored``
+    is a key saved but paused by the island's Mixie side (kept on this
+    computer): the hosted rows are live, and the key row offers to change or
+    remove it. ``byok_resumable`` (a paused key this computer can re-send)
+    adds "Switch back to my API key"; a key in use adds "Switch to Mixie
+    (keep my key)".
 
     ``guest``: Mixar's hosted models need a sign-in, so every platform row is
     greyed under a "Sign in" note; the key route stays the way forward.
@@ -160,11 +177,12 @@ def build_rows(
     current_levels: List[str] = []
 
     if not models:
-        # Still offer the key route: an empty catalog is exactly when a user
-        # has nothing hosted to pick and their own key is the way forward.
+        # Still offer the saved key's routes: an empty catalog is exactly when
+        # a user has nothing hosted to pick.
         return [
             MenuRow(kind="SENTINEL", label=EMPTY_SENTINEL_TEXT, enabled=False),
-            _byok_row(byok_active),
+            *_toggle_rows(byok_active, byok_resumable),
+            *_byok_rows(byok_active or byok_stored, guest=guest),
         ]
 
     if byok_active:
@@ -226,8 +244,18 @@ def build_rows(
         MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active and not guest,
                 active=not active_provider and not active_model)
     )
-    rows.append(_byok_row(byok_active))
+    rows.extend(_toggle_rows(byok_active, byok_resumable))
+    rows.extend(_byok_rows(byok_active or byok_stored, guest=guest))
     return rows
+
+
+def _toggle_rows(byok_active: bool, byok_resumable: bool) -> List[MenuRow]:
+    """Pause / resume rows (the island toggle's moves, never a deletion)."""
+    if byok_active:
+        return [MenuRow(kind="USE_MIXIE", label=USE_MIXIE_TEXT)]
+    if byok_resumable:
+        return [MenuRow(kind="USE_KEY", label=USE_KEY_TEXT)]
+    return []
 
 
 def build_thinking_rows(
@@ -263,17 +291,17 @@ def build_thinking_rows(
     return []
 
 
-def _byok_row(byok_active: bool) -> MenuRow:
-    """The AI Provider Settings row.
+def _byok_rows(key_saved: bool, guest: bool = False) -> List[MenuRow]:
+    """The saved key's AI Provider Settings row, or none without a key — except
+    for a guest, whose only live row is the one that sets a key up.
 
     ``enabled`` is unconditionally True — it is the one row a configured key
     must NOT disable, because clearing that key is what it is for. ``active``
-    carries "a key is in use" so the menu can pick the icon, the way the
+    carries "a key is saved" so the menu can pick the icon, the way the
     removed topbar entry did.
     """
-    return MenuRow(
-        kind="BYOK",
-        label=BYOK_MANAGE_TEXT if byok_active else BYOK_SETUP_TEXT,
-        enabled=True,
-        active=byok_active,
-    )
+    if key_saved:
+        return [MenuRow(kind="BYOK", label=BYOK_MANAGE_TEXT, enabled=True, active=True)]
+    if guest:
+        return [MenuRow(kind="BYOK", label=BYOK_SETUP_TEXT, enabled=True, active=False)]
+    return []

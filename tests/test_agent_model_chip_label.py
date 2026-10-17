@@ -145,9 +145,10 @@ def test_the_byok_note_row_carries_the_named_key():
     assert rows[0].kind == "NOTE"
     assert rows[0].label == "Your key: OpenRouter · Claude Sonnet 4.6"
     assert rows[0].enabled is False
-    # Every other rule is untouched: hosted rows greyed, the key row live.
-    assert all(row.enabled is False for row in rows if row.kind != "BYOK")
-    assert [row.enabled for row in rows if row.kind == "BYOK"] == [True]
+    # Every other rule is untouched: hosted rows greyed, the key routes live
+    # (change or remove it, or switch to Mixie keeping it).
+    assert all(row.enabled is False for row in rows if row.kind not in {"BYOK", "USE_MIXIE"})
+    assert [row.enabled for row in rows if row.kind in {"USE_MIXIE", "BYOK"}] == [True, True]
 
 
 def test_the_byok_note_row_keeps_the_generic_text_before_the_credential_lands():
@@ -165,7 +166,7 @@ def test_no_note_row_without_a_key_and_none_on_the_empty_catalog():
     # The empty catalog keeps its sentinel + key route, exactly as before.
     kinds = [row.kind for row in model_menu.build_rows(
         [], byok_active=True, byok_provider_label="OpenRouter")]
-    assert kinds == ["SENTINEL", "BYOK"]
+    assert kinds == ["SENTINEL", "USE_MIXIE", "BYOK"]
 
 
 def test_the_menu_feeds_the_note_from_the_credential_state():
@@ -284,3 +285,38 @@ def test_the_optimistic_local_write_composes_too():
     }, wm)
 
     assert wm.mixar_agent_model_label == "Claude Sonnet 4.6 · Medium High"
+
+
+def test_the_key_chip_names_providers_the_way_the_design_does():
+    from mixar.modules.byok.core import catalog_labels
+    assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
+    assert catalog_labels.chip_provider_label('openai') == 'OpenAI API'
+    assert catalog_labels.chip_provider_label('gemini') == 'Gemini API'
+    assert catalog_labels.chip_provider_label('kimi') == 'Kimi API'
+    assert catalog_labels.chip_provider_label('fugu') == 'Fugu API'
+    assert catalog_labels.chip_provider_label('codex') == 'Codex'
+    assert catalog_labels.chip_provider_label('openrouter') == 'OpenRouter'
+    assert catalog_labels.chip_provider_label('local') == 'Local'
+    assert catalog_labels.chip_provider_label('') == ''
+
+
+def test_the_key_chip_drops_a_model_word_that_repeats_the_brand(monkeypatch):
+    from mixar.modules.byok.core import catalog_labels
+    labels = {('anthropic', 'claude-opus-5-5'): 'Claude Opus 5.5',
+              ('gemini', 'gemini-3-1-pro'): 'Gemini 3.1 Pro',
+              ('openai', 'gpt-5-5'): 'GPT-5.5',
+              ('kimi', 'kimi-k2'): 'Kimi K2'}
+    monkeypatch.setattr(catalog_labels, 'lookup_model_label',
+                        lambda provider, model: labels.get((provider, model), model))
+    assert catalog_labels.chip_model_label('anthropic', 'claude-opus-5-5') == 'Opus 5.5'
+    # A remainder starting with a digit keeps its brand.
+    assert catalog_labels.chip_model_label('gemini', 'gemini-3-1-pro') == 'Gemini 3.1 Pro'
+    assert catalog_labels.chip_model_label('openai', 'gpt-5-5') == 'GPT-5.5'
+    assert catalog_labels.chip_model_label('kimi', 'kimi-k2') == 'K2'
+    # A provider without a short brand name never strips a word.
+    monkeypatch.setattr(catalog_labels, 'lookup_provider_label', lambda pid: 'QA Key Provider')
+    labels[('qa-key-provider', 'qa-key-model')] = 'QA Key Model'
+    assert catalog_labels.chip_model_label('qa-key-provider', 'qa-key-model') == 'QA Key Model'
+    # Unknown ids read raw; no model, no label.
+    assert catalog_labels.chip_model_label('anthropic', 'claude-x') == 'claude-x'
+    assert catalog_labels.chip_model_label('anthropic', '') == ''

@@ -28,7 +28,7 @@ from mixar.modules.common.i18n import n_
 
 from ...common.api import APIResponse, get_agent_service
 from ...common.network import classify_network_error, log_network_failure
-from ..constants import LOCAL_PROVIDER_ID
+from ..constants import BYOK_TURN_ACCOUNT_FIELD, BYOK_TURN_KEY_FIELD, LOCAL_PROVIDER_ID
 
 logger = get_logger(__name__)
 
@@ -141,6 +141,116 @@ schedule_on_main = _schedule_on_main
 
 
 # ---------------------------------------------------------------------------
+# Requests in flight (main thread) and the always-answering worker
+# ---------------------------------------------------------------------------
+
+# Saves, removals and in-place re-saves actually sent and not yet answered
+# (main thread only: counted when the request starts, released just before
+# its callback runs). The dialog reads it: closed with Esc mid-request and
+# reopened, it must keep showing that request's progress instead of offering
+# a second one; the island's toggle and model switch wait for it too.
+_mutations_in_flight = 0
+# Bumped by a logout reset: a request counted before it never releases into
+# the next account's count.
+_in_flight_generation = 0
+
+_NO_STORED_KEY_MSG = n_(
+    "No saved key on this computer. Enter it in AI Provider Settings."
+)
+
+
+def mutation_in_flight() -> bool:
+    """A save, removal or in-place re-save was sent and has not been answered yet."""
+    return _mutations_in_flight > 0
+
+
+def _track(on_done: Callable) -> Callable:
+    """Count a request until its callback runs. The release happens before
+    the caller's callback, so even a raising callback cannot leave it stuck;
+    `_run_worker` guarantees the callback is delivered."""
+    global _mutations_in_flight
+    _mutations_in_flight += 1
+    generation = _in_flight_generation
+    released = [False]
+
+    def _release():
+        global _mutations_in_flight
+        if not released[0]:
+            released[0] = True
+            if generation == _in_flight_generation:
+                _mutations_in_flight = max(0, _mutations_in_flight - 1)
+
+    def _done(*args):
+        _release()
+        on_done(*args)
+
+    _done.release = _release
+    return _done
+
+
+def hold() -> Callable[[], None]:
+    """Count a save that starts with local work before its HTTP call (the
+    Local custom endpoint's ping); call the returned release once that work
+    ends, then send the request (which counts itself)."""
+    return _track(lambda *args: None).release
+
+
+def reset_in_flight() -> None:
+    """Logout: the next account must not wait on the previous one's request
+    (its late callback is epoch-guarded and never drives the count negative)."""
+    global _mutations_in_flight, _in_flight_generation
+    _mutations_in_flight = 0
+    _in_flight_generation += 1
+
+
+def _run_worker(name: str, work: Callable[[], tuple], on_done: Callable,
+                failure: tuple) -> None:
+    """Run ``work`` off the main thread and ALWAYS deliver ``on_done(*result)``
+    on the main thread — ``failure`` when anything at all goes wrong (even the
+    error classification itself), on the calling (main) thread when no worker
+    can be started. A request that never answers would otherwise leave the
+    dialog busy and every key action refused for the session. (With no timer
+    at all only the in-flight count is released: bpy is main-thread.)"""
+    def _deliver(result):
+        try:
+            _schedule_on_main(on_done, *result)
+        except Exception as e:  # noqa: BLE001
+            # No timer (interpreter shutdown): never touch bpy from this
+            # thread; just release the in-flight count.
+            logger.warning("BYOK %s: main-thread delivery failed: %s", name, e)
+            getattr(on_done, "release", lambda: None)()
+
+    def _thread():
+        result = failure
+        try:
+            result = work()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("BYOK %s failed: %s", name, e)
+            try:
+                result = _shape_exception(e, failure)
+            except Exception as inner:  # noqa: BLE001
+                logger.warning("BYOK %s: error classification failed: %s", name, inner)
+        finally:
+            _deliver(result)
+
+    try:
+        threading.Thread(target=_thread, daemon=True, name=name).start()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("BYOK %s: worker not started: %s", name, e)
+        on_done(*failure)
+
+
+def _shape_exception(exc: Exception, failure: tuple) -> tuple:
+    """`_translate_exception`'s tri-tuple, in the arity ``failure`` uses."""
+    if len(failure) != 3:
+        return failure
+    success, data, err = _translate_exception(exc)
+    if isinstance(failure[1], int):
+        return False, 0, err  # delete's (success, removed_count, error)
+    return success, data, err
+
+
+# ---------------------------------------------------------------------------
 # BYOK credentials
 # ---------------------------------------------------------------------------
 
@@ -152,18 +262,11 @@ def fetch_state(
     On success the `data` arg of `on_done` is the response's inner `data`
     payload (dict with keys `byok_active`, `items`).
     """
-    def _thread():
-        try:
-            response = get_agent_service().get_credentials()
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK fetch_state failed: %s", e)
-            success, data, err = _translate_exception(e)
-        _schedule_on_main(on_done, success, data, err)
+    def _work():
+        return _translate(get_agent_service().get_credentials())
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKFetchState"
-    ).start()
+    _run_worker("MixarBYOKFetchState", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
 
 
 def save_credentials(
@@ -185,12 +288,12 @@ def save_credentials(
     themselves stay in that file.
 
     On 200 the key material is written to this device's credential store
-    (`key_store`) — still on the worker thread, before the callback — so the
-    next turn can carry it. The server keeps metadata only. A store write
-    that fails is reported as an ERROR (with the server's state attached, so
-    the card still shows the truth): the account is BYOK-active and this
-    device cannot sign a turn, which a "Saved" recap would hide until the
-    next message's 409.
+    (`key_store`, with ``model``, which a later resume re-sends) — still on
+    the worker thread, before the callback — so the next turn can carry it.
+    The server keeps metadata only. A store write that fails is reported as
+    an ERROR (with the server's state attached, so the card still shows the
+    truth): the account is BYOK-active and this device cannot sign a turn,
+    which a "Saved" recap would hide until the next message's 409.
 
     The key is SEALED to the backend's transport key before the PUT
     (`transport_seal`, on this worker thread); this device's store keeps the
@@ -199,22 +302,79 @@ def save_credentials(
     key and repeats the PUT once with a fresh envelope.
 
     A local ``model`` that is a filesystem path is sent as its basename;
-    every local save funnels through here before transport sealing.
+    every local save funnels through here before transport sealing. The
+    request is counted in flight until its callback (`mutation_in_flight`).
     """
     if provider == LOCAL_PROVIDER_ID:
         from mixar.modules.local_models.core.model_name import safe_model_name
         model = safe_model_name(model)
 
-    def _thread():
+    on_done = _track(on_done)
+
+    def _work():
         success, data, err = _put_sealed(provider, model, api_key, base_url,
                                          supports_vision, account_id)
-        if success and not _store_local_key(provider, api_key, codex_auth_path):
+        if success and not _store_local_key(provider, api_key, codex_auth_path, model):
             success, err = False, _LOCAL_STORE_FAILED_MSG
-        _schedule_on_main(on_done, success, data, err)
+        return success, data, err
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKSave"
-    ).start()
+    _run_worker("MixarBYOKSave", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
+
+
+def resave_stored_key(
+    model: Optional[str],
+    on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+) -> None:
+    """PUT /agent/byok with the key THIS DEVICE already holds — nothing is
+    typed and nothing is re-entered. Two island callers: the key chip's
+    model switch (``model`` is the new model of the same provider) and
+    Custom AI resuming a paused key (``model`` None: the record's own, saved
+    with it). The server re-validates exactly like a fresh save and answers
+    with the credential echo.
+
+    Worker thread: the record is loaded; a Codex sign-in is read from the
+    CLI's file and renewed when stale, exactly as before a turn
+    (`turn_credentials.resolve`, renewed tokens written back to the file);
+    the token is sealed by `_put_sealed`; on 200 the record's ``model`` is
+    updated. Refused (nothing sent) with a user-safe message when this
+    device holds no key, the record names no model (an earlier build saved
+    it) or the provider is Local, whose endpoint is not in the record — the
+    settings dialog is the route then. Counted in flight like a save.
+    """
+    on_done = _track(on_done)
+
+    def _work():
+        from . import codex_auth, key_store, turn_credentials
+
+        record = key_store.load()
+        if record is None or (record.get("provider") or "") in ("", LOCAL_PROVIDER_ID):
+            return False, None, _NO_STORED_KEY_MSG
+        provider = record["provider"]
+        target = (model or record.get("model") or "").strip()
+        if not target:
+            return False, None, _NO_STORED_KEY_MSG
+        live, problem = key_store.materialize(record)
+        if problem is not None:
+            return False, None, problem
+        resolution = turn_credentials.resolve(live, refresher=codex_auth.refresh_access_token)
+        if resolution.blocked:
+            return False, None, resolution.error
+        if resolution.record_changes:
+            key_store.persist_changes(live, resolution.record_changes)
+        api_key = resolution.fields.get(BYOK_TURN_KEY_FIELD)
+        if not api_key:
+            return False, None, _NO_STORED_KEY_MSG
+        account_id = resolution.fields.get(BYOK_TURN_ACCOUNT_FIELD)
+        success, data, err = _put_sealed(provider, target, api_key, None, None, account_id)
+        if success and not key_store.update({"model": target}):
+            # The server runs the new model; only a later resume would re-send
+            # the old one. Not an error the user can act on.
+            logger.warning("BYOK model switched, but this device's record kept the old model")
+        return success, data, err
+
+    _run_worker("MixarBYOKResave", _work, on_done,
+                (False, None, _GENERIC_SERVER_ERROR_MSG))
 
 
 def _put_sealed(provider, model, api_key, base_url, supports_vision, account_id,
@@ -266,45 +426,59 @@ def is_stale_transport_key(exc: Exception) -> bool:
 
 def delete_credentials(
     on_done: Callable[[bool, int, Optional[str]], None],
+    *,
+    forget_local: bool = True,
 ) -> None:
     """DELETE /agent/credentials/all — remove BYOK config. Always 200 on
     a reachable server; `removed_count` is the row count deleted.
-    """
-    def _thread():
-        try:
-            response = get_agent_service().delete_credentials_all()
-            success, data, err = _translate(response)
-            if success:
-                removed = 0
-                if isinstance(data, dict):
-                    value = data.get("removed", 0)
-                    if isinstance(value, int):
-                        removed = value
-                _forget_local_key()
-                _schedule_on_main(on_done, True, removed, None)
-            else:
-                _schedule_on_main(on_done, False, 0, err)
-        except Exception as e:
-            logger.warning("BYOK delete_credentials failed: %s", e)
-            _, _, err = _translate_exception(e)
-            _schedule_on_main(on_done, False, 0, err)
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKDelete"
-    ).start()
+    ``forget_local`` False keeps this device's key record: the island's
+    Mixie half PAUSES the key — the server forgets it (Mixie answers, credits
+    are charged) and Custom AI re-sends it later from the record
+    (`resave_stored_key`). "Remove key" and the chat card's "Use Mixar
+    credits instead" delete both. Counted in flight like a save.
+    """
+    on_done = _track(on_done)
+
+    def _work():
+        response = get_agent_service().delete_credentials_all()
+        success, data, err = _translate(response)
+        if not success:
+            return False, 0, err
+        removed = data.get("removed", 0) if isinstance(data, dict) else 0
+        if forget_local:
+            _forget_local_key()
+        return True, removed if isinstance(removed, int) else 0, None
+
+    _run_worker("MixarBYOKDelete", _work, on_done,
+                (False, 0, _GENERIC_SERVER_ERROR_MSG))
+
+
+def forget_stored_key(on_done: Callable[[bool], None]) -> None:
+    """Delete this device's key record only (a paused key the user no longer
+    wants kept). Nothing is sent: the server holds nothing for a paused
+    key. ``on_done(deleted)`` on the main thread."""
+    on_done = _track(on_done)
+
+    def _work():
+        from . import key_store
+
+        return (bool(key_store.delete()),)
+
+    _run_worker("MixarBYOKForget", _work, on_done, (False,))
 
 
 # ---------------------------------------------------------------------------
 # This device's copy of the key (worker thread; the store blocks)
 # ---------------------------------------------------------------------------
 
-def _store_local_key(provider, api_key, codex_auth_path) -> bool:
+def _store_local_key(provider, api_key, codex_auth_path, model) -> bool:
     """True when the record is in this device's store (Codex: the file
     reference only — never the tokens)."""
     try:
         from . import key_store
 
-        record = key_store.make_record(provider, api_key, auth_path=codex_auth_path)
+        record = key_store.make_record(provider, api_key, auth_path=codex_auth_path, model=model)
         if key_store.save(record):
             return True
         logger.warning("BYOK key was validated but could not be stored on this device")

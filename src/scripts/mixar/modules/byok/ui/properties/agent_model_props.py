@@ -36,6 +36,11 @@ _WM_ATTRS = (
     'mixar_agent_model_thinking',
     'mixar_agent_model_byok_active',
     'mixar_agent_model_eligible',
+    'mixar_agent_key_label',
+    'mixar_agent_key_model',
+    'mixar_agent_key_menu',
+    'mixar_agent_key_busy',
+    'mixar_agent_key_resumable',
 )
 
 
@@ -77,6 +82,44 @@ def register():
         name="Agent Model Eligible",
         description="False when the saved model is not available on your plan",
         default=True,
+    )
+    # The island key chip, right of the Mixie | Custom AI toggle while a key is
+    # in use: the provider ("Claude API"), the model ("Opus 5.5"), whether the
+    # model opens a dropdown (not for OpenRouter / Local) and whether an
+    # island mutation (switch / pause / resume) is in flight. Written by
+    # `credential_state.apply_to_wm()`; C++ only reads them. Empty label = no
+    # key, no chip.
+    WM.mixar_agent_key_label = StringProperty(
+        name="Agent Key Provider Label",
+        description="Short name of the provider whose API key the agent uses",
+        default="",
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_model = StringProperty(
+        name="Agent Key Model Label",
+        description="The model your API key runs the agent on",
+        default="",
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_menu = BoolProperty(
+        name="Agent Key Model Menu",
+        description="The key's model can be switched from the chat composer",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    WM.mixar_agent_key_busy = BoolProperty(
+        name="Agent Key Busy",
+        description="A model switch, pause or resume of your API key is being saved",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    # A paused key this computer still holds: Custom AI switches back to it
+    # with no dialog (the island's Custom AI tooltip names it).
+    WM.mixar_agent_key_resumable = BoolProperty(
+        name="Agent Key Resumable",
+        description="Your saved API key is paused; Custom AI switches back to it",
+        default=False,
+        options={'SKIP_SAVE'},
     )
 
 

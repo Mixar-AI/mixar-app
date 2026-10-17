@@ -42,7 +42,7 @@ from typing import Any, Callable, Dict, Optional
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils import credential_store
 
-from ..constants import BYOK_KEY_STORE_PREFIX, CODEX_PROVIDER_ID
+from ..constants import BYOK_KEY_STORE_PREFIX, CODEX_PROVIDER_ID, LOCAL_PROVIDER_ID
 from . import codex_auth
 from mixar.modules.auth.core.auth import user_id_from_token  # noqa: F401 — the key record's scope
 
@@ -113,9 +113,14 @@ def make_record(
     provider: str,
     key: Optional[str],
     auth_path: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """A cloud/local record carries the key; a Codex record carries only the
-    sign-in file reference (``auth_path``; "" = the CLI's default)."""
+    sign-in file reference (``auth_path``; "" = the CLI's default). ``model``
+    is the model the key was saved on: it is what the island's Custom AI
+    re-sends when it resumes a paused key (`byok_client.resave_stored_key`),
+    since the server keeps nothing once the key is paused. A record without
+    it (an earlier build) can only be resumed through the settings dialog."""
     if provider == CODEX_PROVIDER_ID:
         return {
             "v": _RECORD_VERSION,
@@ -123,11 +128,13 @@ def make_record(
             "key": None,
             "auth_path": (auth_path or "").strip(),
             "expired_fingerprint": None,
+            "model": (model or "").strip(),
         }
     return {
         "v": _RECORD_VERSION,
         "provider": provider or "",
         "key": key or None,
+        "model": (model or "").strip(),
     }
 
 
@@ -244,6 +251,47 @@ def update(changes: Dict[str, Any], user_id: Optional[str] = None) -> bool:
 # ---------------------------------------------------------------------------
 # Presence check for the UI (worker thread → main-thread callback)
 # ---------------------------------------------------------------------------
+
+def resumable_summary(record: Optional[Dict[str, Any]]) -> Optional[Dict[str, str]]:
+    """``{"provider", "model"}`` when ``record`` can be re-sent to the server
+    without the user typing anything (the island's Custom AI after Mixie
+    paused the key), else None. Pure apart from a Codex record, whose
+    sign-in file is read (never copied): a file that is gone or whose
+    sign-in the endpoint revoked cannot be resumed, only entered again.
+    Local is never resumable here — its endpoint lives in the local-models
+    manifest, not in this record — and neither is a record saved by a build
+    that did not remember the model. Blocking (Codex): worker threads only."""
+    if not record:
+        return None
+    provider = record.get("provider") or ""
+    model = (record.get("model") or "").strip()
+    if not provider or not model or provider == LOCAL_PROVIDER_ID:
+        return None
+    if provider == CODEX_PROVIDER_ID:
+        live, problem = materialize(record)
+        if problem is not None or (live or {}).get("expired"):
+            return None
+    elif not record.get("key"):
+        return None
+    return {"provider": provider, "model": model}
+
+
+def check_resumable_async(on_done: Callable[[Optional[Dict[str, str]]], None]) -> None:
+    """Calls ``on_done(summary)`` on the main thread with
+    `resumable_summary` of this device's record (None when nothing here can
+    be resumed)."""
+    def _thread():
+        summary = None
+        try:
+            summary = resumable_summary(load())
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("BYOK resumable check failed: %s", type(exc).__name__)
+        from .byok_client import schedule_on_main
+
+        schedule_on_main(on_done, summary)
+
+    threading.Thread(target=_thread, daemon=True, name="MixarBYOKResumable").start()
+
 
 def check_presence_async(provider: str, on_done: Callable[[bool], None]) -> None:
     """Calls ``on_done(missing)`` on the main thread: True when this device

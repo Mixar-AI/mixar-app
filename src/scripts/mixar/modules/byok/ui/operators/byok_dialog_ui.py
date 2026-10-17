@@ -25,7 +25,7 @@ State machine lives on WindowManager (see ui/properties/byok_props.py);
 operators and async flow live in byok_ops.py. This module only draws.
 """
 
-from mixar.modules.common.i18n import n_, rpt_
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core import catalog_labels, key_prompt, model_suggestions
 from .byok_dialog_chrome import (  # re-exported: callers use byok_dialog_ui.<name>
@@ -56,6 +56,8 @@ from .byok_dialog_chrome import (  # re-exported: callers use byok_dialog_ui.<na
 BYOK_GUIDE_URL = "https://www.mixar.app/docs#your-own-provider"
 
 OP_SAVE = "mixar_byok.save"
+OP_USE_KEY = "mixar_byok.use_key"
+OP_FORGET_KEY = "mixar_byok.forget_stored_key"
 OP_REQUEST_REMOVE = "mixar_byok.request_remove"
 OP_CANCEL_REMOVE = "mixar_byok.cancel_remove"
 OP_CONFIRM_REMOVE = "mixar_byok.confirm_remove"
@@ -107,6 +109,11 @@ def draw_dialog(layout, wm):
         # keeps metadata only): ask for the key, keep provider/model as saved.
         _draw_device_key_notice(col, wm)
         col.separator(factor=0.6)
+    elif _key_paused(wm):
+        # The island's Mixie half paused the key: the server holds nothing,
+        # this computer holds the key. Name it; saving below replaces it.
+        _draw_paused_notice(col, wm, with_actions=(state == 'IDLE'))
+        col.separator(factor=0.6)
     _draw_form(col, wm, disabled=(state == 'SAVING'), key_only=key_missing)
     if state == 'ERROR' and wm.byok_last_error:
         _draw_error(col, wm)
@@ -132,6 +139,8 @@ def _draw_header(col, wm, state):
     active = wm.byok_is_active and state != 'REMOVED'
     if active and _device_key_missing(wm):
         pill_text = n_("Key needed on this device")
+    elif not active and state != 'REMOVED' and _key_paused(wm):
+        pill_text = n_("Paused")
     else:
         pill_text = n_("Active") if active else n_("Not configured")
     card_label(pill, pill_text, 'PILL')
@@ -199,6 +208,37 @@ def _device_key_missing(wm) -> bool:
     if key_prompt.is_open():
         return True
     return bool(wm.byok_is_active and getattr(wm, 'byok_device_key_missing', False))
+
+
+def _key_paused(wm) -> bool:
+    """Inactive for the account, but this computer still holds the key the
+    island's Mixie half paused (`credential_state.byok_key_resumable`)."""
+    return bool(not wm.byok_is_active and getattr(wm, 'byok_key_resumable', False))
+
+
+def _draw_paused_notice(col, wm, with_actions):
+    from ...core import credential_state
+
+    provider, model = credential_state.resume_target()
+    box = section(col)
+    bcol = box.column()
+    card_label(bcol, n_("Your key is paused — Mixie is answering"), 'SECTION')
+    bcol.separator(factor=0.25)
+    card_label(
+        bcol,
+        iface_("Saved on this computer: {provider} · {model}").format(
+            provider=lookup_provider_label(provider),
+            model=lookup_model_label(provider, model)),
+        'MUTED',
+    )
+    card_label(bcol, n_("Custom AI in the chat bar switches back to it. Saving a key below replaces it."),
+               'MUTED')
+    if with_actions:
+        bcol.separator(factor=0.55)
+        row = bcol.row(align=True)
+        row.scale_y = 1.4
+        op_button(row, OP_USE_KEY, n_("Use my key"), 'CARD')
+        op_button(row, OP_FORGET_KEY, n_("Forget saved key"), 'DANGER')
 
 
 def _draw_device_key_notice(col, wm):

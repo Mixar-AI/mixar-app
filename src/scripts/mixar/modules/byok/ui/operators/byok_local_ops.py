@@ -193,7 +193,14 @@ def _draw_custom(body, wm) -> None:
 # beats a silently disabled Save button.
 
 def execute_local(op, wm, on_done):
-    """Run the Local save path. Returns the operator result set."""
+    """Run the Local save path. Returns the operator result set.
+
+    SAVING is set BEFORE the request starts: a request whose worker cannot
+    start answers synchronously (byok_client._run_worker), and its ERROR must
+    not be overwritten by a SAVING with nothing in flight."""
+    wm.byok_dialog_state = 'SAVING'
+    wm.byok_last_error = ''
+    ensure_dialog_redraw_pump()
     if getattr(wm, 'byok_form_local_mode', 'MANAGED') == 'CUSTOM':
         started, err = local_provider.save_custom_async(wm, on_done)
     else:
@@ -202,9 +209,6 @@ def execute_local(op, wm, on_done):
         wm.byok_dialog_state = 'ERROR'
         wm.byok_last_error = err or n_("Could not save the local provider.")
         return {'CANCELLED'}
-    wm.byok_dialog_state = 'SAVING'
-    wm.byok_last_error = ''
-    ensure_dialog_redraw_pump()
     return {'FINISHED'}
 
 

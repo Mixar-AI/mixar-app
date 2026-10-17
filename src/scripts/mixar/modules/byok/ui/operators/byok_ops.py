@@ -12,20 +12,13 @@ turn by `core/turn_credentials`. A device without a stored key (upgrade,
 second machine) sees `wm.byok_device_key_missing` and the dialog asks for
 the key only — re-saving goes through PUT /agent/byok again.
 
-State machine lives on WindowManager (see ui/properties/byok_props.py).
-The dialog operator's draw() delegates to `byok_dialog_ui.draw_dialog`,
-which dispatches on `wm.byok_dialog_state` (IDLE / SAVING / REMOVING /
-SAVED / REMOVED / ERROR / CONFIRM_REMOVE) and renders with the profile
-card's design system. Save and Remove spawn async work through
-`core/byok_client.py`; callbacks mutate WM state on the main thread and
-the props dialog redraws on the next tick.
-
-The dialog draws its own single-primary-action footer and always marks
-one button active-default, which suppresses the props dialog's automatic
-OK/Cancel row (`wm_block_dialog_create` skips it when the block already
-has a default button) — the redundant Save-plus-OK pair is gone. Success
-lands on an explicit SAVED / REMOVED recap with one Done button, so
-"did it save?" is never a question.
+State machine lives on WindowManager (see ui/properties/byok_props.py);
+`byok_dialog_ui.draw_dialog` renders it with a single-primary-action footer
+whose active-default button suppresses the props dialog's OK/Cancel row.
+Save and Remove spawn async work through `core/byok_client.py`; callbacks
+mutate WM state on the main thread. Success lands on an explicit SAVED /
+REMOVED recap with one Done button. The island's toggle and model switch
+mutate the same key, so every write here waits for them (`account_busy`).
 """
 
 import bpy
@@ -41,6 +34,12 @@ from ...core.local_switch import (
     deregister_local_if_switched_away as _deregister_local_if_switched_away,
 )
 from . import byok_dialog_ui
+from .byok_dialog_support import (
+    account_busy as _account_busy,
+    prefill_from_prompt as _prefill_from_prompt,
+    saved_provider_model as _saved_provider_model,
+    toast_if_closed,
+)
 from .byok_state_ops import (
     _apply_cached_state,
     _clear_cached_state,
@@ -116,37 +115,38 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         if _dialog_open:
             return {'CANCELLED'}
         wm = context.window_manager
-        # Reset dialog-local state on open. Never prefill the api_key field.
-        wm.byok_dialog_state = 'IDLE'
-        wm.byok_last_error = ''
+        # Reset dialog-local state on open — unless a save / remove is still
+        # in flight, whose SAVING / REMOVING the dialog keeps showing until it
+        # lands (the dialog can be closed with Esc mid-request). Never prefill
+        # the api_key field.
+        if not byok_client.mutation_in_flight():
+            wm.byok_dialog_state = 'IDLE'
+            wm.byok_last_error = ''
         _wipe_form_secrets(wm)  # never prefill credential material
-        # If we already have an active config, prefill provider/model so
-        # the user sees what's currently saved and can edit from there.
-        # Provider assignment can fail if the cache hasn't been populated
-        # yet (the saved provider isn't in the current EnumProperty items)
-        # — guard against TypeError.
-        if wm.byok_is_active:
-            if wm.byok_current_provider:
-                try:
-                    wm.byok_form_provider = wm.byok_current_provider
-                except TypeError:
-                    logger.debug(
-                        "Could not prefill provider %s — not in cache yet",
-                        wm.byok_current_provider,
-                    )
-            if model_suggestions.is_openrouter(wm.byok_current_provider):
+        # If a key is saved (in use, or paused on this computer), prefill
+        # provider/model so the user sees what's currently saved and can edit
+        # from there. Provider assignment can fail if the cache hasn't been
+        # populated yet (the saved provider isn't in the current EnumProperty
+        # items) — guard against TypeError.
+        saved_provider, saved_model = _saved_provider_model(wm)
+        if saved_provider:
+            try:
+                wm.byok_form_provider = saved_provider
+            except TypeError:
+                logger.debug("Could not prefill provider %s — not in cache yet", saved_provider)
+            if model_suggestions.is_openrouter(saved_provider):
                 # OpenRouter uses a free-text model slug, not the catalog dropdown.
-                if wm.byok_current_model:
-                    wm.byok_form_openrouter_model = wm.byok_current_model
-            elif model_suggestions.is_local(wm.byok_current_provider):
+                if saved_model:
+                    wm.byok_form_openrouter_model = saved_model
+            elif model_suggestions.is_local(saved_provider):
                 pass  # prefilled below by byok_local_ops.prepare_dialog
-            elif wm.byok_current_model:
+            elif saved_model:
                 try:
-                    wm.byok_form_model = wm.byok_current_model
+                    wm.byok_form_model = saved_model
                 except TypeError:
                     logger.debug(
                         "Could not prefill model %s — not in cache for this provider",
-                        wm.byok_current_model,
+                        saved_model,
                     )
         # Opened from the chat's key-missing card: the refusal's provider and
         # model win over the mirror, and the form draws key-only with the
@@ -238,12 +238,15 @@ class MIXAR_BYOK_OT_save(Operator):
         # execute(), which routes problems to the ERROR state with a
         # message the user can act on — the old silently-greyed Save
         # button gave no clue what was missing (and the card-styled
-        # button has no disabled look to lean on).
-        return context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+        # button has no disabled look to lean on). The island's toggle /
+        # model switch is a mutation of the same key: one at a time, or a
+        # late echo would resurrect what this changes.
+        return (context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+                and not _account_busy())
 
     def execute(self, context):
         wm = context.window_manager
-        if wm.byok_dialog_state in ('SAVING', 'REMOVING'):
+        if wm.byok_dialog_state in ('SAVING', 'REMOVING') or _account_busy():
             return {'CANCELLED'}
         provider = wm.byok_form_provider
 
@@ -326,24 +329,6 @@ def _saving(wm) -> bool:
     return getattr(wm, 'byok_dialog_state', '') == 'SAVING'
 
 
-def _prefill_from_prompt(wm, prompt):
-    """Apply a key-missing card's prefill (`core/key_prompt`), if any. A
-    provider or model the catalog does not list yet is skipped — the row
-    keeps whatever the mirror prefilled above."""
-    if not prompt:
-        return
-    provider, model = prompt.get("provider") or "", prompt.get("model") or ""
-    try:
-        if provider:
-            wm.byok_form_provider = provider
-        if model and model_suggestions.is_openrouter(provider):
-            wm.byok_form_openrouter_model = model
-        elif model and not model_suggestions.is_local(provider):
-            wm.byok_form_model = model
-    except TypeError:
-        logger.debug("Key prompt prefill skipped — provider or model not in the catalog yet")
-
-
 def _save_callback():
     """Bind the submit-time credential epoch into the save callback.
 
@@ -367,7 +352,13 @@ def _on_save_done(success: bool, data, err, epoch=None):
             _wipe_form_secrets(wm)
             if not applied:
                 logger.debug("BYOK save landed after logout; echo dropped")
+                wm.byok_dialog_state = 'IDLE'
                 return
+            # The echo is the server's word: move the island now (reads issued
+            # before it are dropped), and let the refresh confirm.
+            preference_state.invalidate_reads()
+            preference_state.apply_local(
+                {'mixar_agent_model_byok_active': bool((data or {}).get('byok_active'))}, wm)
             preference_state.refresh()
             # SAVED, not IDLE: the dialog shows an explicit recap with a
             # single Done button, so the user never has to wonder
@@ -380,6 +371,9 @@ def _on_save_done(success: bool, data, err, epoch=None):
             # message now that this device can sign it (once).
             key_prompt.notify_saved()
         else:
+            if epoch is not None and epoch != credential_state.current_epoch():
+                wm.byok_dialog_state = 'IDLE'
+                return  # another account by now; nothing of this save remains
             if data:
                 # The PUT landed but the device-store write did not: adopt
                 # the server's state so the card and the "Key needed on this
@@ -388,6 +382,7 @@ def _on_save_done(success: bool, data, err, epoch=None):
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or n_("Couldn't save. Try again.")
             logger.warning("BYOK save failed: %s", err)
+            toast_if_closed(_dialog_open, n_("Couldn't save your API key"), err)
         _redraw_mixie_chat_areas()
     except Exception as e:
         logger.error("BYOK save callback failed: %s", e, exc_info=True)
@@ -420,31 +415,52 @@ class MIXAR_BYOK_OT_cancel_remove(Operator):
 
 
 class MIXAR_BYOK_OT_confirm_remove(Operator):
-    """Delete the stored API key server-side"""
+    """Delete your API key: from your Mixar account and from this computer"""
     bl_idname = "mixar_byok.confirm_remove"
     bl_label = "Confirm Remove"
     bl_options = {'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        return (context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
+                and not _account_busy())
+
     def execute(self, context):
         wm = context.window_manager
+        if wm.byok_dialog_state in ('SAVING', 'REMOVING') or _account_busy():
+            return {'CANCELLED'}
         wm.byok_dialog_state = 'REMOVING'
         wm.byok_last_error = ''
         _redraw_mixie_chat_areas()
         ensure_dialog_redraw_pump()
 
-        byok_client.delete_credentials(on_done=_on_delete_done)
+        epoch = credential_state.current_epoch()
+
+        def _done(success: bool, removed_count: int, err):
+            _on_delete_done(success, removed_count, err, epoch=epoch)
+
+        byok_client.delete_credentials(on_done=_done)
         return {'FINISHED'}
 
 
-def _on_delete_done(success: bool, removed_count: int, err):
+def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
     """Main-thread delete callback."""
     try:
         wm = bpy.context.window_manager
+        if epoch is not None and epoch != credential_state.current_epoch():
+            # Logged out (or into another account) meanwhile: this result
+            # belongs to an account the mirror no longer shows.
+            wm.byok_dialog_state = 'IDLE'
+            return
         if success:
             # The server confirmed "inactive": the mirror stays LOADED (a
             # logout clears it unloaded), so nothing reads it as unfetched.
             _clear_cached_state(wm, loaded=True)
             _wipe_form_secrets(wm)
+            # Every row is gone, so byok_active is false by construction: move
+            # the island now (reads issued before are dropped), refresh confirms.
+            preference_state.invalidate_reads()
+            preference_state.apply_local({'mixar_agent_model_byok_active': False}, wm)
             preference_state.refresh()
             # REMOVED, not IDLE — explicit recap, same as the save path.
             wm.byok_dialog_state = 'REMOVED'
@@ -455,6 +471,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or n_("Couldn't switch back. Try again.")
             logger.warning("BYOK remove failed: %s", err)
+            toast_if_closed(_dialog_open, n_("Couldn't remove your API key"), err)
         _redraw_mixie_chat_areas()
     except Exception as e:
         logger.error("BYOK delete callback failed: %s", e, exc_info=True)

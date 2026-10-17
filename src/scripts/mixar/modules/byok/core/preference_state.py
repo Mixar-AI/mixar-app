@@ -101,6 +101,15 @@ def end_mutation(epoch: int) -> bool:
     return True
 
 
+def invalidate_reads() -> None:
+    """Drop every read (and its retry) issued before now: the island toggle
+    and the key save / remove know a newer `byok_active` than a GET that was
+    already in flight, which would otherwise flip the thumb back."""
+    global _request_serial
+    with _lock:
+        _request_serial += 1
+
+
 def snapshot() -> Dict[str, Any]:
     """Current state as a plain dict (safe to read from any thread)."""
     with _lock:
