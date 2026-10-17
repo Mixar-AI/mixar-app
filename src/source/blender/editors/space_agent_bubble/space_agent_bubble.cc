@@ -48,6 +48,8 @@
 
 #include "BLI_rect.h"
 
+#include "agent_ui_provider.hh"
+
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 
@@ -724,34 +726,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                 TIP_("Auto mode: the agent decides open choices itself instead of asking you, "
                      "and lists its decisions in the summary"));
 
-  /* --- Model, right of Auto ---
-   * Pops the Python menu that owns the whole picker (catalog projection,
-   * preference state, the PUT); C++ only draws the chip and reads the
-   * WindowManager mirror. A pulldown is anchored to this chip. A free popup
-   * opened downward from the cursor on this bottom row, and its last item
-   * covered Upload Reference. The chip is absent until the Python half
-   * registers the mirror, and an empty rect means the width budget dropped it. */
-  if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
-    agent_bubble_rect_to_region(region, layout->chip_model, &bx, &by, &bw, &bh);
-    uiDefMenuBut(
-        block,
-        [](bContext *C, ui::Layout *menu_layout, void * /*arg*/) {
-          MenuType *mt = WM_menutype_find("MIXIE_CHAT_MT_agent_model", false);
-          if (mt != nullptr) {
-            ui::menutype_draw(C, mt, menu_layout);
-          }
-        },
-        nullptr,
-        "",
-        bx,
-        by,
-        bw,
-        bh,
-        state->model_byok_active ?
-            TIP_("Your own API key is in use, and it decides the model. Open this menu "
-                 "and pick \"Change or remove my API key\" to choose a hosted model again") :
-            TIP_("Choose which model the agent runs on"));
-  }
+  /* --- Mixie | Custom AI and the key chip, right of Auto ---
+   * (agent_ui_provider.cc). Absent until the Python half registers the
+   * mirror; an empty rect means the budget dropped it. */
+  agent_bubble_provider_buttons(block, region, *layout, *state);
 
   if (!agent_bubble_references_visible(C)) {
     agent_bubble_send_button(C, region, block, *layout, *state);

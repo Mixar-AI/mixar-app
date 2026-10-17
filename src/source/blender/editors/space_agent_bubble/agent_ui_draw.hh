@@ -98,6 +98,19 @@ struct AgentIslandState {
    * beside Refine; refining greys Refine out until the answer lands. */
   bool prompt_refined;
   bool prompt_refining;
+
+  /* The key chip after the Mixie | Custom AI toggle while a key is in use
+   * (wm.mixar_agent_key_*): provider ("Claude API") and model ("Opus 5.5") as
+   * drawn, whether the model opens the switch dropdown, and whether a switch
+   * is being saved (the chip then names the target, dimmed). Empty label =
+   * no chip. Read by `agent_ui_provider_gather`. */
+  char model_key_label[64];
+  char model_key_model[96];
+  bool model_key_menu;
+  bool model_key_busy;
+  /* A paused key that still validates: Custom AI switches back to it with no
+   * dialog (only its tooltip differs here; Python decides the click). */
+  bool model_key_resumable;
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */
