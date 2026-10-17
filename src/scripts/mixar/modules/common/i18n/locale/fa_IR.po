@@ -8860,26 +8860,23 @@ msgstr "ﺪﻧﻮﺷ ﻪﻓﺎﺿﺍ ﺎﻤﻧ ﻥﺍﻮﻨﻋ‌ﻪﺑ ﺎﺗ �
 msgid "Generates as one multi-view job"
 msgstr "ﺩﻮﺷ‌ﯽﻣ ﺪﯿﻟﻮﺗ ﺎﻤﻧﺪﻨﭼ ﺭﺎﮐ ﮏﯾ ﺕﺭﻮﺻ‌ﻪﺑ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ﺮﮕﯾﺩ ﺩﺭﻮﻣ)"
+
 msgid "Video Gen tab not available"
 msgstr "ﺖﺴﯿﻧ ﺱﺮﺘﺳﺩ ﺭﺩ ﻮﯾﺪﯾﻭ ﺪﯿﻟﻮﺗ ﻪﻧﺎﺑﺯ"
 
 msgid "Selected References"
 msgstr "ﻩﺪﺷ‌ﺏﺎﺨﺘﻧﺍ ﻊﺟﺍﺮﻣ"
 
-msgid "Images: {count}"
-msgstr "{count} :ﺮﯾﻭﺎﺼﺗ"
-
-msgid "Videos: {count}"
-msgstr "{count} :ﺎﻫﻮﯾﺪﯾﻭ"
+msgid "No references selected — text-to-video"
+msgstr "ﻮﯾﺪﯾﻭ ﻪﺑ ﻦﺘﻣ — ﻩﺪﺸﻧ ﺏﺎﺨﺘﻧﺍ ﯽﻌﺟﺮﻣ"
 
 msgid "A selected video source file is missing"
 msgstr "ﺖﺴﯿﻧ ﺩﻮﺟﻮﻣ ﻩﺪﺷ‌ﺏﺎﺨﺘﻧﺍ ﯼﻮﯾﺪﯾﻭ ﻊﺒﻨﻣ ﻞﯾﺎﻓ"
 
-msgid "No references selected — text-to-video"
-msgstr "ﻮﯾﺪﯾﻭ ﻪﺑ ﻦﺘﻣ — ﻩﺪﺸﻧ ﺏﺎﺨﺘﻧﺍ ﯽﻌﺟﺮﻣ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "ﺪﯿﻨﮐ ﺮﮐﺫ ﺖﭙﻣﺍﺮﭘ ﺭﺩ ﺍﺭ ﻮﯾﺪﯾﻭ/ﺮﯾﻮﺼﺗ ﺐﯿﺗﺮﺗ ،ﺎﻫ‌ﺶﻘﻧ ﻦﯿﯿﻌﺗ ﻡﺎﮕﻨﻫ"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "ﻊﺟﺮﻣ ﯼﺎﻫ‌ﺖﯾﺩﻭﺪﺤﻣ"
@@ -20306,9 +20303,6 @@ msgstr "{count} ﺩﺮﮐ ﺮﯿﯿﻐﺗ"
 
 msgid "{count} deleted"
 msgstr "{count} ﺪﺷ ﻑﺬﺣ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ﺮﮕﯾﺩ ﺩﺭﻮﻣ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ﻩﺪﺷ‌ﻪﺘﺧﺎﺳ"

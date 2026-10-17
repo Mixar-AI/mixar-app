@@ -8860,26 +8860,23 @@ msgstr "Chagua picha za ubao wa hisia ili kuziongeza kama maoni"
 msgid "Generates as one multi-view job"
 msgstr "Inatengeneza kama kazi moja ya maoni mengi"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} zaidi)"
+
 msgid "Video Gen tab not available"
 msgstr "Kichupo cha utengenezaji wa video hakipatikani"
 
 msgid "Selected References"
 msgstr "Marejeleo Yaliyochaguliwa"
 
-msgid "Images: {count}"
-msgstr "Picha: {count}"
-
-msgid "Videos: {count}"
-msgstr "Video: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Hakuna marejeleo yaliyochaguliwa — maandishi hadi video"
 
 msgid "A selected video source file is missing"
 msgstr "Faili chanzo ya video iliyochaguliwa haipo"
 
-msgid "No references selected — text-to-video"
-msgstr "Hakuna marejeleo yaliyochaguliwa — maandishi hadi video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Taja mpangilio wa picha/video katika maagizo unapogawa majukumu"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Vikomo vya Rejeleo"
@@ -20306,9 +20303,6 @@ msgstr "{count} zimebadilishwa"
 
 msgid "{count} deleted"
 msgstr "{count} zimefutwa"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} zaidi)"
 
 msgid "Created: {names}"
 msgstr "Zimeundwa: {names}"

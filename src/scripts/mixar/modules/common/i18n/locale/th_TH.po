@@ -8860,26 +8860,23 @@ msgstr "เลือกภาพมู้ดบอร์ดเพื่อเพ
 msgid "Generates as one multi-view job"
 msgstr "สร้างเป็นงานหลายมุมมองงานเดียว"
 
+msgid "… (+{count} more)"
+msgstr "… (+อีก {count} รายการ)"
+
 msgid "Video Gen tab not available"
 msgstr "แท็บสร้างวิดีโอไม่พร้อมใช้งาน"
 
 msgid "Selected References"
 msgstr "อ้างอิงที่ถูกเลือก"
 
-msgid "Images: {count}"
-msgstr "ภาพ: {count}"
-
-msgid "Videos: {count}"
-msgstr "วิดีโอ: {count}"
+msgid "No references selected — text-to-video"
+msgstr "ไม่ได้เลือกอ้างอิง — ข้อความเป็นวิดีโอ"
 
 msgid "A selected video source file is missing"
 msgstr "ไม่พบไฟล์ต้นฉบับของวิดีโอที่ถูกเลือก"
 
-msgid "No references selected — text-to-video"
-msgstr "ไม่ได้เลือกอ้างอิง — ข้อความเป็นวิดีโอ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "ระบุลำดับภาพ/วิดีโอในพรอมต์เมื่อกำหนดบทบาท"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "ขีดจำกัดอ้างอิง"
@@ -20306,9 +20303,6 @@ msgstr "แก้ไข {count}"
 
 msgid "{count} deleted"
 msgstr "ลบ {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+อีก {count} รายการ)"
 
 msgid "Created: {names}"
 msgstr "สร้าง: {names}"

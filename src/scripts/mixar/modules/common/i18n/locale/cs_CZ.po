@@ -8860,26 +8860,23 @@ msgstr "Vyberte obrázky z moodboardu a přidejte je jako pohledy"
 msgid "Generates as one multi-view job"
 msgstr "Generuje se jako jedna úloha s více pohledy"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} dalších)"
+
 msgid "Video Gen tab not available"
 msgstr "Karta Generování videa není k dispozici"
 
 msgid "Selected References"
 msgstr "Vybrané reference"
 
-msgid "Images: {count}"
-msgstr "Obrázky: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videa: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nejsou vybrány žádné reference — text na video"
 
 msgid "A selected video source file is missing"
 msgstr "Chybí zdrojový soubor vybraného videa"
 
-msgid "No references selected — text-to-video"
-msgstr "Nejsou vybrány žádné reference — text na video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Při přiřazování rolí uveďte v promptu pořadí obrázků/videí"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Limity referencí"
@@ -20306,9 +20303,6 @@ msgstr "Upraveno: {count}"
 
 msgid "{count} deleted"
 msgstr "Smazáno: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} dalších)"
 
 msgid "Created: {names}"
 msgstr "Vytvořeno: {names}"

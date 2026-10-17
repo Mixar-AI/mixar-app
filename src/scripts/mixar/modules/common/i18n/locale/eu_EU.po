@@ -8860,26 +8860,23 @@ msgstr "Hautatu moodboard-eko irudiak ikuspegi gisa gehitzeko"
 msgid "Generates as one multi-view job"
 msgstr "Ikuspegi anitzeko lan bakar gisa sortzen da"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} gehiago)"
+
 msgid "Video Gen tab not available"
 msgstr "Bideo-sorkuntza fitxa ez dago erabilgarri"
 
 msgid "Selected References"
 msgstr "Hautatutako erreferentziak"
 
-msgid "Images: {count}"
-msgstr "Irudiak: {count}"
-
-msgid "Videos: {count}"
-msgstr "Bideoak: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Ez da erreferentziarik hautatu — testutik bideora"
 
 msgid "A selected video source file is missing"
 msgstr "Hautatutako bideo baten iturburu-fitxategia falta da"
 
-msgid "No references selected — text-to-video"
-msgstr "Ez da erreferentziarik hautatu — testutik bideora"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Aipatu irudi/bideo ordena gonbitean rolak esleitzean"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Erreferentzia-mugak"
@@ -20306,9 +20303,6 @@ msgstr "{count} aldatu dira"
 
 msgid "{count} deleted"
 msgstr "{count} ezabatu dira"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} gehiago)"
 
 msgid "Created: {names}"
 msgstr "Sortuak: {names}"

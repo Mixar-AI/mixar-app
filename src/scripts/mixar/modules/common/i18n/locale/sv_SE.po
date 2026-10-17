@@ -8860,26 +8860,23 @@ msgstr "Välj moodboardbilder för att lägga till dem som vyer"
 msgid "Generates as one multi-view job"
 msgstr "Genereras som ett jobb med flera vyer"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} till)"
+
 msgid "Video Gen tab not available"
 msgstr "Fliken Videogenerering är inte tillgänglig"
 
 msgid "Selected References"
 msgstr "Valda referenser"
 
-msgid "Images: {count}"
-msgstr "Bilder: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videor: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Inga referenser valda – text till video"
 
 msgid "A selected video source file is missing"
 msgstr "En vald videokällfil saknas"
 
-msgid "No references selected — text-to-video"
-msgstr "Inga referenser valda – text till video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Ange bild-/videoordningen i prompten när du tilldelar roller"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Referensgränser"
@@ -20306,9 +20303,6 @@ msgstr "{count} ändrade"
 
 msgid "{count} deleted"
 msgstr "{count} borttagna"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} till)"
 
 msgid "Created: {names}"
 msgstr "Skapade: {names}"

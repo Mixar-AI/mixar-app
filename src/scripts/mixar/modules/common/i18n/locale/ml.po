@@ -8860,26 +8860,23 @@ msgstr "വ്യൂകളായി ചേർക്കാൻ മൂഡ്ബോ�
 msgid "Generates as one multi-view job"
 msgstr "ഒരു മൾട്ടി-വ്യൂ ജോലിയായി ജനറേറ്റ് ചെയ്യുന്നു"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} കൂടി)"
+
 msgid "Video Gen tab not available"
 msgstr "വീഡിയോ ജെൻ ടാബ് ലഭ്യമല്ല"
 
 msgid "Selected References"
 msgstr "തിരഞ്ഞെടുത്ത റഫറൻസുകൾ"
 
-msgid "Images: {count}"
-msgstr "ചിത്രങ്ങൾ: {count}"
-
-msgid "Videos: {count}"
-msgstr "വീഡിയോകൾ: {count}"
+msgid "No references selected — text-to-video"
+msgstr "റഫറൻസുകളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല — ടെക്സ്റ്റ്-ടു-വീഡിയോ"
 
 msgid "A selected video source file is missing"
 msgstr "തിരഞ്ഞെടുത്ത ഒരു വീഡിയോ ഉറവിട ഫയൽ കാണുന്നില്ല"
 
-msgid "No references selected — text-to-video"
-msgstr "റഫറൻസുകളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല — ടെക്സ്റ്റ്-ടു-വീഡിയോ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "റോളുകൾ നൽകുമ്പോൾ പ്രോംപ്റ്റിൽ ചിത്ര/വീഡിയോ ക്രമം പരാമർശിക്കുക"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "റഫറൻസ് പരിധികൾ"
@@ -20306,9 +20303,6 @@ msgstr "{count} മാറ്റി"
 
 msgid "{count} deleted"
 msgstr "{count} ഇല്ലാതാക്കി"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} കൂടി)"
 
 msgid "Created: {names}"
 msgstr "സൃഷ്ടിച്ചത്: {names}"

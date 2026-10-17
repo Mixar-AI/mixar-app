@@ -8860,26 +8860,23 @@ msgstr "םיטבמכ ןתוא ףיסוהל ידכ הארשה חול תונומת
 msgid "Generates as one multi-view job"
 msgstr "תחא םיבורמ םיטבמ תמישמכ רצונ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} םיפסונ)"
+
 msgid "Video Gen tab not available"
 msgstr "הנימז הניא ואידיו תריצי תינושל"
 
 msgid "Selected References"
 msgstr "ורחבנש םיסנרפר"
 
-msgid "Images: {count}"
-msgstr "{count} :תונומת"
-
-msgid "Videos: {count}"
-msgstr "{count} :ואידיו"
+msgid "No references selected — text-to-video"
+msgstr "ואידיוול טסקט — םיסנרפר ורחבנ אל"
 
 msgid "A selected video source file is missing"
 msgstr "רסח רחבנש ואידיווה רוקמ ץבוק"
 
-msgid "No references selected — text-to-video"
-msgstr "ואידיוול טסקט — םיסנרפר ורחבנ אל"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "םידיקפת ךויש תעב ואידיווהו תונומתה רדס תא היחנהב ןייצל שי"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "סנרפר תולבגמ"
@@ -20306,9 +20303,6 @@ msgstr "{count} ונוש"
 
 msgid "{count} deleted"
 msgstr "{count} וקחמנ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} םיפסונ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ורצונ"

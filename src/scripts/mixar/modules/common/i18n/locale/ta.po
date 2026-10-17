@@ -8860,26 +8860,23 @@ msgstr "பார்வைகளாகச் சேர்க்க மூட்�
 msgid "Generates as one multi-view job"
 msgstr "ஒரே பல பார்வைப் பணியாக உருவாக்கப்படும்"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} மேலும்)"
+
 msgid "Video Gen tab not available"
 msgstr "காணொளி உருவாக்கத் தாவல் கிடைக்கவில்லை"
 
 msgid "Selected References"
 msgstr "தேர்ந்தெடுத்த குறிப்புகள்"
 
-msgid "Images: {count}"
-msgstr "படங்கள்: {count}"
-
-msgid "Videos: {count}"
-msgstr "காணொளிகள்: {count}"
+msgid "No references selected — text-to-video"
+msgstr "குறிப்புகள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை — உரையிலிருந்து காணொளி"
 
 msgid "A selected video source file is missing"
 msgstr "தேர்ந்தெடுத்த காணொளி மூலக் கோப்பு இல்லை"
 
-msgid "No references selected — text-to-video"
-msgstr "குறிப்புகள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை — உரையிலிருந்து காணொளி"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "பாத்திரங்களை ஒதுக்கும்போது ப்ராம்ப்டில் படம்/காணொளி வரிசையைக் குறிப்பிடவும்"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "குறிப்பு வரம்புகள்"
@@ -20306,9 +20303,6 @@ msgstr "{count} மாற்றப்பட்டது"
 
 msgid "{count} deleted"
 msgstr "{count} அழிக்கப்பட்டது"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} மேலும்)"
 
 msgid "Created: {names}"
 msgstr "உருவாக்கப்பட்டது: {names}"

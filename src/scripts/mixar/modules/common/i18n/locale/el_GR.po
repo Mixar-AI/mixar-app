@@ -8860,26 +8860,23 @@ msgstr "Επιλέξτε εικόνες Moodboard για να τις προσθ�
 msgid "Generates as one multi-view job"
 msgstr "Δημιουργείται ως μία εργασία πολλαπλών όψεων"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ακόμη)"
+
 msgid "Video Gen tab not available"
 msgstr "Η καρτέλα παραγωγής βίντεο δεν είναι διαθέσιμη"
 
 msgid "Selected References"
 msgstr "Επιλεγμένες αναφορές"
 
-msgid "Images: {count}"
-msgstr "Εικόνες: {count}"
-
-msgid "Videos: {count}"
-msgstr "Βίντεο: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Δεν έχουν επιλεγεί αναφορές — κείμενο σε βίντεο"
 
 msgid "A selected video source file is missing"
 msgstr "Λείπει ένα επιλεγμένο αρχείο προέλευσης βίντεο"
 
-msgid "No references selected — text-to-video"
-msgstr "Δεν έχουν επιλεγεί αναφορές — κείμενο σε βίντεο"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Αναφέρετε τη σειρά εικόνας/βίντεο στην προτροπή όταν αναθέτετε ρόλους"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Όρια αναφορών"
@@ -20306,9 +20303,6 @@ msgstr "τροποποιήθηκαν: {count}"
 
 msgid "{count} deleted"
 msgstr "διαγράφηκαν: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ακόμη)"
 
 msgid "Created: {names}"
 msgstr "Δημιουργήθηκαν: {names}"

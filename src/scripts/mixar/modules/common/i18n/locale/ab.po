@@ -8860,26 +8860,23 @@ msgstr "Амудборд асахьанҵақәа шәалх, аԥшрақәа �
 msgid "Generates as one multi-view job"
 msgstr "Акы ахарԥшыгатә аԥшрақәа зусура аҳасабала иԥҵоит"
 
+msgid "… (+{count} more)"
+msgstr "… (+еиҳаны {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Авидео аԥҵара атаб ыҟаӡам"
 
 msgid "Selected References"
 msgstr "Иалхыз Ахьырԥшқәа"
 
-msgid "Images: {count}"
-msgstr "Асахьанҵақәа: {count}"
-
-msgid "Videos: {count}"
-msgstr "Авидеоқәа: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Ахьырԥшқәа алхым — аҳәоу авидео ахь"
 
 msgid "A selected video source file is missing"
 msgstr "Иалхыз авидео ахыҵхырҭа ашәҟәы ыҟаӡам"
 
-msgid "No references selected — text-to-video"
-msgstr "Ахьырԥшқәа алхым — аҳәоу авидео ахь"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Арольқәа аныршәоу, апромпт аҟны асахьанҵа/авидео аишьҭагылашьа шәазгәаҭа"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Ахьырԥш Алимитқәа"
@@ -20306,9 +20303,6 @@ msgstr "иԥсахуп: {count}"
 
 msgid "{count} deleted"
 msgstr "иныхуп: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+еиҳаны {count})"
 
 msgid "Created: {names}"
 msgstr "Иԥҵоуп: {names}"

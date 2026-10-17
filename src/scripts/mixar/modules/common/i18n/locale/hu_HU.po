@@ -8860,26 +8860,23 @@ msgstr "Jelöljön ki moodboard-képeket, hogy nézetként hozzáadja őket"
 msgid "Generates as one multi-view job"
 msgstr "Egyetlen többnézetes feladatként generál"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} további)"
+
 msgid "Video Gen tab not available"
 msgstr "A Videógenerálás lap nem érhető el"
 
 msgid "Selected References"
 msgstr "Kijelölt referenciák"
 
-msgid "Images: {count}"
-msgstr "Képek: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videók: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nincs kijelölt referencia – szövegből videó"
 
 msgid "A selected video source file is missing"
 msgstr "Egy kijelölt videó forrásfájlja hiányzik"
 
-msgid "No references selected — text-to-video"
-msgstr "Nincs kijelölt referencia – szövegből videó"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Szerepek kiosztásakor a promptban hivatkozzon a képek/videók sorrendjére"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Referenciakorlátok"
@@ -20306,9 +20303,6 @@ msgstr "Módosítva: {count}"
 
 msgid "{count} deleted"
 msgstr "Törölve: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} további)"
 
 msgid "Created: {names}"
 msgstr "Létrehozva: {names}"

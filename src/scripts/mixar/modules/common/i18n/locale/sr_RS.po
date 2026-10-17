@@ -8860,26 +8860,23 @@ msgstr "Изаберите слике мудборда да их додате к
 msgid "Generates as one multi-view job"
 msgstr "Генерише се као један задатак са више погледа"
 
+msgid "… (+{count} more)"
+msgstr "… (још +{count})"
+
 msgid "Video Gen tab not available"
 msgstr "Картица генерисања видеа није доступна"
 
 msgid "Selected References"
 msgstr "Изабране референце"
 
-msgid "Images: {count}"
-msgstr "Слике: {count}"
-
-msgid "Videos: {count}"
-msgstr "Видео-записи: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Није изабрана ниједна референца — текст у видео"
 
 msgid "A selected video source file is missing"
 msgstr "Недостаје изабрана изворна видео-датотека"
 
-msgid "No references selected — text-to-video"
-msgstr "Није изабрана ниједна референца — текст у видео"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "У промпту наведите редослед слика и видео-записа када додељујете улоге"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Границе референци"
@@ -20306,9 +20303,6 @@ msgstr "Измењено: {count}"
 
 msgid "{count} deleted"
 msgstr "Обрисано: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (још +{count})"
 
 msgid "Created: {names}"
 msgstr "Направљено: {names}"

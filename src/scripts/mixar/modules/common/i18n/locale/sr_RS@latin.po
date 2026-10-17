@@ -11219,6 +11219,10 @@ msgid "Generates as one multi-view job"
 msgstr "Generiše se kao jedan zadatak sa više pogleda"
 
 # derived
+msgid "… (+{count} more)"
+msgstr "… (još +{count})"
+
+# derived
 msgid "Video Gen tab not available"
 msgstr "Kartica generisanja videa nije dostupna"
 
@@ -11227,24 +11231,15 @@ msgid "Selected References"
 msgstr "Izabrane reference"
 
 # derived
-msgid "Images: {count}"
-msgstr "Slike: {count}"
-
-# derived
-msgid "Videos: {count}"
-msgstr "Video-zapisi: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nije izabrana nijedna referenca — tekst u video"
 
 # derived
 msgid "A selected video source file is missing"
 msgstr "Nedostaje izabrana izvorna video-datoteka"
 
-# derived
-msgid "No references selected — text-to-video"
-msgstr "Nije izabrana nijedna referenca — tekst u video"
-
-# derived
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "U promptu navedite redosled slika i video-zapisa kada dodeljujete uloge"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 # derived
 msgid "Reference Limits"
@@ -26043,10 +26038,6 @@ msgstr "Izmenjeno: {count}"
 # derived
 msgid "{count} deleted"
 msgstr "Obrisano: {count}"
-
-# derived
-msgid "… (+{count} more)"
-msgstr "… (još +{count})"
 
 # derived
 msgid "Created: {names}"

@@ -8860,26 +8860,23 @@ msgstr "Valitkaa tunnelmataulukuvia lisätäksenne ne näkymiksi."
 msgid "Generates as one multi-view job"
 msgstr "Luodaan yhtenä moninäkymätyönä."
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} lisää)"
+
 msgid "Video Gen tab not available"
 msgstr "Videonluonti-välilehti ei ole käytettävissä"
 
 msgid "Selected References"
 msgstr "Valitut referenssit"
 
-msgid "Images: {count}"
-msgstr "Kuvia: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videoita: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Referenssejä ei ole valittu — tekstistä videoksi"
 
 msgid "A selected video source file is missing"
 msgstr "Valitun videon lähdetiedosto puuttuu."
 
-msgid "No references selected — text-to-video"
-msgstr "Referenssejä ei ole valittu — tekstistä videoksi"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Mainitkaa kuvien ja videoiden järjestys kehotteessa, kun määritätte rooleja."
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Referenssirajat"
@@ -20306,9 +20303,6 @@ msgstr "{count} muokattu"
 
 msgid "{count} deleted"
 msgstr "{count} poistettu"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} lisää)"
 
 msgid "Created: {names}"
 msgstr "Luotu: {names}"

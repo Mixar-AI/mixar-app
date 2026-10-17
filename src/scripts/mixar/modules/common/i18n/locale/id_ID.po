@@ -8860,26 +8860,23 @@ msgstr "Pilih gambar moodboard untuk menambahkannya sebagai tampak"
 msgid "Generates as one multi-view job"
 msgstr "Dihasilkan sebagai satu tugas multi-tampak"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} lainnya)"
+
 msgid "Video Gen tab not available"
 msgstr "Tab Generasi Video tidak tersedia"
 
 msgid "Selected References"
 msgstr "Referensi Terseleksi"
 
-msgid "Images: {count}"
-msgstr "Gambar: {count}"
-
-msgid "Videos: {count}"
-msgstr "Video: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Tidak ada referensi terseleksi — teks-ke-video"
 
 msgid "A selected video source file is missing"
 msgstr "Salah satu berkas sumber video terseleksi tidak ditemukan"
 
-msgid "No references selected — text-to-video"
-msgstr "Tidak ada referensi terseleksi — teks-ke-video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Sebutkan urutan gambar/video di prompt saat menetapkan peran"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Batas Referensi"
@@ -20306,9 +20303,6 @@ msgstr "{count} diubah"
 
 msgid "{count} deleted"
 msgstr "{count} dihapus"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} lainnya)"
 
 msgid "Created: {names}"
 msgstr "Dibuat: {names}"

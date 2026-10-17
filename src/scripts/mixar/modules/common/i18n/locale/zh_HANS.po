@@ -8860,26 +8860,23 @@ msgstr "选择情绪板图像以将其添加为视图"
 msgid "Generates as one multi-view job"
 msgstr "作为一个多视图任务生成"
 
+msgid "… (+{count} more)"
+msgstr "…（另有 {count} 个）"
+
 msgid "Video Gen tab not available"
 msgstr "视频生成选项卡不可用"
 
 msgid "Selected References"
 msgstr "选中的参考"
 
-msgid "Images: {count}"
-msgstr "图像：{count}"
-
-msgid "Videos: {count}"
-msgstr "视频：{count}"
+msgid "No references selected — text-to-video"
+msgstr "未选择参考 — 文本生成视频"
 
 msgid "A selected video source file is missing"
 msgstr "某个选中视频的源文件缺失"
 
-msgid "No references selected — text-to-video"
-msgstr "未选择参考 — 文本生成视频"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "分配角色时，请在提示词中注明图像/视频的顺序"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "参考限制"
@@ -20306,9 +20303,6 @@ msgstr "已修改 {count} 个"
 
 msgid "{count} deleted"
 msgstr "已删除 {count} 个"
-
-msgid "… (+{count} more)"
-msgstr "…（另有 {count} 个）"
 
 msgid "Created: {names}"
 msgstr "已创建：{names}"

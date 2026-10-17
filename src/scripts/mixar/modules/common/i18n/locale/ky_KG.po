@@ -8860,26 +8860,23 @@ msgstr "Көрүнүш катары кошуу үчүн мудборд сүрө�
 msgid "Generates as one multi-view job"
 msgstr "Бир көп көрүнүштүү тапшырма катары генерацияланат"
 
+msgid "… (+{count} more)"
+msgstr "… (+дагы {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Видео генерациясы өтмөгү жеткиликсиз"
 
 msgid "Selected References"
 msgstr "Тандалган үлгүлөр"
 
-msgid "Images: {count}"
-msgstr "Сүрөттөр: {count}"
-
-msgid "Videos: {count}"
-msgstr "Видеолор: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Үлгү тандалган жок — тексттен видео"
 
 msgid "A selected video source file is missing"
 msgstr "Тандалган видеонун булак файлы жок"
 
-msgid "No references selected — text-to-video"
-msgstr "Үлгү тандалган жок — тексттен видео"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Ролдорду дайындоодо промптта сүрөт/видео тартибин көрсөтүңүз"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Үлгү чектөөлөрү"
@@ -20306,9 +20303,6 @@ msgstr "{count} өзгөртүлдү"
 
 msgid "{count} deleted"
 msgstr "{count} өчүрүлдү"
-
-msgid "… (+{count} more)"
-msgstr "… (+дагы {count})"
 
 msgid "Created: {names}"
 msgstr "Түзүлдү: {names}"

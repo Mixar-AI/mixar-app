@@ -8860,26 +8860,23 @@ msgstr "მონიშნეთ მუდბორდის გამოსა�
 msgid "Generates as one multi-view job"
 msgstr "იწარმოება ერთ მრავალ-ხედის დავალებად"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} კიდევ)"
+
 msgid "Video Gen tab not available"
 msgstr "ვიდეოს წარმოქმნის ჩანართი მიუწვდომელია"
 
 msgid "Selected References"
 msgstr "მონიშნული რეფერენსები"
 
-msgid "Images: {count}"
-msgstr "გამოსახულებები: {count}"
-
-msgid "Videos: {count}"
-msgstr "ვიდეოები: {count}"
+msgid "No references selected — text-to-video"
+msgstr "რეფერენსები მონიშნული არ არის — ტექსტიდან ვიდეო"
 
 msgid "A selected video source file is missing"
 msgstr "მონიშნული ვიდეოს წყაროს ფაილი აკლია"
 
-msgid "No references selected — text-to-video"
-msgstr "რეფერენსები მონიშნული არ არის — ტექსტიდან ვიდეო"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "როლების მინიჭებისას პრომპტში მიუთითეთ გამოსახულებისა და ვიდეოს რიგი"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "რეფერენსის ზღვრები"
@@ -20306,9 +20303,6 @@ msgstr "შეცვლილია: {count}"
 
 msgid "{count} deleted"
 msgstr "წაშლილია: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} კიდევ)"
 
 msgid "Created: {names}"
 msgstr "შექმნილია: {names}"

@@ -8860,26 +8860,23 @@ msgstr "Selecteer moodboardafbeeldingen om ze als aanzichten toe te voegen"
 msgid "Generates as one multi-view job"
 msgstr "Wordt gegenereerd als één taak met meerdere aanzichten"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} meer)"
+
 msgid "Video Gen tab not available"
 msgstr "Tabblad Videogeneratie niet beschikbaar"
 
 msgid "Selected References"
 msgstr "Geselecteerde referenties"
 
-msgid "Images: {count}"
-msgstr "Afbeeldingen: {count}"
-
-msgid "Videos: {count}"
-msgstr "Video's: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Geen referenties geselecteerd — tekst-naar-video"
 
 msgid "A selected video source file is missing"
 msgstr "Een geselecteerd bronvideobestand ontbreekt"
 
-msgid "No references selected — text-to-video"
-msgstr "Geen referenties geselecteerd — tekst-naar-video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Vermeld de volgorde van afbeeldingen/video's in de prompt bij het toewijzen van rollen"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Referentielimieten"
@@ -20306,9 +20303,6 @@ msgstr "{count} gewijzigd"
 
 msgid "{count} deleted"
 msgstr "{count} verwijderd"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} meer)"
 
 msgid "Created: {names}"
 msgstr "Gemaakt: {names}"

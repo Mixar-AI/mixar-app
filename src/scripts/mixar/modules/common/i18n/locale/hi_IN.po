@@ -8860,26 +8860,23 @@ msgstr "मूडबोर्ड छवियों को दृश्यों
 msgid "Generates as one multi-view job"
 msgstr "एक बहु-दृश्य जॉब के रूप में उत्पन्न होता है"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} और)"
+
 msgid "Video Gen tab not available"
 msgstr "वीडियो जनरेशन टैब उपलब्ध नहीं है"
 
 msgid "Selected References"
 msgstr "चयनित संदर्भ"
 
-msgid "Images: {count}"
-msgstr "छवियाँ: {count}"
-
-msgid "Videos: {count}"
-msgstr "वीडियो: {count}"
+msgid "No references selected — text-to-video"
+msgstr "कोई संदर्भ चयनित नहीं — पाठ-से-वीडियो"
 
 msgid "A selected video source file is missing"
 msgstr "एक चयनित वीडियो स्रोत संचिका अनुपलब्ध है"
 
-msgid "No references selected — text-to-video"
-msgstr "कोई संदर्भ चयनित नहीं — पाठ-से-वीडियो"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "भूमिकाएँ निर्धारित करते समय प्रॉम्प्ट में छवि/वीडियो का क्रम बताएँ"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "संदर्भ सीमाएँ"
@@ -20306,9 +20303,6 @@ msgstr "{count} संशोधित"
 
 msgid "{count} deleted"
 msgstr "{count} मिटाए गए"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} और)"
 
 msgid "Created: {names}"
 msgstr "बनाए गए: {names}"

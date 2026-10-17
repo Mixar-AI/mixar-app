@@ -8860,26 +8860,23 @@ msgstr "Seleccioneu imatges del moodboard per afegir-les com a vistes"
 msgid "Generates as one multi-view job"
 msgstr "Es genera com una sola tasca de multivisionat"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} més)"
+
 msgid "Video Gen tab not available"
 msgstr "La pestanya de generació de vídeo no està disponible"
 
 msgid "Selected References"
 msgstr "Referències seleccionades"
 
-msgid "Images: {count}"
-msgstr "Imatges: {count}"
-
-msgid "Videos: {count}"
-msgstr "Vídeos: {count}"
+msgid "No references selected — text-to-video"
+msgstr "No s'ha seleccionat cap referència — text a vídeo"
 
 msgid "A selected video source file is missing"
 msgstr "Falta un document font de vídeo seleccionat"
 
-msgid "No references selected — text-to-video"
-msgstr "No s'ha seleccionat cap referència — text a vídeo"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Esmenteu l'ordre d'imatges/vídeos a la indicació quan assigneu rols"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Límits de referències"
@@ -20306,9 +20303,6 @@ msgstr "Modificats: {count}"
 
 msgid "{count} deleted"
 msgstr "Eliminats: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} més)"
 
 msgid "Created: {names}"
 msgstr "Creats: {names}"

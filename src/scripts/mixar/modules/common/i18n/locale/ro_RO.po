@@ -8860,26 +8860,23 @@ msgstr "Selectați imagini Moodboard pentru a le adăuga ca vederi"
 msgid "Generates as one multi-view job"
 msgstr "Se generează ca o singură sarcină cu vederi multiple"
 
+msgid "… (+{count} more)"
+msgstr "… (+ încă {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Fila Generare video nu este disponibilă"
 
 msgid "Selected References"
 msgstr "Referințe selectate"
 
-msgid "Images: {count}"
-msgstr "Imagini: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videoclipuri: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nicio referință selectată — text în video"
 
 msgid "A selected video source file is missing"
 msgstr "Lipsește un fișier sursă video selectat"
 
-msgid "No references selected — text-to-video"
-msgstr "Nicio referință selectată — text în video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Menționați ordinea imaginilor/videoclipurilor în prompt când atribuiți roluri"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Limite referință"
@@ -20306,9 +20303,6 @@ msgstr "Modificate: {count}"
 
 msgid "{count} deleted"
 msgstr "Șterse: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+ încă {count})"
 
 msgid "Created: {names}"
 msgstr "Create: {names}"

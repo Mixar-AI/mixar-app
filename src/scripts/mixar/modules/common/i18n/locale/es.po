@@ -8860,26 +8860,23 @@ msgstr "Seleccione imágenes del moodboard para agregarlas como vistas"
 msgid "Generates as one multi-view job"
 msgstr "Se genera como un único trabajo de vistas múltiples"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} más)"
+
 msgid "Video Gen tab not available"
 msgstr "Solapa Gen. de video no disponible"
 
 msgid "Selected References"
 msgstr "Referencias seleccionadas"
 
-msgid "Images: {count}"
-msgstr "Imágenes: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videos: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Ninguna referencia seleccionada: texto a video"
 
 msgid "A selected video source file is missing"
 msgstr "Falta un archivo de origen de video seleccionado"
 
-msgid "No references selected — text-to-video"
-msgstr "Ninguna referencia seleccionada: texto a video"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Mencione el orden de imágenes/videos en el prompt al asignar roles"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Límites de referencias"
@@ -20306,9 +20303,6 @@ msgstr "{count} modificados"
 
 msgid "{count} deleted"
 msgstr "{count} borrados"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} más)"
 
 msgid "Created: {names}"
 msgstr "Creados: {names}"

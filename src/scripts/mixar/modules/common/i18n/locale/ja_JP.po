@@ -8860,26 +8860,23 @@ msgstr "ムードボード画像を選択してビューとして追加します
 msgid "Generates as one multi-view job"
 msgstr "1つのマルチビュージョブとして生成します"
 
+msgid "… (+{count} more)"
+msgstr "…（ほか {count} 件）"
+
 msgid "Video Gen tab not available"
 msgstr "動画生成タブは利用できません"
 
 msgid "Selected References"
 msgstr "選択した参照"
 
-msgid "Images: {count}"
-msgstr "画像: {count}"
-
-msgid "Videos: {count}"
-msgstr "動画: {count}"
+msgid "No references selected — text-to-video"
+msgstr "参照が選択されていません — テキストから動画"
 
 msgid "A selected video source file is missing"
 msgstr "選択した動画のソースファイルが見つかりません"
 
-msgid "No references selected — text-to-video"
-msgstr "参照が選択されていません — テキストから動画"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "役割を割り当てる場合は、プロンプトで画像/動画の順番を指定してください"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "参照の制限"
@@ -20310,9 +20307,6 @@ msgstr "{count} 件変更"
 
 msgid "{count} deleted"
 msgstr "{count} 件削除"
-
-msgid "… (+{count} more)"
-msgstr "…（ほか {count} 件）"
 
 msgid "Created: {names}"
 msgstr "作成: {names}"

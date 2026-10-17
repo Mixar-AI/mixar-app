@@ -8860,26 +8860,23 @@ msgstr "Sélectionnez des images du moodboard pour les ajouter comme vues"
 msgid "Generates as one multi-view job"
 msgstr "Généré en une seule tâche multivues"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} autres)"
+
 msgid "Video Gen tab not available"
 msgstr "Onglet Génération vidéo indisponible"
 
 msgid "Selected References"
 msgstr "Références sélectionnées"
 
-msgid "Images: {count}"
-msgstr "Images : {count}"
-
-msgid "Videos: {count}"
-msgstr "Vidéos : {count}"
+msgid "No references selected — text-to-video"
+msgstr "Aucune référence sélectionnée — texte vers vidéo"
 
 msgid "A selected video source file is missing"
 msgstr "Un fichier source vidéo sélectionné est introuvable"
 
-msgid "No references selected — text-to-video"
-msgstr "Aucune référence sélectionnée — texte vers vidéo"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Indiquez l’ordre des images/vidéos dans le prompt pour attribuer les rôles"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Limites des références"
@@ -20306,9 +20303,6 @@ msgstr "{count} modifié(s)"
 
 msgid "{count} deleted"
 msgstr "{count} supprimé(s)"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} autres)"
 
 msgid "Created: {names}"
 msgstr "Créés : {names}"

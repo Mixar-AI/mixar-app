@@ -8860,26 +8860,23 @@ msgstr "Należy wybrać obrazy z moodboardu, aby dodać je jako widoki"
 msgid "Generates as one multi-view job"
 msgstr "Generowane jako jedno zadanie wielowidokowe"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} więcej)"
+
 msgid "Video Gen tab not available"
 msgstr "Karta Generowanie filmu jest niedostępna"
 
 msgid "Selected References"
 msgstr "Wybrane odniesienia"
 
-msgid "Images: {count}"
-msgstr "Obrazy: {count}"
-
-msgid "Videos: {count}"
-msgstr "Filmy: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nie wybrano odniesień — tekst na film"
 
 msgid "A selected video source file is missing"
 msgstr "Brakuje pliku źródłowego wybranego filmu"
 
-msgid "No references selected — text-to-video"
-msgstr "Nie wybrano odniesień — tekst na film"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Przypisując role, należy podać w monicie kolejność obrazów/filmów"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Limity odniesień"
@@ -20306,9 +20303,6 @@ msgstr "Zmodyfikowano: {count}"
 
 msgid "{count} deleted"
 msgstr "Usunięto: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} więcej)"
 
 msgid "Created: {names}"
 msgstr "Utworzono: {names}"

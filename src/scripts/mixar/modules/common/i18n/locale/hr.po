@@ -8860,26 +8860,23 @@ msgstr "Odaberite slike moodboarda da biste ih dodali kao poglede"
 msgid "Generates as one multi-view job"
 msgstr "Generira se kao jedan zadatak s više pogleda"
 
+msgid "… (+{count} more)"
+msgstr "… (još {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Kartica generiranja videozapisa nije dostupna"
 
 msgid "Selected References"
 msgstr "Odabrane reference"
 
-msgid "Images: {count}"
-msgstr "Slike: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videozapisi: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Nije odabrana nijedna referenca — tekst u videozapis"
 
 msgid "A selected video source file is missing"
 msgstr "Nedostaje odabrana izvorna datoteka videozapisa"
 
-msgid "No references selected — text-to-video"
-msgstr "Nije odabrana nijedna referenca — tekst u videozapis"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "U upitu navedite redoslijed slika/videozapisa kad dodjeljujete uloge"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Ograničenja referenci"
@@ -20306,9 +20303,6 @@ msgstr "izmijenjeno: {count}"
 
 msgid "{count} deleted"
 msgstr "obrisano: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (još {count})"
 
 msgid "Created: {names}"
 msgstr "Stvoreno: {names}"

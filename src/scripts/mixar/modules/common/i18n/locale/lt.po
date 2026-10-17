@@ -8860,26 +8860,23 @@ msgstr "Pasirinkite nuotaikų lentos paveikslus, kad pridėtumėte juos kaip vai
 msgid "Generates as one multi-view job"
 msgstr "Generuojama kaip viena kelių vaizdų užduotis"
 
+msgid "… (+{count} more)"
+msgstr "… (dar {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Vaizdo įrašų generavimo skirtukas nepasiekiamas"
 
 msgid "Selected References"
 msgstr "Pasirinkti pavyzdžiai"
 
-msgid "Images: {count}"
-msgstr "Paveikslų: {count}"
-
-msgid "Videos: {count}"
-msgstr "Vaizdo įrašų: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Pavyzdžių nepasirinkta — tekstas į vaizdo įrašą"
 
 msgid "A selected video source file is missing"
 msgstr "Trūksta pasirinkto vaizdo įrašo šaltinio failo"
 
-msgid "No references selected — text-to-video"
-msgstr "Pavyzdžių nepasirinkta — tekstas į vaizdo įrašą"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Priskirdami vaidmenis, raginime nurodykite paveikslų ir vaizdo įrašų tvarką"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Pavyzdžių ribos"
@@ -20306,9 +20303,6 @@ msgstr "pakeista: {count}"
 
 msgid "{count} deleted"
 msgstr "ištrinta: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (dar {count})"
 
 msgid "Created: {names}"
 msgstr "Sukurta: {names}"

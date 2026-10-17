@@ -8860,26 +8860,23 @@ msgstr "選取情緒板影像以將其加入為檢視"
 msgid "Generates as one multi-view job"
 msgstr "以單一多重檢視任務生成"
 
+msgid "… (+{count} more)"
+msgstr "…（另有 {count} 個）"
+
 msgid "Video Gen tab not available"
 msgstr "視訊生成分頁標籤無法使用"
 
 msgid "Selected References"
 msgstr "所選參考"
 
-msgid "Images: {count}"
-msgstr "影像：{count}"
-
-msgid "Videos: {count}"
-msgstr "視訊：{count}"
+msgid "No references selected — text-to-video"
+msgstr "未選取參考 — 文字轉視訊"
 
 msgid "A selected video source file is missing"
 msgstr "某個所選視訊的來源檔案遺失"
 
-msgid "No references selected — text-to-video"
-msgstr "未選取參考 — 文字轉視訊"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "指派角色時，請在提示詞中註明影像／視訊的順序"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "參考限制"
@@ -20306,9 +20303,6 @@ msgstr "已修改 {count} 個"
 
 msgid "{count} deleted"
 msgstr "已刪除 {count} 個"
-
-msgid "… (+{count} more)"
-msgstr "…（另有 {count} 個）"
 
 msgid "Created: {names}"
 msgstr "已建立：{names}"

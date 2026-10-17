@@ -8860,26 +8860,23 @@ msgstr "Виберіть зображення мудборду, щоб дода�
 msgid "Generates as one multi-view job"
 msgstr "Генерується як одне завдання багато-вигляду"
 
+msgid "… (+{count} more)"
+msgstr "… (ще +{count})"
+
 msgid "Video Gen tab not available"
 msgstr "Вкладка генерації відео недоступна"
 
 msgid "Selected References"
 msgstr "Вибрані референси"
 
-msgid "Images: {count}"
-msgstr "Зображення: {count}"
-
-msgid "Videos: {count}"
-msgstr "Відео: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Референсів не вибрано — текст у відео"
 
 msgid "A selected video source file is missing"
 msgstr "Бракує вихідного файлу одного з вибраних відео"
 
-msgid "No references selected — text-to-video"
-msgstr "Референсів не вибрано — текст у відео"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Призначаючи ролі, вказуйте в промпті порядок зображень/відео"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Ліміти референсів"
@@ -20306,9 +20303,6 @@ msgstr "змінено: {count}"
 
 msgid "{count} deleted"
 msgstr "видалено: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (ще +{count})"
 
 msgid "Created: {names}"
 msgstr "Створено: {names}"

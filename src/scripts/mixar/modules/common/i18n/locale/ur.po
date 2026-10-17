@@ -8860,26 +8860,23 @@ msgstr "ﮟﯾﺮﮐ ﺐﺨﺘﻨﻣ ﺮﯾﻭﺎﺼﺗ ﯽﮐ ﮈﺭﻮﺑ ﮈ�
 msgid "Generates as one multi-view job"
 msgstr "ﮯﮨ ﺎﺗﻮﮨ ﺍﺪﯿﭘ ﺮﭘ ﺭﻮﻃ ﮯﮐ ﻡﺎﮐ ﻮﯾﻭ ﯽﭩﻠﻣ ﮏﯾﺍ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ﺪﯾﺰﻣ)"
+
 msgid "Video Gen tab not available"
 msgstr "ﮟﯿﮩﻧ ﺏﺎﯿﺘﺳﺩ ﺐﯿﭨ ﻖﯿﻠﺨﺗ ﻮﯾﮉﯾﻭ"
 
 msgid "Selected References"
 msgstr "ﮯﻟﺍﻮﺣ ﺐﺨﺘﻨﻣ"
 
-msgid "Images: {count}"
-msgstr "{count} :ﺮﯾﻭﺎﺼﺗ"
-
-msgid "Videos: {count}"
-msgstr "{count} :ﺯﻮﯾﮉﯾﻭ"
+msgid "No references selected — text-to-video"
+msgstr "ﻮﯾﮉﯾﻭ ﮯﺳ ﻦﺘﻣ — ﮟﯿﮩﻧ ﺐﺨﺘﻨﻣ ﮧﻟﺍﻮﺣ ﯽﺋﻮﮐ"
 
 msgid "A selected video source file is missing"
 msgstr "ﮯﮨ ﺐﺋﺎﻏ ﻞﺋﺎﻓ ﺬﺧﺎﻣ ﯽﮐ ﻮﯾﮉﯾﻭ ﺐﺨﺘﻨﻣ"
 
-msgid "No references selected — text-to-video"
-msgstr "ﻮﯾﮉﯾﻭ ﮯﺳ ﻦﺘﻣ — ﮟﯿﮩﻧ ﺐﺨﺘﻨﻣ ﮧﻟﺍﻮﺣ ﯽﺋﻮﮐ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "ﮟﯿﮭﮑﻟ ﺐﯿﺗﺮﺗ ﯽﮐ ﻮﯾﮉﯾﻭ/ﺮﯾﻮﺼﺗ ﮟﯿﻣ ﭧﭙﻣﺍﺮﭘ ﺖﻗﻭ ﮯﺗﺮﮐ ﺭﺮﻘﻣ ﺭﺍﺩﺮﮐ"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "ﮟﯾﺪﺣ ﯽﮐ ﮞﻮﻟﺍﻮﺣ"
@@ -20306,9 +20303,6 @@ msgstr "{count} ﮯﺋﻮﮨ ﻞﯾﺪﺒﺗ"
 
 msgid "{count} deleted"
 msgstr "{count} ﮯﺋﻮﮨ ﻑﺬﺣ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ﺪﯾﺰﻣ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ﮯﻨﺑ"

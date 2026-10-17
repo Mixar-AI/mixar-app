@@ -8860,26 +8860,23 @@ msgstr "ﺮﻇﺎﻨﻤﻛ ﺎﻬﺘﻓﺎﺿﻹ﻿ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣ
 msgid "Generates as one multi-view job"
 msgstr "ﺮﻇﺎﻨﻤﻟﺍ ﺓﺩﺪﻌﺘﻣ ﺓﺪﺣﺍﻭ ﺔﻤﻬﻤﻛ ﺪﻴﻟﻮﺘﻟﺍ ﻢﺘﻳ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ﻯﺮﺧﺃ)"
+
 msgid "Video Gen tab not available"
 msgstr "ﺮﻓﻮﺘﻣ ﺮﻴﻏ ﻮﻳﺪﻴﻔﻟﺍ ﺪﻴﻟﻮﺗ ﺐﻳﻮﺒﺗ"
 
 msgid "Selected References"
 msgstr "ﺓﺩﺪﺤﻤﻟﺍ ﻊﺟﺍﺮﻤﻟﺍ"
 
-msgid "Images: {count}"
-msgstr "{count} :ﺭﻮﺼﻟﺍ"
-
-msgid "Videos: {count}"
-msgstr "{count} :ﻮﻳﺪﻴﻔﻟﺍ ﻊﻃﺎﻘﻣ"
+msgid "No references selected — text-to-video"
+msgstr "ﻮﻳﺪﻴﻓ ﻰﻟﺇ ﺺﻧ — ﻊﺟﺍﺮﻣ ﻱﺃ ﺩﺪﺤﺗُ ﻢﻟ"
 
 msgid "A selected video source file is missing"
 msgstr "ﺩﻮﻘﻔﻣ ﺓﺩﺪﺤﻤﻟﺍ ﻮﻳﺪﻴﻔﻟﺍ ﺭﺪﺼﻣ ﺕﺎﻔﻠﻣ ﺪﺣﺃ"
 
-msgid "No references selected — text-to-video"
-msgstr "ﻮﻳﺪﻴﻓ ﻰﻟﺇ ﺺﻧ — ﻊﺟﺍﺮﻣ ﻱﺃ ﺩﺪﺤﺗُ ﻢﻟ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "ﺭﺍﻭﺩﻷ﻿ﺍ ﻦﻴﻴﻌﺗ ﺪﻨﻋ ﻪﺟّﻮﻤﻟﺍ ﻲﻓ ﻮﻳﺪﻴﻔﻟﺍ/ﺭﻮﺼﻟﺍ ﺐﻴﺗﺮﺗ ﺮﻛﺫﺍ"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "ﻊﺟﺍﺮﻤﻟﺍ ﺩﻭﺪﺣ"
@@ -20306,9 +20303,6 @@ msgstr "{count} ﻝﺪّﻋُ"
 
 msgid "{count} deleted"
 msgstr "{count} ﻑﺬﺣُ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ﻯﺮﺧﺃ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ﺄﺸﻨﻤُﻟﺍ"

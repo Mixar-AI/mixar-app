@@ -8860,26 +8860,23 @@ msgstr "Görünüm olarak eklemek için moodboard görsellerini seçin"
 msgid "Generates as one multi-view job"
 msgstr "Tek bir çoklu görünüm işi olarak oluşturur"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} tane daha)"
+
 msgid "Video Gen tab not available"
 msgstr "Video Oluşturma sekmesi kullanılamıyor"
 
 msgid "Selected References"
 msgstr "Seçili Referanslar"
 
-msgid "Images: {count}"
-msgstr "Görseller: {count}"
-
-msgid "Videos: {count}"
-msgstr "Videolar: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Referans seçilmedi — metinden videoya"
 
 msgid "A selected video source file is missing"
 msgstr "Seçili bir video kaynak dosyası eksik"
 
-msgid "No references selected — text-to-video"
-msgstr "Referans seçilmedi — metinden videoya"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Rol atarken istemde görsel/video sırasını belirtin"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Referans Sınırları"
@@ -20306,9 +20303,6 @@ msgstr "{count} değiştirildi"
 
 msgid "{count} deleted"
 msgstr "{count} silindi"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} tane daha)"
 
 msgid "Created: {names}"
 msgstr "Oluşturulan: {names}"
