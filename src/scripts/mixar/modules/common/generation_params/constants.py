@@ -18,6 +18,15 @@ TYPE_INTEGER = "integer"
 TYPE_NUMBER = "number"
 TYPE_FLOAT = "float"
 TYPE_BOOLEAN = "boolean"
+# A list of published choices (``items.enum`` / ``choices``), rendered as a
+# searchable multi-select and collected as a list — see core/multi_select.py.
+TYPE_ARRAY = "array"
+
+# Suffix of the hidden per-list active-row IntProperty beside a multi-select
+# collection attribute (``p_<name>`` + this); template_list needs one.
+MULTI_SELECT_ACTIVE_SUFFIX = "__active"
+# The shared UIList that draws every multi-select (ui/lists/choice_list.py).
+MULTI_SELECT_LIST_ID = "MIXAR_UL_genparams_choices"
 
 # The backend validator treats "float" and "number" as the same numeric
 # type; keep the client in sync so a "float" param renders as a real
@@ -50,3 +59,12 @@ UNBOUNDED_INT_MIN = -(2**31)
 UNBOUNDED_INT_MAX = 2**31 - 1
 UNBOUNDED_FLOAT_MIN = -1.0e18
 UNBOUNDED_FLOAT_MAX = 1.0e18
+
+# The selected model's catalog description is drawn as muted wrapped lines
+# under a Model dropdown (core/draw.py:draw_model_description), measured to
+# the host's width less MODEL_DESCRIPTION_MARGIN (UI units: popup/box padding
+# plus the label's own inset). Columns are the fallback when the width or the
+# font cannot be measured.
+MODEL_DESCRIPTION_MARGIN = 40
+MODEL_DESCRIPTION_WRAP_COLUMNS = 32
+MODEL_DESCRIPTION_SCALE_Y = 0.8

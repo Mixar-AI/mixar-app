@@ -2006,6 +2006,24 @@ msgstr "Generavimas nepavyko — bandykite dar kartą"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Katalogo visible_if pagal RNA atributą"
 
+msgid "Nothing selected"
+msgstr "Nieko nepasirinkta"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Reikšmė"
+
+msgid "Group"
+msgstr "Grupė"
+
+msgid "Selected"
+msgstr "Pasirinkta"
+
 msgid "No modes"
 msgstr "Nėra veiksenų"
 
@@ -4610,6 +4628,45 @@ msgstr "Automatinis rigas nepavyko"
 msgid "Animate failed"
 msgstr "Animuoti nepavyko"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Pasirinktame tinkle sienų: {count:,} (daugiausia {max_faces:,})"
 
@@ -5396,6 +5453,9 @@ msgstr "Tinklo segmentavimas"
 msgid "Auto Rig"
 msgstr "Automatinis rigas"
 
+msgid "Animate"
+msgstr "Animuoti"
+
 msgid "Add Mesh"
 msgstr "Pridėti tinklą"
 
@@ -5497,6 +5557,15 @@ msgstr "Tobulinimo žingsnių skaičius generuojant. Daugiau žingsnių gali už
 
 msgid "The file format used to store the generated image."
 msgstr "Failo formatas, kuriuo saugomas sugeneruotas paveikslas."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Automatinis (pagal pavadinimą)"
@@ -5816,6 +5885,9 @@ msgstr "Surinkti veikėją"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Vietoje pritvirtina sugeneruotas dalis prie suriginto arba paprasto kūno"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Naudoti tik paveikslo stilių"
 
@@ -5974,6 +6046,9 @@ msgstr "Pirmiausia sugeneruokite „{name}“ — ši kortelė naudoja jos rezul
 
 msgid "Mesh"
 msgstr "Tinklas"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Pavyzdys {number}"
@@ -6920,9 +6995,6 @@ msgstr "Naudoti pasirinktinę spalvą"
 msgid "Custom Colour"
 msgstr "Pasirinktinė spalva"
 
-msgid "Selected"
-msgstr "Pasirinkta"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Spustelėjant nepaiso šio rėmelio krašto ir vidaus, kad būtų galima pasirinkti tik jo narius"
 
@@ -6931,6 +7003,18 @@ msgstr "Suskleista"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Piešia rėmelį kaip juostą su pavadinimu ir slepia jo turinį"
+
+msgid "Unavailable"
+msgstr "Nepasiekiama"
+
+msgid "No supported 3D service is available"
+msgstr "Nėra palaikomos 3D paslaugos"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Paveikslų modeliai turi skelbti kaukės vedimą ir du pavyzdžius"
+
+msgid "Attachment settings"
+msgstr "Prisegto failo nustatymai"
 
 msgid "No choices published"
 msgstr "Nepaskelbta pasirinkimų"
@@ -6949,18 +7033,6 @@ msgstr "Baigta"
 
 msgid "Generation completed"
 msgstr "Generavimas baigtas"
-
-msgid "Unavailable"
-msgstr "Nepasiekiama"
-
-msgid "No supported 3D service is available"
-msgstr "Nėra palaikomos 3D paslaugos"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Paveikslų modeliai turi skelbti kaukės vedimą ir du pavyzdžius"
-
-msgid "Attachment settings"
-msgstr "Prisegto failo nustatymai"
 
 msgid "Parameter ID"
 msgstr "Parametro ID"
@@ -6986,14 +7058,14 @@ msgstr "Loginė reikšmė"
 msgid "Catalog choice"
 msgstr "Katalogo pasirinkimas"
 
-msgid "Widget"
-msgstr "Valdiklis"
-
-msgid "Group"
-msgstr "Grupė"
-
 msgid "Choices"
 msgstr "Pasirinkimai"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Valdiklis"
 
 msgid "Visibility Condition"
 msgstr "Matomumo sąlyga"
@@ -7013,11 +7085,14 @@ msgstr "Mažiausia"
 msgid "Maximum"
 msgstr "Didžiausia"
 
-msgid "Value"
-msgstr "Reikšmė"
-
 msgid "Value Label"
 msgstr "Reikšmės žyma"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Lizdo ID"
@@ -8725,6 +8800,33 @@ msgstr "Įrėminti viską"
 msgid "Clear Board"
 msgstr "Išvalyti lentą"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objekto pavadinimas"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animacijos"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Agento automatinis rigas"
 
@@ -8746,8 +8848,8 @@ msgstr "Griaučių tipas: automatinis / dvikojis / keturkojis / šešiakojis / a
 msgid "Skeleton Spec"
 msgstr "Griaučių specifikacija"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Griaučių susitarimas: „tripo“ arba „mixamo“"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Kaulų pavadinimai: tripo, mixamo, actorcore, unity, unreal arba vrm (iš anksto paruoštas Tripo animacijas palaiko tik tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "Agento PBR generavimas"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Generuoja PBR tekstūras nurodytam tinklo objektui naudojant Tripo"
-
-msgid "Object Name"
-msgstr "Objekto pavadinimas"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Scenoje tekstūruojamo tinklo objekto pavadinimas"
@@ -9901,8 +10000,8 @@ msgstr "Pasirinkite išvedimo mazgą"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Redaguokite raginimą, tada paspauskite Enter arba „Generuoti“"
 
-msgid "Node added to the generation queue"
-msgstr "Mazgas įtrauktas į generavimo eilę"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Rodo šio mazgo nustatymus ir raginimą, kad juos būtų galima pakoreguoti ir vykdyti dar kartą; spustelėkite dar kartą, kad atšauktumėte redagavimą ir grįžtumėte prie rezultato"
@@ -11952,9 +12051,6 @@ msgstr "Spalvos kvantavimo bitai"
 
 msgid "Generic Quantization Bits"
 msgstr "Bendrieji kvantavimo bitai"
-
-msgid "Animations"
-msgstr "Animacijos"
 
 msgid "Animation Mode"
 msgstr "Animacijos veiksena"
@@ -24831,9 +24927,6 @@ msgstr "Atidaryti eilę"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Nieko nepasirinkta"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Prieš keisdami skirtukus baikite eskizą arba diktavimą"
 
@@ -25652,6 +25745,9 @@ msgstr "Eilėje..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Spustelėkite, kad pataisytumėte raginimą ir bandytumėte dar kartą"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26849,9 +26945,6 @@ msgstr "Saugios zonos"
 
 msgid "Select a character to animate"
 msgstr "Pasirinkite personažą animacijai"
-
-msgid "Animate"
-msgstr "Animuoti"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Įrašo šį blokavimo lygio judesį nuo grojimo galvutės"

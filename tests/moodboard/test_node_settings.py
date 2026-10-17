@@ -45,6 +45,10 @@ def popup():
         'draw_toggle': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
         'draw_section_box': lambda layout: layout.column(),
         'draw_tooltip': lambda layout, text: layout.mixar_tooltip(text=text),
+        'node_service_key': lambda node: getattr(node, 'service_key_id', ''),
+        'node_model_slug': lambda node: getattr(node, 'model_slug', ''),
+        'draw_model_description': lambda layout, service, model, width=None: layout.events.append(
+            ('description', (service, model), layout.active())),
         'redraw_moodboard_canvases': Mock(),
         'is_moodboard_context': Mock(return_value=True),
     }
@@ -98,8 +102,9 @@ def parameter(kind, **kwargs):
 
 
 def node(**kwargs):
-    values = dict(node_id='owner', state='DRAFT', show_mode=True, parameters=[],
-                  preview_image=None, preview_object=None)
+    values = dict(node_id='owner', action_type='IMAGE_GEN', state='DRAFT', show_mode=True,
+                  parameters=[], preview_image=None, preview_object=None,
+                  service_key_id='image_gen', model_slug='model_a')
     values.update(kwargs)
     return SimpleNamespace(**values)
 
@@ -268,3 +273,17 @@ def test_overlay_anchors_below_owner_header_without_changing_prompt(popup):
     assert op.anchored_overlay and tuple(op.overlay_offset) == (-756, -64)
     context.window_manager.invoke_popup.assert_called_once_with(op, width=376)
     assert owner.prompt == 'Draft'
+
+
+def test_selected_model_description_sits_under_the_model_dropdown(popup):
+    """The picked model's catalog description follows its dropdown, before params."""
+    layout = Layout()
+    popup['_draw_settings'](layout, node(parameters=[parameter('INTEGER')]))
+    events = [(kind, value) for kind, value, _ in layout.events]
+    model_at = next(i for i, (kind, value) in enumerate(events)
+                    if kind == 'prop' and value[1] == 'model')
+    description_at = events.index(('description', ('image_gen', 'model_a')))
+    help_at = events.index(('tooltip', popup['MODEL_HELP']))
+    param_at = next(i for i, (kind, value) in enumerate(events)
+                    if kind == 'prop' and value[1] == 'value_integer')
+    assert model_at < help_at < description_at < param_at

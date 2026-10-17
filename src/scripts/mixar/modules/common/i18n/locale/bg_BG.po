@@ -2006,6 +2006,24 @@ msgstr "Генерацията е неуспешна — моля, опитай�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if на каталога с ключ RNA атрибут"
 
+msgid "Nothing selected"
+msgstr "Нищо не е избрано"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Стойност"
+
+msgid "Group"
+msgstr "Група"
+
+msgid "Selected"
+msgstr "Избран"
+
 msgid "No modes"
 msgstr "Няма режими"
 
@@ -4610,6 +4628,45 @@ msgstr "Автоматичният риг е неуспешен"
 msgid "Animate failed"
 msgstr "Анимацията е неуспешна"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Избраният меш има лица: {count:,} (макс. {max_faces:,})"
 
@@ -5396,6 +5453,9 @@ msgstr "Сегментиране на меш"
 msgid "Auto Rig"
 msgstr "Автоматичен риг"
 
+msgid "Animate"
+msgstr "Анимирай"
+
 msgid "Add Mesh"
 msgstr "Добави меш"
 
@@ -5497,6 +5557,15 @@ msgstr "Броят стъпки на уточняване по време на �
 
 msgid "The file format used to store the generated image."
 msgstr "Файловият формат, в който се записва генерираното изображение."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Авто (от името)"
@@ -5816,6 +5885,9 @@ msgstr "Сглоби персонаж"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Прикачва генерирани части към ригнато или обикновено тяло, локално"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Само стил от изображението"
 
@@ -5974,6 +6046,9 @@ msgstr "Първо генерирайте '{name}' — тази карта из�
 
 msgid "Mesh"
 msgstr "Меш"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Референция {number}"
@@ -6920,9 +6995,6 @@ msgstr "Използвай потребителски цвят"
 msgid "Custom Colour"
 msgstr "Потребителски цвят"
 
-msgid "Selected"
-msgstr "Избран"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Игнорира границата и вътрешността на тази рамка при кликване, така че да могат да се избират само членовете ѝ"
 
@@ -6931,6 +7003,18 @@ msgstr "Свита"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Рисува рамката като лента със заглавие и скрива тялото ѝ"
+
+msgid "Unavailable"
+msgstr "Недостъпно"
+
+msgid "No supported 3D service is available"
+msgstr "Няма налична поддържана 3D услуга"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Моделите за изображения трябва да обявят насочване от маскиране и две референции"
+
+msgid "Attachment settings"
+msgstr "Настройки на прикачения файл"
 
 msgid "No choices published"
 msgstr "Няма публикувани избори"
@@ -6949,18 +7033,6 @@ msgstr "Завършено"
 
 msgid "Generation completed"
 msgstr "Генерацията завърши"
-
-msgid "Unavailable"
-msgstr "Недостъпно"
-
-msgid "No supported 3D service is available"
-msgstr "Няма налична поддържана 3D услуга"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Моделите за изображения трябва да обявят насочване от маскиране и две референции"
-
-msgid "Attachment settings"
-msgstr "Настройки на прикачения файл"
 
 msgid "Parameter ID"
 msgstr "ИД на параметъра"
@@ -6986,14 +7058,14 @@ msgstr "Булева стойност"
 msgid "Catalog choice"
 msgstr "Избор от каталога"
 
-msgid "Widget"
-msgstr "Приспособление"
-
-msgid "Group"
-msgstr "Група"
-
 msgid "Choices"
 msgstr "Избори"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Приспособление"
 
 msgid "Visibility Condition"
 msgstr "Условие за видимост"
@@ -7013,11 +7085,14 @@ msgstr "Минимум"
 msgid "Maximum"
 msgstr "Максимум"
 
-msgid "Value"
-msgstr "Стойност"
-
 msgid "Value Label"
 msgstr "Етикет на стойността"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ИД на гнездото"
@@ -8725,6 +8800,33 @@ msgstr "Рамкирай всичко"
 msgid "Clear Board"
 msgstr "Изчисти таблото"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Име на обекта"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Анимации"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Автоматичен риг на агента"
 
@@ -8746,8 +8848,8 @@ msgstr "Тип скелет: автоматичен / двуног / четир�
 msgid "Skeleton Spec"
 msgstr "Спецификация на скелета"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Конвенция на скелета: „tripo“ или „mixamo“"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Именуване на костите: tripo, mixamo, actorcore, unity, unreal или vrm (само tripo поддържа готовите анимации на Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "PBR генерация на агента"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Генерира PBR текстури за дадения меш обект чрез Tripo"
-
-msgid "Object Name"
-msgstr "Име на обекта"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Име на меш обекта в сцената, който да се текстурира"
@@ -9901,8 +10000,8 @@ msgstr "Изберете възел за извод"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Редактирайте промпта, после натиснете Enter или Генерирай"
 
-msgid "Node added to the generation queue"
-msgstr "Възелът е добавен в опашката за генерация"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Показва настройките и промпта на този възел, за да се коригират и пуснат отново; кликнете пак, за да откажете редакцията и да се върнете към резултата"
@@ -11952,9 +12051,6 @@ msgstr "Битове за квантуване на цвета"
 
 msgid "Generic Quantization Bits"
 msgstr "Битове за общо квантуване"
-
-msgid "Animations"
-msgstr "Анимации"
 
 msgid "Animation Mode"
 msgstr "Режим на анимация"
@@ -24831,9 +24927,6 @@ msgstr "Отвори опашката"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Нищо не е избрано"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Завършете скицирането или диктовката, преди да сменяте разделите"
 
@@ -25652,6 +25745,9 @@ msgstr "На опашка..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Кликнете, за да редактирате промпта и да опитате отново"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26849,9 +26945,6 @@ msgstr "Безопасни зони"
 
 msgid "Select a character to animate"
 msgstr "Изберете герой за анимиране"
-
-msgid "Animate"
-msgstr "Анимирай"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Ключва това движение на ниво блокинг от главата за възпроизвеждане"

@@ -2006,6 +2006,24 @@ msgstr "Генерацыя не ўдалася — паспрабуйце яшч
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if каталога па атрыбуце RNA"
 
+msgid "Nothing selected"
+msgstr "Нічога не выбрана"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Значэнне"
+
+msgid "Group"
+msgstr "Група"
+
+msgid "Selected"
+msgstr "Выбрана"
+
 msgid "No modes"
 msgstr "Няма рэжымаў"
 
@@ -4610,6 +4628,45 @@ msgstr "Аўтаматычны рыг не ўдаўся"
 msgid "Animate failed"
 msgstr "Анімацыя не ўдалася"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "У выбранай сеткі граняў: {count:,} (максімум {max_faces:,})"
 
@@ -5396,6 +5453,9 @@ msgstr "Сегментацыя сеткі"
 msgid "Auto Rig"
 msgstr "Аўтаматычны рыг"
 
+msgid "Animate"
+msgstr "Анімаваць"
+
 msgid "Add Mesh"
 msgstr "Дадаць сетку"
 
@@ -5497,6 +5557,15 @@ msgstr "Колькасць крокаў удакладнення падчас г
 
 msgid "The file format used to store the generated image."
 msgstr "Фармат файла для захавання згенераванай выявы."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Аўта (з назвы)"
@@ -5816,6 +5885,9 @@ msgstr "Сабраць персанажа"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Далучае згенераваныя часткі да зарыгаванага або звычайнага цела, лакальна"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Толькі стыль выявы"
 
@@ -5974,6 +6046,9 @@ msgstr "Спачатку згенеравайце «{name}» — гэтая ка
 
 msgid "Mesh"
 msgstr "Сетка"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Рэферэнс {number}"
@@ -6920,9 +6995,6 @@ msgstr "Выкарыстаць уласны колер"
 msgid "Custom Colour"
 msgstr "Уласны колер"
 
-msgid "Selected"
-msgstr "Выбрана"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ігнаруе мяжу і ўнутранасць гэтай рамкі пры націску, каб можна было выбраць толькі яе ўдзельнікаў"
 
@@ -6931,6 +7003,18 @@ msgstr "Згорнута"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Малюе рамку як паласу з назвай і хавае яе цела"
+
+msgid "Unavailable"
+msgstr "Недаступна"
+
+msgid "No supported 3D service is available"
+msgstr "Няма даступнай падтрыманай службы 3D"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Мадэлі выяў мусяць абвяшчаць вядзенне маскі і два рэферэнсы"
+
+msgid "Attachment settings"
+msgstr "Налады далучэння"
 
 msgid "No choices published"
 msgstr "Варыянты не апублікаваны"
@@ -6949,18 +7033,6 @@ msgstr "Завершана"
 
 msgid "Generation completed"
 msgstr "Генерацыя завершана"
-
-msgid "Unavailable"
-msgstr "Недаступна"
-
-msgid "No supported 3D service is available"
-msgstr "Няма даступнай падтрыманай службы 3D"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Мадэлі выяў мусяць абвяшчаць вядзенне маскі і два рэферэнсы"
-
-msgid "Attachment settings"
-msgstr "Налады далучэння"
 
 msgid "Parameter ID"
 msgstr "Ідэнтыфікатар параметра"
@@ -6986,14 +7058,14 @@ msgstr "Лагічнае значэнне"
 msgid "Catalog choice"
 msgstr "Варыянт каталога"
 
-msgid "Widget"
-msgstr "Віджэт"
-
-msgid "Group"
-msgstr "Група"
-
 msgid "Choices"
 msgstr "Варыянты"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Віджэт"
 
 msgid "Visibility Condition"
 msgstr "Умова бачнасці"
@@ -7013,11 +7085,14 @@ msgstr "Мінімум"
 msgid "Maximum"
 msgstr "Максімум"
 
-msgid "Value"
-msgstr "Значэнне"
-
 msgid "Value Label"
 msgstr "Подпіс значэння"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Ідэнтыфікатар сокета"
@@ -8725,6 +8800,33 @@ msgstr "Рамка вакол усяго"
 msgid "Clear Board"
 msgstr "Ачысціць дошку"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Назва аб'екта"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Анімацыі"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Аўтаматычны рыг агента"
 
@@ -8746,8 +8848,8 @@ msgstr "Тып шкілета: аўта / двуногі / чатырохног�
 msgid "Skeleton Spec"
 msgstr "Спецыфікацыя шкілета"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Канвенцыя шкілета: «tripo» або «mixamo»"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Найменаванне касцей: tripo, mixamo, actorcore, unity, unreal або vrm (гатовыя анімацыі Tripo падтрымлівае толькі tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "Генерацыя PBR агента"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Згенераваць тэкстуры PBR для зададзенага аб'екта-сеткі праз Tripo"
-
-msgid "Object Name"
-msgstr "Назва аб'екта"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Назва аб'екта-сеткі ў сцэне, на які трэба нанесці тэкстуру"
@@ -9901,8 +10000,8 @@ msgstr "Выберыце вузел вываду"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Адрэдагуйце промпт, потым націсніце Enter або «Згенераваць»"
 
-msgid "Node added to the generation queue"
-msgstr "Вузел дададзены ў чаргу генерацыі"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Паказвае налады і промпт гэтага вузла, каб іх можна было змяніць і запусціць зноў; пстрыкніце яшчэ раз, каб скасаваць праўку і вярнуцца да выніку"
@@ -11952,9 +12051,6 @@ msgstr "Біты квантавання колеру"
 
 msgid "Generic Quantization Bits"
 msgstr "Біты агульнага квантавання"
-
-msgid "Animations"
-msgstr "Анімацыі"
 
 msgid "Animation Mode"
 msgstr "Рэжым анімацыі"
@@ -24831,9 +24927,6 @@ msgstr "Адкрыць чаргу"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Нічога не выбрана"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Скончыце эскіз або дыктоўку перад пераключэннем укладак"
 
@@ -25652,6 +25745,9 @@ msgstr "У чарзе..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Націсніце, каб змяніць промпт і паспрабаваць зноў"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26849,9 +26945,6 @@ msgstr "Бяспечныя зоны"
 
 msgid "Select a character to animate"
 msgstr "Выберыце персанажа для анімацыі"
-
-msgid "Animate"
-msgstr "Анімаваць"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Запісвае гэты рух узроўню блакінгу ад указальніка прайгравання"

@@ -2006,6 +2006,24 @@ msgstr "生成に失敗しました — もう一度お試しください"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "RNA属性をキーとするカタログの visible_if"
 
+msgid "Nothing selected"
+msgstr "何も選択していません"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "値"
+
+msgid "Group"
+msgstr "グループ"
+
+msgid "Selected"
+msgstr "選択"
+
 msgid "No modes"
 msgstr "モードなし"
 
@@ -4610,6 +4628,45 @@ msgstr "自動リグに失敗しました"
 msgid "Animate failed"
 msgstr "アニメーションに失敗しました"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "選択したメッシュの面数は{count:,}です（最大 {max_faces:,}）"
 
@@ -5396,6 +5453,9 @@ msgstr "メッシュのセグメンテーション"
 msgid "Auto Rig"
 msgstr "自動リグ"
 
+msgid "Animate"
+msgstr "アニメーション化"
+
 msgid "Add Mesh"
 msgstr "メッシュを追加"
 
@@ -5497,6 +5557,15 @@ msgstr "生成時に使用する改良ステップの数。ステップが多い
 
 msgid "The file format used to store the generated image."
 msgstr "生成された画像の保存に使用するファイルフォーマット。"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "自動（名前から）"
@@ -5816,6 +5885,9 @@ msgstr "キャラクターをアセンブル"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "生成されたパーツを、リグ付きまたはリグなしの体にローカルで取り付けます"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "画像のスタイルのみを使用"
 
@@ -5974,6 +6046,9 @@ msgstr "先に「{name}」を生成してください — このカードはそ�
 
 msgid "Mesh"
 msgstr "メッシュ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "参照 {number}"
@@ -6920,9 +6995,6 @@ msgstr "カスタムカラーを使用"
 msgid "Custom Colour"
 msgstr "カスタムカラー"
 
-msgid "Selected"
-msgstr "選択"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "クリック時にこのフレームの枠と内部を無視し、メンバーのみを選択できるようにします"
 
@@ -6931,6 +7003,18 @@ msgstr "折りたたみ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "フレームをタイトルバーとして描画し、本体を非表示にします"
+
+msgid "Unavailable"
+msgstr "利用不可"
+
+msgid "No supported 3D service is available"
+msgstr "サポートされている3Dサービスがありません"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "画像モデルはマスクガイダンスと2つの参照に対応している必要があります"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "公開されている選択肢はありません"
@@ -6949,18 +7033,6 @@ msgstr "完了"
 
 msgid "Generation completed"
 msgstr "生成が完了しました"
-
-msgid "Unavailable"
-msgstr "利用不可"
-
-msgid "No supported 3D service is available"
-msgstr "サポートされている3Dサービスがありません"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "画像モデルはマスクガイダンスと2つの参照に対応している必要があります"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "パラメーターID"
@@ -6986,14 +7058,14 @@ msgstr "ブール値"
 msgid "Catalog choice"
 msgstr "カタログの選択肢"
 
-msgid "Widget"
-msgstr "ウィジェット"
-
-msgid "Group"
-msgstr "グループ"
-
 msgid "Choices"
 msgstr "選択肢"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ウィジェット"
 
 msgid "Visibility Condition"
 msgstr "表示条件"
@@ -7013,11 +7085,14 @@ msgstr "最小"
 msgid "Maximum"
 msgstr "最大"
 
-msgid "Value"
-msgstr "値"
-
 msgid "Value Label"
 msgstr "値のラベル"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ソケットID"
@@ -8725,6 +8800,33 @@ msgstr "すべて表示"
 msgid "Clear Board"
 msgstr "ボードをクリア"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "オブジェクト名"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "アニメーション"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "エージェントオートリグ"
 
@@ -8746,8 +8848,8 @@ msgstr "スケルトンタイプ: auto / biped / quadruped / hexapod / octopod /
 msgid "Skeleton Spec"
 msgstr "スケルトン仕様"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "スケルトンの規約: 'tripo' または 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "ボーン命名: tripo, mixamo, actorcore, unity, unreal または vrm (Tripo のプリセットアニメーションに対応するのは tripo のみ)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "エージェントPBR生成"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripoを使用して、指定したメッシュオブジェクトのPBRテクスチャを生成します"
-
-msgid "Object Name"
-msgstr "オブジェクト名"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "テクスチャを付けるシーン内のメッシュオブジェクトの名前"
@@ -9901,8 +10000,8 @@ msgstr "推論ノードを選択してください"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "プロンプトを編集してから、Enterまたは「生成」を押してください"
 
-msgid "Node added to the generation queue"
-msgstr "ノードを生成キューに追加しました"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "このノードの設定とプロンプトを表示して、調整と再実行ができるようにします。もう一度クリックすると編集をキャンセルして結果に戻ります"
@@ -11952,9 +12051,6 @@ msgstr "カラー量子化ビット数"
 
 msgid "Generic Quantization Bits"
 msgstr "汎用量子化ビット数"
-
-msgid "Animations"
-msgstr "アニメーション"
 
 msgid "Animation Mode"
 msgstr "アニメーションモード"
@@ -24835,9 +24931,6 @@ msgstr "キューを開く"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "何も選択していません"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "タブを切り替える前にスケッチまたは音声入力を終了してください"
 
@@ -25656,6 +25749,9 @@ msgstr "待機中..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "クリックしてプロンプトを編集し、再試行"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26853,9 +26949,6 @@ msgstr "セーフエリア"
 
 msgid "Select a character to animate"
 msgstr "アニメーションさせるキャラクターを選択してください"
-
-msgid "Animate"
-msgstr "アニメーション化"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "再生位置からこのブロッキングレベルの動きにキーを打ちます"

@@ -2006,6 +2006,24 @@ msgstr "წარმოქმნა ჩავარდა — გთხოვთ
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "კატალოგის visible_if, გასაღები RNA ატრიბუტით"
 
+msgid "Nothing selected"
+msgstr "მონიშნული არაფერია"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "მნიშვნელობა"
+
+msgid "Group"
+msgstr "ჯგუფი"
+
+msgid "Selected"
+msgstr "მონიშნული"
+
 msgid "No modes"
 msgstr "რეჟიმები არ არის"
 
@@ -4610,6 +4628,45 @@ msgstr "ავტომატური რიგი ჩავარდა"
 msgid "Animate failed"
 msgstr "ანიმაცია ჩავარდა"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "მონიშნულ მეშს აქვს {count:,} წახნაგი (მაქს. {max_faces:,})"
 
@@ -5396,6 +5453,9 @@ msgstr "მეშის სეგმენტაცია"
 msgid "Auto Rig"
 msgstr "ავტომატური რიგი"
 
+msgid "Animate"
+msgstr "ანიმირება"
+
 msgid "Add Mesh"
 msgstr "მეშის დამატება"
 
@@ -5497,6 +5557,15 @@ msgstr "დაზუსტების ნაბიჯების რაოდ�
 
 msgid "The file format used to store the generated image."
 msgstr "ფაილის ფორმატი, რომლითაც წარმოქმნილი გამოსახულება ინახება."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "ავტომატური (სახელიდან)"
@@ -5816,6 +5885,9 @@ msgstr "პერსონაჟის აწყობა"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ამაგრებს წარმოქმნილ ნაწილებს რიგიან ან ჩვეულებრივ სხეულზე, ლოკალურად"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "მხოლოდ გამოსახულების სტილის გამოყენება"
 
@@ -5974,6 +6046,9 @@ msgstr "ჯერ წარმოქმენით „{name}“ — ეს ბ�
 
 msgid "Mesh"
 msgstr "მეში"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "რეფერენსი {number}"
@@ -6920,9 +6995,6 @@ msgstr "მორგებული ფერის გამოყენებ�
 msgid "Custom Colour"
 msgstr "მორგებული ფერი"
 
-msgid "Selected"
-msgstr "მონიშნული"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "დაწკაპუნებისას უგულებელყოფს ამ ჩარჩოს საზღვარსა და შიგთავსს, რათა მხოლოდ მისი წევრები მოინიშნოს"
 
@@ -6931,6 +7003,18 @@ msgstr "აკეცილი"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ხატავს ჩარჩოს სათაურიან ზოლად და მალავს მის ტანს"
+
+msgid "Unavailable"
+msgstr "მიუწვდომელი"
+
+msgid "No supported 3D service is available"
+msgstr "მხარდაჭერილი 3D სერვისი ხელმისაწვდომი არ არის"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "გამოსახულების მოდელებმა ნიღბის მიმართულება და ორი რეფერენსი უნდა გამოაცხადოს"
+
+msgid "Attachment settings"
+msgstr "დანართის ანაწყობები"
 
 msgid "No choices published"
 msgstr "არჩევანი არ გამოქვეყნებულა"
@@ -6949,18 +7033,6 @@ msgstr "დასრულებულია"
 
 msgid "Generation completed"
 msgstr "წარმოქმნა დასრულდა"
-
-msgid "Unavailable"
-msgstr "მიუწვდომელი"
-
-msgid "No supported 3D service is available"
-msgstr "მხარდაჭერილი 3D სერვისი ხელმისაწვდომი არ არის"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "გამოსახულების მოდელებმა ნიღბის მიმართულება და ორი რეფერენსი უნდა გამოაცხადოს"
-
-msgid "Attachment settings"
-msgstr "დანართის ანაწყობები"
 
 msgid "Parameter ID"
 msgstr "პარამეტრის ID"
@@ -6986,14 +7058,14 @@ msgstr "ლოგიკური მნიშვნელობა"
 msgid "Catalog choice"
 msgstr "კატალოგის არჩევანი"
 
-msgid "Widget"
-msgstr "ვიჯეტი"
-
-msgid "Group"
-msgstr "ჯგუფი"
-
 msgid "Choices"
 msgstr "არჩევანი"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ვიჯეტი"
 
 msgid "Visibility Condition"
 msgstr "ხილვადობის პირობა"
@@ -7013,11 +7085,14 @@ msgstr "მინიმუმი"
 msgid "Maximum"
 msgstr "მაქსიმუმი"
 
-msgid "Value"
-msgstr "მნიშვნელობა"
-
 msgid "Value Label"
 msgstr "მნიშვნელობის ჭდე"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ბუდის ID"
@@ -8725,6 +8800,33 @@ msgstr "ყველაფრის კადრში მოქცევა"
 msgid "Clear Board"
 msgstr "დაფის გასუფთავება"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ობიექტის სახელი"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ანიმაციები"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "აგენტის ავტომატური რიგი"
 
@@ -8746,8 +8848,8 @@ msgstr "ჩონჩხის ტიპი: auto / biped / quadruped / hexapod /
 msgid "Skeleton Spec"
 msgstr "ჩონჩხის სპეციფიკაცია"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "ჩონჩხის შეთანხმება: „tripo“ ან „mixamo“"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "ძვლების დასახელება: tripo, mixamo, actorcore, unity, unreal ან vrm (Tripo-ს მზა ანიმაციებს მხოლოდ tripo უჭერს მხარს)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "აგენტის PBR წარმოქმნა"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "მოცემული მეშის ობიექტისთვის PBR ტექსტურების წარმოქმნა Tripo-თი"
-
-msgid "Object Name"
-msgstr "ობიექტის სახელი"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "სცენის იმ მეშის ობიექტის სახელი, რომელსაც ტექსტურა დაედება"
@@ -9901,8 +10000,8 @@ msgstr "მონიშნეთ ინფერენსის კვანძ�
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "დაარედაქტირეთ პრომპტი, შემდეგ დააჭირეთ Enter-ს ან „წარმოქმნას“"
 
-msgid "Node added to the generation queue"
-msgstr "კვანძი დაემატა წარმოქმნის რიგს"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "ამ კვანძის ანაწყობებისა და პრომპტის ჩვენება, რომ მოარგოთ და ხელახლა გაუშვათ; რედაქტირების გასაუქმებლად და შედეგზე დასაბრუნებლად კიდევ ერთხელ დააწკაპუნეთ"
@@ -11952,9 +12051,6 @@ msgstr "ფერის დაკვანტვის ბიტები"
 
 msgid "Generic Quantization Bits"
 msgstr "ზოგადი დაკვანტვის ბიტები"
-
-msgid "Animations"
-msgstr "ანიმაციები"
 
 msgid "Animation Mode"
 msgstr "ანიმაციის რეჟიმი"
@@ -24831,9 +24927,6 @@ msgstr "რიგის გახსნა"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "მონიშნული არაფერია"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ჩანართების გადართვამდე დაასრულეთ ესკიზი ან კარნახი"
 
@@ -25652,6 +25745,9 @@ msgstr "რიგშია..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "პრომპტის რედაქტირებისა და თავიდან ცდისთვის დააწკაპუნეთ"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26849,9 +26945,6 @@ msgstr "უსაფრთხო არეები"
 
 msgid "Select a character to animate"
 msgstr "ანიმაციისთვის პერსონაჟის მონიშვნა"
-
-msgid "Animate"
-msgstr "ანიმირება"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ამ ბლოკინგის დონის მოძრაობის დაფიქსირება აღწარმოების თავიდან"

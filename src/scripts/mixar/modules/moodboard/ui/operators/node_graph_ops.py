@@ -7,7 +7,7 @@
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.common.i18n import n_, rpt_
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.graph_notice import post_graph_notice
 from mixar.modules.moodboard.ui.moodboard_graph_properties import ACTION_TYPES
 
@@ -137,7 +137,8 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
             node.state = 'DRAFT'
             node.job_id = ""
             node.error = ""
-            self.report({'INFO'}, "Edit the prompt, then press Enter or Generate")
+            self.report({'INFO'}, "Edit the prompt, then press Enter or Generate"
+                        if node.show_prompt else "Adjust the settings, then press Generate")
             if context.area:
                 context.area.tag_redraw()
             return {'FINISHED'}
@@ -151,9 +152,10 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
             if context.area:
                 context.area.tag_redraw()
             return {'CANCELLED'}
-        # ASSEMBLE runs locally and queues nothing (run_action_node -> None).
-        message = assemble_summary(node) if job is None else n_("Node added to the generation queue")
-        self.report({'INFO'}, message)
+        # ASSEMBLE runs locally (job None). A queued job says nothing: its async
+        # submit may still be refused; the card and queue toast show progress.
+        if job is None:
+            self.report({'INFO'}, assemble_summary(node))
         if context.area:
             context.area.tag_redraw()
         return {'FINISHED'}

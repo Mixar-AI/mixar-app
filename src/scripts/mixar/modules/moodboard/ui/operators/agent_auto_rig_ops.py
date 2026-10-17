@@ -63,7 +63,8 @@ class MIXIE_OT_agent_auto_rig(Operator):
     )
     spec: StringProperty(
         name="Skeleton Spec",
-        description="Skeleton convention: 'tripo' or 'mixamo'",
+        description="Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm "
+                    "(only tripo takes Tripo animation presets)",
         default="tripo",
     )
     model: StringProperty(

@@ -341,7 +341,7 @@ def test_run_operator_reports_the_assemble_summary():
     ops = _read(MOODBOARD / "ui/operators/node_graph_ops.py")
     run_op = ops.split("class MIXIE_OT_moodboard_run_action_node")[1].split("\nclass ")[0]
     assert "job = run_action_node(context, node, self)" in run_op
-    assert "assemble_summary(node) if job is None" in run_op
+    assert "if job is None:\n            self.report({'INFO'}, assemble_summary(node))" in run_op
     assert "mark_run_failed(node" in run_op
     assert "'UNDO'" not in run_op
 

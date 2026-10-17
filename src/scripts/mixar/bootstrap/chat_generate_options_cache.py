@@ -53,6 +53,10 @@ _options_data: Optional[Dict[str, Any]] = None  # the response "data" object
 _etag: Optional[str] = None
 _cache_error: Optional[str] = None
 _is_loading: bool = False
+# A refresh asked for while a fetch is in flight (e.g. by a UI-language
+# switch, whose new X-Mixar-Locale the running request does not carry):
+# the fetch runs once more when it lands instead of the ask being dropped.
+_refresh_pending: bool = False
 _shutdown_requested: bool = False
 _lifecycle_epoch: int = 0
 
@@ -305,9 +309,13 @@ def clear_chat_generate_options_cache() -> None:
 
 def refresh_chat_generate_options_cache() -> None:
     """Manually trigger an async (re)validation of the cache."""
+    global _refresh_pending
     with _lock:
-        if _shutdown_requested or _is_loading:
-            return  # Fetch already in progress; avoid concurrent hazard
+        if _shutdown_requested:
+            return
+        if _is_loading:
+            _refresh_pending = True  # re-run when the in-flight fetch lands
+            return
 
     threading.Thread(
         target=_fetch_data_sync,
@@ -324,7 +332,7 @@ def _fetch_data_sync() -> None:
     An already-loaded cache does NOT skip the fetch: the If-None-Match
     revalidation is the point (304 = keep, 200 = swap).
     """
-    global _options_data, _etag, _cache_error, _is_loading
+    global _options_data, _etag, _cache_error, _is_loading, _refresh_pending
 
     with _lock:
         if _shutdown_requested or _is_loading:
@@ -384,14 +392,19 @@ def _fetch_data_sync() -> None:
 
     finally:
         with _lock:
+            rerun = False
             if epoch == _lifecycle_epoch:
                 _cache_error = new_error
                 _is_loading = False
                 do_notify = swapped and not _shutdown_requested
+                rerun = _refresh_pending and not _shutdown_requested
+                _refresh_pending = False
             else:
                 do_notify = False
         if do_notify:
             _schedule_redraw()
+        if rerun:
+            refresh_chat_generate_options_cache()
 
 
 def _schedule_redraw() -> None:

@@ -2006,6 +2006,24 @@ msgstr "Generatie mislukt — probeer het opnieuw"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Catalogus-visible_if per RNA-attribuut"
 
+msgid "Nothing selected"
+msgstr "Niets geselecteerd"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Waarde"
+
+msgid "Group"
+msgstr "Groep"
+
+msgid "Selected"
+msgstr "Geselecteerd"
+
 msgid "No modes"
 msgstr "Geen modi"
 
@@ -4610,6 +4628,45 @@ msgstr "Automatische rig mislukt"
 msgid "Animate failed"
 msgstr "Animeren mislukt"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Geselecteerde mesh heeft {count:,} vlakken (max. {max_faces:,})"
 
@@ -5396,6 +5453,9 @@ msgstr "Meshsegmentatie"
 msgid "Auto Rig"
 msgstr "Automatische rig"
 
+msgid "Animate"
+msgstr "Animeren"
+
 msgid "Add Mesh"
 msgstr "Mesh toevoegen"
 
@@ -5497,6 +5557,15 @@ msgstr "Het aantal verfijningsstappen tijdens de generatie. Meer stappen kunnen 
 
 msgid "The file format used to store the generated image."
 msgstr "Het bestandsformaat waarin de gegenereerde afbeelding wordt opgeslagen."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Auto (op naam)"
@@ -5816,6 +5885,9 @@ msgstr "Personage samenstellen"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Bevestigt gegenereerde onderdelen lokaal aan een gerigd of gewoon lichaam"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 msgid "Use Image Style Only"
 msgstr "Alleen stijl van afbeelding gebruiken"
 
@@ -5974,6 +6046,9 @@ msgstr "Genereer eerst '{name}' — deze kaart gebruikt het resultaat ervan"
 
 msgid "Mesh"
 msgstr "Mesh"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Referentie {number}"
@@ -6920,9 +6995,6 @@ msgstr "Aangepaste kleur gebruiken"
 msgid "Custom Colour"
 msgstr "Aangepaste kleur"
 
-msgid "Selected"
-msgstr "Geselecteerd"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Negeert de rand en het binnenste van dit kader bij klikken, zodat alleen de leden kunnen worden geselecteerd"
 
@@ -6931,6 +7003,18 @@ msgstr "Samengevouwen"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Tekent het kader als titelbalk en verbergt de inhoud"
+
+msgid "Unavailable"
+msgstr "Niet beschikbaar"
+
+msgid "No supported 3D service is available"
+msgstr "Er is geen ondersteunde 3D-dienst beschikbaar"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Afbeeldingsmodellen moeten maskersturing en twee referenties aangeven"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "Geen keuzes gepubliceerd"
@@ -6949,18 +7033,6 @@ msgstr "Voltooid"
 
 msgid "Generation completed"
 msgstr "Generatie voltooid"
-
-msgid "Unavailable"
-msgstr "Niet beschikbaar"
-
-msgid "No supported 3D service is available"
-msgstr "Er is geen ondersteunde 3D-dienst beschikbaar"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Afbeeldingsmodellen moeten maskersturing en twee referenties aangeven"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "Parameter-ID"
@@ -6986,14 +7058,14 @@ msgstr "Booleaanse waarde"
 msgid "Catalog choice"
 msgstr "Cataloguskeuze"
 
-msgid "Widget"
-msgstr "Widget"
-
-msgid "Group"
-msgstr "Groep"
-
 msgid "Choices"
 msgstr "Keuzes"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Widget"
 
 msgid "Visibility Condition"
 msgstr "Zichtbaarheidsvoorwaarde"
@@ -7013,11 +7085,14 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maximum"
 
-msgid "Value"
-msgstr "Waarde"
-
 msgid "Value Label"
 msgstr "Waardelabel"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Socket-ID"
@@ -8725,6 +8800,33 @@ msgstr "Alles in beeld"
 msgid "Clear Board"
 msgstr "Bord wissen"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Objectnaam"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Animaties"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Automatische rig door agent"
 
@@ -8746,8 +8848,8 @@ msgstr "Skelettype: auto / biped / quadruped / hexapod / octopod / avian / serpe
 msgid "Skeleton Spec"
 msgstr "Skeletspecificatie"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Skeletconventie: 'tripo' of 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Botbenaming: tripo, mixamo, actorcore, unity, unreal of vrm (alleen tripo ondersteunt de vooraf ingestelde Tripo-animaties)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8766,9 +8868,6 @@ msgstr "PBR-generatie door agent"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Genereert PBR-texturen voor het opgegeven mesh-object met Tripo"
-
-msgid "Object Name"
-msgstr "Objectnaam"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Naam van het mesh-object in de scène dat getextureerd moet worden"
@@ -9901,8 +10000,8 @@ msgstr "Selecteer een inferentienode"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Bewerk de prompt en druk dan op Enter of Genereer"
 
-msgid "Node added to the generation queue"
-msgstr "Node toegevoegd aan de generatiewachtrij"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Toont de instellingen en prompt van deze node zodat deze kan worden aangepast en opnieuw uitgevoerd; klik nogmaals om het bewerken te annuleren en terug te gaan naar het resultaat"
@@ -11952,9 +12051,6 @@ msgstr "Kwantisatiebits kleur"
 
 msgid "Generic Quantization Bits"
 msgstr "Generieke kwantisatiebits"
-
-msgid "Animations"
-msgstr "Animaties"
 
 msgid "Animation Mode"
 msgstr "Animatiemodus"
@@ -24831,9 +24927,6 @@ msgstr "Wachtrij openen"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Niets geselecteerd"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Rond het schetsen of dicteren af voordat u van tabblad wisselt"
 
@@ -25652,6 +25745,9 @@ msgstr "In wachtrij..."
 
 msgid "Click to edit the prompt and try again"
 msgstr "Klik om de prompt te bewerken en het opnieuw te proberen"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 msgid ""
 "Export\n"
@@ -26849,9 +26945,6 @@ msgstr "Veilige zones"
 
 msgid "Select a character to animate"
 msgstr "Selecteer een personage om te animeren"
-
-msgid "Animate"
-msgstr "Animeren"
 
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Legt deze beweging op blockingniveau vast als keyframes vanaf de afspeelkop"

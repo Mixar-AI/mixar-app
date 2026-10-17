@@ -2540,6 +2540,24 @@ msgstr "Generisanje nije uspelo — pokušajte ponovo"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if kataloga vezan za RNA atribut"
 
+msgid "Nothing selected"
+msgstr "Ništa nije izabrano"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Vrednost"
+
+msgid "Group"
+msgstr "Grupa"
+
+msgid "Selected"
+msgstr "Izabrano"
+
 # derived
 msgid "No modes"
 msgstr "Nema režima rada"
@@ -5819,6 +5837,45 @@ msgstr "Automatski rig nije uspeo"
 msgid "Animate failed"
 msgstr "Animacija nije uspela"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 # derived
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Izabrani meš ima stranica: {count:,} (najviše {max_faces:,})"
@@ -6777,6 +6834,10 @@ msgid "Auto Rig"
 msgstr "Automatski rig"
 
 # derived
+msgid "Animate"
+msgstr "Animiraj"
+
+# derived
 msgid "Add Mesh"
 msgstr "Dodaj meš"
 
@@ -6911,6 +6972,15 @@ msgstr "Broj koraka dorade tokom generisanja. Više koraka može duže trajati."
 # derived
 msgid "The file format used to store the generated image."
 msgstr "Format datoteke u kojem se čuva generisana slika."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 # derived
 msgid "Auto (from name)"
@@ -7332,6 +7402,9 @@ msgstr "Sklopi lik"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Prilaže generisane delove rigovanom ili običnom telu, lokalno"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
 # derived
 msgid "Use Image Style Only"
 msgstr "Koristi samo stil slike"
@@ -7541,6 +7614,9 @@ msgstr "Prvo generišite „{name}“ — ova kartica koristi njegov rezultat"
 
 msgid "Mesh"
 msgstr "Meš"
+
+msgid "Rigged Character"
+msgstr ""
 
 # derived
 msgid "Reference {number}"
@@ -8777,9 +8853,6 @@ msgstr "Koristi prilagođenu boju"
 msgid "Custom Colour"
 msgstr "Prilagođena boja"
 
-msgid "Selected"
-msgstr "Izabrano"
-
 # derived
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Zanemari ivicu i unutrašnjost ovog okvira pri kliku, da bi se mogli izabrati samo njegovi članovi"
@@ -8791,6 +8864,22 @@ msgstr "Skupljeno"
 # derived
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Crta okvir kao traku sa naslovom i skriva njegovo telo"
+
+# derived
+msgid "Unavailable"
+msgstr "Nedostupno"
+
+# derived
+msgid "No supported 3D service is available"
+msgstr "Nema dostupne podržane 3D usluge"
+
+# derived
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Modeli slike moraju da objave vođenje maskom i dve reference"
+
+# derived
+msgid "Attachment settings"
+msgstr "Podešavanja priloga"
 
 # derived
 msgid "No choices published"
@@ -8815,22 +8904,6 @@ msgstr "Završeno"
 # derived
 msgid "Generation completed"
 msgstr "Generisanje je završeno"
-
-# derived
-msgid "Unavailable"
-msgstr "Nedostupno"
-
-# derived
-msgid "No supported 3D service is available"
-msgstr "Nema dostupne podržane 3D usluge"
-
-# derived
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Modeli slike moraju da objave vođenje maskom i dve reference"
-
-# derived
-msgid "Attachment settings"
-msgstr "Podešavanja priloga"
 
 # derived
 msgid "Parameter ID"
@@ -8863,15 +8936,15 @@ msgid "Catalog choice"
 msgstr "Izbor iz kataloga"
 
 # derived
-msgid "Widget"
-msgstr "Vidžet"
-
-msgid "Group"
-msgstr "Grupa"
-
-# derived
 msgid "Choices"
 msgstr "Izbori"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+# derived
+msgid "Widget"
+msgstr "Vidžet"
 
 # derived
 msgid "Visibility Condition"
@@ -8894,12 +8967,15 @@ msgstr "Minimum"
 msgid "Maximum"
 msgstr "Maksimum"
 
-msgid "Value"
-msgstr "Vrednost"
-
 # derived
 msgid "Value Label"
 msgstr "Naziv vrednosti"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 # derived
 msgid "Socket ID"
@@ -11135,6 +11211,34 @@ msgstr "Ukadruj sve"
 msgid "Clear Board"
 msgstr "Očisti tablu"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Ime objekta"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+# derived
+msgid "Animations"
+msgstr "Animacije"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 # derived
 msgid "Agent Auto Rig"
 msgstr "Automatski rig agenta"
@@ -11163,8 +11267,8 @@ msgid "Skeleton Spec"
 msgstr "Specifikacija skeleta"
 
 # derived
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konvencija skeleta: 'tripo' ili 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Imenovanje kostiju: tripo, mixamo, actorcore, unity, unreal ili vrm (unapred zadate Tripo animacije podržava samo tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -11186,9 +11290,6 @@ msgstr "PBR generisanje agenta"
 # derived
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Generiši PBR teksture za zadati meš objekat pomoću Tripo"
-
-msgid "Object Name"
-msgstr "Ime objekta"
 
 # derived
 msgid "Name of the mesh object in the scene to texture"
@@ -12674,9 +12775,8 @@ msgstr "Izaberite čvor zaključivanja"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Uredite prompt, zatim pritisnite Enter ili Generiši"
 
-# derived
-msgid "Node added to the generation queue"
-msgstr "Čvor je dodat u red generisanja"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 # derived
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
@@ -15322,10 +15422,6 @@ msgstr "Bitovi kvantizacije boje"
 # derived
 msgid "Generic Quantization Bits"
 msgstr "Bitovi opšte kvantizacije"
-
-# derived
-msgid "Animations"
-msgstr "Animacije"
 
 # derived
 msgid "Animation Mode"
@@ -31832,9 +31928,6 @@ msgstr "Otvori red"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Ništa nije izabrano"
-
 # derived
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Završite skiciranje ili diktiranje pre promene kartica"
@@ -32888,6 +32981,9 @@ msgstr "U redu..."
 # derived
 msgid "Click to edit the prompt and try again"
 msgstr "Kliknite da uredite prompt i pokušate ponovo"
+
+msgid "Check its input and settings, then try again"
+msgstr ""
 
 # derived
 msgid ""
@@ -34409,10 +34505,6 @@ msgstr "Bezbedne zone"
 # derived
 msgid "Select a character to animate"
 msgstr "Izaberite lika za animaciju"
-
-# derived
-msgid "Animate"
-msgstr "Animiraj"
 
 # derived
 msgid "Key this blocking-level motion from the playhead"

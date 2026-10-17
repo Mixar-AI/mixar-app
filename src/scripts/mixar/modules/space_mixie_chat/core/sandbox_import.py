@@ -5,6 +5,7 @@
 """The restricted ``__import__`` installed in the agent sandbox's builtins."""
 
 import builtins
+import sys
 
 from .sandbox_modules import is_denied_module, safe_module
 
@@ -29,8 +30,30 @@ def make_restricted_import(exec_namespace):
     allowed = set(exec_namespace.keys()) - {"__builtins__", "__name__", "open"}
     real_import = builtins.__import__
 
+    def _import_lazy_submodules(package, fromlist):
+        # `from bpy_extras import anim_utils` names a submodule the package
+        # does not import itself. The real import system loads it from the
+        # fromlist; the injected proxy cannot, so the name was missing until
+        # something else had imported it. Load each such submodule the way
+        # `import bpy_extras.anim_utils` already may (denied ones excepted);
+        # the proxy then hands it out like any same-package attribute.
+        real = sys.modules.get(package)
+        for item in fromlist:
+            if not isinstance(item, str) or item == "*" or hasattr(real, item):
+                continue
+            sub = f"{package}.{item}"
+            if is_denied_module(sub):
+                continue
+            try:
+                real_import(sub)
+            except ImportError:
+                pass  # not a submodule: the from-import reports the missing name
+
     def _restricted_import(name, *args, **kwargs):
         if name in allowed:
+            fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
+            if fromlist and name in _PASS_THROUGH_PACKAGES:
+                _import_lazy_submodules(name, fromlist)
             return exec_namespace[name]
         top_module = name.split(".")[0]
         if top_module in _PASS_THROUGH_PACKAGES:
