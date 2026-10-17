@@ -112,6 +112,11 @@ def _watch():
             _signature = signature
             _scan = _refresh(state, target)
         if _scan:
+            # Tags only the popover; its count of 0 means the browser closed, so
+            # stop scanning and unbind: the next popover draw binds and rescans.
+            if not window.mixar_refresh_popover("MIXAR_PT_animations"):
+                close()
+                return None
             deadline = time.perf_counter() + .004
             while time.perf_counter() < deadline:
                 try:
@@ -119,8 +124,6 @@ def _watch():
                 except StopIteration:
                     _scan = None
                     break
-            area.tag_redraw()
-            window.mixar_refresh_popover("MIXAR_PT_animations")
         return .02 if _scan else None
     except (ReferenceError, RuntimeError):
         close()

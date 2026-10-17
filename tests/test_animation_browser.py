@@ -138,3 +138,41 @@ def test_a_selected_rig_is_never_offered_hide_rig():
     context = NS(view_layer=NS(objects=NS(active=rig)), scene=NS(objects={'Rig': rig}))
     assert catalog.selected_target(context) is rig
     assert catalog.hidable_rig(context) is None
+
+
+def _watch_env(monkeypatch, popovers_open):
+    from mixar.modules.workflow.core import animation_browser as browser
+    state = NS(search='', scope='ALL', clips=MagicMock(), active_index=0,
+               target_name='', loading=False)
+    fake_bpy = MagicMock()
+    fake_bpy.context.window_manager.mixar_animations = state
+    fake_bpy.data.actions = []
+    monkeypatch.setattr(browser, 'bpy', fake_bpy)
+    window = MagicMock()
+    window.workspace.name = browser.BASIC_WORKSPACE_NAME
+    window.mixar_refresh_popover.return_value = popovers_open
+    area = MagicMock(type='VIEW_3D')
+    monkeypatch.setattr(browser, 'host', lambda: (window, area))
+    monkeypatch.setattr(browser, '_host', (1, 2))
+    monkeypatch.setattr(browser, '_signature', None)
+    monkeypatch.setattr(browser, '_scan', None)
+    scanned = []
+    monkeypatch.setattr(browser.catalog, 'selected_target', lambda _context: None)
+    monkeypatch.setattr(browser.catalog, 'entries',
+                        lambda *args: scanned.append(args) or iter(()))
+    return browser, area, scanned
+
+
+def test_closed_browser_stops_scanning_and_unbinds(monkeypatch):
+    # A selection change after the popover closed must not rescan or redraw.
+    browser, area, scanned = _watch_env(monkeypatch, popovers_open=0)
+    assert browser._watch() is None
+    assert browser._host is None and not scanned
+    area.tag_redraw.assert_not_called()
+
+
+def test_open_browser_scans_and_tags_only_the_popover(monkeypatch):
+    browser, area, scanned = _watch_env(monkeypatch, popovers_open=1)
+    assert browser._watch() is None
+    assert scanned and browser._host == (1, 2)
+    area.tag_redraw.assert_not_called()
