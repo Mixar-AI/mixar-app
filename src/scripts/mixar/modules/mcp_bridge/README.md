@@ -31,7 +31,8 @@ Claude/Codex. Use `mixar_credit_balance` to inspect your available balance.
 The setup uses a stable per-user launcher backed by Mixar's bundled Python.
 It requires no separate Python packages or copied account token. The dialog's
 **Allow AI apps to use Mixar (MCP)** checkbox is the switch: unticking it revokes
-access, a line under it says what AI apps see right now, and while it is off an
+access, a line under it says what AI apps see right now (they can connect only
+once Mixar is signed in and connected to its server), and while it is off an
 AI app's tool call answers "MCP is turned off in Mixar" (never "Mixar is not
 open"). If multiple opted-in Mixar processes are running,
 the connection uses the one that is signed in; when several are, the assistant
