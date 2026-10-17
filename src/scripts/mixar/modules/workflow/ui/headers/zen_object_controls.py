@@ -32,7 +32,7 @@ def draw_object_controls(layout, context):
     grip = row.row(align=True)
     grip.ui_units_x = 1.4
     grip.operator_context = 'INVOKE_DEFAULT'
-    grip.operator('view2d.pan', text='', icon='GRIP')
+    grip.operator('view2d.pan', text='', icon='GRIP_V')
     grip.mixar_style(component="TOOLBAR", variant="GHOST")
     name = row.row(align=True)
     name.ui_units_x = 5.0
