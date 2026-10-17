@@ -121,6 +121,7 @@
 #include "IMB_colormanagement.hh"
 
 #include "readfile.hh"
+#include "readfile_image_undo.hh"
 #include "versioning_common.hh"
 
 namespace blender {
@@ -2661,6 +2662,15 @@ static bool direct_link_id(FileData *fd,
     default:
       /* Do nothing. Handled by IDTypeInfo callback. */
       break;
+  }
+
+  /* RNA pixel edits followed by Image.pack() do not necessarily tag ID_RECALC_SOURCE.
+   * Never transplant live ImBuf/GPU caches over a different restored packed source.
+   * Unchanged sources (including dirty, unpacked paint buffers) keep their caches. */
+  if ((fd->flags & FD_FLAGS_IS_MEMFILE) && id_old != nullptr && GS(id->name) == ID_IM &&
+      blo::image_packed_sources_changed(*id_cast<Image *>(id), *id_cast<Image *>(id_old)))
+  {
+    id->recalc |= ID_RECALC_SOURCE;
   }
 
   /* try to restore (when undoing) or clear ID's cache pointers. */
