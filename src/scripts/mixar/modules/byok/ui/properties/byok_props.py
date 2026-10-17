@@ -45,10 +45,46 @@ def _model_items(self, context):
     """EnumProperty items callback — model list filtered to the
     currently-selected provider. Returns a "No models available"
     sentinel when the provider has no cached models so the dropdown
-    is never blank.
+    is never blank. `self` is the WindowManager.
     """
-    provider = getattr(context.window_manager, 'byok_form_provider', '') or ''
-    return get_model_items(provider)
+    return get_model_items(getattr(self, 'byok_form_provider', '') or '')
+
+
+# The provider / model picks are stored as IDENTIFIERS (the hidden `*_id`
+# strings), not as Blender's enum number: with 3-tuple items that number is the
+# list index, so a pick made while the catalog loads — or before a refresh
+# reorders it — would silently become whichever item now sits at that index.
+# get → the stored id's index in the CURRENT list (0, the first item, when
+# unset or no longer listed); set → store the chosen item's identifier.
+
+def _index_of(items, identifier) -> int:
+    for index, item in enumerate(items):
+        if item[0] == identifier:
+            return index
+    return 0
+
+
+def _identifier_at(items, index) -> str:
+    return items[index][0] if 0 <= index < len(items) else ''
+
+
+def _provider_get(self):
+    return _index_of(get_provider_items(), self.byok_form_provider_id)
+
+
+def _provider_set(self, value):
+    self.byok_form_provider_id = _identifier_at(get_provider_items(), value)
+    # Run here rather than as `update=`: the reset must follow every write,
+    # including assignments from Python (the dialog prefill).
+    _provider_changed(self, None)
+
+
+def _model_get(self):
+    return _index_of(_model_items(self, None), self.byok_form_model_id)
+
+
+def _model_set(self, value):
+    self.byok_form_model_id = _identifier_at(_model_items(self, None), value)
 
 
 def _provider_changed(self, context):
@@ -127,6 +163,8 @@ def wipe_transient_secrets(wm) -> None:
 _WM_ATTRS = (
     'byok_form_provider',
     'byok_form_model',
+    'byok_form_provider_id',
+    'byok_form_model_id',
     'byok_form_api_key',
     'byok_form_openrouter_model',
     'byok_form_codex_path',
@@ -152,19 +190,26 @@ def register():
 
     # --- Form fields (what the user picks / types into the dialog) ---
     # Both provider and model use dynamic EnumProperty callbacks so the
-    # lists can change without re-registering the properties. NOTE: when
-    # items is a callback, EnumProperty does not accept a string default
-    # — whichever item is index 0 in the cache becomes the default.
+    # lists can change without re-registering the properties. The pick lives
+    # in the hidden `*_id` strings (see `_provider_get`); unset, the dropdown
+    # shows the list's first item. Runtime-only: nothing goes into a .blend.
+    WM.byok_form_provider_id = StringProperty(default='', options={'SKIP_SAVE'})
+    WM.byok_form_model_id = StringProperty(default='', options={'SKIP_SAVE'})
     WM.byok_form_provider = EnumProperty(
         name="Provider",
         description="LLM provider",
         items=_provider_items,
-        update=_provider_changed,
+        get=_provider_get,
+        set=_provider_set,
+        options={'SKIP_SAVE'},
     )
     WM.byok_form_model = EnumProperty(
         name="Model",
         description="Model to use with the selected provider",
         items=_model_items,
+        get=_model_get,
+        set=_model_set,
+        options={'SKIP_SAVE'},
     )
     WM.byok_form_api_key = StringProperty(
         name="API Key",

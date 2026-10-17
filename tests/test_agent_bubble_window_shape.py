@@ -435,7 +435,7 @@ class TestIslandWindowTranslucency:
         wm = (ROOT / "src/source/blender/windowmanager/intern/wm_window.cc").read_text()
         body = wm[wm.index("void WM_window_decoration_style_apply("):]
         body = body[:body.index("\n}")]
-        assert "if (wm_window_contains_agent_bubble_space(win)) {\n    return;" in body
+        assert "if (Mixar_window_has_agent_bubble(win)) {\n    return;" in body
         assert body.index("return;") < body.index("applyWindowDecorationStyle()")
 
     def test_metal_present_keeps_framebuffer_alpha(self) -> None:
