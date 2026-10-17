@@ -101,3 +101,24 @@ def trigger_ui_redraw() -> None:
     except Exception:
         pass
     return None
+
+
+def refresh_popup_dialogs() -> int:
+    """Rebuild every open operator dialog so its ``draw()`` re-reads state.
+
+    Pop-up regions live outside every area, so ``area.tag_redraw()`` never
+    reaches them: a dialog whose draw reads async state stays stale until the
+    pointer moves over it. Native ``Window.mixar_refresh_popups`` tags only
+    operator dialogs (never menus or popovers). Main thread only. Returns the
+    number of dialogs tagged; 0 on a binary without the native call.
+    """
+    count = 0
+    try:
+        import bpy
+        for window in bpy.context.window_manager.windows:
+            refresh = getattr(window, "mixar_refresh_popups", None)
+            if refresh is not None:
+                count += refresh()
+    except Exception:
+        pass
+    return count

@@ -169,14 +169,27 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
         #
-        # Both the profile and chat picker open this shared dialog. A popup
-        # block in the Agent Bubble's ~460px window would be clipped over the
-        # composer, so host it in the main window instead.
-        # Override the WINDOW only: the bubble's screen is a temporary one and
-        # `temp_override(screen=...)` refuses it outright ("Overriding context
-        # with an active temporary screen isn't supported").
-        host = _dialog_host_window(context)
+        # Both the profile and chat picker open this shared dialog, always in
+        # the main window and centred, with the Agent island and pill hidden
+        # until it closes (they float above every main-window pop-up). The
+        # native modal dialog does all three — re-hosting out of the island,
+        # centring, and a dock hold released by the pop-up's own teardown on
+        # every close path (Done, Cancel, Esc, click-away, file load).
         _dialog_open = True
+        modal = getattr(wm, "mixar_invoke_modal_dialog", None)
+        if modal is not None:
+            try:
+                return modal(self, width=CARD_DIALOG_WIDTH)
+            except Exception:
+                _dialog_open = False
+                raise
+        # Binaries without it: a popup block in the Agent Bubble's ~460px
+        # window would be clipped over the composer, so host it in the main
+        # window instead. Override the WINDOW only: the bubble's screen is a
+        # temporary one and `temp_override(screen=...)` refuses it outright
+        # ("Overriding context with an active temporary screen isn't
+        # supported").
+        host = _dialog_host_window(context)
         try:
             if host is not None and host != context.window:
                 with context.temp_override(window=host):

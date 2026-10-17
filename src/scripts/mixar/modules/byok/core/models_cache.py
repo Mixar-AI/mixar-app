@@ -249,8 +249,14 @@ def _refresh_preference() -> None:
 
 def _redraw() -> None:
     try:
-        from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
+        from mixar.modules.common.utils.platform_utils import (
+            refresh_popup_dialogs,
+            trigger_ui_redraw,
+        )
 
         trigger_ui_redraw()
+        # An open AI Provider Settings dialog reads the catalog in draw():
+        # rebuild it so "Loading…" turns into the providers without a mouse move.
+        refresh_popup_dialogs()
     except Exception as exc:
         logger.debug("Agent models catalog redraw failed: %s", exc)

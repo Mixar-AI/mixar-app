@@ -55,4 +55,26 @@ bool Mixar_window_resize_dispatch_active();
 bool Mixar_window_gpu_context_push(const wmWindowManager *wm, wmWindow *win);
 void Mixar_window_gpu_context_pop(const wmWindowManager *wm);
 
+/**
+ * Hide the Agent island and pill while a modal pop-up is open
+ * (`wm_mixar_modal_dialog.cc`). Keyed by `owner` (the pop-up's data, or a
+ * per-dialog static): a second hold by the same owner is ignored and a
+ * release only undoes an existing hold, so a pop-up may release from both
+ * its button handler and its free path. No-op hiding on Linux.
+ */
+void Mixar_floating_docks_hold(const void *owner);
+void Mixar_floating_docks_release(const void *owner);
+/** Any modal dialog holds the docks hidden: the island must not treat a press
+ * in that dialog as an outside click (it would come back minimised). */
+bool Mixar_floating_docks_held();
+
+/**
+ * The window a dock-hiding dialog opened from `win` is hosted in: `win`
+ * itself, unless it is an Agent Bubble window (hidden with the docks), then
+ * its top-level main window.
+ */
+wmWindow *Mixar_modal_dialog_host_window(wmWindowManager *wm, wmWindow *win);
+/** Make the re-hosted dialog's window the OS key window (macOS / Windows). */
+void Mixar_modal_dialog_focus_host(wmWindow *win);
+
 }  // namespace blender
