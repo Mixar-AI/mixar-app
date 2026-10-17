@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "Domyślne"
 
@@ -1751,7 +1754,10 @@ msgstr "Pobrano — nie działa"
 msgid "Not downloaded"
 msgstr "Nie pobrano"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "Model lokalny"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "Tryb lokalny"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Zarządzany przez Mixar lub własny serwer lokalny"
-
-msgid "Local model"
-msgstr "Model lokalny"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Wybrany model do pobrania i uruchomienia na tym komputerze"

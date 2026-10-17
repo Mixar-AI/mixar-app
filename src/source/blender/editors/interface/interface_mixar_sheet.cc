@@ -11,7 +11,7 @@
  * `interface_mixar_sheet.hh`.
  *
  * Text is drawn straight through BLF rather than #fontstyle_draw: the sheet
- * face is Clash Grotesk, which is not one of the UI fonts a #uiFontStyle can
+ * sizes its text by Mixar's text roles and weights, which no #uiFontStyle can
  * name, and the artboard positions type by baseline and cap height, which the
  * style painter's ascender/descender centring cannot reproduce.
  */
@@ -53,13 +53,28 @@ float px(const float design_px)
   return design_px * 0.5f * UI_SCALE_FAC;
 }
 
-int font(const float size_dp)
+/** The UI body size in region px: the widget font's points at the live
+ * scale — the unit the Agent island and Mixar's text roles measure in. */
+static float body_px()
 {
-  int id = mixar_clash_grotesk_font();
-  if (id < 0) {
-    id = BLF_default();
+  const uiStyle *style = style_get();
+  return (style ? style->widget.points : UI_DEFAULT_TEXT_POINTS) * UI_SCALE_FAC;
+}
+
+static int widget_weight()
+{
+  const uiStyle *style = style_get();
+  return style ? style->widget.character_weight : weight_regular;
+}
+
+int font(const float ratio, const int weight, const bool mono)
+{
+  const int id = mono ? blf_mono_font : BLF_default();
+  BLF_size(id, body_px() * ratio);
+  if (!mono) {
+    BLF_character_weight(id, weight);
   }
-  BLF_size(id, px(size_dp * text_scale));
+  BLF_disable(id, BLF_CLIPPING);
   return id;
 }
 
@@ -89,6 +104,10 @@ void text_at(
   BLF_color4ubv(font_id, col);
   BLF_position(font_id, std::round(x), std::round(baseline), 0.0f);
   BLF_draw(font_id, text, strlen(text));
+  /* Blender's widget text pass assumes the style's weight on the UI face. */
+  if (font_id == BLF_default()) {
+    BLF_character_weight(font_id, widget_weight());
+  }
 }
 
 /** \a text shortened with a tail ellipsis to \a max_w px. */
@@ -194,16 +213,21 @@ static void draw_title(Button *but, const rcti *rect)
   const std::string subtitle = nl == std::string::npos ? "" : text.substr(nl + 1);
   const float x = float(rect->xmin) + px(title_x);
   const float top = float(rect->ymax);
-  text_at(font(title_size), x, top - px(title_baseline), title.c_str(), text_bright);
+  text_at(font(title_size, weight_strong), x, top - px(title_baseline), title.c_str(), text_bright);
   if (!subtitle.empty()) {
-    text_at(font(subtitle_size), x, top - px(subtitle_baseline), subtitle.c_str(), text_dim);
+    text_at(font(subtitle_size, weight_regular),
+            x,
+            top - px(subtitle_baseline),
+            subtitle.c_str(),
+            text_dim);
   }
 }
 
 /** Dim caption with bright spans: "ALL SUPPORTED \x1fANTHROPIC\x1f MODELS". */
 static void draw_caption(Button *but, const rcti *rect)
 {
-  const int font_id = font(caption_size);
+  /* The island card's caption: monospace, dim, the bright span lit. */
+  const int font_id = font(caption_size, weight_regular, true);
   const std::string text = label(but);
   rctf box;
   BLI_rctf_rcti_copy(&box, rect);
@@ -233,14 +257,18 @@ static void draw_caption(Button *but, const rcti *rect)
   }
 }
 
-static void draw_text(Button *but, const rcti *rect, const float size_dp, const uchar col_in[4])
+static void draw_text(Button *but,
+                      const rcti *rect,
+                      const float size_dp,
+                      const uchar col_in[4],
+                      const int weight = weight_regular)
 {
   uchar col[4];
   memcpy(col, col_in, 4);
   dim(col, disabled(but) ? 0.5f : 1.0f);
   rctf box;
   BLI_rctf_rcti_copy(&box, rect);
-  text_in(font(size_dp), box, label(but), col, false);
+  text_in(font(size_dp, weight), box, label(but), col, false);
 }
 
 }  // namespace mixar_sheet
@@ -337,28 +365,45 @@ void UI_layout_mixar_sheet_tag_last(Layout *layout,
 
 float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text)
 {
+  /* The same face, size and weight the painter draws \a element with. */
   float size = label_size;
+  int weight = weight_medium;
+  bool mono = false;
   switch (element) {
     case MixarCardElement::SheetTitle:
       size = title_size;
+      weight = weight_strong;
       break;
     case MixarCardElement::SheetCaption:
-    case MixarCardElement::SheetDangerText:
       size = caption_size;
+      mono = true;
+      break;
+    case MixarCardElement::SheetDangerText:
+      size = note_size;
+      weight = weight_medium;
       break;
     case MixarCardElement::SheetPrompt:
       size = prompt_size;
       break;
     case MixarCardElement::SheetNote:
       size = note_size;
+      weight = weight_regular;
       break;
     case MixarCardElement::SheetBody:
       size = body_size;
+      weight = weight_regular;
+      break;
+    case MixarCardElement::SheetPrimary:
+    case MixarCardElement::SheetSecondary:
+    case MixarCardElement::SheetDangerButton:
+      weight = weight_strong;
       break;
     default:
       break;
   }
-  return text_width(font(size), text) / UI_SCALE_FAC;
+  const float w = text_width(font(size, weight, mono), text) / UI_SCALE_FAC;
+  BLF_character_weight(BLF_default(), widget_weight());
+  return w;
 }
 
 void UI_mixar_sheet_draw_back(const Block *block, const rcti *rect)
@@ -431,7 +476,7 @@ bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardE
       draw_chip(but, rect);
       break;
     case MixarCardElement::SheetPrompt:
-      draw_text(but, rect, prompt_size, text_dim);
+      draw_text(but, rect, prompt_size, text_body, weight_medium);
       break;
     case MixarCardElement::SheetNote:
       draw_text(but, rect, note_size, text_dim);
@@ -440,7 +485,7 @@ bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardE
       draw_text(but, rect, body_size, text_body);
       break;
     case MixarCardElement::SheetDangerText:
-      draw_text(but, rect, caption_size, text_danger);
+      draw_text(but, rect, note_size, text_danger, weight_medium);
       break;
     case MixarCardElement::SheetPrimary:
     case MixarCardElement::SheetSecondary:

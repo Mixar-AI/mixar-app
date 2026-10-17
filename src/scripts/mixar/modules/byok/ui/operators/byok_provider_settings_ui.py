@@ -123,7 +123,7 @@ def draw_sidebar(col, wm, geo, enabled):
             # Loading / empty sentinel: say so instead of offering a row.
             S.label(S.row(body, S.ROW_H, left=S.LEFT_INSET), label, S.NOTE)
             continue
-        text = label.upper()
+        text = label
         S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=S.row_right(body, text)),
                  OP_PICK, text, S.PROVIDER_ROW, lit=(pid == current), provider=pid)
     # How it works: the published guide (one row of the column's budget,
@@ -132,11 +132,15 @@ def draw_sidebar(col, wm, geo, enabled):
     guide = S.row(body, S.ROW_H - S.GAP, left=S.LEFT_INSET, packed=True)
     _pill(guide, "wm.url_open", iface_("Guide"), S.SECONDARY).url = BYOK_GUIDE_URL
 
-    foot = col.row(align=True)
-    foot.scale_y = S.units(S.FOOTER)
+    # Local model: a row like the providers at the column's foot (its glyph
+    # drawn by the painter), not a full-width slab.
+    foot = S.fixed(col, S.FOOTER)
     foot.enabled = enabled
-    S.choice(foot, OP_PICK, iface_("LOCAL MODEL"), S.FOOTER_ROW,
+    S.choice(S.row(foot, S.ROW_H, left=S.LEFT_INSET, right=S.ROW_RIGHT), OP_PICK,
+             iface_("Local model"), S.FOOTER_ROW,
              lit=model_suggestions.is_local(current), provider=LOCAL_PROVIDER_ID)
+    # The rest of the foot is margin under the row, off the card's edge.
+    S.sep(foot, S.FOOTER - S.ROW_H)
 
 
 # ---------------------------------------------------------------------------

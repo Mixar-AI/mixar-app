@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "默认"
 
@@ -1751,7 +1754,10 @@ msgstr "已下载——未运行"
 msgid "Not downloaded"
 msgstr "未下载"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "本地模型"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "本地模式"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "由 Mixar 管理，或使用您自己的本地服务器"
-
-msgid "Local model"
-msgstr "本地模型"
 
 msgid "Curated model to download and run on this computer"
 msgstr "要在此计算机上下载并运行的精选模型"

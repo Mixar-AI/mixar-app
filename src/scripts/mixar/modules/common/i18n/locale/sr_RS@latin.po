@@ -1992,6 +1992,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "Tekuće"
 
@@ -2195,7 +2198,10 @@ msgstr "Preuzet — ne radi"
 msgid "Not downloaded"
 msgstr "Nije preuzet"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 # derived
@@ -2306,8 +2312,9 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+# derived
+msgid "Local model"
+msgstr "Lokalni model"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2528,10 +2535,6 @@ msgstr "Lokalni režim"
 # derived
 msgid "Managed by Mixar, or your own local server"
 msgstr "Upravlja Mixar, ili vaš sopstveni lokalni server"
-
-# derived
-msgid "Local model"
-msgstr "Lokalni model"
 
 # derived
 msgid "Curated model to download and run on this computer"

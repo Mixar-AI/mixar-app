@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "Standaard"
 
@@ -1751,7 +1754,10 @@ msgstr "Gedownload — niet actief"
 msgid "Not downloaded"
 msgstr "Niet gedownload"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "Lokaal model"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "Lokale modus"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Beheerd door Mixar, of uw eigen lokale server"
-
-msgid "Local model"
-msgstr "Lokaal model"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Geselecteerd model om te downloaden en op deze computer te draaien"

@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "मूलभूत"
 
@@ -1751,7 +1754,10 @@ msgstr "डाउनलोड हो गया — चल नहीं रहा
 msgid "Not downloaded"
 msgstr "डाउनलोड नहीं हुआ"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "स्थानीय मॉडल"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "स्थानीय रूप"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar द्वारा प्रबंधित, या आपका अपना स्थानीय सर्वर"
-
-msgid "Local model"
-msgstr "स्थानीय मॉडल"
 
 msgid "Curated model to download and run on this computer"
 msgstr "इस कंप्यूटर पर डाउनलोड करके चलाने के लिए चुनिंदा मॉडल"

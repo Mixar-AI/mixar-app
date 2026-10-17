@@ -228,6 +228,14 @@ void draw_line(const State &state, const Layout &l, const Metrics &m, const int 
   }
   const Line &line = state.lines[i];
   float col[4];
+  if (line.kind == LineKind::Divider) {
+    /* A hairline across the plates' width, centred in its gap. */
+    with_alpha(DIVIDER, a, col);
+    const float h = std::max(1.0f, m.fs * 0.05f);
+    const float cy = BLI_rctf_cent_y(&r);
+    fill({r.xmin + m.pad * 0.6f, r.xmax - m.pad * 0.6f, cy - h * 0.5f, cy + h * 0.5f}, 0.0f, col);
+    return;
+  }
   if (line.kind == LineKind::Note) {
     with_alpha(NOTE, a, col);
     const std::string note = fit(line.trailing.c_str(), BLI_rctf_size_x(&r) - m.pad * 1.2f,
@@ -265,7 +273,9 @@ void draw_line(const State &state, const Layout &l, const Metrics &m, const int 
   float trailing_w = 0.0f;
   if (!level && !line.trailing.empty()) {
     const bool hot = line.disclosure && state.hover == i && state.hover_trailing;
-    with_alpha(hot ? INK_TAB_HOVER : TRAILING, a, col);
+    /* "Mixar default" carries its tag in the accent: the server's pick. */
+    const float *ink = is_default_row(row) ? FOOTER_INK : (hot ? INK_TAB_HOVER : TRAILING);
+    with_alpha(ink, a * (is_default_row(row) ? 0.85f : 1.0f), col);
     trailing_w = text(line.trailing.c_str(), plate.xmax - m.pad * 0.6f, cy, m.fs * 0.78f, col, 0,
                       true, 1) +
                  m.pad;

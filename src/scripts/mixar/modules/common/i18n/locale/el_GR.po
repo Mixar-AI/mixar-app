@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "Προεπιλογή"
 
@@ -1751,7 +1754,10 @@ msgstr "Λήφθηκε — δεν εκτελείται"
 msgid "Not downloaded"
 msgstr "Δεν έχει ληφθεί"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "Τοπικό μοντέλο"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "Τοπική κατάσταση"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Διαχειρίζεται το Mixar ή ο δικός σας τοπικός διακομιστής"
-
-msgid "Local model"
-msgstr "Τοπικό μοντέλο"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Επιμελημένο μοντέλο για λήψη και εκτέλεση σε αυτόν τον υπολογιστή"

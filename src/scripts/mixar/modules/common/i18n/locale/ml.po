@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "സ്ഥിരം"
 
@@ -1751,7 +1754,10 @@ msgstr "ഡൗൺലോഡ് ചെയ്തു — പ്രവർത്തി
 msgid "Not downloaded"
 msgstr "ഡൗൺലോഡ് ചെയ്തിട്ടില്ല"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "ലോക്കൽ മോഡൽ"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "ലോക്കൽ മോഡ്"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar കൈകാര്യം ചെയ്യുന്നു, അല്ലെങ്കിൽ നിങ്ങളുടെ സ്വന്തം ലോക്കൽ സെർവർ"
-
-msgid "Local model"
-msgstr "ലോക്കൽ മോഡൽ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "ഈ കമ്പ്യൂട്ടറിൽ ഡൗൺലോഡ് ചെയ്ത് പ്രവർത്തിപ്പിക്കേണ്ട തിരഞ്ഞെടുത്ത മോഡൽ"

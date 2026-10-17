@@ -46,16 +46,15 @@ def _with_catalog(monkeypatch):
 def test_a_long_provider_name_widens_its_pill_but_stops_short_of_the_divider():
     layout = FakeLayout([], card_api=True)
     S = byok_sheet
-    # The artboard's pill: 66..379, so a short name keeps the 63 dp margin.
-    assert S.row_right(layout, "OPENAI") == S.ROW_RIGHT
-    # A name that needs more keeps 28 dp of pill on both sides…
-    long_name = "CODEX (CHATGPT SUBS)"   # 20 chars at the fake's 14 dp = 280 dp
-    expected = S.SIDEBAR - S.LEFT_INSET - (280 + 2 * S.ROW_TEXT_X)
+    # A short name keeps the plate's design margin to the divider.
+    assert S.row_right(layout, "OpenAI") == S.ROW_RIGHT
+    # A name that needs more keeps ROW_TEXT_X of plate on both sides…
+    long_name = "Codex (ChatGPT s)"   # 17 chars at the fake's 14 dp = 238 dp
+    expected = S.SIDEBAR - S.LEFT_INSET - (238 + 2 * S.ROW_TEXT_X)
     assert S.ROW_MIN_RIGHT < expected < S.ROW_RIGHT
     assert S.row_right(layout, long_name) == expected
-    # …until the pill would touch the divider; then the painter ellipsises.
+    # …until the plate would touch the divider; then the painter ellipsises.
     assert S.row_right(layout, "X" * 80) == S.ROW_MIN_RIGHT
-
 
 def test_rna_sheet_kinds_cover_every_kind_python_uses():
     """Every kind the Python sheet kit names is an RNA item, and every RNA
@@ -87,17 +86,17 @@ def test_providers_are_rows_and_local_is_the_footer_button(monkeypatch):
                 byok_form_model='claude-fable-5-1')
     rows = [e for e in log if e.startswith("pick:provider:")]
     assert rows == [
-        "pick:provider:anthropic:ANTHROPIC",
-        "pick:provider:openai:OPENAI",
-        "pick:provider:openrouter:OPENROUTER",
-        "pick:provider:codex:CODEX (CHATGPT SUB)",
-        "pick:provider:local:LOCAL MODEL",
+        "pick:provider:anthropic:Anthropic",
+        "pick:provider:openai:OpenAI",
+        "pick:provider:openrouter:OpenRouter",
+        "pick:provider:codex:Codex (ChatGPT sub)",
+        "pick:provider:local:Local model",
     ]
     # Exactly one provider row, the foot (not Local) and one model chip are lit.
     assert log.count("sheet:PROVIDER_ROW:True") == 1
     assert log.count("sheet:FOOTER_ROW:False") == 1
     assert log.count("sheet:CHIP:True") == 1
-    assert "sheet_frame:182:442" in log
+    assert f"sheet_frame:{byok_sheet.HEADER}:{byok_sheet.SIDEBAR}" in log
 
 
 def test_every_supported_model_is_a_chip_and_the_key_names_it(monkeypatch):
@@ -123,7 +122,7 @@ def test_the_sheet_keeps_the_artboard_s_height_until_it_needs_more():
     assert geo.height == S.HEIGHT
     assert geo.left_body + S.FOOTER == geo.right
     assert geo.fixed_top + geo.area + geo.bottom == geo.right
-    assert geo.area == 436  # chips start at y=334, the prompt block at 770
+    assert geo.area == S.HEIGHT - S.HEADER - geo.fixed_top - geo.bottom
 
     tall = S.Geometry(n_rows=14, chips_need=0, bottom=S.key_block_height())
     assert tall.height > S.HEIGHT
@@ -165,11 +164,14 @@ def test_the_dialog_opens_as_a_padding_free_sheet():
     assert "sheet ? std::string() : WM_operatortype_name(op->type, op->ptr)" in wm
     header = SHEET_HH.read_text(encoding="utf-8")
     # The Python kit and the painter share the artboard.
-    for name, value in (("frame_radius", 16.0), ("row_h", 59.0), ("chip_h", 49.0),
-                        ("input_h", 81.0), ("footer_h", 76.0), ("chip_pad", 19.0)):
-        assert f"inline constexpr float {name} = {value}f;" in header
-    assert byok_sheet.ROW_H == 59 and byok_sheet.CHIP_H == 49 and byok_sheet.INPUT_H == 81
-    assert byok_sheet.FOOTER == 76 and byok_sheet.CHIP_PAD == 19
+    for name, value in (("row_h", byok_sheet.ROW_H), ("chip_h", byok_sheet.CHIP_H),
+                        ("input_h", byok_sheet.INPUT_H), ("footer_h", byok_sheet.FOOTER),
+                        ("chip_pad", byok_sheet.CHIP_PAD), ("row_text_x", byok_sheet.ROW_TEXT_X),
+                        ("button_h", byok_sheet.BUTTON_H)):
+        assert f"inline constexpr float {name} = {float(value)}f;" in header, name
+    # Type follows Mixar's text roles (ratios of the UI body), not artboard px.
+    assert "inline constexpr float label_size = 1.0f;" in header
+    assert "Clash" not in SHEET_CC.read_text(encoding="utf-8")
 
 
 def test_a_key_needed_locks_provider_and_model(monkeypatch):

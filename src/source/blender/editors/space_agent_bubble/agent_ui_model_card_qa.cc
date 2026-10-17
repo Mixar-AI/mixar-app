@@ -76,6 +76,9 @@ void qa_targets(const wmWindow *win,
     rctf visible;
     BLI_rctf_isect(&r, &layout.list, &visible);
     const Line &line = state->lines[i];
+    if (line.kind == LineKind::Divider) {
+      continue;
+    }
     if (line.kind == LineKind::Note) {
       add("model_card_note", line.trailing, visible).index = i;
       continue;

@@ -129,18 +129,18 @@ def draw_local_fields(area, wm) -> None:
         _draw_managed(area, wm)
 
     S.sep(area, S.GAP)
-    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET),
-            n_("Runs entirely on this computer - your prompts never leave it "
-               "except through Mixar's agent orchestration."), S.NOTE)
+    for line in (n_("Runs entirely on this computer."),
+                 n_("Your prompts leave it only through Mixar's agent orchestration.")):
+        S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), line, S.NOTE)
 
 
 def _draw_managed(area, wm) -> None:
-    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET), n_("Model"), S.NOTE)
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), n_("Model"), S.NOTE)
     S.dropdown(S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN),
                wm, 'byok_form_local_model')
 
     text, _icon, is_error = managed_status(wm)
-    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET), text,
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), text,
             S.DANGER_TEXT if is_error else S.NOTE, translate=False)
     S.sep(area, S.GAP)
 
@@ -162,7 +162,7 @@ def _draw_managed(area, wm) -> None:
 
 
 def _draw_custom(area, wm) -> None:
-    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET), n_("Detected local apps"), S.NOTE)
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), n_("Detected local apps"), S.NOTE)
     detect = S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
     S.dropdown(detect, wm, 'byok_form_local_detected')
     S.gap(detect, S.GAP)
@@ -172,7 +172,7 @@ def _draw_custom(area, wm) -> None:
     for text, prop in ((n_("Base URL"), 'byok_form_local_custom_base'),
                        (n_("Model"), 'byok_form_local_custom_model'),
                        (n_("API Key (optional)"), 'byok_form_local_custom_key')):
-        S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET), text, S.NOTE)
+        S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), text, S.NOTE)
         S.input_field(S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), wm, prop,
                       activate=(prop == 'byok_form_local_custom_key'
                                 and key_prompt.focus_is(key_prompt.FOCUS_LOCAL_KEY)))

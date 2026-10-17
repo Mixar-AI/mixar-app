@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "기본 값"
 
@@ -1751,7 +1754,10 @@ msgstr "다운로드됨 — 실행 중이 아님"
 msgid "Not downloaded"
 msgstr "다운로드되지 않음"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "로컬 모델"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "로컬 모드"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar에서 관리하거나 직접 운영하는 로컬 서버를 사용합니다"
-
-msgid "Local model"
-msgstr "로컬 모델"
 
 msgid "Curated model to download and run on this computer"
 msgstr "이 컴퓨터에 다운로드하여 실행할 엄선된 모델입니다"

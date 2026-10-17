@@ -1568,6 +1568,9 @@ msgstr ""
 msgid "Mixar default"
 msgstr ""
 
+msgid "RECOMMENDED"
+msgstr ""
+
 msgid "Default"
 msgstr "இயல்புநிலை"
 
@@ -1751,7 +1754,10 @@ msgstr "பதிவிறக்கப்பட்டது — இயங்க�
 msgid "Not downloaded"
 msgstr "பதிவிறக்கப்படவில்லை"
 
-msgid "Runs entirely on this computer - your prompts never leave it except through Mixar's agent orchestration."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
 
 msgid "Cancel Download"
@@ -1847,8 +1853,8 @@ msgstr ""
 msgid "Guide"
 msgstr ""
 
-msgid "LOCAL MODEL"
-msgstr ""
+msgid "Local model"
+msgstr "உள்ளக மாதிரி"
 
 msgid "Pick a provider on the left to see its models."
 msgstr ""
@@ -2044,9 +2050,6 @@ msgstr "உள்ளகப் பயன்முறை"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar நிர்வகிக்கும், அல்லது உங்கள் சொந்த உள்ளகச் சேவையகம்"
-
-msgid "Local model"
-msgstr "உள்ளக மாதிரி"
 
 msgid "Curated model to download and run on this computer"
 msgstr "இந்தக் கணினியில் பதிவிறக்கி இயக்க தேர்ந்தெடுத்த மாதிரி"

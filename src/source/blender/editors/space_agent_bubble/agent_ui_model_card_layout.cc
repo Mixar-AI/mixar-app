@@ -15,6 +15,7 @@
 
 #include "BLF_api.hh"
 #include "BLI_time.h"
+#include "BLI_utildefines.h"
 
 #include "DNA_windowmanager_types.h"
 
@@ -220,7 +221,7 @@ Hit hit_test(const State &state, const Layout &layout, const float mx, const flo
   for (int i = 0; i < int(state.lines.size()); i++) {
     rctf r;
     if (line_rect(state, layout, i, &r) && BLI_rctf_isect_pt(&r, mx, my)) {
-      if (state.lines[i].kind == LineKind::Note) {
+      if (ELEM(state.lines[i].kind, LineKind::Note, LineKind::Divider)) {
         return hit;
       }
       hit.line = i;

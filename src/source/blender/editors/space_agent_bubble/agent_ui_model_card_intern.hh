@@ -40,7 +40,9 @@ struct Row {
   bool enabled = true;
 };
 
-enum class LineKind { Pick, Level, Note };
+/** Divider: the hairline under "Mixar default", setting the server's pick
+ * apart from the specific models. */
+enum class LineKind { Pick, Level, Note, Divider };
 
 /** One drawn line of the open tab's list. A pick that owns the thinking
  * disclosure carries it as its trailing text (`disclosure`). */
@@ -122,6 +124,8 @@ void draw(const wmWindow *win, void *customdata);
 
 /* Data (agent_ui_model_card_data.cc). */
 
+/** "Mixar default": the Mixie tab's pick without a model (the server's). */
+bool is_default_row(const Row &row);
 /** Index of the tab \a id, or -1. */
 int tab_index(const State &state, const std::string &id);
 /** The open tab's list (notes, picks, unfolded levels) and its footers. */

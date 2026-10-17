@@ -101,6 +101,17 @@ def test_hosted_pick_with_thinking_names_the_model_and_offers_levels(catalog):
     assert [r.thinking for r in picker.build_rows(s, catalog) if r.kind == "level"] == ["low", "high"]
 
 
+def test_mixar_default_stands_apart(catalog):
+    """The server's pick is tagged (the card draws it in the accent and rules
+    it off from the specific models); no other row carries the tag."""
+    rows = [r for r in picker.build_rows(picker.picker_state(_cred(), _pref()), catalog)
+            if r.tab == TAB_MIXIE and r.kind == "model"]
+    assert (rows[0].label, rows[0].meta, rows[0].model) == ("Mixar default", "RECOMMENDED", "")
+    assert all(r.meta != "RECOMMENDED" for r in rows[1:])
+    card = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_model_card_data.cc").read_text()
+    assert "is_default_row(row)" in card and "LineKind::Divider" in card
+
+
 def test_hosted_rows_follow_the_catalog_and_keep_provider_identity(catalog):
     s = picker.picker_state(_cred(), _pref(mixar_agent_model_provider="anthropic",
                                           mixar_agent_model_id="claude-sonnet-5-5"))

@@ -44,6 +44,10 @@ HEADING_KEY = n_("YOUR KEY")
 HEADING_ADD_KEY = n_("BRING YOUR OWN KEY")
 HEADING_LOCAL = n_("ON THIS COMPUTER")
 DEFAULT_ROW = n_("Mixar default")
+#: The default row's trailing tag: the server picks the best model for the
+#: agent. The island card draws it in the accent and rules it off from the
+#: specific models below.
+DEFAULT_META = n_("RECOMMENDED")
 DEFAULT_CHIP = n_("Default")
 SIGN_IN_NOTE = n_("Sign in to use Mixar models")
 KEY_NEEDED_NOTE = n_("Key needed on this computer")
@@ -152,7 +156,8 @@ def _mixie_rows(state, models: Sequence[Dict[str, Any]]) -> List[Row]:
     if not models:
         return [Row(TAB_MIXIE, ROW_NOTE, iface_(EMPTY_NOTE), enabled=False)]
     no_pick = not state["hosted_provider"] and not state["hosted_model"]
-    rows.append(Row(TAB_MIXIE, ROW_MODEL, iface_(DEFAULT_ROW), current=no_pick, enabled=live))
+    rows.append(Row(TAB_MIXIE, ROW_MODEL, iface_(DEFAULT_ROW), meta=iface_(DEFAULT_META),
+                    current=no_pick, enabled=live))
     for record in models:
         provider = record.get("provider_id") or ""
         model = record.get("model_id") or ""

@@ -43,92 +43,93 @@ namespace mixar_sheet {
 /** Design px (2x artboard) -> region px at the live UI scale. */
 float px(float design_px);
 
-/** The artboard's type renders about 7% larger than Clash Grotesk at the
- * same nominal size (measured on the title, rows, chips and captions of a
- * 1:1 capture), so every face is sized up by this before `px`. */
-inline constexpr float text_scale = 1.07f;
+/* Type follows Mixar's text roles (UI_mixar_text.hh), not the artboard's px:
+ * every size below is a RATIO of the UI body size (the widget font's points
+ * at the live scale, the same unit the Agent island measures in), drawn in
+ * the island's face with its weights; captions use the monospace face the
+ * island's model card uses. `font()` resolves a ratio to a BLF id. */
+inline constexpr int weight_regular = 400;
+inline constexpr int weight_medium = 500;
+inline constexpr int weight_strong = 600;
 
 /* -- Frame -------------------------------------------------------------- */
-inline constexpr float frame_radius = 16.0f;
+inline constexpr float frame_radius = 20.0f;
 inline constexpr float frame_line = 1.0f;
-inline constexpr uchar frame_fill[4] = {0x18, 0x19, 0x1C, 255};
-inline constexpr uchar frame_border[4] = {0x45, 0x44, 0x47, 255};
+inline constexpr uchar frame_fill[4] = {0x18, 0x19, 0x1B, 255};
+inline constexpr uchar frame_border[4] = {0x33, 0x34, 0x37, 255};
 
-/* -- Header: title at 66 / baseline 88, subtitle baseline 133 ----------- */
+/* -- Header: title and subtitle from the sheet's left margin ------------ */
 inline constexpr float title_x = 66.0f;
-inline constexpr float title_size = 46.0f;
-inline constexpr float title_baseline = 88.0f;
-inline constexpr float subtitle_size = 22.0f;
-inline constexpr float subtitle_baseline = 133.0f;
+inline constexpr float title_size = 1.5f;       /* x body */
+inline constexpr float title_baseline = 70.0f;
+inline constexpr float subtitle_size = 0.92f;   /* x body */
+inline constexpr float subtitle_baseline = 108.0f;
 
-/* -- Close: 100 square, 40 from the top, 42 from the right -------------- */
-inline constexpr float close_size = 100.0f;
-inline constexpr float close_top = 40.0f;
-inline constexpr float close_right = 42.0f;
-inline constexpr float close_radius = 16.0f;
-inline constexpr float close_cross = 31.0f;
+/* -- Close: a quiet square that only fills under the pointer ------------- */
+inline constexpr float close_size = 60.0f;
+inline constexpr float close_top = 38.0f;
+inline constexpr float close_right = 38.0f;
+inline constexpr float close_radius = 14.0f;
+inline constexpr float close_cross = 18.0f;
 inline constexpr float close_stroke = 2.0f;
-inline constexpr uchar close_fill[4] = {0x27, 0x28, 0x29, 255};
-inline constexpr uchar close_fill_hover[4] = {0x36, 0x37, 0x39, 255};
-inline constexpr uchar close_cross_col[4] = {0xFF, 0x85, 0x85, 255};
+inline constexpr uchar close_fill[4] = {0x2A, 0x2B, 0x2D, 0};
+inline constexpr uchar close_fill_hover[4] = {0x2E, 0x2F, 0x32, 255};
+inline constexpr uchar close_cross_col[4] = {0xB4, 0xB4, 0xB8, 255};
 
-/* -- Text --------------------------------------------------------------- */
-inline constexpr float caption_size = 22.0f;
-inline constexpr float prompt_size = 24.0f;
-inline constexpr float note_size = 16.0f;
-inline constexpr float body_size = 24.0f;
-inline constexpr float label_size = 26.0f;
-inline constexpr uchar text_bright[4] = {0xFF, 0xFF, 0xFF, 255};
-inline constexpr uchar text_body[4] = {0xE2, 0xE2, 0xE2, 255};
-inline constexpr uchar text_dim[4] = {0x6B, 0x6B, 0x6B, 255};
-inline constexpr uchar text_danger[4] = {0xFF, 0x85, 0x85, 255};
+/* -- Text (x body; Mixar roles: Caption 15/18, Body 18/18) -------------- */
+inline constexpr float caption_size = 0.8f;     /* monospace caption */
+inline constexpr float prompt_size = 1.0f;
+inline constexpr float note_size = 0.86f;
+inline constexpr float body_size = 1.0f;
+inline constexpr float label_size = 1.0f;
+inline constexpr uchar text_bright[4] = {0xF2, 0xF2, 0xF2, 255};
+inline constexpr uchar text_body[4] = {0xDC, 0xDC, 0xDC, 255};
+inline constexpr uchar text_dim[4] = {0x8A, 0x8A, 0x8C, 255};
+inline constexpr uchar text_danger[4] = {0xF0, 0x86, 0x7E, 255};
 /** `|`-free marker Python wraps the bright span of a caption in
  * ("ALL SUPPORTED \x1fANTHROPIC\x1f MODELS"); never drawn. */
 inline constexpr char caption_bright_mark = '\x1f';
 
-/* -- Provider row: 59 tall pill, text 28 in, dot 15.5 left of it -------- */
-inline constexpr float row_h = 59.0f;
-inline constexpr float row_radius = 24.0f;
-inline constexpr float row_text_x = 28.0f;
+/* -- Provider row: 46 tall plate, text 20 in, dot 15.5 left of it ------- */
+inline constexpr float row_h = 46.0f;
+inline constexpr float row_radius = 14.0f;
+inline constexpr float row_text_x = 20.0f;
 /** A long provider name may run to the pill's edge before it is ellipsised. */
 inline constexpr float row_text_right = 8.0f;
-inline constexpr float row_dot_r = 5.5f;
+inline constexpr float row_dot_r = 4.5f;
 inline constexpr float row_dot_gap = 15.5f;
-inline constexpr uchar row_fill_a[4] = {0x37, 0x37, 0x37, 255};
-inline constexpr uchar row_fill_b[4] = {0x48, 0x48, 0x48, 255};
-inline constexpr uchar row_text_off[4] = {0x70, 0x70, 0x70, 255};
-inline constexpr uchar row_dot[4] = {0xD9, 0xD9, 0xD9, 255};
+inline constexpr uchar row_fill_a[4] = {0x2A, 0x2B, 0x2D, 255};
+inline constexpr uchar row_fill_b[4] = {0x31, 0x32, 0x35, 255};
+inline constexpr uchar row_text_off[4] = {0x9C, 0x9C, 0x9F, 255};
+inline constexpr uchar row_dot[4] = {0x7D, 0xDB, 0x8E, 255};
 
-/* -- Sidebar foot: 76 tall bar, monitor glyph at 108, text at 144 ------- */
-inline constexpr float footer_h = 76.0f;
-inline constexpr float footer_icon_x = 108.0f;
-inline constexpr float footer_icon = 20.0f;
+/* -- Sidebar foot (Local model): a row like the providers, with a glyph -- */
+inline constexpr float footer_h = 64.0f;
+inline constexpr float footer_icon = 18.0f;
 inline constexpr float footer_icon_stroke = 1.5f;
-inline constexpr float footer_text_x = 144.0f;
-inline constexpr uchar footer_fill[4] = {0x45, 0x44, 0x47, 255};
-inline constexpr uchar footer_fill_hover[4] = {0x52, 0x51, 0x55, 255};
+inline constexpr float footer_icon_gap = 14.0f;
 
-/* -- Model chip: 49 tall, 19 padding, 22 radius ------------------------- */
-inline constexpr float chip_h = 49.0f;
-inline constexpr float chip_radius = 22.0f;
-inline constexpr float chip_pad = 19.0f;
-inline constexpr uchar chip_fill[4] = {0x32, 0x32, 0x32, 255};
-inline constexpr uchar chip_text_off[4] = {0x72, 0x72, 0x72, 255};
+/* -- Model chip: 40 tall, 16 padding ------------------------------------ */
+inline constexpr float chip_h = 40.0f;
+inline constexpr float chip_radius = 14.0f;
+inline constexpr float chip_pad = 16.0f;
+inline constexpr uchar chip_fill[4] = {0x31, 0x32, 0x35, 255};
+inline constexpr uchar chip_text_off[4] = {0x9C, 0x9C, 0x9F, 255};
 
-/* -- Key field: 81 tall, 21.5 radius; the primary docks 8 inside it ----- */
-inline constexpr float input_h = 81.0f;
-inline constexpr float input_radius = 21.5f;
-inline constexpr uchar input_fill[4] = {0x13, 0x13, 0x13, 255};
-inline constexpr uchar input_border[4] = {0x45, 0x44, 0x47, 255};
-inline constexpr uchar input_border_focus[4] = {0x6A, 0x69, 0x6E, 255};
-inline constexpr float dropdown_h = 60.0f;
+/* -- Key field: 64 tall, 14 radius; the primary docks 6 inside it ------- */
+inline constexpr float input_h = 64.0f;
+inline constexpr float input_radius = 14.0f;
+inline constexpr uchar input_fill[4] = {0x12, 0x12, 0x14, 255};
+inline constexpr uchar input_border[4] = {0x33, 0x34, 0x37, 255};
+inline constexpr uchar input_border_focus[4] = {0x5A, 0x5B, 0x60, 255};
+inline constexpr float dropdown_h = 52.0f;
 inline constexpr float dropdown_chevron = 12.0f;
 
-/* -- Pills: 66 tall, 16 radius ------------------------------------------ */
-inline constexpr float button_h = 66.0f;
-inline constexpr float button_radius = 16.0f;
-inline constexpr float button_dock_inset = 8.0f;
-inline constexpr float button_pad = 36.0f;
+/* -- Pills: 52 tall, 12 radius ------------------------------------------ */
+inline constexpr float button_h = 52.0f;
+inline constexpr float button_radius = 12.0f;
+inline constexpr float button_dock_inset = 6.0f;
+inline constexpr float button_pad = 32.0f;
 inline constexpr uchar primary_fill[4] = {0x2B, 0x7C, 0x4B, 255};
 inline constexpr uchar primary_fill_hover[4] = {0x35, 0x90, 0x5A, 255};
 inline constexpr uchar secondary_fill[4] = {0x2E, 0x2F, 0x31, 255};
@@ -138,9 +139,10 @@ inline constexpr uchar danger_fill_hover[4] = {0x4C, 0x2A, 0x2D, 255};
 
 /* Private kit shared by the two painter files. */
 
-/** The sheet face (Clash Grotesk, the widget font when it is missing) sized
- * to \a size_dp design px; returns the BLF id ready to measure and draw. */
-int font(float size_dp);
+/** The island's face (or the monospace caption face) at \a ratio x the UI
+ * body size and \a weight; returns the BLF id ready to measure and draw.
+ * `text_at` restores the widget weight after drawing. */
+int font(float ratio, int weight = weight_medium, bool mono = false);
 float text_width(int font_id, const char *text);
 /** Baseline-anchored, unclipped. */
 void text_at(int font_id, float x, float baseline, const char *text, const uchar col[4]);

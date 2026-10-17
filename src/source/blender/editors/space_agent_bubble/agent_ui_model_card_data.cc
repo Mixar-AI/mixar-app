@@ -71,6 +71,11 @@ std::string wm_string(wmWindowManager *wm, const char *name)
 
 }  // namespace
 
+bool is_default_row(const Row &row)
+{
+  return row.tab == "MIXIE" && row.kind == "model" && row.model.empty();
+}
+
 int tab_index(const State &state, const std::string &id)
 {
   for (int i = 0; i < int(state.tabs.size()); i++) {
@@ -121,6 +126,11 @@ void rebuild_lines(State &state)
       line.trailing = row.meta;
       last_pick = int(state.lines.size());
       push(line, m.row_h);
+      if (is_default_row(row)) {
+        Line divider;
+        divider.kind = LineKind::Divider;
+        push(divider, m.fs * 0.7f);
+      }
     }
     else if (row.kind == "thinking" && last_pick >= 0) {
       Line &pick = state.lines[last_pick];

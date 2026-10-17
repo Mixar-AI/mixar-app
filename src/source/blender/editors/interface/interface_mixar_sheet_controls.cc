@@ -137,7 +137,7 @@ void draw_provider_row(Button *but, const rcti *rect)
   /* Python widens the pill to a long name (`byok_sheet.row_right`); only a
    * name too long even for that runs on towards the divider before it is
    * ellipsised. */
-  const int font_id = font(label_size);
+  const int font_id = font(label_size, motion.selected > 0.5f ? weight_strong : weight_medium);
   if (text_width(font_id, label(but)) > BLI_rctf_size_x(&text)) {
     const float sidebar = but->block->mixar_sheet_sidebar;
     const float divider = sidebar > 0.0f ? block_rect(but).xmin + sidebar - px(16.0f) : pill.xmax;
@@ -152,50 +152,49 @@ void draw_provider_row(Button *but, const rcti *rect)
 static void draw_monitor(const float x, const float cy, const uchar col[4], const float alpha)
 {
   const float w = px(footer_icon);
-  const float screen_h = px(15.2f);
+  const float screen_h = px(13.0f);
   const float stroke_w = px(footer_icon_stroke);
-  const rctf screen = {x, x + w, cy + px(10.0f) - screen_h, cy + px(10.0f)};
+  const rctf screen = {x, x + w, cy + px(9.0f) - screen_h, cy + px(9.0f)};
   float c[4];
   rgba_uchar_to_float(c, col);
   c[3] *= alpha;
   draw_roundbox_corner_set(CNR_ALL);
   draw_roundbox_4fv(&screen, false, px(4.0f), c);
   const float mid = x + w * 0.5f;
-  stroke(mid, screen.ymin, mid, cy - px(10.0f), stroke_w, col, alpha);
-  stroke(x + px(5.5f), cy - px(10.0f), x + w - px(5.5f), cy - px(10.0f), stroke_w, col, alpha);
+  stroke(mid, screen.ymin, mid, cy - px(9.0f), stroke_w, col, alpha);
+  stroke(x + px(4.5f), cy - px(9.0f), x + w - px(4.5f), cy - px(9.0f), stroke_w, col, alpha);
 }
 
 void draw_footer_row(Button *but, const rcti *rect)
 {
+  /* Local model: a sidebar row like the providers — the same plate, wash
+   * and lit state — led by the monitor glyph, sitting at the column's foot. */
   const MixarInteraction motion = mixar_button_motion(*but);
   const float fade = disabled(but) ? 0.5f : 1.0f;
-  const rctf block = block_rect(but);
-  const float line = line_px();
-  const float sidebar = but->block->mixar_sheet_sidebar;
-
-  /* The bar runs to the card's left and bottom edges and hugs its corner,
-   * whatever the layout column measured. */
-  rctf bar;
-  bar.xmin = block.xmin + line;
-  bar.xmax = sidebar > 0.0f ? block.xmin + sidebar - line * 0.5f : float(rect->xmax);
-  bar.ymin = block.ymin + line;
-  bar.ymax = float(rect->ymax);
-  uchar fill[4];
-  lerp_col(fill, footer_fill, footer_fill_hover, std::max(hover_cue(motion), motion.selected * 0.6f));
-  float c[4];
-  rgba_uchar_to_float(c, fill);
-  c[3] *= fade;
-  draw_roundbox_corner_set(CNR_BOTTOM_LEFT);
-  draw_roundbox_4fv(&bar, true, std::max(px(frame_radius) - line, 0.0f), c);
-  draw_roundbox_corner_set(CNR_ALL);
-
-  const float cy = BLI_rctf_cent_y(&bar);
-  draw_monitor(block.xmin + px(footer_icon_x), cy, text_bright, fade);
+  rctf pill;
+  BLI_rctf_rcti_copy(&pill, rect);
+  const float rad = std::min(px(row_radius), BLI_rctf_size_y(&pill) * 0.5f);
+  const float wash = std::max(hover_cue(motion) * (1.0f - motion.selected), 0.0f);
+  /* At rest a faint plate, so the foot reads as a destination, not a label. */
+  mixar_card_fill_round(&pill, rad, text_bright, (0.035f + 0.04f * wash) * fade);
+  if (motion.selected > 0.0f) {
+    mixar_card_fill_round(&pill, rad, row_fill_b, motion.selected * fade);
+  }
   uchar col[4];
-  memcpy(col, text_bright, 4);
-  col[3] = uchar(std::lround(255.0f * fade));
-  const rctf text = {block.xmin + px(footer_text_x), bar.xmax - px(row_text_x), bar.ymin, bar.ymax};
-  text_in(font(label_size), text, label(but), col, false);
+  lerp_col(col, row_text_off, text_bright, std::max(motion.selected, hover_cue(motion) * 0.6f));
+  col[3] = uchar(std::lround(float(col[3]) * fade));
+  const float cy = BLI_rctf_cent_y(&pill);
+  const float icon_x = pill.xmin + px(row_text_x);
+  draw_monitor(icon_x, cy, col, 1.0f);
+  const rctf text = {icon_x + px(footer_icon) + px(footer_icon_gap),
+                     pill.xmax - px(row_text_x),
+                     pill.ymin,
+                     pill.ymax};
+  text_in(font(label_size, motion.selected > 0.5f ? weight_strong : weight_medium),
+          text,
+          label(but),
+          col,
+          false);
 }
 
 /* -- Model chip ------------------------------------------------------------ */
@@ -223,7 +222,9 @@ void draw_chip(Button *but, const rcti *rect)
   const float pad = std::min(px(chip_pad), BLI_rctf_size_x(&chip) * 0.25f);
   text.xmin += pad;
   text.xmax -= pad;
-  text_in(font(label_size), text, label(but), col, true);
+  /* One weight lit or not: Python sized the chip with this face, and the
+   * fill already says which one is current. */
+  text_in(font(label_size, weight_medium), text, label(but), col, true);
 }
 
 /* -- Pills ------------------------------------------------------------------ */
@@ -274,7 +275,7 @@ void draw_pill(Button *but, const rcti *rect, const MixarCardElement element)
     /* An icon pill (the Local branch's rescan): the stock glyph, centred,
      * ahead of whatever label there is. */
     const float icon_size = ICON_DEFAULT_HEIGHT * UI_SCALE_FAC;
-    const int font_id = font(label_size);
+    const int font_id = font(label_size, weight_strong);
     const float label_w = text_width(font_id, label(but));
     const float gap = label_w > 0.0f ? px(12.0f) : 0.0f;
     const float group_w = std::min(icon_size + gap + label_w, BLI_rctf_size_x(&text));
@@ -284,7 +285,7 @@ void draw_pill(Button *but, const rcti *rect, const MixarCardElement element)
     text_in(font_id, text, label(but), col, false);
     return;
   }
-  text_in(font(label_size), text, label(but), col, true);
+  text_in(font(label_size, weight_strong), text, label(but), col, true);
 }
 
 }  // namespace mixar_sheet

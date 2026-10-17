@@ -5,8 +5,9 @@
 
 """AI Provider settings — the sheet kit the dialog's states are built with.
 
-The designer's artboard is a 2x export: 1502 x 969 design px for a
-751 x 484.5 UI-px dialog. Everything here is written in those design px
+Measured in design px (2x: a 1440 dp sheet is 720 UI px wide), from the
+designer's artboard tightened to the Agent island's proportions; its text
+follows Mixar's text roles in the C++ painter, not artboard px. Everything here is written in those design px
 ("dp") and converted to layout units in exactly two places — ``units()``
 (fixed heights / widths, 40 dp per UI unit) and ``sep()`` (spacers, 12 dp
 per separator factor) — so this layout and the C++ painters
@@ -24,11 +25,11 @@ functionality — it just stops looking like the artboard.
 from mixar.modules.common.i18n import n_
 
 # --- The artboard (design px) ---------------------------------------------
-WIDTH = 1502
-HEIGHT = 969
-HEADER = 182            # title block; the divider is drawn at its foot
-SIDEBAR = 442           # provider column width, divider at its right edge
-FOOTER = 76             # the sidebar's LOCAL MODEL foot
+WIDTH = 1440
+HEIGHT = 700
+HEADER = 140            # title block; the divider is drawn at its foot
+SIDEBAR = 400           # provider column width, divider at its right edge
+FOOTER = 64             # the sidebar's Local model row and its bottom margin
 UNIT_DP = 40.0          # one UI unit (20 px at 1x) is 40 design px
 SEP_DP = 12.0           # one separator factor is 6 px at 1x
 
@@ -38,47 +39,47 @@ SEP_DP = 12.0           # one separator factor is 6 px at 1x
 SPLIT_SPACE = 16
 SPLIT_FACTOR = (SIDEBAR / 2) / (WIDTH / 2 - SPLIT_SPACE / 2)
 RIGHT_X = SIDEBAR + SPLIT_SPACE
-RIGHT_MARGIN = WIDTH - 1474.5            # the key field ends 27.5 dp from the edge
+RIGHT_MARGIN = 28                        # the key field ends 28 dp from the edge
 
 # Header: close square at the top right.
-CLOSE = 100
-CLOSE_TOP = 40
-CLOSE_RIGHT = 42
+CLOSE = 60
+CLOSE_TOP = 38
+CLOSE_RIGHT = 38
 
 # Captions sit 50 dp under the header divider ("PROVIDERS", "ALL SUPPORTED…").
-CAPTION_TOP = 50
-CAPTION_H = 48
+CAPTION_TOP = 36
+CAPTION_H = 34
 LEFT_INSET = 66                          # sidebar text / pill edge
-RIGHT_INSET = 501 - RIGHT_X              # chips and the right caption at x=501
-PROMPT_INSET = 515 - RIGHT_X             # the key prompt at x=515
+RIGHT_INSET = 43                         # chips and the right caption, from the column edge
+PROMPT_INSET = 57                        # the key prompt, from the column edge
 
 # Provider rows: 59 dp pills from x=66 to 379, starting 333 dp from the top.
-ROW_H = 59
-ROW_RIGHT = SIDEBAR - 379
-ROW_TEXT_X = 28                          # the name sits 28 dp inside the pill
+ROW_H = 46
+ROW_RIGHT = 60                           # a plate stops 60 dp short of the divider
+ROW_TEXT_X = 20                          # the name sits 20 dp inside the plate
 ROW_MIN_RIGHT = 16                       # a wide pill stops short of the divider
-CAPTION_TO_ROWS = 333 - (HEADER + CAPTION_TOP + CAPTION_H)
-ROWS_BOTTOM_GAP = 36
+CAPTION_TO_ROWS = 14
+ROWS_BOTTOM_GAP = 28
 
 # Model chips: 49 dp pills butted in a row, rows 21.5 dp apart from y=334.
-CHIP_H = 49
-CHIP_PAD = 19
-CHIP_GAP_Y = 21.5
-CAPTION_TO_CHIPS = 334 - (HEADER + CAPTION_TOP + CAPTION_H)
+CHIP_H = 40
+CHIP_PAD = 16
+CHIP_GAP_Y = 12
+CAPTION_TO_CHIPS = 14
 
 # The key block at the foot of the right column.
-PROMPT_H = 30
-NOTE_H = 26
-NOTE_TO_INPUT = 31.5
-INPUT_H = 81
-FIELD_H = 60             # secondary fields (OpenRouter slug, Local custom server)
-BUTTON_H = 66
-BUTTON_PAD = 36
-SAVE_W = 262
-DOCK_INSET = 8
-BOTTOM = HEIGHT - 938.5  # below the key field
-STRIP_H = 44             # one "in use" / error line above the prompt
-GAP = 16
+PROMPT_H = 34
+NOTE_H = 30
+NOTE_TO_INPUT = 20
+INPUT_H = 64
+FIELD_H = 52             # secondary fields (OpenRouter slug, Local custom server)
+BUTTON_H = 52
+BUTTON_PAD = 32
+SAVE_W = 230
+DOCK_INSET = 6
+BOTTOM = 30              # below the key field
+STRIP_H = 40             # one "in use" / error line above the prompt
+GAP = 14
 
 # Bright-span marker the caption painter understands (never drawn).
 MARK = "\x1f"
