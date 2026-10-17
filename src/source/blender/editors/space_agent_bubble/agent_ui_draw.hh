@@ -84,14 +84,11 @@ struct AgentIslandState {
    * switch thumb sits on the ON side. */
   bool auto_mode;
 
-  /* Hosted agent model pick, mirrored onto the WindowManager by the Python
-   * half (byok). `model_available` is false until those properties are
-   * registered — the chip is then not laid out or drawn at all, rather than
-   * offering a menu that does not exist yet. `model_byok_active` means the
-   * user's own API key overrides the hosted pick, so the chip is inert. */
+  /* The model chip, mirrored onto the WindowManager by the Python half
+   * (byok/core/picker_mirror.py). `model_available` is false until those
+   * properties are registered — the chip is then not laid out or drawn at
+   * all, rather than opening a card with nothing in it. */
   bool model_available;
-  bool model_byok_active;
-  char model_label[96];
 
   /* Refine / Revert of the composer draft (scene.mixie_chat_prompt_refined /
    * _refining, moodboard/core/prompt_refine_chat.py). Refined adds Revert

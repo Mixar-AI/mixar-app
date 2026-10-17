@@ -362,21 +362,16 @@ def test_a_switch_that_lands_after_logout_is_dropped(state, monkeypatch):
     assert state.snapshot()['byok_is_active'] is False
 
 
-def _class(path, name):
-    tree = ast.parse(path.read_text(encoding='utf-8'))
-    return tree, next(n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == name)
-
-
-def test_the_operator_is_internal_registered_and_never_opens_the_dialog():
-    tree, cls = _class(SWITCH_OPS, 'MIXAR_BYOK_OT_switch_model')
-    source = ast.get_source_segment(SWITCH_OPS.read_text(encoding='utf-8'), cls)
-    assert 'bl_idname = "mixar_byok.switch_model"' in source
-    assert "bl_options = {'INTERNAL'}" in source
-    assert 'switch(context.window_manager, self.model)' in source
-    assert 'byok_client.resave_stored_key(model, on_done=_done)' in SWITCH_OPS.read_text(encoding='utf-8')
-    assert 'credential_state.begin_switch(' in SWITCH_OPS.read_text(encoding='utf-8')
-    assert 'is_valid_model(provider, self.model)' in source
-    assert 'open_dialog' not in SWITCH_OPS.read_text(encoding='utf-8')
+def test_the_switch_is_the_island_cards_and_never_opens_the_dialog():
+    """`mixar_byok.switch_model` had no caller once the card ran every pick
+    through `mixar.agent_pick`; `switch()` is what that pick runs."""
+    tree = ast.parse(SWITCH_OPS.read_text(encoding='utf-8'))
+    source = SWITCH_OPS.read_text(encoding='utf-8')
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+    assert 'mixar_byok.switch_model' not in source
+    assert 'byok_client.resave_stored_key(model, on_done=_done)' in source
+    assert 'credential_state.begin_switch(' in source
+    assert 'open_dialog' not in source
     assigned = {t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
                 if isinstance(t, ast.Name)}
     assert 'classes' in assigned

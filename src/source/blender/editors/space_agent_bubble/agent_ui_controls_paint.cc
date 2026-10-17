@@ -412,8 +412,8 @@ void agent_ui_draw_chip_row(ARegion *region,
     }
   }
 
-  /* Mixie | Custom AI and, while a key is in use, the key chip — who answers
-   * the agent (agent_ui_provider.cc). */
+  /* The model chip — who answers the agent and which model
+   * (agent_ui_provider.cc). */
   agent_ui_draw_provider(region, layout, state);
 
   agent_ui_draw_refine_controls(region, layout, state);

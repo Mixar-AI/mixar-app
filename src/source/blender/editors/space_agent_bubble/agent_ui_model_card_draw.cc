@@ -21,6 +21,8 @@
 #include "BLF_api.hh"
 #include "BLI_rect.h"
 
+#include "DNA_userdef_types.h"
+
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
@@ -57,6 +59,14 @@ constexpr float THUMB_HOT[4] = HEX(0xFFFFFF, 0.34f);
 
 constexpr int WEIGHT_REGULAR = 500;
 constexpr int WEIGHT_STRONG = 650;
+
+/** The weight the island's other text is drawn at: the widget style's. Text
+ * here goes back to it after its own weight (other island text assumes it). */
+int widget_weight()
+{
+  const uiStyle *style = ui::style_get();
+  return style ? style->widget.character_weight : WEIGHT_REGULAR - 100;
+}
 
 void with_alpha(const float in[4], const float alpha, float r_out[4])
 {
@@ -106,7 +116,7 @@ float text(const char *str,
   BLF_position(font, x, cy - float(box.ymin + box.ymax) * 0.5f, 0.0f);
   BLF_draw(font, str, len);
   if (!mono) {
-    BLF_character_weight(font, WEIGHT_REGULAR - 100);
+    BLF_character_weight(font, widget_weight());
   }
   return w;
 }
@@ -116,7 +126,7 @@ std::string fit(const char *str, const float width, const float size, const int 
 {
   BLF_character_weight(BLF_default(), weight);
   std::string out = ui::mixar_fit_text(str, width, size);
-  BLF_character_weight(BLF_default(), WEIGHT_REGULAR - 100);
+  BLF_character_weight(BLF_default(), widget_weight());
   return out;
 }
 
@@ -345,17 +355,10 @@ void draw(const wmWindow * /*win*/, void *customdata)
   }
   const Metrics m = metrics(state);
   const float a = appear_factor(state);
-  Layout l = layout_compute(state);
-  /* Rise into place. */
-  const float rise = (1.0f - a) * m.fs * 0.6f;
-  State shifted = state;
-  shifted.anchor.ymin -= rise;
-  shifted.anchor.ymax -= rise;
-  if (rise > 0.0f) {
-    l = layout_compute(shifted);
-  }
-  const State &s = rise > 0.0f ? shifted : state;
+  /* Rise into place (the modal hit-tests the same layout). */
+  const Layout l = layout_compute(state, card_rise(state));
 
+  const GPUBlend blend_prev = GPU_blend_get();
   GPU_blend(GPU_BLEND_ALPHA);
   shadow(l.card, m.radius, m.fs, a);
   float col[4];
@@ -364,23 +367,24 @@ void draw(const wmWindow * /*win*/, void *customdata)
   with_alpha(BORDER, a, col);
   outline(l.card, m.radius, col);
 
-  draw_tabs(s, l, m, a);
-  draw_caption(s, l, m, a);
+  draw_tabs(state, l, m, a);
+  draw_caption(state, l, m, a);
 
   int scissor[4];
   GPU_scissor_get(scissor);
   GPU_scissor_test(true);
   GPU_scissor(int(l.list.xmin), int(l.list.ymin), int(BLI_rctf_size_x(&l.list)),
               int(BLI_rctf_size_y(&l.list)));
-  for (int i = 0; i < int(s.lines.size()); i++) {
-    draw_line(s, l, m, i, a);
+  for (int i = 0; i < int(state.lines.size()); i++) {
+    draw_line(state, l, m, i, a);
   }
   GPU_scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+  /* Window draw callbacks run with the test off; GPU has no getter for it. */
   GPU_scissor_test(false);
 
-  draw_scrollbar(s, l, m, a);
-  draw_footer(s, l, m, a);
-  GPU_blend(GPU_BLEND_NONE);
+  draw_scrollbar(state, l, m, a);
+  draw_footer(state, l, m, a);
+  GPU_blend(blend_prev);
 }
 
 }  // namespace blender::agent_model_card

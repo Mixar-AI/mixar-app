@@ -20,6 +20,7 @@ modules depend on them. Do not widen them.
 """
 
 import threading
+from threading import current_thread, main_thread
 from typing import Any, Callable, Optional
 
 from mixar.config.config import get_server_url
@@ -175,6 +176,20 @@ def mutation_in_flight() -> bool:
     return _mutations_in_flight > 0
 
 
+def _mirror_busy() -> None:
+    """Re-write the island picker's mirror: its BUSY state follows the count
+    (the card words its gate from it). Main thread only — the count is also
+    released off-thread at interpreter shutdown, where bpy is off limits."""
+    if current_thread() is not main_thread():
+        return
+    try:
+        from . import picker_mirror
+
+        picker_mirror.apply_to_wm()
+    except Exception as e:  # noqa: BLE001 — a mirror write never blocks a request
+        logger.debug("BYOK picker mirror not refreshed: %s", e)
+
+
 def _track(on_done: Callable) -> Callable:
     """Count a request until its callback runs (released BEFORE the caller's
     callback, so a raising callback cannot leave it stuck)."""
@@ -182,6 +197,7 @@ def _track(on_done: Callable) -> Callable:
     _mutations_in_flight += 1
     generation = _in_flight_generation
     released = [False]
+    _mirror_busy()
 
     def _release():
         global _mutations_in_flight
@@ -189,6 +205,7 @@ def _track(on_done: Callable) -> Callable:
             released[0] = True
             if generation == _in_flight_generation:
                 _mutations_in_flight = max(0, _mutations_in_flight - 1)
+                _mirror_busy()
 
     def _done(*args):
         _release()
@@ -209,6 +226,7 @@ def reset_in_flight() -> None:
     global _mutations_in_flight, _in_flight_generation
     _mutations_in_flight = 0
     _in_flight_generation += 1
+    _mirror_busy()
 
 
 def _run_worker(name: str, work: Callable[[], tuple], on_done: Callable,

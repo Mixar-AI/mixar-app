@@ -20,7 +20,7 @@
  *                 (no invented "New Chat" fallback)
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   auto switch   scene.mixie_chat_auto_mode
- *   model chip    wm.mixar_agent_model_label / wm.mixar_agent_model_byok_active
+ *   model chip    wm.mixar_agent_{source,source_label,chip_name,source_state}
  *                 (absent until the Python half registers them)
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
@@ -414,8 +414,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                                std::clamp(RNA_property_float_get(&wm_ptr, level), 0.0f, 1.0f) :
                                0.0f;
   }
-  /* Hosted model pick and the key chip: the Python half's WindowManager
-   * mirror; absent properties read as "no picker" (agent_ui_provider.cc). */
+  /* The model chip: the Python half's WindowManager mirror; absent
+   * properties read as "no picker" (agent_ui_provider.cc). */
   agent_ui_provider_gather(wm, r_state);
 
   cat.listening = r_state->voice_listening;

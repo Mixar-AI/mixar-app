@@ -6,8 +6,12 @@
 
 One function, `apply_to_wm`, called from every place the inputs change:
 `credential_state.apply_to_wm`, `preference_state.apply_to_wm`, the catalog
-load (`models_cache._redraw`) and the thinking toggle. It reads the three
-mirrors, runs `picker` and writes the strings the C++ chip and popup draw.
+load (`models_cache._redraw`), the first draw after start-up and every change
+of the signed-in / guest flags (their RNA updates), and the start and end of
+a hosted pick (`preference_state.begin_mutation` / `end_mutation`) or a
+dialog save / removal (`byok_client._track`): the chip's BUSY state is what
+the island card words its gate from. It reads the three mirrors, runs
+`picker` and writes the strings the C++ chip and popup draw.
 The island card (agent_ui_model_card.cc) owns its open tab and its thinking
 disclosure; it opens on the source in use every time.
 """
@@ -28,12 +32,14 @@ def apply_to_wm(wm=None) -> None:
     if target is None or not hasattr(target, "mixar_agent_rows"):
         return  # properties not registered yet; the next apply catches up
     try:
-        from . import credential_state, model_suggestions, preference_state
+        from . import byok_client, credential_state, model_suggestions, preference_state
 
         state = picker.picker_state(
             credential_state.snapshot(), preference_state.snapshot(),
             guest=bool(getattr(target, "mixie_chat_is_guest", False)),
-            pending=credential_state.pending(), switching=credential_state.switching())
+            signed_in=bool(getattr(target, "mixie_chat_is_logged_in", True)),
+            pending=credential_state.pending(), switching=credential_state.switching(),
+            busy=byok_client.mutation_in_flight() or preference_state.mutation_pending())
         tabs = picker.build_tabs(state)
         rows = picker.build_rows(state, model_suggestions.get_platform_models())
         chip = picker.chip(state)

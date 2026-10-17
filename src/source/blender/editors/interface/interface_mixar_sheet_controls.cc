@@ -5,9 +5,10 @@
 /** \file
  * \ingroup edinterface
  *
- * AI Provider settings sheet — the controls: the close square, provider
- * rows and the sidebar's Local Model foot, model chips, the docked pills and
- * the key field they dock into. See `interface_mixar_sheet.hh` for the
+ * AI Provider settings sheet — the painters: the text elements (title,
+ * caption, prompt / note / body lines), the close square, provider rows and
+ * the sidebar's Local Model foot, model chips, the docked pills and the key
+ * field they dock into. See `interface_mixar_sheet.hh` for the
  * artboard the numbers come from.
  *
  * Every control reads its hover / press / selection from
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
 
 #include "BLI_math_color.h"
 #include "BLI_rect.h"
@@ -63,9 +65,115 @@ static float hover_cue(const MixarInteraction &motion)
   return std::min(1.0f, motion.hover + motion.press);
 }
 
+static void dim(uchar col[4], const float alpha)
+{
+  col[3] = uchar(std::lround(float(col[3]) * alpha));
+}
+
 static float line_px()
 {
   return std::max(float(U.pixelsize), px(frame_line));
+}
+
+/* -- Text elements ------------------------------------------------------- */
+
+/** "Title\nSubtitle": the title on the artboard's baseline below the sheet's
+ * top edge, the subtitle on its own, both from the sheet's left margin. The
+ * button's rect ends where the close square's slot begins (the sheet's edge
+ * in the busy states, which have none); both lines keep the close square's
+ * right margin from it and are ellipsised past that, so a long translation
+ * never runs under the cross or off the card. */
+void draw_title(Button *but, const rcti *rect)
+{
+  const std::string text = label(but);
+  const size_t nl = text.find('\n');
+  const std::string title = text.substr(0, nl);
+  const std::string subtitle = nl == std::string::npos ? "" : text.substr(nl + 1);
+  const float x = float(rect->xmin) + px(title_x);
+  const float top = float(rect->ymax);
+  const float max_w = float(rect->xmax) - px(close_right) - x;
+  const int title_font = font(title_size, weight_strong);
+  text_at(title_font,
+          x,
+          top - px(title_baseline),
+          fit(title_font, title.c_str(), max_w).c_str(),
+          text_bright);
+  if (!subtitle.empty()) {
+    const int subtitle_font = font(subtitle_size, weight_regular);
+    text_at(subtitle_font,
+            x,
+            top - px(subtitle_baseline),
+            fit(subtitle_font, subtitle.c_str(), max_w).c_str(),
+            text_dim);
+  }
+}
+
+/** Dim caption with bright spans: "ALL SUPPORTED \x1fANTHROPIC\x1f MODELS",
+ * tail-ellipsised to the button's width as one line (the ellipsis takes the
+ * colour of the span it cuts). */
+void draw_caption(Button *but, const rcti *rect)
+{
+  /* The island card's caption: monospace, dim, the bright span lit. */
+  const int font_id = font(caption_size, weight_regular, true);
+  const std::string text = label(but);
+  rctf box;
+  BLI_rctf_rcti_copy(&box, rect);
+  const float baseline = BLI_rctf_cent_y(&box) - cap_height(font_id) * 0.5f;
+  const float fade = disabled(but) ? 0.5f : 1.0f;
+  uchar dim_col[4], bright_col[4];
+  memcpy(dim_col, text_dim, 4);
+  memcpy(bright_col, text_bright, 4);
+  dim(dim_col, fade);
+  dim(bright_col, fade);
+
+  /* Fit the caption as the reader sees it (marks dropped), then spend that
+   * many bytes across the spans. */
+  std::string plain = text;
+  plain.erase(std::remove(plain.begin(), plain.end(), caption_bright_mark), plain.end());
+  const std::string shown = fit(font_id, plain.c_str(), BLI_rctf_size_x(&box));
+  const bool clipped = shown != plain;
+  const char *ellipsis = "\xe2\x80\xa6";
+  size_t budget = clipped ? shown.size() - std::min(shown.size(), strlen(ellipsis)) :
+                            plain.size();
+
+  float x = float(rect->xmin);
+  bool bright = false;
+  size_t start = 0;
+  while (start <= text.size()) {
+    size_t end = text.find(caption_bright_mark, start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string segment = text.substr(start, std::min(end - start, budget));
+    budget -= segment.size();
+    const bool cut = clipped && budget == 0;
+    if (cut) {
+      segment += ellipsis;
+    }
+    if (!segment.empty()) {
+      text_at(font_id, x, baseline, segment.c_str(), bright ? bright_col : dim_col);
+      x += text_width(font_id, segment.c_str());
+    }
+    if (cut) {
+      break;
+    }
+    bright = !bright;
+    start = end + 1;
+  }
+}
+
+void draw_text(Button *but,
+                      const rcti *rect,
+                      const float size_dp,
+                      const uchar col_in[4],
+                      const int weight)
+{
+  uchar col[4];
+  memcpy(col, col_in, 4);
+  dim(col, disabled(but) ? 0.5f : 1.0f);
+  rctf box;
+  BLI_rctf_rcti_copy(&box, rect);
+  text_in(font(size_dp, weight), box, label(but), col, false);
 }
 
 /* -- Close ---------------------------------------------------------------- */
@@ -75,9 +183,9 @@ void draw_close(Button *but, const rcti *rect)
   const MixarInteraction motion = mixar_button_motion(*but);
   rctf square;
   BLI_rctf_rcti_copy(&square, rect);
-  /* The layout hands this button a 100-wide slot reaching down from the
-   * sheet's top edge: the square sits at its foot, the artboard's 40 below
-   * the edge; a shorter rect (an old layout) keeps the square at its top. */
+  /* The layout hands this button a #close_size-wide slot reaching down from
+   * the sheet's top edge: the square sits at its foot, #close_top below the
+   * edge; a shorter rect (an old layout) keeps the square at its top. */
   const float size = std::min(px(close_size),
                               std::min(BLI_rctf_size_x(&square), BLI_rctf_size_y(&square)));
   square.xmin = square.xmax - size;
@@ -235,7 +343,7 @@ void draw_pill(Button *but, const rcti *rect, const MixarCardElement element)
   const float fade = disabled(but) ? 0.45f : 1.0f;
   rctf pill;
   BLI_rctf_rcti_copy(&pill, rect);
-  /* Docked: the pill sits inside the key field with the artboard's 8 px
+  /* Docked: the pill sits inside the key field with #button_dock_inset of
    * breathing room on the field's top, bottom and right edges. */
   if (but->mixar_style.progress >= 0.5f) {
     const float inset = px(button_dock_inset);
@@ -335,12 +443,17 @@ void UI_mixar_sheet_dropdown_draw(Button *but, const rcti *rect)
 
   /* Chevron at the right end. */
   const float half = px(dropdown_chevron) * 0.5f;
-  const float cx = box.xmax - px(30.0f);
+  const float cx = box.xmax - px(dropdown_chevron_right);
   const float cy = BLI_rctf_cent_y(&box);
   const float width = px(2.0f);
   stroke(cx - half, cy + half * 0.5f, cx, cy - half * 0.5f, width, text_dim, fade);
   stroke(cx, cy - half * 0.5f, cx + half, cy + half * 0.5f, width, text_dim, fade);
   GPU_blend(GPU_BLEND_NONE);
+}
+
+int UI_mixar_sheet_dropdown_text_inset()
+{
+  return int(std::lround(px(dropdown_text_right)));
 }
 
 }  // namespace blender::ui

@@ -28,7 +28,11 @@ composer types again instead of the viewport taking the keys as shortcuts.
 
 import ast
 import re
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WM = ROOT / "src/source/blender/windowmanager"
@@ -219,3 +223,63 @@ def test_byok_uses_the_native_dialog_and_falls_back():
     src = BYOK.read_text()
     assert "island_dialog" not in src
     assert len(src.splitlines()) <= 500
+
+
+# --- the single-instance flag on every open path (functional) ----------------
+
+def _byok():
+    """The dialog operator module under the bpy mock (test_byok_dialog_ui
+    installs it) and that suite's fake WindowManager."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_byok_dialog_ui import _wm, byok_ops
+    return byok_ops, _wm
+
+
+def _invoke_with(monkeypatch, wm):
+    """Run open_dialog.invoke against ``wm`` with its data prep stubbed."""
+    byok_ops, _ = _byok()
+    monkeypatch.setattr(byok_ops.byok_client, "mutation_in_flight", lambda: False)
+    monkeypatch.setattr(byok_ops, "_saved_provider_model", lambda wm: (None, None))
+    monkeypatch.setattr(byok_ops, "_prefill_from_prompt", lambda wm, prompt: None)
+    monkeypatch.setattr(byok_ops.model_suggestions, "is_loaded", lambda: True)
+    monkeypatch.setattr(byok_ops, "_dialog_host_window", lambda context: None)
+    monkeypatch.setattr(byok_ops, "_dialog_open", False)
+    context = SimpleNamespace(window_manager=wm, window=None)
+    return byok_ops.MIXAR_BYOK_OT_open_dialog().invoke(context, None)
+
+
+def test_a_failing_dialog_open_releases_the_single_instance_flag(monkeypatch):
+    """Every open path that raises must clear `_dialog_open`, or the dialog
+    could never be opened again this session."""
+    byok_ops, _wm = _byok()
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("no window")
+
+    # Old binary: the plain props dialog.
+    wm = _wm('IDLE', invoke_props_dialog=boom)
+    with pytest.raises(RuntimeError):
+        _invoke_with(monkeypatch, wm)
+    assert byok_ops._dialog_open is False
+
+    # A modal dialog predating `sheet`, whose plain retry fails too.
+    calls = []
+
+    def modal(op, width, **kwargs):
+        calls.append(kwargs)
+        if kwargs.get("sheet"):
+            raise TypeError("modal() got an unexpected keyword argument 'sheet'")
+        raise RuntimeError("no window")
+
+    wm = _wm('IDLE', mixar_invoke_modal_dialog=modal)
+    with pytest.raises(RuntimeError):
+        _invoke_with(monkeypatch, wm)
+    assert calls == [{"sheet": True}, {}]
+    assert byok_ops._dialog_open is False
+
+    # And a successful open keeps it set until the dialog closes.
+    wm = _wm('IDLE', mixar_invoke_modal_dialog=lambda op, width, **kw: {'RUNNING_MODAL'})
+    assert _invoke_with(monkeypatch, wm) == {'RUNNING_MODAL'}
+    assert byok_ops._dialog_open is True
+    byok_ops.MIXAR_BYOK_OT_open_dialog().cancel(SimpleNamespace(window_manager=wm))
+    assert byok_ops._dialog_open is False

@@ -351,7 +351,7 @@ class FormPlan:
         return iface_("Save & Activate")
 
     def _docked_save(self, field, prop, focus):
-        """Save & Activate docked in ``field``: the artboard's 262 pill, wider
+        """Save & Activate docked in ``field``: the artboard's SAVE_W pill, wider
         only when its label (Validating with your provider…) needs it."""
         text = self._save_text()
         width = max(S.SAVE_W, S.text_width(field, S.PRIMARY, text) + 2 * S.BUTTON_PAD)

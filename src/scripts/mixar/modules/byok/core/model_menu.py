@@ -38,10 +38,11 @@ def format_thinking_level(level: str) -> str:
 
 
 def format_thinking_label(level: str) -> str:
-    """Sub-row wording for one thinking level."""
+    """Sub-row wording for one thinking level, translated (the card draws
+    it as given)."""
     text = format_thinking_level(level)
     if not text:
-        return n_("Thinking")
+        return iface_("Thinking")
     return iface_("Thinking: {level}").format(level=iface_(text))
 
 

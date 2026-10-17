@@ -217,8 +217,6 @@ float agent_ui_provider_text_width(const char *text, const float size, const int
 void agent_ui_provider_gather(wmWindowManager *wm, AgentIslandState *r_state)
 {
   r_state->model_available = false;
-  r_state->model_byok_active = false;
-  r_state->model_label[0] = '\0';
   BLI_strncpy(r_state->model_source, "MIXIE", sizeof(r_state->model_source));
   r_state->model_source_label[0] = '\0';
   r_state->model_chip_name[0] = '\0';
@@ -235,7 +233,6 @@ void agent_ui_provider_gather(wmWindowManager *wm, AgentIslandState *r_state)
     return;
   }
   r_state->model_available = true;
-  read_string(&wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
   read_string(&wm_ptr, "mixar_agent_source", r_state->model_source, sizeof(r_state->model_source));
   read_string(&wm_ptr,
               "mixar_agent_source_label",
@@ -247,7 +244,6 @@ void agent_ui_provider_gather(wmWindowManager *wm, AgentIslandState *r_state)
               "mixar_agent_source_state",
               r_state->model_chip_state,
               sizeof(r_state->model_chip_state));
-  r_state->model_byok_active = !STREQ(r_state->model_source, "MIXIE");
 }
 
 void agent_ui_draw_provider(ARegion *region,

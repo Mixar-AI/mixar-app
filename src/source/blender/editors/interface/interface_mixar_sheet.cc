@@ -5,8 +5,8 @@
 /** \file
  * \ingroup edinterface
  *
- * AI Provider settings sheet — the text kit, the framed backdrop, the tags
- * and the text elements. Controls (close, rows, chips, pills) are in
+ * AI Provider settings sheet — the text kit, the framed backdrop and the
+ * tags. The painters (text elements, close, rows, chips, pills) are in
  * `interface_mixar_sheet_controls.cc`; the design is described in
  * `interface_mixar_sheet.hh`.
  *
@@ -90,32 +90,35 @@ float text_width(const int font_id, const char *text)
   return BLF_width(font_id, text, strlen(text));
 }
 
-/** Cap height of the face at its current size: the artboard centres labels
- * on their caps, not on the ascender/descender box. */
-static float cap_height(const int font_id)
+float cap_height(const int font_id)
 {
   rcti box;
   BLF_boundbox(font_id, "H", 1, &box);
   return float(std::max(box.ymax, 1));
 }
 
-void text_at(
-    const int font_id, const float x, const float baseline, const char *text, const uchar col[4])
+/** Blender's widget text pass assumes the style's weight on the UI face:
+ * every exit of a draw that called #font puts it back, empty text included
+ * (an icon-only pill, a blank label). */
+static void restore_weight(const int font_id)
 {
-  if (text == nullptr || text[0] == '\0') {
-    return;
-  }
-  BLF_color4ubv(font_id, col);
-  BLF_position(font_id, std::round(x), std::round(baseline), 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-  /* Blender's widget text pass assumes the style's weight on the UI face. */
   if (font_id == BLF_default()) {
     BLF_character_weight(font_id, widget_weight());
   }
 }
 
-/** \a text shortened with a tail ellipsis to \a max_w px. */
-static std::string fit(const int font_id, const char *text, const float max_w)
+void text_at(
+    const int font_id, const float x, const float baseline, const char *text, const uchar col[4])
+{
+  if (text != nullptr && text[0] != '\0') {
+    BLF_color4ubv(font_id, col);
+    BLF_position(font_id, std::round(x), std::round(baseline), 0.0f);
+    BLF_draw(font_id, text, strlen(text));
+  }
+  restore_weight(font_id);
+}
+
+std::string fit(const int font_id, const char *text, const float max_w)
 {
   const size_t len = strlen(text);
   if (max_w <= 0.0f) {
@@ -145,6 +148,7 @@ void text_in(const int font_id,
              const bool centre)
 {
   if (text == nullptr || text[0] == '\0') {
+    restore_weight(font_id);
     return;
   }
   const std::string shown = fit(font_id, text, BLI_rctf_size_x(&rect));
@@ -188,91 +192,6 @@ rctf block_rect(const Button *but)
   /* Popup blocks project 1:1 onto their region, so block space is region
    * pixel space here (`block_to_region_fl` with the popup's ortho winmat). */
   return but->block->rect;
-}
-
-static const char *label(const Button *but)
-{
-  return but->str.empty() ? but->drawstr.c_str() : but->str.c_str();
-}
-
-static bool disabled(const Button *but)
-{
-  return (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
-}
-
-static void dim(uchar col[4], const float alpha)
-{
-  col[3] = uchar(std::lround(float(col[3]) * alpha));
-}
-
-/* -- Text elements ------------------------------------------------------- */
-
-/** "Title\nSubtitle": the title on the artboard's baseline below the sheet's
- * top edge, the subtitle on its own, both from the sheet's left margin. */
-static void draw_title(Button *but, const rcti *rect)
-{
-  const std::string text = label(but);
-  const size_t nl = text.find('\n');
-  const std::string title = text.substr(0, nl);
-  const std::string subtitle = nl == std::string::npos ? "" : text.substr(nl + 1);
-  const float x = float(rect->xmin) + px(title_x);
-  const float top = float(rect->ymax);
-  text_at(font(title_size, weight_strong), x, top - px(title_baseline), title.c_str(), text_bright);
-  if (!subtitle.empty()) {
-    text_at(font(subtitle_size, weight_regular),
-            x,
-            top - px(subtitle_baseline),
-            subtitle.c_str(),
-            text_dim);
-  }
-}
-
-/** Dim caption with bright spans: "ALL SUPPORTED \x1fANTHROPIC\x1f MODELS". */
-static void draw_caption(Button *but, const rcti *rect)
-{
-  /* The island card's caption: monospace, dim, the bright span lit. */
-  const int font_id = font(caption_size, weight_regular, true);
-  const std::string text = label(but);
-  rctf box;
-  BLI_rctf_rcti_copy(&box, rect);
-  const float baseline = BLI_rctf_cent_y(&box) - cap_height(font_id) * 0.5f;
-  const float fade = disabled(but) ? 0.5f : 1.0f;
-  uchar dim_col[4], bright_col[4];
-  memcpy(dim_col, text_dim, 4);
-  memcpy(bright_col, text_bright, 4);
-  dim(dim_col, fade);
-  dim(bright_col, fade);
-
-  float x = float(rect->xmin);
-  bool bright = false;
-  size_t start = 0;
-  while (start <= text.size()) {
-    size_t end = text.find(caption_bright_mark, start);
-    if (end == std::string::npos) {
-      end = text.size();
-    }
-    const std::string segment = text.substr(start, end - start);
-    if (!segment.empty()) {
-      text_at(font_id, x, baseline, segment.c_str(), bright ? bright_col : dim_col);
-      x += text_width(font_id, segment.c_str());
-    }
-    bright = !bright;
-    start = end + 1;
-  }
-}
-
-static void draw_text(Button *but,
-                      const rcti *rect,
-                      const float size_dp,
-                      const uchar col_in[4],
-                      const int weight = weight_regular)
-{
-  uchar col[4];
-  memcpy(col, col_in, 4);
-  dim(col, disabled(but) ? 0.5f : 1.0f);
-  rctf box;
-  BLI_rctf_rcti_copy(&box, rect);
-  text_in(font(size_dp, weight), box, label(but), col, false);
 }
 
 }  // namespace mixar_sheet
@@ -414,12 +333,19 @@ float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text
     case MixarCardElement::SheetDangerButton:
       weight = weight_strong;
       break;
+    case MixarCardElement::SheetProviderRow:
+    case MixarCardElement::SheetFooterRow:
+      /* A row draws its name at the strong weight while lit, medium at rest:
+       * sized for the wider face, picking a row never ellipsises its name. */
+      weight = weight_strong;
+      break;
     default:
       break;
   }
   /* In half design px (Python doubles it), on the layout's unit (see px). */
-  const float w = text_width(font(size, weight, mono), text) * 20.0f / float(UI_UNIT_X);
-  BLF_character_weight(BLF_default(), widget_weight());
+  const int font_id = font(size, weight, mono);
+  const float w = text_width(font_id, text) * 20.0f / float(UI_UNIT_X);
+  restore_weight(font_id);
   return w;
 }
 

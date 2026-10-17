@@ -99,6 +99,18 @@ def register():
     WM.mixar_agent_source_state = StringProperty(default="OK", options={'SKIP_SAVE'})
     WM.mixar_agent_tabs = StringProperty(default="", options={'SKIP_SAVE'})
     WM.mixar_agent_rows = StringProperty(default="", options={'SKIP_SAVE'})
+    # Fill them once at start-up: signed out, no credential or catalog event
+    # would ever write them, and the chip and card would stay blank.
+    bpy.app.timers.register(_first_mirror, first_interval=0.1)
+
+
+def _first_mirror():
+    try:
+        from ...core import picker_mirror
+        picker_mirror.apply_to_wm()
+    except Exception:
+        pass
+    return None
 
 
 def unregister():

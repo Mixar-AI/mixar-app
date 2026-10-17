@@ -6,12 +6,12 @@
 
 `pause` / `resume` are what the island model card's picks run
 (`agent_pick_ops.py`: a Mixie pick over a key pauses it, a key-tab pick with
-the key paused resumes it); `mixar_byok.use_mixie` / `use_key` wrap them for
-the dialog ("Use my key") and Python callers.
+the key paused resumes it); `mixar_byok.use_key` wraps the resume for AI
+Provider Settings ("Use my key").
 
 The key lives on this computer (`core/key_store`); the server keeps metadata
 only. So nothing here asks for the key or deletes it:
-- **Pause** (a key in use): the server's rows are deleted the server's rows are deleted
+- **Pause** (a key in use): the server's rows are deleted
   (`byok_client.delete_credentials(forget_local=False)`) so Mixie answers,
   the platform pick applies and credits are charged — and this computer
   keeps the key record. Only a key a resume could bring back is paused
@@ -42,11 +42,6 @@ key when it started, so a pause or resume now would apply only to the next
 message while the chip said otherwise. `use_key` still opens the settings
 meanwhile when there is nothing to resume.
 
-Two operators, not `open_dialog` with a property: the toggle's halves are
-adjacent unlabelled buttons, and when the island rebuilds its block Blender
-matches the active button to its predecessor by operator type, so two
-`open_dialog` buttons could trade their properties after a layout change.
-
 `mixar_byok.forget_stored_key` (the dialog's "Forget saved key" while
 paused) deletes this computer's record only; the server holds nothing.
 """
@@ -71,39 +66,6 @@ def _can_toggle() -> bool:
     # removal still in flight would race this echo.
     return (not credential_state.pending() and not preference_state.mutation_pending()
             and not byok_client.mutation_in_flight())
-
-
-class MIXAR_BYOK_OT_use_mixie(Operator):
-    """Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"""
-    bl_idname = "mixar_byok.use_mixie"
-    bl_label = "Use Mixie"
-    bl_options = {'INTERNAL'}
-
-    @classmethod
-    def poll(cls, context):
-        if turn_in_flight(context):
-            cls.poll_message_set(TURN_IN_FLIGHT_MESSAGE)
-            return False
-        return _can_toggle()
-
-    def invoke(self, context, _event):
-        return self.execute(context)
-
-    def execute(self, context):
-        if turn_in_flight(context):
-            self.report({'WARNING'}, TURN_IN_FLIGHT_MESSAGE)
-            return {'CANCELLED'}
-        # Either mirror may be the first to say a key is in use (the island's
-        # thumb reads the hosted pick's flag); Mixie already answering is a no-op.
-        if not (credential_state.snapshot()["byok_is_active"]
-                or preference_state.snapshot()["mixar_agent_model_byok_active"]):
-            return {'CANCELLED'}
-        if not credential_state.pausable():
-            # Nothing a resume could bring back (Local, a revoked sign-in, a
-            # record without a model, or the store not read yet): the settings
-            # own that decision — Remove key lives there.
-            return _open_settings()
-        return {'FINISHED'} if _pause(context.window_manager) else {'CANCELLED'}
 
 
 class MIXAR_BYOK_OT_use_key(Operator):
@@ -186,9 +148,6 @@ def pause(wm, then=None) -> bool:
 
     byok_client.delete_credentials(on_done=_done, forget_local=False)
     return True
-
-
-_pause = pause  # the tests' and the toggle's own name for it
 
 
 def _on_pause_done(success, removed_count, err, epoch, pref_epoch, then=None):
@@ -310,7 +269,6 @@ def _redraw() -> None:
 
 
 classes = (
-    MIXAR_BYOK_OT_use_mixie,
     MIXAR_BYOK_OT_use_key,
     MIXAR_BYOK_OT_forget_stored_key,
 )

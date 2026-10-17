@@ -807,6 +807,16 @@ def _on_chat_mode_changed(self, context):
             pass
 
 
+def _mirror_model_picker(self, _context):
+    """Signing in / out or becoming a guest changes what the island's model
+    card offers (Mixar's models need an account): re-mirror it."""
+    try:
+        from mixar.modules.byok.core import picker_mirror
+        picker_mirror.apply_to_wm(self)
+    except Exception:
+        pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -1068,6 +1078,7 @@ def register():
         name="Is Logged In",
         description="Whether user is currently logged in",
         default=False,
+        update=_mirror_model_picker,
     )
 
     # Mirrors /auth/me's is_guest: logged in on a guest account (no sign-in
@@ -1076,6 +1087,7 @@ def register():
         name="Is Guest",
         description="Whether the current session is a guest account",
         default=False,
+        update=_mirror_model_picker,
     )
 
     bpy.types.WindowManager.mixie_chat_is_logging_in = BoolProperty(

@@ -27,7 +27,7 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.byok.core import credential_state, key_prompt  # noqa: E402
-from mixar.modules.byok.ui.operators import byok_dialog_ui  # noqa: E402
+from mixar.modules.byok.ui.operators import byok_dialog_ui, byok_sheet  # noqa: E402
 from mixar.modules.space_mixie_chat.constants import SessionState  # noqa: E402
 from mixar.modules.space_mixie_chat.core import byok_card, byok_notice, byok_resend, composer_send  # noqa: E402
 
@@ -190,20 +190,16 @@ def test_closing_the_dialog_without_saving_forgets_the_resend():
     key_prompt.notify_saved()          # nothing to run
 
 
-def test_field_input_focuses_the_credential_field_only_when_asked():
-    class Row:
-        def __init__(self):
-            self.scale_y = 1.0
-
+def test_the_key_field_focuses_the_credential_field_only_when_asked():
+    class Field:
         def prop(self, *a, **kw):
             pass
 
-    rows = []
-    col = SimpleNamespace(row=lambda align=False: rows.append(Row()) or rows[-1])
-    byok_dialog_ui.field_input(col, object(), "byok_form_api_key")
-    assert not hasattr(rows[0], "activate_init")
-    byok_dialog_ui.field_input(col, object(), "byok_form_api_key", activate=True)
-    assert rows[1].activate_init is True
+    rest, asked = Field(), Field()
+    byok_sheet.input_field(rest, object(), "byok_form_api_key")
+    assert not hasattr(rest, "activate_init")
+    byok_sheet.input_field(asked, object(), "byok_form_api_key", activate=True)
+    assert asked.activate_init is True
 
 
 def test_the_dialog_operator_takes_the_prefill_and_resends_on_save():

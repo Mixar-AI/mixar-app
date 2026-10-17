@@ -26,18 +26,11 @@ State machine lives on WindowManager (see ui/properties/byok_props.py);
 operators and async flow live in byok_ops.py. This module only draws.
 """
 
-from mixar.modules.common.i18n import iface_, n_
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core import catalog_labels, model_suggestions
 from . import byok_provider_settings_ui as form
 from . import byok_sheet as S
-from .byok_dialog_chrome import (  # re-exported: other surfaces still use the card kit
-    card_label,
-    field_dropdown,
-    field_input,
-    field_label,
-    op_button,
-)
 
 # Operator idnames as literals — byok_ops imports this module for its draw()
 # body, so importing the classes back would be circular.
@@ -113,9 +106,9 @@ def _draw_header(sheet, state):
         # Busy states keep the dialog until the request lands.
         return
     # The ✕: a cancel-path dismiss, so Esc and this both wipe transient
-    # secrets. A 100-wide slot, 42 from the right, reaching down from the
-    # sheet's top edge; the painter puts the 100-square at its foot, 40 below
-    # the edge (the slot's top is the sheet's top margin).
+    # secrets. A CLOSE-wide slot, CLOSE_RIGHT from the right, reaching down
+    # from the sheet's top edge; the painter puts the CLOSE square at its
+    # foot, CLOSE_TOP below the edge (the slot's top is the sheet's top).
     slot = S.sized(header, S.CLOSE)
     slot.scale_y = S.units(S.CLOSE_TOP + S.CLOSE)
     S.dismiss(slot, CLOSE_GLYPH, S.CLOSE_KIND)
@@ -155,13 +148,18 @@ def _foot_row(col):
 
 
 class _ConfirmRemovePlan:
-    """CONFIRM_REMOVE: what removing the key means; keeping it is the default."""
+    """CONFIRM_REMOVE: what removing the key means; keeping it is the default.
+    A failed DELETE lands back here with its error over the buttons, so
+    Remove is the retry."""
 
-    need = 7 * BODY_ROW + S.GAP
     bottom = S.action_block_height()
 
     def __init__(self, wm):
         self.wm = wm
+        # Static messages are stored as msgids; formatted ones arrive translated.
+        self.errors = form.wrap(rpt_(wm.byok_last_error), form.ERROR_WRAP_CHARS)[:2] \
+            if wm.byok_last_error else []
+        self.need = (7 + len(self.errors)) * BODY_ROW + S.GAP
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
@@ -174,6 +172,7 @@ class _ConfirmRemovePlan:
         S.sep(area, S.GAP)
         _lines(area, [iface_("The agent will use Mixar's models again."),
                       iface_("Agent chats will use Mixar credits again.")], S.NOTE)
+        _lines(area, self.errors, S.DANGER_TEXT)
         line = _foot_row(col)
         keep = iface_("Stay connected") if signs_in else iface_("Keep my key")
         for op, text, kind, default in ((OP_CANCEL_REMOVE, keep, S.SECONDARY, True),

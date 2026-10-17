@@ -11,6 +11,7 @@
  */
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "BLF_api.hh"
@@ -32,6 +33,21 @@ namespace {
 
 /** The card rises into place over this long (reduced motion: at once). */
 constexpr double APPEAR_SECONDS = 0.14;
+/** From this far below its place, in body text sizes. */
+constexpr float RISE_FS = 0.6f;
+/** An eased value this close to its goal lands on it (the timer then rests). */
+constexpr float SNAP = 0.002f;
+
+/** One eased step of \a value toward \a goal; true when it changed. */
+bool ease(float &value, const float goal, const float k, const float snap)
+{
+  const float before = value;
+  value += (goal - value) * k;
+  if (std::abs(goal - value) < snap) {
+    value = goal;
+  }
+  return value != before;
+}
 
 }  // namespace
 
@@ -67,7 +83,12 @@ float appear_factor(const State &state)
   return 1.0f - (1.0f - x) * (1.0f - x) * (1.0f - x); /* Ease out. */
 }
 
-Layout layout_compute(const State &state)
+float card_rise(const State &state)
+{
+  return (1.0f - appear_factor(state)) * metrics(state).fs * RISE_FS;
+}
+
+Layout layout_compute(const State &state, const float rise)
 {
   const Metrics m = metrics(state);
   Layout l;
@@ -88,7 +109,7 @@ Layout layout_compute(const State &state)
                                  win_w - 2.0f * m.margin);
   const float x0 = std::clamp(
       state.anchor.xmin - m.pad * 0.5f, m.margin, std::max(m.margin, win_w - m.margin - width));
-  const float bottom = state.anchor.ymax + m.gap;
+  const float bottom = state.anchor.ymax - rise + m.gap;
   const float room = std::max(0.0f, win_h - m.margin - bottom);
   const float wanted = header + l.content_h + footer;
   const float height = std::min(wanted, std::max(room, header + footer + m.row_h));
@@ -181,6 +202,12 @@ bool pickable(const State &state, const int line)
   }
   const Line &l = state.lines[line];
   return l.kind != LineKind::Note && l.row >= 0 && state.rows[l.row].enabled;
+}
+
+bool footer_enabled(const State &state, const int footer)
+{
+  return footer >= 0 && footer < int(state.footers.size()) &&
+         state.rows[state.footers[footer]].enabled;
 }
 
 
@@ -281,26 +308,23 @@ void move_focus(State &state, const int step)
   }
 }
 
-void step_motion(State &state)
+bool step_motion(State &state)
 {
   const bool reduced = ui::mixar_motion_reduced();
-  const float k = reduced ? 1.0f : 0.3f;
-  state.scroll += (state.scroll_target - state.scroll) * k;
-  if (std::abs(state.scroll_target - state.scroll) < 0.5f) {
-    state.scroll = state.scroll_target;
-  }
+  const float k = reduced ? 1.0f : 0.25f;
+  bool moved = ease(state.scroll, state.scroll_target, reduced ? 1.0f : 0.3f, 0.5f);
   const float goal_pill = float(std::max(0, tab_index(state, state.tab)));
-  state.pill += (goal_pill - state.pill) * (reduced ? 1.0f : 0.28f);
+  moved |= ease(state.pill, goal_pill, reduced ? 1.0f : 0.28f, SNAP);
   for (int i = 0; i < int(state.hover_mix.size()); i++) {
     const float goal = (state.hover == i || state.focus == i) ? 1.0f : 0.0f;
-    state.hover_mix[i] += (goal - state.hover_mix[i]) * (reduced ? 1.0f : 0.25f);
+    moved |= ease(state.hover_mix[i], goal, k, SNAP);
   }
   for (int i = 0; i < int(state.footer_mix.size()); i++) {
-    const float goal = state.hover_footer == i ? 1.0f : 0.0f;
-    state.footer_mix[i] += (goal - state.footer_mix[i]) * (reduced ? 1.0f : 0.25f);
+    moved |= ease(state.footer_mix[i], state.hover_footer == i ? 1.0f : 0.0f, k, SNAP);
   }
   const float bar_goal = (state.hover_bar || state.dragging_bar) ? 1.0f : 0.0f;
-  state.bar_mix += (bar_goal - state.bar_mix) * (reduced ? 1.0f : 0.25f);
+  moved |= ease(state.bar_mix, bar_goal, k, SNAP);
+  return moved;
 }
 
 void drag_bar(State &state, const Layout &layout, const float my)

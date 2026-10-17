@@ -727,7 +727,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                 TIP_("Auto mode: the agent decides open choices itself instead of asking you, "
                      "and lists its decisions in the summary"));
 
-  /* --- Mixie | Custom AI and the key chip, right of Auto ---
+  /* --- The model chip, right of Auto: one button opening the model card ---
    * (agent_ui_provider.cc). Absent until the Python half registers the
    * mirror; an empty rect means the budget dropped it. */
   agent_bubble_provider_buttons(C, block, region, *layout, *state);

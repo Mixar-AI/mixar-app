@@ -176,10 +176,19 @@ def test_openrouter_has_a_slug_not_a_list(catalog):
 
 
 def test_guest_and_empty_catalog(catalog):
-    s = picker.picker_state(_cred(), _pref(), guest=True)
-    tab = picker.build_tabs(s)[0]
-    assert not tab.enabled and tab.note == "Sign in to use Mixar models"
-    assert all(not r.enabled for r in picker.build_rows(s, catalog) if r.tab == TAB_MIXIE)
+    """Signed out or on a guest, the Mixie tab still opens on the whole
+    catalog, every row off under one sign-in note; a key of your own works."""
+    for s in (picker.picker_state(_cred(), _pref(), guest=True),
+              picker.picker_state(_cred(), _pref(), signed_in=False)):
+        tabs = picker.build_tabs(s)
+        assert tabs[0].enabled and not tabs[0].note
+        assert tabs[1].action == "settings"
+        rows = [r for r in picker.build_rows(s, catalog) if r.tab == TAB_MIXIE]
+        assert (rows[0].kind, rows[0].label) == ("note", "Sign in to use Mixar models")
+        assert len(rows) > 2 and not any(r.enabled for r in rows)
+    # Signed out with no catalog yet: the note alone, not "contact support".
+    s = picker.picker_state(_cred(), _pref(), signed_in=False)
+    assert _kinds(picker.build_rows(s, []), TAB_MIXIE) == [("note", "Sign in to use Mixar models", False, False)]
     s = picker.picker_state(_cred(), _pref())
     assert _kinds(picker.build_rows(s, []), TAB_MIXIE) == [("note", "No models available — contact support", False, False)]
 
@@ -374,3 +383,135 @@ def test_a_record_for_another_provider_cannot_pause_the_active_key(pick):
     assert not credential_state.pausable()
     assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'FINISHED'}
     assert calls.pause == [] and calls.dialog == [True]
+
+
+# ---------------------------------------------------------------------------
+# Review fixes: translation once, busy wording, wire scrub, cold start
+# ---------------------------------------------------------------------------
+
+def _mark(text):
+    return f"<{text}>"
+
+
+def test_the_bare_thinking_disclosure_is_translated(catalog, monkeypatch):
+    """No saved level: the disclosure still reaches the card translated (the
+    card draws labels as given)."""
+    from mixar.modules.byok.core import model_menu
+    monkeypatch.setattr(model_menu, "iface_", _mark)
+    s = picker.picker_state(_cred(), _pref(mixar_agent_model_provider="anthropic",
+                                           mixar_agent_model_id="claude-opus-5-5"))
+    thinking = [r for r in picker.build_rows(s, catalog) if r.kind == picker.ROW_THINKING]
+    assert [r.label for r in thinking] == ["<Thinking>"]
+    assert model_menu.format_thinking_label("high") == "<Thinking: {level}>".format(level="<High>")
+
+
+def test_brand_names_are_never_translated_and_local_is(catalog, monkeypatch):
+    monkeypatch.setattr(picker, "iface_", _mark)
+    s = picker.picker_state(_cred(byok_is_active=True, byok_current_provider="anthropic",
+                                  byok_current_model="claude-opus-5-5"), _pref())
+    assert picker.build_tabs(s)[1].label == "Claude API"
+    assert picker.chip(s)["label"] == "Claude API"
+    paused = picker.picker_state(_cred(byok_key_resumable=True, byok_resume_provider="anthropic",
+                                       byok_resume_model="claude-opus-5-5"), _pref())
+    assert picker.build_tabs(paused)[1].label == "Claude API"
+    router = picker.picker_state(_cred(byok_is_active=True, byok_current_provider="openrouter",
+                                       byok_current_model="x/y"), _pref())
+    assert picker.build_rows(router, catalog)[-2].meta == "OpenRouter"
+    assert picker.chip(router)["label"] == "OpenRouter"
+    # The one chip name that is a word: translated, once.
+    assert picker._provider_name("local") == "<Local>"
+    source = (SCRIPTS / "mixar/modules/byok/core/picker.py").read_text(encoding="utf-8")
+    assert 'n_("OpenRouter")' not in source and "TURN_NOTE" not in source
+
+
+@pytest.mark.parametrize("gate", ["switch", "hosted_pick", "dialog_save", "loading"])
+def test_every_account_gate_is_busy_so_the_card_says_it_is_saving(catalog, gate):
+    """The card words its gate from the chip state: BUSY reads "Saving your
+    change…", anything else "Finish or stop the current reply"
+    (agent_ui_model_card_data.cc). Only a turn in flight is not BUSY."""
+    cred, pref, kw = _cred(), _pref(), {}
+    if gate == "switch":
+        kw["pending"] = "switch"
+    elif gate == "loading":
+        pref = _pref(mixar_agent_model_byok_active=True)  # credential read not landed
+    else:
+        kw["busy"] = True
+    assert picker.chip(picker.picker_state(cred, pref, **kw))["state"] == picker.STATE_BUSY
+    card = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_model_card_data.cc").read_text()
+    assert '"mixar_agent_source_state") == "BUSY"' in card
+
+
+def test_the_mirror_follows_a_hosted_pick_and_a_dialog_save(catalog, monkeypatch):
+    import bpy
+    from mixar.modules.byok.core import byok_client
+    monkeypatch.setattr(key_store, "check_resumable_async", lambda on_done: None)
+    monkeypatch.setattr(key_store, "check_presence_async", lambda provider, on_done: None)
+    monkeypatch.setattr(credential_state, "_redraw", lambda: None)
+    monkeypatch.setattr(preference_state, "_redraw", lambda: None)
+    wm = SimpleNamespace(mixar_agent_rows="")
+    monkeypatch.setattr(bpy.context, "window_manager", wm, raising=False)
+    credential_state.clear(wm, loaded=True)
+    preference_state.clear(wm)
+    assert wm.mixar_agent_source_state == picker.STATE_OK
+    # A hosted pick: BUSY from begin to end, whatever the echo writes between.
+    assert preference_state.begin_mutation()
+    assert wm.mixar_agent_source_state == picker.STATE_BUSY
+    preference_state.apply_local({"mixar_agent_model_id": "m"})
+    assert wm.mixar_agent_source_state == picker.STATE_BUSY
+    preference_state.end_mutation(preference_state.current_epoch())
+    assert wm.mixar_agent_source_state == picker.STATE_OK
+    # A dialog save / removal: BUSY until its answer lands.
+    done = byok_client._track(lambda *a: None)
+    assert wm.mixar_agent_source_state == picker.STATE_BUSY
+    done(True, {}, None)
+    assert wm.mixar_agent_source_state == picker.STATE_OK
+    byok_client.reset_in_flight()
+    credential_state.clear(wm)
+    preference_state.clear(wm)
+
+
+def test_every_wire_field_is_scrubbed(catalog):
+    """An OpenRouter slug is user-typed; provider / model / thinking ride the
+    wire too, and the C++ reader needs exactly nine fields per row."""
+    rows = [picker.Row(TAB_KEY, "model", "a\x1fb", provider="open\x1frouter",
+                       model="x\x1ey\x1fz", thinking="hi\x1fgh"),
+            picker.Row(TAB_KEY, "footer", "Change model slug…")]
+    wire = picker.encode_rows(rows)
+    records = wire.split(picker.RS)
+    assert len(records) == 2 and all(len(r.split(picker.FS)) == 9 for r in records)
+    assert picker.decode_rows(wire)[0].model == "x y z"
+    tabs = [picker.Tab("K\x1fEY", "x", action="sett\x1eings")]
+    assert len(picker.encode_tabs(tabs).split(picker.FS)) == 7
+
+
+def test_a_cold_start_mixie_pick_waits_for_the_credential_read(pick, monkeypatch):
+    """The hosted pick says a key answers before this launch's credential
+    read has landed: whether the key can be paused is unknown, so the pick
+    waits (it never opens the settings over a pausable key)."""
+    from mixar.modules.byok.ui.operators import agent_pick_ops as ops
+    run, calls, wm = pick
+    preference_state.apply_local({"mixar_agent_model_byok_active": True}, wm)
+    assert picker.loading(credential_state.snapshot(), preference_state.snapshot())
+    messages = []
+    monkeypatch.setattr(ops.MIXAR_OT_agent_pick, "poll_message_set",
+                        staticmethod(messages.append), raising=False)
+    ctx = SimpleNamespace(window_manager=wm, scene=SimpleNamespace())
+    assert not ops.MIXAR_OT_agent_pick.poll(ctx) and messages == [picker.LOADING_MESSAGE]
+    assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'CANCELLED'}
+    assert calls.dialog == [] and calls.pause == [] and calls.set == []
+    # The read lands: a pausable key is paused, then the pick follows.
+    credential_state.apply_from_payload({"byok_active": True, "items": [
+        {"provider": "anthropic", "model": "claude-opus-5-5"}]}, wm)
+    credential_state.set_resumable({"provider": "anthropic", "model": "claude-opus-5-5"})
+    assert ops.MIXAR_OT_agent_pick.poll(ctx)
+    assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'FINISHED'}
+    assert len(calls.pause) == 1 and calls.dialog == []
+
+
+def test_a_mixie_pick_signed_out_does_nothing(pick):
+    run, calls, wm = pick
+    wm.mixie_chat_is_logged_in = False
+    assert run(TAB_MIXIE, "anthropic", "claude-opus-5-5") == {'CANCELLED'}
+    wm.mixie_chat_is_logged_in, wm.mixie_chat_is_guest = True, True
+    assert run(TAB_MIXIE, "anthropic", "claude-opus-5-5") == {'CANCELLED'}
+    assert calls.set == [] and calls.reset == [] and calls.dialog == []

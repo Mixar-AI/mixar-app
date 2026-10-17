@@ -49,7 +49,7 @@ void qa_targets(const wmWindow *win,
   if (!state || state->win != win || !is_host_region(area, region)) {
     return;
   }
-  const Layout layout = layout_compute(*state);
+  const Layout layout = layout_compute(*state, card_rise(*state)); /* As drawn. */
   auto add = [&](const char *surface, const std::string &text, const rctf &rect) -> MixarQATarget & {
     MixarQATarget target;
     target.surface = surface;

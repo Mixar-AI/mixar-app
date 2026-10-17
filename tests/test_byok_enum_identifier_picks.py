@@ -153,14 +153,16 @@ def test_unset_or_unknown_ids_fall_back_to_the_first_item():
     assert wm.byok_form_provider == "NONE"
     assert wm.byok_form_model == "NONE"
 
+    # The first item in display order (no catalog order here: the default
+    # order puts OpenAI first) and its first model.
     model_suggestions.populate(PROVIDERS, MODELS)
-    assert wm.byok_form_provider == "anthropic"
-    assert wm.byok_form_model == "claude-a"
+    assert wm.byok_form_provider == "openai"
+    assert wm.byok_form_model == "gpt-5"
 
     wm.byok_form_provider_id = "retired-provider"
     wm.byok_form_model_id = "retired-model"
-    assert wm.byok_form_provider == "anthropic"
-    assert wm.byok_form_model == "claude-a"
+    assert wm.byok_form_provider == "openai"
+    assert wm.byok_form_model == "gpt-5"
 
 
 def test_an_unlisted_identifier_is_refused_and_keeps_the_pick():

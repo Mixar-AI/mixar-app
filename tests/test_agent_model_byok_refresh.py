@@ -86,7 +86,9 @@ def test_failed_mutation_preserves_picker_without_fetching(callbacks, saving):
 
     callback(False, None if saving else 0, "Request failed")
 
-    assert wm.byok_dialog_state == "ERROR"
+    # A failed save shows its error on the form; a failed remove goes back to
+    # the confirm step with the error, so Remove retries and Keep backs out.
+    assert wm.byok_dialog_state == ("ERROR" if saving else "CONFIRM_REMOVE")
     assert pending == []
     assert wm.mixar_agent_model_byok_active is True
 

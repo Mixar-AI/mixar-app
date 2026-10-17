@@ -74,7 +74,7 @@ IDLE = ("(not drv.main_window().scene.mixie_chat_is_busy) and "
         "drv.main_window().scene.mixie_chat_state == 'IDLE'")
 LOADED = "__import__('mixar.modules.byok.core.credential_state', fromlist=['x']).snapshot()['byok_state_loaded']"
 MISSING = "__import__('mixar.modules.byok.core.credential_state', fromlist=['x']).snapshot()['byok_device_key_missing']"
-DIALOG_DONE = "bpy.data.window_managers[0].byok_dialog_state in ('SAVED','ERROR','REMOVED')"
+DIALOG_DONE = "bpy.data.window_managers[0].byok_dialog_state in ('SAVED','ERROR','REMOVED','CONFIRM_REMOVE')"
 
 
 def state(qa):

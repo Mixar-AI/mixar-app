@@ -14,6 +14,8 @@
 
 #include "MEM_guardedalloc.h"
 
+#include "BLI_time.h"
+
 #include "BLT_translation.hh"
 
 #include "BKE_context.hh"
@@ -32,6 +34,9 @@ namespace blender::agent_model_card {
 namespace {
 
 constexpr const char *PICK_OP = "MIXAR_OT_agent_pick";
+/** The pick poll is Python (a turn in flight, a change being saved): asked at
+ * 10 Hz, not every 60 Hz tick. The operator checks it again when it runs. */
+constexpr double POLL_SECONDS = 0.1;
 constexpr char RS = '\x1e';
 constexpr char FS = '\x1f';
 
@@ -164,15 +169,20 @@ void rebuild_lines(State &state)
 }
 
 /** Read Python's picker and the pick operator's poll; rebuild on a change. */
-void refresh(bContext *C, State &state, const bool force)
+bool refresh(bContext *C, State &state, const bool force)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
   const std::string tabs = wm_string(wm, "mixar_agent_tabs");
   const std::string rows = wm_string(wm, "mixar_agent_rows");
-  wmOperatorType *ot = WM_operatortype_find(PICK_OP, true);
-  const bool gated = ot && !WM_operator_poll_context(C, ot, wm::OpCallContext::InvokeDefault);
+  bool gated = state.gated;
+  const double now = BLI_time_now_seconds();
+  if (force || now - state.polled_at >= POLL_SECONDS) {
+    wmOperatorType *ot = WM_operatortype_find(PICK_OP, true);
+    gated = ot && !WM_operator_poll_context(C, ot, wm::OpCallContext::InvokeDefault);
+    state.polled_at = now;
+  }
   if (!force && tabs == state.raw_tabs && rows == state.raw_rows && gated == state.gated) {
-    return;
+    return false;
   }
   state.raw_tabs = tabs;
   state.raw_rows = rows;
@@ -202,6 +212,7 @@ void refresh(bContext *C, State &state, const bool force)
                                                       "";
   }
   rebuild_lines(state);
+  return true;
 }
 
 }  // namespace blender::agent_model_card

@@ -67,6 +67,7 @@ void agent_ui_chevron_fill_draw(
     }
   }
 
+  const GPUBlend blend_prev = GPU_blend_get();
   GPU_blend(GPU_BLEND_ALPHA);
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
@@ -92,7 +93,7 @@ void agent_ui_chevron_fill_draw(
   }
   immEnd();
   immUnbindProgram();
-  GPU_blend(GPU_BLEND_NONE);
+  GPU_blend(blend_prev);
 }
 
 }  // namespace blender

@@ -18,13 +18,16 @@
  * #UI_mixar_sheet_draw_back when the block carries #BLOCK_MIXAR_SHEET.
  *
  * Geometry is written in the artboard's own units: the design is a 2x export
- * (1502 x 969 design px for a 751 x 484.5 UI-px dialog), so every token below
- * is a design px and `mixar_sheet::px` turns it into region pixels. Python
- * lays the rows out in the same units (`byok/ui/operators/byok_sheet.py`), so
- * the two sides never disagree about a measurement.
+ * (1440 x 700 design px for a 720 x 350 UI-px dialog, taller when its content
+ * needs it), so every token below is a design px and `mixar_sheet::px` turns
+ * it into region pixels. Python lays the rows out in the same units
+ * (`byok/ui/operators/byok_sheet.py`: WIDTH, HEIGHT, HEADER, SIDEBAR), so the
+ * two sides never disagree about a measurement.
  */
 
 #pragma once
+
+#include <string>
 
 #include "BLI_rect.h"
 #include "BLI_sys_types.h"
@@ -124,6 +127,10 @@ inline constexpr uchar input_border[4] = {0x33, 0x34, 0x37, 255};
 inline constexpr uchar input_border_focus[4] = {0x5A, 0x5B, 0x60, 255};
 inline constexpr float dropdown_h = 52.0f;
 inline constexpr float dropdown_chevron = 12.0f;
+/** The chevron's centre, from the dropdown's right edge. */
+inline constexpr float dropdown_chevron_right = 30.0f;
+/** Room the value text leaves free of the chevron, from the right edge. */
+inline constexpr float dropdown_text_right = 48.0f;
 
 /* -- Pills: 52 tall, 12 radius ------------------------------------------ */
 inline constexpr float button_h = 52.0f;
@@ -141,10 +148,16 @@ inline constexpr uchar danger_fill_hover[4] = {0x4C, 0x2A, 0x2D, 255};
 
 /** The island's face (or the monospace caption face) at \a ratio x the UI
  * body size and \a weight; returns the BLF id ready to measure and draw.
- * `text_at` restores the widget weight after drawing. */
+ * `text_at` / `text_in` restore the widget weight on every exit (empty text
+ * included); a measure-only caller restores it itself. */
 int font(float ratio, int weight = weight_medium, bool mono = false);
 float text_width(int font_id, const char *text);
-/** Baseline-anchored, unclipped. */
+/** Cap height of the face at its current size: the artboard centres labels
+ * on their caps, not on the ascender/descender box. */
+float cap_height(int font_id);
+/** \a text shortened with a tail ellipsis to \a max_w px. */
+std::string fit(int font_id, const char *text, float max_w);
+/** Baseline-anchored, unclipped (callers fit first). */
 void text_at(int font_id, float x, float baseline, const char *text, const uchar col[4]);
 /** Cap-height centred on \a rect's middle, tail-ellipsised to its width. */
 void text_in(int font_id, const rctf &rect, const char *text, const uchar col[4], bool centre);
@@ -154,7 +167,14 @@ void stroke(float x0, float y0, float x1, float y1, float width, const uchar col
 /** The button's block as a region-pixel rect (popups map 1:1). */
 rctf block_rect(const Button *but);
 
-/* Controls (`interface_mixar_sheet_controls.cc`). */
+/* Painters (`interface_mixar_sheet_controls.cc`). */
+void draw_title(Button *but, const rcti *rect);
+void draw_caption(Button *but, const rcti *rect);
+void draw_text(Button *but,
+               const rcti *rect,
+               float size_dp,
+               const uchar col_in[4],
+               int weight = weight_regular);
 void draw_close(Button *but, const rcti *rect);
 void draw_provider_row(Button *but, const rcti *rect);
 void draw_footer_row(Button *but, const rcti *rect);
@@ -172,6 +192,9 @@ bool UI_mixar_sheet_element_is(MixarCardElement element);
 /**
  * Mark \a layout's block as a sheet and record its chrome: the header divider
  * \a header_dp below the top edge and a sidebar \a sidebar_dp wide (design px).
+ * Python always passes `byok_sheet.HEADER` / `SIDEBAR` (140 / 400); the RNA
+ * defaults of `layout.mixar_sheet_frame` (182 / 442) are the first artboard's
+ * and are never used.
  */
 void UI_layout_mixar_sheet_frame(Layout *layout, float header_dp, float sidebar_dp);
 
@@ -202,5 +225,9 @@ void UI_mixar_sheet_input_draw(Button *but, const rcti *rect);
 
 /** Backdrop and chevron of a Menu button tagged SheetDropdown. */
 void UI_mixar_sheet_dropdown_draw(Button *but, const rcti *rect);
+
+/** Region px the stock text pass must take off a SheetDropdown's right edge
+ * so its value never runs under the chevron. */
+int UI_mixar_sheet_dropdown_text_inset();
 
 }  // namespace blender::ui

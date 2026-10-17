@@ -79,10 +79,19 @@ _short_providers: dict[str, str] = {}
 _short_models: dict[tuple[str, str], str] = {}
 
 # The backend's `provider_order`: every provider id a picker shows, in display
-# order, this client's own OpenRouter / Codex / Local included. The client
-# never decides the order; an older backend that omits it leaves this empty
-# and the list stays catalog groups first, client options after.
+# order, this client's own OpenRouter / Codex / Local included. The backend
+# decides the order; this is empty until a catalog carrying it has loaded.
 _provider_order: list[str] = []
+
+# Used only while no catalog order is known (signed out, a guest before the
+# first catalog lands, an older backend): the backend's PROVIDER_ORDER as of
+# this release (modules/agent/schemas/supported_model.py). A loaded catalog's
+# `provider_order` always replaces it, so a reorder still ships as a backend
+# deploy.
+DEFAULT_PROVIDER_ORDER = (
+    "openai", "codex", "anthropic", "gemini", "openrouter",
+    "vertex", "bedrock", "kimi", "fugu", "local",
+)
 
 # Defaults for the six per-model flags, applied when a field is absent.
 #
@@ -151,8 +160,9 @@ def get_provider_items() -> list[tuple[str, str, str]]:
     ):
         if client_item[0] not in identifiers:
             items.append(client_item)
-    if _provider_order:
-        rank = {pid: index for index, pid in enumerate(_provider_order)}
+    order = _provider_order or DEFAULT_PROVIDER_ORDER
+    if order:
+        rank = {pid: index for index, pid in enumerate(order)}
         # Stable: a sentinel stays first, an id the order does not name keeps
         # its place after the listed ones.
         items.sort(key=lambda item: -1 if item in (PROVIDER_EMPTY_SENTINEL,

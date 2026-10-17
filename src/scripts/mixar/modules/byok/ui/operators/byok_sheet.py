@@ -46,14 +46,14 @@ CLOSE = 60
 CLOSE_TOP = 38
 CLOSE_RIGHT = 38
 
-# Captions sit 50 dp under the header divider ("PROVIDERS", "ALL SUPPORTED…").
+# Captions sit CAPTION_TOP dp under the header divider ("PROVIDERS", "ALL SUPPORTED…").
 CAPTION_TOP = 36
 CAPTION_H = 34
 LEFT_INSET = 66                          # sidebar text / pill edge
 RIGHT_INSET = 43                         # chips and the right caption, from the column edge
 PROMPT_INSET = 57                        # the key prompt, from the column edge
 
-# Provider rows: 59 dp pills from x=66 to 379, starting 333 dp from the top.
+# Provider rows: ROW_H dp plates from x=LEFT_INSET to ROW_RIGHT short of the divider.
 ROW_H = 46
 ROW_RIGHT = 60                           # a plate stops 60 dp short of the divider
 ROW_TEXT_X = 20                          # the name sits 20 dp inside the plate
@@ -61,7 +61,7 @@ ROW_MIN_RIGHT = 16                       # a wide pill stops short of the divide
 CAPTION_TO_ROWS = 14
 ROWS_BOTTOM_GAP = 28
 
-# Model chips: 49 dp pills butted in a row, rows 21.5 dp apart from y=334.
+# Model chips: CHIP_H dp pills butted in a row, rows CHIP_GAP_Y dp apart.
 CHIP_H = 40
 CHIP_PAD = 16
 CHIP_GAP_Y = 12
@@ -176,7 +176,7 @@ def _flag(layout, kind, default):
 def button(layout, operator_id, text, kind=SECONDARY, default=False, docked=False,
            icon='NONE'):
     """Operator button drawn as a sheet pill. ``docked`` nests the pill in the
-    field before it (8 dp breathing room). ``text`` is already translated
+    field before it (DOCK_INSET dp breathing room). ``text`` is already translated
     (``iface_``), so Blender must not translate it again. Returns the operator
     properties."""
     props = layout.operator(operator_id, text=text, icon=icon, translate=False)
@@ -244,8 +244,8 @@ def row(parent, h_dp, left=0.0, right=0.0, packed=False, align=None):
 
 
 def row_right(layout, text):
-    """The right margin of a provider pill: the artboard's 63 dp, shrunk
-    until a long name keeps the same 28 dp of pill on both sides, but never
+    """The right margin of a provider pill: the artboard's ROW_RIGHT, shrunk
+    until a long name keeps ROW_TEXT_X of pill on both sides, but never
     closer than 16 dp to the divider (then the painter ellipsises)."""
     need = text_width(layout, PROVIDER_ROW, text) + 2 * ROW_TEXT_X
     return min(ROW_RIGHT, max(ROW_MIN_RIGHT, SIDEBAR - LEFT_INSET - need))
@@ -271,7 +271,10 @@ def sized(parent, w_dp):
 
 
 def caption(parent, text, left, translate=True):
-    label(row(parent, CAPTION_H, left=left), text, CAPTION, translate=translate)
+    """A right-column caption; it stops RIGHT_MARGIN short of the card's edge,
+    where the painter ellipsises a long translation."""
+    label(row(parent, CAPTION_H, left=left, right=RIGHT_MARGIN), text, CAPTION,
+          translate=translate)
 
 
 def bright(text):
@@ -303,7 +306,7 @@ def chips_height(n_rows):
 # ---------------------------------------------------------------------------
 
 class Geometry:
-    """Column heights for one draw. The sheet is the artboard's 969 dp unless
+    """Column heights for one draw. The sheet is the artboard's HEIGHT unless
     the sidebar's rows or the right column's content need more; both columns
     always end on the same line, so the key field sits at the bottom and the
     Local Model foot hugs the card's corner."""

@@ -94,7 +94,6 @@ int main()
   idle.scribble_available = true;
   idle.voice_available = true;
   idle.model_available = true;
-  idle.model_label = "Mixie";
   idle.chip_badge = "Mixie";
   idle.chip_name = "Auto";
 
@@ -106,7 +105,7 @@ int main()
   AgentChipRowInputs sketching = capturing;
   sketching.scribble_armed = true;
   sketching.mark_intent = "Point to edit";
-  sketching.model_label = "Claude Sonnet 4.6 · High";
+  sketching.chip_name = "Claude Sonnet 4.6";
 
   AgentChipRowInputs queued = idle;
   queued.mark_count = 2;
@@ -114,8 +113,9 @@ int main()
   queued.voice_listening = true;
   queued.voice_status = "Allow microphone";
 
+  /* A name long enough to walk the elided rung before the badge alone. */
   AgentChipRowInputs long_model = idle;
-  long_model.model_label = "Claude Opus 5 · Extended thinking";
+  long_model.chip_name = "Claude Opus 5 Extended Thinking Preview";
 
   AgentChipRowInputs no_voice = idle;
   no_voice.voice_available = false;

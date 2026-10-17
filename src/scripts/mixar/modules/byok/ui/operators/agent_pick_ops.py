@@ -19,7 +19,10 @@ request the account needs (byok-local-models.md, "The island model picker"):
 
 One account mutation at a time (`byok_dialog_support.account_busy`) and
 never while a turn is in flight (`turn_in_flight`): the backend binds a
-turn's key and model when it starts.
+turn's key and model when it starts. Nor before this launch's credential
+read has landed while the hosted pick says a key answers (`picker.loading`):
+whether a Mixie row can pause that key is not known yet, and guessing "no"
+would open the settings over a key one click could pause.
 """
 
 import bpy
@@ -62,19 +65,27 @@ class MIXAR_OT_agent_pick(Operator):
         if account_busy():
             cls.poll_message_set(preference_state.PENDING_MESSAGE)
             return False
+        if _loading():
+            cls.poll_message_set(picker.LOADING_MESSAGE)
+            return False
         return True
 
     def invoke(self, context, _event):
         return self.execute(context)
 
     def execute(self, context):
-        if turn_in_flight(context) or account_busy():
+        if turn_in_flight(context) or account_busy() or _loading():
             return {'CANCELLED'}
         wm = context.window_manager
-        state = picker.picker_state(credential_state.snapshot(), preference_state.snapshot())
+        state = picker.picker_state(
+            credential_state.snapshot(), preference_state.snapshot(),
+            guest=bool(getattr(wm, "mixie_chat_is_guest", False)),
+            signed_in=bool(getattr(wm, "mixie_chat_is_logged_in", True)))
         provider, model, thinking = self.provider.strip(), self.model.strip(), self.thinking.strip()
 
         if self.source == TAB_MIXIE:
+            if not state["hosted_ok"]:
+                return {'CANCELLED'}  # Mixar's models need an account (the card says so).
             if state["source"] != TAB_MIXIE or preference_state.snapshot()["mixar_agent_model_byok_active"]:
                 if not state["pausable"]:
                     return _open_settings()
@@ -94,6 +105,10 @@ class MIXAR_OT_agent_pick(Operator):
         if self.source == TAB_LOCAL:
             return {'FINISHED'} if state["source"] == TAB_LOCAL else _open_settings()
         return {'CANCELLED'}
+
+
+def _loading() -> bool:
+    return picker.loading(credential_state.snapshot(), preference_state.snapshot())
 
 
 def _hosted(wm, provider, model, thinking, state):

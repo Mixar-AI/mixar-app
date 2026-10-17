@@ -86,6 +86,7 @@ def begin_mutation() -> bool:
             return False
         _mutating = True
         _request_serial += 1
+    _mirror_busy()
     _redraw()
     return True
 
@@ -97,8 +98,20 @@ def end_mutation(epoch: int) -> bool:
         if epoch != _epoch:
             return False
         _mutating = False
+    _mirror_busy()
     _redraw()
     return True
+
+
+def _mirror_busy() -> None:
+    """The island picker's BUSY state follows the write barrier (the card
+    words its gate from it); the field mirror itself is unchanged."""
+    try:
+        from . import picker_mirror
+
+        picker_mirror.apply_to_wm()
+    except Exception as exc:  # noqa: BLE001 — a mirror write never blocks a save
+        logger.debug("Agent model picker mirror not refreshed: %s", exc)
 
 
 def invalidate_reads() -> None:

@@ -165,16 +165,12 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             byok_local_ops.prepare_dialog(wm)
         except Exception as e:
             logger.debug("Local provider dialog prep failed: %s", e)
-        # invoke_props_dialog (not invoke_popup) so the dialog redraws
-        # continuously — state flips from SAVING → IDLE / ERROR during
-        # the async save must be visible without user interaction.
-        #
-        # Both the profile and chat picker open this shared dialog, always in
-        # the main window and centred, with the Agent island and pill hidden
-        # until it closes (they float above every main-window pop-up). The
-        # native modal dialog does all three — re-hosting out of the island,
-        # centring, and a dock hold released by the pop-up's own teardown on
-        # every close path (Done, Cancel, Esc, click-away, file load).
+        # A props dialog (not invoke_popup) redraws continuously, so the async
+        # SAVING → IDLE / ERROR flips show without user input. The native
+        # modal dialog opens it in the main window, centred, with the Agent
+        # island and pill hidden (they float above every main-window pop-up);
+        # the pop-up's own teardown releases that hold on every close path
+        # (Done, Cancel, Esc, click-away, file load).
         _dialog_open = True
         modal = getattr(wm, "mixar_invoke_modal_dialog", None)
         if modal is not None:
@@ -404,7 +400,9 @@ class MIXAR_BYOK_OT_request_remove(Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        context.window_manager.byok_dialog_state = 'CONFIRM_REMOVE'
+        wm = context.window_manager
+        wm.byok_dialog_state = 'CONFIRM_REMOVE'
+        wm.byok_last_error = ''  # the confirm step shows only its own failure
         return {'FINISHED'}
 
 
@@ -415,7 +413,9 @@ class MIXAR_BYOK_OT_cancel_remove(Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        context.window_manager.byok_dialog_state = 'IDLE'
+        wm = context.window_manager
+        wm.byok_dialog_state = 'IDLE'
+        wm.byok_last_error = ''
         return {'FINISHED'}
 
 
@@ -473,7 +473,9 @@ def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
             logger.info("BYOK removed: %d row(s) deleted", removed_count)
             _deregister_local_if_switched_away(None)
         else:
-            wm.byok_dialog_state = 'ERROR'
+            # Back on the confirm step, error shown: Remove retries, Keep backs
+            # out (the form's Try Again would re-run Save with no key).
+            wm.byok_dialog_state = 'CONFIRM_REMOVE'
             wm.byok_last_error = err or n_("Couldn't switch back. Try again.")
             logger.warning("BYOK remove failed: %s", err)
             toast_if_closed(_dialog_open, n_("Couldn't remove your API key"), err)

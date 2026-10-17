@@ -5765,6 +5765,9 @@ static void widget_mixar_sheet_dropdown(Button *but,
                                         const float /*zoom*/)
 {
   UI_mixar_sheet_dropdown_draw(but, rect);
+  /* Text stops short of the chevron, as #widget_menubut keeps it off its
+   * arrows: the stock text pass clips (and ellipsises) to this rect. */
+  rect->xmax -= UI_mixar_sheet_dropdown_text_inset();
 }
 
 /* -- Mixar Section Widget ------------------------------------------------ */

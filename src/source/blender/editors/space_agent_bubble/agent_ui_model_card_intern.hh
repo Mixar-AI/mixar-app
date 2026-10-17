@@ -84,6 +84,7 @@ struct State {
   std::string raw_tabs, raw_rows, source;
   std::vector<Tab> tabs;
   std::vector<Row> rows;
+  double polled_at = 0.0; /* When the pick operator's poll last ran. */
 
   /* The card's own state. */
   std::string tab;          /* The open tab's id. */
@@ -99,6 +100,7 @@ struct State {
   std::vector<float> hover_mix;
   std::vector<float> footer_mix;
   float bar_mix = 0.0f;
+  bool risen = false; /* The open rise has drawn its last frame. */
 
   /* Pointer. */
   int hover = -1, pressed = -1, focus = -1; /* Line indices. */
@@ -106,18 +108,22 @@ struct State {
   bool hover_trailing = false, hover_bar = false;
   bool dragging_bar = false;
   float drag_grab = 0.0f;
+  int cursor = -1; /* The cursor the card set over itself; -1: the regions'. */
 };
 
 /** The open card, or null (one island, one card). */
 extern State *g_state;
 
 Metrics metrics(const State &state);
-Layout layout_compute(const State &state);
+/** \a rise: how far below its place the card sits (#card_rise while it opens). */
+Layout layout_compute(const State &state, float rise = 0.0f);
 /** The visible rect of \a line (window px), scrolled; false when outside the list. */
 bool line_rect(const State &state, const Layout &layout, int line, rctf *r_rect);
 /** The trailing (disclosure) rect of a pick line. */
 rctf trailing_rect(const State &state, const Layout &layout, const rctf &line_rect);
 float appear_factor(const State &state);
+/** How far below its place the card is drawn now, rising in as it opens. */
+float card_rise(const State &state);
 
 /** The window draw callback (agent_ui_model_card_draw.cc). */
 void draw(const wmWindow *win, void *customdata);
@@ -130,8 +136,9 @@ bool is_default_row(const Row &row);
 int tab_index(const State &state, const std::string &id);
 /** The open tab's list (notes, picks, unfolded levels) and its footers. */
 void rebuild_lines(State &state);
-/** Read Python's picker and the pick poll; rebuild on a change or \a force. */
-void refresh(bContext *C, State &state, bool force);
+/** Read Python's picker and the pick poll; rebuild on a change or \a force.
+ * True when it rebuilt. */
+bool refresh(bContext *C, State &state, bool force);
 
 /* Input (agent_ui_model_card_layout.cc). */
 
@@ -141,13 +148,15 @@ struct Hit {
   bool trailing = false, thumb = false, track = false, inside = false, chip = false;
 };
 bool pickable(const State &state, int line);
+/** The footer action \a footer can be clicked (drawn dimmed otherwise). */
+bool footer_enabled(const State &state, int footer);
 Hit hit_test(const State &state, const Layout &layout, float mx, float my);
 void scroll_into_view(State &state, int line);
 /** Jump (no easing) so the open tab's current pick is in view. */
 void reveal_current(State &state);
 void move_focus(State &state, int step);
-/** One 60 Hz step of every eased value. */
-void step_motion(State &state);
+/** One 60 Hz step of every eased value; true while any of them moved. */
+bool step_motion(State &state);
 void drag_bar(State &state, const Layout &layout, float my);
 
 }  // namespace agent_model_card

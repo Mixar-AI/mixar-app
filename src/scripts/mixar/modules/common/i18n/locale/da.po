@@ -1601,10 +1601,7 @@ msgstr ""
 msgid "Change model slug…"
 msgstr ""
 
-msgid "OpenRouter"
-msgstr ""
-
-msgid "Wait for the current reply to finish, then change the model."
+msgid "Loading your AI provider settings…"
 msgstr ""
 
 msgid "saved"
@@ -1619,36 +1616,6 @@ msgstr ""
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
 
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Din egen API-nøgle er i brug — vælg \"Skift eller fjern min API-nøgle\" i denne menu for at vælge en hostet model"
-
-msgid "Set Agent Model"
-msgstr "Angiv agentmodel"
-
-msgid "Use this model for the agent"
-msgstr "Brug denne model til agenten"
-
-msgid "Provider"
-msgstr "Udbyder"
-
-msgid "Model"
-msgstr "Model"
-
-msgid "Label"
-msgstr "Etiket"
-
-msgid "Thinking Level"
-msgstr "Tænkeniveau"
-
-msgid "No model selected"
-msgstr "Ingen model valgt"
-
-msgid "Reset Agent Model"
-msgstr "Nulstil agentmodel"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Rens den gemte model, og lad Mixar vælge"
-
 msgid "Could not change model"
 msgstr "Kunne ikke skifte model"
 
@@ -1658,6 +1625,9 @@ msgstr "Kunne ikke nulstille modellen"
 msgid "Pick Agent Model"
 msgstr ""
 
+msgid "Use this model for the agent"
+msgstr "Brug denne model til agenten"
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
@@ -1665,6 +1635,9 @@ msgid "Not found: {path} — run  codex login"
 msgstr ""
 
 msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
 msgstr ""
 
 msgid "Please try again."
@@ -1768,6 +1741,9 @@ msgstr ""
 
 msgid "Your prompts leave it only through Mixar's agent orchestration."
 msgstr ""
+
+msgid "Model"
+msgstr "Model"
 
 msgid "Cancel Download"
 msgstr "Annuller download"
@@ -1949,22 +1925,7 @@ msgstr "Opdatér modelkatalog"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Validér udbyder- og modelkataloget igen fra backenden"
 
-msgid "Switch Model"
-msgstr ""
-
-msgid "Run the agent on this model with your saved API key"
-msgstr ""
-
-msgid "That model is not available for your key"
-msgstr ""
-
 msgid "Couldn't switch model"
-msgstr ""
-
-msgid "Use Mixie"
-msgstr ""
-
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
 msgstr ""
 
 msgid "Use My Key"
@@ -2035,6 +1996,9 @@ msgstr ""
 
 msgid "The model the agent runs on"
 msgstr ""
+
+msgid "Provider"
+msgstr "Udbyder"
 
 msgid "LLM provider"
 msgstr "LLM-udbyder"
@@ -2191,6 +2155,9 @@ msgstr ""
 
 msgid "Value"
 msgstr "Værdi"
+
+msgid "Label"
+msgstr "Etiket"
 
 msgid "Group"
 msgstr "Gruppe"

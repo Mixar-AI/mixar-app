@@ -197,3 +197,48 @@ def test_a_paused_key_offers_use_and_forget(monkeypatch):
     assert any("Paused, Mixie is answering" in e for e in log), log
     assert f"op:{byok_dialog_ui.OP_USE_KEY}" in log
     assert f"op:{byok_dialog_ui.OP_FORGET_KEY}" in log
+
+
+def test_the_sidebar_links_to_the_published_byok_guide():
+    """The Guide button opens the BYOK section of the docs. The anchor id must
+    match the frontend section (mixie-frontend src/pages/docsByok.ts →
+    YOUR_OWN_PROVIDER_SECTION id 'your-own-provider'); a drift breaks the link."""
+    assert byok_dialog_ui.BYOK_GUIDE_URL == "https://www.mixar.app/docs#your-own-provider"
+    source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
+              / "byok_provider_settings_ui.py").read_text(encoding="utf-8")
+    sidebar = source[source.index("def draw_sidebar("):source.index("\nclass FormPlan")]
+    assert '"wm.url_open"' in sidebar and "BYOK_GUIDE_URL" in sidebar
+    # And it is drawn: the sidebar carries the Guide pill.
+    assert any(e == "op:wm.url_open" for e in _draw('IDLE', card_api=True))
+
+
+def _body(text, signature):
+    start = text.index(signature)
+    return text[start:text.index("\n}\n", start)]
+
+
+def test_painters_fit_their_text_and_leave_the_font_as_they_found_it():
+    """The dropdown's value stops short of its chevron (as stock menus keep
+    off their arrows); header text is ellipsised; a row is measured in the
+    face it is drawn in while lit; every draw restores the UI face's weight,
+    empty text included."""
+    widgets = (INTERFACE_DIR / "interface_widgets.cc").read_text(encoding="utf-8")
+    dropdown = _body(widgets, "static void widget_mixar_sheet_dropdown(")
+    assert "rect->xmax -= UI_mixar_sheet_dropdown_text_inset();" in dropdown
+    header = SHEET_HH.read_text(encoding="utf-8")
+    inset = float(re.search(r"dropdown_text_right = ([\d.]+)f;", header).group(1))
+    chevron = float(re.search(r"dropdown_chevron_right = ([\d.]+)f;", header).group(1))
+    half = float(re.search(r"dropdown_chevron = ([\d.]+)f;", header).group(1)) / 2
+    assert inset > chevron + half
+
+    sheet = SHEET_CC.read_text(encoding="utf-8")
+    text_in = _body(sheet, "void text_in(")
+    empty = text_in[text_in.index("text[0] == '\\0'"):text_in.index("return;")]
+    assert "restore_weight(font_id);" in empty
+    assert "restore_weight(font_id);" in _body(sheet, "void text_at(")
+    controls = (INTERFACE_DIR / "interface_mixar_sheet_controls.cc").read_text(encoding="utf-8")
+    assert "fit(" in _body(controls, "void draw_title(")
+    assert "fit(" in _body(controls, "void draw_caption(")
+    width = _body(sheet, "float UI_mixar_sheet_text_width(")
+    row = width[width.index("case MixarCardElement::SheetProviderRow:"):]
+    assert row.index("weight = weight_strong;") < row.index("break;")

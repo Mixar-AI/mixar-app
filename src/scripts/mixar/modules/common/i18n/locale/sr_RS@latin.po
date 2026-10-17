@@ -2026,10 +2026,7 @@ msgstr ""
 msgid "Change model slug…"
 msgstr ""
 
-msgid "OpenRouter"
-msgstr ""
-
-msgid "Wait for the current reply to finish, then change the model."
+msgid "Loading your AI provider settings…"
 msgstr ""
 
 msgid "saved"
@@ -2046,44 +2043,6 @@ msgid "Could not fetch Mixar's key-sealing key — check your connection and try
 msgstr ""
 
 # derived
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Koristi se vaš API ključ — u ovom meniju izaberite „Promeni ili ukloni moj API ključ“ da biste izabrali hostovani model"
-
-# derived
-msgid "Set Agent Model"
-msgstr "Postavi model agenta"
-
-# derived
-msgid "Use this model for the agent"
-msgstr "Koristi ovaj model za agenta"
-
-# derived
-msgid "Provider"
-msgstr "Dobavljač"
-
-msgid "Model"
-msgstr ""
-
-msgid "Label"
-msgstr "Naziv"
-
-# derived
-msgid "Thinking Level"
-msgstr "Nivo razmišljanja"
-
-# derived
-msgid "No model selected"
-msgstr "Nije izabran model"
-
-# derived
-msgid "Reset Agent Model"
-msgstr "Resetuj model agenta"
-
-# derived
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Briše sačuvani model i dozvoljava da Mixar izabere"
-
-# derived
 msgid "Could not change model"
 msgstr "Nije moguće promeniti model"
 
@@ -2094,6 +2053,10 @@ msgstr "Nije moguće resetovati model"
 msgid "Pick Agent Model"
 msgstr ""
 
+# derived
+msgid "Use this model for the agent"
+msgstr "Koristi ovaj model za agenta"
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
@@ -2101,6 +2064,9 @@ msgid "Not found: {path} — run  codex login"
 msgstr ""
 
 msgid "Choose a Codex model."
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
 msgstr ""
 
 msgid "Please try again."
@@ -2211,6 +2177,9 @@ msgid "Runs entirely on this computer."
 msgstr ""
 
 msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
 msgstr ""
 
 # derived
@@ -2416,22 +2385,7 @@ msgstr "Osveži katalog modela"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Ponovo proverava katalog dobavljača i modela sa pozadine"
 
-msgid "Switch Model"
-msgstr ""
-
-msgid "Run the agent on this model with your saved API key"
-msgstr ""
-
-msgid "That model is not available for your key"
-msgstr ""
-
 msgid "Couldn't switch model"
-msgstr ""
-
-msgid "Use Mixie"
-msgstr ""
-
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
 msgstr ""
 
 msgid "Use My Key"
@@ -2514,6 +2468,10 @@ msgstr ""
 
 msgid "The model the agent runs on"
 msgstr ""
+
+# derived
+msgid "Provider"
+msgstr "Dobavljač"
 
 # derived
 msgid "LLM provider"
@@ -2709,6 +2667,9 @@ msgstr ""
 
 msgid "Value"
 msgstr "Vrednost"
+
+msgid "Label"
+msgstr "Naziv"
 
 msgid "Group"
 msgstr "Grupa"

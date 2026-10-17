@@ -26,7 +26,8 @@ BYOK_API_KEY_MAX_LENGTH = 256
 #   SAVED           recap card + [Done] — the explicit "it saved" moment
 #   REMOVED         recap card + [Done]
 #   ERROR           form + inline error + [Cancel][Try Again]
-#   CONFIRM_REMOVE  config card + warning + [Keep My Key][Remove API Key]
+#   CONFIRM_REMOVE  config card + warning + [Keep my key][Remove key]; also where a
+#                   failed remove lands, with its error, so Remove retries
 DIALOG_STATE_ITEMS = (
     ('IDLE',            "Idle",            "Ready for input"),
     ('SAVING',          "Saving",          "Save request in flight"),

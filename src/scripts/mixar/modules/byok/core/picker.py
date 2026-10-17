@@ -58,8 +58,7 @@ MANAGE_KEY = n_("Manage key…")
 ENTER_KEY = n_("Enter key…")
 SETUP_LOCAL = n_("Set up local model…")
 CHANGE_SLUG = n_("Change model slug…")
-OPENROUTER_META = n_("OpenRouter")
-TURN_NOTE = n_("Wait for the current reply to finish, then change the model.")
+LOADING_MESSAGE = n_("Loading your AI provider settings…")
 
 
 @dataclass(frozen=True)
@@ -99,11 +98,28 @@ def _pausable(credential):
     return credential_state.pausable(dict(credential_state._DEFAULTS, **credential))
 
 
+def loading(credential: Dict[str, Any], preference: Dict[str, Any]) -> bool:
+    """The hosted pick says a key answers but this launch's credential read
+    has not landed: whether that key can be paused (a Mixie pick) is not
+    known yet, so the card waits instead of guessing "open the settings".
+    Only a server payload marks a key active, so an active one is loaded; a
+    snapshot without the flag (an older caller) counts as loaded too."""
+    return (bool(preference.get("mixar_agent_model_byok_active"))
+            and not credential.get("byok_is_active")
+            and not credential.get("byok_state_loaded", True))
+
+
 def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
-                 guest: bool = False, pending: str = "", switching: str = "") -> Dict[str, Any]:
+                 guest: bool = False, signed_in: bool = True, pending: str = "",
+                 switching: str = "", busy: bool = False) -> Dict[str, Any]:
     """One dict the rules read, from the credential and preference mirrors.
-    ``switching`` is the model an in-place switch is saving: the chip names
-    it (dimmed, BUSY) until the save lands or fails."""
+    Mixar's own models need an account: signed out or on a guest, the Mixie
+    tab still lists the catalog, disabled under a sign-in note, while a key
+    of your own (Add a key, Local) works as usual.
+    ``pending`` is the island mutation in flight (`credential_state.pending`);
+    ``busy`` any other account change still unanswered (a hosted pick, a
+    dialog save / removal). ``switching`` is the model an in-place switch is
+    saving: the chip names it (dimmed, BUSY) until the save lands or fails."""
     active = bool(credential.get("byok_is_active"))
     provider = (credential.get("byok_current_provider") or "") if active else ""
     local_active = active and model_suggestions.is_local(provider)
@@ -126,7 +142,10 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
         "hosted_thinking": preference.get("mixar_agent_model_thinking") or "",
         "hosted_eligible": bool(preference.get("mixar_agent_model_eligible", True)),
         "guest": bool(guest),
+        "hosted_ok": bool(signed_in) and not guest,
         "pending": pending or "",
+        "busy": bool(busy),
+        "loading": loading(credential, preference),
     }
 
 
@@ -134,15 +153,23 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
 # Tabs
 # ---------------------------------------------------------------------------
 
+def _provider_name(provider: str) -> str:
+    """The badge / tab name of a key's provider: a brand from the catalog,
+    drawn as given; only the "Local" word is translated."""
+    label = catalog_labels.chip_provider_label(provider)
+    return iface_(label) if model_suggestions.is_local(provider) else label
+
+
 def build_tabs(state: Dict[str, Any]) -> List[Tab]:
-    tabs = [Tab(TAB_MIXIE, iface_(MIXIE_LABEL), enabled=not state["guest"], cost=iface_(COST_CREDITS),
-                note=iface_(SIGN_IN_NOTE) if state["guest"] else "", heading=iface_(HEADING_MIXIE))]
+    # Always open: signed out, its rows say why they are off (_mixie_rows).
+    tabs = [Tab(TAB_MIXIE, iface_(MIXIE_LABEL), cost=iface_(COST_CREDITS),
+                heading=iface_(HEADING_MIXIE))]
     if state["key_provider"]:
-        tabs.append(Tab(TAB_KEY, iface_(catalog_labels.chip_provider_label(state["key_provider"])),
+        tabs.append(Tab(TAB_KEY, _provider_name(state["key_provider"]),
                         cost=iface_(COST_FREE), heading=iface_(HEADING_KEY),
                         note=iface_(KEY_NEEDED_NOTE) if state["key_missing"] else ""))
     elif state["resumable"]:
-        tabs.append(Tab(TAB_KEY, iface_(catalog_labels.chip_provider_label(state["resume_provider"])),
+        tabs.append(Tab(TAB_KEY, _provider_name(state["resume_provider"]),
                         cost=iface_(COST_FREE), note=iface_(PAUSED_NOTE), heading=iface_(HEADING_KEY)))
     else:
         tabs.append(Tab(TAB_KEY, iface_(ADD_KEY_TAB), cost=iface_(COST_FREE),
@@ -159,9 +186,12 @@ def build_tabs(state: Dict[str, Any]) -> List[Tab]:
 
 def _mixie_rows(state, models: Sequence[Dict[str, Any]]) -> List[Row]:
     rows: List[Row] = []
-    live = not state["guest"]
+    live = state["hosted_ok"]
+    if not live:
+        # Shown only inside the card, above the catalog it greys out.
+        rows.append(Row(TAB_MIXIE, ROW_NOTE, iface_(SIGN_IN_NOTE), enabled=False))
     if not models:
-        return [Row(TAB_MIXIE, ROW_NOTE, iface_(EMPTY_NOTE), enabled=False)]
+        return rows or [Row(TAB_MIXIE, ROW_NOTE, iface_(EMPTY_NOTE), enabled=False)]
     no_pick = not state["hosted_provider"] and not state["hosted_model"]
     rows.append(Row(TAB_MIXIE, ROW_MODEL, iface_(DEFAULT_ROW), meta=iface_(DEFAULT_META),
                     current=no_pick, enabled=live))
@@ -203,7 +233,8 @@ def _key_rows(state) -> List[Row]:
     current_model = state["resume_model"] if paused else state["key_model"]
     live = not state["key_missing"]
     if model_suggestions.is_openrouter(provider):
-        rows.append(Row(TAB_KEY, ROW_MODEL, current_model or "—", meta=iface_(OPENROUTER_META),
+        rows.append(Row(TAB_KEY, ROW_MODEL, current_model or "—",
+                        meta=catalog_labels.chip_provider_label(provider),
                         current=not paused, enabled=live and bool(current_model),
                         provider=provider, model=current_model))
         rows.append(Row(TAB_KEY, ROW_FOOTER, iface_(CHANGE_SLUG)))
@@ -253,12 +284,16 @@ def chip(state: Dict[str, Any]) -> Dict[str, str]:
     if source == TAB_LOCAL:
         label, name = iface_(LOCAL_LABEL), state["local_model"]
     elif source == TAB_KEY:
-        label = iface_(catalog_labels.chip_provider_label(state["key_provider"]))
+        label = _provider_name(state["key_provider"])
         name = catalog_labels.chip_model_label(state["key_provider"], state["key_model"])
     else:
         label = iface_(MIXIE_LABEL)
         name = model_menu.chip_label(state["hosted_label"], state["hosted_thinking"]) or iface_(DEFAULT_CHIP)
-    kind = STATE_BUSY if state["pending"] else (STATE_KEY_NEEDED if state["key_missing"] else STATE_OK)
+    # BUSY for every gate but a turn in flight: the island card words its
+    # gate from this state ("Saving your change…" versus "Finish or stop
+    # the current reply"), and the chip dims.
+    waiting = state["pending"] or state.get("busy") or state.get("loading")
+    kind = STATE_BUSY if waiting else (STATE_KEY_NEEDED if state["key_missing"] else STATE_OK)
     return {"source": source, "label": label, "name": name, "state": kind}
 
 
@@ -271,14 +306,18 @@ def _clean(text: str) -> str:
 
 
 def encode_tabs(tabs: Sequence[Tab]) -> str:
-    return RS.join(FS.join([t.id, _clean(t.label), "1" if t.enabled else "0", _clean(t.cost), _clean(t.note),
-                            _clean(t.heading), t.action])
+    return RS.join(FS.join([_clean(t.id), _clean(t.label), "1" if t.enabled else "0", _clean(t.cost),
+                            _clean(t.note), _clean(t.heading), _clean(t.action)])
                    for t in tabs)
 
 
 def encode_rows(rows: Sequence[Row]) -> str:
-    return RS.join(FS.join([r.tab, r.kind, _clean(r.label), _clean(r.meta), "1" if r.current else "0",
-                            "1" if r.enabled else "0", r.provider, r.model, r.thinking])
+    """Every field is scrubbed: an OpenRouter slug (provider/model ids ride
+    back to `mixar.agent_pick`) is user-typed, and one stray separator would
+    shift the C++ reader's nine fields."""
+    return RS.join(FS.join([_clean(r.tab), _clean(r.kind), _clean(r.label), _clean(r.meta),
+                            "1" if r.current else "0", "1" if r.enabled else "0",
+                            _clean(r.provider), _clean(r.model), _clean(r.thinking)])
                    for r in rows)
 
 

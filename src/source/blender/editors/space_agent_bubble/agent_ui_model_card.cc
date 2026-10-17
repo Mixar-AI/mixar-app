@@ -13,7 +13,8 @@
  *   unfolds its levels in place; a footer opens AI Provider Settings;
  * - wheel / trackpad scroll the list (eased), the thumb drags, the track pages;
  * - Up / Down move a keyboard focus over the picks, Enter runs it,
- *   Left / Right / Tab switch tabs, Esc closes;
+ *   Left / Right / Tab switch tabs (past disabled and action tabs), Esc
+ *   closes; with Ctrl / Alt / Cmd held the arrows and Tab pass through;
  * - a press outside closes the card and still reaches what it was on,
  *   except the chip itself (it would only open the card again).
  */
@@ -84,13 +85,16 @@ void tag_island_redraw(wmWindow *win)
   }
 }
 
+/** A page the card can open (an action tab is a button: only a click runs it). */
+bool selectable(const State &state, const int index)
+{
+  return index >= 0 && index < int(state.tabs.size()) && state.tabs[index].enabled &&
+         state.tabs[index].action.empty();
+}
 
 void set_tab(State &state, const int index)
 {
-  /* An action tab is a button: only a click runs it (card_modal). */
-  if (index < 0 || index >= int(state.tabs.size()) || !state.tabs[index].enabled ||
-      state.tabs[index].id == state.tab || !state.tabs[index].action.empty())
-  {
+  if (!selectable(state, index) || state.tabs[index].id == state.tab) {
     return;
   }
   state.tab = state.tabs[index].id;
@@ -99,6 +103,41 @@ void set_tab(State &state, const int index)
   rebuild_lines(state);
   reveal_current(state);
   request_redraw(state.win);
+}
+
+/** The next page \a step tabs away, past the ones that are not (Left / Right
+ * stop at the ends, Tab wraps). */
+void step_tab(State &state, const int step, const bool wrap)
+{
+  const int n = int(state.tabs.size());
+  int i = tab_index(state, state.tab);
+  for (int k = 1; k < n; k++) {
+    i = wrap ? ((i + step) % n + n) % n : i + step;
+    if (i < 0 || i >= n) {
+      return;
+    }
+    if (selectable(state, i)) {
+      set_tab(state, i);
+      return;
+    }
+  }
+}
+
+/** The card's cursor over itself; off it, the regions' own again: a region
+ * sets its cursor on entry (every move only with `event_cursor`), so the
+ * card asks for a refresh rather than forcing the default. */
+void set_cursor(State &state, const int cursor)
+{
+  if (state.cursor == cursor) {
+    return;
+  }
+  state.cursor = cursor;
+  if (cursor >= 0) {
+    WM_cursor_set(state.win, cursor);
+  }
+  else {
+    state.win->tag_cursor_refresh = true;
+  }
 }
 
 void teardown(bContext *C, wmOperator *op)
@@ -112,7 +151,11 @@ void teardown(bContext *C, wmOperator *op)
   }
   if (state->win && state->draw_handle) {
     WM_draw_cb_exit(state->win, state->draw_handle);
-    WM_cursor_set(state->win, WM_CURSOR_DEFAULT);
+    if (state->cursor >= 0) {
+      /* The regions set theirs at the next move. */
+      set_cursor(*state, -1);
+      WM_event_add_mousemove(state->win);
+    }
     tag_island_redraw(state->win);
   }
   if (g_state == state) {
@@ -195,11 +238,18 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
       teardown(C, op);
       return OPERATOR_FINISHED;
     }
+    /* Redraw only while something moves or changed: settled, a tick is two
+     * string reads (and the pick poll at 10 Hz). */
+    bool redraw = !state->risen || !BLI_rctf_compare(&state->anchor, &g_anchor.chip, 0.0f) ||
+                  state->text_size != g_anchor.text_size;
+    state->risen = appear_factor(*state) >= 1.0f;
     state->anchor = g_anchor.chip;
     state->text_size = g_anchor.text_size;
-    refresh(C, *state, false);
-    step_motion(*state);
-    request_redraw(state->win);
+    redraw |= refresh(C, *state, false);
+    redraw |= step_motion(*state);
+    if (redraw) {
+      request_redraw(state->win);
+    }
     return OPERATOR_RUNNING_MODAL;
   }
   if (event->type == WINDEACTIVATE) {
@@ -210,6 +260,16 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
   if (ISKEYBOARD(event->type)) {
     if (event->val != KM_PRESS) {
       return PASS;
+    }
+    const bool held = event->modifier & (KM_CTRL | KM_ALT | KM_OSKEY | KM_HYPER);
+    if (held && ELEM(event->type,
+                     EVT_UPARROWKEY,
+                     EVT_DOWNARROWKEY,
+                     EVT_LEFTARROWKEY,
+                     EVT_RIGHTARROWKEY,
+                     EVT_TABKEY))
+    {
+      return PASS; /* A shortcut of the composer's, or the system's. */
     }
     switch (event->type) {
       case EVT_ESCKEY:
@@ -222,19 +282,14 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
         move_focus(*state, 1);
         break;
       case EVT_LEFTARROWKEY:
-        set_tab(*state, tab_index(*state, state->tab) - 1);
+        step_tab(*state, -1, false);
         break;
       case EVT_RIGHTARROWKEY:
-        set_tab(*state, tab_index(*state, state->tab) + 1);
+        step_tab(*state, 1, false);
         break;
-      case EVT_TABKEY: {
-        const int n = int(state->tabs.size());
-        if (n > 0) {
-          const int step = (event->modifier & KM_SHIFT) ? n - 1 : 1;
-          set_tab(*state, (tab_index(*state, state->tab) + step) % n);
-        }
+      case EVT_TABKEY:
+        step_tab(*state, (event->modifier & KM_SHIFT) ? -1 : 1, true);
         break;
-      }
       case EVT_RETKEY:
       case EVT_PADENTER:
         if (pickable(*state, state->focus)) {
@@ -250,7 +305,8 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
 
   const float mx = float(event->xy[0]);
   const float my = float(event->xy[1]);
-  const Layout layout = layout_compute(*state);
+  /* The layout as drawn, mid-rise included. */
+  const Layout layout = layout_compute(*state, card_rise(*state));
   const Hit hit = hit_test(*state, layout, mx, my);
 
   if (ELEM(event->type, MOUSEMOVE, INBETWEEN_MOUSEMOVE)) {
@@ -258,6 +314,10 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
       drag_bar(*state, layout, my);
       request_redraw(state->win);
       return OPERATOR_RUNNING_MODAL;
+    }
+    /* The tab ink and the disclosure light at once; the plates ease (timer). */
+    if (hit.tab != state->hover_tab || hit.trailing != state->hover_trailing) {
+      request_redraw(state->win);
     }
     state->hover = hit.line;
     state->hover_tab = hit.tab;
@@ -267,12 +327,16 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
     if (hit.line >= 0) {
       state->focus = -1;
     }
+    if (!hit.inside) {
+      set_cursor(*state, -1);
+      return PASS;
+    }
     const bool clickable = (hit.line >= 0 && pickable(*state, hit.line)) || hit.trailing ||
-                           hit.footer >= 0 ||
+                           footer_enabled(*state, hit.footer) ||
                            (hit.tab >= 0 && state->tabs[hit.tab].enabled &&
                             state->tabs[hit.tab].id != state->tab);
-    WM_cursor_set(state->win, clickable ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
-    return hit.inside ? OPERATOR_RUNNING_MODAL : PASS;
+    set_cursor(*state, clickable ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+    return OPERATOR_RUNNING_MODAL;
   }
 
   if (ISMOUSE_WHEEL(event->type) || event->type == MOUSEPAN) {
@@ -326,8 +390,11 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
         }
         set_tab(*state, hit.tab);
       }
+      else if (hit.footer >= 0) {
+        state->pressed = footer_enabled(*state, hit.footer) ? -2 - hit.footer : -1;
+      }
       else {
-        state->pressed = hit.footer >= 0 ? -2 - hit.footer : hit.line;
+        state->pressed = hit.line;
       }
       request_redraw(state->win);
       return OPERATOR_RUNNING_MODAL;
