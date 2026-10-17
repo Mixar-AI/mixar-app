@@ -81,7 +81,7 @@ bool BKE_undo_tabs_last_walk_was_document();
 /** True for a worker lane scene (``mixie_session_id`` starts with ``agentlane:``)
  * or the agent preview's private render scene. */
 bool BKE_undo_tab_scene_is_lane(const Scene *scene);
-/** True for the agent preview's private render scene (``mixar_internal_render_scene``). */
+/** True for private render or animation preview scenes; neither owns a project undo tab. */
 bool BKE_undo_tab_scene_is_internal_render(const Scene *scene);
 
 /** The tab a scene belongs to: its own ``session_uid`` for a real tab, the

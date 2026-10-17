@@ -146,6 +146,7 @@ static int group_int_prop(const IDProperty *group, const char *name, int fallbac
  * made the tab's whole content "shared", and a push while it existed was filed
  * under a tab no user can see (the reach rule). It is a lane: it claims nothing. */
 static const char *INTERNAL_RENDER_SCENE_PROP = "mixar_internal_render_scene";
+static const char *INTERNAL_ANIMATION_SCENE_PROP = "mixar_internal_animation_scene";
 
 static bool scene_is_internal_render(const Scene *scene)
 {
@@ -153,7 +154,9 @@ static bool scene_is_internal_render(const Scene *scene)
     return false;
   }
   return group_int_prop(scene->id.properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0 ||
-         group_int_prop(scene->id.system_properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0;
+         group_int_prop(scene->id.system_properties, INTERNAL_RENDER_SCENE_PROP, 0) != 0 ||
+         group_int_prop(scene->id.properties, INTERNAL_ANIMATION_SCENE_PROP, 0) != 0 ||
+         group_int_prop(scene->id.system_properties, INTERNAL_ANIMATION_SCENE_PROP, 0) != 0;
 }
 
 bool BKE_undo_tab_scene_is_internal_render(const Scene *scene)

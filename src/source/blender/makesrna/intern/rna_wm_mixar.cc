@@ -242,6 +242,11 @@ static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const
 
 /* tour_menu.cc: tag every open pop-up in the window to rebuild its layout. */
 int Mixar_refresh_popups(wmWindow *win);
+int Mixar_refresh_popover(wmWindow *win, const char *panel_id);
+static int rna_Window_mixar_refresh_popover(wmWindow *win, const char *panel_id)
+{
+  return Mixar_refresh_popover(win, panel_id);
+}
 
 static int rna_Window_mixar_refresh_popups(wmWindow *win)
 {
@@ -419,6 +424,14 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         func, "Rebuild every pop-up open in this window after async state changes");
     PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
     RNA_def_function_return(func, parm);
+  }
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_refresh_popover", "rna_Window_mixar_refresh_popover");
+    RNA_def_function_ui_description(func, "Refresh only the named live popover after async updates");
+    PropertyRNA *parm = RNA_def_string(func, "panel_id", nullptr, 0, "Panel", "Panel type idname");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    RNA_def_function_return(func, RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX));
   }
   /* This window's client rect inside another window's client coordinates
    * (points, bottom-left origin) — exact across window styles. */
