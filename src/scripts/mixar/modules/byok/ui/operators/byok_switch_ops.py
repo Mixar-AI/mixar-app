@@ -12,7 +12,7 @@ re-validates it like a fresh save.
 
 While the request is in flight the chip names the target model, dimmed, and
 the dropdown's rows are disabled (`credential_state.begin_switch`; one island
-mutation at a time, shared with the Mixie | Custom AI toggle). Success adopts
+mutation at a time, shared with pause and resume). Success adopts
 the server's echo exactly like a dialog save; a failure keeps the stored
 model and says why in a toast. Nothing here opens the dialog.
 
@@ -67,18 +67,25 @@ class MIXAR_BYOK_OT_switch_model(Operator):
         if not model_suggestions.is_valid_model(provider, self.model):
             self.report({'WARNING'}, n_("That model is not available for your key"))
             return {'CANCELLED'}
-        if byok_client.mutation_in_flight() or preference_state.mutation_pending():
-            return {'CANCELLED'}  # a dialog save / removal or a hosted pick is in flight
-        epoch = credential_state.current_epoch()
-        if not credential_state.begin_switch(self.model, context.window_manager):
-            return {'CANCELLED'}  # a toggle or another switch is in flight
-        _redraw()
+        return {'FINISHED'} if switch(context.window_manager, self.model) else {'CANCELLED'}
 
-        def _done(success, data, err):
-            _on_switch_done(success, data, err, epoch)
 
-        byok_client.resave_stored_key(self.model, on_done=_done)
-        return {'FINISHED'}
+def switch(wm, model: str) -> bool:
+    """Re-send the key in use on ``model``; False when nothing started (a
+    dialog save / removal, a hosted pick or another island mutation is in
+    flight). Shared by the operator and the island popup's `mixar.agent_pick`."""
+    if byok_client.mutation_in_flight() or preference_state.mutation_pending():
+        return False
+    epoch = credential_state.current_epoch()
+    if not credential_state.begin_switch(model, wm):
+        return False
+    _redraw()
+
+    def _done(success, data, err):
+        _on_switch_done(success, data, err, epoch)
+
+    byok_client.resave_stored_key(model, on_done=_done)
+    return True
 
 
 def _on_switch_done(success, data, err, epoch):

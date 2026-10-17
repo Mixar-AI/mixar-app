@@ -48,6 +48,7 @@
 
 #include "BLI_rect.h"
 
+#include "agent_ui_model_card.hh"
 #include "agent_ui_provider.hh"
 
 #include "UI_interface.hh"
@@ -729,7 +730,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   /* --- Mixie | Custom AI and the key chip, right of Auto ---
    * (agent_ui_provider.cc). Absent until the Python half registers the
    * mirror; an empty rect means the budget dropped it. */
-  agent_bubble_provider_buttons(block, region, *layout, *state);
+  agent_bubble_provider_buttons(C, block, region, *layout, *state);
 
   if (!agent_bubble_references_visible(C)) {
     agent_bubble_send_button(C, region, block, *layout, *state);
@@ -4430,6 +4431,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_queue_navigate);
   WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
+  agent_model_card_register();
   WM_operatortype_append(MIXAR_OT_preview_sketch);
 }
 

@@ -35,23 +35,28 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.byok.core import (
-    byok_client, catalog_labels, codex_auth, credential_state, key_store, model_suggestions,
-    transport_seal,
+    byok_client, catalog_labels, codex_auth, credential_state, key_store, model_suggestions, picker,
+    preference_state, transport_seal,
 )
 from mixar.modules.byok.constants import BYOK_TURN_ACCOUNT_FIELD, BYOK_TURN_KEY_FIELD
 
 BYOK = SCRIPTS / "mixar" / "modules" / "byok"
 SWITCH_OPS = BYOK / "ui" / "operators" / "byok_switch_ops.py"
-KEY_MENU = BYOK / "ui" / "menus" / "key_model_menu.py"
 PROPS = BYOK / "ui" / "properties" / "agent_model_props.py"
 PROVIDER_CC = (ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
                / "agent_ui_provider.cc")
+CARD_DATA_CC = PROVIDER_CC.parent / "agent_ui_model_card_data.cc"
 
+# As the backend sends it: short labels are the catalog's, never the client's.
 CATALOG = {'providers': [
-    {'id': 'anthropic', 'label': 'Anthropic', 'models': [
-        {'id': 'claude-opus-5-5', 'label': 'Claude Opus 5.5', 'platform_available': True},
-        {'id': 'claude-sonnet-5-5', 'label': 'Claude Sonnet 5.5', 'platform_available': True},
+    {'id': 'anthropic', 'label': 'Anthropic', 'short_label': 'Claude API', 'models': [
+        {'id': 'claude-opus-5-5', 'label': 'Claude Opus 5.5', 'short_label': 'Opus 5.5',
+         'platform_available': True},
+        {'id': 'claude-sonnet-5-5', 'label': 'Claude Sonnet 5.5', 'short_label': 'Sonnet 5.5',
+         'platform_available': True},
     ]},
+    # A provider with no catalog models (the key's own model still gets a row).
+    {'id': 'kimi', 'label': 'Moonshot Kimi', 'short_label': 'Kimi API', 'models': []},
 ]}
 
 
@@ -80,53 +85,69 @@ def state(monkeypatch):
     model_suggestions._populated_once = saved_loaded
 
 
-def _mirror(wm):
-    return (wm.mixar_agent_key_label, wm.mixar_agent_key_model,
-            wm.mixar_agent_key_menu, wm.mixar_agent_key_busy)
+def _chip():
+    """What the island chip draws: (source, badge, name, state)."""
+    st = picker.picker_state(credential_state.snapshot(), preference_state.snapshot(),
+                             pending=credential_state.pending(),
+                             switching=credential_state.switching())
+    c = picker.chip(st)
+    return c["source"], c["label"], c["name"], c["state"]
+
+
+def _key_models():
+    """The key tab's model rows: [(model, current)]."""
+    st = picker.picker_state(credential_state.snapshot(), preference_state.snapshot(),
+                             pending=credential_state.pending(),
+                             switching=credential_state.switching())
+    return [(r.model, r.current) for r in picker.build_rows(st, [])
+            if r.tab == picker.TAB_KEY and r.kind == picker.ROW_MODEL]
 
 
 # ---------------------------------------------------------------------------
-# The mirrors the C++ chip reads
+# What the island chip and the popup's key tab show
 # ---------------------------------------------------------------------------
 
-def test_an_active_cloud_key_names_provider_and_model_and_offers_the_dropdown(state):
-    wm = SimpleNamespace()
-    state.apply_from_payload(_payload(), wm)
-    assert _mirror(wm) == ('Claude API', 'Opus 5.5', True, False)
+def test_an_active_cloud_key_names_provider_and_model_and_lists_its_models(state):
+    state.apply_from_payload(_payload(), SimpleNamespace())
+    assert _chip() == ('KEY', 'Claude API', 'Opus 5.5', 'OK')
+    assert _key_models() == [('claude-opus-5-5', True), ('claude-sonnet-5-5', False)]
 
 
-@pytest.mark.parametrize('provider, label', [('openrouter', 'OpenRouter'), ('local', 'Local')])
-def test_free_form_providers_have_no_dropdown(state, provider, label):
-    wm = SimpleNamespace()
-    state.apply_from_payload(_payload(provider, 'some/model'), wm)
-    assert wm.mixar_agent_key_label == label
-    assert wm.mixar_agent_key_model == 'some/model'
-    assert wm.mixar_agent_key_menu is False
+def test_openrouter_offers_only_its_slug(state):
+    state.apply_from_payload(_payload('openrouter', 'some/model'), SimpleNamespace())
+    assert _chip() == ('KEY', 'OpenRouter', 'some/model', 'OK')
+    assert _key_models() == [('some/model', True)]
 
 
-def test_no_key_means_no_chip(state):
-    wm = SimpleNamespace()
-    state.apply_from_payload(_payload(active=False), wm)
-    assert _mirror(wm) == ('', '', False, False)
+def test_a_local_model_is_its_own_source(state):
+    state.apply_from_payload(_payload('local', 'some/model'), SimpleNamespace())
+    assert _chip() == ('LOCAL', 'Local', 'some/model', 'OK')
+    assert _key_models() == []  # nothing on the key tab: no key is in use
 
 
-def test_a_provider_without_catalog_models_offers_no_dropdown(state):
-    wm = SimpleNamespace()
-    state.apply_from_payload(_payload('kimi', 'kimi-k2'), wm)
-    assert wm.mixar_agent_key_label == 'Kimi API'
-    assert wm.mixar_agent_key_menu is False
+def test_no_key_means_mixie_answers(state):
+    state.apply_from_payload(_payload(active=False), SimpleNamespace())
+    assert _chip()[0] == 'MIXIE'
+    assert _key_models() == []
 
 
-def test_the_mirrors_are_registered_window_manager_properties():
+def test_a_model_the_catalog_does_not_list_keeps_its_row(state):
+    state.apply_from_payload(_payload('kimi', 'kimi-k2'), SimpleNamespace())
+    assert _chip()[:2] == ('KEY', 'Kimi API')
+    assert _key_models() == [('kimi-k2', True)]
+
+
+def test_the_picker_mirrors_are_registered_and_read_by_the_cpp():
     source = PROPS.read_text(encoding='utf-8')
-    names = ('mixar_agent_key_label', 'mixar_agent_key_model', 'mixar_agent_key_menu',
-             'mixar_agent_key_busy', 'mixar_agent_key_resumable')
+    names = ('mixar_agent_source', 'mixar_agent_source_label', 'mixar_agent_chip_name',
+             'mixar_agent_source_state', 'mixar_agent_tabs', 'mixar_agent_rows')
     for name in names:
         assert f"WM.{name} = " in source
         assert f"'{name}'," in source  # unregistered with the rest
-    cpp = PROVIDER_CC.read_text(encoding='utf-8')
+    assert 'mixar_agent_key_' not in source  # the old key chip's mirrors are gone
+    cpp = PROVIDER_CC.read_text(encoding='utf-8') + CARD_DATA_CC.read_text(encoding='utf-8')
     for name in names:
-        assert f'"{name}"' in cpp
+        assert f'"{name}"' in cpp, name
 
 
 # ---------------------------------------------------------------------------
@@ -138,13 +159,14 @@ def test_a_switch_in_flight_names_the_target_dimmed_until_it_lands(state):
     state.apply_from_payload(_payload(), wm)
     assert state.begin_switch('claude-sonnet-5-5', wm)
     assert state.switching() == 'claude-sonnet-5-5' and state.pending() == 'switch'
-    assert _mirror(wm) == ('Claude API', 'Sonnet 5.5', True, True)
+    assert _chip() == ('KEY', 'Claude API', 'Sonnet 5.5', 'BUSY')
+    assert _key_models() == [('claude-opus-5-5', False), ('claude-sonnet-5-5', True)]
     # One island mutation at a time.
     assert not state.begin_switch('claude-opus-5-5', wm)
     assert not state.begin_toggle(False, wm)
     state.end_pending(wm)
     assert state.switching() == ''
-    assert _mirror(wm) == ('Claude API', 'Opus 5.5', True, False)
+    assert _chip() == ('KEY', 'Claude API', 'Opus 5.5', 'OK')
 
 
 def test_logout_drops_a_pending_switch(state):
@@ -153,7 +175,8 @@ def test_logout_drops_a_pending_switch(state):
     state.begin_switch('claude-sonnet-5-5', wm)
     state.clear(wm)
     assert state.switching() == ''
-    assert _mirror(wm) == ('', '', False, False)
+    assert _chip()[0] == 'MIXIE'
+    assert _key_models() == []
 
 
 # ---------------------------------------------------------------------------
@@ -349,8 +372,9 @@ def test_the_operator_is_internal_registered_and_never_opens_the_dialog():
     source = ast.get_source_segment(SWITCH_OPS.read_text(encoding='utf-8'), cls)
     assert 'bl_idname = "mixar_byok.switch_model"' in source
     assert "bl_options = {'INTERNAL'}" in source
-    assert 'byok_client.resave_stored_key(self.model' in source
-    assert 'credential_state.begin_switch(' in source
+    assert 'switch(context.window_manager, self.model)' in source
+    assert 'byok_client.resave_stored_key(model, on_done=_done)' in SWITCH_OPS.read_text(encoding='utf-8')
+    assert 'credential_state.begin_switch(' in SWITCH_OPS.read_text(encoding='utf-8')
     assert 'is_valid_model(provider, self.model)' in source
     assert 'open_dialog' not in SWITCH_OPS.read_text(encoding='utf-8')
     assigned = {t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
@@ -358,38 +382,37 @@ def test_the_operator_is_internal_registered_and_never_opens_the_dialog():
     assert 'classes' in assigned
 
 
-# ---------------------------------------------------------------------------
-# The dropdown's rows
-# ---------------------------------------------------------------------------
-
-def test_the_dropdown_lists_the_provider_s_models_with_the_current_one_lit(state):
-    from mixar.modules.byok.ui.menus import key_model_menu as menu
-
-    snap = {'byok_is_active': True, 'byok_current_provider': 'anthropic',
-            'byok_current_model': 'claude-opus-5-5'}
-    assert menu.menu_rows(snap) == [('claude-opus-5-5', 'Claude Opus 5.5', True),
-                                    ('claude-sonnet-5-5', 'Claude Sonnet 5.5', False)]
-    # While a switch is in flight its target is the lit row.
-    assert [r[2] for r in menu.menu_rows(snap, 'claude-sonnet-5-5')] == [False, True]
-    for provider in ('openrouter', 'local'):
-        assert menu.menu_rows({**snap, 'byok_current_provider': provider}) == []
-    assert menu.menu_rows({**snap, 'byok_is_active': False}) == []
-
-
-def test_the_dropdown_s_bl_idname_is_the_one_the_island_pops():
-    _, cls = _class(KEY_MENU, 'MIXAR_BYOK_MT_key_model')
-    assert cls.bases[0].id == 'Menu'
-    assert 'KEY_MODEL_MENU_ID = "MIXAR_BYOK_MT_key_model"' in KEY_MENU.read_text(encoding='utf-8')
-    assert '"MIXAR_BYOK_MT_key_model"' in PROVIDER_CC.read_text(encoding='utf-8')
-
-
-def test_chip_labels_are_brand_names_and_only_local_is_translated():
+def test_chip_labels_are_brand_names_and_only_local_is_translated(state):
     source = (BYOK / "core" / "catalog_labels.py").read_text(encoding='utf-8')
     assert 'LOCAL_CHIP_LABEL = n_("Local")' in source
     assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
+    # Only the providers the desktop defines itself are named in the client.
+    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex'}
+    assert catalog_labels.chip_provider_label('codex') == 'Codex'
+
+
+def test_short_labels_are_the_backends_and_an_older_backend_gets_full_names(state):
+    assert catalog_labels.chip_model_label('anthropic', 'claude-opus-5-5') == 'Opus 5.5'
+    # Codex shows the openai group: its short labels too.
+    model_suggestions.populate_from_payload({'providers': [
+        {'id': 'openai', 'label': 'OpenAI', 'short_label': 'OpenAI API', 'models': [
+            {'id': 'gpt-6-sol', 'label': 'GPT 6 Sol', 'short_label': 'GPT 6 Sol'}]}]})
+    assert catalog_labels.chip_model_label('codex', 'gpt-6-sol') == 'GPT 6 Sol'
+    # A backend from before short_label: full names, never a client-side cut.
+    model_suggestions.populate_from_payload({'providers': [
+        {'id': 'anthropic', 'label': 'Anthropic', 'models': [
+            {'id': 'claude-opus-5-5', 'label': 'Claude Opus 5.5'}]}]})
+    assert catalog_labels.chip_provider_label('anthropic') == 'Anthropic'
+    assert catalog_labels.chip_model_label('anthropic', 'claude-opus-5-5') == 'Claude Opus 5.5'
+    model_suggestions.clear()
+    assert model_suggestions.provider_short_label('anthropic') == ''
 
 
 def test_the_island_builds_the_provider_sources():
     cmake = (PROVIDER_CC.parent / "CMakeLists.txt").read_text(encoding='utf-8')
-    for name in ("agent_ui_provider.cc", "agent_ui_provider_chevron.cc", "agent_ui_provider.hh"):
+    for name in ("agent_ui_provider.cc", "agent_ui_provider_chevron.cc", "agent_ui_provider.hh",
+                 "agent_ui_model_card.cc", "agent_ui_model_card_data.cc",
+                 "agent_ui_model_card_draw.cc", "agent_ui_model_card_layout.cc",
+                 "agent_ui_model_card_qa.cc", "agent_ui_model_card.hh",
+                 "agent_ui_model_card_intern.hh"):
         assert f"  {name}\n" in cmake

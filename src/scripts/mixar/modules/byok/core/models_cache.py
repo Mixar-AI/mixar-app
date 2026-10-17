@@ -258,7 +258,7 @@ def _redraw() -> None:
         # An open AI Provider Settings dialog reads the catalog in draw():
         # rebuild it so "Loading…" turns into the providers without a mouse move.
         refresh_popup_dialogs()
-        # The island key chip names catalog labels; re-mirror them.
+        # The island chip and popup name catalog labels; re-mirror them.
         from . import credential_state
         credential_state.apply_to_wm()
     except Exception as exc:

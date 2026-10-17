@@ -358,9 +358,6 @@ void agent_ui_layout_build(const int window_w,
   r_layout->chip_auto = f.box(scribble_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
   r_layout->chip_model = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
   r_layout->model_form = AgentModelChipForm::Full;
-  r_layout->model_split_x = BLI_rctf_cent_x(&r_layout->chip_model);
-  r_layout->chip_key = {};
-  r_layout->key_compact = false;
   r_layout->chip_reading = f.box(scribble_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(scribble_x, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   /* Generate keeps the artboard's right inset against whatever card width
@@ -391,10 +388,8 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   in.voice_status = state.voice_status;
   in.model_available = state.model_available;
   in.model_label = state.model_label;
-  in.model_key_active = state.model_byok_active && state.model_key_label[0];
-  in.model_key_label = state.model_key_label;
-  in.model_key_model = state.model_key_model;
-  in.model_key_menu = state.model_key_menu;
+  in.chip_badge = state.model_source_label;
+  in.chip_name = state.model_chip_name;
   in.translate = [](const char *msgid) -> const char * { return IFACE_(msgid); };
   const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
                                  AGENT_CHIP_ICON_GAP * u,
@@ -451,25 +446,6 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   place(layout.chip_voice, fit.width[AGENT_CHIP_SLOT_VOICE]);
   place(layout.chip_auto, fit.width[AGENT_CHIP_SLOT_AUTO]);
   place(layout.chip_model, fit.width[AGENT_CHIP_SLOT_MODEL]);
-  /* The model slot holds the toggle and, while a key is in use, its chip:
-   * split it, and find where the toggle's Mixie half ends and its Custom AI
-   * half begins — shared by the painter and the native buttons. */
-  const AgentProviderSizes provider = agent_provider_sizes(in, metrics, measure, measure_strong);
-  layout.chip_key = {};
-  layout.key_compact = false;
-  if (layout.model_form != AgentModelChipForm::Icon &&
-      BLI_rctf_size_x(&layout.chip_model) > 0.0f)
-  {
-    const float slot_end = layout.chip_model.xmax;
-    layout.chip_model.xmax = layout.chip_model.xmin + provider.toggle_w;
-    if (provider.chip_w > 0.0f) {
-      layout.chip_key = layout.chip_model;
-      layout.chip_key.xmin = layout.chip_model.xmax + AGENT_KEY_CHIP_GAP * u;
-      layout.chip_key.xmax = slot_end;
-      layout.key_compact = layout.model_form == AgentModelChipForm::Label;
-    }
-  }
-  layout.model_split_x = layout.chip_model.xmin + AGENT_TOGGLE_THUMB_INSET * u + provider.mixie_w;
   place(layout.chip_reading, fit.width[AGENT_CHIP_SLOT_READING]);
   place(layout.chip_clear, fit.width[AGENT_CHIP_SLOT_CLEAR]);
 }

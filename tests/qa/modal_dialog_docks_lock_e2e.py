@@ -9,7 +9,7 @@ points, under the agent viewport lock. No credits, no real credentials.
     python3 tests/qa/modal_dialog_docks_lock_e2e.py
 
 Run on an isolated QA app built with the change. For each entry point —
-(A) the island's model dropdown with the island OPEN and a draft typed,
+(A) the island model chip's popup with the island OPEN and a draft typed,
 (B) the profile menu with the island resting as the PILL — it proves:
 1. the dialog is hosted in the main window and centred in it;
 2. every floating dock that was on screen is suppressed (macOS: native
@@ -32,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from bubble_new_file_from_island_e2e import NATIVE_WINDOWS  # noqa: E402
+import model_popup as mp  # noqa: E402
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import ScenarioFail, run_scenario  # noqa: E402
@@ -39,7 +40,6 @@ from lib import ScenarioFail, run_scenario  # noqa: E402
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/modal-dialog-docks'))
 OUT.mkdir(parents=True, exist_ok=True)
 USER = 'qa.modal-dialog@example.invalid'
-PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE'}
 PROFILE = {'text': USER, 'area_type': 'TOPBAR'}
 SETTINGS = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
 KEY_FIELD = {'prop': 'byok_form_api_key', 'popup': True}
@@ -148,13 +148,10 @@ def snap(qa, name):
 
 
 def open_from_island(qa):
-    qa.click(**PICKER)
-    # A fresh island's first click can commit composer focus; retry once only
-    # while the menu demonstrably stayed shut.
-    if not qa.find(**SETTINGS)['widgets']:
-        qa.click(**PICKER)
-    qa.wait("bool(drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))", timeout=5)
-    qa.click(**SETTINGS)
+    # The model chip's popup; its key tab's footer is the settings route
+    # ("Add a key…" / "Manage key…" / "Enter key…", whichever applies).
+    mp.show_tab(qa, 'KEY')
+    mp.settings(qa)
     qa.wait(DIALOG_OPEN, timeout=10)
     return True
 

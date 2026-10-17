@@ -5,8 +5,8 @@
 """The client's view of the server's BYOK credential state.
 
 Source of truth is a plain dict here; `wm.byok_*` is a mirror the C++ profile
-card and the dialog draw from, and `wm.mixar_agent_key_*` is the island's key
-chip. Keeping the dict primary means a fetch that lands before `byok_props`
+card and the dialog draw from; the island's model chip and popup read the
+picker mirrors `core/picker_mirror.py` writes from here. Keeping the dict primary means a fetch that lands before `byok_props`
 has registered its WindowManager properties (UI auto-discovery is batched
 over several frames) is retained rather than silently lost. Not persisted:
 it carries the account's provider, model and masked key preview, and is
@@ -56,7 +56,7 @@ _DEFAULTS: Dict[str, Any] = {
     # the dialog then asks for the key only.
     "byok_device_key_missing": False,
     # Server says inactive but THIS device holds a key record it can re-send
-    # (the island paused it): Custom AI resumes it with no dialog. Derived
+    # (the island paused it): a key-tab pick resumes it with no dialog. Derived
     # from `key_store` after every successful apply; the provider and model
     # it names (not mirrored) prefill the dialog and the menu's wording.
     "byok_key_resumable": False,
@@ -84,15 +84,13 @@ _epoch: int = 0
 # epoch (`on_next_fetch`); a logout `clear()` drops them with the epoch.
 _fetch_hooks: list = []
 # The one island mutation that may be in flight: an in-place model switch
-# (the key chip's dropdown), a pause or a resume (the Mixie | Custom AI
-# toggle). While set, background fetches are held (their answer would predate
+# (a key-tab pick), a pause or a resume (the model card's picks). While set, background fetches are held (their answer would predate
 # the mutation) and a second mutation is refused.
 _pending: Optional[Dict[str, Any]] = None
 # Bumped by every write this process knows the answer of: a GET issued before
 # it is dropped when it lands; its failure retry carries the serial too.
 _request_serial: int = 0
 _RETRY_DELAY_S = 15.0
-
 
 def snapshot() -> Dict[str, Any]:
     """Current state as a plain dict (safe to read from any thread)."""
@@ -251,7 +249,7 @@ def set_resumable(summary: Optional[Dict[str, str]]) -> None:
 def _check_resumable(parsed: Dict[str, Any]) -> None:
     """After a successful apply: ask the key store (worker thread) whether
     this device holds a record that can be re-sent — while inactive that is
-    what Custom AI resumes, while active it is what Mixie may pause."""
+    what the key tab resumes, while active it is what a Mixie pick may pause."""
     epoch = current_epoch()
 
     def _done(summary):
@@ -294,33 +292,8 @@ def apply_to_wm(wm=None) -> None:
             # Properties not registered yet (UI auto-discovery is batched) —
             # the dict keeps the value and a later apply_to_wm picks it up.
             return
-    _apply_key_chip(target, current)
-
-
-def _apply_key_chip(target, current) -> None:
-    """The island key chip's mirrors (C++ only reads them): provider and
-    model as drawn (a switch names its target, dimmed), dropdown, busy,
-    resumable."""
-    from . import catalog_labels, model_suggestions
-    from mixar.modules.common.i18n import iface_
-
-    active = bool(current["byok_is_active"])
-    provider = current["byok_current_provider"] if active else ""
-    switching_to = switching() if active else ""
-    model = switching_to or (current["byok_current_model"] if active else "")
-    menu = bool(provider) and not (model_suggestions.is_openrouter(provider)
-                                   or model_suggestions.is_local(provider))
-    if menu:
-        items = model_suggestions.get_model_items(provider)
-        menu = any(mid != 'NONE' for mid, _label, _desc in items)
-    try:
-        target.mixar_agent_key_label = iface_(catalog_labels.chip_provider_label(provider))
-        target.mixar_agent_key_model = catalog_labels.chip_model_label(provider, model)
-        target.mixar_agent_key_menu = menu
-        target.mixar_agent_key_busy = bool(pending())
-        target.mixar_agent_key_resumable = bool(current["byok_key_resumable"])
-    except Exception:  # registered in a later auto-discovery batch
-        pass
+    from . import picker_mirror
+    picker_mirror.apply_to_wm(target)
 
 
 # ---------------------------------------------------------------------------
@@ -328,14 +301,14 @@ def _apply_key_chip(target, current) -> None:
 # ---------------------------------------------------------------------------
 
 def resumable(current: Optional[Dict[str, Any]] = None) -> bool:
-    """A paused key this device can re-send: Custom AI switches back to it
+    """A paused key this device can re-send: the key tab switches back to it
     with no dialog."""
     current = current if current is not None else snapshot()
     return bool(current["byok_key_resumable"] and not current["byok_is_active"])
 
 
 def pausable(current: Optional[Dict[str, Any]] = None) -> bool:
-    """A key in use that Custom AI could bring back after a pause."""
+    """A key in use that a resume could bring back after a pause."""
     current = current if current is not None else snapshot()
     return bool(current["byok_is_active"] and current["byok_record_resumable"])
 
@@ -360,8 +333,8 @@ def switching() -> str:
 
 
 def begin_switch(model: str, wm=None) -> bool:
-    """Mark a model switch in flight: the chip names ``model`` until it lands.
-    False (nothing changed) when another mutation is already in flight."""
+    """Mark a model switch in flight (the chip names ``model`` until it
+    lands); False when another mutation is already in flight."""
     global _pending, _request_serial
     with _lock:
         if _pending is not None:
@@ -494,7 +467,6 @@ def _schedule_retry(epoch, serial) -> None:
 def _redraw() -> None:
     try:
         from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
-
         trigger_ui_redraw()
     except Exception as exc:
         logger.debug("BYOK state redraw failed: %s", exc)

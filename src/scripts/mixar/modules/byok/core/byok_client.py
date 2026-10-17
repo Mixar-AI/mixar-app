@@ -322,7 +322,7 @@ def resave_stored_key(
 ) -> None:
     """PUT /agent/byok with the key THIS DEVICE already holds — nothing is
     typed. Island callers: the key chip's model switch (``model`` is the new
-    model, same provider) and Custom AI resuming a paused key (``model``
+    model, same provider) and the model card resuming a paused key (``model``
     None: the record's own). The server re-validates like a fresh save.
     Worker thread: load the record, read / renew a Codex sign-in exactly as
     before a turn (`turn_credentials.resolve`, renewals written back to the
@@ -428,7 +428,7 @@ def delete_credentials(
 ) -> None:
     """DELETE /agent/credentials/all — remove BYOK config (`removed_count`
     rows). ``forget_local`` False keeps this device's key record: the
-    island's Mixie half PAUSES the key and Custom AI re-sends it later
+    island's Mixie pick PAUSES the key and a key-tab pick re-sends it later
     (`resave_stored_key`); "Remove key" and the chat card delete both.
     Counted in flight like a save.
     """

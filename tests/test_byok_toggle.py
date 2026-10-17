@@ -33,8 +33,19 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 
 install_bpy_mock()
 
-from mixar.modules.byok.core import credential_state, key_store, preference_state
+from mixar.modules.byok.core import credential_state, key_store, picker, preference_state
 from mixar.modules.byok.ui.operators import byok_toggle_ops as ops
+
+
+def _picker():
+    """What the island chip and popup read (core/picker.py over the mirrors)."""
+    return picker.picker_state(credential_state.snapshot(), preference_state.snapshot(),
+                               pending=credential_state.pending(),
+                               switching=credential_state.switching())
+
+
+def _chip():
+    return picker.chip(_picker())
 
 RESUMABLE = {"provider": "anthropic", "model": "claude-opus-5-5"}
 
@@ -102,23 +113,23 @@ def test_a_paused_key_is_a_record_here_while_the_server_says_inactive(env):
     assert snap["byok_key_resumable"] and not snap["byok_is_active"]
     assert credential_state.resumable()
     assert credential_state.resume_target() == ("anthropic", "claude-opus-5-5")
-    assert wm.byok_key_resumable is True and wm.mixar_agent_key_resumable is True
-    # The key chip only exists while a key answers.
-    assert wm.mixar_agent_key_label == "" and wm.mixar_agent_key_model == ""
+    assert wm.byok_key_resumable is True and _picker()["resumable"] is True
+    # Mixie answers while the key is paused; the key tab offers it back.
+    assert _chip()["source"] == picker.TAB_MIXIE
 
 
 def test_a_record_that_cannot_be_resent_is_not_resumable(env):
     wm, calls = env
     _paused(wm, calls, summary=None)
     assert not credential_state.resumable()
-    assert wm.mixar_agent_key_resumable is False
+    assert _picker()["resumable"] is False
     assert credential_state.resume_target() == ("", "")
 
 
 def test_an_active_key_is_never_resumable_but_may_be_pausable(env):
     wm, calls = env
     _key_in_use(wm, calls)
-    assert not credential_state.resumable() and wm.mixar_agent_key_resumable is False
+    assert not credential_state.resumable() and _picker()["resumable"] is False
     assert credential_state.pausable()
     calls.resumable[-1](None)  # a Local key, a revoked sign-in, no model
     assert not credential_state.pausable()
@@ -148,14 +159,14 @@ def test_mixie_deletes_the_rows_and_keeps_the_record(env):
     assert credential_state.pending() == "pause"
     # Nothing is flipped ahead of the server: a turn sent now still carries the key.
     assert wm.byok_is_active is True and wm.mixar_agent_model_byok_active is True
-    assert wm.mixar_agent_key_busy is True
+    assert _chip()["state"] == picker.STATE_BUSY
     # A fetch issued earlier must not land while the DELETE is in flight.
     credential_state._apply_fetch_result(credential_state.current_epoch(), True, _payload(), None)
 
     calls.delete[0][0](True, 1, None)
     assert credential_state.pending() == ""
     assert wm.byok_is_active is False and wm.mixar_agent_model_byok_active is False
-    assert wm.mixar_agent_key_busy is False and wm.mixar_agent_key_label == ""
+    assert _chip()["state"] == picker.STATE_OK and _chip()["source"] == picker.TAB_MIXIE
     assert calls.toasts == []
     assert len(calls.pref_fetch) == 1  # the server's word on byok_active follows
     calls.resumable[-1](RESUMABLE)
@@ -204,6 +215,8 @@ def test_mixie_opens_the_settings_for_a_key_it_could_not_bring_back(env, monkeyp
 
 def test_custom_ai_resends_the_record_without_the_dialog(env, monkeypatch):
     wm, calls = env
+    from mixar.modules.byok.core import model_suggestions
+    monkeypatch.setattr(model_suggestions, "_short_providers", {"anthropic": "Claude API"})
     _paused(wm, calls)
     opened = []
     monkeypatch.setattr(ops.bpy.ops.mixar_byok, "open_dialog",
@@ -216,7 +229,7 @@ def test_custom_ai_resends_the_record_without_the_dialog(env, monkeypatch):
     calls.resave[0][1](True, _payload(), None)
     assert credential_state.pending() == ""
     assert wm.byok_is_active is True and wm.mixar_agent_model_byok_active is True
-    assert wm.mixar_agent_key_label == "Claude API"
+    assert (_chip()["source"], _chip()["label"]) == (picker.TAB_KEY, "Claude API")
     assert not credential_state.resumable()  # active: nothing is paused
     assert len(calls.pref_fetch) == 1
 
@@ -255,7 +268,7 @@ def test_forget_saved_key_drops_the_record_only(env):
     assert ops.MIXAR_BYOK_OT_forget_stored_key().execute(ctx) == {'FINISHED'}
     assert calls.delete == []  # the server holds nothing for a paused key
     calls.forget[0](True)
-    assert not credential_state.resumable() and wm.mixar_agent_key_resumable is False
+    assert not credential_state.resumable() and _picker()["resumable"] is False
     assert not ops.MIXAR_BYOK_OT_forget_stored_key.poll(ctx)
 
 
@@ -532,14 +545,6 @@ def test_a_request_finishing_after_the_dialog_closed_still_reports_failure(env, 
     monkeypatch.setattr(byok_ops, "_dialog_open", True)
     byok_ops._on_delete_done(False, 0, "server said no", epoch=credential_state.current_epoch())
     assert toasts == ["Couldn't remove your API key"]  # an open dialog shows it inline
-
-
-def test_the_hosted_menu_draws_the_toggle_rows_as_the_toggle_operators():
-    source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "menus"
-              / "agent_model_menu.py").read_text(encoding="utf-8")
-    assert 'row.kind == "USE_MIXIE":\n        line.operator("mixar_byok.use_mixie"' in source
-    assert 'line.operator("mixar_byok.use_key"' in source
-    assert "byok_resumable=credential_state.resumable()" in source
 
 
 def test_the_dialog_names_the_paused_key_and_prefills_it(env):

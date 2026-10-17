@@ -117,7 +117,7 @@ def make_record(
 ) -> Dict[str, Any]:
     """A cloud/local record carries the key; a Codex record carries only the
     sign-in file reference (``auth_path``; "" = the CLI's default). ``model``
-    is the model the key was saved on: it is what the island's Custom AI
+    is the model the key was saved on: it is what the dialog's "Use my key"
     re-sends when it resumes a paused key (`byok_client.resave_stored_key`),
     since the server keeps nothing once the key is paused. A record without
     it (an earlier build) can only be resumed through the settings dialog."""
@@ -254,7 +254,7 @@ def update(changes: Dict[str, Any], user_id: Optional[str] = None) -> bool:
 
 def resumable_summary(record: Optional[Dict[str, Any]]) -> Optional[Dict[str, str]]:
     """``{"provider", "model"}`` when ``record`` can be re-sent to the server
-    without the user typing anything (the island's Custom AI after Mixie
+    without the user typing anything (a key-tab pick after a Mixie
     paused the key), else None. Pure apart from a Codex record, whose
     sign-in file is read (never copied): a file that is gone or whose
     sign-in the endpoint revoked cannot be resumed, only entered again.

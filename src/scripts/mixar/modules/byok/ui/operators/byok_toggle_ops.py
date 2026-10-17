@@ -2,20 +2,25 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The island's Mixie | Custom AI toggle: switch who answers, in one click.
+"""Pause and resume the user's key: who answers, in one click.
+
+`pause` / `resume` are what the island model card's picks run
+(`agent_pick_ops.py`: a Mixie pick over a key pauses it, a key-tab pick with
+the key paused resumes it); `mixar_byok.use_mixie` / `use_key` wrap them for
+the dialog ("Use my key") and Python callers.
 
 The key lives on this computer (`core/key_store`); the server keeps metadata
-only. So the toggle never asks for the key and never deletes it:
-- **Mixie** while a key is in use PAUSES it: the server's rows are deleted
+only. So nothing here asks for the key or deletes it:
+- **Pause** (a key in use): the server's rows are deleted the server's rows are deleted
   (`byok_client.delete_credentials(forget_local=False)`) so Mixie answers,
   the platform pick applies and credits are charged — and this computer
-  keeps the key record. Only a key Custom AI could bring back is paused
+  keeps the key record. Only a key a resume could bring back is paused
   (`credential_state.pausable`): a Local key (its endpoint and managed
   runtime live outside the record), a revoked Codex sign-in or a record
   from a build that did not remember the model would be orphaned in the
   credential store, so for those Mixie opens AI Provider Settings, where
   Remove key is.
-- **Custom AI** RESUMES a paused key: the record is re-sent
+- **Resume** (a paused key): the record is re-sent
   (`byok_client.resave_stored_key`; the server re-validates it like a fresh
   save) — no dialog, no typing. With nothing to resume (no record, a Local
   key whose endpoint is not in the record, a revoked Codex sign-in, a record
@@ -34,7 +39,7 @@ the island has a toggle or model switch in flight, a dialog save / removal
 is unanswered, or the hosted picker has a pick in flight — and while an
 agent turn is in flight (`turn_in_flight`): the backend bound that turn's
 key when it started, so a pause or resume now would apply only to the next
-message while the thumb said otherwise. Custom AI still opens the settings
+message while the chip said otherwise. `use_key` still opens the settings
 meanwhile when there is nothing to resume.
 
 Two operators, not `open_dialog` with a property: the toggle's halves are
@@ -69,7 +74,7 @@ def _can_toggle() -> bool:
 
 
 class MIXAR_BYOK_OT_use_mixie(Operator):
-    """Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"""
+    """Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"""
     bl_idname = "mixar_byok.use_mixie"
     bl_label = "Use Mixie"
     bl_options = {'INTERNAL'}
@@ -94,7 +99,7 @@ class MIXAR_BYOK_OT_use_mixie(Operator):
                 or preference_state.snapshot()["mixar_agent_model_byok_active"]):
             return {'CANCELLED'}
         if not credential_state.pausable():
-            # Nothing Custom AI could bring back (Local, a revoked sign-in, a
+            # Nothing a resume could bring back (Local, a revoked sign-in, a
             # record without a model, or the store not read yet): the settings
             # own that decision — Remove key lives there.
             return _open_settings()
@@ -104,7 +109,7 @@ class MIXAR_BYOK_OT_use_mixie(Operator):
 class MIXAR_BYOK_OT_use_key(Operator):
     """Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"""
     bl_idname = "mixar_byok.use_key"
-    bl_label = "Use Custom AI"
+    bl_label = "Use My Key"
     bl_options = {'INTERNAL'}
 
     @classmethod
@@ -166,8 +171,10 @@ class MIXAR_BYOK_OT_forget_stored_key(Operator):
 # Pause: DELETE the server rows, keep the record
 # ---------------------------------------------------------------------------
 
-def _pause(wm) -> bool:
-    """Ask the server to forget the key; False when nothing started."""
+def pause(wm, then=None) -> bool:
+    """Ask the server to forget the key (the record stays); False when
+    nothing started. ``then`` runs on the main thread after a successful
+    pause — the island popup chains the hosted pick it was asked for."""
     if not _can_toggle() or not credential_state.begin_toggle(False, wm):
         return False
     epoch = credential_state.current_epoch()
@@ -175,13 +182,16 @@ def _pause(wm) -> bool:
     _redraw()
 
     def _done(success, removed_count, err):
-        _on_pause_done(success, removed_count, err, epoch, pref_epoch)
+        _on_pause_done(success, removed_count, err, epoch, pref_epoch, then)
 
     byok_client.delete_credentials(on_done=_done, forget_local=False)
     return True
 
 
-def _on_pause_done(success, removed_count, err, epoch, pref_epoch):
+_pause = pause  # the tests' and the toggle's own name for it
+
+
+def _on_pause_done(success, removed_count, err, epoch, pref_epoch, then=None):
     """Main-thread callback: adopt "inactive", or re-read and explain."""
     try:
         if credential_state.current_epoch() != epoch:
@@ -192,13 +202,18 @@ def _on_pause_done(success, removed_count, err, epoch, pref_epoch):
             # Every row is gone, so byok_active is false by construction:
             # move the island now (reads issued before are dropped) and let
             # the preference refresh confirm. The resumable check that
-            # follows the apply tells Custom AI it can switch back.
+            # follows the apply tells the key tab it can switch back.
             credential_state.apply_removed(epoch=epoch)
             preference_state.invalidate_reads()
             preference_state.apply_local(
                 {"mixar_agent_model_byok_active": False}, epoch=pref_epoch)
             logger.info("BYOK key paused: %d row(s) deleted, record kept on this device",
                         removed_count)
+            if then is not None:
+                try:
+                    then()
+                except Exception as e:  # noqa: BLE001 — the pause itself landed
+                    logger.warning("BYOK pause follow-up failed: %s", e)
         else:
             logger.warning("BYOK pause failed: %s", err)
             _toast(n_("Couldn't switch to Mixie"), err)
@@ -214,8 +229,9 @@ def _on_pause_done(success, removed_count, err, epoch, pref_epoch):
 # Resume: re-send the record
 # ---------------------------------------------------------------------------
 
-def _resume(wm) -> bool:
-    """Re-send the paused key from this computer; False when nothing started."""
+def resume(wm, model=None) -> bool:
+    """Re-send the paused key from this computer, on ``model`` (None: the
+    model it was saved with); False when nothing started."""
     if not _can_toggle() or not credential_state.begin_toggle(True, wm):
         return False
     epoch = credential_state.current_epoch()
@@ -225,8 +241,11 @@ def _resume(wm) -> bool:
     def _done(success, data, err):
         _on_resume_done(success, data, err, epoch, pref_epoch)
 
-    byok_client.resave_stored_key(None, on_done=_done)
+    byok_client.resave_stored_key(model, on_done=_done)
     return True
+
+
+_resume = resume
 
 
 def _on_resume_done(success, data, err, epoch, pref_epoch):

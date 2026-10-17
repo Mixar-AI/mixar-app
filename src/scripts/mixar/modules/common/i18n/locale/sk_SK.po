@@ -1532,29 +1532,8 @@ msgstr "Lokálny server odpovedal HTTP {status}."
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Lokálny server nie je dostupný. Skontrolujte, či je spustený a či je základná URL správna."
 
-msgid "No models available — contact support"
-msgstr "Nie sú dostupné žiadne modely — kontaktujte podporu"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "Model určuje váš kľúč API"
-
 msgid "Custom"
 msgstr "Vlastný"
-
-msgid "Change or remove my API key…"
-msgstr "Zmeniť alebo odstrániť môj kľúč API…"
-
-msgid "Use my own API key…"
-msgstr ""
-
-msgid "Switch to Mixie (keep my key)"
-msgstr ""
-
-msgid "Switch back to my API key"
-msgstr ""
 
 msgid "Thinking"
 msgstr "Uvažovanie"
@@ -1562,8 +1541,74 @@ msgstr "Uvažovanie"
 msgid "Thinking: {level}"
 msgstr "Uvažovanie: {level}"
 
-msgid "Your key: {name}"
-msgstr "Váš kľúč: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "Default"
+msgstr "Predvolené"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Nie sú dostupné žiadne modely — kontaktujte podporu"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Add a key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Ukladá sa model agenta… Pred odoslaním alebo zmenou modelu počkajte."
@@ -1572,27 +1617,6 @@ msgid "Mixar cannot accept your key right now — try again in a moment."
 msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
-msgstr ""
-
-msgid "Agent Model"
-msgstr "Model agenta"
-
-msgid "Choose which model runs the agent."
-msgstr "Vyberie model, na ktorom beží agent."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Úroveň uvažovania pre aktuálne vybraný model."
-
-msgid "No thinking levels for this model"
-msgstr "Tento model nemá úrovne uvažovania"
-
-msgid "Model"
-msgstr "Model"
-
-msgid "Choose which model your API key runs the agent on"
-msgstr ""
-
-msgid "No models to switch to"
 msgstr ""
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
@@ -1606,6 +1630,9 @@ msgstr "Použije tento model pre agenta"
 
 msgid "Provider"
 msgstr "Poskytovateľ"
+
+msgid "Model"
+msgstr "Model"
 
 msgid "Label"
 msgstr "Nápis"
@@ -1627,6 +1654,9 @@ msgstr "Model sa nepodarilo zmeniť"
 
 msgid "Could not reset model"
 msgstr "Model sa nepodarilo resetovať"
+
+msgid "Pick Agent Model"
+msgstr ""
 
 msgid "Sign-in found: {path}"
 msgstr ""
@@ -1650,9 +1680,6 @@ msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
 msgstr "Používa vaše predplatné ChatGPT — kredity Mixar sa neúčtujú."
 
 msgid "Choose a Codex model."
-msgstr ""
-
-msgid "Wait for the current reply to finish, then change the model."
 msgstr ""
 
 msgid "Please try again."
@@ -1715,7 +1742,7 @@ msgstr ""
 msgid "Saved on this computer: {provider} · {model}"
 msgstr ""
 
-msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgid "Pick one of its models from the model chip in the chat bar to switch back. Saving a key below replaces it."
 msgstr ""
 
 msgid "Use my key"
@@ -1907,10 +1934,10 @@ msgstr ""
 msgid "Use Mixie"
 msgstr ""
 
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
 msgstr ""
 
-msgid "Use Custom AI"
+msgid "Use My Key"
 msgstr ""
 
 msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
@@ -1933,6 +1960,9 @@ msgstr "Poskytovateľ modelu agenta"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "ID poskytovateľa uloženého výberu modelu hostovaného agenta"
+
+msgid "Agent Model"
+msgstr "Model agenta"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "ID modelu uloženého výberu modelu hostovaného agenta"
@@ -1961,34 +1991,16 @@ msgstr "Model agenta je dostupný"
 msgid "False when the saved model is not available on your plan"
 msgstr "Nepravda, keď uložený model nie je dostupný vo vašom pláne"
 
-msgid "Agent Key Provider Label"
+msgid "Agent Source"
 msgstr ""
 
-msgid "Short name of the provider whose API key the agent uses"
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
 msgstr ""
 
-msgid "Agent Key Model Label"
+msgid "Agent Model Name"
 msgstr ""
 
-msgid "The model your API key runs the agent on"
-msgstr ""
-
-msgid "Agent Key Model Menu"
-msgstr ""
-
-msgid "The key's model can be switched from the chat composer"
-msgstr ""
-
-msgid "Agent Key Busy"
-msgstr ""
-
-msgid "A model switch, pause or resume of your API key is being saved"
-msgstr ""
-
-msgid "Agent Key Resumable"
-msgstr ""
-
-msgid "Your saved API key is paused; Custom AI switches back to it"
+msgid "The model the agent runs on"
 msgstr ""
 
 msgid "LLM provider"
@@ -2776,9 +2788,6 @@ msgstr "Profil kompatibility"
 
 msgid "Density"
 msgstr "Hustota"
-
-msgid "Default"
-msgstr "Predvolené"
 
 msgid "Generation-pane control spacing"
 msgstr "Rozostup ovládacích prvkov panela generovania"
@@ -19314,9 +19323,6 @@ msgstr "Panel nástrojov"
 msgid "Sidebar"
 msgstr "Bočný panel"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "Panel segmentácie UV siete"
 
@@ -25053,6 +25059,15 @@ msgstr "pred %d d"
 msgid "%dw ago"
 msgstr "pred %d týž."
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Generuje sa (%d)"
 
@@ -25068,31 +25083,7 @@ msgstr "{} · Enter na odoslanie"
 msgid "Sketch · Enter to send"
 msgstr "Náčrt · Enter na odoslanie"
 
-msgid "Custom AI"
-msgstr ""
-
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
-msgstr ""
-
-msgid "Your own API key is in use, and it decides the model"
-msgstr ""
-
-msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
-msgstr ""
-
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Your own API key is in use. Click to change the provider or key"
+msgid "Who answers the agent and which model. Click to change"
 msgstr ""
 
 msgid "No generations yet"

@@ -231,7 +231,7 @@ def _draw_paused_notice(col, wm, with_actions):
             model=lookup_model_label(provider, model)),
         'MUTED',
     )
-    card_label(bcol, n_("Custom AI in the chat bar switches back to it. Saving a key below replaces it."),
+    card_label(bcol, n_("Pick one of its models from the model chip in the chat bar to switch back. Saving a key below replaces it."),
                'MUTED')
     if with_actions:
         bcol.separator(factor=0.55)

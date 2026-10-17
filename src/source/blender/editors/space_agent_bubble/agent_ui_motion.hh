@@ -33,9 +33,7 @@ enum class AgentIslandControl {
   Clear,
   Voice,
   Auto,
-  Model,
-  KeyChip,  /* The key chip's provider word (opens AI Provider settings). */
-  KeyModel, /* The key chip's model pill (the switch dropdown). */
+  Model, /* The model chip (opens the model popup). */
   Generate,
   Refine,
   Revert,

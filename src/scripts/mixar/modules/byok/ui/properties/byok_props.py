@@ -262,7 +262,7 @@ def register():
     )
     # The server holds nothing for a PAUSED key, but this computer does: the
     # island's Mixie half deleted the server rows and kept the key record,
-    # and Custom AI re-sends it. True while inactive and such a record is
+    # and the model card's key tab re-sends it. True while inactive and such a record is
     # here (derived off-thread by core/credential_state); the dialog names
     # it and offers Use my key / Forget saved key.
     WM.byok_key_resumable = BoolProperty(

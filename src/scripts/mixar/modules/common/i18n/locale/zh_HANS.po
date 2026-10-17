@@ -1532,29 +1532,8 @@ msgstr "本地服务器返回 HTTP {status}。"
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "无法连接本地服务器。请检查其是否正在运行，以及基础 URL 是否正确。"
 
-msgid "No models available — contact support"
-msgstr "无可用模型——请联系支持团队"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "模型由您的 API 密钥决定"
-
 msgid "Custom"
 msgstr "自定义"
-
-msgid "Change or remove my API key…"
-msgstr "更改或移除我的 API 密钥…"
-
-msgid "Use my own API key…"
-msgstr ""
-
-msgid "Switch to Mixie (keep my key)"
-msgstr ""
-
-msgid "Switch back to my API key"
-msgstr ""
 
 msgid "Thinking"
 msgstr "思考"
@@ -1562,8 +1541,74 @@ msgstr "思考"
 msgid "Thinking: {level}"
 msgstr "思考：{level}"
 
-msgid "Your key: {name}"
-msgstr "您的密钥：{name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "Default"
+msgstr "默认"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "无可用模型——请联系支持团队"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Add a key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "正在保存智能体模型…请稍候再发送消息或更换模型。"
@@ -1572,27 +1617,6 @@ msgid "Mixar cannot accept your key right now — try again in a moment."
 msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
-msgstr ""
-
-msgid "Agent Model"
-msgstr "智能体模型"
-
-msgid "Choose which model runs the agent."
-msgstr "选择运行智能体的模型。"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "当前所选模型的推理强度。"
-
-msgid "No thinking levels for this model"
-msgstr "此模型没有思考级别"
-
-msgid "Model"
-msgstr "模型"
-
-msgid "Choose which model your API key runs the agent on"
-msgstr ""
-
-msgid "No models to switch to"
 msgstr ""
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
@@ -1606,6 +1630,9 @@ msgstr "为智能体使用此模型"
 
 msgid "Provider"
 msgstr "提供商"
+
+msgid "Model"
+msgstr "模型"
 
 msgid "Label"
 msgstr "标签"
@@ -1627,6 +1654,9 @@ msgstr "无法更改模型"
 
 msgid "Could not reset model"
 msgstr "无法重置模型"
+
+msgid "Pick Agent Model"
+msgstr ""
 
 msgid "Sign-in found: {path}"
 msgstr ""
@@ -1650,9 +1680,6 @@ msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
 msgstr "使用您的 ChatGPT 订阅——不扣除 Mixar 积分。"
 
 msgid "Choose a Codex model."
-msgstr ""
-
-msgid "Wait for the current reply to finish, then change the model."
 msgstr ""
 
 msgid "Please try again."
@@ -1715,7 +1742,7 @@ msgstr ""
 msgid "Saved on this computer: {provider} · {model}"
 msgstr ""
 
-msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgid "Pick one of its models from the model chip in the chat bar to switch back. Saving a key below replaces it."
 msgstr ""
 
 msgid "Use my key"
@@ -1907,10 +1934,10 @@ msgstr ""
 msgid "Use Mixie"
 msgstr ""
 
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
 msgstr ""
 
-msgid "Use Custom AI"
+msgid "Use My Key"
 msgstr ""
 
 msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
@@ -1933,6 +1960,9 @@ msgstr "智能体模型提供商"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "已保存的托管智能体模型选择的提供商 ID"
+
+msgid "Agent Model"
+msgstr "智能体模型"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "已保存的托管智能体模型选择的模型 ID"
@@ -1961,34 +1991,16 @@ msgstr "智能体模型可用"
 msgid "False when the saved model is not available on your plan"
 msgstr "已保存的模型在您的套餐中不可用时为假"
 
-msgid "Agent Key Provider Label"
+msgid "Agent Source"
 msgstr ""
 
-msgid "Short name of the provider whose API key the agent uses"
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
 msgstr ""
 
-msgid "Agent Key Model Label"
+msgid "Agent Model Name"
 msgstr ""
 
-msgid "The model your API key runs the agent on"
-msgstr ""
-
-msgid "Agent Key Model Menu"
-msgstr ""
-
-msgid "The key's model can be switched from the chat composer"
-msgstr ""
-
-msgid "Agent Key Busy"
-msgstr ""
-
-msgid "A model switch, pause or resume of your API key is being saved"
-msgstr ""
-
-msgid "Agent Key Resumable"
-msgstr ""
-
-msgid "Your saved API key is paused; Custom AI switches back to it"
+msgid "The model the agent runs on"
 msgstr ""
 
 msgid "LLM provider"
@@ -2776,9 +2788,6 @@ msgstr "兼容性配置"
 
 msgid "Density"
 msgstr "密度"
-
-msgid "Default"
-msgstr "默认"
 
 msgid "Generation-pane control spacing"
 msgstr "生成窗格控件间距"
@@ -19314,9 +19323,6 @@ msgstr "工具栏"
 msgid "Sidebar"
 msgstr "侧栏"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV 网格分割面板"
 
@@ -25053,6 +25059,15 @@ msgstr "%d 天前"
 msgid "%dw ago"
 msgstr "%d 周前"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "生成中 (%d)"
 
@@ -25068,31 +25083,7 @@ msgstr "{} · 按 Enter 发送"
 msgid "Sketch · Enter to send"
 msgstr "草图 · 按 Enter 发送"
 
-msgid "Custom AI"
-msgstr ""
-
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
-msgstr ""
-
-msgid "Your own API key is in use, and it decides the model"
-msgstr ""
-
-msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
-msgstr ""
-
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Your own API key is in use. Click to change the provider or key"
+msgid "Who answers the agent and which model. Click to change"
 msgstr ""
 
 msgid "No generations yet"

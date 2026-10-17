@@ -95,6 +95,8 @@ int main()
   idle.voice_available = true;
   idle.model_available = true;
   idle.model_label = "Mixie";
+  idle.chip_badge = "Mixie";
+  idle.chip_name = "Auto";
 
   AgentChipRowInputs capturing = idle;
   capturing.voice_listening = true;
@@ -118,17 +120,14 @@ int main()
   AgentChipRowInputs no_voice = idle;
   no_voice.voice_available = false;
 
-  /* The user's own key in use: the toggle plus its key chip. */
+  /* The user's own key in use: the badge names the provider, the name the model. */
   AgentChipRowInputs key = idle;
-  key.model_key_active = true;
-  key.model_key_label = "Claude API";
-  key.model_key_model = "Opus 5.5";
-  key.model_key_menu = true;
+  key.chip_badge = "Claude API";
+  key.chip_name = "Opus 5.5";
 
   AgentChipRowInputs key_free_form = key;
-  key_free_form.model_key_label = "OpenRouter";
-  key_free_form.model_key_model = "anthropic/claude-opus-4.8";
-  key_free_form.model_key_menu = false;
+  key_free_form.chip_badge = "OpenRouter";
+  key_free_form.chip_name = "anthropic/claude-opus-4.8";
 
   const Scenario scenarios[] = {
       {"idle", idle},

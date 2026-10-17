@@ -1532,29 +1532,8 @@ msgstr ".HTTP {status} הנע ימוקמה תרשה"
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr ".הנוכנ תיסיסבה URL-ה תבותכשו לעופ אוהש קודבל שי .ימוקמה תרשל עיגהל היה ןתינ אל"
 
-msgid "No models available — contact support"
-msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "לדומב טלוש API-ה חתפמ"
-
 msgid "Custom"
 msgstr "תישיא םאתומ"
-
-msgid "Change or remove my API key…"
-msgstr "…ילש API-ה חתפמ לש הרסה וא יוניש"
-
-msgid "Use my own API key…"
-msgstr ""
-
-msgid "Switch to Mixie (keep my key)"
-msgstr ""
-
-msgid "Switch back to my API key"
-msgstr ""
 
 msgid "Thinking"
 msgstr "הבישח"
@@ -1562,8 +1541,74 @@ msgstr "הבישח"
 msgid "Thinking: {level}"
 msgstr "{level} :הבישח"
 
-msgid "Your key: {name}"
-msgstr "{name} :ךלש חתפמה"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "Default"
+msgstr "לדחמ תרירב"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Add a key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr ".םילדומ תפלחה וא החילש ינפל ןיתמהל אנ …ןכוסה לדומ תא רמוש"
@@ -1572,27 +1617,6 @@ msgid "Mixar cannot accept your key right now — try again in a moment."
 msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
-msgstr ""
-
-msgid "Agent Model"
-msgstr "ןכוסה לדומ"
-
-msgid "Choose which model runs the agent."
-msgstr ".ןכוסה תא ץירמ לדומ הזיא רוחבל שי"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr ".עגרכ רחבנש לדומה לש הקסהה ץמאמ"
-
-msgid "No thinking levels for this model"
-msgstr "הז לדומל הבישח תומר ןיא"
-
-msgid "Model"
-msgstr "לדומ"
-
-msgid "Choose which model your API key runs the agent on"
-msgstr ""
-
-msgid "No models to switch to"
 msgstr ""
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
@@ -1606,6 +1630,9 @@ msgstr "ןכוסל הז לדומב שומיש"
 
 msgid "Provider"
 msgstr "קפס"
+
+msgid "Model"
+msgstr "לדומ"
 
 msgid "Label"
 msgstr "תיוות"
@@ -1627,6 +1654,9 @@ msgstr "לדומה תא תונשל היה ןתינ אל"
 
 msgid "Could not reset model"
 msgstr "לדומה תא לחתאל היה ןתינ אל"
+
+msgid "Pick Agent Model"
+msgstr ""
 
 msgid "Sign-in found: {path}"
 msgstr ""
@@ -1650,9 +1680,6 @@ msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
 msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
 
 msgid "Choose a Codex model."
-msgstr ""
-
-msgid "Wait for the current reply to finish, then change the model."
 msgstr ""
 
 msgid "Please try again."
@@ -1715,7 +1742,7 @@ msgstr ""
 msgid "Saved on this computer: {provider} · {model}"
 msgstr ""
 
-msgid "Custom AI in the chat bar switches back to it. Saving a key below replaces it."
+msgid "Pick one of its models from the model chip in the chat bar to switch back. Saving a key below replaces it."
 msgstr ""
 
 msgid "Use my key"
@@ -1907,10 +1934,10 @@ msgstr ""
 msgid "Use Mixie"
 msgstr ""
 
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer: Custom AI switches back"
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
 msgstr ""
 
-msgid "Use Custom AI"
+msgid "Use My Key"
 msgstr ""
 
 msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
@@ -1933,6 +1960,9 @@ msgstr "ןכוסה לדומ קפס"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "הרמשנש חראתמה ןכוסה לדומ תריחב לש קפסה ההזמ"
+
+msgid "Agent Model"
+msgstr "ןכוסה לדומ"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "הרמשנש חראתמה ןכוסה לדומ תריחב לש לדומה ההזמ"
@@ -1961,34 +1991,16 @@ msgstr "יאכז ןכוסה לדומ"
 msgid "False when the saved model is not available on your plan"
 msgstr "ךלש לולסמב ןימז וניא רומשה לדומהשכ יוגש"
 
-msgid "Agent Key Provider Label"
+msgid "Agent Source"
 msgstr ""
 
-msgid "Short name of the provider whose API key the agent uses"
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
 msgstr ""
 
-msgid "Agent Key Model Label"
+msgid "Agent Model Name"
 msgstr ""
 
-msgid "The model your API key runs the agent on"
-msgstr ""
-
-msgid "Agent Key Model Menu"
-msgstr ""
-
-msgid "The key's model can be switched from the chat composer"
-msgstr ""
-
-msgid "Agent Key Busy"
-msgstr ""
-
-msgid "A model switch, pause or resume of your API key is being saved"
-msgstr ""
-
-msgid "Agent Key Resumable"
-msgstr ""
-
-msgid "Your saved API key is paused; Custom AI switches back to it"
+msgid "The model the agent runs on"
 msgstr ""
 
 msgid "LLM provider"
@@ -2776,9 +2788,6 @@ msgstr "תומיאת ליפורפ"
 
 msgid "Density"
 msgstr "תופיפצ"
-
-msgid "Default"
-msgstr "לדחמ תרירב"
 
 msgid "Generation-pane control spacing"
 msgstr "הריציה תינולח ידקפ חוויר"
@@ -19314,9 +19323,6 @@ msgstr "םילכ לגרס"
 msgid "Sidebar"
 msgstr "דצ לגרס"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV תרוצ חוליפ חול"
 
@@ -25053,6 +25059,15 @@ msgstr "םימי %d ינפל"
 msgid "%dw ago"
 msgstr "תועובש %d ינפל"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "(%d) רצוי"
 
@@ -25068,31 +25083,7 @@ msgstr "{} · Enter החילשל"
 msgid "Sketch · Enter to send"
 msgstr "החילשל Enter · הציקס"
 
-msgid "Custom AI"
-msgstr ""
-
-msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved: Custom AI switches back to it"
-msgstr ""
-
-msgid "Your own API key is in use, and it decides the model"
-msgstr ""
-
-msgid "Mixie is answering. Click to choose which Mixie model the agent runs on"
-msgstr ""
-
-msgid "Your own API key is in use, so Mixar credits are not charged. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Switch back to your saved API key. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "Use your own API key: pick a provider and model in AI Provider settings. Mixar credits are not charged while it is in use"
-msgstr ""
-
-msgid "The model your API key runs the agent on. Click to change it in AI Provider settings"
-msgstr ""
-
-msgid "Your own API key is in use. Click to change the provider or key"
+msgid "Who answers the agent and which model. Click to change"
 msgstr ""
 
 msgid "No generations yet"

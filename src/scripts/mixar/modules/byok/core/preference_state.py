@@ -235,6 +235,8 @@ def apply_to_wm(wm=None) -> None:
             # Properties not registered yet (UI auto-discovery is batched) —
             # the dict keeps the value and a later apply_to_wm picks it up.
             return
+    from . import picker_mirror
+    picker_mirror.apply_to_wm(target)
 
 
 # ---------------------------------------------------------------------------

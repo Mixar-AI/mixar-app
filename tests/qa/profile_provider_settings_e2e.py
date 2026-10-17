@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib import ScenarioFail, run_scenario
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/profile-provider-qa'))
@@ -155,16 +156,30 @@ def check_dialog(qa):
 
 
 def open_picker(qa, area_type, active):
+    """The island chip's popup reflects the key: with one in use it opens on
+    the key tab (its models live, "Manage key…" below); without, on Mixie
+    (hosted models live) and the key tab's footer adds a key."""
+    import model_popup as mp
     if area_type == 'AGENT_BUBBLE':
         qa.eval('result=str(bpy.ops.mixar.agent_bubble_show_window())')
-    qa.click(but_type='Pulldown', area_type=area_type, region_type='TOOLS')
-    qa.wait("bool(drv.find(op='MIXAR_OT_agent_model_set', popup=True))", timeout=5)
-    models = qa.find(op='MIXAR_OT_agent_model_set', popup=True)['widgets']
-    if len(models) != 2 or any(w['enabled'] == active for w in models):
-        raise ScenarioFail(f'{area_type} model state does not match BYOK={active}: {models}')
-    settings = qa.find(**SETTINGS)['widgets']
+    mp.open_popup(qa)
+    want = 'KEY' if active else 'MIXIE'
+    if mp.open_tab(qa) != want:
+        raise ScenarioFail(f'{area_type} popup opened on {mp.open_tab(qa)}, expected {want}')
+    models = mp.rows(qa)
+    expected = 2 if active else 3  # the key's two models | Mixar default + two hosted
+    if len(models) != expected or not all(enabled for _, enabled in models):
+        raise ScenarioFail(f'{area_type} model rows do not match BYOK={active}: {models}')
+    if not active:
+        mp.show_tab(qa, 'KEY')
+    settings = qa.find(**mp.SETTINGS_ROW)['widgets']
     if len(settings) != 1 or not settings[0]['enabled']:
         raise ScenarioFail(f'{area_type} shared settings route unavailable')
+
+
+def island_settings(qa):
+    import model_popup as mp
+    mp.settings(qa)
 
 
 def save(qa, model, name):
@@ -208,7 +223,7 @@ def run(qa):
         snaps.append(open_profile(qa, 'initial'))
         save(qa, 'QA Model One', 'profile_save')
         qa.step('bubble_reflects_profile_save', open_picker, qa, 'AGENT_BUBBLE', True)
-        qa.step('island_shared_dialog', qa.click, **SETTINGS)
+        qa.step('island_shared_dialog', island_settings, qa)
         check_dialog(qa)
         qa.wait(f"{WM}.byok_current_model == 'qa-one' and {WM}.byok_form_model == 'qa-one'", timeout=5)
         snaps.append(snap(qa, 'island_sees_profile_save', {'prop': 'byok_form_model', 'popup': True}))
@@ -219,7 +234,7 @@ def run(qa):
             raise ScenarioFail('Profile still offers removal after chat removed the key')
         close_popup(qa)
         open_picker(qa, 'AGENT_BUBBLE', False)
-        qa.click(**SETTINGS)
+        island_settings(qa)
         check_dialog(qa)
         save(qa, 'QA Model Two', 'bubble_save')
         snaps.append(open_profile(qa, 'after_bubble_save'))
@@ -227,8 +242,9 @@ def run(qa):
         snaps.append(snap(qa, 'profile_sees_bubble_save', {'prop': 'byok_form_model', 'popup': True}))
         remove(qa, 'profile_remove')
         qa.step('bubble_reflects_profile_remove', open_picker, qa, 'AGENT_BUBBLE', False)
-        snaps.append(snap(qa, 'agent_bubble_restored', SETTINGS))
-        close_popup(qa)
+        import model_popup as mp
+        snaps.append(snap(qa, 'agent_bubble_restored', mp.SETTINGS_ROW))
+        mp.close_popup(qa)
         counts = qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
                          "f = O._qa_profile_fixture[1]\n"
                          "result = {'saves': f.saves, 'deletes': f.deletes, 'fetches': f.fetches}")

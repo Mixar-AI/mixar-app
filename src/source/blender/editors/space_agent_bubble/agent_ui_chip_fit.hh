@@ -70,13 +70,11 @@ struct AgentChipRowInputs {
   const char *voice_status = "";
   bool model_available = false;
   const char *model_label = "";
-  /* The key chip after the toggle while the user's own key is in use: its
-   * provider ("Claude API") and model ("Opus 5.5") as drawn, and whether the
-   * model opens a dropdown (not for OpenRouter / Local). Inactive = no chip. */
-  bool model_key_active = false;
-  const char *model_key_label = "";
-  const char *model_key_model = "";
-  bool model_key_menu = false;
+  /* The model chip: WHO answers (the badge: "Mixie", "Claude API", "Local")
+   * and WHICH model (the name), both as drawn (wm.mixar_agent_source_label /
+   * wm.mixar_agent_chip_name, core/picker.py). */
+  const char *chip_badge = "";
+  const char *chip_name = "";
   /** Fixed chip words and the voice status are measured as drawn: the island
    *  passes its UI translation; null (the harness) measures the English.
    *  The model label and the reading's intent arrive already as drawn. */
@@ -96,85 +94,61 @@ struct AgentChipMetrics {
 };
 
 /* -------------------------------------------------------------------- */
-/** \name Provider toggle and key chip
+/** \name The model chip
  *
- * Measured off the designer's frames (key in use: Frame 1533210284, Mixie:
- * Frame 1533210285), whose chip row is 20.7 px tall against the island's 44
- * units — 2.1256 island units per frame px; each token notes its frame px.
- * Mixie | Custom AI is a track with a thumb behind the word in use; Mixie's
- * filled chevron shows only while Mixie is lit (it opens the hosted menu).
- * While a key is in use a dark green chip follows 2 px later: the provider in
- * grey, then a lighter pill holding the model and, when the provider has a
- * fixed list, the same chevron.
+ * One chip, right of Auto, that always names who answers and which model:
+ * a small badge pill with the source word ("Mixie", "Claude API", "Codex",
+ * "Local"), the model name, and the filled chevron (it opens the model
+ * card, agent_ui_model_card.hh). Three forms for the width ladder: Full
+ * (badge + name + chevron), Label (name + chevron), Icon (the badge alone —
+ * "who" outlives "which" when space is gone). Tokens are island units
+ * (2.1256 per frame px of the designer's chip row).
  * \{ */
 
-/** The toggle's segment words: Mixie (hosted) and the user's key. */
-inline constexpr const char *AGENT_MODEL_TOGGLE_MIXIE = "Mixie";
-inline constexpr const char *AGENT_MODEL_TOGGLE_KEY = "Custom AI";
-
 inline constexpr float AGENT_PROVIDER_RADIUS = 17.6f;       /* 8.28 px, every rounded shape */
-inline constexpr float AGENT_TOGGLE_THUMB_INSET = 2.0f;     /* 1 px */
-inline constexpr float AGENT_TOGGLE_SEG_PAD = 22.0f;        /* ~10.4 px, a word in its segment */
-inline constexpr float AGENT_TOGGLE_CHEVRON_GAP = 20.0f;    /* 9.5 px, "Mixie" -> chevron */
 inline constexpr float AGENT_PROVIDER_CHEVRON_W = 13.6f;    /* 6.4 px filled triangle */
 inline constexpr float AGENT_PROVIDER_CHEVRON_H = 11.7f;    /* 5.5 px */
-inline constexpr float AGENT_KEY_CHIP_GAP = 4.25f;          /* 2 px, toggle -> chip */
-inline constexpr float AGENT_KEY_CHIP_PAD = 13.6f;          /* 6.4 px, provider word inset */
-inline constexpr float AGENT_KEY_CHIP_TEXT_GAP = 13.8f;     /* 6.5 px, provider word -> pill */
-inline constexpr float AGENT_KEY_PILL_INSET = 4.25f;        /* 2 px, pill inside the chip */
-inline constexpr float AGENT_KEY_PILL_PAD = 13.5f;          /* 6.35 px, model word inset */
-inline constexpr float AGENT_KEY_PILL_CHEVRON_GAP = 27.2f;  /* 12.8 px, model word -> chevron */
-inline constexpr float AGENT_KEY_PILL_CHEVRON_PAD = 11.5f;  /* 5.4 px, chevron -> pill edge */
-/** The model word is set a size down from the chip font (6.7 vs 7.2 px caps). */
-inline constexpr float AGENT_KEY_MODEL_TEXT = 0.93f;
-/** Weights (Manrope's variable axis): the toggle words and the model are
- *  semibold in the frames, the provider word the island's regular. */
+inline constexpr float AGENT_CHIP_BADGE_INSET = 4.25f;      /* 2 px, badge pill inside the chip */
+inline constexpr float AGENT_CHIP_BADGE_PAD = 13.5f;        /* 6.35 px, badge word inset */
+inline constexpr float AGENT_CHIP_NAME_GAP = 13.8f;         /* 6.5 px, badge -> name */
+inline constexpr float AGENT_CHIP_NAME_PAD = 13.6f;         /* 6.4 px, name inset without a badge */
+inline constexpr float AGENT_CHIP_CHEVRON_GAP = 20.0f;      /* 9.5 px, name -> chevron */
+inline constexpr float AGENT_CHIP_CHEVRON_PAD = 11.5f;      /* 5.4 px, chevron -> chip edge */
+/** The badge word is set a size down from the chip font. */
+inline constexpr float AGENT_CHIP_BADGE_TEXT = 0.86f;
+/** Weights (Manrope's variable axis): the name and the badge are semibold. */
 inline constexpr int AGENT_PROVIDER_WEIGHT_STRONG = 600;
 inline constexpr int AGENT_PROVIDER_WEIGHT_REGULAR = 400;
 
-/** One measured provider control, device pixels. */
+/** One measured chip, device pixels. */
 struct AgentProviderSizes {
-  float mixie_w = 0.0f;  /* Mixie segment (its chevron only while lit). */
-  float key_w = 0.0f;    /* Custom AI segment. */
-  float toggle_w = 0.0f; /* Track: both segments and the thumb inset. */
-  float pill_w = 0.0f;   /* The key chip's model pill. */
-  float chip_w = 0.0f;   /* The key chip with its provider word; 0 = none. */
-  float chip_compact_w = 0.0f; /* The key chip as its pill alone. */
+  float badge_w = 0.0f; /* The badge pill (word + its padding). */
+  float name_w = 0.0f;  /* The model name. */
+  float full_w = 0.0f;  /* Badge + name + chevron. */
+  float label_w = 0.0f; /* Name + chevron. */
+  float icon_w = 0.0f;  /* The badge alone. */
 };
 
-/** Measure the toggle and, while a key is in use, its chip. \a text_width
- *  measures at the chip font's regular weight (the provider word), \a strong_width
- *  at #AGENT_PROVIDER_WEIGHT_STRONG (the toggle words, the model, which is then
- *  scaled to its own size). */
+/** Measure the chip's three forms. \a strong_width measures at
+ *  #AGENT_PROVIDER_WEIGHT_STRONG (the badge, scaled to its own size, and the
+ *  name); \a text_width is kept for callers measuring regular text. */
 template<typename TextWidthFn, typename StrongWidthFn>
 inline AgentProviderSizes agent_provider_sizes(const AgentChipRowInputs &in,
                                                const AgentChipMetrics &m,
-                                               const TextWidthFn &text_width,
+                                               const TextWidthFn & /*text_width*/,
                                                const StrongWidthFn &strong_width)
 {
   const float u = m.unit;
-  auto word = [&](const char *msgid) { return in.translate ? in.translate(msgid) : msgid; };
   AgentProviderSizes r;
-  const float pad = AGENT_TOGGLE_SEG_PAD * u;
-  const float chevron = AGENT_PROVIDER_CHEVRON_W * u;
-  r.mixie_w = pad + strong_width(word(AGENT_MODEL_TOGGLE_MIXIE)) + pad;
-  if (!in.model_key_active) {
-    r.mixie_w += AGENT_TOGGLE_CHEVRON_GAP * u + chevron;
-  }
-  r.key_w = pad + strong_width(word(AGENT_MODEL_TOGGLE_KEY)) + pad;
-  r.toggle_w = r.mixie_w + r.key_w + 2.0f * AGENT_TOGGLE_THUMB_INSET * u;
-  if (!in.model_key_active) {
-    return r;
-  }
-  const float model = strong_width(in.model_key_model) * AGENT_KEY_MODEL_TEXT;
-  r.pill_w = AGENT_KEY_PILL_PAD * u + model +
-             (in.model_key_menu ? (AGENT_KEY_PILL_CHEVRON_GAP + AGENT_KEY_PILL_CHEVRON_PAD) * u +
-                                      chevron :
-                                  AGENT_KEY_PILL_PAD * u);
-  const float inset = AGENT_KEY_PILL_INSET * u;
-  r.chip_w = AGENT_KEY_CHIP_PAD * u + text_width(in.model_key_label) +
-             AGENT_KEY_CHIP_TEXT_GAP * u + r.pill_w + inset;
-  r.chip_compact_w = inset + r.pill_w + inset;
+  const float chevron = AGENT_CHIP_CHEVRON_GAP * u + AGENT_PROVIDER_CHEVRON_W * u +
+                        AGENT_CHIP_CHEVRON_PAD * u;
+  const float inset = AGENT_CHIP_BADGE_INSET * u;
+  r.badge_w = AGENT_CHIP_BADGE_PAD * u + strong_width(in.chip_badge) * AGENT_CHIP_BADGE_TEXT +
+              AGENT_CHIP_BADGE_PAD * u;
+  r.name_w = strong_width(in.chip_name);
+  r.full_w = inset + r.badge_w + AGENT_CHIP_NAME_GAP * u + r.name_w + chevron;
+  r.label_w = AGENT_CHIP_NAME_PAD * u + r.name_w + chevron;
+  r.icon_w = inset + r.badge_w + inset;
   return r;
 }
 
@@ -227,18 +201,9 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
   r_chips[AGENT_CHIP_SLOT_AUTO] = {{width("Auto", m.switch_w) + m.pad_x, m.switch_w + 2.0f * m.pad_x},
                                    2};
   if (in.model_available) {
-    /* The Mixie | Custom AI toggle; while a key is in use, with its chip
-     * (provider and model pill, then the pill alone). Then the icon alone at
-     * Upload's own floor. */
+    /* The model chip: badge + name, the name alone, the badge alone. */
     const AgentProviderSizes p = agent_provider_sizes(in, m, text_width, strong_width);
-    if (p.chip_w > 0.0f) {
-      const float gap = AGENT_KEY_CHIP_GAP * m.unit;
-      r_chips[AGENT_CHIP_SLOT_MODEL] = {
-          {p.toggle_w + gap + p.chip_w, p.toggle_w + gap + p.chip_compact_w, icon_only}, 3};
-    }
-    else {
-      r_chips[AGENT_CHIP_SLOT_MODEL] = {{p.toggle_w, p.toggle_w, icon_only}, 3};
-    }
+    r_chips[AGENT_CHIP_SLOT_MODEL] = {{p.full_w, p.label_w, std::max(p.icon_w, icon_only)}, 3};
   }
   if (in.scribble_armed || in.mark_count) {
     /* The reading label elides down to about two glyphs beside its chevron. */
