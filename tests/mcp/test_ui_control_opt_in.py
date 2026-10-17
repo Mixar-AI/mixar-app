@@ -204,30 +204,59 @@ def test_a_signed_out_user_can_still_turn_mcp_off(monkeypatch, enabled):
         assert not switches
 
 
+READY = "MCP is on: AI apps can connect to this Mixar."
+NOT_READY = "MCP is on. AI apps can use Mixar once it's signed in and connected."
+
+
+def _wm(signed_in):
+    """``signed_in``: "yes", "expired" (an account whose session ended) or "out"."""
+    return SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=signed_in != "out",
+                                                          mixie_chat_session_expired=signed_in == "expired"))
+
+
+def _draw_dialog(monkeypatch, *, enabled=True, running=True, connected=True, signed_in="yes"):
+    from mixar.modules.mcp_bridge.ui.operators import connect
+    monkeypatch.setattr(connect.runtime, "enabled", lambda: enabled)
+    monkeypatch.setattr(connect.runtime, "is_running", lambda: running)
+    monkeypatch.setattr(connect.runtime, "snapshot", lambda: {"connected": connected})
+    monkeypatch.setattr(connect.runtime, "ui_control_enabled", lambda: False)
+    monkeypatch.setattr(connect, "stable_launch", lambda: ("mixar-mcp", []))
+    log = []
+    layout = _Layout(log)
+    _dialog_draw(connect)(SimpleNamespace(layout=layout, app="CLAUDE_CODE"), _wm(signed_in))
+    return layout, [entry[1] for entry in log if entry[0] == "label"]
+
+
 @pytest.mark.parametrize("enabled, running", [(True, True), (True, False), (False, False)])
 def test_the_mcp_switch_is_a_labelled_checkbox_with_its_state_spelled_out(monkeypatch, enabled, running):
     """A "Disable" button beside an "MCP enabled" tick was pressed by a user
     trying to fix a connection, who then saw no sign that MCP was off (2026-10-05).
     The switch is a checkbox that names what it allows, and a line under it
     says what AI apps see right now."""
-    from mixar.modules.mcp_bridge.ui.operators import connect
-    monkeypatch.setattr(connect.runtime, "enabled", lambda: enabled)
-    monkeypatch.setattr(connect.runtime, "is_running", lambda: running)
-    monkeypatch.setattr(connect.runtime, "ui_control_enabled", lambda: False)
-    monkeypatch.setattr(connect, "stable_launch", lambda: ("mixar-mcp", []))
-    log = []
-    layout = _Layout(log)
-    signed_in = SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=True,
-                                                               mixie_chat_session_expired=False))
-    _dialog_draw(connect)(SimpleNamespace(layout=layout, app="CLAUDE_CODE"), signed_in)
+    layout, labels = _draw_dialog(monkeypatch, enabled=enabled, running=running)
     [(icon, props)] = _switches(layout)
     assert icon == ("CHECKBOX_HLT" if enabled else "CHECKBOX_DEHLT") and props.enabled is (not enabled)
-    assert not any(entry[0] == "operator" and entry[2] in ("Disable", "Enable MCP") for entry in log)
-    labels = [text for kind, text in ((e[0], e[1]) for e in log) if kind == "label"]
+    assert not any(entry[0] == "operator" and entry[2] in ("Disable", "Enable MCP") for entry in layout.log)
     status = labels[labels.index("Your AI app can start Mixar when needed.") + 1]
     if not enabled:
         assert status.startswith("MCP is off:") and "not connected" in status
-    elif running:
-        assert status.startswith("MCP is on:")
     else:
-        assert status.startswith("MCP is on,") and "waiting" in status
+        assert status == (READY if running else NOT_READY)
+
+
+@pytest.mark.parametrize("signed_in", ["yes", "expired", "out"])
+@pytest.mark.parametrize("running", [True, False])
+@pytest.mark.parametrize("connected", [True, False])
+def test_the_dialog_says_ai_apps_can_connect_only_when_they_can(monkeypatch, signed_in, running, connected):
+    """The relay runs without a session and refuses every call, and refuses
+    scene calls while the agent server is down: the dialog once said "AI apps
+    can connect" under its own "Sign in to Mixar" notice."""
+    _layout, labels = _draw_dialog(monkeypatch, running=running, connected=connected, signed_in=signed_in)
+    ready = signed_in == "yes" and running and connected
+    assert (READY in labels) is ready
+    assert (NOT_READY in labels) is (not ready)
+    if signed_in != "yes":
+        assert "Sign in to Mixar to connect AI apps." in labels
+        assert labels.index("Sign in to Mixar to connect AI apps.") < labels.index(NOT_READY)
+    else:
+        assert "AI generation uses credits and needs a Mixar account." in labels

@@ -6470,7 +6470,7 @@ msgstr ""
 msgid "MCP is on: AI apps can connect to this Mixar."
 msgstr ""
 
-msgid "MCP is on, waiting for Mixar's server connection."
+msgid "MCP is on. AI apps can use Mixar once it's signed in and connected."
 msgstr ""
 
 msgid "Connect AI Apps (MCP)"
@@ -6491,7 +6491,7 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "Scene and UI tools are free; only AI generation uses credits."
+msgid "AI generation uses credits and needs a Mixar account."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
