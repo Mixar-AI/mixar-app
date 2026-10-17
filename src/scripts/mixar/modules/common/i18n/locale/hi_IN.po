@@ -1445,6 +1445,15 @@ msgstr "हमारी ओर से कुछ गड़बड़ हो गई
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "पहले स्थानीय मॉडल शुरू करे�
 msgid "Base URL and model name are required."
 msgstr "आधार URL और मॉडल नाम आवश्यक हैं।"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "स्थानीय सर्वर ने HTTP {status} लौटाया।"
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "स्थानीय सर्वर तक नहीं पहुँचा जा सका। जाँचें कि वह चल रहा है और आधार URL सही है।"
 
-msgid "No models available — contact support"
-msgstr "कोई मॉडल उपलब्ध नहीं — सहायता से संपर्क करें"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "मॉडल आपकी API कुंजी से नियंत्रित होता है"
-
 msgid "Custom"
 msgstr "कस्टम"
-
-msgid "Use my own API key…"
-msgstr "अपनी API कुंजी का उपयोग करें…"
-
-msgid "Change or remove my API key…"
-msgstr "मेरी API कुंजी बदलें या हटाएँ…"
 
 msgid "Thinking"
 msgstr "चिंतन"
@@ -1541,8 +1541,74 @@ msgstr "चिंतन"
 msgid "Thinking: {level}"
 msgstr "चिंतन: {level}"
 
-msgid "Your key: {name}"
-msgstr "आपकी कुंजी: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "मूलभूत"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "कोई मॉडल उपलब्ध नहीं — सहायता से संपर्क करें"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "एजेंट मॉडल सहेजा जा रहा है… संदेश भेजने या मॉडल बदलने से पहले कृपया प्रतीक्षा करें।"
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "एजेंट मॉडल"
-
-msgid "Choose which model runs the agent."
-msgstr "चुनता है कि कौन-सा मॉडल एजेंट चलाता है।"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "वर्तमान में चुने गए मॉडल के लिए तर्क प्रयास।"
-
-msgid "No thinking levels for this model"
-msgstr "इस मॉडल के लिए कोई चिंतन स्तर नहीं"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "आपकी अपनी API कुंजी उपयोग में है — होस्ट किया गया मॉडल चुनने के लिए इस मेनू में “मेरी API कुंजी बदलें या हटाएँ” चुनें"
@@ -1601,109 +1655,52 @@ msgstr "मॉडल बदला नहीं जा सका"
 msgid "Could not reset model"
 msgstr "मॉडल रीसेट नहीं किया जा सका"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "आपकी ChatGPT सदस्यता का उपयोग करता है — Mixar क्रेडिट नहीं काटे जाते।"
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI प्रदाता सेटिंग्स"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "सक्रिय"
-
-msgid "Not configured"
-msgstr "कॉन्फ़िगर नहीं"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "वर्तमान कॉन्फ़िगरेशन"
-
-msgid "Account"
-msgstr "खाता"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT सदस्यता"
 
-msgid "API Key"
-msgstr "API कुंजी"
-
-msgid "Stored securely"
-msgstr "सुरक्षित रूप से संग्रहीत"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "केवल-पाठ मॉडल — चैट काम करता है; 3D कार्य दृश्य प्रतिक्रिया के बिना चलते हैं।"
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "प्रदाता सेटअप"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "पुनः प्रयास करें"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "डाउनलोड हो गया — चल नहीं रहा
 msgid "Not downloaded"
 msgstr "डाउनलोड नहीं हुआ"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "पूरी तरह इसी कंप्यूटर पर चलता है — Mixar के एजेंट ऑर्केस्ट्रेशन के अलावा आपके प्रॉम्प्ट कभी इससे बाहर नहीं जाते।"
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "डाउनलोड रद्द करें"
@@ -1781,9 +1793,6 @@ msgstr "आधार URL"
 msgid "API Key (optional)"
 msgstr "API कुंजी (वैकल्पिक)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "इस कंप्यूटर पर कोई भी OpenAI-संगत सर्वर — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "स्थानीय प्रदाता सहेजा नहीं जा सका।"
 
@@ -1792,6 +1801,9 @@ msgstr "स्थानीय ऐप फिर से स्कैन करे�
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "चल रहे स्थानीय AI ऐप के लिए इस कंप्यूटर को फिर से स्कैन करता है"
+
+msgid "AI Provider Settings"
+msgstr "AI प्रदाता सेटिंग्स"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar एजेंट के लिए आपकी अपनी API कुंजी का उपयोग करता है। सक्रिय रहने के दौरान एजेंट अनुरोधों के लिए Mixar क्रेडिट नहीं काटे जाते।"
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "हटाएँ"
 
@@ -1817,10 +1832,109 @@ msgstr "हटाने की पुष्टि का क्रम शुर�
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "हटाने का क्रम रद्द करके मुख्य संवाद पर लौटता है"
 
-msgid "Delete the stored API key server-side"
-msgstr "सर्वर पर संग्रहीत API कुंजी मिटाता है"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "डिस्कनेक्ट करें"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "स्थानीय मॉडल"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models से कोई भी स्लग, जैसे anthropic/claude-opus-4.8।"
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "पुनः प्रयास करें"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "मॉडल कैटलॉग ताज़ा करें"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "बैकएंड से प्रदाता+मॉडल कैटलॉग का पुनः सत्यापन करता है"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "एजेंट मॉडल प्रदाता"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "होस्ट किए गए एजेंट के सहेजे गए मॉडल चयन की प्रदाता id"
+
+msgid "Agent Model"
+msgstr "एजेंट मॉडल"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "होस्ट किए गए एजेंट के सहेजे गए मॉडल चयन की मॉडल id"
@@ -1868,20 +2024,32 @@ msgstr "एजेंट मॉडल पात्र"
 msgid "False when the saved model is not available on your plan"
 msgstr "जब सहेजा गया मॉडल आपके प्लान में उपलब्ध न हो तब असत्य"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "LLM प्रदाता"
 
 msgid "Model to use with the selected provider"
 msgstr "चयनित प्रदाता के साथ उपयोग होने वाला मॉडल"
 
+msgid "API Key"
+msgstr "API कुंजी"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "आपकी API कुंजी एन्क्रिप्ट करके संग्रहीत की जाती है और केवल Mixar एजेंट अनुरोधों के लिए उपयोग होती है। सहेजने के बाद केवल छिपा हुआ पूर्वावलोकन दिखाया जाता है।"
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models से कोई भी मॉडल स्लग (जैसे anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "स्थानीय रूप"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar द्वारा प्रबंधित, या आपका अपना स्थानीय सर्वर"
-
-msgid "Local model"
-msgstr "स्थानीय मॉडल"
 
 msgid "Curated model to download and run on this computer"
 msgstr "इस कंप्यूटर पर डाउनलोड करके चलाने के लिए चुनिंदा मॉडल"
@@ -1915,6 +2080,15 @@ msgstr "BYOK सक्रिय"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "जब सर्वर इस प्रयोक्ता के लिए byok_active बताता है तब सत्य"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "संवाद स्थिति"
@@ -2291,6 +2465,9 @@ msgstr "एजेंट आइलैंड की कतार उपलब्�
 msgid "Show every job"
 msgstr "हर जॉब दिखाता है"
 
+msgid "Active"
+msgstr "सक्रिय"
+
 msgid "Show pending or running jobs"
 msgstr "लंबित या चल रहे जॉब दिखाता है"
 
@@ -2665,9 +2842,6 @@ msgstr "संगतता प्रोफ़ाइल"
 
 msgid "Density"
 msgstr "घनत्व"
-
-msgid "Default"
-msgstr "मूलभूत"
 
 msgid "Generation-pane control spacing"
 msgstr "जनरेशन-पैन नियंत्रण अंतराल"
@@ -19281,9 +19455,6 @@ msgstr "टूलबार"
 msgid "Sidebar"
 msgstr "साइडबार"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV जाल विभाजन पैनल"
 
@@ -21389,9 +21560,6 @@ msgstr "कनेक्ट करने में विफल"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Dev रूप: डमी सामग्री के साथ कनेक्ट किया गया"
-
-msgid "Disconnect"
-msgstr "डिस्कनेक्ट करें"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie एजेंट सर्वर से डिस्कनेक्ट करता है"
@@ -25182,6 +25350,15 @@ msgstr "%d दिन पहले"
 msgid "%dw ago"
 msgstr "%d सप्ताह पहले"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "उत्पन्न हो रहे (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · भेजने के लिए Enter"
 
 msgid "Sketch · Enter to send"
 msgstr "स्केच · भेजने के लिए Enter"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "स्वचालित रूप चालू है: एजेंट 
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "स्वचालित रूप: एजेंट आपसे पूछने के बजाय खुले विकल्प स्वयं तय करता है, और अपने निर्णय सारांश में सूचीबद्ध करता है"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "आपकी अपनी API कुंजी उपयोग में है, और वही मॉडल तय करती है। फिर से होस्ट किया गया मॉडल चुनने के लिए यह मेनू खोलें और \"मेरी API कुंजी बदलें या हटाएँ\" चुनें"
-
-msgid "Choose which model the agent runs on"
-msgstr "चुनें कि एजेंट किस मॉडल पर चलता है"
 
 msgid "Agent Bubble"
 msgstr "एजेंट बबल"
@@ -27540,6 +27714,66 @@ msgstr "खतरा-रंगत वाला कार्य बटन"
 msgid "Borderless quiet action button"
 msgstr "बिना सीमा वाला शांत कार्य बटन"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "चिप"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "रूप स्लाइडर बायाँ"
 
@@ -27704,9 +27938,6 @@ msgstr "ग्लिफ़"
 
 msgid "Header glyph"
 msgstr "शीर्ष लेख ग्लिफ़"
-
-msgid "Chip"
-msgstr "चिप"
 
 msgid "Chip track"
 msgstr "चिप ट्रैक"

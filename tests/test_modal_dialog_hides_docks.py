@@ -183,9 +183,9 @@ def test_rna_function_mirrors_invoke_props_dialog():
     assert 'RNA_def_pointer(func, "operator", "Operator"' in rna
     assert 'RNA_def_int(func, "width", 300' in rna
     assert "rna_enum_operator_return_items" in rna
-    assert ("static int rna_WindowManager_mixar_invoke_modal_dialog("
-            "bContext *C, wmOperator *op, int width)") in rna
-    assert "return Mixar_operator_modal_dialog_popup(C, op, width);" in rna
+    assert "static int rna_WindowManager_mixar_invoke_modal_dialog(bContext *C," in rna
+    assert 'RNA_def_boolean(func,\n                  "sheet",' in rna  # the AI Provider sheet
+    assert "return Mixar_operator_modal_dialog_popup(C, op, width, sheet);" in rna
     host = RNA_WM_MIXAR.read_text()
     assert "RNA_def_mixar_popup_query(brna, srna);" in host
     assert len(host.splitlines()) <= 500
@@ -207,7 +207,9 @@ def test_byok_uses_the_native_dialog_and_falls_back():
     body = _invoke()
     native = body.index('getattr(wm, "mixar_invoke_modal_dialog", None)')
     assert body.index("if _dialog_open") < native
-    assert "return modal(self, width=CARD_DIALOG_WIDTH)" in body
+    # The sheet, and a binary whose modal dialog predates `sheet`.
+    assert "return modal(self, width=byok_dialog_ui.SHEET_WIDTH, sheet=True)" in body
+    assert "return modal(self, width=byok_dialog_ui.SHEET_WIDTH)" in body
     # Older binaries: the previous main-window host override.
     assert native < body.index("_dialog_host_window(context)")
     assert native < body.index("wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)")

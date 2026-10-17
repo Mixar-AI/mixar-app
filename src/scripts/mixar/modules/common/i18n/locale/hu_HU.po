@@ -1445,6 +1445,15 @@ msgstr "Hiba történt a mi oldalunkon. Próbálja újra."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "Előbb indítsa el a lokális modellt (a mentéshez futnia kell)."
 msgid "Base URL and model name are required."
 msgstr "Az alap URL és a modell neve kötelező."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "A lokális szerver HTTP {status} választ adott."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Nem érhető el a lokális szerver. Ellenőrizze, hogy fut-e, és helyes-e az alap URL."
 
-msgid "No models available — contact support"
-msgstr "Nem érhetők el modellek – forduljon az ügyfélszolgálathoz"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "A modellt az Ön API-kulcsa határozza meg"
-
 msgid "Custom"
 msgstr "Egyéni"
-
-msgid "Use my own API key…"
-msgstr "Saját API-kulcs használata…"
-
-msgid "Change or remove my API key…"
-msgstr "Saját API-kulcs módosítása vagy eltávolítása…"
 
 msgid "Thinking"
 msgstr "Gondolkodás"
@@ -1541,8 +1541,74 @@ msgstr "Gondolkodás"
 msgid "Thinking: {level}"
 msgstr "Gondolkodás: {level}"
 
-msgid "Your key: {name}"
-msgstr "Saját kulcs: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Alapértelmezett"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Nem érhetők el modellek – forduljon az ügyfélszolgálathoz"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Ügynökmodell mentése… Várjon, mielőtt üzenetet küld vagy modellt vált."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "Ügynökmodell"
-
-msgid "Choose which model runs the agent."
-msgstr "Az ügynököt futtató modell kiválasztása."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Az éppen kiválasztott modell gondolkodási ráfordítása."
-
-msgid "No thinking levels for this model"
-msgstr "Ehhez a modellhez nincsenek gondolkodási szintek"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "A saját API-kulcsa van használatban – hosztolt modell választásához válassza ebben a menüben a „Saját API-kulcs módosítása vagy eltávolítása” lehetőséget"
@@ -1601,109 +1655,52 @@ msgstr "Nem sikerült modellt váltani"
 msgid "Could not reset model"
 msgstr "Nem sikerült alaphelyzetbe állítani a modellt"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Az Ön ChatGPT-előfizetését használja – nem kerül Mixar-kredit felszámításra."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "MI-szolgáltató beállításai"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "Aktív"
-
-msgid "Not configured"
-msgstr "Nincs beállítva"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "Jelenlegi konfiguráció"
-
-msgid "Account"
-msgstr "Fiók"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-előfizetés"
 
-msgid "API Key"
-msgstr "API-kulcs"
-
-msgid "Stored securely"
-msgstr "Biztonságosan tárolva"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Csak szöveges modell – a csevegés működik; a 3D-feladatok vizuális visszajelzés nélkül futnak."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Szolgáltató beállítása"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Bármely azonosító az openrouter.ai/models oldalról, pl. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Újrapróbálás"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "Letöltve – nem fut"
 msgid "Not downloaded"
 msgstr "Nincs letöltve"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Teljesen ezen a számítógépen fut – a promptjai csak a Mixar ügynök-orkesztrációján keresztül hagyják el."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Letöltés megszakítása"
@@ -1781,9 +1793,6 @@ msgstr "Alap URL"
 msgid "API Key (optional)"
 msgstr "API-kulcs (nem kötelező)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Bármely OpenAI-kompatibilis szerver ezen a számítógépen – Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Nem sikerült menteni a lokális szolgáltatót."
 
@@ -1792,6 +1801,9 @@ msgstr "Lokális alkalmazások újrakeresése"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "A számítógép újbóli átvizsgálása futó lokális MI-alkalmazások után"
+
+msgid "AI Provider Settings"
+msgstr "MI-szolgáltató beállításai"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Saját API-kulcs használata a Mixar ügynökhöz. Amíg aktív, az ügynökkérésekért nem kerül Mixar-kredit felszámításra."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Eltávolítás"
 
@@ -1817,10 +1832,109 @@ msgstr "Az eltávolítás megerősítési folyamatának indítása"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Az eltávolítási folyamat megszakítása és visszatérés a fő párbeszédablakhoz"
 
-msgid "Delete the stored API key server-side"
-msgstr "A tárolt API-kulcs törlése a szerveren"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Kapcsolat bontása"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Lokális modell"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Bármely azonosító az openrouter.ai/models oldalról, pl. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Újrapróbálás"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "Modellkatalógus frissítése"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "A szolgáltató- és modellkatalógus újraellenőrzése a háttérrendszerből"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Ügynökmodell szolgáltatója"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "A mentett felhős ügynökmodell választásának szolgáltatóazonosítója"
+
+msgid "Agent Model"
+msgstr "Ügynökmodell"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "A mentett felhős ügynökmodell választásának modellazonosítója"
@@ -1868,20 +2024,32 @@ msgstr "Ügynökmodell jogosult"
 msgid "False when the saved model is not available on your plan"
 msgstr "Hamis, ha a mentett modell nem érhető el az Ön csomagjában"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "LLM-szolgáltató"
 
 msgid "Model to use with the selected provider"
 msgstr "A kijelölt szolgáltatóval használandó modell"
 
+msgid "API Key"
+msgstr "API-kulcs"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Az API-kulcs titkosítva tárolódik, és csak a Mixar ügynökkéréseihez használatos. Mentés után csak maszkolt előnézet látható."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Bármely modellazonosító az openrouter.ai/models oldalról (pl. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "Lokális mód"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "A Mixar kezeli, vagy az Ön saját lokális kiszolgálója"
-
-msgid "Local model"
-msgstr "Lokális modell"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Válogatott modell letöltése és futtatása ezen a számítógépen"
@@ -1915,6 +2080,15 @@ msgstr "BYOK aktív"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Igaz, ha a kiszolgáló byok_active értéket jelez ennél a felhasználónál"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Párbeszéd állapota"
@@ -2291,6 +2465,9 @@ msgstr "Az Ügynökbuborék várólistája nem érhető el"
 msgid "Show every job"
 msgstr "Minden feladat megjelenítése"
 
+msgid "Active"
+msgstr "Aktív"
+
 msgid "Show pending or running jobs"
 msgstr "A függő vagy futó feladatok megjelenítése"
 
@@ -2665,9 +2842,6 @@ msgstr "Kompatibilitási profil"
 
 msgid "Density"
 msgstr "Sűrűség"
-
-msgid "Default"
-msgstr "Alapértelmezett"
 
 msgid "Generation-pane control spacing"
 msgstr "A generálási ablaktábla vezérlőinek térköze"
@@ -19281,9 +19455,6 @@ msgstr "Eszköztár"
 msgid "Sidebar"
 msgstr "Oldalsáv"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV-térháló szegmentálásának panelje"
 
@@ -21389,9 +21560,6 @@ msgstr "A csatlakozás nem sikerült"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Fejlesztői mód: csatlakozva helyettes adatokkal"
-
-msgid "Disconnect"
-msgstr "Kapcsolat bontása"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Kapcsolat bontása a Mixie ügynökszerverrel"
@@ -25182,6 +25350,15 @@ msgstr "%d napja"
 msgid "%dw ago"
 msgstr "%d hete"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Generálás (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · Enter a küldéshez"
 
 msgid "Sketch · Enter to send"
 msgstr "Vázlat · Enter a küldéshez"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "Az automata mód be van kapcsolva: az ügynök maga dönt a nyitott vál
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automata mód: az ügynök maga dönt a nyitott választásokról, ahelyett hogy Önt megkérdezné, és a döntéseit az összegzésben felsorolja"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Az Ön saját API-kulcsa van használatban, és az dönt a modellről. Nyissa meg ezt a menüt, és válassza a „Saját API-kulcs módosítása vagy eltávolítása” elemet, hogy újra üzemeltetett modellt választhasson"
-
-msgid "Choose which model the agent runs on"
-msgstr "Válassza ki, melyik modellen fusson az ügynök"
 
 msgid "Agent Bubble"
 msgstr "Ügynökbuborék"
@@ -27540,6 +27714,66 @@ msgstr "Veszélyszínű műveletgomb"
 msgid "Borderless quiet action button"
 msgstr "Szegély nélküli, halk műveletgomb"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Jelvény"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Módcsúszka bal"
 
@@ -27704,9 +27938,6 @@ msgstr "Glifa"
 
 msgid "Header glyph"
 msgstr "Fejlécglifa"
-
-msgid "Chip"
-msgstr "Jelvény"
 
 msgid "Chip track"
 msgstr "Jelvénysáv"

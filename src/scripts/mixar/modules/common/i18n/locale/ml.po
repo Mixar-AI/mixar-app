@@ -1445,6 +1445,15 @@ msgstr "ഞങ്ങളുടെ ഭാഗത്ത് എന്തോ തെറ
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "ആദ്യം ലോക്കൽ മോഡൽ ആരംഭിക്ക
 msgid "Base URL and model name are required."
 msgstr "അടിസ്ഥാന URL-ഉം മോഡൽ പേരും ആവശ്യമാണ്."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "ലോക്കൽ സെർവർ HTTP {status} മറുപടി നൽകി."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "ലോക്കൽ സെർവറിലെത്താനായില്ല. അത് പ്രവർത്തിക്കുന്നുണ്ടെന്നും അടിസ്ഥാന URL ശരിയാണെന്നും പരിശോധിക്കുക."
 
-msgid "No models available — contact support"
-msgstr "മോഡലുകൾ ലഭ്യമല്ല — പിന്തുണയുമായി ബന്ധപ്പെടുക"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "നിങ്ങളുടെ API കീ മോഡലിനെ നിയന്ത്രിക്കുന്നു"
-
 msgid "Custom"
 msgstr "ഇഷ്ടാനുസൃതം"
-
-msgid "Use my own API key…"
-msgstr "എന്റെ സ്വന്തം API കീ ഉപയോഗിക്കുക…"
-
-msgid "Change or remove my API key…"
-msgstr "എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക…"
 
 msgid "Thinking"
 msgstr "ചിന്ത"
@@ -1541,8 +1541,74 @@ msgstr "ചിന്ത"
 msgid "Thinking: {level}"
 msgstr "ചിന്ത: {level}"
 
-msgid "Your key: {name}"
-msgstr "നിങ്ങളുടെ കീ: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "സ്ഥിരം"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "മോഡലുകൾ ലഭ്യമല്ല — പിന്തുണയുമായി ബന്ധപ്പെടുക"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "ഏജന്റ് മോഡൽ സംരക്ഷിക്കുന്നു… അയയ്ക്കുന്നതിനോ മോഡലുകൾ മാറ്റുന്നതിനോ മുമ്പ് കാത്തിരിക്കുക."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "ഏജന്റ് മോഡൽ"
-
-msgid "Choose which model runs the agent."
-msgstr "ഏജന്റ് ഏത് മോഡൽ പ്രവർത്തിപ്പിക്കണമെന്ന് തിരഞ്ഞെടുക്കുക."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "ഇപ്പോൾ തിരഞ്ഞെടുത്ത മോഡലിന്റെ യുക്തിചിന്ത ശ്രമം."
-
-msgid "No thinking levels for this model"
-msgstr "ഈ മോഡലിന് ചിന്ത നിലകളില്ല"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ് — ഹോസ്റ്റ് ചെയ്ത മോഡൽ തിരഞ്ഞെടുക്കാൻ ഈ മെനുവിൽ \"എന്റെ API കീ മാറ്റുകയോ നീക്കം ചെയ്യുകയോ ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
@@ -1601,109 +1655,52 @@ msgstr "മോഡൽ മാറ്റാനായില്ല"
 msgid "Could not reset model"
 msgstr "മോഡൽ പുനഃക്രമീകരിക്കാനായില്ല"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "നിങ്ങളുടെ ChatGPT സബ്സ്ക്രിപ്ഷൻ ഉപയോഗിക്കുന്നു — Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "സജീവം"
-
-msgid "Not configured"
-msgstr "ക്രമീകരിച്ചിട്ടില്ല"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "നിലവിലെ ക്രമീകരണം"
-
-msgid "Account"
-msgstr "അക്കൗണ്ട്"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT സബ്സ്ക്രിപ്ഷൻ"
 
-msgid "API Key"
-msgstr "API കീ"
-
-msgid "Stored securely"
-msgstr "സുരക്ഷിതമായി സൂക്ഷിച്ചു"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "ടെക്സ്റ്റ്-മാത്രം മോഡൽ — ചാറ്റ് പ്രവർത്തിക്കും; 3D ടാസ്കുകൾ ദൃശ്യ ഫീഡ്ബാക്കില്ലാതെ നടക്കും."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "ദാതാവ് സജ്ജീകരണം"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് സ്ലഗും, ഉദാ. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "ഡൗൺലോഡ് ചെയ്തു — പ്രവർത്തി
 msgid "Not downloaded"
 msgstr "ഡൗൺലോഡ് ചെയ്തിട്ടില്ല"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "പൂർണമായും ഈ കമ്പ്യൂട്ടറിൽ പ്രവർത്തിക്കുന്നു — Mixar-ന്റെ ഏജന്റ് ഓർക്കസ്ട്രേഷൻ വഴിയല്ലാതെ നിങ്ങളുടെ പ്രോംപ്റ്റുകൾ ഇവിടെ നിന്ന് പുറത്തുപോകില്ല."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "ഡൗൺലോഡ് റദ്ദാക്കുക"
@@ -1781,9 +1793,6 @@ msgstr "അടിസ്ഥാന URL"
 msgid "API Key (optional)"
 msgstr "API കീ (ഐച്ഛികം)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "ഈ കമ്പ്യൂട്ടറിലെ ഏത് OpenAI-അനുയോജ്യ സെർവറും — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "ലോക്കൽ ദാതാവിനെ സംരക്ഷിക്കാനായില്ല."
 
@@ -1792,6 +1801,9 @@ msgstr "ലോക്കൽ ആപ്പുകൾ വീണ്ടും സ്ക
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "പ്രവർത്തിക്കുന്ന ലോക്കൽ AI ആപ്പുകൾക്കായി ഈ കമ്പ്യൂട്ടർ വീണ്ടും സ്കാൻ ചെയ്യുക"
+
+msgid "AI Provider Settings"
+msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar ഏജന്റിന് നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗിക്കുക. സജീവമായിരിക്കുമ്പോൾ ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "നീക്കം ചെയ്യുക"
 
@@ -1817,10 +1832,109 @@ msgstr "നീക്കം-സ്ഥിരീകരണ ഫ്ലോ ആരംഭ
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "നീക്കം ഫ്ലോ റദ്ദാക്കി പ്രധാന ഡയലോഗിലേക്ക് മടങ്ങുക"
 
-msgid "Delete the stored API key server-side"
-msgstr "സൂക്ഷിച്ച API കീ സെർവറിൽ നിന്ന് ഇല്ലാതാക്കുക"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "വിച്ഛേദിക്കുക"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "ലോക്കൽ മോഡൽ"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് സ്ലഗും, ഉദാ. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "മോഡൽ കാറ്റലോഗ് പുതുക്കുക"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ബാക്ക്എൻഡിൽ നിന്ന് ദാതാവ്+മോഡൽ കാറ്റലോഗ് വീണ്ടും സാധൂകരിക്കുക"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "ഏജന്റ് മോഡൽ ദാതാവ്"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "സംരക്ഷിച്ച ഹോസ്റ്റഡ്-ഏജന്റ് മോഡൽ തിരഞ്ഞെടുപ്പിന്റെ ദാതാവ് id"
+
+msgid "Agent Model"
+msgstr "ഏജന്റ് മോഡൽ"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "സംരക്ഷിച്ച ഹോസ്റ്റഡ്-ഏജന്റ് മോഡൽ തിരഞ്ഞെടുപ്പിന്റെ മോഡൽ id"
@@ -1868,20 +2024,32 @@ msgstr "ഏജന്റ് മോഡൽ യോഗ്യം"
 msgid "False when the saved model is not available on your plan"
 msgstr "സംരക്ഷിച്ച മോഡൽ നിങ്ങളുടെ പ്ലാനിൽ ലഭ്യമല്ലെങ്കിൽ തെറ്റ്"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "LLM ദാതാവ്"
 
 msgid "Model to use with the selected provider"
 msgstr "തിരഞ്ഞെടുത്ത ദാതാവിനൊപ്പം ഉപയോഗിക്കേണ്ട മോഡൽ"
 
+msgid "API Key"
+msgstr "API കീ"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "നിങ്ങളുടെ API കീ എൻക്രിപ്റ്റ് ചെയ്ത് സൂക്ഷിക്കുന്നു, Mixar ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് മാത്രം ഉപയോഗിക്കുന്നു. സംരക്ഷിച്ച ശേഷം മറച്ച പ്രിവ്യൂ മാത്രം കാണിക്കും."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models-ൽ നിന്നുള്ള ഏത് മോഡൽ സ്ലഗും (ഉദാ. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "ലോക്കൽ മോഡ്"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar കൈകാര്യം ചെയ്യുന്നു, അല്ലെങ്കിൽ നിങ്ങളുടെ സ്വന്തം ലോക്കൽ സെർവർ"
-
-msgid "Local model"
-msgstr "ലോക്കൽ മോഡൽ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "ഈ കമ്പ്യൂട്ടറിൽ ഡൗൺലോഡ് ചെയ്ത് പ്രവർത്തിപ്പിക്കേണ്ട തിരഞ്ഞെടുത്ത മോഡൽ"
@@ -1915,6 +2080,15 @@ msgstr "BYOK സജീവം"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "ഈ ഉപയോക്താവിന് സെർവർ byok_active റിപ്പോർട്ട് ചെയ്യുമ്പോൾ ശരി"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "ഡയലോഗ് നില"
@@ -2291,6 +2465,9 @@ msgstr "ഏജന്റ് ദ്വീപ് ക്യൂ ലഭ്യമല്
 msgid "Show every job"
 msgstr "എല്ലാ ജോലിയും കാണിക്കുക"
 
+msgid "Active"
+msgstr "സജീവം"
+
 msgid "Show pending or running jobs"
 msgstr "കാത്തിരിക്കുന്നതോ പ്രവർത്തിക്കുന്നതോ ആയ ജോലികൾ കാണിക്കുക"
 
@@ -2665,9 +2842,6 @@ msgstr "അനുയോജ്യതാ പ്രൊഫൈൽ"
 
 msgid "Density"
 msgstr "സാന്ദ്രത"
-
-msgid "Default"
-msgstr "സ്ഥിരം"
 
 msgid "Generation-pane control spacing"
 msgstr "ജനറേഷൻ-പെയിൻ നിയന്ത്രണ ഇടം"
@@ -19281,9 +19455,6 @@ msgstr "ടൂൾബാർ"
 msgid "Sidebar"
 msgstr "സൈഡ്ബാർ"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV മെഷ് സെഗ്മെന്റേഷൻ പാനൽ"
 
@@ -21389,9 +21560,6 @@ msgstr "ബന്ധിപ്പിക്കാനായില്ല"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Dev മോഡ്: ഡമ്മി ഡാറ്റയുമായി ബന്ധിപ്പിച്ചു"
-
-msgid "Disconnect"
-msgstr "വിച്ഛേദിക്കുക"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie ഏജന്റ് സെർവറിൽ നിന്ന് വിച്ഛേദിക്കുക"
@@ -25182,6 +25350,15 @@ msgstr "%d ദിവസം മുമ്പ്"
 msgid "%dw ago"
 msgstr "%d ആഴ്ച മുമ്പ്"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "ജനറേറ്റ് ചെയ്യുന്നു (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · അയയ്ക്കാൻ Enter"
 
 msgid "Sketch · Enter to send"
 msgstr "സ്കെച്ച് · അയയ്ക്കാൻ Enter"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "ഓട്ടോ മോഡ് ഓണാണ്: തുറന്ന തി�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദിക്കുന്നതിന് പകരം തുറന്ന തിരഞ്ഞെടുപ്പുകൾ ഏജന്റ് തന്നെ തീരുമാനിക്കുന്നു, തീരുമാനങ്ങൾ സംഗ്രഹത്തിൽ പട്ടികപ്പെടുത്തുന്നു"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗത്തിലാണ്, മോഡൽ അത് തീരുമാനിക്കുന്നു. ഹോസ്റ്റ് ചെയ്ത മോഡൽ വീണ്ടും തിരഞ്ഞെടുക്കാൻ ഈ മെനു തുറന്ന് \"എന്റെ API കീ മാറ്റുക അല്ലെങ്കിൽ നീക്കം ചെയ്യുക\" തിരഞ്ഞെടുക്കുക"
-
-msgid "Choose which model the agent runs on"
-msgstr "ഏജന്റ് ഏത് മോഡലിലാണ് പ്രവർത്തിക്കുന്നതെന്ന് തിരഞ്ഞെടുക്കുക"
 
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
@@ -27540,6 +27714,66 @@ msgstr "അപകട-നിറമുള്ള പ്രവർത്തന ബട
 msgid "Borderless quiet action button"
 msgstr "ബോർഡറില്ലാത്ത ശാന്ത പ്രവർത്തന ബട്ടൺ"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "ചിപ്പ്"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "മോഡ് സ്ലൈഡർ ഇടത്"
 
@@ -27704,9 +27938,6 @@ msgstr "ഗ്ലിഫ്"
 
 msgid "Header glyph"
 msgstr "ഹെഡർ ഗ്ലിഫ്"
-
-msgid "Chip"
-msgstr "ചിപ്പ്"
 
 msgid "Chip track"
 msgstr "ചിപ്പ് ട്രാക്ക്"

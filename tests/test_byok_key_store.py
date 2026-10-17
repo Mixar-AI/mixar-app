@@ -226,10 +226,10 @@ def test_byok_client_stores_the_key_locally_on_200_and_never_sends_the_refresh_t
     assert "account_id=account_id," in put_body and "api_key=envelope," in put_body
     assert "codex_auth_path" not in put_body
     assert "refresh_token" not in save_body and "refresh_token" not in put_body
-    assert "if success and not _store_local_key(provider, api_key, codex_auth_path):" in save_body
+    assert "if success and not _store_local_key(provider, api_key, codex_auth_path, model, user_id):" in save_body
     assert "success, err = False, _LOCAL_STORE_FAILED_MSG" in save_body
     delete_body = src[src.index("def delete_credentials("):src.index("def _store_local_key(")]
-    assert "_forget_local_key()" in delete_body
+    assert "_forget_local_key(user_id)" in delete_body  # the account the request was made as
     # Logout keeps the key: only the cached user scope is dropped.
     hooks = (SCRIPTS / "mixar" / "modules" / "auth" / "core" / "auth_hooks.py").read_text(encoding="utf-8")
     assert "key_store.forget_user()" in hooks and "key_store.delete(" not in hooks

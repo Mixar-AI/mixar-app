@@ -23,7 +23,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
-from ...core import preference_client, preference_state
+from ...core import credential_state, preference_client, preference_state
 
 logger = get_logger(__name__)
 
@@ -65,7 +65,7 @@ class MIXAR_OT_agent_model_set(Operator):
 
     @classmethod
     def poll(cls, context):
-        if preference_state.mutation_pending():
+        if preference_state.mutation_pending() or credential_state.pending():
             cls.poll_message_set(preference_state.PENDING_MESSAGE)
             return False
         return True
@@ -86,40 +86,50 @@ class MIXAR_OT_agent_model_set(Operator):
         if _byok_active():
             self.report({'ERROR'}, _BYOK_BLOCKED_MSG)
             return {'CANCELLED'}
-
-        thinking = (self.thinking_level or "").strip()
         wm = getattr(context, "window_manager", None)
-        if not preference_state.begin_mutation():
+        if not set_hosted(wm, provider, model, (self.thinking_level or "").strip(),
+                          label=(self.label or "").strip()):
             self.report({'WARNING'}, preference_state.PENDING_MESSAGE)
             return {'CANCELLED'}
-        epoch = preference_state.current_epoch()
-        previous = preference_state.snapshot()
-
-        preference_state.apply_local(
-            {
-                "mixar_agent_model_provider": provider,
-                "mixar_agent_model_id": model,
-                "mixar_agent_model_label": (self.label or "").strip() or model,
-                "mixar_agent_model_thinking": thinking,
-                # A row the user could click was drawn eligible; the server has
-                # the last word and a 400 reverts this wholesale.
-                "mixar_agent_model_eligible": True,
-            },
-            wm,
-            epoch=epoch,
-        )
-        _redraw()
-
-        def _done(success, data, err):
-            _on_save_done(epoch, previous, success, data, err)
-
-        preference_client.save_preference(
-            provider=provider,
-            model=model,
-            on_done=_done,
-            thinking_level=thinking or None,
-        )
         return {'FINISHED'}
+
+
+def set_hosted(wm, provider: str, model: str, thinking: str = "", label: str = "") -> bool:
+    """Save the hosted pick (optimistic mirror, PUT on a worker). False when
+    another pick is in flight. Shared by the island popup's `mixar.agent_pick`
+    (after a pause, when a key was in use) and this operator."""
+    if not preference_state.begin_mutation():
+        return False
+    epoch = preference_state.current_epoch()
+    previous = preference_state.snapshot()
+    if not label:
+        from ...core import catalog_labels
+        label = catalog_labels.lookup_model_label(provider, model)
+    preference_state.apply_local(
+        {
+            "mixar_agent_model_provider": provider,
+            "mixar_agent_model_id": model,
+            "mixar_agent_model_label": label or model,
+            "mixar_agent_model_thinking": thinking,
+            # A row the user could click was drawn eligible; the server has
+            # the last word and a 400 reverts this wholesale.
+            "mixar_agent_model_eligible": True,
+        },
+        wm,
+        epoch=epoch,
+    )
+    _redraw()
+
+    def _done(success, data, err):
+        _on_save_done(epoch, previous, success, data, err)
+
+    preference_client.save_preference(
+        provider=provider,
+        model=model,
+        on_done=_done,
+        thinking_level=thinking or None,
+    )
+    return True
 
 
 class MIXAR_OT_agent_model_reset(Operator):
@@ -131,7 +141,7 @@ class MIXAR_OT_agent_model_reset(Operator):
 
     @classmethod
     def poll(cls, context):
-        if preference_state.mutation_pending():
+        if preference_state.mutation_pending() or credential_state.pending():
             cls.poll_message_set(preference_state.PENDING_MESSAGE)
             return False
         return True
@@ -140,32 +150,37 @@ class MIXAR_OT_agent_model_reset(Operator):
         if _byok_active():
             self.report({'ERROR'}, _BYOK_BLOCKED_MSG)
             return {'CANCELLED'}
-
         wm = getattr(context, "window_manager", None)
-        if not preference_state.begin_mutation():
+        if not reset_hosted(wm):
             self.report({'WARNING'}, preference_state.PENDING_MESSAGE)
             return {'CANCELLED'}
-        epoch = preference_state.current_epoch()
-        previous = preference_state.snapshot()
-
-        preference_state.apply_local(
-            {
-                "mixar_agent_model_provider": "",
-                "mixar_agent_model_id": "",
-                "mixar_agent_model_label": "",
-                "mixar_agent_model_thinking": "",
-                "mixar_agent_model_eligible": True,
-            },
-            wm,
-            epoch=epoch,
-        )
-        _redraw()
-
-        def _done(success, data, err):
-            _on_reset_done(epoch, previous, success, err)
-
-        preference_client.delete_preference(on_done=_done)
         return {'FINISHED'}
+
+
+def reset_hosted(wm) -> bool:
+    """Clear the hosted pick (the server default). False when a pick is in flight."""
+    if not preference_state.begin_mutation():
+        return False
+    epoch = preference_state.current_epoch()
+    previous = preference_state.snapshot()
+    preference_state.apply_local(
+        {
+            "mixar_agent_model_provider": "",
+            "mixar_agent_model_id": "",
+            "mixar_agent_model_label": "",
+            "mixar_agent_model_thinking": "",
+            "mixar_agent_model_eligible": True,
+        },
+        wm,
+        epoch=epoch,
+    )
+    _redraw()
+
+    def _done(success, data, err):
+        _on_reset_done(epoch, previous, success, err)
+
+    preference_client.delete_preference(on_done=_done)
+    return True
 
 
 # ---------------------------------------------------------------------------

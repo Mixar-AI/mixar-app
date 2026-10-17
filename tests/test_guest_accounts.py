@@ -240,26 +240,10 @@ _MODELS = [
 ]
 
 
-def test_guest_sees_hosted_models_greyed_under_a_sign_in_note():
-    rows = model_menu.build_rows(_MODELS, active_provider="anthropic", active_model="sonnet",
-                                 active_thinking="low", guest=True)
-    kinds = [row.kind for row in rows]
-    assert kinds[0] == "NOTE" and rows[0].label == model_menu.GUEST_NOTE_TEXT
-    assert all(not row.enabled for row in rows if row.kind in {"MODEL", "THINKING_MENU", "RESET"})
-    assert [row.kind for row in rows if row.enabled] == ["BYOK"]
 
 
-def test_guest_with_a_key_sees_the_key_note_only():
-    rows = model_menu.build_rows(_MODELS, byok_active=True, guest=True,
-                                 byok_provider_label="OpenAI", byok_model_label="gpt")
-    notes = [row for row in rows if row.kind == "NOTE"]
-    assert len(notes) == 1 and notes[0].label != model_menu.GUEST_NOTE_TEXT
 
 
-def test_signed_in_rows_are_unchanged_by_the_guest_flag():
-    rows = model_menu.build_rows(_MODELS)
-    assert [row.enabled for row in rows if row.kind == "MODEL"] == [True, True]
-    assert rows[0].kind == "MODEL"
 
 
 # --- guest session + claim ----------------------------------------------------
@@ -618,8 +602,8 @@ def test_signed_out_surfaces_admit_guests():
     topbar = (MODULES / "space_mixie_chat/ui/topbar.py").read_text()
     assert 'caption = email if logged_in else iface_("Guest")' in topbar
     assert 'topbar_layout.account_signed_in(wm)' in topbar
-    menu = (MODULES / "byok/ui/menus/agent_model_menu.py").read_text()
-    assert "guest=bool(getattr(context.window_manager, \"mixie_chat_is_guest\"" in menu
+    mirror = (MODULES / "byok/core/picker_mirror.py").read_text()
+    assert 'guest=bool(getattr(target, "mixie_chat_is_guest", False))' in mirror
 
 
 def test_guests_send_no_telemetry_and_no_usage_polls():

@@ -1445,6 +1445,15 @@ msgstr "Un problème est survenu de notre côté. Veuillez réessayer."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "Démarrez d’abord le modèle local (il doit être en cours d’exécut
 msgid "Base URL and model name are required."
 msgstr "L’URL de base et le nom du modèle sont requis."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Le serveur local a répondu HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Impossible de joindre le serveur local. Vérifiez qu’il est en cours d’exécution et que l’URL de base est correcte."
 
-msgid "No models available — contact support"
-msgstr "Aucun modèle disponible — contactez le support"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "Votre clé API détermine le modèle"
-
 msgid "Custom"
 msgstr "Personnalisée"
-
-msgid "Use my own API key…"
-msgstr "Utiliser ma propre clé API…"
-
-msgid "Change or remove my API key…"
-msgstr "Modifier ou supprimer ma clé API…"
 
 msgid "Thinking"
 msgstr "Réflexion"
@@ -1541,8 +1541,74 @@ msgstr "Réflexion"
 msgid "Thinking: {level}"
 msgstr "Réflexion : {level}"
 
-msgid "Your key: {name}"
-msgstr "Votre clé : {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Par défaut"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Aucun modèle disponible — contactez le support"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Enregistrement du modèle de l’agent… Veuillez patienter avant d’envoyer un message ou de changer de modèle."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "Modèle de l’agent"
-
-msgid "Choose which model runs the agent."
-msgstr "Choisir le modèle qui exécute l’agent."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Effort de raisonnement du modèle actuellement choisi."
-
-msgid "No thinking levels for this model"
-msgstr "Aucun niveau de réflexion pour ce modèle"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Votre propre clé API est utilisée — choisissez « Modifier ou supprimer ma clé API » dans ce menu pour choisir un modèle hébergé"
@@ -1601,109 +1655,52 @@ msgstr "Impossible de changer de modèle"
 msgid "Could not reset model"
 msgstr "Impossible de réinitialiser le modèle"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Utilise votre abonnement ChatGPT — aucun crédit Mixar n’est débité."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Réglages du fournisseur d’IA"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "Actif"
-
-msgid "Not configured"
-msgstr "Non configuré"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "Configuration actuelle"
-
-msgid "Account"
-msgstr "Compte"
 
 msgid "ChatGPT subscription"
 msgstr "Abonnement ChatGPT"
 
-msgid "API Key"
-msgstr "Clé API"
-
-msgid "Stored securely"
-msgstr "Stockée de façon sécurisée"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Modèle texte uniquement — la discussion fonctionne ; les tâches 3D s’exécutent sans retour visuel."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Configuration du fournisseur"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "N’importe quel identifiant de openrouter.ai/models, par ex. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Réessayer"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "Téléchargé — non démarré"
 msgid "Not downloaded"
 msgstr "Non téléchargé"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "S’exécute entièrement sur cet ordinateur — vos prompts n’en sortent jamais, sauf via l’orchestration de l’agent Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Annuler le téléchargement"
@@ -1781,9 +1793,6 @@ msgstr "URL de base"
 msgid "API Key (optional)"
 msgstr "Clé API (facultative)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Tout serveur compatible OpenAI sur cet ordinateur — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Impossible d’enregistrer le fournisseur local."
 
@@ -1792,6 +1801,9 @@ msgstr "Réanalyser les applications locales"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "Rechercher à nouveau sur cet ordinateur les applications d’IA locales en cours d’exécution"
+
+msgid "AI Provider Settings"
+msgstr "Réglages du fournisseur d’IA"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Utiliser votre propre clé API pour l’agent Mixar. Tant que cette option est active, aucun crédit Mixar n’est débité pour les requêtes de l’agent."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Supprimer"
 
@@ -1817,10 +1832,109 @@ msgstr "Lancer la confirmation de suppression"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Annuler la suppression et revenir à la boîte de dialogue principale"
 
-msgid "Delete the stored API key server-side"
-msgstr "Supprimer la clé API stockée côté serveur"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Déconnecter"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Modèle local"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "N’importe quel identifiant de openrouter.ai/models, par ex. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Réessayer"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "Rafraîchir le catalogue de modèles"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Revalider le catalogue fournisseurs+modèles auprès du serveur"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Fournisseur du modèle de l’agent"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "ID du fournisseur du modèle hébergé choisi et enregistré pour l’agent"
+
+msgid "Agent Model"
+msgstr "Modèle de l’agent"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "ID du modèle hébergé choisi et enregistré pour l’agent"
@@ -1868,20 +2024,32 @@ msgstr "Modèle de l’agent éligible"
 msgid "False when the saved model is not available on your plan"
 msgstr "Faux quand le modèle enregistré n’est pas disponible dans votre forfait"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "Fournisseur de LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Modèle à utiliser avec le fournisseur sélectionné"
 
+msgid "API Key"
+msgstr "Clé API"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Votre clé API est stockée chiffrée et utilisée uniquement pour les requêtes de l’agent Mixar. Après l’enregistrement, seul un aperçu masqué est affiché."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "N’importe quel identifiant de modèle de openrouter.ai/models (par ex. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "Mode local"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Géré par Mixar, ou votre propre serveur local"
-
-msgid "Local model"
-msgstr "Modèle local"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Modèle sélectionné à télécharger et exécuter sur cet ordinateur"
@@ -1915,6 +2080,15 @@ msgstr "BYOK actif"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Vrai quand le serveur indique byok_active pour cet utilisateur"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "État de la boîte de dialogue"
@@ -2291,6 +2465,9 @@ msgstr "La file d’attente de l’îlot de l’agent est indisponible"
 msgid "Show every job"
 msgstr "Afficher toutes les tâches"
 
+msgid "Active"
+msgstr "Actif"
+
 msgid "Show pending or running jobs"
 msgstr "Afficher les tâches en attente ou en cours"
 
@@ -2665,9 +2842,6 @@ msgstr "Profil de compatibilité"
 
 msgid "Density"
 msgstr "Densité"
-
-msgid "Default"
-msgstr "Par défaut"
 
 msgid "Generation-pane control spacing"
 msgstr "Espacement des contrôles du volet de génération"
@@ -19281,9 +19455,6 @@ msgstr "Barre d’outils"
 msgid "Sidebar"
 msgstr "Barre latérale"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "Panneau de segmentation UV du maillage"
 
@@ -21389,9 +21560,6 @@ msgstr "Échec de la connexion"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Mode dev : connecté avec des données factices"
-
-msgid "Disconnect"
-msgstr "Déconnecter"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Se déconnecter du serveur de l’agent Mixie"
@@ -25182,6 +25350,15 @@ msgstr "il y a %d j"
 msgid "%dw ago"
 msgstr "il y a %d sem."
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Génération (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · Enter pour envoyer"
 
 msgid "Sketch · Enter to send"
 msgstr "Croquis · Enter pour envoyer"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "Le mode auto est activé : l’agent tranche lui-même les choix en sus
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Mode auto : l’agent tranche lui-même les choix en suspens au lieu de vous interroger, et liste ses décisions dans le résumé"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Votre propre clé API est utilisée, et c’est elle qui détermine le modèle. Ouvrez ce menu et choisissez « Modifier ou supprimer ma clé API » pour choisir à nouveau un modèle hébergé"
-
-msgid "Choose which model the agent runs on"
-msgstr "Choisir le modèle utilisé par l’agent"
 
 msgid "Agent Bubble"
 msgstr "Bulle de l’agent"
@@ -27540,6 +27714,66 @@ msgstr "Bouton d’action teinté de danger"
 msgid "Borderless quiet action button"
 msgstr "Bouton d’action discret sans bordure"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Badge"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Curseur de mode gauche"
 
@@ -27704,9 +27938,6 @@ msgstr "Glyphe"
 
 msgid "Header glyph"
 msgstr "Glyphe d’en-tête"
-
-msgid "Chip"
-msgstr "Badge"
 
 msgid "Chip track"
 msgstr "Piste de badge"

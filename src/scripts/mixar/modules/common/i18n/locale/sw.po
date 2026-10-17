@@ -1445,6 +1445,15 @@ msgstr "Kuna hitilafu upande wetu. Tafadhali jaribu tena."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "Anzisha kwanza modeli ya ndani (lazima iwe inaendeshwa ili kuhifadhi)."
 msgid "Base URL and model name are required."
 msgstr "URL ya msingi na jina la modeli vinahitajika."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Seva ya ndani ilijibu HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Haikuweza kufikia seva ya ndani. Angalia kuwa inaendeshwa na URL ya msingi ni sahihi."
 
-msgid "No models available — contact support"
-msgstr "Hakuna modeli zinazopatikana — wasiliana na usaidizi"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "Ufunguo wako wa API unadhibiti modeli"
-
 msgid "Custom"
 msgstr "Desturi"
-
-msgid "Use my own API key…"
-msgstr "Tumia ufunguo wangu wa API…"
-
-msgid "Change or remove my API key…"
-msgstr "Badilisha au ondoa ufunguo wangu wa API…"
 
 msgid "Thinking"
 msgstr "Ufikiri"
@@ -1541,8 +1541,74 @@ msgstr "Ufikiri"
 msgid "Thinking: {level}"
 msgstr "Ufikiri: {level}"
 
-msgid "Your key: {name}"
-msgstr "Ufunguo wako: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Chaguomsingi"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Hakuna modeli zinazopatikana — wasiliana na usaidizi"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Inahifadhi modeli ya wakala… Tafadhali subiri kabla ya kutuma au kubadilisha modeli."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "Modeli ya wakala"
-
-msgid "Choose which model runs the agent."
-msgstr "Chagua modeli ipi inaendesha wakala."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Juhudi ya ufikiri ya modeli iliyochaguliwa sasa."
-
-msgid "No thinking levels for this model"
-msgstr "Hakuna viwango vya ufikiri vya modeli hii"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Ufunguo wako wa API unatumika — chagua \"Badilisha au ondoa ufunguo wangu wa API\" katika menyu hii ili kuchagua modeli iliyohifadhiwa mtandaoni"
@@ -1601,109 +1655,52 @@ msgstr "Haikuweza kubadilisha modeli"
 msgid "Could not reset model"
 msgstr "Haikuweza kuweka upya modeli"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Hutumia usajili wako wa ChatGPT — krediti za Mixar hazitozwi."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Mipangilio ya mtoa huduma wa AI"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "Inayotumika"
-
-msgid "Not configured"
-msgstr "Haijawekwa"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "Usanidi wa sasa"
-
-msgid "Account"
-msgstr "Akaunti"
 
 msgid "ChatGPT subscription"
 msgstr "Usajili wa ChatGPT"
 
-msgid "API Key"
-msgstr "Ufunguo wa API"
-
-msgid "Stored securely"
-msgstr "Imehifadhiwa kwa usalama"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Modeli ya maandishi pekee — soga hufanya kazi; majukumu ya 3D huendeshwa bila maoni ya kuona."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Usanidi wa mtoa huduma"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Jaribu tena"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "Imepakuliwa — haijaendeshwa"
 msgid "Not downloaded"
 msgstr "Haijapakuliwa"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Huendeshwa yote kwenye kompyuta hii — maagizo yako hayatoki humo isipokuwa kupitia upangaji wa wakala wa Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Ghairi upakuaji"
@@ -1781,9 +1793,6 @@ msgstr "URL ya msingi"
 msgid "API Key (optional)"
 msgstr "Ufunguo wa API (si lazima)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Seva yoyote inayoendana na OpenAI kwenye kompyuta hii — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Haikuweza kuhifadhi mtoa huduma wa ndani."
 
@@ -1792,6 +1801,9 @@ msgstr "Changanua tena programu za ndani"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "Changanua tena kompyuta hii kutafuta programu za AI za ndani zinazoendeshwa"
+
+msgid "AI Provider Settings"
+msgstr "Mipangilio ya mtoa huduma wa AI"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti za Mixar hazitozwi kwa maombi ya wakala."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Ondoa"
 
@@ -1817,10 +1832,109 @@ msgstr "Anzisha mtiririko wa uthibitisho wa kuondoa"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Ghairi mtiririko wa kuondoa na urudi kwenye kidirisha kuu"
 
-msgid "Delete the stored API key server-side"
-msgstr "Futa ufunguo wa API uliohifadhiwa upande wa seva"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Tenganisha"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Modeli ya ndani"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Slug yoyote kutoka openrouter.ai/models, k.m. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Jaribu tena"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "Onyesha upya katalogi ya modeli"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Thibitisha tena katalogi ya mtoa huduma na modeli kutoka seva ya nyuma"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Mtoa huduma wa modeli ya wakala"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "Kitambulisho cha mtoa huduma wa chaguo la modeli ya wakala iliyohifadhiwa mtandaoni"
+
+msgid "Agent Model"
+msgstr "Modeli ya wakala"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "Kitambulisho cha modeli ya chaguo la modeli ya wakala iliyohifadhiwa mtandaoni"
@@ -1868,20 +2024,32 @@ msgstr "Modeli ya wakala inastahili"
 msgid "False when the saved model is not available on your plan"
 msgstr "Si kweli wakati modeli iliyohifadhiwa haipatikani kwenye mpango wako"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "Mtoa huduma wa LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Modeli ya kutumia na mtoa huduma aliyechaguliwa"
 
+msgid "API Key"
+msgstr "Ufunguo wa API"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Ufunguo wako wa API huhifadhiwa ukiwa umesimbwa na hutumika kwa maombi ya wakala wa Mixar pekee. Baada ya kuhifadhi, hakiki iliyofichwa pekee huonyeshwa."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Slug yoyote ya modeli kutoka openrouter.ai/models (k.m. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "Modi ya ndani"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Inasimamiwa na Mixar, au seva yako ya ndani"
-
-msgid "Local model"
-msgstr "Modeli ya ndani"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Modeli iliyochaguliwa ya kupakua na kuendesha kwenye kompyuta hii"
@@ -1915,6 +2080,15 @@ msgstr "BYOK inatumika"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Kweli seva inaporipoti byok_active kwa mtumiaji huyu"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Hali ya kidirisha"
@@ -2291,6 +2465,9 @@ msgstr "Foleni ya kisiwa cha wakala haipatikani"
 msgid "Show every job"
 msgstr "Onyesha kila kazi"
 
+msgid "Active"
+msgstr "Inayotumika"
+
 msgid "Show pending or running jobs"
 msgstr "Onyesha kazi zinazosubiri au zinazoendeshwa"
 
@@ -2665,9 +2842,6 @@ msgstr "Wasifu wa utangamano"
 
 msgid "Density"
 msgstr "Msongamano"
-
-msgid "Default"
-msgstr "Chaguomsingi"
 
 msgid "Generation-pane control spacing"
 msgstr "Nafasi ya vidhibiti vya kidirisha cha utengenezaji"
@@ -19281,9 +19455,6 @@ msgstr "Upauzana"
 msgid "Sidebar"
 msgstr "Upau wa kando"
 
-msgid "Mixie"
-msgstr ""
-
 msgid "UV Mesh Segmentation panel"
 msgstr "Jopo la ugawaji wa matundu ya UV"
 
@@ -21389,9 +21560,6 @@ msgstr "Imeshindwa kuunganisha"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Modi ya msanidi: Imeunganishwa na data ya majaribio"
-
-msgid "Disconnect"
-msgstr "Tenganisha"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Tenganisha kutoka seva ya wakala ya Mixie"
@@ -25182,6 +25350,15 @@ msgstr "%d siku zilizopita"
 msgid "%dw ago"
 msgstr "%d wiki zilizopita"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Inatengeneza (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · Enter kutuma"
 
 msgid "Sketch · Enter to send"
 msgstr "Mchoro · Enter kutuma"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "Modi otomatiki imewashwa: wakala huamua chaguzi wazi mwenyewe na hauuliz
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Modi otomatiki: wakala huamua chaguzi wazi mwenyewe badala ya kuuliza, na huorodhesha maamuzi yake katika muhtasari"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Ufunguo wako wa API unatumika, na unaamua modeli. Fungua menyu hii na uchague \"Badilisha au ondoa ufunguo wangu wa API\" ili kuchagua modeli iliyohifadhiwa tena"
-
-msgid "Choose which model the agent runs on"
-msgstr "Chagua modeli ambayo wakala hutumia"
 
 msgid "Agent Bubble"
 msgstr "Kiputo cha wakala"
@@ -27540,6 +27714,66 @@ msgstr "Kitufe cha kitendo chenye rangi ya hatari"
 msgid "Borderless quiet action button"
 msgstr "Kitufe cha kitendo tulivu bila mpaka"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Chipu"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Kitelezi cha modi, kushoto"
 
@@ -27704,9 +27938,6 @@ msgstr "Glyph"
 
 msgid "Header glyph"
 msgstr "Glyph ya kichwa"
-
-msgid "Chip"
-msgstr "Chipu"
 
 msgid "Chip track"
 msgstr "Njia ya chipu"

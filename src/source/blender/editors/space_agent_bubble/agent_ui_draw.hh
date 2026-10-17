@@ -98,6 +98,16 @@ struct AgentIslandState {
    * beside Refine; refining greys Refine out until the answer lands. */
   bool prompt_refined;
   bool prompt_refining;
+
+  /* The model chip (wm.mixar_agent_*; core/picker.py decides, the C++ only
+   * draws): who answers — "MIXIE" | "KEY" | "LOCAL" — its badge word and the
+   * model name as drawn, and the chip's state: "OK" | "KEY_NEEDED" | "BUSY"
+   * (busy: a switch, pause or resume is being saved; the name dims). Read by
+   * `agent_ui_provider_gather`; the chip opens the model card (agent_ui_model_card.hh). */
+  char model_source[8];
+  char model_source_label[32];
+  char model_chip_name[96];
+  char model_chip_state[16];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

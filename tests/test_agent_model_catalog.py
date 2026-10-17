@@ -255,3 +255,23 @@ def test_a_byok_only_populate_call_does_not_leave_stale_records():
     model_suggestions.populate(providers=[("x", "X", "X")], models={})
 
     assert model_suggestions.get_platform_models() == []
+
+
+def test_the_provider_list_follows_the_backend_order():
+    """The backend's `provider_order` places every provider, this client's own
+    OpenRouter / Codex / Local included; the client never decides the order."""
+    payload = _payload(_provider("anthropic", "Anthropic", [_model("a")]),
+                       _provider("openai", "OpenAI", [_model("o")]),
+                       _provider("newco", "Newco", [_model("n")]))
+    payload["provider_order"] = ["openai", "codex", "anthropic", "openrouter", "local"]
+    model_suggestions.populate_from_payload(payload)
+    ids = [item[0] for item in model_suggestions.get_provider_items()]
+    assert ids == ["openai", "codex", "anthropic", "openrouter", "local", "newco"]
+
+
+def test_an_older_backend_keeps_catalog_order_then_client_options():
+    model_suggestions.populate_from_payload(
+        _payload(_provider("anthropic", "Anthropic", [_model("a")]),
+                 _provider("openai", "OpenAI", [_model("o")])))
+    ids = [item[0] for item in model_suggestions.get_provider_items()]
+    assert ids == ["anthropic", "openai", "openrouter", "codex", "local"]

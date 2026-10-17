@@ -1445,6 +1445,15 @@ msgstr "Κάτι πήγε στραβά από την πλευρά μας. Δοκ
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "Εκκινήστε πρώτα το τοπικό μοντέλο (πρέπ
 msgid "Base URL and model name are required."
 msgstr "Απαιτούνται το βασικό URL και το όνομα μοντέλου."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Ο τοπικός διακομιστής απάντησε HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Δεν ήταν δυνατή η επικοινωνία με τον τοπικό διακομιστή. Ελέγξτε ότι εκτελείται και ότι το βασικό URL είναι σωστό."
 
-msgid "No models available — contact support"
-msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "Το κλειδί API σας ελέγχει το μοντέλο"
-
 msgid "Custom"
 msgstr "Προσαρμοσμένο"
-
-msgid "Use my own API key…"
-msgstr "Χρήση δικού μου κλειδιού API…"
-
-msgid "Change or remove my API key…"
-msgstr "Αλλαγή ή αφαίρεση του κλειδιού API μου…"
 
 msgid "Thinking"
 msgstr "Σκέψη"
@@ -1541,8 +1541,74 @@ msgstr "Σκέψη"
 msgid "Thinking: {level}"
 msgstr "Σκέψη: {level}"
 
-msgid "Your key: {name}"
-msgstr "Το κλειδί σας: {name}"
+msgid "Mixie"
+msgstr "Mixie"
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Προεπιλογή"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Αποθήκευση μοντέλου πράκτορα… Περιμένετε πριν στείλετε ή αλλάξετε μοντέλα."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "Μοντέλο πράκτορα"
-
-msgid "Choose which model runs the agent."
-msgstr "Επιλέξτε ποιο μοντέλο εκτελεί τον πράκτορα."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Προσπάθεια συλλογισμού για το μοντέλο που είναι επιλεγμένο."
-
-msgid "No thinking levels for this model"
-msgstr "Δεν υπάρχουν επίπεδα σκέψης για αυτό το μοντέλο"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Χρησιμοποιείται το δικό σας κλειδί API — επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API μου» σε αυτό το μενού για να διαλέξετε φιλοξενούμενο μοντέλο"
@@ -1601,109 +1655,52 @@ msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
 msgid "Could not reset model"
 msgstr "Δεν ήταν δυνατή η επαναφορά μοντέλου"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Χρησιμοποιεί τη συνδρομή ChatGPT σας — οι πιστώσεις Mixar δεν χρεώνονται."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Ρυθμίσεις παρόχου ΤΝ"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "Ενεργό"
-
-msgid "Not configured"
-msgstr "Δεν έχει ρυθμιστεί"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "Τρέχουσα ρύθμιση"
-
-msgid "Account"
-msgstr "Λογαριασμός"
 
 msgid "ChatGPT subscription"
 msgstr "Συνδρομή ChatGPT"
 
-msgid "API Key"
-msgstr "Κλειδί API"
-
-msgid "Stored securely"
-msgstr "Αποθηκευμένο με ασφάλεια"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λειτουργεί· οι εργασίες 3D εκτελούνται χωρίς οπτική ανατροφοδότηση."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Ρύθμιση παρόχου"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Δοκιμή ξανά"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "Λήφθηκε — δεν εκτελείται"
 msgid "Not downloaded"
 msgstr "Δεν έχει ληφθεί"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Εκτελείται εξ ολοκλήρου σε αυτόν τον υπολογιστή — οι προτροπές σας δεν φεύγουν από αυτόν, εκτός μέσω της ενορχήστρωσης πράκτορα του Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Ακύρωση λήψης"
@@ -1781,9 +1793,6 @@ msgstr "Βασικό URL"
 msgid "API Key (optional)"
 msgstr "Κλειδί API (προαιρετικό)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Οποιοσδήποτε διακομιστής συμβατός με OpenAI σε αυτόν τον υπολογιστή — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Δεν ήταν δυνατή η αποθήκευση του τοπικού παρόχου."
 
@@ -1792,6 +1801,9 @@ msgstr "Επανασάρωση τοπικών εφαρμογών"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "Ξανασαρώνει αυτόν τον υπολογιστή για τοπικές εφαρμογές ΤΝ που εκτελούνται"
+
+msgid "AI Provider Settings"
+msgstr "Ρυθμίσεις παρόχου ΤΝ"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Χρησιμοποιήστε το δικό σας κλειδί API για τον πράκτορα Mixar. Όσο είναι ενεργό, οι πιστώσεις Mixar δεν χρεώνονται για αιτήματα του πράκτορα."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Remove"
 
@@ -1817,10 +1832,109 @@ msgstr "Ξεκινά τη ροή επιβεβαίωσης αφαίρεσης"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Ακυρώνει τη ροή αφαίρεσης και επιστρέφει στον κύριο διάλογο"
 
-msgid "Delete the stored API key server-side"
-msgstr "Διαγράφει το αποθηκευμένο κλειδί API στην πλευρά του διακομιστή"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Αποσύνδεση"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Τοπικό μοντέλο"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Δοκιμή ξανά"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "Ανανέωση καταλόγου μοντέλων"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Επικυρώνει ξανά τον κατάλογο παρόχου και μοντέλου από τον διακομιστή"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Πάροχος μοντέλου πράκτορα"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "Αναγνωριστικό παρόχου της αποθηκευμένης επιλογής φιλοξενούμενου μοντέλου πράκτορα"
+
+msgid "Agent Model"
+msgstr "Μοντέλο πράκτορα"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "Αναγνωριστικό μοντέλου της αποθηκευμένης επιλογής φιλοξενούμενου μοντέλου πράκτορα"
@@ -1868,20 +2024,32 @@ msgstr "Καταλληλότητα μοντέλου πράκτορα"
 msgid "False when the saved model is not available on your plan"
 msgstr "Ψευδές όταν το αποθηκευμένο μοντέλο δεν είναι διαθέσιμο στο πρόγραμμά σας"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "Πάροχος LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Μοντέλο για χρήση με τον επιλεγμένο πάροχο"
 
+msgid "API Key"
+msgstr "Κλειδί API"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Το κλειδί API σας αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar. Μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Οποιοδήποτε slug μοντέλου από το openrouter.ai/models (π.χ. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "Τοπική κατάσταση"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Διαχειρίζεται το Mixar ή ο δικός σας τοπικός διακομιστής"
-
-msgid "Local model"
-msgstr "Τοπικό μοντέλο"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Επιμελημένο μοντέλο για λήψη και εκτέλεση σε αυτόν τον υπολογιστή"
@@ -1915,6 +2080,15 @@ msgstr "BYOK ενεργό"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Αληθές όταν ο διακομιστής αναφέρει byok_active για αυτόν τον χρήστη"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Κατάσταση διαλόγου"
@@ -2291,6 +2465,9 @@ msgstr "Η ουρά της νησίδας πράκτορα δεν είναι δ�
 msgid "Show every job"
 msgstr "Εμφάνιση κάθε εργασίας"
 
+msgid "Active"
+msgstr "Ενεργό"
+
 msgid "Show pending or running jobs"
 msgstr "Εμφάνιση εργασιών σε εκκρεμότητα ή σε εκτέλεση"
 
@@ -2665,9 +2842,6 @@ msgstr "Προφίλ συμβατότητας"
 
 msgid "Density"
 msgstr "Πυκνότητα"
-
-msgid "Default"
-msgstr "Προεπιλογή"
 
 msgid "Generation-pane control spacing"
 msgstr "Αποστάσεις χειριστηρίων τμήματος παραγωγής"
@@ -19281,9 +19455,6 @@ msgstr "Γραμμή εργαλείων"
 msgid "Sidebar"
 msgstr "Πλαϊνή στήλη"
 
-msgid "Mixie"
-msgstr "Mixie"
-
 msgid "UV Mesh Segmentation panel"
 msgstr "Ταμπλό τμηματοποίησης πολυγώνων UV"
 
@@ -21389,9 +21560,6 @@ msgstr "Αποτυχία σύνδεσης."
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Κατάσταση ανάπτυξης: συνδέθηκε με εικονικά δεδομένα"
-
-msgid "Disconnect"
-msgstr "Αποσύνδεση"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Αποσυνδέεται από τον διακομιστή του πράκτορα Mixie."
@@ -25182,6 +25350,15 @@ msgstr "πριν %dd"
 msgid "%dw ago"
 msgstr "πριν %dw"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Δημιουργία (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · Enter για αποστολή"
 
 msgid "Sketch · Enter to send"
 msgstr "Σκίτσο · Enter για αποστολή"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "Η αυτόματη κατάσταση είναι ενεργή: ο πρ�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασίζει μόνος του τις ανοιχτές επιλογές αντί να σας ρωτά και καταγράφει τις αποφάσεις του στη σύνοψη"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Χρησιμοποιείται το δικό σας κλειδί API και αυτό καθορίζει το μοντέλο. Ανοίξτε αυτό το μενού και επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API» για να ξαναεπιλέξετε φιλοξενούμενο μοντέλο"
-
-msgid "Choose which model the agent runs on"
-msgstr "Επιλέξτε σε ποιο μοντέλο εκτελείται ο πράκτορας"
 
 msgid "Agent Bubble"
 msgstr "Φούσκα πράκτορα"
@@ -27540,6 +27714,66 @@ msgstr "Κουμπί δράσης με απόχρωση κινδύνου"
 msgid "Borderless quiet action button"
 msgstr "Ήσυχο κουμπί δράσης χωρίς περίγραμμα"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Τσιπ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Αριστερό ρυθμιστικό κατάστασης"
 
@@ -27704,9 +27938,6 @@ msgstr "Σύμβολο"
 
 msgid "Header glyph"
 msgstr "Σύμβολο κεφαλίδας"
-
-msgid "Chip"
-msgstr "Τσιπ"
 
 msgid "Chip track"
 msgstr "Ράγα τσιπ"

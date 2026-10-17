@@ -171,6 +171,7 @@ def _clear_byok_state_on_logout(wm):
         ('byok_current_supports_vision', True),
         ('byok_key_preview', ''),
         ('byok_device_key_missing', False),
+        ('byok_key_resumable', False),
         ('byok_form_api_key', ''),
         ('byok_form_openrouter_model', ''),
         ('byok_form_codex_path', ''),

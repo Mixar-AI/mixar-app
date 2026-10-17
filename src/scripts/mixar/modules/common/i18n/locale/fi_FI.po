@@ -1445,6 +1445,15 @@ msgstr "Jokin meni vikaan meidän puolellamme. Yrittäkää uudelleen."
 msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
 msgstr ""
 
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1511,29 +1520,20 @@ msgstr "Käynnistäkää ensin paikallinen malli (sen on oltava käynnissä, jot
 msgid "Base URL and model name are required."
 msgstr "Perus-URL ja mallin nimi vaaditaan."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Paikallinen palvelin vastasi HTTP-tilalla {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Paikalliseen palvelimeen ei saatu yhteyttä. Tarkistakaa, että se on käynnissä ja että perus-URL on oikein."
 
-msgid "No models available — contact support"
-msgstr "Malleja ei ole saatavilla — ottakaa yhteyttä tukeen"
-
-msgid "Sign in to use Mixar models"
-msgstr ""
-
-msgid "Your API key controls the model"
-msgstr "API-avaimenne määrää mallin"
-
 msgid "Custom"
 msgstr "Mukautettu"
-
-msgid "Use my own API key…"
-msgstr "Käytä omaa API-avainta…"
-
-msgid "Change or remove my API key…"
-msgstr "Vaihda tai poista API-avain…"
 
 msgid "Thinking"
 msgstr "Ajattelu"
@@ -1541,8 +1541,74 @@ msgstr "Ajattelu"
 msgid "Thinking: {level}"
 msgstr "Ajattelu: {level}"
 
-msgid "Your key: {name}"
-msgstr "Avaimenne: {name}"
+msgid "Mixie"
+msgstr "Mixie"
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Alkuperäinen"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Malleja ei ole saatavilla — ottakaa yhteyttä tukeen"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "OpenRouter"
+msgstr ""
+
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Agentin mallia tallennetaan… Odottakaa, ennen kuin lähetätte viestin tai vaihdatte mallia."
@@ -1552,18 +1618,6 @@ msgstr ""
 
 msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
 msgstr ""
-
-msgid "Agent Model"
-msgstr "Agentin malli"
-
-msgid "Choose which model runs the agent."
-msgstr "Valitkaa, mikä malli ajaa agenttia."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Parhaillaan valitun mallin päättelyn voimakkuus."
-
-msgid "No thinking levels for this model"
-msgstr "Tällä mallilla ei ole ajattelun tasoja"
 
 msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
 msgstr "Oma API-avaimenne on käytössä — valitkaa tästä valikosta ”Vaihda tai poista API-avain”, jos haluatte isännöidyn mallin"
@@ -1601,109 +1655,52 @@ msgstr "Mallia ei voitu vaihtaa"
 msgid "Could not reset model"
 msgstr "Mallia ei voitu nollata"
 
+msgid "Pick Agent Model"
+msgstr ""
+
 msgid "Sign-in found: {path}"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
 msgstr ""
 
-msgid "Codex sign-in file (empty = default)"
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
-msgstr ""
-
-msgid "Only the access token leaves this computer, with each agent request;"
-msgstr ""
-
-msgid "the sign-in file is never copied, and renewed tokens are written back to it."
-msgstr ""
-
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Käyttää ChatGPT-tilaustanne — Mixar-krediittejä ei veloiteta."
-
 msgid "Choose a Codex model."
 msgstr ""
 
-msgid "Removing your key…"
+msgid "Please try again."
 msgstr ""
 
-msgid "This can take a few seconds."
+msgid "AI Provider settings"
 msgstr ""
 
-msgid "Validating with your provider…"
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
 msgstr ""
 
-msgid "AI Provider Settings"
-msgstr "Tekoälyn palveluntarjoajan asetukset"
-
-msgid "Key needed on this device"
+msgid "Provider: {provider}"
 msgstr ""
 
-msgid "Active"
-msgstr "Aktiivinen"
-
-msgid "Not configured"
-msgstr "Ei määritetty"
-
-msgid "Guide"
+msgid "Model: {model}"
 msgstr ""
 
-msgid "Use your own AI provider. While it is on, Agent chats do not use Mixar credits."
+msgid "Account: {account}"
 msgstr ""
-
-msgid "Current Configuration"
-msgstr "Nykyinen määritys"
-
-msgid "Account"
-msgstr "Tili"
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-tilaus"
 
-msgid "API Key"
-msgstr "API-avain"
-
-msgid "Stored securely"
-msgstr "Tallennettu turvallisesti"
-
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Tekstimalli — keskustelu toimii; 3D-tehtävät suoritetaan ilman visuaalista palautetta."
-
-msgid "Remove key…"
+msgid "API key: {key}"
 msgstr ""
 
-msgid "Codex sign-in needed on this device"
+msgid "stored securely"
 msgstr ""
 
-msgid "Run  codex login  on this computer, then save below."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
-msgid "Enter your API key to continue"
+msgid "DISCONNECT THIS SIGN-IN?"
 msgstr ""
 
-msgid "Your provider and model are already set — just paste the key."
-msgstr ""
-
-msgid "Your key is stored only on this computer. Mixar never keeps it."
-msgstr ""
-
-msgid "Provider Setup"
-msgstr "Palveluntarjoajan määritys"
-
-msgid "Stored only on this computer. Mixar never keeps a copy. You will see a masked preview after saving."
-msgstr ""
-
-msgid "Pick a model that can use tools — the agent needs it. Most current models can."
-msgstr ""
-
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Mikä tahansa tunnus osoitteesta openrouter.ai/models, esim. anthropic/claude-opus-4.8."
-
-msgid "Couldn't save"
-msgstr ""
-
-msgid "Remove your key?"
+msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
 msgid "The agent will use Mixar's models again."
@@ -1712,25 +1709,37 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
-msgid "You are set. Agent chats now run on your own provider."
+msgid "Stay connected"
 msgstr ""
 
-msgid "Key removed"
+msgid "Keep my key"
+msgstr ""
+
+msgid "DISCONNECTING"
+msgstr ""
+
+msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
+msgstr ""
+
+msgid "Removing your key…"
+msgstr ""
+
+msgid "SAVED"
+msgstr ""
+
+msgid "REMOVED"
+msgstr ""
+
+msgid "You are set. Agent chats now run on your own provider."
 msgstr ""
 
 msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
-msgstr ""
-
-msgid "Try Again"
-msgstr "Yritä uudelleen"
-
-msgid "Keep my key"
-msgstr ""
-
-msgid "Remove key"
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1754,8 +1763,11 @@ msgstr "Ladattu — ei käynnissä"
 msgid "Not downloaded"
 msgstr "Ei ladattu"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Toimii kokonaan tällä tietokoneella — kehotteenne eivät lähde tältä koneelta muuten kuin Mixar-agentin ohjauksen mukana."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
 
 msgid "Cancel Download"
 msgstr "Peruuta lataus"
@@ -1781,9 +1793,6 @@ msgstr "Perus-URL"
 msgid "API Key (optional)"
 msgstr "API-avain (valinnainen)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Mikä tahansa OpenAI-yhteensopiva palvelin tällä tietokoneella — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Paikallista palveluntarjoajaa ei voitu tallentaa."
 
@@ -1792,6 +1801,9 @@ msgstr "Skannaa paikalliset sovellukset uudelleen"
 
 msgid "Rescan this computer for running local AI apps"
 msgstr "Skannaa tämän tietokoneen uudelleen käynnissä olevien paikallisten tekoälysovellusten varalta"
+
+msgid "AI Provider Settings"
+msgstr "Tekoälyn palveluntarjoajan asetukset"
 
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Käyttää omaa API-avainta Mixar-agentille. Kun asetus on käytössä, agentin pyynnöistä ei veloiteta Mixar-krediittejä."
@@ -1808,6 +1820,9 @@ msgstr ""
 msgid "Couldn't save. Try again."
 msgstr ""
 
+msgid "Couldn't save your API key"
+msgstr ""
+
 msgid "Remove"
 msgstr "Poista"
 
@@ -1817,10 +1832,109 @@ msgstr "Aloittaa poiston vahvistuksen"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Peruuttaa poistokulun ja palaa päävalintaikkunaan"
 
-msgid "Delete the stored API key server-side"
-msgstr "Poistaa tallennetun API-avaimen palvelimelta"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
 msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Katkaise yhteys"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Paikallinen malli"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Mikä tahansa tunnus osoitteesta openrouter.ai/models, esim. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Yritä uudelleen"
+
+msgid "Save & Activate"
 msgstr ""
 
 msgid "Refresh BYOK State"
@@ -1835,11 +1949,53 @@ msgstr "Virkistä malliluettelo"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Tarkistaa palveluntarjoaja- ja malliluettelon uudelleen taustapalvelusta"
 
+msgid "Switch Model"
+msgstr ""
+
+msgid "Run the agent on this model with your saved API key"
+msgstr ""
+
+msgid "That model is not available for your key"
+msgstr ""
+
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use Mixie"
+msgstr ""
+
+msgid "Switch to Mixie, Mixar's hosted models. Your API key stays saved on this computer, ready to switch back"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Agentin mallin palveluntarjoaja"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "Tallennetun isännöidyn agenttimallin valinnan palveluntarjoajan tunnus"
+
+msgid "Agent Model"
+msgstr "Agentin malli"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "Tallennetun isännöidyn agenttimallin valinnan mallitunnus"
@@ -1868,20 +2024,32 @@ msgstr "Agentin malli kelvollinen"
 msgid "False when the saved model is not available on your plan"
 msgstr "Epätosi, kun tallennettu malli ei ole saatavilla paketissanne"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
 msgid "LLM provider"
 msgstr "LLM-palveluntarjoaja"
 
 msgid "Model to use with the selected provider"
 msgstr "Malli, jota käytetään valitun palveluntarjoajan kanssa"
 
+msgid "API Key"
+msgstr "API-avain"
+
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "API-avaimenne tallennetaan salattuna ja sitä käytetään vain Mixar-agentin pyyntöihin. Tallennuksen jälkeen näytetään vain peitetty esikatselu."
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Mikä tahansa mallin tunnus osoitteesta openrouter.ai/models (esim. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -1891,9 +2059,6 @@ msgstr "Paikallinen tila"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixarin hallinnoima tai oma paikallinen palvelimenne"
-
-msgid "Local model"
-msgstr "Paikallinen malli"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Valikoitu malli, joka ladataan ja ajetaan tällä tietokoneella"
@@ -1915,6 +2080,15 @@ msgstr "BYOK käytössä"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Tosi, kun palvelin ilmoittaa byok_active tälle käyttäjälle"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Valintaikkunan tila"
@@ -2291,6 +2465,9 @@ msgstr "Agenttisaarekkeen jono ei ole käytettävissä"
 msgid "Show every job"
 msgstr "Näytä jokainen työ"
 
+msgid "Active"
+msgstr "Aktiivinen"
+
 msgid "Show pending or running jobs"
 msgstr "Näytä odottavat tai käynnissä olevat työt"
 
@@ -2665,9 +2842,6 @@ msgstr "Yhteensopivuusprofiili"
 
 msgid "Density"
 msgstr "Tiheys"
-
-msgid "Default"
-msgstr "Alkuperäinen"
 
 msgid "Generation-pane control spacing"
 msgstr "Luontiruudun säätimien välistys"
@@ -19281,9 +19455,6 @@ msgstr "Työkalupalkki"
 msgid "Sidebar"
 msgstr "Sivupalkki"
 
-msgid "Mixie"
-msgstr "Mixie"
-
 msgid "UV Mesh Segmentation panel"
 msgstr "UV-muodon segmentoinnin paneeli"
 
@@ -21389,9 +21560,6 @@ msgstr "Yhdistäminen epäonnistui"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Kehitystila: yhdistetty testitiedoilla"
-
-msgid "Disconnect"
-msgstr "Katkaise yhteys"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Katkaisee yhteyden Mixie-agentin palvelimeen"
@@ -25182,6 +25350,15 @@ msgstr "%d pv sitten"
 msgid "%dw ago"
 msgstr "%d vk sitten"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Luodaan (%d)"
 
@@ -25196,6 +25373,9 @@ msgstr "{} · Enter lähettää"
 
 msgid "Sketch · Enter to send"
 msgstr "Luonnos · Enter lähettää"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -25394,12 +25574,6 @@ msgstr "Automaattitila on päällä: agentti päättää avoimet valinnat itse e
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Automaattitila: agentti päättää avoimet valinnat itse sen sijaan, että kysyisi sinulta, ja luettelee päätöksensä yhteenvedossa"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Oma API-avaimesi on käytössä, ja se määrää mallin. Avaa tämä valikko ja valitse ”Vaihda tai poista API-avaimeni”, jotta voit taas valita ylläpidetyn mallin"
-
-msgid "Choose which model the agent runs on"
-msgstr "Valitse, millä mallilla agentti toimii"
 
 msgid "Agent Bubble"
 msgstr "Agenttikupla"
@@ -27540,6 +27714,66 @@ msgstr "Vaaran sävyttämä toimintopainike"
 msgid "Borderless quiet action button"
 msgstr "Reunaton hillitty toimintopainike"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's full-bleed foot (Local Model)"
+msgstr ""
+
+msgid "Chip"
+msgstr "Siru"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Tilaliukusäädin vasen"
 
@@ -27704,9 +27938,6 @@ msgstr "Glyyfi"
 
 msgid "Header glyph"
 msgstr "Otsikon glyyfi"
-
-msgid "Chip"
-msgstr "Siru"
 
 msgid "Chip track"
 msgstr "Sirun ura"

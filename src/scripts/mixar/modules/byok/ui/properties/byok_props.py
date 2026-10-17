@@ -180,6 +180,7 @@ _WM_ATTRS = (
     'byok_current_supports_vision',
     'byok_key_preview',
     'byok_device_key_missing',
+    'byok_key_resumable',
     'byok_dialog_state',
     'byok_last_error',
 )
@@ -302,6 +303,16 @@ def register():
     # for the key only. Mirrored from core/credential_state.
     WM.byok_device_key_missing = BoolProperty(
         name="Key needed on this device",
+        default=False,
+    )
+    # The server holds nothing for a PAUSED key, but this computer does: the
+    # island's Mixie half deleted the server rows and kept the key record,
+    # and the model card's key tab re-sends it. True while inactive and such a record is
+    # here (derived off-thread by core/credential_state); the dialog names
+    # it and offers Use my key / Forget saved key.
+    WM.byok_key_resumable = BoolProperty(
+        name="Saved key paused",
+        description="Your API key is saved on this computer and paused; Mixie is answering",
         default=False,
     )
 

@@ -13,16 +13,22 @@ namespace blender {
 #ifdef RNA_RUNTIME
 
 bool Mixar_window_popup_block_open(wmWindow *win);
-wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C, wmOperator *op, int width);
+wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
+                                                   wmOperator *op,
+                                                   int width,
+                                                   bool sheet);
 
 static bool rna_Window_mixar_popup_block_open(wmWindow *win)
 {
   return Mixar_window_popup_block_open(win);
 }
 
-static int rna_WindowManager_mixar_invoke_modal_dialog(bContext *C, wmOperator *op, int width)
+static int rna_WindowManager_mixar_invoke_modal_dialog(bContext *C,
+                                                       wmOperator *op,
+                                                       int width,
+                                                       bool sheet)
 {
-  return Mixar_operator_modal_dialog_popup(C, op, width);
+  return Mixar_operator_modal_dialog_popup(C, op, width, sheet);
 }
 
 #else
@@ -54,6 +60,12 @@ static void RNA_def_mixar_popup_query(BlenderRNA *brna, StructRNA *window)
   parm = RNA_def_pointer(func, "operator", "Operator", "", "Operator to call");
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   RNA_def_int(func, "width", 300, 0, INT_MAX, "", "Width of the popup", 0, INT_MAX);
+  RNA_def_boolean(func,
+                  "sheet",
+                  false,
+                  "Sheet",
+                  "Open as a Mixar sheet: no title row, no padding, the framed card backdrop "
+                  "(the operator's draw() calls layout.mixar_sheet_frame)");
   parm = RNA_def_enum_flag(
       func, "result", rna_enum_operator_return_items, OPERATOR_FINISHED, "result", "");
   RNA_def_function_return(func, parm);

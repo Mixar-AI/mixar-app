@@ -62,6 +62,9 @@ class FakeLayout:
         self.alert = False
         self.alignment = 'EXPAND'
         self.scale_y = 1.0
+        self.ui_units_x = 0.0
+        self.ui_units_y = 0.0
+        self.activate_init = False
         self.use_property_split = False
         self.use_property_decorate = False
 
@@ -83,18 +86,31 @@ class FakeLayout:
         return self._sub()
 
     # -- items --
-    def label(self, text="", icon='NONE'):
+    def label(self, text="", icon='NONE', translate=True):
         self._log.append(f"label:{text}")
 
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE', emboss=True, **_kw):
+    def operator(self, op, text="", icon='NONE', translate=True):
         self._log.append(f"op:{op}")
-        return SimpleNamespace()
+        log = self._log
+
+        class _Props(SimpleNamespace):
+            def __setattr__(self, key, value):
+                log.append(f"pick:{key}:{value}:{text}")
+                super().__setattr__(key, value)
+
+        return _Props()
 
     def separator(self, factor=1.0):
         pass
+
+    def prop_enum(self, data, prop, value, text="", icon='NONE'):
+        self._log.append(f"enum:{prop}:{value}:{text}")
+
+    def grid_flow(self, **_kwargs):
+        return self._sub()
 
     # -- Mixar card API (conditionally present) --
     def __getattr__(self, name):
@@ -105,6 +121,11 @@ class FakeLayout:
             'mixar_dropdown',
             'mixar_input',
             'template_popup_confirm',
+            'mixar_cinema_row',
+            'mixar_sheet_frame',
+            'mixar_sheet',
+            'mixar_sheet_label',
+            'mixar_sheet_text_width',
         ):
             if not self.__dict__['_card_api']:
                 raise AttributeError(name)
@@ -117,6 +138,9 @@ class FakeLayout:
     def _impl_mixar_card_button(self, kind='CARD', active_default=False):
         self._log.append(f"card_button:{kind}:{active_default}")
 
+    def _impl_mixar_cinema_row(self, kind='OPTION'):
+        self._log.append(f"cinema_row:{kind}")
+
     def _impl_mixar_section(self):
         self._log.append("section")
         return self._sub()
@@ -127,8 +151,21 @@ class FakeLayout:
     def _impl_mixar_input(self, data, prop, text=""):
         self._log.append(f"input:{prop}")
 
-    def _impl_template_popup_confirm(self, operator, text="", cancel_text=""):
+    def _impl_template_popup_confirm(self, operator, text="", cancel_text="", translate=True):
         self._log.append(f"popup_confirm:{cancel_text}")
+
+    def _impl_mixar_sheet_frame(self, header=182.0, sidebar=442.0):
+        self._log.append(f"sheet_frame:{header}:{sidebar}")
+
+    def _impl_mixar_sheet(self, kind='CHIP', lit=False, extra=0.0):
+        self._log.append(f"sheet:{kind}:{lit}")
+
+    def _impl_mixar_sheet_label(self, text="", kind='BODY', lit=False, extra=0.0,
+                                translate=True):
+        self._log.append(f"sheet_label:{kind}:{text}")
+
+    def _impl_mixar_sheet_text_width(self, kind='CHIP', text=""):
+        return 7.0 * len(text)
 
 
 def _wm(state='IDLE', **extra):
@@ -181,11 +218,11 @@ def test_every_state_marks_exactly_one_active_default_button():
 
 
 def test_footer_actions_per_state():
-    # IDLE with an active config: Cancel + Save, and Remove lives in the
-    # config card (not the footer) — three distinct, unambiguous actions.
+    # IDLE with an active config: the ✕ closes, Save & Activate is the
+    # default, and Remove sits on the "In use" line — three distinct actions.
     log = _draw('IDLE', card_api=True, byok_is_active=True,
                 byok_current_provider='anthropic', byok_current_model='m')
-    assert "popup_confirm:Cancel" in log
+    assert "popup_confirm:✕" in log
     assert f"op:{byok_dialog_ui.OP_SAVE}" in log
     assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
     assert "card_button:ACCENT:True" in log
@@ -355,11 +392,11 @@ def test_error_keeps_the_active_configuration_visible():
     for card_api in (True, False):
         log = _draw('ERROR', card_api, byok_is_active=True,
                     byok_current_provider='anthropic', byok_current_model='m')
-        assert any(e.endswith("Current Configuration") for e in log), log
+        assert any("In use:" in e for e in log), log
         assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log
 
     log = _draw('ERROR', card_api=True)
-    assert not any(e.endswith("Current Configuration") for e in log)
+    assert not any("In use:" in e for e in log)
 
 
 # ---------------------------------------------------------------------------
@@ -449,12 +486,14 @@ def test_native_ok_row_suppression_guard_still_in_place():
     assert create < guard < confirm
 
 
-def test_the_header_links_to_the_published_byok_guide():
+def test_the_sidebar_links_to_the_published_byok_guide():
     """The Guide button opens the BYOK section of the docs. The anchor id must
     match the frontend section (mixie-frontend src/pages/docsByok.ts →
     YOUR_OWN_PROVIDER_SECTION id 'your-own-provider'); a drift breaks the link."""
     assert byok_dialog_ui.BYOK_GUIDE_URL == "https://www.mixar.app/docs#your-own-provider"
     source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
-              / "byok_dialog_ui.py").read_text(encoding="utf-8")
-    header = source[source.index("def _draw_header("):source.index("def ", source.index("def _draw_header(") + 1)]
-    assert 'operator("wm.url_open"' in header and "BYOK_GUIDE_URL" in header
+              / "byok_provider_settings_ui.py").read_text(encoding="utf-8")
+    sidebar = source[source.index("def draw_sidebar("):source.index("\nclass FormPlan")]
+    assert '"wm.url_open"' in sidebar and "BYOK_GUIDE_URL" in sidebar
+    # And it is drawn: the sidebar carries the Guide pill.
+    assert any(e == "op:wm.url_open" for e in _draw('IDLE', card_api=True))

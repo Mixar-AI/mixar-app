@@ -71,6 +71,19 @@ _model_cache: dict[str, list[tuple[str, str, str]]] = {}
 # free to change shape and free to be dropped outright.
 _platform_records: list[dict] = []
 
+# The backend's compact names (`short_label` on providers and models, e.g.
+# "Claude API" · "Opus 5.5"): what the island's model chip and card show for
+# the provider and model of a user's own key. Rendered as given; an older
+# backend that omits them leaves these empty and callers use the full labels.
+_short_providers: dict[str, str] = {}
+_short_models: dict[tuple[str, str], str] = {}
+
+# The backend's `provider_order`: every provider id a picker shows, in display
+# order, this client's own OpenRouter / Codex / Local included. The client
+# never decides the order; an older backend that omits it leaves this empty
+# and the list stays catalog groups first, client options after.
+_provider_order: list[str] = []
+
 # Defaults for the six per-model flags, applied when a field is absent.
 #
 # `platform_available` fails CLOSED (the backend column defaults FALSE and
@@ -138,6 +151,13 @@ def get_provider_items() -> list[tuple[str, str, str]]:
     ):
         if client_item[0] not in identifiers:
             items.append(client_item)
+    if _provider_order:
+        rank = {pid: index for index, pid in enumerate(_provider_order)}
+        # Stable: a sentinel stays first, an id the order does not name keeps
+        # its place after the listed ones.
+        items.sort(key=lambda item: -1 if item in (PROVIDER_EMPTY_SENTINEL,
+                                                   PROVIDER_LOADING_SENTINEL)
+                   else rank.get(item[0], len(rank)))
     return items
 
 
@@ -193,7 +213,18 @@ def is_loaded() -> bool:
     return _populated_once
 
 
-def populate(providers, models, records=None) -> None:
+def provider_short_label(provider: str) -> str:
+    """The backend's short name for a catalog provider, or ""."""
+    return _short_providers.get(provider, "")
+
+
+def model_short_label(provider: str, model: str) -> str:
+    """The backend's short name for a model, or "". Codex shows the "openai"
+    group (see _MODEL_SOURCE_PROVIDER)."""
+    return _short_models.get((_MODEL_SOURCE_PROVIDER.get(provider, provider), model), "")
+
+
+def populate(providers, models, records=None, short_labels=None, order=None) -> None:
     """Replace the caches from a successful models-catalog response.
 
     Args:
@@ -206,6 +237,11 @@ def populate(providers, models, records=None) -> None:
             picker. Optional so the BYOK-only callers (and their tests) keep
             working unchanged; omitting it empties the picker rather than
             leaving the previous account's rows behind.
+        short_labels: ``(providers, models)`` — ``{provider_id: short}`` and
+            ``{(provider_id, model_id): short}`` from the catalog; omitted =
+            none (callers fall back to the full labels).
+        order: the backend's ``provider_order`` (provider ids in display
+            order); omitted = catalog order, client options after.
     """
     global _populated_once
     _retire_current()
@@ -219,6 +255,12 @@ def populate(providers, models, records=None) -> None:
     _platform_records.clear()
     if records:
         _platform_records.extend(dict(r) for r in records)
+    _short_providers.clear()
+    _short_models.clear()
+    if short_labels:
+        _short_providers.update(short_labels[0])
+        _short_models.update(short_labels[1])
+    _provider_order[:] = [pid for pid in order or () if isinstance(pid, str) and pid]
     _populated_once = True
 
 
@@ -231,6 +273,9 @@ def clear() -> None:
     _provider_cache.clear()
     _model_cache.clear()
     _platform_records.clear()
+    _short_providers.clear()
+    _short_models.clear()
+    _provider_order.clear()
     _populated_once = False
 
 
@@ -245,8 +290,8 @@ def populate_from_payload(payload) -> None:
     """Populate from a raw ``GET /agent/models`` payload.
 
     Shape:
-        {"providers": [{"id", "label", "models": [
-            {"id", "label", "platform_available", "byok_available",
+        {"providers": [{"id", "label", "short_label", "models": [
+            {"id", "label", "short_label", "platform_available", "byok_available",
              "supports_vision", "min_tier", "eligible", "thinking_levels"},
             ...]}, ...]}
 
@@ -255,8 +300,9 @@ def populate_from_payload(payload) -> None:
     skipped rather than raising — the backend is authoritative about which
     options exist, and a malformed row should cost one option, not the dialog.
 
-    Order is the server's and is never re-sorted: `providers` arrives sorted by
-    label and each `models` list in the admin-configured `display_order`.
+    Order is the server's and is never decided here: `provider_order` places
+    every provider (this client's own options included) and each `models` list
+    arrives in the admin-configured `display_order`.
     """
     if not isinstance(payload, dict):
         return
@@ -264,6 +310,8 @@ def populate_from_payload(payload) -> None:
     providers: list[tuple[str, str, str]] = []
     models: dict[str, list[tuple[str, str, str]]] = {}
     records: list[dict] = []
+    short_providers: dict[str, str] = {}
+    short_models: dict[tuple[str, str], str] = {}
 
     for entry in payload.get("providers") or []:
         if not isinstance(entry, dict):
@@ -275,6 +323,8 @@ def populate_from_payload(payload) -> None:
         # EnumProperty items are (id, label, description); the API gives id +
         # label, so the label doubles as the tooltip.
         providers.append((pid, label, label))
+        if isinstance(entry.get("short_label"), str) and entry["short_label"]:
+            short_providers[pid] = entry["short_label"]
 
         items: list[tuple[str, str, str]] = []
         for model in entry.get("models") or []:
@@ -284,6 +334,8 @@ def populate_from_payload(payload) -> None:
             if not mid:
                 continue
             mlabel = model.get("label") or mid
+            if isinstance(model.get("short_label"), str) and model["short_label"]:
+                short_models[(pid, mid)] = model["short_label"]
             record = _build_record(pid, label, mid, mlabel, model)
             records.append(record)
             # BYOK's own dropdowns show only what a user key can drive. The
@@ -293,7 +345,9 @@ def populate_from_payload(payload) -> None:
                 items.append((mid, mlabel, mlabel))
         models[pid] = items
 
-    populate(providers, models, records)
+    order = payload.get("provider_order")
+    populate(providers, models, records, (short_providers, short_models),
+             order if isinstance(order, list) else None)
 
 
 def _build_record(provider_id, provider_label, model_id, model_label, raw) -> dict:
