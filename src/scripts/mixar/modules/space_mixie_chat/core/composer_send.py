@@ -29,8 +29,14 @@ class OutgoingMessage:
 
 
 def model_change_pending(scene):
+    """A hosted pick or an island key pause / resume / switch is saving: a
+    message sent now would go out on neither the old nor the new model (a
+    resume's re-PUT lands while the mirror still reads inactive, so the turn
+    would leave keyless)."""
+    from mixar.modules.byok.core import credential_state
     from mixar.modules.byok.core.preference_state import mutation_pending
-    return getattr(scene, 'mixie_chat_mode', '') not in {'GENERATE', 'LIBRARY'} and mutation_pending()
+    return (getattr(scene, 'mixie_chat_mode', '') not in {'GENERATE', 'LIBRARY'}
+            and (mutation_pending() or bool(credential_state.pending())))
 
 
 def can_send(scene):

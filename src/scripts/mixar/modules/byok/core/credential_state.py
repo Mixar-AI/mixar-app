@@ -308,9 +308,14 @@ def resumable(current: Optional[Dict[str, Any]] = None) -> bool:
 
 
 def pausable(current: Optional[Dict[str, Any]] = None) -> bool:
-    """A key in use that a resume could bring back after a pause."""
+    """A key in use that a resume could bring back after a pause: this
+    device's record must be the ACTIVE provider's key. A record for another
+    provider (the active key was saved on another computer) would pause the
+    account's key and later resume a different one."""
     current = current if current is not None else snapshot()
-    return bool(current["byok_is_active"] and current["byok_record_resumable"])
+    return bool(current["byok_is_active"] and current["byok_record_resumable"]
+                and current["byok_resume_provider"]
+                and current["byok_resume_provider"] == current["byok_current_provider"])
 
 
 def resume_target() -> tuple:

@@ -165,7 +165,9 @@ class _ConfirmRemovePlan:
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
-        S.caption(col, n_("REMOVE YOUR API KEY?"), S.RIGHT_INSET)
+        signs_in = form.signs_in(self.wm.byok_current_provider)
+        S.caption(col, n_("DISCONNECT THIS SIGN-IN?") if signs_in
+                  else n_("REMOVE YOUR API KEY?"), S.RIGHT_INSET)
         S.sep(col, S.CAPTION_TO_CHIPS)
         area = S.fixed(col, geo.area)
         _lines(area, _config_lines(self.wm))
@@ -173,8 +175,10 @@ class _ConfirmRemovePlan:
         _lines(area, [iface_("The agent will use Mixar's models again."),
                       iface_("Agent chats will use Mixar credits again.")], S.NOTE)
         line = _foot_row(col)
-        for op, text, kind, default in ((OP_CANCEL_REMOVE, iface_("Keep my key"), S.SECONDARY, True),
-                                        (OP_CONFIRM_REMOVE, iface_("Remove key"), S.DANGER_BUTTON, False)):
+        keep = iface_("Stay connected") if signs_in else iface_("Keep my key")
+        for op, text, kind, default in ((OP_CANCEL_REMOVE, keep, S.SECONDARY, True),
+                                        (OP_CONFIRM_REMOVE, form.remove_text(self.wm.byok_current_provider),
+                                         S.DANGER_BUTTON, False)):
             width = max(S.SAVE_W * 0.7, S.text_width(line, kind, text) + 2 * S.BUTTON_PAD)
             S.button(S.sized(line, width), op, text, kind, default=default)
             S.gap(line, S.GAP)
@@ -191,7 +195,9 @@ class _RemovingPlan:
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
-        S.caption(col, n_("REMOVING YOUR API KEY"), S.RIGHT_INSET)
+        signs_in = form.signs_in(self.wm.byok_current_provider)
+        S.caption(col, n_("DISCONNECTING") if signs_in else n_("REMOVING YOUR API KEY"),
+                  S.RIGHT_INSET)
         S.sep(col, S.CAPTION_TO_CHIPS)
         area = S.fixed(col, geo.area)
         _lines(area, _config_lines(self.wm))
@@ -199,7 +205,8 @@ class _RemovingPlan:
         busy.enabled = False
         # A disabled pill keeps the primary slot (and the active-default flag)
         # while the delete is in flight; Return does nothing on it.
-        S.button(busy, OP_SAVE, iface_("Removing your key…"), S.PRIMARY, default=True)
+        S.button(busy, OP_SAVE, iface_("Disconnecting…") if signs_in
+                 else iface_("Removing your key…"), S.PRIMARY, default=True)
 
 
 class _RecapPlan:
@@ -214,7 +221,7 @@ class _RecapPlan:
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
-        S.caption(col, n_("SAVED") if self.saved else n_("API KEY REMOVED"), S.RIGHT_INSET)
+        S.caption(col, n_("SAVED") if self.saved else n_("REMOVED"), S.RIGHT_INSET)
         S.sep(col, S.CAPTION_TO_CHIPS)
         area = S.fixed(col, geo.area)
         if self.saved:

@@ -126,7 +126,8 @@ def test_hosted_rows_follow_the_catalog_and_keep_provider_identity(catalog):
 
 def test_own_key_in_use(catalog):
     s = picker.picker_state(_cred(byok_is_active=True, byok_current_provider="anthropic", byok_current_model="claude-opus-5-5",
-                                  byok_record_resumable=True), _pref(mixar_agent_model_byok_active=True))
+                                  byok_record_resumable=True, byok_resume_provider="anthropic"),
+                            _pref(mixar_agent_model_byok_active=True))
     assert s["source"] == TAB_KEY and s["pausable"]
     assert picker.chip(s) == {"source": TAB_KEY, "label": "Claude API", "name": "Opus 5.5", "state": "OK"}
     tabs = picker.build_tabs(s)
@@ -333,3 +334,43 @@ def test_the_pick_waits_for_a_turn_and_for_other_mutations(pick, monkeypatch):
     monkeypatch.setattr(ops, "turn_in_flight", lambda context: False)
     monkeypatch.setattr(ops, "account_busy", lambda: True)
     assert not ops.MIXAR_OT_agent_pick.poll(ctx)
+
+
+def test_re_picking_the_current_model_row_keeps_its_level(pick, catalog):
+    """The current model's row carries the saved level, so clicking it again
+    (its row body also folds the thinking disclosure) sends nothing."""
+    run, calls, wm = pick
+    preference_state.apply_local({"mixar_agent_model_provider": "anthropic",
+                                  "mixar_agent_model_id": "claude-opus-5-5",
+                                  "mixar_agent_model_thinking": "high"}, wm)
+    state = picker.picker_state(_cred(), _pref(mixar_agent_model_provider="anthropic",
+                                               mixar_agent_model_id="claude-opus-5-5",
+                                               mixar_agent_model_thinking="high"))
+    row = next(r for r in picker.build_rows(state, catalog)
+               if r.kind == picker.ROW_MODEL and r.current)
+    assert row.thinking == "high"
+    assert run(TAB_MIXIE, row.provider, row.model, row.thinking) == {'FINISHED'}
+    assert calls.set == [] and calls.reset == []
+
+
+def test_a_key_mutation_in_flight_holds_the_composer(monkeypatch):
+    """A message sent while the island pauses / resumes / switches a key would
+    leave keyless (or on credits): the composer waits like it does for a hosted pick."""
+    from mixar.modules.space_mixie_chat.core import composer_send
+    scene = SimpleNamespace(mixie_chat_mode='AGENT')
+    monkeypatch.setattr(credential_state, "pending", lambda: "")
+    assert not composer_send.model_change_pending(scene)
+    monkeypatch.setattr(credential_state, "pending", lambda: "resume")
+    assert composer_send.model_change_pending(scene)
+    assert not composer_send.model_change_pending(SimpleNamespace(mixie_chat_mode='GENERATE'))
+
+
+def test_a_record_for_another_provider_cannot_pause_the_active_key(pick):
+    """This device holds an Anthropic record but the account's active key is
+    OpenAI (saved elsewhere): a Mixie pick must not pause it."""
+    run, calls, wm = pick
+    credential_state.apply_from_payload({"byok_active": True, "items": [{"provider": "openai", "model": "gpt-6-sol"}]}, wm)
+    credential_state.set_resumable({"provider": "anthropic", "model": "claude-opus-5-5"})
+    assert not credential_state.pausable()
+    assert run(TAB_MIXIE, "anthropic", "claude-sonnet-5-5") == {'FINISHED'}
+    assert calls.pause == [] and calls.dialog == [True]

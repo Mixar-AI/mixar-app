@@ -8,7 +8,7 @@
  * agent_ui_model_card.hh. Paint is agent_ui_model_card_draw.cc, layout
  * agent_ui_model_card_layout.cc, QA targets agent_ui_model_card_qa.cc.
  *
- * Input, while open (a blocking modal operator on the island window):
+ * Input, while open (a modal operator on the island window):
  * - a press on a pick runs it on release; the current pick's "Thinking: …"
  *   unfolds its levels in place; a footer opens AI Provider Settings;
  * - wheel / trackpad scroll the list (eased), the thumb drags, the track pages;
@@ -22,6 +22,7 @@
 
 #include "MEM_guardedalloc.h"
 
+#include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 
@@ -30,6 +31,7 @@
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
+#include "ED_screen.hh"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 
@@ -71,6 +73,17 @@ void request_redraw(wmWindow *win)
   }
 }
 
+/** Redraw the island's regions, not only recomposite them: the chip paints
+ * itself lit while the card is open, and a cached region would keep it so. */
+void tag_island_redraw(wmWindow *win)
+{
+  if (bScreen *screen = win ? WM_window_get_active_screen(win) : nullptr) {
+    for (ScrArea &area : screen->areabase) {
+      ED_area_tag_redraw(&area);
+    }
+  }
+}
+
 
 void set_tab(State &state, const int index)
 {
@@ -100,7 +113,7 @@ void teardown(bContext *C, wmOperator *op)
   if (state->win && state->draw_handle) {
     WM_draw_cb_exit(state->win, state->draw_handle);
     WM_cursor_set(state->win, WM_CURSOR_DEFAULT);
-    request_redraw(state->win);
+    tag_island_redraw(state->win);
   }
   if (g_state == state) {
     g_state = nullptr;
@@ -286,7 +299,9 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
   }
 
   if (event->type == LEFTMOUSE) {
-    if (event->val == KM_PRESS) {
+    /* A quick second click arrives as a double click; the window manager
+     * re-sends it as a press only when unhandled, and this modal handles it. */
+    if (ELEM(event->val, KM_PRESS, KM_DBL_CLICK)) {
       if (hit.chip) {
         teardown(C, op);
         return OPERATOR_FINISHED; /* The chip toggles: do not reopen. */
@@ -338,7 +353,7 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
       return hit.inside ? OPERATOR_RUNNING_MODAL : PASS;
     }
   }
-  if (ISMOUSE_BUTTON(event->type) && event->val == KM_PRESS && !hit.inside) {
+  if (ISMOUSE_BUTTON(event->type) && ELEM(event->val, KM_PRESS, KM_DBL_CLICK) && !hit.inside) {
     teardown(C, op);
     return CLOSE_PASS;
   }
@@ -358,7 +373,10 @@ void MIXAR_OT_agent_model_card(wmOperatorType *ot)
   ot->invoke = card_invoke;
   ot->modal = card_modal;
   ot->cancel = card_cancel;
-  ot->flag = OPTYPE_INTERNAL | OPTYPE_BLOCKING;
+  /* Not OPTYPE_BLOCKING: that grabs the cursor, which on Windows captures
+   * every mouse event (other windows included) to the island while the card
+   * is open. Focus moving elsewhere closes it (WINDEACTIVATE). */
+  ot->flag = OPTYPE_INTERNAL;
 }
 
 }  // namespace

@@ -16,7 +16,7 @@ Status lines over the prompt, one per fact about the saved key:
 - **key needed** — active for the account but not on this computer (or the
   dialog came from the chat's key-missing card): provider and model stay as
   saved (sidebar and chips locked), only the key is asked for;
-- **in use** — with Remove API Key (Raj's two-step: CONFIRM_REMOVE);
+- **in use** — with Remove key / Disconnect (Raj's two-step: CONFIRM_REMOVE);
 - **paused** — the island picked Mixie; this computer still holds the key:
   Use my key / Forget;
 - the error, wrapped.
@@ -44,8 +44,11 @@ BYOK_GUIDE_URL = "https://www.mixar.app/docs#your-own-provider"
 # Design px a chip row may use: the right column less its inset and margin.
 CHIP_ROW_WIDTH = S.WIDTH - S.RIGHT_X - S.RIGHT_INSET - S.RIGHT_MARGIN
 ERROR_WRAP_CHARS = 80
-# Room the Local branch's fields take inside the flexible area.
-LOCAL_FIELDS_HEIGHT = 440
+# Room the Local branch's fields take inside the flexible area: its taller
+# (Custom) branch — mode chips, detected apps, three labelled fields and the
+# two closing notes (byok_local_ops.draw_local_fields).
+LOCAL_FIELDS_HEIGHT = (S.CHIP_H + S.GAP + 4 * (S.NOTE_H + S.FIELD_H)
+                       + S.GAP + 2 * S.NOTE_H)
 STORED_NOTE = n_("Stored only on this computer, used only for Mixar agent requests - "
                  "Mixar never keeps a copy.")
 
@@ -80,8 +83,28 @@ def sidebar_providers():
 
 
 def sidebar_rows():
-    """Rows the sidebar's height budget counts: the providers and the Guide."""
-    return len(sidebar_providers()) + 1
+    """Rows the sidebar's height budget counts: the providers."""
+    return len(sidebar_providers())
+
+
+def signs_in(provider):
+    """A provider used through a sign-in or a local server, not an API key."""
+    return model_suggestions.is_codex(provider) or model_suggestions.is_local(provider)
+
+
+def remove_text(provider):
+    """The in-use strip's remove button: a key is removed, a sign-in disconnected."""
+    return iface_("Disconnect") if signs_in(provider) else iface_("Remove key")
+
+
+def _key_text(provider, preview):
+    """What identifies the active key in the in-use strip. A Codex preview is
+    "ChatGPT · <account>"; the strip keeps the account only."""
+    if not preview:
+        return "" if signs_in(provider) else iface_("key stored securely")
+    if model_suggestions.is_codex(provider):
+        return preview.rsplit(" · ", 1)[-1]
+    return preview
 
 
 def wrap(text, width):
@@ -115,7 +138,13 @@ def draw_sidebar(col, wm, geo, enabled):
     body = S.fixed(col, geo.left_body)
     body.enabled = enabled
     S.sep(body, S.CAPTION_TOP)
-    S.caption(body, n_("PROVIDERS"), S.LEFT_INSET)
+    # The caption row carries the published guide at its right end, where the
+    # provider plates stop, so it reads as the section's "how it works".
+    head = S.row(body, S.CAPTION_H, left=S.LEFT_INSET, right=S.ROW_RIGHT)
+    S.label(head, n_("PROVIDERS"), S.CAPTION)
+    text = iface_("Guide")
+    S.button(S.sized(head, S.text_width(head, S.SECONDARY, text) + S.BUTTON_PAD),
+             "wm.url_open", text, S.SECONDARY).url = BYOK_GUIDE_URL
     S.sep(body, S.CAPTION_TO_ROWS)
     current = wm.byok_form_provider
     for pid, label, _desc in sidebar_providers():
@@ -126,11 +155,6 @@ def draw_sidebar(col, wm, geo, enabled):
         text = label
         S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=S.row_right(body, text)),
                  OP_PICK, text, S.PROVIDER_ROW, lit=(pid == current), provider=pid)
-    # How it works: the published guide (one row of the column's budget,
-    # `sidebar_rows`).
-    S.sep(body, S.GAP)
-    guide = S.row(body, S.ROW_H - S.GAP, left=S.LEFT_INSET, packed=True)
-    _pill(guide, "wm.url_open", iface_("Guide"), S.SECONDARY).url = BYOK_GUIDE_URL
 
     # Local model: a row like the providers at the column's foot (its glyph
     # drawn by the painter), not a full-width slab.
@@ -201,7 +225,7 @@ class FormPlan:
     def build(self, col, geo):
         wm = self.wm
         S.sep(col, S.CAPTION_TOP)
-        S.caption(col, self._caption(), S.RIGHT_INSET)
+        S.caption(col, self._caption(), S.RIGHT_INSET, translate=False)
         S.sep(col, S.CAPTION_TO_CHIPS)
         area = S.fixed(col, geo.area - len(self.strips) * S.STRIP_H)
         area.enabled = self.state != 'SAVING'
@@ -227,7 +251,9 @@ class FormPlan:
         elif self.kind == 'codex':
             from . import byok_codex_ops
             note, _kind = byok_codex_ops.path_status(wm.byok_form_codex_path or "")
-            self._key_block(col, iface_("Codex sign-in file (empty = the default ~/.codex/auth.json)"),
+            # Short prompt; the hint under it names the file in use (empty
+            # field = the default ~/.codex/auth.json, which path_status shows).
+            self._key_block(col, iface_("Codex sign-in file"),
                             note, 'byok_form_codex_path', key_prompt.FOCUS_CODEX_PATH,
                             translate_note=False)
         else:
@@ -292,7 +318,7 @@ class FormPlan:
                 key = ""
             else:
                 provider, model = wm.byok_current_provider, wm.byok_current_model
-                key = wm.byok_key_preview or iface_("key stored securely")
+                key = _key_text(provider, wm.byok_key_preview)
             values = dict(provider=provider_label(provider), model=model_label(provider, model),
                           key=key)
             if kind == 'missing':
@@ -301,17 +327,21 @@ class FormPlan:
                         S.DANGER_TEXT, translate=False)
                 continue
             if kind == 'in_use':
-                text = iface_("In use: {provider} · {model} · {key}")
+                # The caption and the lit sidebar row already name the shown provider.
+                parts = [values['model'], key] if provider == self.provider else \
+                    [values['provider'], values['model'], key]
+                text = iface_("In use: {details}").format(
+                    details=" · ".join(part for part in parts if part))
             else:
-                text = iface_("Paused, Mixie is answering: {provider} · {model}")
-            S.label(strip, text.format(**values), S.NOTE, translate=False)
+                text = iface_("Paused, Mixie is answering: {provider} · {model}").format(**values)
+            S.label(strip, text, S.NOTE, translate=False)
             if self.state != 'IDLE':
                 continue
             if kind == 'paused':
                 _pill(strip, OP_USE_KEY, iface_("Use my key"))
                 _pill(strip, OP_FORGET_KEY, iface_("Forget"), S.DANGER_BUTTON)
             else:
-                _pill(strip, OP_REQUEST_REMOVE, iface_("Remove API Key"), S.DANGER_BUTTON)
+                _pill(strip, OP_REQUEST_REMOVE, remove_text(provider), S.DANGER_BUTTON)
 
     def _save_text(self):
         if self.state == 'SAVING':
@@ -325,7 +355,10 @@ class FormPlan:
         only when its label (Validating with your provider…) needs it."""
         text = self._save_text()
         width = max(S.SAVE_W, S.text_width(field, S.PRIMARY, text) + 2 * S.BUTTON_PAD)
-        S.input_field(field, self.wm, prop, docked_w=width + S.DOCK_INSET,
+        # A path field carries Blender's browse button (one UI unit) before
+        # the Save pill; the field's backdrop runs under both.
+        browse = S.UNIT_DP if prop == 'byok_form_codex_path' else 0.0
+        S.input_field(field, self.wm, prop, docked_w=width + S.DOCK_INSET + browse,
                       activate=key_prompt.focus_is(focus))
         save = S.sized(field, width + S.DOCK_INSET)
         save.enabled = self.state != 'SAVING'

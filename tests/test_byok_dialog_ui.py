@@ -92,7 +92,7 @@ class FakeLayout:
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE'):
+    def operator(self, op, text="", icon='NONE', translate=True):
         self._log.append(f"op:{op}")
         log = self._log
 
@@ -151,7 +151,7 @@ class FakeLayout:
     def _impl_mixar_input(self, data, prop, text=""):
         self._log.append(f"input:{prop}")
 
-    def _impl_template_popup_confirm(self, operator, text="", cancel_text=""):
+    def _impl_template_popup_confirm(self, operator, text="", cancel_text="", translate=True):
         self._log.append(f"popup_confirm:{cancel_text}")
 
     def _impl_mixar_sheet_frame(self, header=182.0, sidebar=442.0):

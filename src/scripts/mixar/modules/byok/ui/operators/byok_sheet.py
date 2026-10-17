@@ -154,10 +154,15 @@ def label(layout, text, kind=BODY, lit=False, translate=True):
     row.label(text=text.replace(MARK, ''), translate=translate)
 
 
+# Blender truncates every sized slot to whole px; a measured label gets this
+# much room on top so the painter never ellipsises it by a rounding pixel.
+TEXT_SLACK = 4.0
+
+
 def text_width(layout, kind, text):
     """Width of ``text`` in the painter's face, in design px."""
     if hasattr(layout, 'mixar_sheet_text_width'):
-        return 2.0 * layout.mixar_sheet_text_width(kind=kind, text=text)
+        return 2.0 * layout.mixar_sheet_text_width(kind=kind, text=text) + TEXT_SLACK
     return 14.0 * len(text)  # stock-widget fallback: a rough glyph average
 
 
@@ -171,8 +176,10 @@ def _flag(layout, kind, default):
 def button(layout, operator_id, text, kind=SECONDARY, default=False, docked=False,
            icon='NONE'):
     """Operator button drawn as a sheet pill. ``docked`` nests the pill in the
-    field before it (8 dp breathing room). Returns the operator properties."""
-    props = layout.operator(operator_id, text=text, icon=icon)
+    field before it (8 dp breathing room). ``text`` is already translated
+    (``iface_``), so Blender must not translate it again. Returns the operator
+    properties."""
+    props = layout.operator(operator_id, text=text, icon=icon, translate=False)
     _flag(layout, kind, default)
     tag(layout, kind, extra=1.0 if docked else 0.0)
     return props
@@ -184,14 +191,15 @@ def dismiss(layout, text, kind=SECONDARY, default=False, docked=False):
     exactly like Esc. Nothing on a build without the template."""
     if not hasattr(layout, 'template_popup_confirm'):
         return
-    layout.template_popup_confirm("", text="", cancel_text=text)
+    layout.template_popup_confirm("", text="", cancel_text=text, translate=False)
     _flag(layout, kind, default)
     tag(layout, kind, extra=1.0 if docked else 0.0)
 
 
 def choice(layout, operator_id, text, kind, lit, provider="", model=""):
-    """A pickable row / chip: `mixar_byok.pick` with the choice it makes."""
-    props = layout.operator(operator_id, text=text)
+    """A pickable row / chip: `mixar_byok.pick` with the choice it makes.
+    ``text`` is a catalog name or already-translated text: never translated here."""
+    props = layout.operator(operator_id, text=text, translate=False)
     if provider:
         props.provider = provider
     if model:
@@ -262,8 +270,8 @@ def sized(parent, w_dp):
     return sub
 
 
-def caption(parent, text, left):
-    label(row(parent, CAPTION_H, left=left), text, CAPTION)
+def caption(parent, text, left, translate=True):
+    label(row(parent, CAPTION_H, left=left), text, CAPTION, translate=translate)
 
 
 def bright(text):

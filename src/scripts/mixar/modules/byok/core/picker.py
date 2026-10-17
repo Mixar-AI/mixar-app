@@ -92,6 +92,13 @@ class Row:
 # State
 # ---------------------------------------------------------------------------
 
+def _pausable(credential):
+    """credential_state.pausable on a snapshot (imported late: the state
+    module mirrors through this one)."""
+    from . import credential_state
+    return credential_state.pausable(dict(credential_state._DEFAULTS, **credential))
+
+
 def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
                  guest: bool = False, pending: str = "", switching: str = "") -> Dict[str, Any]:
     """One dict the rules read, from the credential and preference mirrors.
@@ -112,7 +119,7 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
         "resumable": resumable and not model_suggestions.is_local(resume_provider),
         "resume_provider": resume_provider,
         "resume_model": (credential.get("byok_resume_model") or "") if resumable else "",
-        "pausable": active and bool(credential.get("byok_record_resumable")),
+        "pausable": _pausable(credential),
         "hosted_provider": preference.get("mixar_agent_model_provider") or "",
         "hosted_model": preference.get("mixar_agent_model_id") or "",
         "hosted_label": preference.get("mixar_agent_model_label") or "",
@@ -166,10 +173,13 @@ def _mixie_rows(state, models: Sequence[Dict[str, Any]]) -> List[Row]:
         levels = [lv for lv in (record.get("thinking_levels") or []) if lv]
         eligible = bool(record.get("eligible", True))
         is_current = provider == state["hosted_provider"] and model == state["hosted_model"]
+        # The current model's row keeps its saved level: picking it again (its
+        # row body also folds the thinking disclosure) must not reset it.
         rows.append(Row(TAB_MIXIE, ROW_MODEL, record.get("model_label") or model,
                         meta="" if eligible else iface_(NOT_ON_PLAN),
                         current=is_current, enabled=live and eligible,
-                        provider=provider, model=model))
+                        provider=provider, model=model,
+                        thinking=state["hosted_thinking"] if is_current else ""))
         if is_current:
             if levels:
                 # The disclosure and its levels always ride the wire; the

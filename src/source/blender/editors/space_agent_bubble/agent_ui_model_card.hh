@@ -10,7 +10,7 @@
  * the current one checked, its thinking levels folded under it, a pinned
  * footer of settings actions and its own scrollbar.
  *
- * It is `MIXAR_OT_agent_model_card`, a blocking modal operator on the island
+ * It is `MIXAR_OT_agent_model_card`, a modal operator on the island
  * window (the credits banner's pattern): a window draw callback paints the
  * card above every region, the modal handler owns clicks, wheel, keys and
  * click-away, and a 60 Hz timer eases the scroll, the tab pill and hovers.

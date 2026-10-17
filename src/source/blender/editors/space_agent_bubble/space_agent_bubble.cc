@@ -1468,6 +1468,10 @@ static void agent_bubble_composer_region_layout(const bContext *C, ARegion * /*r
 
 static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region)
 {
+  /* The model chip re-records its rect below only when this draw paints it;
+   * every other draw (pill, another tab, a failed begin) leaves the anchor
+   * invalid, so an open model card closes on its next tick. */
+  agent_model_card_anchor(CTX_wm_window(C), rctf{}, 0.0f, false);
   if (agent_bubble_window_is_pill(C)) {
     return;
   }

@@ -50,7 +50,11 @@ namespace mixar_sheet {
 
 float px(const float design_px)
 {
-  return design_px * 0.5f * UI_SCALE_FAC;
+  /* The Python layout sizes in UI units (`ui_units_x`, `scale_y`): one unit
+   * is 40 design px and `U.widget_unit` region px. `widget_unit` is rounded
+   * (29 px, not 30, at 150 %), so `0.5 * UI_SCALE_FAC` would drift from the
+   * slots the layout hands the painter. */
+  return design_px * float(UI_UNIT_X) / 40.0f;
 }
 
 /** The UI body size in region px: the widget font's points at the live
@@ -339,6 +343,18 @@ void UI_layout_mixar_sheet_tag_last(Layout *layout,
     return;
   }
   Button *but = block->buttons_ptrs.last().get();
+  if (element == MixarCardElement::SheetInput && but->type != ButtonType::Text) {
+    /* A FILE_PATH / DIR_PATH property adds its browse button after the text
+     * field: the field is the input, a step or two back. */
+    for (int i = int(block->buttons_ptrs.size()) - 2, steps = 0; i >= 0 && steps < 2;
+         i--, steps++)
+    {
+      if (block->buttons_ptrs[i]->type == ButtonType::Text) {
+        but = block->buttons_ptrs[i].get();
+        break;
+      }
+    }
+  }
   MixarButtonStyle &style = but->mixar_style;
   if (ELEM(element, MixarCardElement::SheetInput, MixarCardElement::SheetDropdown)) {
     /* Native Text / Menu buttons: keep the stock input and text passes and
@@ -401,7 +417,8 @@ float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text
     default:
       break;
   }
-  const float w = text_width(font(size, weight, mono), text) / UI_SCALE_FAC;
+  /* In half design px (Python doubles it), on the layout's unit (see px). */
+  const float w = text_width(font(size, weight, mono), text) * 20.0f / float(UI_UNIT_X);
   BLF_character_weight(BLF_default(), widget_weight());
   return w;
 }

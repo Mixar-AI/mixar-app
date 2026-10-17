@@ -49,8 +49,8 @@ def test_a_long_provider_name_widens_its_pill_but_stops_short_of_the_divider():
     # A short name keeps the plate's design margin to the divider.
     assert S.row_right(layout, "OpenAI") == S.ROW_RIGHT
     # A name that needs more keeps ROW_TEXT_X of plate on both sides…
-    long_name = "Codex (ChatGPT s)"   # 17 chars at the fake's 14 dp = 238 dp
-    expected = S.SIDEBAR - S.LEFT_INSET - (238 + 2 * S.ROW_TEXT_X)
+    long_name = "Codex (ChatGPT s)"   # 17 chars at the fake's 14 dp = 238 dp, + slack
+    expected = S.SIDEBAR - S.LEFT_INSET - (238 + S.TEXT_SLACK + 2 * S.ROW_TEXT_X)
     assert S.ROW_MIN_RIGHT < expected < S.ROW_RIGHT
     assert S.row_right(layout, long_name) == expected
     # …until the plate would touch the divider; then the painter ellipsises.
@@ -135,10 +135,11 @@ def test_the_sheet_keeps_the_artboard_s_height_until_it_needs_more():
 
 def test_chips_wrap_like_the_artboard_s_butted_pills():
     layout = FakeLayout([], card_api=True)
+    chip = 7.0 * 20 * 2 + byok_sheet.TEXT_SLACK + 2 * byok_sheet.CHIP_PAD
     rows = byok_sheet.chip_rows(layout, [("a", "x" * 20), ("b", "y" * 20), ("c", "z" * 20)],
-                                avail_dp=2 * (7.0 * 20 * 2 + 2 * byok_sheet.CHIP_PAD) + 1)
+                                avail_dp=2 * chip + 1)
     assert [len(r) for r in rows] == [2, 1]
-    assert rows[0][0][2] == 7.0 * 20 * 2 + 2 * byok_sheet.CHIP_PAD
+    assert rows[0][0][2] == chip
 
 
 def test_busy_states_have_no_close_button():

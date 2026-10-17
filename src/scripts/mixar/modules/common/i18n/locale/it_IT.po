@@ -1697,6 +1697,9 @@ msgstr ""
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
 msgstr ""
 
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
+
 msgid "REMOVE YOUR API KEY?"
 msgstr ""
 
@@ -1706,13 +1709,19 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
+msgid "Stay connected"
+msgstr ""
+
 msgid "Keep my key"
 msgstr ""
 
-msgid "Remove key"
+msgid "DISCONNECTING"
 msgstr ""
 
 msgid "REMOVING YOUR API KEY"
+msgstr ""
+
+msgid "Disconnecting…"
 msgstr ""
 
 msgid "Removing your key…"
@@ -1721,7 +1730,7 @@ msgstr ""
 msgid "SAVED"
 msgstr ""
 
-msgid "API KEY REMOVED"
+msgid "REMOVED"
 msgstr ""
 
 msgid "You are set. Agent chats now run on your own provider."
@@ -1847,6 +1856,15 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
+msgid "Disconnect"
+msgstr "Disconnetti"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
 msgid "PROVIDERS"
 msgstr ""
 
@@ -1862,7 +1880,7 @@ msgstr ""
 msgid "Enter your OpenRouter API key here."
 msgstr ""
 
-msgid "Codex sign-in file (empty = the default ~/.codex/auth.json)"
+msgid "Codex sign-in file"
 msgstr ""
 
 msgid "Enter API key for {model} here."
@@ -1895,13 +1913,10 @@ msgstr "Qualsiasi slug da openrouter.ai/models, ad es. anthropic/claude-opus-4.8
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "key stored securely"
-msgstr ""
-
 msgid "Key needed on this computer: {provider} · {model}. Enter it below."
 msgstr ""
 
-msgid "In use: {provider} · {model} · {key}"
+msgid "In use: {details}"
 msgstr ""
 
 msgid "Paused, Mixie is answering: {provider} · {model}"
@@ -1911,9 +1926,6 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
-msgstr ""
-
-msgid "Remove API Key"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2038,9 +2050,6 @@ msgstr "La chiave API viene memorizzata in forma crittografata e usata solo per 
 
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Qualsiasi slug di modello da openrouter.ai/models (ad es. anthropic/claude-opus-4.8)"
-
-msgid "Codex sign-in file"
-msgstr ""
 
 msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
@@ -21551,9 +21560,6 @@ msgstr "Connessione non riuscita"
 
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Modalità sviluppatore: connesso con dati fittizi"
-
-msgid "Disconnect"
-msgstr "Disconnetti"
 
 msgid "Disconnect from the Mixie agent server"
 msgstr "Si disconnette dal server dell'agente Mixie"
