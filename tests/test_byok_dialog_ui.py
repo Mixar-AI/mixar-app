@@ -495,3 +495,20 @@ def test_native_ok_row_suppression_guard_still_in_place():
     confirm = source.find("button_func_set(confirm_but", create)
     assert create != -1 and confirm != -1
     assert create < guard < confirm
+
+
+def test_a_guest_is_never_promised_mixar_models_or_credits():
+    """Removing a guest's key cannot "go back" to Mixar's models or credits —
+    a guest has neither. The confirm step and the recap say what does happen."""
+    promised = ("Mixar's models again", "Mixar credits again")
+    for state in ('CONFIRM_REMOVE', 'REMOVED'):
+        account = " ".join(_draw(state, card_api=True, byok_is_active=True,
+                                 byok_current_provider='codex', byok_current_model='gpt-5',
+                                 mixie_chat_is_logged_in=True, mixie_chat_is_guest=False))
+        assert any(p in account for p in promised), state
+        for who in (dict(mixie_chat_is_logged_in=True, mixie_chat_is_guest=True),
+                    dict(mixie_chat_is_logged_in=False, mixie_chat_is_guest=False)):
+            text = " ".join(_draw(state, card_api=True, byok_is_active=True,
+                                  byok_current_provider='codex', byok_current_model='gpt-5', **who))
+            assert not any(p in text for p in promised), (state, who)
+            assert "Sign in to use Mixar models instead." in text, (state, who)

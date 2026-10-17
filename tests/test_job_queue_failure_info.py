@@ -80,6 +80,16 @@ def test_reason_equal_to_message_is_not_repeated():
     assert FI.failure_reason(job) == ""
 
 
+def test_reason_differing_only_in_case_or_full_stop_is_not_repeated():
+    """The guest sign-in refusal: "Sign in to Mixar to use this" as the message
+    and "Sign in to Mixar to use this." as the reason read as one sentence."""
+    job = Job(user_message="Sign in to Mixar to use this", error_reason="Sign in to Mixar to use this.")
+    assert FI.failure_reason(job) == ""
+    assert "Reason:" not in FI.failure_details(job, include_ids=False)
+    job = Job(user_message="Sign in to Mixar to use this", error_reason="sign in to mixar to use THIS")
+    assert FI.failure_reason(job) == ""
+
+
 def test_submit_validation_error_shows_backend_detail():
     job = Job()
     error = ValidationError(

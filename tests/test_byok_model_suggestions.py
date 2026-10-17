@@ -93,6 +93,56 @@ def test_provider_change_selects_first_model_from_new_provider():
     model_suggestions.clear()
 
 
+def test_provider_change_back_to_the_key_in_use_keeps_its_model(monkeypatch):
+    """Leaving the provider in use and coming back lights the model it runs,
+    not the first in the list; a paused key's provider likewise."""
+    model_suggestions.populate(
+        providers=[("provider-b", "Provider B", "Provider B")],
+        models={"provider-b": [("model-b1", "Model B1", "Model B1"),
+                               ("model-b2", "Model B2", "Model B2")]},
+    )
+    wm = SimpleNamespace(byok_form_provider="provider-b", byok_form_model="model-b1",
+                         byok_is_active=True, byok_current_provider="provider-b",
+                         byok_current_model="model-b2")
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b2"
+    # Another provider's key in use: the first model, as before.
+    wm.byok_current_provider = "provider-x"
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b1"
+    # A paused key on this provider: its model.
+    from mixar.modules.byok.core import credential_state
+    wm.byok_is_active = False
+    monkeypatch.setattr(credential_state, "resume_target", lambda: ("provider-b", "model-b2"))
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b2"
+    # A remembered model the catalog no longer lists: the first one.
+    monkeypatch.setattr(credential_state, "resume_target", lambda: ("provider-b", "retired"))
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b1"
+    model_suggestions.clear()
+
+
+def test_save_names_what_is_missing(monkeypatch):
+    """One message per missing piece: a picked model is never asked for again."""
+    model_suggestions.populate(
+        providers=[("provider-b", "Provider B", "Provider B")],
+        models={"provider-b": [("model-b", "Model B", "Model B")]},
+    )
+    monkeypatch.setattr(byok_ops.byok_client, "save_credentials",
+                        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("reached network")))
+    cases = (("provider-b", "model-b", "", "Enter your API key."),
+             ("provider-b", "stale", "secret", "Pick a model."),
+             ("NONE", "model-b", "secret", "Pick a provider."))
+    for provider, model, key, message in cases:
+        wm = SimpleNamespace(byok_dialog_state="IDLE", byok_last_error="",
+                             byok_form_provider=provider, byok_form_model=model,
+                             byok_form_api_key=key)
+        assert byok_ops.MIXAR_BYOK_OT_save().execute(SimpleNamespace(window_manager=wm)) == {'CANCELLED'}
+        assert (wm.byok_dialog_state, wm.byok_last_error) == ("ERROR", message)
+    model_suggestions.clear()
+
+
 def test_save_rejects_stale_model_from_another_provider(monkeypatch):
     model_suggestions.populate(
         providers=[("provider-b", "Provider B", "Provider B")],

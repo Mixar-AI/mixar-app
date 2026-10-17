@@ -244,18 +244,27 @@ def failure_reason(job) -> str:
     if not reason:
         return ""
     message = failure_message(job)
-    if reason == message or reason in message:
+    # "Sign in to Mixar to use this." repeats "Sign in to Mixar to use this":
+    # compare without case and the trailing full stop the two sources differ in.
+    said, extra = _comparable(message), _comparable(reason)
+    if extra == said or extra in said:
         return ""
     return reason
 
 
-def failure_details(job, *, include_ids: bool = True) -> str:
-    """Multi-line explanation for tooltips, toasts and the copy action."""
+def _comparable(text: str) -> str:
+    return " ".join((text or "").casefold().split()).rstrip(" .!")
+
+
+def failure_details(job, *, include_ids: bool = True, include_hint: bool = True) -> str:
+    """Multi-line explanation for tooltips, toasts and the copy action.
+    ``include_hint=False`` for a surface whose button already is the hint
+    (the toast's "Sign in" next to "Sign in, then retry." said it twice)."""
     lines = [failure_message(job)]
     reason = failure_reason(job)
     if reason:
         lines.append(f"Reason: {reason}")
-    hint = failure_hint(job)
+    hint = failure_hint(job) if include_hint else ""
     if hint:
         lines.append(hint)
     if include_ids:

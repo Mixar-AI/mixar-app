@@ -65,9 +65,10 @@ service = SimpleNamespace(get_model_preference=get_preference,
     delete_credentials_all=delete_credentials)
 B.get_agent_service = F.get_agent_service = lambda: service
 O._deregister_local_if_switched_away = lambda provider: None
-M.populate_from_payload({'providers': [{'id': 'openai', 'label': 'QA Provider',
-    'models': [{'id': 'qa-one', 'label': 'QA Model One', 'platform_available': True},
-               {'id': 'qa-two', 'label': 'QA Model Two', 'platform_available': True}]}]})
+M.populate_from_payload({'providers': [{'id': 'openai', 'label': 'QA Provider', 'short_label': 'OpenAI API',
+    'models': [{'id': 'qa-one', 'label': 'QA Model One', 'short_label': 'QA Model One', 'platform_available': True},
+               {'id': 'qa-two', 'label': 'QA Model Two', 'short_label': 'QA Model Two', 'platform_available': True}]}],
+    'provider_order': ['openai', 'codex', 'anthropic', 'gemini', 'openrouter', 'local']})
 C.clear()
 P.clear()
 wm.byok_form_provider = 'openai'
@@ -76,6 +77,10 @@ bpy.context.scene.mixie_chat_user_id = 'qa.provider@example.invalid'
 bpy.context.preferences.view.show_tooltips = False
 P._redraw()
 O._qa_profile_fixture = (saved, fixture)
+# The fake service has no transport key: send the key unsealed, as typed.
+from mixar.modules.byok.core import transport_seal as T
+O._qa_profile_seal = T.seal
+T.seal = lambda secret: secret
 result = True
 """
 
@@ -100,6 +105,9 @@ bpy.context.scene.mixie_chat_user_id = saved[10]
 bpy.context.preferences.view.show_tooltips = saved[11]
 O._wipe_form_secrets(bpy.context.window_manager)
 del O._qa_profile_fixture
+from mixar.modules.byok.core import transport_seal as T
+T.seal = O._qa_profile_seal
+del O._qa_profile_seal
 result = True
 """
 
@@ -244,7 +252,8 @@ def run(qa):
         remove(qa, 'profile_remove')
         qa.step('bubble_reflects_profile_remove', open_picker, qa, 'AGENT_BUBBLE', False)
         import model_popup as mp
-        snaps.append(snap(qa, 'agent_bubble_restored', mp.SETTINGS_ROW))
+        # No key left: "Add a key" is the key tab itself (an action), no footer row.
+        snaps.append(snap(qa, 'agent_bubble_restored', mp.CARD))
         mp.close_popup(qa)
         counts = qa.eval("from mixar.modules.byok.ui.operators import byok_ops as O\n"
                          "f = O._qa_profile_fixture[1]\n"

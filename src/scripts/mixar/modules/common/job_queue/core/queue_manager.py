@@ -688,8 +688,15 @@ class FeatureQueue(DownloadMixin):
                         NotificationAction,
                         get_notification_store,
                     )
-                    # Sentence, the provider's own reason, what to do.
-                    message = failure_details(job, include_ids=False)
+                    # "Sign-in required" (a guest's job) offers the sign-in.
+                    actions = [NotificationAction(
+                        label=n_("Sign in"), operator="mixie_chat.login",
+                        style="primary",
+                    )] if getattr(job, "error_class", "") == "auth" else None
+                    # Sentence, the provider's own reason, what to do — the
+                    # last left out when a button already is what to do.
+                    message = failure_details(job, include_ids=False,
+                                              include_hint=not actions)
                     # display_label strips the agent-batch prefix + dedup hash
                     # ("ImageGen: a hero [3f2a]") that the raw label carries.
                     title = (
@@ -697,11 +704,6 @@ class FeatureQueue(DownloadMixin):
                         or job.label
                         or n_("Generation failed")
                     )
-                    # "Sign-in required" (a guest's job) offers the sign-in.
-                    actions = [NotificationAction(
-                        label=n_("Sign in"), operator="mixie_chat.login",
-                        style="primary",
-                    )] if getattr(job, "error_class", "") == "auth" else None
                     get_notification_store().push(
                         "error", title, body=message, priority="high",
                         actions=actions,

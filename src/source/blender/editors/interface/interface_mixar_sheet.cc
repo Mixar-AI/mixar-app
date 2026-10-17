@@ -264,13 +264,25 @@ void UI_layout_mixar_sheet_tag_last(Layout *layout,
   Button *but = block->buttons_ptrs.last().get();
   if (element == MixarCardElement::SheetInput && but->type != ButtonType::Text) {
     /* A FILE_PATH / DIR_PATH property adds its browse button after the text
-     * field: the field is the input, a step or two back. */
+     * field: the field is the input, a step or two back. The browse button
+     * becomes a docked secondary pill (icon only), like the Save beside it. */
+    Button *browse = but;
     for (int i = int(block->buttons_ptrs.size()) - 2, steps = 0; i >= 0 && steps < 2;
          i--, steps++)
     {
       if (block->buttons_ptrs[i]->type == ButtonType::Text) {
         but = block->buttons_ptrs[i].get();
         break;
+      }
+    }
+    if (but != browse) {
+      MixarButtonStyle &pill = browse->mixar_style;
+      pill.component = MixarComponent::LegacyCard;
+      pill.card = MixarCardElement::SheetSecondary;
+      pill.lit = false;
+      pill.progress = 1.0f; /* Docked: the field's backdrop runs underneath. */
+      if (!pill.explicit_theme) {
+        pill.theme = MixarTheme::LegacyMixar;
       }
     }
   }

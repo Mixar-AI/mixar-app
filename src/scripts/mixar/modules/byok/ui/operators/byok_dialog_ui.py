@@ -136,6 +136,12 @@ def _config_lines(wm):
     return lines
 
 
+def _hosted_ok(wm):
+    """Mixar's own models need an account (not a guest, not signed out)."""
+    return (bool(getattr(wm, 'mixie_chat_is_logged_in', True))
+            and not getattr(wm, 'mixie_chat_is_guest', False))
+
+
 def _lines(area, lines, kind=S.BODY):
     for line in lines:
         S.label(S.row(area, BODY_ROW, left=S.RIGHT_INSET), line, kind, translate=False)
@@ -170,8 +176,14 @@ class _ConfirmRemovePlan:
         area = S.fixed(col, geo.area)
         _lines(area, _config_lines(self.wm))
         S.sep(area, S.GAP)
-        _lines(area, [iface_("The agent will use Mixar's models again."),
-                      iface_("Agent chats will use Mixar credits again.")], S.NOTE)
+        if _hosted_ok(self.wm):
+            after = [iface_("The agent will use Mixar's models again."),
+                     iface_("Agent chats will use Mixar credits again.")]
+        else:
+            # A guest (or signed out) has no Mixar models to fall back on.
+            after = [iface_("The agent stops answering until you add a key again."),
+                     iface_("Sign in to use Mixar models instead.")]
+        _lines(area, after, S.NOTE)
         _lines(area, self.errors, S.DANGER_TEXT)
         line = _foot_row(col)
         keep = iface_("Stay connected") if signs_in else iface_("Keep my key")
@@ -227,9 +239,12 @@ class _RecapPlan:
             _lines(area, [iface_("You are set. Agent chats now run on your own provider.")])
             S.sep(area, S.GAP)
             _lines(area, _config_lines(self.wm), S.NOTE)
-        else:
+        elif _hosted_ok(self.wm):
             _lines(area, [iface_("The agent uses Mixar's models again.")])
             _lines(area, [iface_("Agent chats use Mixar credits again.")], S.NOTE)
+        else:
+            _lines(area, [iface_("Add a key to talk to the agent again.")])
+            _lines(area, [iface_("Sign in to use Mixar models instead.")], S.NOTE)
         S.dismiss(S.sized(_foot_row(col), S.SAVE_W), iface_(S.DONE_TEXT), S.PRIMARY,
                   default=True)
 

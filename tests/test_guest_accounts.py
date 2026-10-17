@@ -173,6 +173,21 @@ def test_failure_toast_offers_sign_in_for_the_auth_class():
     assert 'error_class", "") == "auth"' in source
 
 
+def test_a_guest_jobs_toast_says_it_once():
+    """Toast: "Sign in to Mixar to use this" beside its Sign in button — not
+    the reason again, not "Sign in, then retry." (the button is the retry).
+    The queue row, which has no button, keeps the hint."""
+    error = LoginRequiredError("Sign in to Mixar to use this.", cta="login", status_code=403)
+    job = SimpleNamespace(error="", error_class="", error_reason="", user_message="",
+                          vendor_code="", backend_job_id="")
+    failure_info.apply_client_failure(job, error, stage="submit")
+    assert failure_info.failure_details(job, include_ids=False, include_hint=False) == \
+        "Sign in to Mixar to use this"
+    assert failure_info.failure_details(job, include_ids=False).endswith("Sign in, then retry.")
+    source = (MODULES / "common/job_queue/core/queue_manager.py").read_text()
+    assert "include_hint=not actions" in source
+
+
 # --- the chat notice ----------------------------------------------------------
 
 class _Items(list):
@@ -719,3 +734,36 @@ def test_every_sign_in_path_captures_session_started_after_the_identity():
         assert body.count(call) == 1
         assert body.index("_apply_identity(") < body.index(call)
         assert "if not guest.is_guest():" in body[:body.index(call)]
+
+
+def test_an_identity_change_without_sign_out_starts_fresh_chats(monkeypatch, config):
+    """A chat belongs to the identity that started it (the backend answers
+    another's continued session "Session unavailable"). When a different
+    identity applies without a sign-out — a guest whose token was lost gets a
+    fresh guest — every tab holding another identity's chat starts a fresh
+    one. A claim (the guest signing in to an account) keeps its chats."""
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops, session_ops
+    reset = []
+    monkeypatch.setattr(session_ops, "start_new_chat", lambda scene, report=None: reset.append(scene.name))
+
+    def scenes(*owners):
+        return [SimpleNamespace(name=f"s{i}", mixie_chat_user_id=owner, mixie_session_id=sid)
+                for i, (owner, sid) in enumerate(owners)]
+
+    a, b = "guest-a@guest.mixar.invalid", "guest-b@guest.mixar.invalid"
+    tabs = scenes((a, "sess-1"), (b, "sess-2"), ("", "sess-3"), (a, ""))
+    monkeypatch.setattr(auth_ops.bpy, "data", SimpleNamespace(scenes=tabs), raising=False)
+
+    guest.mark(True, a)
+    auth_ops._drop_foreign_chats(b, True)          # guest A -> fresh guest B
+    assert reset == ["s0"]                         # B's own, unowned and empty tabs untouched
+
+    reset.clear()
+    auth_ops._drop_foreign_chats("user@example.com", False)  # guest A claimed into an account
+    assert reset == ["s1"]                         # A's chats moved with the claim; B's did not
+
+    reset.clear()
+    guest.mark(False)
+    auth_ops._drop_foreign_chats("other@example.com", False)  # account -> another account
+    assert reset == ["s0", "s1"]
+    guest.mark(False)

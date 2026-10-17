@@ -261,13 +261,12 @@ class MIXAR_BYOK_OT_save(Operator):
         model = wm.byok_form_model
         api_key = wm.byok_form_api_key.strip()
 
-        if (
-            provider == 'NONE'
-            or not model_suggestions.is_valid_model(provider, model)
-            or not api_key
-        ):
-            wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = n_("Pick a model and enter your key.")
+        # Name what is actually missing (a picked model is never asked for again).
+        problem = (n_("Pick a provider.") if provider == 'NONE' else n_("Pick a model.")
+                   if not model_suggestions.is_valid_model(provider, model)
+                   else n_("Enter your API key.") if not api_key else "")
+        if problem:
+            wm.byok_dialog_state, wm.byok_last_error = 'ERROR', problem
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'

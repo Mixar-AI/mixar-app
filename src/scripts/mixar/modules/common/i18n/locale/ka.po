@@ -1682,6 +1682,12 @@ msgstr ""
 msgid "Agent chats will use Mixar credits again."
 msgstr ""
 
+msgid "The agent stops answering until you add a key again."
+msgstr ""
+
+msgid "Sign in to use Mixar models instead."
+msgstr ""
+
 msgid "Stay connected"
 msgstr ""
 
@@ -1713,6 +1719,9 @@ msgid "The agent uses Mixar's models again."
 msgstr ""
 
 msgid "Agent chats use Mixar credits again."
+msgstr ""
+
+msgid "Add a key to talk to the agent again."
 msgstr ""
 
 msgid "Unpacking the local AI runtime…"
@@ -1787,7 +1796,13 @@ msgstr "გამოიყენეთ საკუთარი API გასა
 msgid "Validate with the provider and save your API key"
 msgstr "ამოწმებს პროვაიდერთან და ინახავს თქვენს API გასაღებს"
 
-msgid "Pick a model and enter your key."
+msgid "Pick a provider."
+msgstr ""
+
+msgid "Pick a model."
+msgstr ""
+
+msgid "Enter your API key."
 msgstr ""
 
 msgid "Enter a model slug and your key."

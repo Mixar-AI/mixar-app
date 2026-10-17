@@ -87,10 +87,25 @@ def _model_set(self, value):
     self.byok_form_model_id = _identifier_at(_model_items(self, None), value)
 
 
+def _remembered_model(wm, provider):
+    """The model this account already uses with ``provider``: the key in use,
+    else a paused key's model. "" when the provider has none."""
+    if getattr(wm, 'byok_is_active', False) and getattr(wm, 'byok_current_provider', '') == provider:
+        return getattr(wm, 'byok_current_model', '') or ''
+    try:
+        from ...core import credential_state
+        paused_provider, paused_model = credential_state.resume_target()
+    except Exception:
+        return ''
+    return paused_model if paused_provider == provider else ''
+
+
 def _provider_changed(self, context):
     """When the user picks a different provider, reset the model
     selection so we don't end up with a model that doesn't belong to
     the new provider (which would be an invalid combo at save time).
+    Coming back to the provider in use (or a paused key's) selects the model
+    it runs, not the first in the list.
     """
     try:
         wm = context.window_manager if context is not None else self
@@ -99,7 +114,11 @@ def _provider_changed(self, context):
         # Dynamic EnumProperties reject identifiers absent from their current
         # item callback.  Select the first real model for the new provider, or
         # the NONE sentinel only when that is what the callback exposes.
-        wm.byok_form_model = items[0][0] if items else 'NONE'
+        remembered = _remembered_model(wm, provider)
+        if remembered and any(item[0] == remembered for item in items):
+            wm.byok_form_model = remembered
+        else:
+            wm.byok_form_model = items[0][0] if items else 'NONE'
         if is_local(provider):
             # Build the managed-model item cache (RAM fit + downloaded state)
             # and kick a background probe for user-run local apps, so the

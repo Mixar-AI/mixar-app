@@ -242,3 +242,15 @@ def test_painters_fit_their_text_and_leave_the_font_as_they_found_it():
     width = _body(sheet, "float UI_mixar_sheet_text_width(")
     row = width[width.index("case MixarCardElement::SheetProviderRow:"):]
     assert row.index("weight = weight_strong;") < row.index("break;")
+
+
+def test_a_path_fields_browse_button_is_a_docked_sheet_pill():
+    """A FILE_PATH property (the Codex sign-in file) adds Blender's browse
+    button after its text field; tagging the input styles the field AND turns
+    that button into a docked, icon-only secondary pill (no stock grey square)."""
+    src = SHEET_CC.read_text(encoding="utf-8")
+    body = src[src.index("void UI_layout_mixar_sheet_tag_last("):]
+    body = body[:body.index("\n}\n")]
+    assert "Button *browse = but;" in body
+    assert "pill.card = MixarCardElement::SheetSecondary;" in body
+    assert "pill.progress = 1.0f;" in body

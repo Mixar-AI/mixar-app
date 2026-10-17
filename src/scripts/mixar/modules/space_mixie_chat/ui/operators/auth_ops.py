@@ -223,6 +223,28 @@ def _clear_referral_state(wm):
         logger.debug("Failed clearing referral state: %s", e)
 
 
+def _drop_foreign_chats(address: str, is_guest: bool) -> None:
+    """A chat belongs to the identity that started it: the backend refuses
+    another identity's continued session ("Session unavailable"). Sign-out
+    starts a fresh chat in every tab, but an identity can change without one
+    (a guest whose token was lost is issued a fresh guest). Every open tab
+    whose chat another identity started starts a fresh one, archived under
+    that identity. Only a claim (this guest signing in to an account) keeps
+    its chats: the claim moved their ownership to the account."""
+    claimed_from = guest.email() if guest.is_guest() and not is_guest else ""
+    from .session_ops import start_new_chat
+    for open_scene in bpy.data.scenes:
+        owner = getattr(open_scene, "mixie_chat_user_id", "") or ""
+        if (not owner or owner in (address, claimed_from)
+                or not getattr(open_scene, "mixie_session_id", "")):
+            continue
+        try:
+            start_new_chat(open_scene)
+        except Exception as e:  # noqa: BLE001 — never block a sign-in
+            logger.warning("Fresh chat for %r after an identity change failed: %s",
+                           open_scene.name, e)
+
+
 def _apply_identity(wm, scene, user_info: dict) -> bool:
     """Mirror a ``/me`` payload onto the session; True for a guest.
 
@@ -233,6 +255,7 @@ def _apply_identity(wm, scene, user_info: dict) -> bool:
     data = user_info["data"]
     email = data.get("email", "")
     is_guest = bool(data.get("is_guest", False))
+    _drop_foreign_chats(email, is_guest)
     if scene is not None:
         scene.mixie_chat_user_id = email
         scene.mixie_chat_credits = data.get("credits", 0)

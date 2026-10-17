@@ -204,7 +204,10 @@ def type_key_under_lock(qa):
 
 
 def cancel_under_lock(qa):
-    qa.click(text='Cancel', popup=True)
+    # The sheet's close is the ✕ (a template_popup_confirm cancel button, the
+    # same cancel() path Esc takes); older dialogs said "Cancel".
+    closer = '✕' if qa.find(text='✕', popup=True)['widgets'] else 'Cancel'
+    qa.click(text=closer, popup=True)
     qa.wait(f'not {DIALOG_OPEN}', timeout=5)
     if qa.eval(f'result = {WM}.byok_form_api_key'):
         raise ScenarioFail('Cancel left the typed key in RNA memory')
