@@ -19116,8 +19116,8 @@ msgstr "Pretpregled skice nije bilo moguće stvoriti. Nacrtajte ponovno za novi 
 msgid "View sketch"
 msgstr "Prikaži skicu"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Nacrt agenta je pun (najviše {count} znakova)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Oznaka dodana — ispod nje nema ničega"
@@ -20808,8 +20808,8 @@ msgstr "ID kontrolne točke"
 msgid "Restoring checkpoint…"
 msgstr "Vraćanje kontrolne točke…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Zalijepljeni tekst je predug (najviše {count} znakova)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Zalijepi tekst"
@@ -21791,6 +21791,12 @@ msgstr "Poslani komentar povratne informacije"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Lokalno poslani komentar, u razgovoru prikazan samo za čitanje"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Poruka nije poslana"
@@ -24354,6 +24360,9 @@ msgstr "Natrag na prethodno"
 msgid "Grid & Relationship Lines"
 msgstr "Rešetka i crte odnosa"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Mehanizam renderiranja"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Postavke renderiranja"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

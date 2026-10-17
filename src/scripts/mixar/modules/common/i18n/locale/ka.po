@@ -19116,8 +19116,8 @@ msgstr "ესკიზის გადახედვის შექმნა 
 msgid "View sketch"
 msgstr "ესკიზის ხედი"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "აგენტის მონახაზი სავსეა (მაქს. {count} სიმბოლო)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "აღნიშვნა დაემატა — მის ქვეშ არაფერია"
@@ -20808,8 +20808,8 @@ msgstr "საკონტროლო წერტილის ID"
 msgid "Restoring checkpoint…"
 msgstr "საკონტროლო წერტილი აღდგება…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ჩასმული ტექსტი ზედმეტად გრძელია (მაქს. {count} სიმბოლო)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ტექსტის ჩასმა"
@@ -21791,6 +21791,12 @@ msgstr "გაგზავნილი უკუკავშირის კო�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ლოკალურად გაგზავნილი კომენტარი, ჩატში მხოლოდ წასაკითხად ჩანს"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "შეტყობინება არ გაგზავნილა"
@@ -24354,6 +24360,9 @@ msgstr "დაბრუნება წინაზე"
 msgid "Grid & Relationship Lines"
 msgstr "ბადე და კავშირის ხაზები"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "სარენდერო ძრავა"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "რენდერის ანაწყობები"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

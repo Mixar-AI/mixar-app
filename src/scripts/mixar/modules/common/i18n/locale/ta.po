@@ -19116,8 +19116,8 @@ msgstr "வரைவு முன்னோட்டத்தை உருவா�
 msgid "View sketch"
 msgstr "வரைவைப் பார்"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "முகவர் வரைவு நிரம்பியது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "குறி சேர்க்கப்பட்டது — அதன் கீழ் எதுவும் இல்லை"
@@ -20808,8 +20808,8 @@ msgstr "மீட்டெடுப்பு புள்ளி அடையா�
 msgid "Restoring checkpoint…"
 msgstr "மீட்டெடுப்பு புள்ளி மீட்டெடுக்கப்படுகிறது…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ஒட்டிய உரை மிக நீளமானது (அதிகபட்சம் {count} எழுத்துகள்)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "உரையை ஒட்டவும்"
@@ -21791,6 +21791,12 @@ msgstr "சமர்ப்பித்த பின்னூட்டக் க�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "உள்ளகமாகச் சமர்ப்பித்த கருத்து, அரட்டையில் படிக்க மட்டும் காட்டப்படும்"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "செய்தி அனுப்பப்படவில்லை"
@@ -24354,6 +24360,9 @@ msgstr "மீண்டும் முந்தைய"
 msgid "Grid & Relationship Lines"
 msgstr "கட்டம் மற்றும் உறவுக் கோடுகள்"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "வழங்குதல் எஞ்சின்"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "வழங்கல் அமைப்புகள்"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

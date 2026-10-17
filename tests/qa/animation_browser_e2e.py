@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""No-credit toolbar animation browser replay, never the viewport N-panel.
+"""No-credit floating object-menu animation browser replay, never the viewport N-panel.
 
 QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4899 \
 QA_SCENARIO_OUT=/tmp/animation-browser python3 tests/qa/animation_browser_e2e.py
@@ -52,7 +52,7 @@ def snap(qa, name):
 
 def open_browser(qa):
     qa.press('ESC')
-    qa.click(text='Animations', region_type='HEADER', area_type='VIEW_3D')
+    qa.click(text='Animations', region_type='TOOL_HEADER', area_type='VIEW_3D')
     qa.wait("bool(drv.find(popup=True, prop='scope'))", timeout=5)
 
 
@@ -82,15 +82,16 @@ def run(qa):
     baseline = qa.eval(SNAPSHOT)
     counts = qa.eval(COUNTS)
     snap(qa, '01-toolbar')
-    toolbar = qa.find(text='Animations', region_type='HEADER')['widgets'][0]
-    playback = qa.find(op='SCREEN_OT_keyframe_jump', region_type='HEADER')['widgets']
-    assert toolbar['rect'][0] >= max(item['rect'][2] for item in playback)
+    strip = qa.find(text='Animations', region_type='TOOL_HEADER')['widgets'][0]
+    textures = qa.find(text='Textures', region_type='TOOL_HEADER')['widgets'][0]
+    assert strip['rect'][0] >= textures['rect'][2]
+    assert qa.find(text='Animations', region_type='HEADER')['total'] == 0
     assert not baseline['sidebar']
     open_browser(qa)
     names = qa.eval(f'result=[x.action_name for x in {STATE}.clips]')
     assert names == ['Idle', 'Walk', 'Wave'], names
     snap(qa, '02-clips')
-    qa.step('toolbar_next_to_play_and_nla_discovery', lambda: True)
+    qa.step('object_menu_placement_and_nla_discovery', lambda: True)
 
     search(qa, 'wa')
     qa.wait(f"[x.action_name for x in {STATE}.clips]==['Walk','Wave']", timeout=5)
@@ -154,7 +155,7 @@ result={'frame':p.scene.frame_current, 'angle':p.copies[p.target].pose.bones['Ar
 
     # Explicit user deselection must not leave stale character clips visible.
     qa.eval(BASE + "\nfor obj in w.view_layer.objects: obj.select_set(False)\nw.view_layer.objects.active=None\nbrowser.invalidate()\nresult=True")
-    open_browser(qa)
+    qa.wait("not drv.find(text='Animations',region_type='TOOL_HEADER')", timeout=5)
     qa.wait(f"not {STATE}.target_name", timeout=5)
     assert qa.eval(f'result=all(x.reason for x in {STATE}.clips)')
     snap(qa, '07-no-selection')

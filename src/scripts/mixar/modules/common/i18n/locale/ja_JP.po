@@ -19120,8 +19120,8 @@ msgstr "スケッチのプレビューを作成できませんでした。もう
 msgid "View sketch"
 msgstr "スケッチを表示"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "エージェントの下書きがいっぱいです（最大 {count} 文字）"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "マークを追加しました — 下に何もありません"
@@ -20812,8 +20812,8 @@ msgstr "チェックポイント ID"
 msgid "Restoring checkpoint…"
 msgstr "チェックポイントを復元中…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "貼り付けたテキストが長すぎます（最大 {count} 文字）"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "テキストを貼り付け"
@@ -21795,6 +21795,12 @@ msgstr "送信済みフィードバックコメント"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ローカルで送信したコメント。チャットに読み取り専用で表示されます"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "メッセージは送信されていません"
@@ -24358,6 +24364,9 @@ msgstr "戻る"
 msgid "Grid & Relationship Lines"
 msgstr "グリッドと関係の線"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "レンダーエンジン"
 
@@ -24380,9 +24389,6 @@ msgid "Render Settings"
 msgstr "レンダー設定"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24692,6 +24698,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

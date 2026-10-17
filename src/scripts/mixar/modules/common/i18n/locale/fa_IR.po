@@ -19116,8 +19116,8 @@ msgstr ".ﺪﯿﺸﮑﺑ ﻩﺭﺎﺑﻭﺩ ﺵﻼ﻿ﺗ ﯼﺍﺮﺑ .ﺪﺸﻧ
 msgid "View sketch"
 msgstr "ﭻﮑﺳﺍ ﺶﯾﺎﻤﻧ"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "(ﻪﺴﯾﻮﻧ {count} ﻪﻨﯿﺸﯿﺑ) ﺖﺳﺍ ﺮﭘ ﻞﻣﺎﻋ ﺲﯾﻮﻧ‌ﺶﯿﭘ"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "ﺖﺴﯿﻧ ﻥﺁ ﺮﯾﺯ ﯼﺰﯿﭼ — ﺪﺷ ﻪﻓﺎﺿﺍ ﻥﺎﺸﻧ"
@@ -20808,8 +20808,8 @@ msgstr "ﺖﺸﮔﺯﺎﺑ ﻪﻄﻘﻧ ﻪﺳﺎﻨﺷ"
 msgid "Restoring checkpoint…"
 msgstr "…ﺖﺸﮔﺯﺎﺑ ﻪﻄﻘﻧ ﯽﻧﺍﺩﺮﮔﺯﺎﺑ ﻝﺎﺣ ﺭﺩ"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "(ﻪﺴﯾﻮﻧ {count} ﻪﻨﯿﺸﯿﺑ) ﺖﺳﺍ ﺪﻨﻠﺑ ﺪﺣ ﺯﺍ ﺶﯿﺑ ﻩﺪﺷ‌ﻩﺪﻧﺎﺒﺴﭼ ﻦﺘﻣ"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ﻦﺘﻣ ﻥﺪﻧﺎﺒﺴﭼ"
@@ -21791,6 +21791,12 @@ msgstr "ﻩﺪﺷ‌ﻩﺩﺎﺘﺳﺮﻓ ﺩﺭﻮﺧﺯﺎﺑ ﺮﻈﻧ"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ﺩﻮﺷ‌ﯽﻣ ﻩﺩﺍﺩ ﻥﺎﺸﻧ ﯽﻧﺪﻧﺍﻮﺧ‌ﻂﻘﻓ ﻮﮕﺘﻔﮔ ﺭﺩ ،ﯽﻠﺤﻣ ﻩﺪﺷ‌ﻝﺎﺳﺭﺍ ﺮﻈﻧ"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "ﺪﺸﻧ ﻩﺩﺎﺘﺳﺮﻓ ﻡﺎﯿﭘ"
@@ -24354,6 +24360,9 @@ msgstr "ﯽﻠﺒﻗ ﻪﺑ ﺖﺸﮔﺯﺎﺑ"
 msgid "Grid & Relationship Lines"
 msgstr "ﻪﻄﺑﺍﺭ ﻁﻮﻄﺧ ﻭ ﻪﮑﺒﺷ"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "ﺭﺪﻧﺭ ﺭﻮﺗﻮﻣ"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "ﺭﺪﻧﺭ ﺕﺎﻤﯿﻈﻨﺗ"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

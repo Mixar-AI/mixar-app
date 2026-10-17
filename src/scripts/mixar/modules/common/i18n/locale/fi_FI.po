@@ -19116,8 +19116,8 @@ msgstr "Luonnoksen esikatselua ei voitu luoda. Piirrä uudelleen yrittääksesi 
 msgid "View sketch"
 msgstr "Näytä luonnos"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Agentin luonnos on täynnä (enintään {count} merkkiä)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Merkki lisättiin — sen alla ei ole mitään"
@@ -20808,8 +20808,8 @@ msgstr "Palautuspisteen tunnus"
 msgid "Restoring checkpoint…"
 msgstr "Palautetaan palautuspistettä…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Liitetty teksti on liian pitkä (enintään {count} merkkiä)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Liitä teksti"
@@ -21791,6 +21791,12 @@ msgstr "Lähetetty palautekommentti"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Paikallisesti lähetetty kommentti, näytetään keskustelussa vain luettavana"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Viestiä ei lähetetty"
@@ -24354,6 +24360,9 @@ msgstr "Takaisin edelliseen"
 msgid "Grid & Relationship Lines"
 msgstr "Ruudukko ja suhdeviivat"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Renderöintimoottori"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Renderöintiasetukset"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

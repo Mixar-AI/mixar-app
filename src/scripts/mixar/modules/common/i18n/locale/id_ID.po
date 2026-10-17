@@ -19116,8 +19116,8 @@ msgstr "Tidak dapat membuat pratinjau sketsa. Gambar lagi untuk mencoba ulang."
 msgid "View sketch"
 msgstr "Lihat sketsa"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Draf Agen sudah penuh (maks. {count} karakter)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Tanda ditambahkan — tidak ada apa pun di bawahnya"
@@ -20808,8 +20808,8 @@ msgstr "ID Titik Pemulihan"
 msgid "Restoring checkpoint…"
 msgstr "Memulihkan titik pemulihan…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Teks yang ditempel terlalu panjang (maks. {count} karakter)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Tekstur"
@@ -21791,6 +21791,12 @@ msgstr "Komentar Umpan Balik Terkirim"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Komentar yang dikirim secara lokal, ditampilkan hanya-baca di obrolan"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Pesan tidak terkirim"
@@ -24354,6 +24360,9 @@ msgstr "Gambar Latar"
 msgid "Grid & Relationship Lines"
 msgstr "Kisi & Garis Relasi"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Mesin Render"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Pengaturan Render"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

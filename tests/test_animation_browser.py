@@ -104,3 +104,34 @@ def test_selected_mesh_resolves_its_rig_but_deselected_active_id_does_not():
     assert catalog.selected_target(context) is rig
     mesh.select_get = lambda **kw: False
     assert catalog.selected_target(context) is None
+
+
+def test_preview_rig_toggle_preserves_source_and_initial_visibility(monkeypatch):
+    from mixar.modules.workflow.core import animation_preview as preview
+    rig = MagicMock(type='ARMATURE')
+    copy = MagicMock()
+    layer = object()
+    state = NS(hide_rig=True)
+    session = NS(ready=True, target=rig, copies={rig: copy}, target_visible=True,
+                 scene=NS(view_layers=[layer]), area=MagicMock())
+    monkeypatch.setattr(preview, '_session', session)
+    monkeypatch.setattr(preview, 'bpy', NS(context=NS(window_manager=NS(mixar_animations=state))))
+    preview.update_rig_visibility()
+    copy.hide_set.assert_called_with(True, view_layer=layer)
+    state.hide_rig = False
+    preview.update_rig_visibility()
+    copy.hide_set.assert_called_with(False, view_layer=layer)
+    session.target_visible = False
+    preview.update_rig_visibility()
+    copy.hide_set.assert_called_with(True, view_layer=layer)
+    rig.hide_set.assert_not_called()
+
+
+def test_preview_rig_toggle_ignores_unready_and_non_rig_previews(monkeypatch):
+    from mixar.modules.workflow.core import animation_preview as preview
+    monkeypatch.setattr(preview, '_session', None)
+    preview.update_rig_visibility()
+    monkeypatch.setattr(preview, '_session', NS(ready=False))
+    preview.update_rig_visibility()
+    monkeypatch.setattr(preview, '_session', NS(ready=True, target=NS(type='MESH')))
+    preview.update_rig_visibility()

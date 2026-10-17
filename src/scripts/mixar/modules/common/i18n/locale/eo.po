@@ -19116,8 +19116,8 @@ msgstr "Ne eblis krei la skizan antaŭrigardon. Desegnu denove por reprovi."
 msgid "View sketch"
 msgstr "Rigardi skizon"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "La agenta malneto estas plena (maksimume {count} signoj)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Marko aldonita — nenio sub ĝi"
@@ -20808,8 +20808,8 @@ msgstr "ID de restarigpunkto"
 msgid "Restoring checkpoint…"
 msgstr "Restarigo de restarigpunkto…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Algluita teksto tro longa (maks. {count} signoj)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Alglui tekston"
@@ -21791,6 +21791,12 @@ msgstr "Sendita rimarka komento"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Loke sendita komento, montrata nurlege en la babilado"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Mesaĝo ne sendita"
@@ -24354,6 +24360,9 @@ msgstr "Reen al la antaŭa"
 msgid "Grid & Relationship Lines"
 msgstr "Krado kaj rilataj linioj"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Redona motoro"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Redonaj agordoj"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

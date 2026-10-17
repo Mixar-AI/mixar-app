@@ -3,6 +3,8 @@
 
 """Floating adaptive bar; native popovers hold the detailed properties."""
 import bpy
+from mixar.modules.common.i18n import tip_
+from ...core import animation_preview
 from ...core.zen_object_controls import selected_object
 
 
@@ -15,10 +17,14 @@ def _section(row, panel, label):
         cell.enabled = False
         cell.label(text=label)
     cell.mixar_style(component="TOOLBAR", variant="SECONDARY")
+    return cell
 
 
 def draw_object_controls(layout, context):
-    obj = selected_object(context)
+    session = animation_preview.current()
+    previewing = bool(session and session.window == context.window
+                      and session.area == context.area)
+    obj = session.control_object if previewing else selected_object(context)
     if obj is None:
         return
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row(align=True)
@@ -30,14 +36,17 @@ def draw_object_controls(layout, context):
     grip.mixar_style(component="TOOLBAR", variant="GHOST")
     name = row.row(align=True)
     name.ui_units_x = 5.0
-    name.label(text=obj.name if len(obj.name) <= 12 else obj.name[:11] + "…")
+    name.label(text=obj.name if len(obj.name) <= 12 else obj.name[:11] + "…",
+               translate=False)
     name.mixar_style(component="TOOLBAR", variant="GHOST")
     if obj.type == "MESH":
-        _section(row, "MIXAR_PT_zen_object_modifiers", "Modifier")
-        _section(row, "MIXAR_PT_zen_object_textures", "Textures")
-    else:
+        editing = row.row(align=True)
+        editing.enabled = not previewing
+        _section(editing, "MIXAR_PT_zen_object_modifiers", "Modifier")
+        _section(editing, "MIXAR_PT_zen_object_textures", "Textures")
+    elif obj.type == "LIGHT":
         controls = row.row(align=True)
-        controls.enabled = obj.data.is_editable
+        controls.enabled = not previewing and obj.data.is_editable
         caption = controls.row(align=True)
         caption.ui_units_x = 3.2
         caption.label(text="Color")
@@ -55,7 +64,13 @@ def draw_object_controls(layout, context):
         energy.prop(obj.data, "energy", text="", slider=True)
         energy.mixar_style(component="TOOLBAR", variant="SECONDARY")
 
+    if previewing or obj.type in {"MESH", "ARMATURE"}:
+        animations = _section(row, "MIXAR_PT_animations", "Animations")
+        animations.mixar_tooltip(text=tip_(
+            "Browse and preview animations without leaving Zen Mode"))
+
     close = row.row(align=True)
+    close.enabled = not previewing
     close.ui_units_x = 1.4
     close.operator('mixar.zen_object_controls_show', text='', icon='X').show = False
     close.mixar_style(component="TOOLBAR", variant="GHOST")

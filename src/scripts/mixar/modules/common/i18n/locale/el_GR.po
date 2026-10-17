@@ -19116,8 +19116,8 @@ msgstr "Δεν ήταν δυνατή η δημιουργία της προεπι
 msgid "View sketch"
 msgstr "Προβολή σκίτσου"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Το πρόχειρο του πράκτορα είναι πλήρες (μέγιστο {count} χαρακτήρες)."
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Προστέθηκε σημάδι — δεν υπάρχει τίποτα από κάτω"
@@ -20808,8 +20808,8 @@ msgstr "Αναγνωριστικό σημείου επαναφοράς"
 msgid "Restoring checkpoint…"
 msgstr "Επαναφορά σημείου επαναφοράς…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Το επικολλημένο κείμενο είναι πολύ μεγάλο (μέγ. {count} χαρακτήρες)."
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Επικόλληση κειμένου"
@@ -21791,6 +21791,12 @@ msgstr "Υποβληθέν σχόλιο αξιολόγησης"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Τοπικά υποβληθέν σχόλιο, εμφανίζεται μόνο για ανάγνωση στη συνομιλία."
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Το μήνυμα δεν στάλθηκε."
@@ -24354,6 +24360,9 @@ msgstr "Πίσω στο προηγούμενο"
 msgid "Grid & Relationship Lines"
 msgstr "Πλέγμα και γραμμές σχέσεων"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Μηχανή απόδοσης"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Ρυθμίσεις απόδοσης"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

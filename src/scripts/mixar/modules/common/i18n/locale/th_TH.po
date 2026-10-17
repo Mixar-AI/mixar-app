@@ -19116,8 +19116,8 @@ msgstr "ไม่สามารถสร้างภาพตัวอย่า
 msgid "View sketch"
 msgstr "ดูภาพร่าง"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "ข้อความร่างของเอเจนต์เต็มแล้ว (สูงสุด {count} ตัวอักษร)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "เพิ่มเครื่องหมายแล้ว — ไม่มีสิ่งใดอยู่ใต้เครื่องหมาย"
@@ -20808,8 +20808,8 @@ msgstr "ID จุดคืนค่า"
 msgid "Restoring checkpoint…"
 msgstr "กำลังคืนค่าจุดคืนค่า…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ข้อความที่วางยาวเกินไป (สูงสุด {count} ตัวอักษร)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "วางข้อความ"
@@ -21791,6 +21791,12 @@ msgstr "ความคิดเห็นติชมที่ส่งแล้
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ความคิดเห็นที่ส่งจากเครื่อง แสดงแบบอ่านอย่างเดียวในแชท"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "ข้อความยังไม่ถูกส่ง"
@@ -24354,6 +24360,9 @@ msgstr "กลับไปยังก่อนหน้านี้"
 msgid "Grid & Relationship Lines"
 msgstr "ตารางและเส้นความสัมพันธ์"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "เอนจินเรนเดอร์"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "การตั้งค่าเรนเดอร์"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

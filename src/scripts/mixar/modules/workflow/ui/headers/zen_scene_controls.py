@@ -5,7 +5,7 @@
 
 import bpy
 
-from mixar.modules.common.i18n import n_, tip_
+from mixar.modules.common.i18n import n_
 
 from ...core import viewport_guides, zen_toolbar_layout as tiers
 from ...core.zen_scene import render_samples_binding, sky_enabled
@@ -187,17 +187,6 @@ def draw_guides(layout, context):
     chip.mixar_style(component="TOOLBAR", variant="GHOST")
 
 
-def draw_animations(layout, context, *, tier):
-    animations = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-    if hasattr(bpy.types, "MIXAR_PT_animations"):
-        compact = tiers.at_most(tier, tiers.NARROW)
-        animations.ui_units_x = 2.0 if compact else 6.0
-        animations.popover(panel="MIXAR_PT_animations",
-                           text="" if compact else "Animations", icon="ACTION")
-        animations.mixar_tooltip(text=tip_("Browse and preview animations without leaving Zen Mode"))
-        style(animations)
-
-
 def draw_right(layout, context, *, tier):
     from ...core import animation_preview
     previewing = animation_preview.current() is not None
@@ -216,7 +205,6 @@ def draw_right(layout, context, *, tier):
         transport.operator("mixar.animation_stop" if previewing else "screen.animation_cancel",
                            text="", icon="SNAP_FACE")
         style(transport)
-        draw_animations(layout, context, tier=tier)
         more = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
         more.enabled = not previewing
         more.ui_units_x = 2.0
@@ -224,7 +212,6 @@ def draw_right(layout, context, *, tier):
         style(more)
     else:
         draw_playback(layout, context)
-        draw_animations(layout, context, tier=tier)
         settings = layout.row()
         settings.enabled = not previewing
         draw_sky(settings, context)

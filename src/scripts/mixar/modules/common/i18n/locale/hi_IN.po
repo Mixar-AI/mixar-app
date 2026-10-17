@@ -19116,8 +19116,8 @@ msgstr "स्केच पूर्वावलोकन नहीं बना
 msgid "View sketch"
 msgstr "स्केच देखें"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "एजेंट ड्राफ़्ट भर गया है (अधिकतम {count} वर्ण)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "चिह्न जोड़ा गया — इसके नीचे कुछ नहीं"
@@ -20808,8 +20808,8 @@ msgstr "चेकपॉइंट ID"
 msgid "Restoring checkpoint…"
 msgstr "चेकपॉइंट पुनर्स्थापित हो रहा है…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "चिपकाया गया पाठ बहुत लंबा है (अधिकतम {count} वर्ण)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "पाठ चिपकाएँ"
@@ -21791,6 +21791,12 @@ msgstr "जमा की गई प्रतिक्रिया टिप्�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "स्थानीय रूप से जमा की गई टिप्पणी, चैट में केवल-पठन रूप में दिखाई गई"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "संदेश नहीं भेजा गया"
@@ -24354,6 +24360,9 @@ msgstr "पिछले पर वापस"
 msgid "Grid & Relationship Lines"
 msgstr "जालक और संबंध रेखाएँ"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "प्रतिपादन इंजन"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "प्रतिपादन सेटिंग्स"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

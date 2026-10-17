@@ -19116,8 +19116,8 @@ msgstr "Haikuweza kuunda hakiki ya mchoro. Chora tena ili kujaribu."
 msgid "View sketch"
 msgstr "Tazama mchoro"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Rasimu ya wakala imejaa (herufi {count} kwa juu)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Alama imeongezwa — hakuna kitu chini yake"
@@ -20808,8 +20808,8 @@ msgstr "Kitambulisho cha kituo cha kurejesha"
 msgid "Restoring checkpoint…"
 msgstr "Inarejesha kituo cha kurejesha…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Maandishi yaliyobandikwa marefu mno (herufi {count} kwa juu)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Bandika Maandishi"
@@ -21791,6 +21791,12 @@ msgstr "Maoni ya mrejesho yaliyowasilishwa"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Maoni yaliyowasilishwa ndani, yanaonyeshwa bila kuhaririwa katika mazungumzo"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Ujumbe haujatumwa"
@@ -24354,6 +24360,9 @@ msgstr "Rudi kwa Iliyotangulia"
 msgid "Grid & Relationship Lines"
 msgstr "Gridi na mistari ya uhusiano"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Injini ya Kutoa"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Mipangilio ya urendishaji"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

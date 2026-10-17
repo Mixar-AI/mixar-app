@@ -19116,8 +19116,8 @@ msgstr "Эскизди алдын ала көрүү түзүлгөн жок. К�
 msgid "View sketch"
 msgstr "Эскизди көрүү"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Агенттин черновиги толду (эң көп {count} белги)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Белги кошулду — анын астында эч нерсе жок"
@@ -20808,8 +20808,8 @@ msgstr "Контролдук чекит ID"
 msgid "Restoring checkpoint…"
 msgstr "Контролдук чекит калыбына келтирилүүдө…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Коюлган текст өтө узун (эң көп {count} белги)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Текстти коюу"
@@ -21791,6 +21791,12 @@ msgstr "Жөнөтүлгөн пикир комментарийи"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Жергиликтүү жөнөтүлгөн комментарий, маекте окуу үчүн гана көрсөтүлөт"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Билдирүү жөнөтүлгөн жок"
@@ -24354,6 +24360,9 @@ msgstr "Мурункуга кайтуу"
 msgid "Grid & Relationship Lines"
 msgstr "Тор жана байланыш сызыктары"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Визуалдаштыруу кыймылдаткычы"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Визуалдаштыруу ырастоолору"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

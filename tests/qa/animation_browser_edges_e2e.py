@@ -90,16 +90,17 @@ result=True
     qa.wait("drv.main_window().workspace.name=='Zen Mode'",timeout=5)
     qa.step('workspace_exit_cancels_preview',lambda:True)
 
-    # Higher DPI uses the compact transport but leaves Animations beside Play.
+    # Higher DPI keeps Animations in the object menu, clear of scene controls.
     qa.eval('bpy.context.preferences.view.ui_scale=1.25\nresult=True')
     time.sleep(.5)
-    qa.click(text='Browse and preview animations without leaving Zen Mode',region_type='HEADER')
+    qa.click(text='Browse and preview animations without leaving Zen Mode',region_type='TOOL_HEADER')
     qa.wait("bool(drv.find(popup=True,prop='scope'))",timeout=5)
     snap(qa,'08-scale-125')
     assert qa.find(op='SCREEN_OT_animation_play',region_type='HEADER')['total'] == 1
+    assert qa.find(text='Animations',region_type='HEADER')['total'] == 0
     qa.press('ESC')
     qa.eval('bpy.context.preferences.view.ui_scale=1.0\nresult=True')
-    qa.step('125_percent_scale_keeps_play_and_browser',lambda:True)
+    qa.step('125_percent_scale_keeps_object_menu_browser',lambda:True)
     return {'keyboard':True,'undo':True,'editing':True,'workspace_exit':True,'scale':1.25}
 
 

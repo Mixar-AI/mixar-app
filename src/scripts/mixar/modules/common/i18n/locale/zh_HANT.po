@@ -19116,8 +19116,8 @@ msgstr "無法建立草圖預覽。請重新繪製以重試。"
 msgid "View sketch"
 msgstr "檢視草圖"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "智慧代理草稿已滿（最多 {count} 個字元）"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "已新增標記，但下方沒有任何物體"
@@ -20808,8 +20808,8 @@ msgstr "檢查點 ID"
 msgid "Restoring checkpoint…"
 msgstr "正在還原檢查點…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "貼上的文字過長（最多 {count} 個字元）"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "貼上文字"
@@ -21791,6 +21791,12 @@ msgstr "已提交的回饋意見"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "本機已提交的意見，以唯讀方式顯示在聊天中"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "訊息未送出"
@@ -24354,6 +24360,9 @@ msgstr "返回"
 msgid "Grid & Relationship Lines"
 msgstr "格線與關係線"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "算繪引擎"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "算繪設定"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

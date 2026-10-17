@@ -19116,8 +19116,8 @@ msgstr "Не ўдалося стварыць папярэдні прагляд �
 msgid "View sketch"
 msgstr "Праглядзець эскіз"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Чарнавік агента запоўнены (максімум сімвалаў: {count})"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Пазнака дададзена — пад ёй нічога няма"
@@ -20808,8 +20808,8 @@ msgstr "ID кантрольнай кропкі"
 msgid "Restoring checkpoint…"
 msgstr "Аднаўленне кантрольнай кропкі…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Устаўлены тэкст занадта доўгі (максімум сімвалаў: {count})"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Уставіць тэкст"
@@ -21791,6 +21791,12 @@ msgstr "Адпраўлены каментар водгуку"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Лакальна адпраўлены каментар, у чаце толькі для чытання"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Паведамленне не адпраўлена"
@@ -24354,6 +24360,9 @@ msgstr "Назад да папярэдняга"
 msgid "Grid & Relationship Lines"
 msgstr "Сетка і лініі сувязяў"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Рухавік рэндэру"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Налады рэндэру"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

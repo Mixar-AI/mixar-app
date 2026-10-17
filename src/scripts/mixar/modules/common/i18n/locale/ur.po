@@ -19116,8 +19116,8 @@ msgstr "۔ﮟﯿﭽﻨﯿﮭﮐ ﺮﮭﭘ ﮯﯿﻟ ﮯﮐ ﺶﺷﻮﮐ ﮦﺭ�
 msgid "View sketch"
 msgstr "ﮟﯿﮭﮑﯾﺩ ﮧﮐﺎﺧ"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "(ﻑﻭﺮﺣ {count} ﮦﺩﺎﯾﺯ ﮯﺳ ﮦﺩﺎﯾﺯ) ﮯﮨ ﺎﯿﮔ ﺮﮭﺑ ﮦﺩﻮﺴﻣ ﺎﮐ ﭧﻨﺠﯾﺍ"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "ﮟﯿﮩﻧ ﮫﭽﮐ ﮯﭽﯿﻧ ﮯﮐ ﺱﺍ — ﻞﻣﺎﺷ ﻥﺎﺸﻧ"
@@ -20808,8 +20808,8 @@ msgstr "ID ﭧﻨﺋﺍﻮﭘ ﮏﯿﭼ"
 msgid "Restoring checkpoint…"
 msgstr "…ﮯﮨ ﺎﮨﺭ ﻮﮨ ﻝﺎﺤﺑ ﭧﻨﺋﺍﻮﭘ ﮏﯿﭼ"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "(ﻑﻭﺮﺣ {count} ﮦﺩﺎﯾﺯ ﮯﺳ ﮦﺩﺎﯾﺯ) ﺎﺒﻤﻟ ﺖﮩﺑ ﻦﺘﻣ ﮞﺎﭙﺴﭼ"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ﮟﯾﺮﮐ ﮞﺎﭙﺴﭼ ﻦﺘﻣ"
@@ -21791,6 +21791,12 @@ msgstr "ﮦﺮﺼﺒﺗ ﺕﺍﺮﺛﺎﺗ ﮦﺪﺷ ﻊﻤﺟ"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ﮯﯿﻟ ﮯﮐ ﮯﻨﮬﮍﭘ ﻑﺮﺻ ﮟﯿﻣ ﭧﯿﭼ ،ﮦﺮﺼﺒﺗ ﻊﻤﺟ ﺮﭘ ﺭﻮﻃ ﯽﻣﺎﻘﻣ"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "ﺎﯿﮔ ﺎﺠﯿﮭﺑ ﮟﯿﮩﻧ ﻡﺎﻐﯿﭘ"
@@ -24354,6 +24360,9 @@ msgstr "ﮟﯿﺋﺎﺟ ﺲﭘﺍﻭ ﺮﭘ ﮯﻠﮭﭽﭘ"
 msgid "Grid & Relationship Lines"
 msgstr "ﮟﯿﻨﺋﻻ﻿ ﮧﺘﺷﺭ ﺭﻭﺍ ﮈﺮﮔ"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "ﻦﺠﻧﺍ ﺭﮉﻨﯾﺭ"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "ﺕﺎﺒﯿﺗﺮﺗ ﺭﮉﻨﯾﺭ"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

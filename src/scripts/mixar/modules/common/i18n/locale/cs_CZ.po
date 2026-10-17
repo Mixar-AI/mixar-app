@@ -19116,8 +19116,8 @@ msgstr "Náhled skici se nepodařilo vytvořit. Zkuste to znovu nakreslením."
 msgid "View sketch"
 msgstr "Zobrazit skicu"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Koncept pro agenta je plný (max. {count} znaků)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Značka přidána — pod ní nic není"
@@ -20808,8 +20808,8 @@ msgstr "ID bodu obnovení"
 msgid "Restoring checkpoint…"
 msgstr "Obnovuje se bod obnovení…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Vložený text je příliš dlouhý (max. {count} znaků)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Vložit"
@@ -21791,6 +21791,12 @@ msgstr "Odeslaný komentář zpětné vazby"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Místně odeslaný komentář, zobrazený v chatu pouze pro čtení"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Zpráva nebyla odeslána"
@@ -24354,6 +24360,9 @@ msgstr "Zpět na přechozí"
 msgid "Grid & Relationship Lines"
 msgstr "Mřížka a čáry vztahů"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Render Engine"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Nastavení renderu"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

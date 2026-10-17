@@ -45,12 +45,12 @@ CENTER_PX = 165.0
 """Grid, X-ray, the four shading modes and the shading popover."""
 CENTER_MINIMAL_PX = 32.0
 
-RIGHT_FULL_PX = 712.0
-"""Animations + Cinema + playback + Sky Light + Export, with trailing inset."""
-RIGHT_NARROW_PX = 352.0
-"""Compact playback, Animations icon, Cinema and the overflow popover."""
-RIGHT_TIGHT_PX = 164.0
-"""Compact playback, Animations icon and the overflow popover."""
+RIGHT_FULL_PX = 584.0
+"""Cinema + playback + Sky Light + Export, with trailing inset."""
+RIGHT_NARROW_PX = 312.0
+"""Compact playback, Cinema and the overflow popover."""
+RIGHT_TIGHT_PX = 124.0
+"""Compact playback and the overflow popover."""
 
 MIN_GAP_PX = 14.0
 """Smallest flexible gap kept on each side of the centred cluster."""

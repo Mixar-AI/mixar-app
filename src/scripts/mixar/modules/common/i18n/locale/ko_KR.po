@@ -19116,8 +19116,8 @@ msgstr "스케치 미리보기를 만들 수 없습니다. 다시 그려서 재�
 msgid "View sketch"
 msgstr "스케치 보기"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "에이전트 초안이 가득 찼습니다 (최대 {count}자)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "마크 추가됨 — 아래에 아무것도 없음"
@@ -20808,8 +20808,8 @@ msgstr "체크포인트 ID"
 msgid "Restoring checkpoint…"
 msgstr "체크포인트 복원 중…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "붙여 넣은 텍스트가 너무 깁니다 (최대 {count}자)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "텍스트를 붙여 넣기"
@@ -21791,6 +21791,12 @@ msgstr "제출된 피드백 코멘트"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "로컬에서 제출한 코멘트로, 채팅에 읽기 전용으로 표시됩니다"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "메시지를 보내지 못함"
@@ -24354,6 +24360,9 @@ msgstr "이전으로 돌아 가기"
 msgid "Grid & Relationship Lines"
 msgstr "격자 및 관계 라인"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "렌더 엔진"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "렌더 설정"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

@@ -100,6 +100,10 @@ def start(context, action_name, slot_handle):
     scene[INTERNAL_ANIMATION_SCENE_PROP] = True
     _session = session = SimpleNamespace(
         window=window, source=source, layer=window.view_layer, target=target,
+        control_object=(previous.control_object if previous
+                        else context.view_layer.objects.active),
+        target_visible=target.visible_get(view_layer=window.view_layer,
+                                          viewport=context.area.spaces.active),
         scene=scene, objects=[], copies={}, action=action, slot=slot,
         data=[], data_copies={}, static_data=set(),
         first=first, last=max(first, last), was_playing=playing,
@@ -145,9 +149,21 @@ def _finish_build(session):
     session.scene.frame_set(int(session.first), subframe=session.first % 1)
     session.window.scene = session.scene
     session.ready = True
+    update_rig_visibility()
     session.origin = time.monotonic()
     bpy.context.window_manager.mixar_animations.preparing = False
     session.window.mixar_refresh_popover("MIXAR_PT_animations")
+
+
+def update_rig_visibility(_owner=None, _context=None):
+    """Only hide the copied rig's display; its deformation keeps evaluating."""
+    session = _session
+    if session is None or not session.ready or session.target.type != 'ARMATURE':
+        return
+    hide = bpy.context.window_manager.mixar_animations.hide_rig
+    session.copies[session.target].hide_set(hide or not session.target_visible,
+                                          view_layer=session.scene.view_layers[0])
+    session.area.tag_redraw()
 
 
 def _tick():

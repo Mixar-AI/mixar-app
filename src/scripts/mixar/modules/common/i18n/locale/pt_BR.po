@@ -19116,8 +19116,8 @@ msgstr "Não foi possível criar a pré-visualização do esboço. Desenhe novam
 msgid "View sketch"
 msgstr "Ver esboço"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "O rascunho do agente está cheio (máx. {count} caracteres)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Marca adicionada — nada abaixo dela"
@@ -20808,8 +20808,8 @@ msgstr "ID do ponto de restauração"
 msgid "Restoring checkpoint…"
 msgstr "Restaurando ponto de restauração…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Texto colado muito longo (máx. {count} caracteres)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Colar texto"
@@ -21791,6 +21791,12 @@ msgstr "Comentário de feedback enviado"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Comentário enviado localmente, mostrado como somente leitura no chat"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Mensagem não enviada"
@@ -24354,6 +24360,9 @@ msgstr "Retornar ao anterior"
 msgid "Grid & Relationship Lines"
 msgstr "Grade e linhas de relação"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Motor de Render"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Configurações de renderização"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

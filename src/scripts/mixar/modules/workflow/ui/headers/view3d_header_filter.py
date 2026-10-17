@@ -150,9 +150,7 @@ def _patched_tool_header_draw(self, context):
         if _original_tool_header_draw is not None:
             _original_tool_header_draw(self, context)
         return
-    from ...core.animation_preview import current as animation_preview
-    if animation_preview() is None:
-        draw_object_controls(self.layout, context)
+    draw_object_controls(self.layout, context)
 
 
 def _tool_helper():

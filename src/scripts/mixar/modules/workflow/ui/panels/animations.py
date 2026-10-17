@@ -70,6 +70,11 @@ class MIXAR_PT_animations(bpy.types.Panel):
                            icon='PAUSE' if state.playing else 'PLAY')
             controls.prop(state, 'loop', toggle=True)
             controls.operator('mixar.animation_stop', icon='SNAP_FACE')
+            if session and session.target.type == 'ARMATURE':
+                visibility = player.row()
+                visibility.enabled = not state.preparing
+                visibility.prop(state, 'hide_rig', toggle=True,
+                                icon='HIDE_ON' if state.hide_rig else 'HIDE_OFF')
             scrub = player.row()
             scrub.enabled = not state.preparing
             scrub.prop(state, 'position', text='Position', slider=True)

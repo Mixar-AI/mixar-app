@@ -19116,8 +19116,8 @@ msgstr "Không thể tạo bản xem trước phác thảo. Hãy vẽ lại đ�
 msgid "View sketch"
 msgstr "Xem phác thảo"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Bản nháp cho tác nhân đã đầy (tối đa {count} ký tự)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Đã thêm dấu — không có gì bên dưới"
@@ -20808,8 +20808,8 @@ msgstr "ID Điểm Khôi Phục"
 msgid "Restoring checkpoint…"
 msgstr "Đang quay về điểm khôi phục…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Văn bản dán quá dài (tối đa {count} ký tự)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Dán Văn Bản"
@@ -21791,6 +21791,12 @@ msgstr "Nhận Xét Phản Hồi Đã Gửi"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Nhận xét đã gửi cục bộ, hiển thị chỉ đọc trong cuộc trò chuyện"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Chưa gửi tin nhắn"
@@ -24354,6 +24360,9 @@ msgstr "Trở Lại Trước"
 msgid "Grid & Relationship Lines"
 msgstr "Khung Lưới & Đường Liên Hệ"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Động Cơ Kết Xuất"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Sắp Đặt Kết Xuất"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

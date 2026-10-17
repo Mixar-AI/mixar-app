@@ -19116,8 +19116,8 @@ msgstr "Аескиз аԥхьаԥшра аԥҵара алымшеит. Еиҭа 
 msgid "View sketch"
 msgstr "Аескиз аԥшра"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Агент ачерновик ҭәуп (амаксимум {count} асимвол)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Адырга иацҵан — аҵаҩа даҟәым"
@@ -20808,8 +20808,8 @@ msgstr "Ахынҳәра Аҭыԥ ID"
 msgid "Restoring checkpoint…"
 msgstr "Ахынҳәра Аҭыԥ ахынҳәра иаҿуп…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Иҭаргылоу атекст еиҳауп (амаксимум {count} асимвол)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Атекст аҭаргылара"
@@ -21791,6 +21791,12 @@ msgstr "Ишьҭоу азҳәара акомментари"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Ҷыдала ишьҭоу акомментари, ачат аҿы аԥхьара мацара иубоит"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Аҳәамҭа ишьҭам"
@@ -24354,6 +24360,9 @@ msgstr "Аԥхьатәи ахь Ахынҳәра"
 msgid "Grid & Relationship Lines"
 msgstr "Асетка & Аимадара Ацәаҳәақәа"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Архиара Амотор"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Архиара Архиарақәа"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

@@ -19116,8 +19116,8 @@ msgstr ".ﺔﻟﻭﺎﺤﻤﻟﺍ ﺓﺩﺎﻋﻹ﻿ ﺍﺩًﺪﺠﻣ ﻢﺳﺭ
 msgid "View sketch"
 msgstr "ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﺽﺮﻋﺍ"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "(ﺎﻓًﺮﺣ {count} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﺔﺌﻠﺘﻤﻣ ﻞﻴﻛﻮﻟﺍ ﺓﺩﻮﺴﻣ"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "ﺎﻬﺘﺤﺗ ءﻲﺷ ﻻ﻿ — ﺔﻣﻼ﻿ﻌﻟﺍ ﺖﻔﻴﺿﺃُ"
@@ -20808,8 +20808,8 @@ msgstr "ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﻑﺮّﻌﻣ"
 msgid "Restoring checkpoint…"
 msgstr "…ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﺓﺩﺎﻌﺘﺳﺍ ﺭٍﺎﺟ"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "(ﺎﻓًﺮﺣ {count} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﺍﺪًﺟ ﻞﻳﻮﻃ ﻖﺼﻠﻤﻟﺍ ﺺﻨﻟﺍ"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ﺺﻨﻟﺍ ﻖﺼﻟﺍ"
@@ -21791,6 +21791,12 @@ msgstr "ﻞﺳَﺮﻤُﻟﺍ ﺕﺎﻈﺣﻼ﻿ﻤﻟﺍ ﻖﻴﻠﻌﺗ"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ﺔﺛﺩﺎﺤﻤﻟﺍ ﻲﻓ ﻂﻘﻓ ﺓءﺍﺮﻘﻠﻟ ﺽﺮﻌﻳُ ،ﺎﻴًﻠﺤﻣ ﻞﺳَﺮﻣُ ﻖﻴﻠﻌﺗ"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﻞﺳَﺮﺗُ ﻢﻟ"
@@ -24354,6 +24360,9 @@ msgstr "ﻖﺑﺎﺴﻟﺍ ﻰﻟﺇ ﻉﻮﺟﺮﻟﺍ"
 msgid "Grid & Relationship Lines"
 msgstr "ﺕﺎﻗﻼ﻿ﻌﻟﺍ ﻁﻮﻄﺧﻭ ﺔﻜﺒﺸﻟﺍ"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "ﺮﻴﻴﺼﺘﻟﺍ ﻙﺮﺤﻣ"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "ﺮﻴﻴﺼﺘﻟﺍ ﺕﺍﺩﺍﺪﻋﺇ"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

@@ -19116,8 +19116,8 @@ msgstr "No s'ha pogut crear la previsualització de l'esbós. Dibuixi una altra 
 msgid "View sketch"
 msgstr "Veure l'esbós"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "L'esborrany de l'agent és ple (màxim {count} caràcters)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "S'ha afegit la marca — no hi ha res a sota"
@@ -20808,8 +20808,8 @@ msgstr "ID del punt de restauració"
 msgid "Restoring checkpoint…"
 msgstr "S'està restaurant el punt de restauració…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "El text enganxat és massa llarg (màxim {count} caràcters)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Enganxar text"
@@ -21791,6 +21791,12 @@ msgstr "Comentari enviat"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Comentari enviat localment, mostrat només de lectura al xat"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "No s'ha enviat el missatge"
@@ -24354,6 +24360,9 @@ msgstr "Tornar a anterior"
 msgid "Grid & Relationship Lines"
 msgstr "Graella i línies de relació"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Motor de revelat"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Paràmetres de renderització"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

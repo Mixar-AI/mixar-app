@@ -19116,8 +19116,8 @@ msgstr "无法创建草图预览。请重新绘制以重试。"
 msgid "View sketch"
 msgstr "查看草图"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "智能体草稿已满（最多 {count} 个字符）"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "已添加标记——其下方没有物体"
@@ -20808,8 +20808,8 @@ msgstr "检查点 ID"
 msgid "Restoring checkpoint…"
 msgstr "正在恢复检查点…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "粘贴的文本过长（最多 {count} 个字符）"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "粘贴文本"
@@ -21791,6 +21791,12 @@ msgstr "已提交的反馈评论"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "本地提交的评论，在对话中以只读方式显示"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "消息未发送"
@@ -24354,6 +24360,9 @@ msgstr "返回前一视图"
 msgid "Grid & Relationship Lines"
 msgstr "栅格与关系线"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "渲染引擎"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "渲染设置"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

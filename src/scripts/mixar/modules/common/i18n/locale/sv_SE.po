@@ -19116,8 +19116,8 @@ msgstr "Det gick inte att skapa skissförhandsgranskningen. Rita igen för att f
 msgid "View sketch"
 msgstr "Visa skiss"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Agentutkastet är fullt (max {count} tecken)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Markering tillagd – inget under den"
@@ -20808,8 +20808,8 @@ msgstr "Återställningspunktens ID"
 msgid "Restoring checkpoint…"
 msgstr "Återställer återställningspunkt…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Den inklistrade texten är för lång (max {count} tecken)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Klistra in text"
@@ -21791,6 +21791,12 @@ msgstr "Skickad återkopplingskommentar"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Lokalt skickad kommentar, visas skrivskyddad i chatten"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Meddelandet skickades inte"
@@ -24354,6 +24360,9 @@ msgstr "Tillbaka till föregående"
 msgid "Grid & Relationship Lines"
 msgstr "Rutnät och relationslinjer"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Renderingsmotor"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Renderingsinställningar"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

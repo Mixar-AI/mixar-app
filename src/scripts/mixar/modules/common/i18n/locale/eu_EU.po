@@ -19116,8 +19116,8 @@ msgstr "Ezin izan da zirriborroaren aurrebista sortu. Marraztu berriro saiatzeko
 msgid "View sketch"
 msgstr "Ikusi zirriborroa"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Agentearen zirriborroa beteta dago ({count} karaktere gehienez)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Marka gehitu da — ez dago ezer azpian"
@@ -20808,8 +20808,8 @@ msgstr "Leheneratze-puntuaren IDa"
 msgid "Restoring checkpoint…"
 msgstr "Leheneratze-puntua leheneratzen…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Itsatsitako testua luzeegia da (gehienez {count} karaktere)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Testua kopiatu"
@@ -21791,6 +21791,12 @@ msgstr "Bidalitako iritzi-iruzkina"
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Lokalean bidalitako iruzkina, irakurtzeko soilik erakusten da txatean"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "Mezua ez da bidali"
@@ -24354,6 +24360,9 @@ msgstr "Itzuli aurrekora"
 msgid "Grid & Relationship Lines"
 msgstr "Sarea eta erlazio-lerroak"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "Errendatze-motorra"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "Errendatze-ezarpenak"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"

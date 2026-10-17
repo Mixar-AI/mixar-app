@@ -19116,8 +19116,8 @@ msgstr "സ്കെച്ച് പ്രിവ്യൂ സൃഷ്ടിക�
 msgid "View sketch"
 msgstr "സ്കെച്ച് കാണുക"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "ഏജന്റ് ഡ്രാഫ്റ്റ് നിറഞ്ഞു (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "മാർക്ക് ചേർത്തു — അതിന് താഴെ ഒന്നുമില്ല"
@@ -20808,8 +20808,8 @@ msgstr "ചെക്ക്പോയിന്റ് ID"
 msgid "Restoring checkpoint…"
 msgstr "ചെക്ക്പോയിന്റ് പുനഃസ്ഥാപിക്കുന്നു…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "ഒട്ടിച്ച ടെക്സ്റ്റ് വളരെ നീണ്ടതാണ് (പരമാവധി {count} അക്ഷരങ്ങൾ)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ടെക്സ്റ്റ് ഒട്ടിക്കുക"
@@ -21791,6 +21791,12 @@ msgstr "സമർപ്പിച്ച ഫീഡ്ബാക്ക് കുറ�
 
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ലോക്കലായി സമർപ്പിച്ച കുറിപ്പ്, ചാറ്റിൽ വായന-മാത്രമായി കാണിക്കുന്നു"
+
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
 
 msgid "Message not sent"
 msgstr "സന്ദേശം അയച്ചില്ല"
@@ -24354,6 +24360,9 @@ msgstr "മുമ്പത്തേതിലേക്ക് മടങ്ങു�
 msgid "Grid & Relationship Lines"
 msgstr "ഗ്രിഡും ബന്ധരേഖകളും"
 
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
 msgid "Render Engine"
 msgstr "റെൻഡർ എഞ്ചിൻ"
 
@@ -24376,9 +24385,6 @@ msgid "Render Settings"
 msgstr "റെൻഡർ ക്രമീകരണങ്ങൾ"
 
 msgid "Object Controls"
-msgstr ""
-
-msgid "Browse and preview animations without leaving Zen Mode"
 msgstr ""
 
 msgid "{seconds:.1f}s"
@@ -24688,6 +24694,12 @@ msgid "Browse every animation; only matching slots can be previewed"
 msgstr ""
 
 msgid "Loop"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide the preview rig while the character keeps animating"
 msgstr ""
 
 msgid "Active Modifier"
