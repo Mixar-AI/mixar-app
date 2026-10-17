@@ -34,6 +34,10 @@ _catalog: Optional[Dict[str, Any]] = None  # the response "data" object
 _etag: Optional[str] = None
 _cache_error: Optional[str] = None
 _is_loading: bool = False
+# A refresh asked for while a fetch is in flight (e.g. by a UI-language
+# switch, whose new X-Mixar-Locale the running request does not carry):
+# the fetch runs once more when it lands instead of the ask being dropped.
+_refresh_pending: bool = False
 _shutdown_requested: bool = False
 # Monotonic lifecycle token.  Every logout/register/unregister invalidates
 # workers started by the previous lifecycle so a late response can never
@@ -171,7 +175,11 @@ get_credit_cost = _queries.get_credit_cost
 
 def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
     """(id, label, desc) tuples for a service's models, with LOADING/ERROR
-    placeholder states matching the existing caches."""
+    placeholder states matching the existing caches.
+
+    ``desc`` (the hover tooltip of each dropdown row) is the model's catalog
+    ``description`` — server text, already localized — or the label when the
+    row has none / the backend predates the field."""
     with _lock:
         loading = _is_loading
         loaded = _catalog is not None
@@ -194,7 +202,10 @@ def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
         for m in models:
             slug = m.get("slug") or ""
             label = m.get("label") or slug
-            built.append((slug, label, label))
+            description = m.get("description")
+            if not isinstance(description, str) or not description.strip():
+                description = label
+            built.append((slug, label, description.strip()))
         return built
 
     return _enum_cached("model", service_key, version, _build)
@@ -261,9 +272,13 @@ def clear_generation_catalog_cache() -> None:
 
 def refresh_generation_catalog_cache() -> None:
     """Manually trigger an async (re)validation of the cache."""
+    global _refresh_pending
     with _lock:
-        if _shutdown_requested or _is_loading:
-            return  # Fetch already in progress; avoid concurrent hazard
+        if _shutdown_requested:
+            return
+        if _is_loading:
+            _refresh_pending = True  # re-run when the in-flight fetch lands
+            return
 
     threading.Thread(
         target=_fetch_data_sync,
@@ -308,7 +323,7 @@ def _fetch_data_sync() -> None:
     Unlike imagegen_cache, an already-loaded cache does NOT skip the fetch:
     the If-None-Match revalidation is the point (304 = keep, 200 = swap).
     """
-    global _catalog, _etag, _cache_error, _is_loading
+    global _catalog, _etag, _cache_error, _is_loading, _refresh_pending
 
     with _lock:
         if _shutdown_requested or _is_loading:
@@ -372,14 +387,19 @@ def _fetch_data_sync() -> None:
 
     finally:
         with _lock:
+            rerun = False
             if epoch == _lifecycle_epoch:
                 _cache_error = new_error
                 _is_loading = False
                 do_notify = swapped and not _shutdown_requested
+                rerun = _refresh_pending and not _shutdown_requested
+                _refresh_pending = False
             else:
                 do_notify = False
         if do_notify:
             _schedule_catalog_swapped()
+        if rerun:
+            refresh_generation_catalog_cache()
 
 
 # ============================================================================

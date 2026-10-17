@@ -129,14 +129,16 @@ def _streaming_redraw_tick():
         )
         streaming = state in _STREAMING_STATES
         has_bubble = False
+        # Only the island's own areas are tagged. Tagging every VIEW_3D area
+        # and region at 10 Hz for the whole turn was left over from the
+        # popup-on-viewport days: the halo tick and the agent panel's own
+        # timer already redraw the viewport when they have something to show,
+        # and a full redraw of a production scene on every tick made the
+        # viewport sticky for the whole turn.
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
                 if area.type == 'AGENT_BUBBLE':
                     has_bubble = True
-                    area.tag_redraw()
-                    for region in area.regions:
-                        region.tag_redraw()
-                elif streaming and area.type == 'VIEW_3D':
                     area.tag_redraw()
                     for region in area.regions:
                         region.tag_redraw()
@@ -228,7 +230,9 @@ def _register_bubble_keymap() -> None:
     except Exception as e:  # noqa: BLE001
         logger.warning("agent_bubble: RMB block keymap bind failed: %s", e)
 
-    # LEFTMOUSE PRESS → drag-resize.
+    # LEFTMOUSE PRESS → drag-resize. Window-level is the fallback; the
+    # HEADER keymap is what C++ ensures so a press inside the island
+    # chrome reaches the operator with context.region already HEADER.
     try:
         km = kc.keymaps.new(name="Window", space_type='EMPTY')
         kmi = km.keymap_items.new(
@@ -237,6 +241,17 @@ def _register_bubble_keymap() -> None:
             value='PRESS',
         )
         _keymap_items.append((km, kmi))
+        header_km = kc.keymaps.new(
+            name="Agent Bubble Header",
+            space_type='AGENT_BUBBLE',
+            region_type='HEADER',
+        )
+        header_kmi = header_km.keymap_items.new(
+            idname="mixar.bubble_header_drag",
+            type='LEFTMOUSE',
+            value='PRESS',
+        )
+        _keymap_items.append((header_km, header_kmi))
     except Exception as e:  # noqa: BLE001
         logger.warning(
             "agent_bubble: header-drag keymap bind failed: %s", e

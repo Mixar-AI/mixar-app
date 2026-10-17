@@ -57,9 +57,26 @@
     acquireWakeLock();
   });
 
-  Net.on("close", () => {
+  /* Why a final close (net.js, 4000-4003) ended this pairing. */
+  const FINAL_CLOSE_MESSAGES = {
+    4000: "Another phone or tab took over this camera. Scan the QR code in Mixar again (or reload this page) to take control back.",
+    4001: "This pairing code has expired. Scan the QR code shown in Mixar again.",
+    4002: "Mixar issued a new pairing code. Scan the new QR code to reconnect.",
+    4003: "The virtual camera was stopped in Mixar. Start it again, then scan the QR code.",
+  };
+
+  Net.on("close", (info) => {
     $("conn-dot").classList.remove("ok");
     stopControlLoop();
+    if (info && info.final) {
+      /* Final: no reconnect is coming, so say so where it cannot be
+       * missed — back on the gate, which the phone always shows. */
+      main.classList.add("hidden");
+      gate.classList.remove("hidden");
+      gateStatus.textContent =
+        FINAL_CLOSE_MESSAGES[info.code] || FINAL_CLOSE_MESSAGES[4001];
+      return;
+    }
     if (!gate.classList.contains("hidden")) {
       /* Never got through: `main` is still hidden and the toast lives
        * inside it, so a failure here used to be completely silent — the

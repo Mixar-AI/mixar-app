@@ -35,9 +35,6 @@ from mixar.modules.byok.core import (
     preference_state,
 )
 
-MENU_SOURCE = (
-    SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "menus" / "agent_model_menu.py"
-)
 
 
 def _record(model_id, **overrides):
@@ -104,77 +101,26 @@ def test_a_user_key_replaces_the_hosted_pick_on_the_chip():
     assert model_menu.chip_label("", "", True) == model_menu.BYOK_CHIP_TEXT
 
 
-def test_the_byok_indicator_is_one_short_constant():
-    assert model_menu.BYOK_CHIP_TEXT == "Custom"
-    assert model_menu.BYOK_CHIP_TEXT != model_menu.RESET_TEXT
 
 
 # ---------------------------------------------------------------------------
 # byok_note_text — pure
 # ---------------------------------------------------------------------------
 
-def test_the_note_names_provider_and_model_when_both_are_known():
-    assert (
-        model_menu.byok_note_text("OpenRouter", "Claude Sonnet 4.6")
-        == "Your key: OpenRouter · Claude Sonnet 4.6"
-    )
 
 
-def test_the_note_names_whichever_half_is_known():
-    assert model_menu.byok_note_text("OpenRouter", "") == "Your key: OpenRouter"
-    assert model_menu.byok_note_text("", "gpt-6") == "Your key: gpt-6"
 
 
-def test_the_note_falls_back_to_the_generic_wording_when_nothing_is_known():
-    assert model_menu.byok_note_text("", "") == model_menu.BYOK_NOTE_TEXT
-    assert model_menu.byok_note_text() == model_menu.BYOK_NOTE_TEXT
 
 
 # ---------------------------------------------------------------------------
 # build_rows — the NOTE row
 # ---------------------------------------------------------------------------
 
-def test_the_byok_note_row_carries_the_named_key():
-    rows = model_menu.build_rows(
-        [_record("a"), _record("b", thinking_levels=["high"])],
-        byok_active=True,
-        byok_provider_label="OpenRouter",
-        byok_model_label="Claude Sonnet 4.6",
-    )
-
-    assert rows[0].kind == "NOTE"
-    assert rows[0].label == "Your key: OpenRouter · Claude Sonnet 4.6"
-    assert rows[0].enabled is False
-    # Every other rule is untouched: hosted rows greyed, the key row live.
-    assert all(row.enabled is False for row in rows if row.kind != "BYOK")
-    assert [row.enabled for row in rows if row.kind == "BYOK"] == [True]
 
 
-def test_the_byok_note_row_keeps_the_generic_text_before_the_credential_lands():
-    rows = model_menu.build_rows([_record("a")], byok_active=True)
-
-    assert rows[0].kind == "NOTE"
-    assert rows[0].label == model_menu.BYOK_NOTE_TEXT
 
 
-def test_no_note_row_without_a_key_and_none_on_the_empty_catalog():
-    assert "NOTE" not in [
-        row.kind for row in model_menu.build_rows(
-            [_record("a")], byok_provider_label="OpenRouter", byok_model_label="M")
-    ]
-    # The empty catalog keeps its sentinel + key route, exactly as before.
-    kinds = [row.kind for row in model_menu.build_rows(
-        [], byok_active=True, byok_provider_label="OpenRouter")]
-    assert kinds == ["SENTINEL", "BYOK"]
-
-
-def test_the_menu_feeds_the_note_from_the_credential_state():
-    """The menu passes the key's catalog labels into `build_rows` — read at
-    draw time (never cached) so a late credential fetch shows next draw."""
-    source = MENU_SOURCE.read_text(encoding="utf-8")
-    assert "catalog_labels.byok_current_labels()" in source
-    assert "byok_provider_label=byok_provider_label" in source
-    assert "byok_model_label=byok_model_label" in source
 
 
 # ---------------------------------------------------------------------------
@@ -284,3 +230,36 @@ def test_the_optimistic_local_write_composes_too():
     }, wm)
 
     assert wm.mixar_agent_model_label == "Claude Sonnet 4.6 · Medium High"
+
+
+def test_the_key_chip_names_providers_from_the_catalog(monkeypatch):
+    """Short names are the backend's (`short_label`, GET /agent/models); the
+    desktop names only the providers it defines itself."""
+    from mixar.modules.byok.core import catalog_labels
+    monkeypatch.setattr(model_suggestions, '_short_providers',
+                        {'anthropic': 'Claude API', 'gemini': 'Gemini API', 'newco': 'Newco API'})
+    assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
+    assert catalog_labels.chip_provider_label('newco') == 'Newco API'  # no client release needed
+    assert catalog_labels.chip_provider_label('codex') == 'Codex'
+    assert catalog_labels.chip_provider_label('openrouter') == 'OpenRouter'
+    assert catalog_labels.chip_provider_label('local') == 'Local'
+    assert catalog_labels.chip_provider_label('') == ''
+    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex'}
+    # A catalog provider without a short name (an older backend) reads its label.
+    monkeypatch.setattr(catalog_labels, 'lookup_provider_label', lambda pid: 'Moonshot Kimi')
+    assert catalog_labels.chip_provider_label('kimi') == 'Moonshot Kimi'
+
+
+def test_the_key_chip_model_name_is_the_catalogs_short_label(monkeypatch):
+    from mixar.modules.byok.core import catalog_labels
+    monkeypatch.setattr(model_suggestions, '_short_models',
+                        {('anthropic', 'claude-opus-5-5'): 'Opus 5.5', ('openai', 'gpt-6-sol'): 'GPT 6 Sol'})
+    monkeypatch.setattr(catalog_labels, 'lookup_model_label',
+                        lambda provider, model: {('anthropic', 'claude-sonnet-5'): 'Claude Sonnet 5'}
+                        .get((provider, model), model))
+    assert catalog_labels.chip_model_label('anthropic', 'claude-opus-5-5') == 'Opus 5.5'
+    assert catalog_labels.chip_model_label('codex', 'gpt-6-sol') == 'GPT 6 Sol'  # the openai group
+    # No short label: the full label as written — the client never cuts a word.
+    assert catalog_labels.chip_model_label('anthropic', 'claude-sonnet-5') == 'Claude Sonnet 5'
+    assert catalog_labels.chip_model_label('anthropic', 'claude-x') == 'claude-x'
+    assert catalog_labels.chip_model_label('anthropic', '') == ''

@@ -93,6 +93,56 @@ def test_provider_change_selects_first_model_from_new_provider():
     model_suggestions.clear()
 
 
+def test_provider_change_back_to_the_key_in_use_keeps_its_model(monkeypatch):
+    """Leaving the provider in use and coming back lights the model it runs,
+    not the first in the list; a paused key's provider likewise."""
+    model_suggestions.populate(
+        providers=[("provider-b", "Provider B", "Provider B")],
+        models={"provider-b": [("model-b1", "Model B1", "Model B1"),
+                               ("model-b2", "Model B2", "Model B2")]},
+    )
+    wm = SimpleNamespace(byok_form_provider="provider-b", byok_form_model="model-b1",
+                         byok_is_active=True, byok_current_provider="provider-b",
+                         byok_current_model="model-b2")
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b2"
+    # Another provider's key in use: the first model, as before.
+    wm.byok_current_provider = "provider-x"
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b1"
+    # A paused key on this provider: its model.
+    from mixar.modules.byok.core import credential_state
+    wm.byok_is_active = False
+    monkeypatch.setattr(credential_state, "resume_target", lambda: ("provider-b", "model-b2"))
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b2"
+    # A remembered model the catalog no longer lists: the first one.
+    monkeypatch.setattr(credential_state, "resume_target", lambda: ("provider-b", "retired"))
+    byok_props._provider_changed(wm, SimpleNamespace(window_manager=wm))
+    assert wm.byok_form_model == "model-b1"
+    model_suggestions.clear()
+
+
+def test_save_names_what_is_missing(monkeypatch):
+    """One message per missing piece: a picked model is never asked for again."""
+    model_suggestions.populate(
+        providers=[("provider-b", "Provider B", "Provider B")],
+        models={"provider-b": [("model-b", "Model B", "Model B")]},
+    )
+    monkeypatch.setattr(byok_ops.byok_client, "save_credentials",
+                        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("reached network")))
+    cases = (("provider-b", "model-b", "", "Enter your API key."),
+             ("provider-b", "stale", "secret", "Pick a model."),
+             ("NONE", "model-b", "secret", "Pick a provider."))
+    for provider, model, key, message in cases:
+        wm = SimpleNamespace(byok_dialog_state="IDLE", byok_last_error="",
+                             byok_form_provider=provider, byok_form_model=model,
+                             byok_form_api_key=key)
+        assert byok_ops.MIXAR_BYOK_OT_save().execute(SimpleNamespace(window_manager=wm)) == {'CANCELLED'}
+        assert (wm.byok_dialog_state, wm.byok_last_error) == ("ERROR", message)
+    model_suggestions.clear()
+
+
 def test_save_rejects_stale_model_from_another_provider(monkeypatch):
     model_suggestions.populate(
         providers=[("provider-b", "Provider B", "Provider B")],
@@ -122,11 +172,23 @@ def test_save_rejects_stale_model_from_another_provider(monkeypatch):
     model_suggestions.clear()
 
 
-def test_codex_save_uses_openai_catalog_models(monkeypatch):
+def test_codex_save_uses_openai_catalog_models(monkeypatch, tmp_path):
     """Codex has no catalog group of its own: its model dropdown reuses the
     "openai" models. A stale/sentinel selection is rejected before the
-    network; a real openai catalog model is sent with the pasted auth.json
-    bundle as the key."""
+    network; a real openai catalog model is sent with the ACCESS TOKEN read
+    out of the CLI's auth.json as the key (plus the ChatGPT account id) —
+    the file itself never leaves the machine."""
+    import base64
+    import json
+
+    def _jwt(claims):
+        def seg(obj):
+            return base64.urlsafe_b64encode(json.dumps(obj).encode()).decode().rstrip("=")
+        return f"{seg({'alg': 'none'})}.{seg(claims)}.sig"
+
+    access_token = _jwt({"https://api.openai.com/auth": {"chatgpt_account_id": "acct-1"}})
+    auth_file = tmp_path / "auth.json"
+    auth_file.write_text(json.dumps({"tokens": {"access_token": access_token, "refresh_token": "rt-1"}}))
     model_suggestions.populate(
         providers=[("openai", "OpenAI", "From catalog")],
         models={"openai": [("gpt-5.5", "GPT-5.5", "GPT-5.5")]},
@@ -146,7 +208,7 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
             byok_last_error="",
             byok_form_provider="codex",
             byok_form_model=model,
-            byok_form_codex_bundle='{"tokens": {}}',
+            byok_form_codex_path=str(auth_file),
         )
 
     stale = _wm("NONE")
@@ -161,14 +223,18 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch):
     assert ok.byok_dialog_state == "SAVING"
     assert sent[0]["provider"] == "codex"
     assert sent[0]["model"] == "gpt-5.5"
-    assert sent[0]["api_key"] == '{"tokens": {}}'
+    assert sent[0]["api_key"] == access_token
+    assert sent[0]["account_id"] == "acct-1"
+    assert "refresh_token" not in sent[0]                 # stays in the CLI's file
+    assert sent[0]["codex_auth_path"] == str(auth_file)   # the device keeps the reference
     model_suggestions.clear()
 
 
 def test_dialog_cancel_wipes_live_secret_fields():
     wm = SimpleNamespace(
         byok_form_api_key="provider-secret",
-        byok_form_codex_bundle="jwt-bundle",
+        byok_form_local_custom_key="local-secret",
+        byok_form_codex_path="/not/a/secret.json",
     )
 
     byok_ops.MIXAR_BYOK_OT_open_dialog().cancel(
@@ -176,7 +242,8 @@ def test_dialog_cancel_wipes_live_secret_fields():
     )
 
     assert wm.byok_form_api_key == ""
-    assert wm.byok_form_codex_bundle == ""
+    assert wm.byok_form_local_custom_key == ""
+    assert wm.byok_form_codex_path == "/not/a/secret.json"   # a path, not a secret
 
 
 def test_secret_properties_are_not_saved_in_blend_files(monkeypatch):
@@ -198,4 +265,5 @@ def test_secret_properties_are_not_saved_in_blend_files(monkeypatch):
 
     by_name = {item.get("name"): item for item in string_properties}
     assert by_name["API Key"]["options"] == {'SKIP_SAVE'}
-    assert by_name["Codex auth.json"]["options"] == {'SKIP_SAVE'}
+    assert by_name["Codex sign-in file"]["options"] == {'SKIP_SAVE'}
+    assert by_name["Codex sign-in file"]["subtype"] == 'FILE_PATH'

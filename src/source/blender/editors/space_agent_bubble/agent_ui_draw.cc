@@ -39,6 +39,7 @@
 #include "ED_mixar_glass.hh"
 
 #include "agent_bubble_intern.hh"
+#include "agent_bubble_glass.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_draw_primitives.hh"
 #include "agent_ui_icons.hh"
@@ -95,7 +96,10 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     pill.ymax = h;
     /* Native frost owns the bed; both paths share the rounded light and rim. */
     if (agent_bubble_pill_bed_is_transparent()) {
-      const float wash[4] = AGENT_COL_GLASS_WASH;
+      float wash[4] = AGENT_COL_GLASS_WASH;
+#if defined(WIN32) || defined(__linux__)
+      agent_bubble_composited_island_wash(wash);
+#endif
       agent_bubble_replace_frost_wash(&pill, wash);
       glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
     }
@@ -287,7 +291,10 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
    * otherwise carry leftover pixels that flash the bare backdrop. Frost
    * replaces a premultiplied wash; the shared shader adds its finishing layers. */
   if (agent_bubble_pill_bed_is_transparent()) {
-    const float wash[4] = AGENT_COL_GLASS_WASH;
+    float wash[4] = AGENT_COL_GLASS_WASH;
+#if defined(WIN32) || defined(__linux__)
+    agent_bubble_composited_island_wash(wash);
+#endif
     agent_bubble_replace_frost_wash(&pill, wash);
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
   }

@@ -57,6 +57,7 @@ composer refuses to send while they are in flight
 mixar-backend.
 """
 
+import contextlib
 import os
 import time
 import uuid
@@ -96,6 +97,31 @@ MAX_SESSIONS = 40          # newest session dirs kept, whatever their age
 _LABEL_LIMIT = 80
 
 _restoring = False
+
+
+def _keep_bubble_windows():
+    """The island and pill stay open across the snapshot copy (see
+    ``bubble_lifecycle.keep_windows_for_snapshot``)."""
+    try:
+        from mixar.modules.agent_bubble.core.bubble_lifecycle import keep_windows_for_snapshot
+        return keep_windows_for_snapshot()
+    except Exception:  # noqa: BLE001 — the bubble module is optional here
+        return contextlib.nullcontext()
+
+
+def _save_snapshot(tmp: str) -> None:
+    """``save_as_mainfile`` copy without the file thumbnail: the AUTO preview
+    renders the scene camera through EEVEE, which on a production scene costs
+    seconds for a preview nobody browses (measured 7 s of a 7.5 s save). A
+    binary without the Mixar ``thumbnail`` property saves the ordinary way."""
+    import bpy
+
+    kwargs = dict(filepath=tmp, copy=True, compress=True, relative_remap=False)
+    with _keep_bubble_windows():
+        try:
+            bpy.ops.wm.save_as_mainfile(thumbnail=False, **kwargs)
+        except TypeError:
+            bpy.ops.wm.save_as_mainfile(**kwargs)
 
 
 def _prune(session_id: str, items: list, protect_id: str = "") -> list:
@@ -171,8 +197,8 @@ def capture(scene, label: str, *, kind: str = "turn", session_id: str = "", prot
         tmp = os.path.join(directory, f"{checkpoint_id}.tmp.mixar")
         # relative_remap=False: the snapshot keeps paths relative to the
         # project's own folder, which is where a restore re-titles it. The
-        # Agent Bubble's save_pre purge closes the island for this save like
-        # any other; it is re-shown after the save.
+        # island and pill stay open for this save (no save_pre purge) and no
+        # thumbnail is rendered, so the Send is not held for seconds.
         # A document with Automatically Pack Resources on packs every image
         # during this save, and each image whose file is missing on disk
         # ("Unable to pack file ... not found", e.g. an FBX whose textures
@@ -180,8 +206,7 @@ def capture(scene, label: str, *, kind: str = "turn", session_id: str = "", prot
         # RuntimeError after the file was still written. The snapshot on
         # disk is the truth: keep it, only give up when nothing was saved.
         try:
-            bpy.ops.wm.save_as_mainfile(filepath=tmp, copy=True, compress=True,
-                                        relative_remap=False)
+            _save_snapshot(tmp)
         except RuntimeError as e:
             if not os.path.isfile(tmp):
                 raise

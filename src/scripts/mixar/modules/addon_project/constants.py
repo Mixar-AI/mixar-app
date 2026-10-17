@@ -57,9 +57,11 @@ RPC_METHODS = frozenset({
     RPC_SET_ENTRYPOINT,
 })
 
-# The add-on projects root is a Mixar Preference (MixarPaintPreferences.
-# addon_projects_dir, drawn in the Properties editor's Mixar Preferences
-# panel). The default is expanded at use time; the Preference is the ONE
+# The add-on projects root is ONE per-user setting: the config overlay key
+# mixar.config.config.ADDON_PROJECTS_DIR_KEY (drawn as
+# WindowManager.mixar_addon_projects_dir in the Properties editor's Mixar
+# Preferences panel; never per-Scene). The default is expanded at use time
+# and must equal config.DEFAULT_ADDON_PROJECTS_DIR; the setting is the ONE
 # source of the root, read by workspace.configured_workspace_root.
 WORKSPACE_ROOT_PREFERENCE = "addon_projects_dir"
 DEFAULT_WORKSPACE_DIR = "~/Mixar Addons"

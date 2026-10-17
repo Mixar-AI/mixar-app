@@ -230,6 +230,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     formats=getattr(bubble, "import_formats", ""),
                 )
 
+        # Key-missing card (a turn refused over the user's own key): opens AI
+        # Provider Settings, switches to credits or resends — never a value
+        # for the backend (core/byok_card.py).
+        from ...core import byok_card
+        if byok_card.is_card_action(self.action_value):
+            byok_card.handle_action(context.scene, self.bubble_id, self.action_value)
+            return {'FINISHED'}
+
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it
@@ -245,6 +253,13 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 self.report({'ERROR'}, "Couldn't open the upgrade page")
                 return {'CANCELLED'}
             return {'FINISHED'}
+
+        # Sign-in notice buttons (guest mode): local operators, no dispatch.
+        from ...core.login_notice import BYOK_DIALOG_CHAT_ACTION, SIGN_IN_CHAT_ACTION
+        if self.action_value == SIGN_IN_CHAT_ACTION:
+            return bpy.ops.mixie_chat.login()
+        if self.action_value == BYOK_DIALOG_CHAT_ACTION:
+            return bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT')
 
         # Turn-resume prompt (#1258): adopt the orphaned turn locally (replay
         # + follow via the attach endpoint) or dismiss the bubble — both are

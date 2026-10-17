@@ -1112,6 +1112,9 @@ msgstr "{error} :הלשכנ בצמה תקידב"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ןומיאה API-ל החילשו ,דבלב תושדח תומידקמ תוגוצת דוביע ,םייוניש תקידב ,םיסכנה תוירפס תקירס"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "…ליחתמ"
 
@@ -1433,11 +1436,47 @@ msgstr "םאתומ ימוקמ תרש"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "(... ,Ollama, LM Studio, llama.cpp) לעופ רבכש OpenAI םאות תרשל Mixar תיינפה"
 
-msgid "Invalid form data — please reach out to support."
-msgstr ".הכימתל תונפל אנ — םיניקת אל ספוט ינותנ"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr ".בוש תוסנל אנ .ונלצא שבתשה והשמ"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "ימוקמה לדומה גולטק תא ארוק"
@@ -1481,26 +1520,20 @@ msgstr ".(רומשל ידכ לועפל בייח אוה) ימוקמה לדומה 
 msgid "Base URL and model name are required."
 msgstr ".הבוח תודש םה לדומ םשו סיסב URL תבותכ"
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr ".HTTP {status} הנע ימוקמה תרשה"
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr ".הנוכנ תיסיסבה URL-ה תבותכשו לעופ אוהש קודבל שי .ימוקמה תרשל עיגהל היה ןתינ אל"
 
-msgid "No models available — contact support"
-msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
-
-msgid "Your API key controls the model"
-msgstr "לדומב טלוש API-ה חתפמ"
-
 msgid "Custom"
 msgstr "תישיא םאתומ"
-
-msgid "Use my own API key…"
-msgstr "…ילשמ API חתפמב שומיש"
-
-msgid "Change or remove my API key…"
-msgstr "…ילש API-ה חתפמ לש הרסה וא יוניש"
 
 msgid "Thinking"
 msgstr "הבישח"
@@ -1508,53 +1541,80 @@ msgstr "הבישח"
 msgid "Thinking: {level}"
 msgstr "{level} :הבישח"
 
-msgid "Your key: {name}"
-msgstr "{name} :ךלש חתפמה"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "לדחמ תרירב"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "הכימתל תונפל שי — םינימז םילדומ ןיא"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr ".םילדומ תפלחה וא החילש ינפל ןיתמהל אנ …ןכוסה לדומ תא רמוש"
 
-msgid "Agent Model"
-msgstr "ןכוסה לדומ"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr ".ןכוסה תא ץירמ לדומ הזיא רוחבל שי"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr ".עגרכ רחבנש לדומה לש הקסהה ץמאמ"
-
-msgid "No thinking levels for this model"
-msgstr "הז לדומל הבישח תומר ןיא"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "חראתמ לדומ רוחבל ידכ הז טירפתב \"ילש API-ה חתפמ לש הרסה וא יוניש\" רוחבל שי — שומישב ךלש API-ה חתפמ"
-
-msgid "Set Agent Model"
-msgstr "ןכוסה לדומ תרדגה"
-
-msgid "Use this model for the agent"
-msgstr "ןכוסל הז לדומב שומיש"
-
-msgid "Provider"
-msgstr "קפס"
-
-msgid "Model"
-msgstr "לדומ"
-
-msgid "Label"
-msgstr "תיוות"
-
-msgid "Thinking Level"
-msgstr "הבישח תמר"
-
-msgid "No model selected"
-msgstr "לדומ רחבנ אל"
-
-msgid "Reset Agent Model"
-msgstr "ןכוסה לדומ לוחתא"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "רוחבל Mixar-ל החנהו רומשה לדומה יוקינ"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "לדומה תא תונשל היה ןתינ אל"
@@ -1562,113 +1622,107 @@ msgstr "לדומה תא תונשל היה ןתינ אל"
 msgid "Could not reset model"
 msgstr "לדומה תא לחתאל היה ןתינ אל"
 
-msgid "Removing your key…"
-msgstr "…חתפמה תא ריסמ"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "…קפסה לומ תמאמ"
+msgid "Use this model for the agent"
+msgstr "ןכוסל הז לדומב שומיש"
 
-msgid "AI Provider Settings"
-msgstr "AI קפס תורדגה"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "ליעפ"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "רדגומ אל"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr ".ליעפ הז דוע לכ םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה לצא Mixar ןכוס תצרה"
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "תיחכונה הרוצתה"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "ןובשח"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT יונמ"
 
-msgid "API Key"
-msgstr "API חתפמ"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "חטבואמ ןפואב ןסחואמ"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr ".יתוזח בושמ ילב תוצר דממ-תלת תומישמ ;דבוע טא'צה — דבלב טסקט לדומ"
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "…API חתפמ תרסה"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "קפס תרדגה"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא — Mixar ןכוס תושקבל קר שמשמו ,ןפצומ ןסחואמ"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr ".ךכל קוקז ןכוסה — תויצקנופ / םילכל האירקב ךמותש לדומ רוחבל שי"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ךותמ הניעט"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "תינדי הקבדה וא…"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "םיוות {count} וקבדוה"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "auth.json תא קיבדהל שי — קיר"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "תא קיבדהל וא ןועטל זאו ,ףוסמב  codex login  ץירהל שי"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(םיריזגה חול תא ארוק הקבדהה רותפכ) codex/auth.json./~ לש אלמה ןכותה"
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ChatGPT יונמב שמתשמ"
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "םייונישה תא ליחהל היה ןתינ אל"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "?API-ה חתפמ תא ריסהל"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr ".Mixar לש לדחמה תרירב קפסב בוש שמתשי ןכוסה"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr ".תוידיתע ןכוס תושקב רובע וביוחי Mixar לש םיטידרק"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr ".םיביוחמ םניא Mixar לש םיטידרק — ךלש קפסה לצא תעכ לעופ Mixar ןכוס"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "רסוה API-ה חתפמ"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr ".Mixar לש לדחמה תרירב קפסל רזח ןכוסה"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr ".ןכוס תושקב רובע בוש םיביוחמ Mixar לש םיטידרק"
-
-msgid "Try Again"
-msgstr "ףסונ ןויסינ"
-
-msgid "Save & Activate"
-msgstr "הלעפהו הרימש"
-
-msgid "Keep My Key"
-msgstr "ילש חתפמה תרימש"
-
-msgid "Remove API Key"
-msgstr "API חתפמ תרסה"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "…AI-ה לש תימוקמה הצירה תביבס תא קרופ"
@@ -1691,8 +1745,14 @@ msgstr "לעופ וניא — דרוה"
 msgid "Not downloaded"
 msgstr "דרוה אל"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr ".Mixar לש ןכוסה רומזת ךרד אלא ותוא תובזוע ןניא תויחנהה — הז בשחמב ולוכ ץר"
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "לדומ"
 
 msgid "Cancel Download"
 msgstr "הדרוהה לוטיב"
@@ -1718,9 +1778,6 @@ msgstr "סיסב URL תבותכ"
 msgid "API Key (optional)"
 msgstr "(ילנויצפוא) API חתפמ"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "…Ollama, LM Studio, llama.cpp — הז בשחמב OpenAI םאות תרש לכ"
-
 msgid "Could not save the local provider."
 msgstr ".ימוקמה קפסה תא רומשל היה ןתינ אל"
 
@@ -1730,53 +1787,32 @@ msgstr "םיימוקמ םימושיי לש שדחמ הקירס"
 msgid "Rescan this computer for running local AI apps"
 msgstr "םילעופ םיימוקמ AI ימושיי רותיאל הז בשחמ לש שדחמ הקירס"
 
+msgid "AI Provider Settings"
+msgstr "AI קפס תורדגה"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr ".ןכוס תושקב רובע םיביוחמ םניא Mixar לש םיטידרק ,ליעפ הז דוע לכ .Mixar ןכוס רובע ךלשמ API חתפמב שומיש"
 
 msgid "Validate with the provider and save your API key"
 msgstr "API-ה חתפמ תרימשו קפסה לומ תומיא"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr ".API חתפמ ןיזהלו הז קפסל לדומ רוחבל שי"
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr ".הבוח תודש םה API חתפמו לדומ לש slug ההזמ"
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr ".auth.json תליבח תא ןועטלו Codex לדומ רוחבל שי"
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr ".הלשכנ הרימשה"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "הדשה לא הז בשחממ codex/auth.json./~ תאירק"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json הליחת ץירהל שי — אצמנ אל `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "codex/auth.json./~ תא אורקל היה ןתינ אל"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json קיר"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json יוארכ רמשיי אל אוה — ץצוקו הז הדשל ידמ לודג"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ןעטנ"
-
-msgid "Paste auth.json"
-msgstr "auth.json תקבדה"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "הדשה לא םיריזגה חולמ codex/auth.json./~ תקבדה"
-
-msgid "Clipboard is empty"
-msgstr "קיר םיריזגה חול"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json יוארכ רמשיי אל אוה — ץצוקו הז הדשל ידמ לודג קבדוהש"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "הרסה"
@@ -1787,11 +1823,110 @@ msgstr "הרסהה רושיא ךילהת תלחתה"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "תישארה חיש-ודה תביתל הרזחו הרסהה ךילהת לוטיב"
 
-msgid "Delete the stored API key server-side"
-msgstr "תרשה דצב רומשה API-ה חתפמ תקיחמ"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr ".הלשכנ הרסהה"
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "קתנ"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "ימוקמ לדומ"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההזמ לכ"
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "ףסונ ןויסינ"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK בצמ ןונער"
@@ -1805,11 +1940,38 @@ msgstr "םילדומה גולטק ןונער"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "תרשהמ לדומהו קפסה גולטק לש שדחמ תומיא"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "ןכוסה לדומ קפס"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "הרמשנש חראתמה ןכוסה לדומ תריחב לש קפסה ההזמ"
+
+msgid "Agent Model"
+msgstr "ןכוסה לדומ"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "הרמשנש חראתמה ןכוסה לדומ תריחב לש לדומה ההזמ"
@@ -1838,11 +2000,29 @@ msgstr "יאכז ןכוסה לדומ"
 msgid "False when the saved model is not available on your plan"
 msgstr "ךלש לולסמב ןימז וניא רומשה לדומהשכ יוגש"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "קפס"
+
 msgid "LLM provider"
 msgstr "LLM קפס"
 
 msgid "Model to use with the selected provider"
 msgstr "רחבנש קפסה םע שומישל לדומה"
+
+msgid "API Key"
+msgstr "API חתפמ"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא .Mixar ןכוס תושקבל קר שמשמו ןפצומ ןסחואמ API-ה חתפמ"
@@ -1850,20 +2030,14 @@ msgstr ".תכסוממ הגוצת קר תגצומ הרימשה ירחא .Mixar ן
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "(anthropic/claude-opus-4.8 לשמל) openrouter.ai/models-מ slug ההזמ לכ"
 
-msgid "Codex auth.json"
-msgstr "auth.json לש Codex"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "(`codex login` הליחת ץירהל שי) codex/auth.json./~ לש ןכותה"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "ימוקמ בצמ"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "ךלשמ ימוקמ תרש וא ,Mixar ידי לע להונמ"
-
-msgid "Local model"
-msgstr "ימוקמ לדומ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "הז בשחמב הצרהלו הדרוהל רחבנ לדומ"
@@ -1885,6 +2059,15 @@ msgstr "BYOK ליעפ"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "הז שמתשמ רובע byok_active חוודמ תרשהשכ ןוכנ"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "חיש-וד תבית בצמ"
@@ -1976,6 +2159,27 @@ msgstr "בוש תוסנל אנ — הלשכנ הריציה"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ןייפאמ יפל גולטקה לש RNA"
 
+msgid "Nothing selected"
+msgstr "רבד רחבנ אל"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "ךרע"
+
+msgid "Label"
+msgstr "תיוות"
+
+msgid "Group"
+msgstr "הצובק"
+
+msgid "Selected"
+msgstr "רחבנ"
+
 msgid "No modes"
 msgstr "םיבצמ ןיא"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} תונכומ תוריצי"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "ךישמהל ידכ לולסמה תא גרדשל שי — ולזא םיטידרקה"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "רבחתהל אנ — תומיא שרדנ"
@@ -2125,6 +2332,9 @@ msgstr "הרצונש האצות אוביי"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "(תרשב םייתסהל ןיידע היושע הריציה) לטוב"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "לשכנ תרשה תבושת דוביע"
@@ -2236,6 +2446,9 @@ msgstr "ןימז וניא ןכוסה יא רות"
 
 msgid "Show every job"
 msgstr "המישמ לכ תגצה"
+
+msgid "Active"
+msgstr "ליעפ"
 
 msgid "Show pending or running jobs"
 msgstr "תולעופ וא תוניתממ תומישמ תגצה"
@@ -2612,9 +2825,6 @@ msgstr "תומיאת ליפורפ"
 msgid "Density"
 msgstr "תופיפצ"
 
-msgid "Default"
-msgstr "לדחמ תרירב"
-
 msgid "Generation-pane control spacing"
 msgstr "הריציה תינולח ידקפ חוויר"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "ןובשח םש"
 
 msgid "Display name for the account greeting"
 msgstr "ןובשחה תכרבל הגוצת םש"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "רתוי השדח ץבוק תסרג"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "םיצבק"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "תישאר"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "לשכנ יטמוטואה גירה"
 msgid "Animate failed"
 msgstr "הלשכנ השפנהה"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "({max_faces:,} םומיסקמ) תואפ {count:,} שי הרחבנש הרוצל"
 
@@ -4973,6 +5270,24 @@ msgstr "ימוקמה תרשה לדומ"
 msgid "Local model last error"
 msgstr "ימוקמה לדומה לש הנורחאה האיגשה"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "הקתעה"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "הדוקפ"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "הקתעה"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "טמרופ"
 
 msgid "Processing..."
 msgstr "...דבעמ"
@@ -5312,6 +5702,9 @@ msgstr "הרוצ חוליפ"
 msgid "Auto Rig"
 msgstr "יטמוטוא גיר"
 
+msgid "Animate"
+msgstr "השפנה"
+
 msgid "Add Mesh"
 msgstr "הרוצ ףסוה"
 
@@ -5413,6 +5806,15 @@ msgstr ".ןמז רתוי תחקל םילוכי םיבלש רתוי .הריציה
 
 msgid "The file format used to store the generated image."
 msgstr ".תרצונש הנומתה ןוסחאל שומישבש ץבוקה טמרופ"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "(םשהמ) יטמוטוא"
@@ -5642,14 +6044,14 @@ msgstr "{error} :הלשכנ BaseColor םקרמ תדרוה"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "{error} :הלשכנ BaseColor םקרמ תניעט"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :םקרמה תדרוה ךלהמב היופצ יתלב האיגש"
 
 msgid "Failed to apply textures to any object"
 msgstr "טקייבוא לכ לע הלשכנ םימקרמה תלחה"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "PBR ימקרמ תלחה :360 הארמ חותיפ"
 
 msgid "Both refined and guide masks are required"
 msgstr "ךירדמ תכסמ םגו תנדועמ הכסמ םג תושרדנ"
@@ -5732,6 +6134,15 @@ msgstr "תומד תבכרה"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "תימוקמ ,טושפ ףוגל וא גיר םע ףוגל ורצונש םיקלח רוביח"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "דבלב הנומתה ןונגסב שמתשה"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "םקרמה תריצי תא תורישי העינמ הנומתה ,הבוכמשכ .(הלח ןיידע היחנהה) הנומתה לש יתונמאה ןונגסה קר רבעומ ,לעפומשכ"
+
 msgid "Enter a prompt in the image node"
 msgstr "הנומתה תמוצב היחנה ןיזהל שי"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "הריציה גולטקב הנימז הניא לדומ תריצי"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "קסיה יתמצב ןיידע ךמתנ וניא הז לדומ תריצי בצמ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ןימז לעפומ דממ-תלת תריצי לדומ ןיא"
@@ -5884,6 +6295,9 @@ msgstr "ולש האצותב שמתשמ הז סיטרכ — '{name}' תא הלי�
 
 msgid "Mesh"
 msgstr "הרוצ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number} סנרפר"
@@ -6053,11 +6467,11 @@ msgstr "לשכנ הנצסה תריצי אוביי"
 msgid "No image URLs in server response"
 msgstr "תרשה תבושתב הנומת לש URL תובותכ ןיא"
 
-msgid "Starting reconstruction..."
-msgstr "...רוזחש ליחתמ"
-
 msgid "Error: {error}"
 msgstr "{error} :האיגש"
+
+msgid "Starting reconstruction..."
+msgstr "...רוזחש ליחתמ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :הלשכנ הרצונש הנומתה תדרוה"
@@ -6280,9 +6694,6 @@ msgstr "{error} :הלשכנ םלועה לש הרמה/הדרוה"
 
 msgid "World imported but produced no objects"
 msgstr "םיטקייבוא רצי אל ךא אבוי םלועה"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: םלוע אוביי"
 
 msgid "Failed to import world: {error}"
 msgstr "{error} :לשכנ םלועה אוביי"
@@ -6833,9 +7244,6 @@ msgstr "םאתומ עבצב שומיש"
 msgid "Custom Colour"
 msgstr "םאתומ עבצ"
 
-msgid "Selected"
-msgstr "רחבנ"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "הריחבל םינתינ ויהי הלש םירבחה קרש ידכ ,הציחלב וז תרגסמ לש םינפהמו תרגסמהמ תומלעתה"
 
@@ -6844,6 +7252,18 @@ msgstr "ץווכמ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "הלש ףוגה תרתסהו תרתוכ םע ספכ תרגסמה רויצ"
+
+msgid "Unavailable"
+msgstr "ןימז אל"
+
+msgid "No supported 3D service is available"
+msgstr "ןימז ךמתנ דממ-תלת תוריש ןיא"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "םיסנרפר ינשו הכסמ תייחנה םסרפל םיבייח הנומת ילדומ"
+
+msgid "Attachment settings"
+msgstr "ףרוצמ ץבוק תורדגה"
 
 msgid "No choices published"
 msgstr "תויורשפא ומסרופ אל"
@@ -6862,18 +7282,6 @@ msgstr "םלשוה"
 
 msgid "Generation completed"
 msgstr "המלשוה הריציה"
-
-msgid "Unavailable"
-msgstr "ןימז אל"
-
-msgid "No supported 3D service is available"
-msgstr "ןימז ךמתנ דממ-תלת תוריש ןיא"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "םיסנרפר ינשו הכסמ תייחנה םסרפל םיבייח הנומת ילדומ"
-
-msgid "Attachment settings"
-msgstr "ףרוצמ ץבוק תורדגה"
 
 msgid "Parameter ID"
 msgstr "רטמרפ ההזמ"
@@ -6899,14 +7307,14 @@ msgstr "ינאילוב ךרע"
 msgid "Catalog choice"
 msgstr "גולטק תורשפא"
 
-msgid "Widget"
-msgstr "ביכר"
-
-msgid "Group"
-msgstr "הצובק"
-
 msgid "Choices"
 msgstr "תויורשפא"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ביכר"
 
 msgid "Visibility Condition"
 msgstr "תוארנ יאנת"
@@ -6926,11 +7334,14 @@ msgstr "םומינימ"
 msgid "Maximum"
 msgstr "םומיסקמ"
 
-msgid "Value"
-msgstr "ךרע"
-
 msgid "Value Label"
 msgstr "ךרע תיוות"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "עקש ההזמ"
@@ -7948,12 +8359,6 @@ msgstr "םירצונש םימקרמה לע יתונמא ןונגס הליחמ �
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "(תמלעתמ היחנהה) םקרמה תריצי תא תורישי העינמ — סנרפר תנומת"
 
-msgid "Use Image Style Only"
-msgstr "דבלב הנומתה ןונגסב שמתשה"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "םקרמה תריצי תא תורישי העינמ הנומתה ,הבוכמשכ .(הלח ןיידע היחנהה) הנומתה לש יתונמאה ןונגסה קר רבעומ ,לעפומשכ"
-
 msgid "Output texture resolution in pixels"
 msgstr "םילסקיפב טלפה םקרמ תייצולוזר"
 
@@ -8452,9 +8857,6 @@ msgstr "תקחמנ אל ,תרתסומ תירוקמה הרוצה"
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan לחתוא אל"
 
-msgid "Format"
-msgstr "טמרופ"
-
 msgid "Inputs"
 msgstr "טלק"
 
@@ -8548,26 +8950,23 @@ msgstr "םיטבמכ ןתוא ףיסוהל ידכ הארשה חול תונומת
 msgid "Generates as one multi-view job"
 msgstr "תחא םיבורמ םיטבמ תמישמכ רצונ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} םיפסונ)"
+
 msgid "Video Gen tab not available"
 msgstr "הנימז הניא ואידיו תריצי תינושל"
 
 msgid "Selected References"
 msgstr "ורחבנש םיסנרפר"
 
-msgid "Images: {count}"
-msgstr "{count} :תונומת"
-
-msgid "Videos: {count}"
-msgstr "{count} :ואידיו"
+msgid "No references selected — text-to-video"
+msgstr "ואידיוול טסקט — םיסנרפר ורחבנ אל"
 
 msgid "A selected video source file is missing"
 msgstr "רסח רחבנש ואידיווה רוקמ ץבוק"
 
-msgid "No references selected — text-to-video"
-msgstr "ואידיוול טסקט — םיסנרפר ורחבנ אל"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "םידיקפת ךויש תעב ואידיווהו תונומתה רדס תא היחנהב ןייצל שי"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "סנרפר תולבגמ"
@@ -8644,6 +9043,33 @@ msgstr "לוכה רגסמ"
 msgid "Clear Board"
 msgstr "חול הקנ"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "טקייבוא םש"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "תויצמינא"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ןכוסה לש יטמוטוא גיר"
 
@@ -8665,8 +9091,8 @@ msgstr "auto / biped / quadruped / hexapod / octopod / avian / serpentine / aqua
 msgid "Skeleton Spec"
 msgstr "דלש טרפמ"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "'mixamo' וא 'tripo' :דלש תמכסומ"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "(Tripo לש תונכומה תויצמינאב ךמות tripo קר) vrm וא tripo, mixamo, actorcore, unity, unreal :תומצע תומש"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "ןכוסה לש PBR תריצי"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo תועצמאב ןותנה הרוצה טקייבואל PBR ימקרמ תריצי"
-
-msgid "Object Name"
-msgstr "טקייבוא םש"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "םקרמ תפסוהל הנצסב הרוצה טקייבוא םש"
@@ -8917,11 +9340,11 @@ msgstr "({shortcut}) טא'צל הארשהה חולמ םיפרוצמה םיצבק
 msgid "Sync failed: {error}"
 msgstr "{error} :לשכנ ןורכנסה"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "הארשהה חולב ואידיו תריציב שמתשהל שי םיפילקל .דבלב סליטס תונומת לבקמ ןכוסה .{count} :גלודש ואידיו"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "הארשהה חולב ואידיו תריציב שמתשהל שי םיפילקל .דבלב סליטס תונומת לבקמ ןכוסה .{count} :גלודש ואידיו"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "הארשה חול תונומת ורחבנ אל"
@@ -9219,9 +9642,6 @@ msgstr "הייקית"
 
 msgid "Directory of the selected file(s)"
 msgstr "ורחבנש םיצבקה תייקית"
-
-msgid "Files"
-msgstr "םיצבק"
 
 msgid "Failed to load media: {filepath}"
 msgstr "{filepath} :הלשכנ הידמה תניעט"
@@ -9823,8 +10243,8 @@ msgstr "הקסה תמוצ רוחבל שי"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "רוצ לע וא Enter לע ץוחלל זאו ,היחנהה תא ךורעל שי"
 
-msgid "Node added to the generation queue"
-msgstr "הריציה רותל ףסונ תמוצה"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "האצותל תרזוחו הכירעה תא תלטבמ תפסונ הציחל ;בוש ץירהלו ןנווכל היהי רשפאש ידכ תמוצה לש היחנההו תורדגהה תא גיצמ"
@@ -10839,9 +11259,6 @@ msgstr "טפירקס הללכ אל רצונש רמוחה תבושת"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "{result} :הלשכנ הלחהה ךא רצונ רמוחה"
-
-msgid "Generate Procedural Material"
-msgstr "ילרודצורפ רמוח רוצ"
 
 msgid "Material generation failed"
 msgstr "הלשכנ רמוחה תריצי"
@@ -11877,9 +12294,6 @@ msgstr "עבצ תומיכ תויביס"
 
 msgid "Generic Quantization Bits"
 msgstr "תויללכ תומיכ תויביס"
-
-msgid "Animations"
-msgstr "תויצמינא"
 
 msgid "Animation Mode"
 msgstr "היצמינא בצמ"
@@ -17496,12 +17910,6 @@ msgstr "ןימז דחאשכ GPU-ב דבעל דימת"
 msgid "Always render on the CPU"
 msgstr "CPU-ב דבעל דימת"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "לדחמ תרירבכ תינוציח הייפא תלעפה"
 
@@ -17579,6 +17987,12 @@ msgstr "תרגסמ ךירעהל דימת"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "תרגסמ יוניש לכב םיתמצה ץע תכרעה"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ץורע תויורשפא"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr ".שדחמ תוסנל ידכ בוש רייצל שי .הציקסה לש ה
 msgid "View sketch"
 msgstr "הציקס תגצה"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "(םיוות {count} רתויה לכל) האלמ ןכוסה תטויט"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "ויתחתמ רבד ןיא — ףסונ ןומיסה"
@@ -19109,9 +19523,6 @@ msgstr "םילכ לגרס"
 
 msgid "Sidebar"
 msgstr "דצ לגרס"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV תרוצ חוליפ חול"
@@ -19536,8 +19947,8 @@ msgstr "...הנשמ"
 msgid "Awaiting Input..."
 msgstr "...טלקל ןיתממ"
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr ".ןכוסל חולשל ידכ ואידיווה תא ריסהל שי .ואידיו בצמ םישרוד םינוטרס"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "שמתשמ ההזמ"
@@ -19547,6 +19958,78 @@ msgstr "Mixie טא'צל תורבחתהל שמתשמ ההזמ"
 
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ל הפצמ ןכוסה"
+
+msgid "Skipped slow image: {name}"
+msgstr "{name} :תיטיא הנומת לע גוליד"
+
+msgid "Image encoding failed: {error}"
+msgstr "{error} :לשכנ הנומתה דודיק"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*רצענ*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "גורדש"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "הקיר בושמה תרעה"
@@ -19730,6 +20222,27 @@ msgstr "'{name}' סכנה ץבוקב וניא רבכ."
 
 msgid "Could not add the asset to the scene."
 msgstr ".הנצסל סכנה תא ףיסוהל ןתינ אל"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "...בשוח"
@@ -19880,9 +20393,6 @@ msgstr "{count} ונוש"
 
 msgid "{count} deleted"
 msgstr "{count} וקחמנ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} םיפסונ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ורצונ"
@@ -20046,6 +20556,15 @@ msgstr "תורבחתה"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie טא'צל תורבחתה חול"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Mixar ןובשח םע תורבחתה"
+
 msgid "Session expired"
 msgstr "גפ הלעפהה ףקות"
 
@@ -20055,31 +20574,27 @@ msgstr ".בוש רבחתהל אנ"
 msgid "Login Failed"
 msgstr "הלשכנ תורבחתהה"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar ןובשח םע תורבחתה"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "...ןפדפדל ןיתממ"
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ןפדפדב תורבחתה"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-".ילבולגה ןוילעה לגרסמ חתפנ — ןובשח / ליפורפ לש חתפנ טירפת\n"
-"\n"
-"`()layout.mixar_profile_card` ידי לע ירוקמ ןפואב ריוצמ ןכותה\n"
-"(`interface_mixar_profile_card.cc`): דמ ,יונמה בבש ,הכרב\n"
-"דחא סיטרככ םיסורפ ,ןובשחה תולועפו םיטידרקב שומישה\n"
-"לכ לעו םושירה לע יארחא ןיידע Python .טירפתכ אלו\n"
-".םילסקיפה לע קר יארחא ++C — ליעפמ סיטרכהש רוטרפוא\n"
 
 msgid "Dashboard"
 msgstr "הרקב חול"
@@ -20309,12 +20824,6 @@ msgstr "{note} :םינומיס"
 msgid "Sketch"
 msgstr "הציקס"
 
-msgid "Skipped slow image: {name}"
-msgstr "{name} :תיטיא הנומת לע גוליד"
-
-msgid "Image encoding failed: {error}"
-msgstr "{error} :לשכנ הנומתה דודיק"
-
 msgid "Message sent"
 msgstr "החלשנ העדוהה"
 
@@ -20536,8 +21045,8 @@ msgstr "רוזחש תדוקנ ההזמ"
 msgid "Restoring checkpoint…"
 msgstr "…רוזחש תדוקנ רזחשמ"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "(םיוות {count} רתויה לכל) ידמ ךורא קבדוהש טסקטה"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "טסקט תקבדה"
@@ -20728,11 +21237,14 @@ msgstr "הקיחמל ןויכראב הלעפה"
 msgid "Chat removed from history"
 msgstr "הירוטסיההמ רסוה טא'צה"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
@@ -20740,14 +21252,14 @@ msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
 msgid "Skipped {name}: {error}"
 msgstr "{name}: {error} לע גוליד"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
-
 msgid "These references are already attached"
 msgstr "םיפרוצמ רבכ הלאה םיסנרפרה"
 
 msgid "Added {count} image(s)"
 msgstr "תונומת {count} ופסונ"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-מ הפסוה"
@@ -20764,6 +21276,9 @@ msgstr "{size} - םינותנ שי"
 msgid "{size} - No data"
 msgstr "{size} - םינותנ ןיא"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend ץבוקמ הנומת תריחב"
 
@@ -20772,6 +21287,12 @@ msgstr "הפסונ רבכ הנומתה"
 
 msgid "Image not found in blend file"
 msgstr "blend ץבוקב האצמנ אל הנומתה"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "תפרוצמ רבכ הנומתה"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "ךסמ םוליצ"
 
@@ -21103,9 +21627,6 @@ msgstr "הלשכנ תורבחתהה"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "המד ינותנ םע רבוחמ :חותיפ בצמ"
 
-msgid "Disconnect"
-msgstr "קתנ"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie לש ןכוסה תרשמ תוקתנתה"
 
@@ -21115,14 +21636,14 @@ msgstr "קתונמ :חותיפ בצמ"
 msgid "Disconnected from server"
 msgstr "תרשהמ קתונמ"
 
+msgid "Could not save the chat to History"
+msgstr "הירוטסיהב טא'צה תא רומשל היה ןתינ אל"
+
 msgid "New Chat"
 msgstr "שדח טא'צ"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "(הירוטסיהב רמשנ יחכונה טא'צה) שדח טא'צ תלחתה"
-
-msgid "Could not save the chat to History"
-msgstr "הירוטסיהב טא'צה תא רומשל היה ןתינ אל"
 
 msgid "Started new chat session"
 msgstr "הלחה השדח טא'צ תלעפה"
@@ -21160,6 +21681,12 @@ msgstr "...תמדוקה המישמה תא שדחמ"
 msgid "Could not resume the previous task"
 msgstr "תמדוקה המישמה תא שדחל היה ןתינ אל"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "החלשנש בושמ תרעה"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "טא'צב דבלב האירקל תגצומ ,תימוקמ החלשנש הבוגת"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "החלשנ אל העדוהה"
 
@@ -21522,6 +22058,15 @@ msgstr "טא'צ טלק"
 
 msgid "Type your message here"
 msgstr "ןאכ העדוהה תא דילקהל שי"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "טא'צ תועדוה"
@@ -21660,6 +22205,12 @@ msgstr "רבוחמ"
 
 msgid "Whether user is currently logged in"
 msgstr "תעכ רבוחמ שמתשמה םאה"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "תורבחתה ךילהתב"
@@ -21861,9 +22412,6 @@ msgstr "הביתכ"
 
 msgid "File write"
 msgstr "ץבוק תביתכ"
-
-msgid "Command"
-msgstr "הדוקפ"
 
 msgid "Shell command"
 msgstr "תפטעמ תדוקפ"
@@ -23620,9 +24168,6 @@ msgstr "ןמס תדמצה"
 msgid "Snap 2D cursor"
 msgstr "ידממ-וד ןמס דימצמ"
 
-msgid "Origin"
-msgstr "תישאר"
-
 msgid "Mirror selected UVs"
 msgstr "םירחבנ UV ףקשמ"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "םדוקל הרזח"
 
 msgid "Grid & Relationship Lines"
 msgstr "רשק יווקו תשר"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "רודניר עונמ"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "רודניר תורדגה"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "ודבאי םינותנהמ קלחש ןכתיי ,(%d.%d) רתוי השדח Mixar תסרגב רמשנ ץבוקה"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "רתוי השדח וא Mixar %s-ב ותוא חותפל שי ,רתוי השדח הסרגב רמשנ ץבוקה"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "רייצל ליחתהל ידכ תובכשה חולב רויצ תבכש ףיסוהל שי"
 
@@ -24409,7 +25179,43 @@ msgstr "הציקסה תטויטל הבתכה רצוע וא ליחתמ"
 msgid "Stop the running turn"
 msgstr "ליעפה בבסה תא רצוע"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"רוזחש\n"
+"\n"
+".השטולש ינפל הבתכנש היחנהה תא רזחשמ"
+
+msgid "Refining this prompt..."
+msgstr "...וזה היחנהה תא שטלמ"
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"ףסונ שוטיל\n"
+"\n"
+".םדוקה שוטילה תא אל ,ירוקמה חוסינה תא ריזחמ ןיידע רוזחש .חלשית איה וילאש לדומה רובע םעפ דוע וזה היחנהה תא שדחמ בתוכ"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"שוטיל\n"
+"\n"
+".וילא ביגמ לדומהש טוריפה תא ףיסומו ,חלשית איה וילאש לדומה רובע וזה היחנהה תא שדחמ בתוכ"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "סנרפר תרסה"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "רותבש רויצה תאו וזה הציקסה תא ךילשמ"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "רותה תחיתפ"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "רבד רחבנ אל"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "תוינושל תפלחה ינפל הבתכה וא הציקס םייסל שי"
 
@@ -24607,6 +25413,15 @@ msgstr "םימי %d ינפל"
 msgid "%dw ago"
 msgstr "תועובש %d ינפל"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "(%d) רצוי"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter החילשל"
 
 msgid "Sketch · Enter to send"
 msgstr "החילשל Enter · הציקס"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "ןכוסה לש םיילבולגה םיללכהו טקיורפה ילל�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "בוש לואשל ול רשפאל ידכ הציחל .לאוש אל םל�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תוחותפ תוריחב לע ומצעב טילחמ ןכוסה :יטמוטוא בצמ"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "חראתמ לדומ בוש רוחבל ידכ \"ילש API-ה חתפמ לש הרסה וא יוניש\" ורחבו הז טירפת וחתפ .לדומה תא עבוק אוהו ,שומישב םכלש API-ה חתפמ"
-
-msgid "Choose which model the agent runs on"
-msgstr "ןכוסה ץר וילעש לדומה תריחב"
 
 msgid "Agent Bubble"
 msgstr "ןכוסה תעוב"
@@ -24858,6 +25670,12 @@ msgstr "ורגסנש רפסמ"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "ורגסנש ןכוסה תעוב תונולח רפסמ"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "ןכוסה תעוב ןולח לדוג תרדגה"
@@ -25336,6 +26154,9 @@ msgstr "...רותב"
 msgid "Click to edit the prompt and try again"
 msgstr "רזוח ןויסינלו היחנהה תכירעל הציחל"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "היחנה\n"
 "\n"
 ".הזה תמוצה תא חלוש Enter .רוציל המ וראת"
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"רוזחש\n"
-"\n"
-".השטולש ינפל הבתכנש היחנהה תא רזחשמ"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"ףסונ שוטיל\n"
-"\n"
-".םדוקה שוטילה תא אל ,ירוקמה חוסינה תא ריזחמ ןיידע רוזחש .חלשית איה וילאש לדומה רובע םעפ דוע וזה היחנהה תא שדחמ בתוכ"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"שוטיל\n"
-"\n"
-".וילא ביגמ לדומהש טוריפה תא ףיסומו ,חלשית איה וילאש לדומה רובע וזה היחנהה תא שדחמ בתוכ"
-
-msgid "Refining this prompt..."
-msgstr "...וזה היחנהה תא שטלמ"
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "םימקרמ תוכרע בחרמ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "םימקרמ תוכרע להנל ידכ דצה לגרס תוחולב ושמתשה"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ןושארל הרזח"
 
@@ -26557,9 +27354,6 @@ msgstr "םיחוטב םירוזא"
 msgid "Select a character to animate"
 msgstr "השפנהל תומד רוחבל שי"
 
-msgid "Animate"
-msgstr "השפנה"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ןוגינה שארמ גניקולב תמרב העונת עבוק"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "הדובעה בחרמ תמישמ תוהז"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "הנכס ןווגב הלועפ רותפכ"
 msgid "Borderless quiet action button"
 msgstr "לובג ילב טקש הלועפ רותפכ"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "תיגת"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "לאמש בצמ ןווחמ"
 
@@ -27126,9 +28019,6 @@ msgstr "ףילג"
 
 msgid "Header glyph"
 msgstr "תרתוכ ףילג"
-
-msgid "Chip"
-msgstr "תיגת"
 
 msgid "Chip track"
 msgstr "תיגת לולסמ"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "ץבוק תמויס ןנסמ"
 
 msgid "Write compressed .mixar file"
 msgstr "סוחד mixar. ץבוק תביתכ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "mixar. ץבוקכ הרימש"

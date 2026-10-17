@@ -89,6 +89,14 @@ class EventProcessor:
         if kind == "cancelled":
             self._session.set_run(scene, "", False)
             return True
+        if kind == "login_required":
+            # A paid tool refused the guest mid-turn: the button is this
+            # bubble, the explanation is the model's own prose.
+            from .login_notice import add_login_required_chat_message
+            add_login_required_chat_message(
+                scene, cta=data.get("cta") or "login", body=data.get("message") or "",
+            )
+            return True
         if kind == "activity":
             # One per backend tool call: a step row (merged with the script
             # path's row on call_id) plus the images the call produced.
@@ -161,7 +169,7 @@ class EventProcessor:
         turn and return to IDLE.
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # The loader timer walks every scene and stops itself once none shows
         # a loader (parallel scenes: another tab may still be streaming).
@@ -177,16 +185,38 @@ class EventProcessor:
     def handle_command_error(self, result, scene):
         """Display a confirmed command rejection, preserving typed credit actions."""
         from .credits_notice import is_credits_exhausted_error, add_credit_upgrade_chat_message
+        from mixar.modules.auth.core.guest import login_required_fields
         message = result.get('message') or rpt_('Message could not be delivered')
         data = result.get('data') or {}
         status = result.get('status_code') or data.get('status_code')
-        if is_credits_exhausted_error(status, message):
+        from .byok_notice import present_refusal
+        refusal = login_required_fields(data)
+        if refusal:
+            # -32021: a guest without a working model key (or over the guest
+            # turn ceiling). The turn never started; the notice names the fix.
+            from .login_notice import add_login_required_chat_message
+            add_login_required_chat_message(
+                scene=scene, cta=refusal['cta'], body=refusal['message'] or message,
+            )
+            self._redraw_ui()
+        elif present_refusal(result, data, scene):
+            # The user's own key: the card (or the cold-start resend) takes over.
+            self._end_refused_turn(scene)
+        elif is_credits_exhausted_error(status, message):
             actions = data.get('data') or data
             add_credit_upgrade_chat_message(scene=scene, body=message,
                                             action_url=actions.get('action_url'))
             self._redraw_ui()
         else:
             self._handle_agent_error_internal(message, scene)
+
+    def _end_refused_turn(self, scene) -> None:
+        """A command the backend never started: back to IDLE, no error bubble."""
+        from .executor import get_executor
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        self._clear_loader_bubbles(scene)
+        self._session.set_state(scene, SessionState.IDLE)
+        self._redraw_ui()
 
     def _handle_agent_error_internal(self, error_message: str, scene) -> None:
         """Handle agent stream-level error (called from main thread timer).
@@ -198,7 +228,7 @@ class EventProcessor:
         Abort button stays visible (the backend may still be processing).
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         logger.error(f"agent stream error: {error_message}")
 
@@ -364,7 +394,7 @@ class EventProcessor:
         # settles to IDLE or pauses for input (the user's answer starts a new
         # stream, and with it a new turn / fresh checkpoint budget).
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —

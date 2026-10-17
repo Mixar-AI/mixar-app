@@ -55,6 +55,7 @@
 #include "WM_types.hh"
 
 #include "view3d_director.hh"
+#include "view3d_intern.hh"
 #include "view3d_director_camera_move.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -261,6 +262,15 @@ static wmOperatorStatus director_nudge_modal(bContext *C, wmOperator *op, const 
     return director_nudge_tick(C, op, data);
   }
 
+  if (event->type == WINDEACTIVATE) {
+    /* Focus left the window: the held keys' releases will never arrive, so
+     * this is the all-keys-released end — one undo step for the motion so
+     * far. It must still pass: the window manager requires it of every
+     * handler. */
+    data->held = 0;
+    return director_nudge_finish(C, op) | OPERATOR_PASS_THROUGH;
+  }
+
   if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE)) {
     if (event->val == KM_PRESS) {
       return director_nudge_finish(C, op);
@@ -339,6 +349,7 @@ void view3d_director_operatortypes()
   WM_operatortype_append(MIXAR_OT_director_place_camera);
   WM_operatortype_append(MIXAR_OT_director_scroll_cameras);
   WM_operatortype_append(MIXAR_OT_director_walk);
+  WM_operatortype_append(MIXAR_OT_agent_halo_redraw);
 }
 
 /** \} */

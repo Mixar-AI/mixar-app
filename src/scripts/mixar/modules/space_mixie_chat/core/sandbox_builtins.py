@@ -14,6 +14,7 @@ import builtins
 import json
 from typing import Any
 
+from .sandbox_denylist import DENIED_ATTR_NAMES, attr_denial_reason
 from .sandbox_validator import _BLOCKED_DUNDER_ATTRS
 
 # Restricted builtins whitelist for safe script execution
@@ -83,11 +84,26 @@ def get_safe_builtins() -> dict:
     # This closes the bypass where computed attribute names evade AST checks.
     _original_getattr = builtins.getattr
 
+    # The code-execution names (sandbox_denylist.py) are refused the same way,
+    # so getattr(text, "as_" + "module") cannot reach what the AST guard
+    # rejects when spelled out. A denied name raises even with a default:
+    # a silent default would read as "attribute absent" and hide the refusal.
+    def _plain(name):
+        # A str SUBCLASS made with type() can lie in __eq__/__hash__, so a
+        # membership test would miss it while the real getattr still uses its
+        # characters. Only exact str names are accepted.
+        if isinstance(name, str) and type(name) is not str:
+            raise TypeError("attribute name must be a plain str (sandbox restriction)")
+        return name
+
     def _safe_getattr(obj, name, *default):
+        name = _plain(name)
         if isinstance(name, str) and name in _BLOCKED_DUNDER_ATTRS:
             raise AttributeError(
                 f"Access to '{name}' is blocked (sandbox restriction)"
             )
+        if isinstance(name, str) and name in DENIED_ATTR_NAMES:
+            raise AttributeError(attr_denial_reason(name))
         value = _original_getattr(obj, name, *default)
         if name == "from_mesh":
             from .sandbox_mesh import guard_from_mesh
@@ -95,7 +111,10 @@ def get_safe_builtins() -> dict:
         return value
 
     def _safe_hasattr(obj, name):
-        if isinstance(name, str) and name in _BLOCKED_DUNDER_ATTRS:
+        name = _plain(name)
+        if isinstance(name, str) and (
+            name in _BLOCKED_DUNDER_ATTRS or name in DENIED_ATTR_NAMES
+        ):
             return False
         try:
             _original_getattr(obj, name)
@@ -104,10 +123,13 @@ def get_safe_builtins() -> dict:
             return False
 
     def _safe_setattr(obj, name, value):
+        name = _plain(name)
         if isinstance(name, str) and name in _BLOCKED_DUNDER_ATTRS:
             raise AttributeError(
                 f"Setting '{name}' is blocked (sandbox restriction)"
             )
+        if isinstance(name, str) and name in DENIED_ATTR_NAMES:
+            raise AttributeError(attr_denial_reason(name))
         return builtins.setattr(obj, name, value)
 
     safe_builtins['getattr'] = _safe_getattr

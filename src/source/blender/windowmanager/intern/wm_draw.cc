@@ -35,7 +35,11 @@
 #include "BKE_image.hh"
 #include "BKE_layer.hh"
 #include "BKE_scene.hh"
+#include "BLI_string.h"
 #include "BKE_screen.hh"
+
+#include "RNA_enum_types.hh"
+#include "RNA_access.hh"
 
 #include "GHOST_ISystem.hh"
 #include "GHOST_IWindow.hh"
@@ -63,6 +67,7 @@
 #include "RE_engine.h"
 
 #include "WM_api.hh"
+#include "WM_stall_monitor.hh"
 #include "WM_toolsystem.hh"
 #include "WM_types.hh"
 #include "wm.hh"
@@ -989,6 +994,19 @@ GPUViewport *WM_draw_region_get_bound_viewport(ARegion *region)
   return viewport;
 }
 
+/* Mixar: breadcrumb name for a region draw, e.g. "VIEW_3D/WINDOW". */
+static void wm_draw_stall_name(const ScrArea *area, const ARegion *region, char *r_name, size_t len)
+{
+  const char *space = "SCREEN";
+  if (area) {
+    const SpaceType *st = BKE_spacetype_from_id(area->spacetype);
+    space = st ? st->name : "?";
+  }
+  const char *region_name = "?";
+  RNA_enum_identifier(rna_enum_region_type_items, region->regiontype, &region_name);
+  BLI_snprintf(r_name, len, "%s/%s", space, region_name);
+}
+
 static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bool stereo)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -1013,7 +1031,12 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
         region.runtime->type && region.runtime->type->layout)
     {
       CTX_wm_region_set(C, &region);
-      ED_region_do_layout(C, &region);
+      {
+        char stall_name[64];
+        wm_draw_stall_name(area, &region, stall_name, sizeof(stall_name));
+        Mixar_StallScope stall_scope("layout", stall_name);
+        ED_region_do_layout(C, &region);
+      }
       CTX_wm_region_set(C, nullptr);
     }
   }
@@ -1036,6 +1059,10 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
 
     CTX_wm_region_set(C, &region);
     bool use_viewport = WM_region_use_viewport(area, &region);
+
+    char stall_name[64];
+    wm_draw_stall_name(area, &region, stall_name, sizeof(stall_name));
+    Mixar_StallScope stall_scope("draw", stall_name);
 
     GPU_debug_group_begin(use_viewport ? "Viewport" : "ARegion");
 
@@ -1120,7 +1147,12 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
     wm_draw_region_buffer_create(scene, &region, false, false);
     wm_draw_region_bind(&region, 0);
     GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
-    ED_region_do_draw(C, &region);
+    {
+      char stall_name[64];
+      wm_draw_stall_name(nullptr, &region, stall_name, sizeof(stall_name));
+      Mixar_StallScope stall_scope("draw", stall_name);
+      ED_region_do_draw(C, &region);
+    }
     wm_draw_region_unbind(&region);
 
     GPU_debug_group_end();
@@ -1259,6 +1291,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 static void wm_draw_window(bContext *C, wmWindow *win)
 {
   PRF_scope(ProfileCategory::Draw);
+  Mixar_StallScope stall_scope("window", WM_window_get_active_screen(win)->id.name + 2);
   GPU_context_begin_frame(static_cast<GPUContext *>(win->runtime->gpuctx));
 
   bScreen *screen = WM_window_get_active_screen(win);
@@ -1679,7 +1712,10 @@ void wm_draw_update(bContext *C)
   GPU_context_main_lock();
 
   GPU_render_begin();
-  GPU_render_step();
+  {
+    Mixar_StallScope stall_scope("gpu", "GPU_render_step");
+    GPU_render_step();
+  }
 
   BKE_image_free_unused_gpu_textures();
 

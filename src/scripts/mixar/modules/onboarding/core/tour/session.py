@@ -21,6 +21,7 @@ state ``tick()`` prepared.
 
 import math
 import time
+import uuid
 
 import bpy
 import gpu
@@ -59,6 +60,7 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
     def __init__(self, rate: float = 1.0, silent: bool = False,
                  tour=MIXAR_INTRO):
         self.tour = tour
+        self.tour_run_id = str(uuid.uuid4())
         self.rate = rate
         self.silent = silent
         self.language = "en"     # the user's tour language (set in start())
@@ -81,6 +83,7 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         self._host_rect = (0, 0, 0, 0)
         self._card_bounds = (0, 0, 0, 0)  # host minus a header overlapping its top
         self._host_lost = False        # host window has no VIEW_3D right now
+        self._paused_before_host_lost = False
         self._ui_scale = 1.0
         self._last_wall = time.monotonic()
         self._started_wall = self._last_wall
@@ -298,7 +301,8 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             self.flags["viewport_interacted"] = False
         try:
             from . import telemetry
-            telemetry.step(self.tour.id, beat_id or "", self.runner.index)
+            telemetry.step(self.tour.id, beat_id or "", self.runner.index,
+                           tour_run_id=self.tour_run_id)
         except Exception:  # noqa: BLE001
             pass
 
@@ -332,12 +336,16 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         if region is None:
             if not self._host_lost:
                 self._host_lost = True
+                # A pause the user made before the host went away is theirs:
+                # the host coming back must not resume it.
+                self._paused_before_host_lost = self.runner.user_paused
                 self.runner.set_user_paused(True)
                 self.cursor.hide()
             return True
         if self._host_lost:
             self._host_lost = False
-            if not self.exit_confirm:
+            if not self.exit_confirm and not getattr(
+                    self, "_paused_before_host_lost", False):
                 self.runner.set_user_paused(False)
         ptr = anchors.normalize_ptr(region.as_pointer())
         if ptr != self._host_region_ptr:
@@ -468,7 +476,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             card_ui.draw_card(
                 self._card_layout, self._texture, min(1.0, ms / total),
                 self.runner.user_paused and not self.exit_confirm and not self._gated,
-                getattr(self.clock, "rate", 1.0),
                 alpha=self.card_motion.alpha, ui_scale=self._ui_scale,
                 gate_seconds_left=self.runner.gate_seconds_left(),
                 hover=self.hover, caption=beat.label,

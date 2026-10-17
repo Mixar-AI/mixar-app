@@ -3,6 +3,19 @@
 """One command body for every chat entry point."""
 from typing import Optional
 
+from .attachment_pairing import legacy_attachment_names
+
+
+def image_block(img: dict) -> dict:
+    """One ``image_url`` content block; ``name`` only when the image has one."""
+    mime = img.get("mime_type", "image/png")
+    block = {"type": "image_url",
+             "image_url": {"url": f"data:{mime};base64,{img.get('base64', '')}"}}
+    if img.get("name"):
+        block["name"] = img["name"]
+    return block
+
+
 def build_chat_payload(
     *,
     message: str,
@@ -12,7 +25,6 @@ def build_chat_payload(
     execution_required: bool,
     approval_required: bool,
     image_attachments: Optional[list] = None,
-    attachment_names: Optional[list] = None,
     imported_object_names: Optional[list] = None,
     project_context: Optional[dict] = None,
     mark_context: Optional[dict] = None,
@@ -30,24 +42,19 @@ def build_chat_payload(
         "approval_required": approval_required,
     }
 
-    # Multimodal content when there are image attachments.
+    # Multimodal content when there are image attachments. Each block names
+    # its own bpy.data.images entry (a sibling of image_url — that dict can
+    # reach provider SDKs that reject unknown keys), so a label can never
+    # slide onto another image (core/attachment_pairing.py).
     if image_attachments:
         content = [{"type": "text", "text": message}]
-        for img in image_attachments:
-            mime = img.get("mime_type", "image/png")
-            b64 = img.get("base64", "")
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{mime};base64,{b64}"},
-            })
-        if len(content) > 1:
-            payload["content"] = content
-
-    # Forward resolved bpy.data.images names so the backend can inline
-    # them into the user message; entries are positional and may be
-    # empty strings when an attachment did not resolve to a name.
-    if attachment_names:
-        payload["attachment_names"] = [n for n in attachment_names if n]
+        content.extend(image_block(img) for img in image_attachments)
+        payload["content"] = content
+        # Legacy positional list for older backends: the names of the encoded
+        # images that have one, in order — derived from the same pairs.
+        names = legacy_attachment_names(image_attachments)
+        if names:
+            payload["attachment_names"] = names
     # #1268: names of objects an attached model file created in the
     # scene. Names only — the local path never leaves the addon.
     if imported_object_names:

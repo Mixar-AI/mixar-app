@@ -956,6 +956,20 @@ extern "C" void Mixar_WindowOrderFrontNoActivate(void *window_handle)
 }
 
 
+/* Bring the application in front of every other app. The sign-in flow
+ * calls this after a browser SSO login SUCCEEDED (the user finished in
+ * the browser and expects to land back in Mixar); never on a failed or
+ * cancelled login. The window handle is unused here: AppKit brings the
+ * app's windows forward in their existing order, so the bubble's
+ * no-activate rules above are not disturbed. */
+extern "C" void Mixar_AppActivate(void * /*window_handle*/)
+{
+  @autoreleasepool {
+    [NSApp activateIgnoringOtherApps:YES];
+  }
+}
+
+
 /* Make a window the key window (receives keyboard events). Used to
  * transfer focus back to the host viewport after showing the bubble. */
 extern "C" void Mixar_WindowMakeKey(void *window_handle)
@@ -971,6 +985,20 @@ extern "C" void Mixar_WindowMakeKey(void *window_handle)
   @autoreleasepool {
     [win makeKeyWindow];
   }
+}
+
+
+/* True when the window is the key window. The modal-dialog dock hold
+ * (wm_mixar_modal_dialog.cc) remembers the floating dock that had the
+ * keyboard so the last release can hand it back. */
+extern "C" bool Mixar_WindowIsKey(void *window_handle)
+{
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  return win != nil && [win isKeyWindow];
 }
 
 

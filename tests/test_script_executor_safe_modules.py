@@ -90,6 +90,57 @@ def test_executor_failure_releases_lock_and_restores_output(executor, monkeypatc
     assert executor.execute("__RESULT__ = 8", push_undo=False).return_value == 8
 
 
+def test_bpy_ops_script_namespace_is_denied(executor):
+    # SCRIPT_OT_python_file_run (stock Blender + the Mixar fork) executes an
+    # arbitrary .py file with REAL builtins, bypassing the sandbox — so the
+    # injected bpy.ops surface must deny the whole script.* namespace.
+    result = executor.execute(
+        "bpy.ops.script.python_file_run(filepath='/tmp/evil.py')",
+        push_undo=False,
+    )
+    assert result.success is False
+    assert "bpy.ops.script is not available" in (result.error or "")
+
+    getattr_result = executor.execute(
+        "getattr(bpy.ops, 'script')", push_undo=False
+    )
+    assert getattr_result.success is False
+    assert "bpy.ops.script is not available" in (getattr_result.error or "")
+
+    import_result = executor.execute(
+        "\n".join((
+            "import bpy",
+            "bpy.ops.script.python_file_run(filepath='/tmp/evil.py')",
+        )),
+        push_undo=False,
+    )
+    assert import_result.success is False
+    assert "bpy.ops.script is not available" in (import_result.error or "")
+
+
+def test_bpy_data_surface_still_reachable_through_proxy(executor):
+    # Legit operator access is forwarded: data/ops namespaces other than
+    # script.* must keep working for sandboxed scripts.
+    result = executor.execute(
+        "\n".join((
+            "__RESULT__ = {",
+            "    'ops_mesh_ns': hasattr(bpy.ops, 'mesh'),",
+            "    'ops_ed_ns': hasattr(bpy.ops, 'ed'),",
+            "    'data_ns': hasattr(bpy, 'data'),",
+            "    'context_ns': hasattr(bpy, 'context'),",
+            "}",
+        )),
+        push_undo=False,
+    )
+    assert result.success is True
+    assert result.return_value == {
+        "ops_mesh_ns": True,
+        "ops_ed_ns": True,
+        "data_ns": True,
+        "context_ns": True,
+    }
+
+
 def test_globals_returns_filtered_snapshot_for_transaction_guard(executor):
     result = executor.execute(
         "\n".join(

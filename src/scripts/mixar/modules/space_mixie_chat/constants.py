@@ -58,6 +58,13 @@ def is_lane_scene(scene) -> bool:
     return getattr(scene, 'mixie_session_id', '').startswith(AGENT_LANE_SESSION_PREFIX)
 
 
+# Private preview-render scenes (core/render_scene.py); defined with the render
+# coordinator so `common` can filter them without importing this module.
+from mixar.modules.common.render_coordinator.constants import (  # noqa: E402,F401
+    INTERNAL_RENDER_SCENE_PROP, is_internal_scene,
+)
+
+
 # SESSION STATES
 
 class SessionState(Enum):
@@ -126,6 +133,9 @@ class JSONRPCMethod:
     LLM_REQUEST = "llm.request"
     # Server -> Client (requests - capability-scoped local add-on workspace)
     ADDON_PROJECT_PREFIX = "addon_project."
+    # Server -> Client (request - a Moodboard video as sampled frames; name
+    # resolved on the main thread, decoded off-thread, reply deferred)
+    MOODBOARD_VIEW_VIDEO = "moodboard.view_video"
     # Server -> Client (requests - harness v3 execution protocol: activate /
     # bind_task / status / commit / revoke; handled on the main thread by
     # mixar.modules.common.agent_execution.handlers, replies deferred)
@@ -231,6 +241,20 @@ WS_LIVENESS_TIMEOUT = 45.0
 # GIL-starved wake-up proves the link alive within ~1s and carries on.
 WS_LIVENESS_PROBE_GRACE = 5.0
 
+# Unanswered-command probe: the server answers a command (chat, input,
+# cancel, …) within ~100 ms of receiving it, and pings run on their own lane
+# there, so a command with no answer AND no inbound traffic this long after
+# its frame left the client means the path probably died under it. The
+# client probes at once instead of waiting out WS_LIVENESS_TIMEOUT, so a lost
+# message is resent ~15 s after the send, not ~76 s (socket_liveness.py).
+WS_ACK_TIMEOUT = 8.0
+
+# The slowest uplink still treated as alive: every frame sent holds the fast
+# probes off for size / this rate (a 250 KB image ~16 s), since a local proxy
+# or TLS-inspecting antivirus can swallow a frame at once and upload it slowly
+# where the kernel's send backlog cannot show it (socket_liveness.uploaded).
+WS_ACK_MIN_UPLINK_BPS = 16_000
+
 # UI transport-staleness threshold: how long recv may be silent before the
 # status surfaces (bubble pill, chat header) stop implying a healthy
 # connection. A healthy connection carries at least a pong per ~15s ping, so
@@ -252,7 +276,16 @@ CHAT_INPUT_PLACEHOLDER = "Type your message..."
 # PROPERTY DEFAULTS
 
 CHAT_INPUT_DEFAULT = ""
-CHAT_INPUT_MAXLEN = 10000
+# RNA buffer of the composer (scene.mixie_chat_input, the quick prompt and the
+# Refine stash). Blender's ``maxlen`` is a BYTE count: the draft holds at
+# most CHAT_INPUT_MAXLEN UTF-8 bytes (measured live on the 5.2 fork) and the
+# text editor silently refuses keystrokes past that. Sized to the chat-history
+# ``text`` slot (65536) and well under MAX_MESSAGE_LENGTH, the send-time wire
+# check, so rules + draft can never overflow a send. No C++ buffer is sized
+# from this value: the bubble reads the draft through clamped
+# ``read_string_prop`` calls into its own fixed tails. Byte-aware clamping and
+# the "draft is full" check live in core/composer_limit.py.
+CHAT_INPUT_MAXLEN = 65536
 
 # Project rules (scene.mixie_chat_rules) — persisted in the file and
 # prepended to the first message of every new chat session. Bounded well
@@ -407,15 +440,17 @@ MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
 # Movie containers the moodboard accepts. The agent chat has no video content
-# part on the wire (agent.chat carries image_url data URLs only), so these are
-# refused with a specific message instead of the generic "Unsupported format".
+# part on the wire (agent.chat carries image_url data URLs only): a video is
+# never an image PILL. The picker and the drop route one to a context-file chip
+# instead (context_folder.core.files); this message is what a restored legacy
+# video pill and the encoder still show.
 VIDEO_FILE_FORMATS = {
     '.avi', '.avs', '.divx', '.dv', '.flc', '.flv', '.gif', '.m2t', '.m2ts',
     '.m2v', '.m4v', '.mkv', '.mov', '.movie', '.mp4', '.mpeg', '.mpg', '.mpg2',
     '.mts', '.mv', '.mxf', '.ogg', '.ogv', '.r3d', '.ts', '.vob', '.webm',
     '.wmv', '.xvid',
 }
-VIDEO_ATTACHMENT_REJECTED = n_("Videos require Video mode. Remove the video to send to Agent.")
+VIDEO_ATTACHMENT_REJECTED = n_("Attach the video as a file: videos become context the agent can watch")
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 
@@ -472,8 +507,21 @@ PREVIEW_DEFERRED_MAX_S = 240.0
 #   False: every script gets its own checkpoint (bounded by the cap below).
 # Turn boundaries come from queue_processor: begin_agent_turn on the first
 # streamed event, end_agent_turn on stream complete/error (and on abort /
-# file load), so a checkpoint-less turn cannot leak into the next one.
+# tab close / file load / undo handlers), so a checkpoint-less turn cannot
+# leak into the next one. The closing "Mixie Chat Turn" step is pushed only
+# on complete / error / replay-unavailable / Abort (checkpoint=True), never
+# from tab close, load_pre or the undo/redo handlers.
 AGENT_UNDO_GROUP_PER_TURN = True
+
+# Read-only tools: no undo checkpoint and the turn does not count as having
+# run, so chat-only turns leave no no-op steps. NOT render_gate.READ_ONLY_TOOLS
+# (that set includes render_scene_*, which write data).
+AGENT_UNDO_NEUTRAL_TOOLS = frozenset({
+    "_scene_digest", "_wait_generation_poll", "_detect_views_poll",
+    "_await_generation_image", "poll_generation", "get_all_queue_status",
+    "list_scene_meshes", "list_rules", "list_moodboard_images",
+    "get_paint_layer_stack", "get_paint_channels", "inspect_moodboard_image",
+})
 
 # Per-script checkpoints are capped per turn. Blender keeps U.undosteps
 # (32 by default) memfile steps, so an uncapped long turn would evict the

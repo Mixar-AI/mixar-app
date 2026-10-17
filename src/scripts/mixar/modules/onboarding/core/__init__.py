@@ -4,16 +4,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-Onboarding core: who has seen the tour, and starting it for first-time
-users. The tour itself lives in ``tour/``; ``persistence`` stores the
-per-machine "seen" list.
+Onboarding core: whether this device has seen the tour, and starting it on
+a device that has not. The tour itself lives in ``tour/``; ``persistence``
+stores the per-device "seen" flag.
 """
 
 from . import persistence
 
-__all__ = ["persistence", "maybe_show_for_user", "mark_current_user_seen"]
+__all__ = ["persistence", "maybe_show_tour", "mark_seen"]
 
-_scheduled_emails: set[str] = set()
+_scheduled = False
 
 
 def _operator_registered(op_path: str) -> bool:
@@ -24,48 +24,37 @@ def _operator_registered(op_path: str) -> bool:
     return op_namespace is not None and hasattr(op_namespace, op_name)
 
 
-def mark_current_user_seen(context=None) -> None:
-    """Persist the 'seen onboarding' marker for the signed-in user. The
-    email comes from ``scene.mixie_chat_user_id``, which the auth flow
-    populates on every successful sign-in."""
-    import bpy
-
-    from mixar.config.logging_config import get_logger
-    logger = get_logger(__name__)
-    scene = (context or bpy.context).scene
-    email = getattr(scene, "mixie_chat_user_id", "") if scene else ""
-    if not email:
-        # INFO, not debug: a tour that keeps coming back is otherwise
-        # undiagnosable from the log.
-        logger.info("onboarding: no signed-in user id, seen flag not written")
-        return
-    persistence.mark_user_seen_onboarding(email)
+def mark_seen() -> None:
+    """Persist the 'seen onboarding' flag for this device."""
+    persistence.mark_device_seen_onboarding()
 
 
-def maybe_show_for_user(email: str) -> bool:
-    """Start the onboarding tour if ``email`` hasn't seen it on this
-    machine. Returns True if the tour was scheduled. Called from the
-    auth-success hook, so the tour only ever opens after a sign-in, and
-    again after the splash's mode choice for a user who still hasn't
-    seen it.
+def maybe_show_tour(identity: str) -> bool:
+    """Start the onboarding tour if this device hasn't seen it. Returns True
+    if the tour was scheduled. ``identity`` is the session's email (an
+    account's or a guest's); an empty one means no session yet, and the
+    auth-success hook calls again once there is one. Called from that hook
+    and again after a Zen/Engine mode choice.
     """
     import bpy
 
     from mixar.config.logging_config import get_logger
     logger = get_logger(__name__)
 
-    if not email:
+    global _scheduled
+    if not identity:
         return False
-    if persistence.has_user_seen_onboarding(email):
-        logger.debug("Onboarding: user %s has already seen the tour", email)
+    if persistence.has_device_seen_onboarding():
+        logger.debug("Onboarding: this device has already seen the tour")
         return False
-    if email in _scheduled_emails:
+    if _scheduled:
         return False
 
     # A timer, so no operator ever runs on the auth daemon thread. Startup
     # auth can finish while the splash is still open and before deferred UI
     # loading has registered the tour operator, so keep polling for both.
     def _fire():
+        global _scheduled
         try:
             from mixar.bootstrap import splash_menu
             # Wait until the user has left the splash (picked a workspace
@@ -79,11 +68,11 @@ def maybe_show_for_user(email: str) -> bool:
             from mixar.modules.onboarding.core import tour as tour_pkg
         except Exception as exc:  # noqa: BLE001
             logger.warning("Onboarding: tour package unavailable: %s", exc)
-            _scheduled_emails.discard(email)
+            _scheduled = False
             return None
         if not tour_pkg.is_available():
             logger.warning("Onboarding: no tour video bundled; not starting")
-            _scheduled_emails.discard(email)
+            _scheduled = False
             return None
         op_path = tour_pkg.config.OP_TOUR
         if not _operator_registered(op_path):
@@ -94,16 +83,16 @@ def maybe_show_for_user(email: str) -> bool:
         except Exception as exc:
             logger.warning("Onboarding: %s invoke failed: %s", op_path, exc)
         finally:
-            _scheduled_emails.discard(email)
+            _scheduled = False
         return None
 
     try:
-        _scheduled_emails.add(email)
+        _scheduled = True
         bpy.app.timers.register(_fire, first_interval=0.1)
     except Exception as exc:
-        _scheduled_emails.discard(email)
+        _scheduled = False
         logger.warning("Onboarding: timer registration failed: %s", exc)
         return False
 
-    logger.info("Onboarding: scheduling the tour for first-time user %s", email)
+    logger.info("Onboarding: scheduling the tour for this device")
     return True

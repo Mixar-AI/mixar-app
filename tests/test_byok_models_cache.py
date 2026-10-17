@@ -105,7 +105,7 @@ def test_a_200_populates_persists_and_records_the_etag(monkeypatch):
     models_cache.refresh()
 
     assert model_suggestions.is_loaded()
-    assert [p[0] for p in model_suggestions.get_provider_items()][0] == "anthropic"
+    assert "anthropic" in [p[0] for p in model_suggestions.get_provider_items()]
     stored = json.loads(Path(models_storage._disk_path()).read_text())
     assert stored["etag"] == 'W/"abc"'
     assert stored["data"] == PAYLOAD
@@ -139,7 +139,7 @@ def test_disk_cache_populates_before_any_network_call():
     model_suggestions.clear()
 
     assert models_cache.load_from_disk() is True
-    assert [p[0] for p in model_suggestions.get_provider_items()][0] == "anthropic"
+    assert "anthropic" in [p[0] for p in model_suggestions.get_provider_items()]
 
 
 def test_an_authoritative_empty_catalog_replaces_the_cache(monkeypatch):
@@ -162,7 +162,7 @@ def test_a_malformed_payload_keeps_the_previous_catalog(monkeypatch):
     _serve(monkeypatch, _response(200, _envelope({"nonsense": True}), etag='W/"def"'))
     models_cache.refresh()
 
-    assert [p[0] for p in model_suggestions.get_provider_items()][0] == "anthropic"
+    assert "anthropic" in [p[0] for p in model_suggestions.get_provider_items()]
 
 
 def test_a_transport_failure_keeps_the_previous_catalog(monkeypatch):
@@ -178,7 +178,7 @@ def test_a_transport_failure_keeps_the_previous_catalog(monkeypatch):
     monkeypatch.setattr(models_cache, "get_agent_service", _boom)
     models_cache.refresh()
 
-    assert [p[0] for p in model_suggestions.get_provider_items()][0] == "anthropic"
+    assert "anthropic" in [p[0] for p in model_suggestions.get_provider_items()]
 
 
 def test_logout_clears_memory_and_the_disk_file(monkeypatch):

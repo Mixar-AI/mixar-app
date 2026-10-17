@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Kaixo, Mixarreko Naman naiz.
+Kaixo, Naman naiz.
 Minutu gutxitan aplikazioa erakutsiko dizut.
 Hau zure 3D ikuspegia da.
 Mugitzeko aukera ematen dizun 3D espazioa.
@@ -26,9 +26,9 @@ Lotu zure liburutegia agenteak zure baliabideak erabil ditzan,
 eta kredituak aurrezteko.
 Goian ezkerrean eszenen tiradera dago.
 Eszena bakoitzak bere fitxa eta Mixie agentea ditu.
-Exekutatu zereginak batera eta aldatu haien artean nahi duzunean.
-Eszena prest dagoenean, joan Cinema Mode-ra
-kamera zuzentzeko eta bideo lan-fluxuak sortzeko.
+Exekutatu zereginak batera eta aldatu nahi duzunean, benetako paralelismoz.
+Filmatzeko prest zaudenean, joan Cinema Mode-ra
+kamera zuzentzeko eta kalitate profesionaleko bideoak sortzeko.
 Ideiak 2Dn hasten dira.
 Atera moodboarda eskuinetik edo sakatu tildea.
 Erreferentzia eta kontzeptuetarako mihisea da.
@@ -40,6 +40,6 @@ Blenderren lan-eremu osoa dago, panel eta lasterbide guztiekin.
 Mixiek bietan funtzionatzen du. Aukeratu erosoena.
 Itzul gaitezen Zen Mode-ra.
 Gure sortzaile bazkideen programak kredituak eskaintzen dizkizu,
-eta AIren eta 3Dren etorkizuna eratzen duen komunitatea.
+eta hedabideetako AIren etorkizuna eratzen duen komunitatea.
 Hori da guztia. Badakizu non dagoen dena.
 Sor dezagun 3D elkarrekin.

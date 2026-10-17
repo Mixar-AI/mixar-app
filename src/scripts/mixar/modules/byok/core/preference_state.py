@@ -86,6 +86,7 @@ def begin_mutation() -> bool:
             return False
         _mutating = True
         _request_serial += 1
+    _mirror_busy()
     _redraw()
     return True
 
@@ -97,8 +98,29 @@ def end_mutation(epoch: int) -> bool:
         if epoch != _epoch:
             return False
         _mutating = False
+    _mirror_busy()
     _redraw()
     return True
+
+
+def _mirror_busy() -> None:
+    """The island picker's BUSY state follows the write barrier (the card
+    words its gate from it); the field mirror itself is unchanged."""
+    try:
+        from . import picker_mirror
+
+        picker_mirror.apply_to_wm()
+    except Exception as exc:  # noqa: BLE001 — a mirror write never blocks a save
+        logger.debug("Agent model picker mirror not refreshed: %s", exc)
+
+
+def invalidate_reads() -> None:
+    """Drop every read (and its retry) issued before now: the island toggle
+    and the key save / remove know a newer `byok_active` than a GET that was
+    already in flight, which would otherwise flip the thumb back."""
+    global _request_serial
+    with _lock:
+        _request_serial += 1
 
 
 def snapshot() -> Dict[str, Any]:
@@ -226,6 +248,8 @@ def apply_to_wm(wm=None) -> None:
             # Properties not registered yet (UI auto-discovery is batched) —
             # the dict keeps the value and a later apply_to_wm picks it up.
             return
+    from . import picker_mirror
+    picker_mirror.apply_to_wm(target)
 
 
 # ---------------------------------------------------------------------------

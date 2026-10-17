@@ -28,6 +28,7 @@ set(SRC
   view3d_agent_panel_layout.cc
   view3d_agent_panel_cards.cc
   view3d_agent_panel_sync.cc
+  view3d_agent_halo.cc
   view3d_agent_panel_draw.cc
   view3d_agent_panel_glyphs.cc
   view3d_agent_panel_ops.cc
@@ -56,6 +57,7 @@ set(SRC
   view3d_director_minimap_extents.cc
   view3d_director_nudge.cc
   view3d_director_overlay.cc
+  view3d_display_prewarm.cc
   view3d_director_overlay_frame.cc
   view3d_director_place_camera.cc
   view3d_director_popup.cc
@@ -145,6 +147,7 @@ set(SRC
   view3d_intern.hh
   view3d_moodboard_drawer.hh
   view3d_scenes_drawer.hh
+  view3d_scenes_drawer_srgb.hh
   view3d_navigate.hh
 )
 

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Hej, jeg er Naman fra Mixar.
+Hej, jeg er Naman.
 På få minutter viser jeg dig rundt i appen.
 Dette er dit 3D-visningsområde.
 Et 3D-rum, du kan bevæge dig rundt i.
@@ -26,9 +26,9 @@ Tilknyt dit eget bibliotek, så agenten bruger dine ressourcer,
 og du sparer kreditter.
 Øverst til venstre er sceneskuffen.
 Hver scene har sin egen fane og Mixie-agent.
-Kør opgaver side om side, og skift når som helst.
-Når scenen er klar, skift til Cinema Mode
-for at styre kameraet og opbygge videoforløb.
+Kør opgaver side om side, og skift når som helst – ægte parallelitet.
+Når du er klar til at optage, så gå til Cinema Mode
+for at styre kameraet og lave videoer i professionel kvalitet.
 Idéer starter i 2D.
 Træk moodboardet frem fra højre, eller tryk på tilde.
 Det er et lærred til referencer og koncepter.
@@ -40,6 +40,6 @@ Hele Blenders arbejdsområde er her med alle paneler og genveje.
 Mixie fungerer i begge. Vælg det, der passer dig.
 Lad os gå tilbage til Zen Mode.
 Vores kreative partnerprogram giver dig kreditter
-og et fællesskab, der former fremtiden for AI og 3D.
+og et fællesskab, der former fremtiden for AI i medierne.
 Det var det. Nu ved du, hvor alt er.
 Lad os skabe 3D sammen.

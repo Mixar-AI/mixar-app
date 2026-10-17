@@ -38,7 +38,12 @@ def callbacks(monkeypatch):
 
 
 @pytest.mark.parametrize("saving", [True, False])
-def test_success_refetches_picker_and_waits_for_server_state(callbacks, saving):
+def test_success_moves_the_island_on_server_facts_and_refetches(callbacks, saving):
+    """The island moves on what the server just answered — the save echo's
+    byok_active, or a successful DELETE of every row (byok_active is false by
+    construction) — never on a guess, and the preference refetch confirms.
+    Waiting for that refetch alone left the thumb on Custom AI with no key
+    when it was slow or failed, and Mixie then paused a key that was gone."""
     wm, pending = callbacks
     preference_state.apply_local({"mixar_agent_model_byok_active": not saving})
 
@@ -51,10 +56,26 @@ def test_success_refetches_picker_and_waits_for_server_state(callbacks, saving):
 
     assert wm.byok_dialog_state == ("SAVED" if saving else "REMOVED")
     assert len(pending) == 1
-    # No guessed local flip: only the preference response owns byok_active.
-    assert wm.mixar_agent_model_byok_active is not saving
+    assert wm.mixar_agent_model_byok_active is saving
     pending[0](True, {"byok_active": saving, "items": []}, None)
     assert wm.mixar_agent_model_byok_active is saving
+
+
+def test_a_save_echo_saying_inactive_is_not_overridden(callbacks):
+    """Server facts only: an echo with byok_active false keeps the thumb off."""
+    wm, pending = callbacks
+    byok_ops._on_save_done(True, {"byok_active": False, "items": [{
+        "provider": "openai", "model": "m"}]}, None, epoch=credential_state.current_epoch())
+    assert wm.mixar_agent_model_byok_active is False
+
+
+def test_a_preference_read_issued_before_the_change_cannot_undo_it(callbacks):
+    wm, pending = callbacks
+    preference_state.apply_local({"mixar_agent_model_byok_active": True})
+    preference_state.refresh()  # in flight, carries the pre-removal answer
+    byok_ops._on_delete_done(True, 1, None)
+    pending[0](True, {"byok_active": True, "items": []}, None)  # the old read lands
+    assert wm.mixar_agent_model_byok_active is False
 
 
 @pytest.mark.parametrize("saving", [True, False])
@@ -65,7 +86,9 @@ def test_failed_mutation_preserves_picker_without_fetching(callbacks, saving):
 
     callback(False, None if saving else 0, "Request failed")
 
-    assert wm.byok_dialog_state == "ERROR"
+    # A failed save shows its error on the form; a failed remove goes back to
+    # the confirm step with the error, so Remove retries and Keep backs out.
+    assert wm.byok_dialog_state == ("ERROR" if saving else "CONFIRM_REMOVE")
     assert pending == []
     assert wm.mixar_agent_model_byok_active is True
 

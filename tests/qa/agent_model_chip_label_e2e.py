@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Island Model chip label + the BYOK note; no credits, credentials or writes.
+"""Island model chip label + the key tab; no credits, credentials or writes.
 
 QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4811 \
   QA_SCENARIO_OUT=/tmp/chip-label python3 tests/qa/agent_model_chip_label_e2e.py
 Run in an isolated QA app. Inspect the saved PNGs as well as the state verdict.
 
-Proves, against the real C++ chip and the real native menu:
-  1. a hosted pick WITH a thinking level draws `<model> · <Level>` on the chip;
-  2. a user key flips the chip to `model_menu.BYOK_CHIP_TEXT`, even when the
-     credential state lands AFTER the preference mirror (the re-mirror path);
-  3. the open menu's NOTE row names the key's provider and model.
+Proves, against the real C++ chip and the real native popup:
+  1. a hosted pick WITH a thinking level draws the "Mixie" badge and
+     `<model> · <Level>` on the chip; the popup's Mixie tab lights the pick
+     and its "Thinking: High" disclosure opens the levels in place;
+  2. a user key moves the chip to the key (its provider's badge, its model),
+     even when the credential state lands AFTER the preference mirror;
+  3. the card opens on the key tab with the key's model (one the catalog
+     does not list still gets its row), greyed with "Key needed on this
+     computer" and "Enter key…" while the key is not on this computer.
 Only the preference service and the credential mirror are synthetic (memory
 only — `credential_state` never touches the keychain, and the fixture restores
 the account's real mirror on exit). No PUT/DELETE reaches the backend.
@@ -22,15 +26,14 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib import run_scenario
+import model_popup as mp
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/chip-label'))
 OUT.mkdir(parents=True, exist_ok=True)
-PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE'}
-MODEL = {'op': 'MIXAR_OT_agent_model_set', 'popup': True}
-KEY_ROW = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
+PICKER = mp.CHIP
 CHIP_WITH_LEVEL = 'QA Model · High'
-NOTE_TEXT = 'Your key: QA Key Provider · QA Key Model'
 SETUP = """
 import bpy, os
 from types import SimpleNamespace
@@ -53,6 +56,8 @@ service = SimpleNamespace(get_model_preference=lambda: response({'items': f.item
                           put_model_preference=lambda **k: response({}),
                           delete_model_preference=lambda role: response({'removed': 0}))
 F.get_agent_service = lambda: service
+# Mixie answers first: the account's own key (if any) is set aside in memory.
+C.apply_from_payload({'byok_active': False, 'items': []}, bpy.context.window_manager)
 labels = {'qa-key-provider': 'QA Key Provider', 'qa-key-model': 'QA Key Model'}
 L.lookup_provider_label = lambda pid: labels.get(pid, pid)
 L.lookup_model_label = lambda pid, mid: labels.get(mid, mid)
@@ -91,37 +96,19 @@ from mixar.modules.byok.core import preference_state as P, credential_state as C
 wm = bpy.context.window_manager
 # The preference mirror says "key active" (the server's word) ...
 P.apply_local({'mixar_agent_model_byok_active': True})
-assert wm.mixar_agent_model_label == 'Custom', wm.mixar_agent_model_label
-# ... and the credential fetch lands afterwards, on a chip someone smudged:
-# the credential mirror must recompose it, not leave it to the next pick.
-wm.mixar_agent_model_label = 'stale'
+# ... and the credential fetch lands afterwards: the chip must follow it
+# (picker_mirror runs from the credential apply), not wait for the next pick.
 C.apply_from_payload({'byok_active': True, 'items': [dict(
     provider='qa-key-provider', model='qa-key-model', supports_vision=True,
     key_preview='sk-...qa')]}, wm)
 assert wm.byok_current_provider == 'qa-key-provider'
 P._redraw()
-result = wm.mixar_agent_model_label
+result = wm.mixar_agent_source
 """
 
 
 def close_menus(qa):
-    for _ in range(2):
-        widgets = qa.find(popup=True)['widgets']
-        if not widgets:
-            return
-        for window in {widget['window'] for widget in widgets}:
-            qa.press('ESC', window=window)
-        time.sleep(.2)
-    qa.wait('not bool(drv.find(popup=True))', timeout=5)
-
-
-def open_picker(qa):
-    qa.click(**PICKER)
-    # The first native click after opening a fresh island can commit its
-    # composer focus. Retry once only when the popup demonstrably stayed shut.
-    if not qa.find(**KEY_ROW)['widgets']:
-        qa.click(**PICKER)
-    qa.wait("bool(drv.find(op='MIXAR_BYOK_OT_open_dialog', popup=True))", timeout=5)
+    mp.close_popup(qa)
 
 
 def redraw_window_of(qa, target):
@@ -162,43 +149,52 @@ def run(qa):
     qa.step('install_fixture', qa.eval, SETUP)
     snaps = []
     try:
-        # 1. Hosted pick with a thinking level -> "<model> · <Level>".
+        # 1. Hosted pick with a thinking level -> Mixie, "<model> · <Level>".
         qa.step('chip_reads_model_and_level', qa.wait,
-                f"bpy.context.window_manager.mixar_agent_model_label == {CHIP_WITH_LEVEL!r}",
-                timeout=5)
+                f"bpy.context.window_manager.mixar_agent_chip_name == {CHIP_WITH_LEVEL!r} and "
+                "bpy.context.window_manager.mixar_agent_source == 'MIXIE'", timeout=5)
+        assert mp.chip(qa) == ('MIXIE', 'Mixie', CHIP_WITH_LEVEL, 'OK'), mp.chip(qa)
         qa.step('dict_stays_model_only', qa.eval,
                 "from mixar.modules.byok.core import preference_state as P\n"
                 "assert P.snapshot()['mixar_agent_model_label'] == 'QA Model'\n"
                 "assert not bpy.context.window_manager.mixar_agent_model_byok_active\n"
                 "result=True")
-        assert qa.find(**PICKER)['widgets'], 'the island Model chip is not on screen'
+        assert qa.find(**PICKER)['widgets'], 'the island model chip is not on screen'
         snaps.append(qa.step('chip_level_capture', capture_island, qa, 'chip_level'))
-        qa.step('open_hosted', open_picker, qa)
-        rows = qa.find(**MODEL)['widgets']
-        assert [r['text'] for r in rows] == ['QA Model'] and rows[0]['enabled'], rows
-        assert not qa.find(text='Your key', contains=True, popup=True)['widgets']
-        qa.wait("bool(drv.find(text='Thinking: High', popup=True))", timeout=5)
-        snaps.append(qa.step('hosted_menu_capture', capture, qa, 'hosted_menu', KEY_ROW))
+        qa.step('open_hosted', mp.open_popup, qa)
+        assert mp.open_tab(qa) == 'MIXIE', mp.open_tab(qa)
+        assert mp.rows(qa) == [('Mixar default', True), ('QA Model', True)], mp.rows(qa)
+        qa.wait(f"bool(drv.find(**{mp.THINKING!r}, text='Thinking: High', contains=True))", timeout=5)
+        snaps.append(qa.step('hosted_popup_capture', capture, qa, 'hosted_popup', mp.THINKING))
+        # The disclosure is an RNA toggle; the popup re-lays with the levels.
+        qa.step('open_levels', qa.click, **mp.THINKING)
+        qa.wait(f"sorted(w['text'] for w in drv.find(**{mp.PICK!r})) == "
+                "['High', 'Low', 'Mixar default', 'QA Model']", timeout=5)
+        snaps.append(qa.step('levels_capture', capture, qa, 'hosted_levels', mp.THINKING))
         close_menus(qa)
 
-        # 2. A user key overrides the pick -> the BYOK indicator, re-mirrored
-        #    by the credential state landing after the preference mirror.
-        label = qa.step('byok_on', qa.eval, BYOK_ON)
-        assert label == 'Custom', label
-        qa.step('chip_reads_byok', qa.wait,
-                "bpy.context.window_manager.mixar_agent_model_label == 'Custom' and "
-                "bpy.context.window_manager.mixar_agent_model_byok_active",
-                timeout=5)
-        snaps.append(qa.step('chip_byok_capture', capture_island, qa, 'chip_byok'))
+        # 2. A user key moves the chip to the key, re-mirrored by the
+        #    credential state landing after the preference mirror.
+        source = qa.step('byok_on', qa.eval, BYOK_ON)
+        assert source == 'KEY', source
+        # The fixture's key is never on this computer: once the off-thread
+        # presence check lands, the chip says so (red, "key needed").
+        qa.step('chip_reads_key', qa.wait,
+                "bpy.context.window_manager.mixar_agent_source == 'KEY' and "
+                "bpy.context.window_manager.mixar_agent_source_state == 'KEY_NEEDED'", timeout=10)
+        assert mp.chip(qa) == ('KEY', 'QA Key Provider', 'QA Key Model', 'KEY_NEEDED'), mp.chip(qa)
+        snaps.append(qa.step('chip_key_capture', capture_island, qa, 'chip_key'))
 
-        # 3. The open menu names the key's provider and model.
-        qa.step('open_byok', open_picker, qa)
-        note = qa.find(text=NOTE_TEXT, popup=True)['widgets']
-        assert len(note) == 1 and not note[0]['enabled'], note
-        assert all(not r['enabled'] for r in qa.find(**MODEL)['widgets'])
-        assert qa.find(**KEY_ROW)['widgets'][0]['enabled']
-        assert 'remove' in qa.find(**KEY_ROW)['widgets'][0]['text'].lower()
-        snaps.append(qa.step('byok_menu_capture', capture, qa, 'byok_menu', KEY_ROW))
+        # 3. The card opens on the key tab: the key's model (one the catalog
+        #    does not list still gets its row), greyed until the key is
+        #    entered here, the note saying why, and "Enter key…".
+        qa.step('open_key_tab', mp.open_popup, qa)
+        assert mp.open_tab(qa) == 'KEY', mp.open_tab(qa)
+        assert mp.rows(qa) == [('QA Key Model', False)], mp.rows(qa)
+        assert qa.find(surface='model_card_note', text='Key needed on this computer')['widgets']
+        enter = qa.find(**mp.SETTINGS_ROW)['widgets']
+        assert len(enter) == 1 and enter[0]['enabled'] and enter[0]['text'] == 'Enter key…', enter
+        snaps.append(qa.step('key_popup_capture', capture, qa, 'key_popup', mp.SETTINGS_ROW))
         close_menus(qa)
         return {'snaps': snaps, 'real_backend_mutations': 0}
     finally:

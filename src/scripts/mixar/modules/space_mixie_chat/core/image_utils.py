@@ -448,8 +448,9 @@ def get_blend_images() -> list[dict]:
     """
     images = []
     for image in bpy.data.images:
-        # Skip render results and viewer images
-        if image.type in {'RENDER_RESULT', 'COMPOSITING'} or image.source == 'MOVIE':
+        # Skip render results and viewer images. Movies are listed: the picker
+        # attaches one as a context file rather than an image pill.
+        if image.type in {'RENDER_RESULT', 'COMPOSITING'}:
             continue
 
         images.append({
@@ -458,6 +459,7 @@ def get_blend_images() -> list[dict]:
             'height': image.size[1],
             'has_data': image.has_data,
             'filepath': image.filepath if image.filepath else None,
+            'is_movie': image.source == 'MOVIE',
         })
 
     return images

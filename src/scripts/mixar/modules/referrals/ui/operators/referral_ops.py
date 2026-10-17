@@ -59,7 +59,7 @@ class MIXAR_OT_refer_friend_via_profile(Operator):
 
 
 class MIXAR_OT_refer_friend(Operator):
-    """Share your invite link or email it to friends to earn bonus credits"""
+    """Share your invite link or email it to friends to earn credits when they buy"""
 
     bl_idname = "mixar.refer_friend"
     bl_label = "Refer a Friend"

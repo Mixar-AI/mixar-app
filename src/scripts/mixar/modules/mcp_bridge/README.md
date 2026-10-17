@@ -4,12 +4,13 @@
 # Connect an AI app to Mixar
 
 1. Open Mixar and sign in.
-2. Open your profile menu (top right) → **Connect AI Apps (MCP)** and pick your app. Claude Code and
-   Codex have **Add to …**, which sets everything up; for other apps, **Copy**
-   the shown setup and paste it where the dialog says (**Open Config File**
-   opens that file). **Copy MCP Config** copies the standard `mcpServers` JSON.
-3. **Setup Guide** opens the full per-app instructions.
-   Tick **Let AI apps control Mixar's interface** only if the assistant should
+2. Open your profile menu (top right) → **Connect MCP** and pick your app on
+   the left. Claude Code and Codex have **Add to …**, which sets everything up; for
+   other apps, **Copy setup** and paste it where the dialog says (**Open <file>**
+   opens that file). **Other app** copies the standard `mcpServers` JSON or the
+   bare launcher command.
+3. **Guide** opens the full per-app instructions.
+   Switch on **Let AI apps control Mixar's interface** only if the assistant should
    also see and click Mixar's interface; scene tools work without it.
 4. Restart the app's MCP connection. It can start your installed Mixar when needed.
    The assistant sees every tool even while Mixar is closed or signed out; it
@@ -30,10 +31,10 @@ Claude/Codex. Use `mixar_credit_balance` to inspect your available balance.
 
 The setup uses a stable per-user launcher backed by Mixar's bundled Python.
 It requires no separate Python packages or copied account token. The dialog's
-**Allow AI apps to use Mixar (MCP)** checkbox is the switch: unticking it revokes
-access, a line under it says what AI apps see right now, and while it is off an
-AI app's tool call answers "MCP is turned off in Mixar" (never "Mixar is not
-open"). If multiple opted-in Mixar processes are running,
+status line is the switch: it says what AI apps see right now (they can connect
+only once Mixar is signed in and connected to its server) with **Turn off** /
+**Turn on** beside it, and while MCP is off an AI app's tool call answers "MCP
+is turned off in Mixar" (never "Mixar is not open"). If multiple opted-in Mixar processes are running,
 the connection uses the one that is signed in; when several are, the assistant
 selects one using `mixar_ui_context`. The connection pins its scene;
 `mixar_scene_new` creates a tab and `mixar_scene_switch` moves to one, and every

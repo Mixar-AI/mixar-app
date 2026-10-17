@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include <string>
+
 /* rctf is taken by reference and returned by pointer throughout. */
 #include "DNA_vec_types.h"
 
@@ -158,6 +160,56 @@ void moodboard_frame_color(PointerRNA *frame, float r_color[3]);
  */
 bool moodboard_frame_rename_is_active(const Scene *scene, const char *frame_id);
 void moodboard_frame_rename_end();
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Body Stack and Occlusion (mixie_moodboard_graph_hit.cc)
+ *
+ * An output handle sits just outside its owner's rect, so a picture dropped
+ * on top of an older one hides that older handle under its pixels -- while
+ * the handle's 12 px hit disc kept winning the click and opened Create Next
+ * Node for an image the user could not see. The hit-test, the handle painter
+ * and the QA target exporter all ask the one question below, so a covered
+ * handle is neither painted nor clickable nor offered to a scenario.
+ * \{ */
+
+struct MoodboardGraphCache;
+
+/** One opaque canvas body: a reference picture, an action card or an asset card. */
+struct MoodboardGraphBody {
+  /** Empty for a picture that never received a graph id; it still covers. */
+  std::string node_id;
+  rctf rect;
+  /** Pictures rotate about their centre; cards never do. */
+  float rotation_deg;
+};
+
+/**
+ * Inverse-rotate a canvas point about a centre (degrees, the unit the media
+ * `rotation` property and the image painter's `GPU_matrix_rotate_2d` share),
+ * so an axis-aligned bounds test works on a rotated picture. Shared by every
+ * hit-test that asks "is this point inside that picture?" (mixie_select.cc).
+ */
+void moodboard_inverse_rotate_point(float mx,
+                                    float my,
+                                    float cx,
+                                    float cy,
+                                    float rotation_deg,
+                                    float *r_x,
+                                    float *r_y);
+
+/**
+ * Is this canvas point under a body painted ABOVE `owner_id`'s own body?
+ * Bodies come from #MoodboardGraphCache::bodies, appended in paint order
+ * (pictures in collection order, then action cards, then asset cards;
+ * embedded media is its owning card). An unknown or empty owner is never
+ * covered.
+ */
+bool moodboard_graph_point_covered_above(const MoodboardGraphCache &cache,
+                                         const char *owner_id,
+                                         float x,
+                                         float y);
 
 /** \} */
 

@@ -26,7 +26,12 @@ from .node_graph import (
 from .node_job_bridge import ensure_graph_listener
 from .node_mesh_execution import _MESH_FEATURE_ROUTING, _run_mesh_feature
 from .node_run_helpers import grow_owner_frame, label_image_name, require_upstream_results
-from .node_schema import collect_node_params, node_model_slug, node_service_key
+from .node_schema import (
+    MODEL_3D_SERVICE_KEYS,
+    collect_node_params,
+    node_model_slug,
+    node_service_key,
+)
 
 logger = get_logger(__name__)
 
@@ -167,7 +172,7 @@ def _run_model_3d(context, node, operator):
     service_key = resolve_service_key("model_gen", node_service_key(node))
     if not service_key:
         raise ValueError(rpt_("Model Gen is unavailable in the generation catalog"))
-    if service_key not in {'model_3d', 'image_to_3d', 'hunyuan_rapid'}:
+    if service_key not in MODEL_3D_SERVICE_KEYS:
         raise ValueError(rpt_("This Model Gen mode is not supported by inference nodes yet"))
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
@@ -478,6 +483,10 @@ def run_action_node(context, node, operator):
 
         run_assemble_node(context, node)
         return None
+    elif node.action_type == 'ANIMATE':
+        from .animate_node import run_animate_node
+
+        job, params = run_animate_node(context, node)
     elif node.action_type in _MESH_FEATURE_ROUTING:
         job, params = _run_mesh_feature(context, node, operator)
     else:

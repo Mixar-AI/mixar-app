@@ -31,7 +31,7 @@ def _send_abort_request(session_id: str) -> None:
     """Cancel the backend run through the authenticated agent socket."""
     from mixar.modules.common.agent_rpc.client import request
     try:
-        request('cancel', {'session_id': session_id}, mutation=True)
+        request('cancel', {'session_id': session_id, 'origin': 'file_load'}, mutation=True)
     except Exception as exc:
         logger.warning('Agent cancellation could not be confirmed: %s', exc)
 

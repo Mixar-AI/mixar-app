@@ -68,7 +68,26 @@ def draw_render_settings(layout, context, *, vertical=False):
         style(field)
 
 
+def browser_playing(context):
+    """A clip played from the Animations browser (data-derived, see animation_nla)."""
+    from ...core import animation_nla
+    state = getattr(context.window_manager, "mixar_animations", None)
+    return state is not None and animation_nla.is_playing(context.window, context.scene, state)
+
+
 def draw_playback(layout, context):
+    if browser_playing(context):
+        row = layout.mixar_surface(theme="ZEN").row(align=True)
+        row.ui_units_x = 5.8
+        row.scale_x = 1.9
+        row.operator("mixar.animation_stop", text="", icon="SNAP_FACE")
+        row.operator("mixar.animation_pause", text="", icon="PAUSE"
+                     if context.screen.is_animation_playing else "PLAY")
+        last = row.row(align=True)
+        last.enabled = False
+        last.operator("screen.keyframe_jump", text="", icon="NEXT_KEYFRAME").next = True
+        style(row)
+        return
     row = layout.mixar_surface(theme="ZEN").row(align=True)
     row.alignment = "EXPAND"
     row.ui_units_x = 5.8
@@ -175,18 +194,28 @@ def draw_guides(layout, context):
 
 
 def draw_right(layout, context, *, tier):
+    browsing = browser_playing(context)
     # Native row spacing is enough between groups; extra separators double it.
     if not tiers.at_most(tier, tiers.TIGHT):
-        draw_cinema(layout, context)
+        draw_cinema(layout.row(), context)
     if tiers.overflow_sections(tier) and hasattr(bpy.types, "MIXAR_PT_zen_toolbar_more"):
+        transport = layout.mixar_surface(theme="ZEN").row(align=True)
+        transport.ui_units_x = 3.8
+        playing = context.screen.is_animation_playing
+        transport.operator("mixar.animation_pause" if browsing else "screen.animation_play",
+                           text="", icon="PAUSE" if playing else "PLAY")
+        transport.operator("mixar.animation_stop" if browsing else "screen.animation_cancel",
+                           text="", icon="SNAP_FACE")
+        style(transport)
         more = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
         more.ui_units_x = 2.0
         more.popover(panel="MIXAR_PT_zen_toolbar_more", text="", icon="DOWNARROW_HLT")
         style(more)
     else:
         draw_playback(layout, context)
-        draw_sky(layout, context)
-        draw_export(layout)
+        settings = layout.row()
+        draw_sky(settings, context)
+        draw_export(settings)
 
 
 def draw_export(layout):

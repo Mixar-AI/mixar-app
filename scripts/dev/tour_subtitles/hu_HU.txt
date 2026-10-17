@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Szia, Naman vagyok a Mixartól.
+Szia, Naman vagyok.
 Néhány perc alatt körbevezetlek az alkalmazásban.
 Ez a nézetablakod.
 Egy 3D-tér, amelyben mozoghatsz.
@@ -26,9 +26,9 @@ Csatold saját könyvtáradat, hogy az ügynök a te elemeidet használja,
 és krediteket takaríts meg.
 Balra fent van a jelenetfiók.
 Minden jelenetnek saját füle és Mixie ügynöke van.
-Futtass feladatokat párhuzamosan, és válts köztük bármikor.
-Ha a jelenet elkészült, válts Cinema Mode-ra,
-hogy irányítsd a kamerát és videós munkafolyamatokat készíts.
+Futtass feladatokat párhuzamosan, és válts bármikor – valódi párhuzamosság.
+Ha készen állsz a forgatásra, lépj át Cinema Mode-ba,
+hogy irányítsd a kamerát és profi minőségű videókat készíts.
 Az ötletek 2D-ben kezdődnek.
 Húzd elő jobbról a moodboardot, vagy nyomd meg a tildét.
 Ez egy vászon referenciákhoz és koncepciókhoz.
@@ -40,6 +40,6 @@ A teljes Blender-munkaterület elérhető minden panellel és gyorsbillentyűvel
 A Mixie mindkettőben működik. Válaszd a kényelmesebbet.
 Térjünk vissza Zen Mode-ba.
 Kreatív partnerprogramunk krediteket ad,
-és egy közösséget, amely az AI és a 3D jövőjét alakítja.
+és egy közösséget, amely az AI jövőjét alakítja a médiában.
 Ennyi. Most már tudod, mi hol van.
 Alkossunk együtt 3D-ben.

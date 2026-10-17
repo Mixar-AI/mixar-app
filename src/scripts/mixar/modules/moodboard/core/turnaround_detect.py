@@ -27,6 +27,15 @@ Threading: the detect request runs on the shared async request queue, whose
 callbacks are delivered on Blender's main thread. Crop pixels are downloaded
 on a worker thread and handed back to the main thread before touching
 ``bpy.data``.
+
+Scene: everything lands in the tab that STARTED the detection, resolved again
+when the response arrives (``resolve_job_scene``: by chat session, so a renamed
+tab still matches). ``bpy.context.scene`` at callback time is whatever tab the
+window shows — the user may have switched tabs during the request, and an
+agent's tab is usually not the shown one. A tab closed meanwhile gets nothing.
+A tab that still exists but no longer resolves (its chat session changed —
+New Chat, a loaded chat, a checkpoint reset — or a session-less tab was
+renamed) gets no results either, but its in-flight flag is released.
 """
 
 import threading
@@ -58,42 +67,51 @@ DETECT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 def detect_views(
     image: bpy.types.Image,
-    on_done: Callable[[str, int], None],
-    on_error: Callable[[str], None],
-    on_not_turnaround: Callable[[], None],
+    on_done: Callable[[object, str, int], None],
+    on_error: Callable[[object, str], None],
+    on_not_turnaround: Callable[[object], None],
     hint: str = "",
+    scene=None,
 ) -> None:
     """Detect turnaround panels in *image* and ingest the crops.
 
-    All three callbacks fire on Blender's main thread.
+    All three callbacks fire on Blender's main thread and receive the
+    ORIGINATING scene first — never ``bpy.context.scene``, which by then may
+    be another tab. When that tab no longer exists no callback fires.
 
     Args:
         image: The moodboard image believed to be a turnaround sheet.
-        on_done: ``fn(group_id, companion_count)`` after crops are on the
-            board. ``group_id`` is "" when the sheet had no companion angles.
-        on_error: ``fn(message)`` on any failure.
-        on_not_turnaround: called when the backend says this is an ordinary
-            single image — the caller should change nothing.
+        on_done: ``fn(scene, group_id, companion_count)`` after crops are on
+            the board. ``group_id`` is "" when the sheet had no companion
+            angles.
+        on_error: ``fn(scene, message)`` on any failure.
+        on_not_turnaround: ``fn(scene)`` when the backend says this is an
+            ordinary single image — the caller should change nothing.
         hint: optional one-line description of the subject, forwarded as the
             endpoint's ``hint`` form field to help it read stylised sheets.
+        scene: the tab the crops belong to; defaults to the current scene.
     """
     from mixar.modules.common.api.services import get_model_3d_service
     from mixar.modules.common.utils.image_utils import compress_for_service
+
+    scene = scene if scene is not None else bpy.context.scene
+    origin = _origin_of(scene)
 
     # Dedicated profile, NOT the image_to_3d one: the sheet gets split, so
     # its upload resolution divides down into the per-view 3D input.
     try:
         image_bytes = compress_for_service(image, "turnaround_detect")
     except Exception as e:
-        on_error(rpt_("Failed to read image: {error}").format(error=e))
+        on_error(scene, rpt_("Failed to read image: {error}").format(error=e))
         return
     if not image_bytes:
-        on_error(n_("Image has no pixel data"))
+        on_error(scene, n_("Image has no pixel data"))
         return
     if len(image_bytes) > DETECT_MAX_UPLOAD_BYTES:
         # The backend rejects oversized uploads with a generic 422; say what
         # actually went wrong instead.
         on_error(
+            scene,
             rpt_("Image is too large to analyse ({size:.1f} MB, limit 20 MB)").format(
                 size=len(image_bytes) / (1024 * 1024))
         )
@@ -107,20 +125,29 @@ def detect_views(
         envelope = response.data or {}
         data = envelope.get("data", envelope)
 
+        target = _resolve_origin(origin)
+        if target is None:
+            _release_orphaned(origin)
+            return
+
         if not data.get("is_turnaround"):
-            on_not_turnaround()
+            on_not_turnaround(target)
             return
 
         panels = _sanitise_panels(data.get("panels") or [])
         if not panels:
-            on_not_turnaround()
+            on_not_turnaround(target)
             return
 
-        _ingest_panels(source_name, panels, on_done, on_error)
+        _ingest_panels(origin, source_name, panels, on_done, on_error)
 
     def _on_error(error):
         logger.error("[Turnaround] detect-views failed: %s", error)
-        on_error(_error_message(error))
+        target = _resolve_origin(origin)
+        if target is not None:
+            on_error(target, _error_message(error))
+        else:
+            _release_orphaned(origin)
 
     get_model_3d_service().detect_views_async(
         image_bytes,
@@ -202,14 +229,78 @@ def _sanitise_panels(raw_panels: list) -> list:
     return panels
 
 
+def _origin_of(scene) -> Tuple[str, str, Optional[int]]:
+    """``(scene name, chat session id, pointer)`` identifying the originating
+    tab. Results resolve by name + session only; the pointer just finds a
+    renamed tab to release (see ``_release_orphaned``)."""
+    return (
+        getattr(scene, "name", "") or "",
+        str(getattr(scene, "mixie_session_id", "") or ""),
+        _pointer_of(scene),
+    )
+
+
+def _resolve_origin(origin: Tuple[str, str, Optional[int]]):
+    """The originating tab now, or None when it was closed.
+
+    Same resolution the job queue uses for its results, so a detection and a
+    generation started from one tab always come back to the same place.
+    """
+    from mixar.modules.common.job_queue.core.queue_download import (
+        resolve_job_scene,
+    )
+
+    scene = resolve_job_scene(origin[0], origin[1])
+    if scene is None:
+        logger.warning(
+            "[Turnaround] Tab %r (session %r) is gone; detected views dropped",
+            origin[0], origin[1],
+        )
+    return scene
+
+
+def _release_orphaned(origin: Tuple[str, str, Optional[int]]) -> None:
+    """Clear the in-flight state of an originating tab that no longer resolves.
+
+    The tab can still be open with another chat session (New Chat, a loaded
+    chat, a checkpoint reset) or, without a session, under a new name. The
+    results are not its own any more, but leaving ``mixie_detect_views_running``
+    set would block Detect Views there for good.
+    """
+    name, _session, pointer = origin
+    try:
+        scenes = bpy.data.scenes
+        scene = scenes.get(name) if name else None
+        if scene is None and pointer is not None:
+            scene = next((s for s in scenes if _pointer_of(s) == pointer), None)
+    except Exception:  # noqa: BLE001
+        return
+    if scene is None or not getattr(scene, "mixie_detect_views_running", False):
+        return
+    try:
+        scene.mixie_detect_views_running = False
+        scene.mixie_detect_views_status = ""
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _pointer_of(scene) -> Optional[int]:
+    try:
+        return scene.as_pointer()
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _ingest_panels(
+    origin: Tuple[str, str, Optional[int]],
     source_name: str,
     panels: list,
-    on_done: Callable[[str, int], None],
-    on_error: Callable[[str], None],
+    on_done: Callable[[object, str, int], None],
+    on_error: Callable[[object, str], None],
 ) -> None:
-    """Download crops off-thread, then add them to the moodboard on the main
-    thread. Preview URLs are short-lived, so they are fetched immediately."""
+    """Download crops off-thread, then add them to the originating tab's
+    moodboard on the main thread. Preview URLs are short-lived, so they are
+    fetched immediately."""
     base = _base_name(source_name)
 
     def _download():
@@ -229,17 +320,23 @@ def _ingest_panels(
             downloaded.append((temp_path, panel))
 
         def _apply():
+            # Resolved again: the tab may have closed during the download.
+            scene = _resolve_origin(origin)
+            if scene is None:
+                _discard(downloaded)
+                _release_orphaned(origin)
+                return None
             if not downloaded:
-                on_error(n_("Failed to download the detected views"))
+                on_error(scene, n_("Failed to download the detected views"))
                 return None
             try:
                 group_id, count = _add_panels_to_moodboard(
-                    source_name, base, downloaded)
+                    scene, source_name, base, downloaded)
             except Exception as e:
                 logger.error("[Turnaround] Failed to add crops: %s", e, exc_info=True)
-                on_error(rpt_("Failed to add detected views: {error}").format(error=e))
+                on_error(scene, rpt_("Failed to add detected views: {error}").format(error=e))
                 return None
-            on_done(group_id, count)
+            on_done(scene, group_id, count)
             return None
 
         bpy.app.timers.register(_apply, first_interval=0.0)
@@ -247,8 +344,19 @@ def _ingest_panels(
     threading.Thread(target=_download, daemon=True).start()
 
 
-def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
-    """Main-thread: load each crop onto the board and wire up the tab.
+def _discard(downloaded) -> None:
+    """Remove downloaded crop temp files that will never be loaded."""
+    import os
+
+    for temp_path, _panel in downloaded:
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+
+
+def _add_panels_to_moodboard(scene, source_name, base, downloaded) -> Tuple[str, int]:
+    """Main-thread: load each crop onto *scene*'s board and wire up its tab.
 
     ``main`` becomes the tab's Input Image and ``hero`` sits beside it,
     neither joining the group — only the companion angles do, matching what
@@ -266,7 +374,6 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
         set_active_group, set_group_main_image, set_tab_input_image,
     )
 
-    scene = bpy.context.scene
     group_id = new_group_id()
     origin_x, origin_y, step = _strip_origin(scene, source_name)
 
@@ -342,7 +449,7 @@ def _place(scene, image, x: float, y: float):
     """Append *image* to the moodboard and return its item."""
     from mixar.modules.common.utils.image_utils import add_image_to_moodboard
 
-    add_image_to_moodboard(image, position_x=x, position_y=y)
+    add_image_to_moodboard(image, position_x=x, position_y=y, scene=scene)
     # add_image_to_moodboard appends, so the new item is the last one.
     return scene.mixie_moodboard_images[-1]
 

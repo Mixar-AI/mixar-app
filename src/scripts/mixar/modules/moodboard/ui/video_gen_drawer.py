@@ -16,6 +16,24 @@ from .sidebar_ui_helpers import (
 )
 
 
+#: Lines of references listed before "… and N more"; a 30-still board must
+#: not push the prompt off the sidebar.
+_MAX_LISTED_REFERENCES = 6
+
+
+def _draw_reference_order(col, items, kind, icon):
+    """One ``@Image1: name`` line per reference, in the order they are sent."""
+    for index, item in enumerate(items[:_MAX_LISTED_REFERENCES], start=1):
+        name = item.get("filename") or item.get("image_name") or ""
+        col.label(text=f"@{kind}{index}: {name}", icon=icon, translate=False)
+    hidden = len(items) - _MAX_LISTED_REFERENCES
+    if hidden > 0:
+        col.label(
+            text=iface_("… (+{count} more)").format(count=hidden),
+            icon='BLANK1', translate=False,
+        )
+
+
 def _draw_video_gen(layout, context):
     scene = context.scene
     sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
@@ -35,18 +53,19 @@ def _draw_video_gen(layout, context):
 
     refs = get_selected_moodboard_media_inputs(context)
     selected = draw_section_box(layout, n_("Selected References"), icon='IMAGE_DATA')
-    selected.label(text=iface_("Images: {count}").format(count=len(refs['images'])),
-                   icon='IMAGE_DATA', translate=False)
-    selected.label(text=iface_("Videos: {count}").format(count=len(refs['videos'])),
-                   icon='FILE_MOVIE', translate=False)
-    if refs["videos"] and not refs["all_video_sources_available"]:
-        draw_hint(selected, n_("A selected video source file is missing"), icon='ERROR')
-    elif not refs["count"]:
+    if not refs["count"]:
         draw_hint(selected, n_("No references selected — text-to-video"), icon='INFO')
     else:
+        # This list IS the wire order (board order, images then videos): the
+        # model knows the first line as @Image1. Without it the user had no
+        # way to tell which still "Image 2" was.
+        _draw_reference_order(selected, refs["images"], "Image", 'IMAGE_DATA')
+        _draw_reference_order(selected, refs["videos"], "Video", 'FILE_MOVIE')
+        if refs["videos"] and not refs["all_video_sources_available"]:
+            draw_hint(selected, n_("A selected video source file is missing"), icon='ERROR')
         draw_hint(
             selected,
-            n_("Mention image/video order in the prompt when assigning roles"),
+            n_("Name them in the prompt as @Image1, @Video1 — this order"),
             icon='INFO',
         )
 

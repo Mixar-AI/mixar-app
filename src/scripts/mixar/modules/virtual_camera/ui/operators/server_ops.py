@@ -20,6 +20,7 @@ from __future__ import annotations
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.virtual_camera.constants import CLOSE_REPAIRED
 from mixar.modules.virtual_camera.core import wm_mirror
 from mixar.modules.virtual_camera.core.pairing import generate_token
 from mixar.modules.virtual_camera.core.runtime import get_runtime
@@ -104,7 +105,9 @@ class MIXAR_OT_virtual_camera_new_pairing(Operator):
     def execute(self, context):
         runtime = get_runtime()
         server = runtime.server
-        server.drop_connection(reason="re-pairing")
+        # Close with the FINAL code before the token rotates: the phone
+        # stops reconnecting and asks for a fresh QR scan.
+        server.drop_connection(reason="re-pairing", code=CLOSE_REPAIRED)
         server.state.token = generate_token()
         wm_mirror.sync(runtime)
         return {'FINISHED'}

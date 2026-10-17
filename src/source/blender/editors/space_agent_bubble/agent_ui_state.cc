@@ -20,7 +20,7 @@
  *                 (no invented "New Chat" fallback)
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   auto switch   scene.mixie_chat_auto_mode
- *   model chip    wm.mixar_agent_model_label / wm.mixar_agent_model_byok_active
+ *   model chip    wm.mixar_agent_{source,source_label,chip_name,source_state}
  *                 (absent until the Python half registers them)
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
@@ -59,6 +59,7 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_cat_activity.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_provider.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -307,6 +308,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     /* A scene saved before the chat registered the property reads false —
      * the same default the send path uses (core/composer_send.py). */
     r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
+    r_state->prompt_refined = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refined");
+    r_state->prompt_refining = read_bool_prop(&scene_ptr, "mixie_chat_prompt_refining");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
@@ -411,24 +414,9 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                                std::clamp(RNA_property_float_get(&wm_ptr, level), 0.0f, 1.0f) :
                                0.0f;
   }
-  /* Hosted model pick — the WindowManager mirror the Python half writes
-   * (byok preference state). A build whose Python half has not landed, or
-   * an old .blend opened before the properties registered, reads as "no
-   * picker": the chip is left out entirely instead of popping a menu that
-   * is not registered. */
-  r_state->model_available = false;
-  r_state->model_byok_active = false;
-  r_state->model_label[0] = '\0';
-  if (wm) {
-    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    PropertyRNA *label = RNA_struct_find_property(&wm_ptr, "mixar_agent_model_label");
-    if (label && RNA_property_type(label) == PROP_STRING) {
-      r_state->model_available = true;
-      read_string_prop(
-          &wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
-      r_state->model_byok_active = read_bool_prop(&wm_ptr, "mixar_agent_model_byok_active");
-    }
-  }
+  /* The model chip: the Python half's WindowManager mirror; absent
+   * properties read as "no picker" (agent_ui_provider.cc). */
+  agent_ui_provider_gather(wm, r_state);
 
   cat.listening = r_state->voice_listening;
   if (scene) {

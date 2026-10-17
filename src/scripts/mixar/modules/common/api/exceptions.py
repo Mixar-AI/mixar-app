@@ -88,6 +88,27 @@ class InsufficientCreditsError(HTTPClientError):
         self.action_label = action_label
 
 
+class LoginRequiredError(HTTPClientError):
+    """A guest called a route that needs a signed-in account (403).
+
+    The backend's ``login_required`` refusal: NOT an ``AuthenticationError``
+    (the token is valid; nothing refreshes or waits for a sign-in) and not a
+    credits failure. ``cta`` says what fixes it — ``login``, ``login_or_byok``
+    or ``fix_byok``.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        cta: str = "login",
+        action_label: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(message, **kwargs)
+        self.cta = cta
+        self.action_label = action_label
+
+
 class RateLimitError(HTTPClientError):
     """Rate limit exceeded (429)."""
 

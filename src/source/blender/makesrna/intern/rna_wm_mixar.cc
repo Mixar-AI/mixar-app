@@ -74,6 +74,7 @@
 #endif
 
 #include "rna_wm_ui_control.cc"
+#include "rna_wm_mixar_popup.cc"
 
 /* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
  * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
@@ -147,6 +148,21 @@ bool Mixar_splash_is_open();
 static bool rna_WindowManager_mixar_splash_open_get(PointerRNA * /*ptr*/)
 {
   return Mixar_splash_is_open();
+}
+
+/* Some Mixar window holds OS focus. ``win->active`` follows GHOST's
+ * WindowActivate / WindowDeactivate on every platform, and switching to
+ * another application deactivates the key window, so "no active window"
+ * means another app is in front. The sign-in autoshow gate reads it. */
+static bool rna_WindowManager_mixar_app_active_get(PointerRNA *ptr)
+{
+  const wmWindowManager *wm = (const wmWindowManager *)ptr->data;
+  for (const wmWindow &win : wm->windows) {
+    if (win.active) {
+      return true;
+    }
+  }
+  return false;
 }
 
 static void rna_Window_mixar_qa_drag_file(
@@ -226,6 +242,11 @@ static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const
 
 /* tour_menu.cc: tag every open pop-up in the window to rebuild its layout. */
 int Mixar_refresh_popups(wmWindow *win);
+int Mixar_refresh_popover(wmWindow *win, const char *panel_id);
+static int rna_Window_mixar_refresh_popover(wmWindow *win, const char *panel_id)
+{
+  return Mixar_refresh_popover(win, panel_id);
+}
 
 static int rna_Window_mixar_refresh_popups(wmWindow *win)
 {
@@ -251,7 +272,6 @@ static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
   }
 }
 
-
 #else /* RNA_RUNTIME */
 
 void RNA_def_wm_mixar(BlenderRNA *brna)
@@ -272,6 +292,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
   }
 
   RNA_def_mixar_ui_control(brna, srna);
+  RNA_def_mixar_popup_query(brna, srna);
 
   PropertyRNA *prop = RNA_def_property(srna, "global_areas", PROP_COLLECTION, PROP_NONE);
   RNA_def_property_collection_funcs(prop,
@@ -404,6 +425,14 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
     RNA_def_function_return(func, parm);
   }
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_refresh_popover", "rna_Window_mixar_refresh_popover");
+    RNA_def_function_ui_description(func, "Refresh only the named live popover after async updates");
+    PropertyRNA *parm = RNA_def_string(func, "panel_id", nullptr, 0, "Panel", "Panel type idname");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    RNA_def_function_return(func, RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX));
+  }
   /* This window's client rect inside another window's client coordinates
    * (points, bottom-left origin) — exact across window styles. */
   {
@@ -453,6 +482,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                              "Splash Open",
                              "The startup splash popup is on screen; it closes on a button, "
                              "a click outside it or Escape");
+
+    /* Opening a bubble window activates the app, so the autoshow holds
+     * while the user is in the browser after a sign-in handoff. */
+    prop = RNA_def_property(srna_wm, "mixar_app_active", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_app_active_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "App Active",
+                             "A Mixar window has OS focus; False while another application "
+                             "is in front");
   }
 }
 

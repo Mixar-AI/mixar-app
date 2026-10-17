@@ -4,8 +4,10 @@
 
 """The "add-on projects root" folder (the workspace).
 
-The root is the Mixar Preference ``addon_projects_dir`` (default
-``~/Mixar Addons``, expanded at use time) and is itself THE linked project:
+The root is the per-user setting ``addon_projects_dir`` (the config overlay
+through ``mixar.config.config``, drawn as the Mixar Preferences field
+``WindowManager.mixar_addon_projects_dir``; default ``~/Mixar Addons``,
+expanded at use time) and is itself THE linked project:
 every add-on lives as a top-level package inside it and the ACTIVE add-on
 is the manifest entrypoint. Nothing asks the user for the folder — the
 first project-mode Send creates the default; the Preference field is where
@@ -26,13 +28,12 @@ from .constants import (
     DEFAULT_WORKSPACE_DIR,
     IGNORED_PARTS,
     WORKSPACE_LAYOUT_RULE,
-    WORKSPACE_ROOT_PREFERENCE,
 )
 from .errors import AddonProjectError
 from .manifest import _MODULE_RE, _looks_like_addon_source
 from .storage import read_json, write_json_atomic
 
-# v3.4.x kept a hand-picked root here; migrated into the Preference once.
+# v3.4.x kept a hand-picked root here; migrated into the setting once.
 LEGACY_WORKSPACE_FILE = "workspace.json"
 # Machine-local record of DELIBERATE disables (set_enabled False/uninstall).
 # run_checks only skips auto-enable for stamped entrypoints — a bare
@@ -43,19 +44,29 @@ STATE_FILE = "addon_state.json"
 _TOP_PACKAGE_INIT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)/__init__\.py$")
 
 
-def _preferences():
-    """The Mixar preferences group, or None outside a Blender context."""
+def _read_root_setting():
+    """The stored projects root (per-user config overlay); "" when unreadable."""
     try:
-        import bpy
+        from mixar.config.config import get_addon_projects_dir
 
-        return getattr(bpy.context.scene, "mixar_paint_preferences", None)
+        return get_addon_projects_dir()
     except Exception:
-        return None
+        return ""
+
+
+def _write_root_setting(value: str) -> bool:
+    """Persist the projects root to the per-user config overlay."""
+    try:
+        from mixar.config.config import set_addon_projects_dir
+
+        return bool(set_addon_projects_dir(value))
+    except Exception:
+        return False
 
 
 def preferred_root_value() -> str:
-    """The raw ``addon_projects_dir`` Preference; "" when unset or unreadable."""
-    value = getattr(_preferences(), WORKSPACE_ROOT_PREFERENCE, "")
+    """The raw ``addon_projects_dir`` setting; "" when unset or unreadable."""
+    value = _read_root_setting()
     return value.strip() if isinstance(value, str) else ""
 
 
@@ -71,19 +82,16 @@ def get_workspace_root():
 
 
 def _migrate_legacy_root(storage_dir: Path) -> None:
-    """One shot: a root picked in v3.4.x (``workspace.json``) becomes the Preference.
+    """One shot: a root picked in v3.4.x (``workspace.json``) becomes the setting.
 
-    Runs from operators only (a Preference write is not allowed at draw
-    time). The file goes once its value is in the Preference — or the user
-    already set a different one there — so the Preference stays the one
-    source. Outside a Blender context nothing happens.
+    Runs from operators only. The file goes once its value is stored — or
+    the user already set a different root — so the setting stays the one
+    source. When the per-user config cannot be written the file is left for
+    a later attempt.
     """
     path = Path(storage_dir) / LEGACY_WORKSPACE_FILE
     payload = read_json(path, None)
     if payload is None:
-        return
-    prefs = _preferences()
-    if prefs is None:
         return
     legacy = payload.get("root") if isinstance(payload, dict) else None
     try:
@@ -91,7 +99,8 @@ def _migrate_legacy_root(storage_dir: Path) -> None:
             isinstance(legacy, str) and legacy and Path(legacy).is_dir()
             and preferred_root_value() in ("", DEFAULT_WORKSPACE_DIR)
         ):
-            setattr(prefs, WORKSPACE_ROOT_PREFERENCE, legacy)
+            if not _write_root_setting(legacy):
+                return
         path.unlink()
     except (OSError, AttributeError, TypeError, ValueError):
         pass

@@ -26,7 +26,7 @@
 
 namespace blender::ui {
 
-static int cinema_font()
+int mixar_clash_grotesk_font()
 {
   const auto dir = BKE_appdir_folder_id(BLENDER_DATAFILES, BLF_DATAFILES_FONTS_DIR);
   if (!dir) {
@@ -136,6 +136,12 @@ static int draw_tinted_text(const int font,
   }
   GPU_texture_update(texture, GPU_DATA_UBYTE, pixels.data());
   GPU_texture_filter_mode(texture, false);
+  /* The preceding SVG icon can flush BLF's batch and leave blending disabled.
+   * Finish any queued glyphs before binding our texture, then explicitly use
+   * its coverage alpha so transparent texels never paint a solid rectangle. */
+  const GPUBlend old_blend = GPU_blend_get();
+  BLF_batch_draw_flush();
+  GPU_blend(GPU_BLEND_ALPHA);
   GPU_texture_bind(texture, 0);
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
@@ -154,6 +160,7 @@ static int draw_tinted_text(const int font,
   immUnbindProgram();
   GPU_texture_unbind(texture);
   GPU_texture_free(texture);
+  GPU_blend(old_blend);
   return w - 2;
 }
 
@@ -170,7 +177,7 @@ void mixar_cinema_label(const rcti &bounds,
    * UI_SCALE_FAC below applies the user's UI scale and display density. */
   constexpr float label_scale = 1.47f * 0.80f;
   const uiFontStyle style = mixar_card_font(label_scale, 0);
-  const int custom_font = cinema_font();
+  const int custom_font = mixar_clash_grotesk_font();
   const int font = custom_font >= 0 ? custom_font : BLF_default();
   if (font < 0) {
     return;
@@ -214,6 +221,10 @@ void mixar_cinema_label(const rcti &bounds,
     start[i] += (end[i] - start[i]) * selected * 0.45f;
   }
 
+  /* Native labels preceding Cinema (including the update badge in Engine)
+   * are batched. Draw them with their original scissor and font texture
+   * before this label narrows the clip and binds its own glyph textures. */
+  BLF_batch_draw_flush();
   const GPUBlend old_blend = GPU_blend_get();
   int old_scissor[4];
   GPU_scissor_get(old_scissor);

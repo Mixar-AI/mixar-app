@@ -1112,6 +1112,9 @@ msgstr "{error} :ﺔﻟﺎﺤﻟﺍ ﻦﻣ ﻖﻘﺤﺘﻟﺍ ﻞﺸﻓ"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "ﺐﻳﺭﺪﺘﻟﺍ API ﻰﻟﺇ ﺎﻬﻠﺳﺮﻳﻭ ،ﻂﻘﻓ ﺓﺪﻳﺪﺠﻟﺍ ﺕﺎﻨﻳﺎﻌﻤﻟﺍ ﺮﻴّﺼﻳﻭ ،ﺕﺍﺮﻴﻴﻐﺘﻟﺍ ﻦﻣ ﻖﻘﺤﺘﻳﻭ ،ﻝﻮﺻﻷ﻿ﺍ ﺕﺎﺒﺘﻜﻣ ﺺﺤﻔﻳ"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "…ءﺪﺒﻟﺍ ﺭٍﺎﺟ"
 
@@ -1433,11 +1436,47 @@ msgstr "ﺺﺼﺨﻣ ﻲﻠﺤﻣ ﻡﺩﺎﺧ"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "(... ،Ollama، LM Studio، llama.cpp) ﻞﻌﻔﻟﺎﺑ ﻪﻠﻐّﺸﺗ OpenAI ﻊﻣ ﻖﻓﺍﻮﺘﻣ ﻡﺩﺎﺧ ﻰﻟﺇ Mixar ﻪﺟّﻮﻳ"
 
-msgid "Invalid form data — please reach out to support."
-msgstr ".ﻢﻋﺪﻟﺍ ﻊﻣ ﻞﺻﺍﻮﺘﻟﺍ ﻰﺟﺮﻳُ — ﺔﺤﻟﺎﺻ ﺮﻴﻏ ﺓﺭﺎﻤﺘﺳﻻ﻿ﺍ ﺕﺎﻧﺎﻴﺑ"
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr ".ﻯﺮﺧﺃ ﺓﺮﻣ ﺔﻟﻭﺎﺤﻤﻟﺍ ﻰﺟﺮﻳُ .ﺎﻨﺒﻧﺎﺟ ﻦﻣ ﺄﻄﺧ ﺙﺪﺣ"
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "ﺔﻴﻠﺤﻤﻟﺍ ﺝﺫﺎﻤﻨﻟﺍ ﺝﻮﻟﺎﺘﻛ ﺓءﺍﺮﻗ ﺭٍﺎﺟ"
@@ -1481,26 +1520,20 @@ msgstr ".(ﻆﻔﺤﻠﻟ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻴﻗ ﻥﻮﻜﻳ ﻥﺃ �
 msgid "Base URL and model name are required."
 msgstr "URL ﻥﺎﺑﻮﻠﻄﻣ ﺝﺫﻮﻤﻨﻟﺍ ﻢﺳﺍﻭ ﻲﺳﺎﺳﻷ﻿ﺍ."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr ".HTTP {status} ـﺑ ﻲﻠﺤﻤﻟﺍ ﻡﺩﺎﺨﻟﺍ ﺏﺎﺟﺃ"
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr ".ﺢﻴﺤﺻ ﻲﺳﺎﺳﻷ﻿ﺍ URL ﻥﺃﻭ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻴﻗ ﻪﻧﺃ ﻦﻣ ﻖﻘﺤﺗ .ﻲﻠﺤﻤﻟﺍ ﻡﺩﺎﺨﻟﺍ ﻰﻟﺇ ﻝﻮﺻﻮﻟﺍ ﺭﺬّﻌﺗ"
 
-msgid "No models available — contact support"
-msgstr "ﻢﻋﺪﻟﺍ ﻊﻣ ﻞﺻﺍﻮﺗ — ﺝﺫﺎﻤﻧ ﺮﻓﻮﺘﺗ ﻻ﻿"
-
-msgid "Your API key controls the model"
-msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﺩﺪﺤﻳ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ"
-
 msgid "Custom"
 msgstr "ﺺﺼﺨﻣ"
-
-msgid "Use my own API key…"
-msgstr "…ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﻡﺪﺨﺘﺳﺍ"
-
-msgid "Change or remove my API key…"
-msgstr "…ﻪﻟﺯﺃ ﻭﺃ ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﺮﻴّﻏ"
 
 msgid "Thinking"
 msgstr "ﺮﻴﻜﻔﺘﻟﺍ"
@@ -1508,53 +1541,80 @@ msgstr "ﺮﻴﻜﻔﺘﻟﺍ"
 msgid "Thinking: {level}"
 msgstr "{level} :ﺮﻴﻜﻔﺘﻟﺍ"
 
-msgid "Your key: {name}"
-msgstr "{name} :ﻚﺣﺎﺘﻔﻣ"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "ﻲﺿﺍﺮﺘﻓﻹ﻿ﺍ"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "ﻢﻋﺪﻟﺍ ﻊﻣ ﻞﺻﺍﻮﺗ — ﺝﺫﺎﻤﻧ ﺮﻓﻮﺘﺗ ﻻ﻿"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr ".ﺝﺫﺎﻤﻨﻟﺍ ﺮﻴﻴﻐﺗ ﻭﺃ ﻝﺎﺳﺭﻹ﻿ﺍ ﻞﺒﻗ ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﻰﺟﺮﻳُ …ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﻆﻔﺣ ﺭٍﺎﺟ"
 
-msgid "Agent Model"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr ".ﻞﻴﻛﻮﻟﺍ ﻞﻐّﺸﻳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ ﺭﺎﺘﺨﻳ"
-
-msgid "Reasoning effort for the model currently picked."
-msgstr ".ﺎﻴًﻟﺎﺣ ﺭﺎﺘﺨﻤﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﻝﻻ﻿ﺪﺘﺳﻻ﻿ﺍ ﺪﻬﺟ"
-
-msgid "No thinking levels for this model"
-msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﺍﺬﻬﻟ ﺮﻴﻜﻔﺗ ﺕﺎﻳﻮﺘﺴﻣ ﺪﺟﻮﺗ ﻻ﻿"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "ﻑﺎﻀﺘﺴﻣ ﺝﺫﻮﻤﻧ ﺭﺎﻴﺘﺧﻻ﻿ ﺔﻤﺋﺎﻘﻟﺍ ﻩﺬﻫ ﻦﻣ «ﻪﻟﺯﺃ ﻭﺃ ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﺮﻴّﻏ» ﺮﺘﺧﺍ — ﻡﺍﺪﺨﺘﺳﻻ﻿ﺍ ﺪﻴﻗ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ"
-
-msgid "Set Agent Model"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﻦﻴّﻋ"
-
-msgid "Use this model for the agent"
-msgstr "ﻞﻴﻛﻮﻠﻟ ﺝﺫﻮﻤﻨﻟﺍ ﺍﺬﻫ ﻡﺪﺨﺘﺴﻳ"
-
-msgid "Provider"
-msgstr "ﺩﻭّﺰﻤﻟﺍ"
-
-msgid "Model"
-msgstr "ﺝﺫﻮﻤﻨﻟﺍ"
-
-msgid "Label"
-msgstr "ﻖﺼﻠﻣ"
-
-msgid "Thinking Level"
-msgstr "ﺮﻴﻜﻔﺘﻟﺍ ﻯﻮﺘﺴﻣ"
-
-msgid "No model selected"
-msgstr "ﺝﺫﻮﻤﻧ ﻱﺃ ﺩﺪَّﺤﻳُ ﻢﻟ"
-
-msgid "Reset Agent Model"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﻂﺒﺿ ﺪﻋﺃ"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Mixar ـﻟ ﺭﺎﻴﺘﺧﻻ﻿ﺍ ﻙﺮﺘﻳﻭ ﻅﻮﻔﺤﻤﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ ﺢﺴﻤﻳ"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﺮﻴﻴﻐﺗ ﺭﺬّﻌﺗ"
@@ -1562,113 +1622,107 @@ msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﺮﻴﻴﻐﺗ ﺭﺬّﻌﺗ"
 msgid "Could not reset model"
 msgstr "ﺝﺫﻮﻤﻨﻟﺍ ﻂﺒﺿ ﺓﺩﺎﻋﺇ ﺕﺭﺬّﻌﺗ"
 
-msgid "Removing your key…"
-msgstr "…ﻚﺣﺎﺘﻔﻣ ﺔﻟﺍﺯﺇ ﺭٍﺎﺟ"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "…ﺩﻭّﺰﻤﻟﺍ ﻊﻣ ﻖﻘﺤﺘﻟﺍ ﺭٍﺎﺟ"
+msgid "Use this model for the agent"
+msgstr "ﻞﻴﻛﻮﻠﻟ ﺝﺫﻮﻤﻨﻟﺍ ﺍﺬﻫ ﻡﺪﺨﺘﺴﻳ"
 
-msgid "AI Provider Settings"
-msgstr "ﻲﻋﺎﻨﻄﺻﻻ﻿ﺍ ءﺎﻛﺬﻟﺍ ﺩﻭّﺰﻣ ﺕﺍﺩﺍﺪﻋﺇ"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "ﻝﺎﻌﻓ"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "ﺪّﻌﻣُ ﺮﻴﻏ"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr ".ﻞﻴﻌﻔﺘﻟﺍ ءﺎﻨﺛﺃ Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺗُ ﻻ﻿ — ﺹﺎﺨﻟﺍ ﻙﺩﻭّﺰﻣ ﻰﻠﻋ Mixar ﻞﻴﻛﻭ ﻞﻐّﺷ"
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "ﻲﻟﺎﺤﻟﺍ ﺩﺍﺪﻋﻹ﻿ﺍ"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "ﺏﺎﺴﺤﻟﺍ"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT ﻙﺍﺮﺘﺷﺍ"
 
-msgid "API Key"
-msgstr "API ﺡﺎﺘﻔﻣ"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "ﻥﺎﻣﺄﺑ ﻥﺰّﺨﻣ"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr ".ﺔﻴﺋﺮﻣ ﺔﻌﺟﺍﺭ ﺔﻳﺬﻐﺗ ﻥﻭﺩ ﺬﻔَّﻨﺗُ 3D ﻡﺎﻬﻣﻭ ؛ﻞﻤﻌﺗ ﺔﺛﺩﺎﺤﻤﻟﺍ — ﻂﻘﻓ ﻲﺼﻧ ﺝﺫﻮﻤﻧ"
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "…API ﺡﺎﺘﻔﻣ ﻝﺯﺃ"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "ﺩﻭّﺰﻤﻟﺍ ﺩﺍﺪﻋﺇ"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr ".ﺔﻌﻨَّﻘﻣُ ﺔﻨﻳﺎﻌﻣ ﻻ﻿ﺇ ﻆﻔﺤﻟﺍ ﺪﻌﺑ ﺽﺮﻌﺗُ ﻻ﻿ﻭ — Mixar ﻞﻴﻛﻭ ﺕﺎﺒﻠﻄﻟ ﻂﻘﻓ ﻡﺪﺨﺘﺴﻳُﻭ ﺍﺮًﻔّﺸﻣ ﻥﺰَّﺨﻳُ"
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr ".ﻪﻴﻟﺇ ﺝﺎﺘﺤﻳ ﻞﻴﻛﻮﻟﺎﻓ — ﻝﺍﻭﺪﻟﺍ / ﺕﺍﻭﺩﻷ﻿ﺍ ءﺎﻋﺪﺘﺳﺍ ﻢﻋﺪﻳ ﺎﺟًﺫﻮﻤﻧ ﺮﺘﺧﺍ"
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr ".anthropic/claude-opus-4.8 ﻞﺜﻣ ،openrouter.ai/models ﻦﻣ ﻑﺮّﻌﻣ ﻱﺃ"
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ﻦﻣ ﻞﻤّﺣ"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "ﺎﻳًﻭﺪﻳ ﻪﻘﺼﻟﺍ ﻭﺃ…"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "ﺎﻓًﺮﺣ {count} ﻖﺼﻟ ﻢﺗ"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "ﻚﺑ ﺹﺎﺨﻟﺍ auth.json ﻒﻠﻣ ﻖﺼﻟﺍ — ﻍﺭﺎﻓ"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "ﻞﻣﺎﻜﻟﺍ ﻯﻮﺘﺤﻤﻟﺍ ﻖﺼﻟﺍ ﻭﺃ ﻞﻤّﺣ ﻢﺛ ،ﺔﻴﻓﺮﻄﻟﺍ ﻲﻓ  codex login  ﻞﻐّﺷ"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr ".(ﺔﻈﻓﺎﺤﻟﺍ ﻦﻣ ﻖﺼﻠﻟﺍ ﺭﺯ ﺃﺮﻘﻳ) codex/auth.json./~ ـﻟ"
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr ".Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺗُ ﻻ﻿ — ﻚﺑ ﺹﺎﺨﻟﺍ ChatGPT ﻙﺍﺮﺘﺷﺍ ﻡﺪﺨﺘﺴﻳ"
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "ﻚﺗﺍﺮﻴﻴﻐﺗ ﻖﻴﺒﻄﺗ ﺭﺬّﻌﺗ"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "؟ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﺔﻟﺍﺯﺇ"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr ".ﻯﺮﺧﺃ ﺓﺮﻣ ﻲﺿﺍﺮﺘﻓﻻ﻿ﺍ Mixar ﺩﻭّﺰﻣ ﻞﻴﻛﻮﻟﺍ ﻡﺪﺨﺘﺴﻴﺳ"
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr ".ﺔﻴﻠﺒﻘﺘﺴﻤﻟﺍ ﻞﻴﻛﻮﻟﺍ ﺕﺎﺒﻠﻄﻟ Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺘُﺳ"
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr ".Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺗُ ﻻ﻿ — ﻙﺩﻭّﺰﻣ ﻰﻠﻋ ﻥﻵ﻿ﺍ Mixar ﻞﻴﻛﻭ ﻞﻤﻌﻳ"
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API ﺡﺎﺘﻔﻣ ﺔﻟﺍﺯﺇ ﺖﻤﺗ"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr ".ﻲﺿﺍﺮﺘﻓﻻ﻿ﺍ Mixar ﺩﻭّﺰﻣ ﻰﻟﺇ ﻞﻴﻛﻮﻟﺍ ﺩﺎﻋ"
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr ".ﻯﺮﺧﺃ ﺓﺮﻣ ﻞﻴﻛﻮﻟﺍ ﺕﺎﺒﻠﻄﻟ Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺗُ"
-
-msgid "Try Again"
-msgstr "ﻯﺮﺧﺃ ﺓﺮﻣ ﻝﻭﺎﺣ"
-
-msgid "Save & Activate"
-msgstr "ﻞﻌّﻓﻭ ﻆﻔﺣﺍ"
-
-msgid "Keep My Key"
-msgstr "ﻲﺣﺎﺘﻔﻤﺑ ﻆﻔﺘﺣﺍ"
-
-msgid "Remove API Key"
-msgstr "API ﺡﺎﺘﻔﻣ ﻝﺯﺃ"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "…ﺔﻴﻠﺤﻤﻟﺍ ﻲﻋﺎﻨﻄﺻﻻ﻿ﺍ ءﺎﻛﺬﻟﺍ ﻞﻴﻐﺸﺗ ﺔﺌﻴﺑ ﺔﻣﺰﺣ ﻚﻓ ﺭٍﺎﺟ"
@@ -1691,8 +1745,14 @@ msgstr "ﻞﻴﻐﺸﺘﻟﺍ ﺪﻴﻗ ﺮﻴﻏ — ﻝﺰَّﻨﻣ"
 msgid "Not downloaded"
 msgstr "ﻝﺰَّﻨﻣ ﺮﻴﻏ"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr ".Mixar ﻞﻴﻛﻭ ﻖﻴﺴﻨﺗ ﺮﺒﻋ ﻻ﻿ﺇ ﺍﺪًﺑﺃ ﻚﺗﺎﻬﺟّﻮﻣ ﻩﺭﺩﺎﻐﺗ ﻻ﻿ — ﺮﺗﻮﻴﺒﻤﻜﻟﺍ ﺍﺬﻫ ﻰﻠﻋ ﻞﻣﺎﻜﻟﺎﺑ ﻞﻤﻌﻳ"
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "ﺝﺫﻮﻤﻨﻟﺍ"
 
 msgid "Cancel Download"
 msgstr "ﻞﻳﺰﻨﺘﻟﺍ ﻎِﻟﺃ"
@@ -1718,9 +1778,6 @@ msgstr "URL ﻲﺳﺎﺳﻷ﻿ﺍ"
 msgid "API Key (optional)"
 msgstr "(ﻱﺭﺎﻴﺘﺧﺍ) API ﺡﺎﺘﻔﻣ"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "…Ollama، LM Studio، llama.cpp — ﺮﺗﻮﻴﺒﻤﻜﻟﺍ ﺍﺬﻫ ﻰﻠﻋ OpenAI ﻊﻣ ﻖﻓﺍﻮﺘﻣ ﻡﺩﺎﺧ ﻱﺃ"
-
 msgid "Could not save the local provider."
 msgstr ".ﻲﻠﺤﻤﻟﺍ ﺩﻭّﺰﻤﻟﺍ ﻆﻔﺣ ﺭﺬّﻌﺗ"
 
@@ -1730,53 +1787,32 @@ msgstr "ﺔﻴﻠﺤﻤﻟﺍ ﺕﺎﻘﻴﺒﻄﺘﻟﺍ ﺺﺤﻓ ﺪﻋﺃ"
 msgid "Rescan this computer for running local AI apps"
 msgstr "ﻞﻴﻐﺸﺘﻟﺍ ﺪﻴﻗ ﺔﻴﻠﺤﻣ ﻲﻋﺎﻨﻄﺻﺍ ءﺎﻛﺫ ﺕﺎﻘﻴﺒﻄﺗ ﻦﻋ ﺎﺜًﺤﺑ ﺮﺗﻮﻴﺒﻤﻜﻟﺍ ﺍﺬﻫ ﺺﺤﻓ ﺪﻴﻌﻳ"
 
+msgid "AI Provider Settings"
+msgstr "ﻲﻋﺎﻨﻄﺻﻻ﻿ﺍ ءﺎﻛﺬﻟﺍ ﺩﻭّﺰﻣ ﺕﺍﺩﺍﺪﻋﺇ"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr ".ﻞﻴﻛﻮﻟﺍ ﺕﺎﺒﻠﻄﻟ Mixar ﺓﺪﺻﺭﺃ ﻢﺼﺨﺗُ ﻻ﻿ ،ﻞﻴﻌﻔﺘﻟﺍ ءﺎﻨﺛﺃ .Mixar ﻞﻴﻛﻮﻟ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﻡﺪﺨﺘﺴﻳ"
 
 msgid "Validate with the provider and save your API key"
 msgstr "ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﻆﻔﺤﻳﻭ ﺩﻭّﺰﻤﻟﺍ ﻊﻣ ﻖﻘﺤﺘﻳ"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr ".API ﺡﺎﺘﻔﻣ ﻞﺧﺩﺃﻭ ﺩﻭّﺰﻤﻟﺍ ﺍﺬﻬﻟ ﺎﺟًﺫﻮﻤﻧ ﺮﺘﺧﺍ"
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr ".ﻥﺎﺑﻮﻠﻄﻣ API ﺡﺎﺘﻔﻣﻭ ﺝﺫﻮﻤﻨﻟﺍ ﻑﺮّﻌﻣ"
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr ".ﻚﺑ ﺔﺻﺎﺨﻟﺍ auth.json ﺔﻣﺰﺣ ﻞﻤّﺣﻭ Codex ﺝﺫﻮﻤﻧ ﺮﺘﺧﺍ"
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr ".ﻆﻔﺤﻟﺍ ﻞﺸﻓ"
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "ﻞﻘﺤﻟﺍ ﻰﻟﺇ ﺯﺎﻬﺠﻟﺍ ﺍﺬﻫ ﻦﻣ codex/auth.json./~ ﺃﺮﻘﻳ"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "ﺎﻟًﻭﺃ `codex login` ﻞﻐّﺷ — codex/auth.json./~ ﻰﻠﻋ ﺮﺜﻌﻳُ ﻢﻟ"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "codex/auth.json./~ ﺓءﺍﺮﻗ ﺕﺭﺬّﻌﺗ"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "ﻍﺭﺎﻓ codex/auth.json./~ ﻒﻠﻤﻟﺍ"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ﺢﻴﺤﺻ ﻞﻜﺸﺑ ﻆﻔﺤﻳُ ﻦﻟ — ﻪﻋﺎﻄﺘﻗﺍ ﻢﺗﻭ ﻞﻘﺤﻟﺍ ﺍﺬﻬﻟ ﺍﺪًﺟ ﺮﻴﺒﻛ auth.json ﻒﻠﻣ"
-
-msgid "Loaded auth.json"
-msgstr "auth.json ﻞﻴﻤﺤﺗ ﻢﺗ"
-
-msgid "Paste auth.json"
-msgstr "auth.json ﻖﺼﻟﺍ"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "ﻞﻘﺤﻟﺍ ﻲﻓ ﺔﻈﻓﺎﺤﻟﺍ ﻦﻣ codex/auth.json./~ ﻖﺼﻠﻳ"
-
-msgid "Clipboard is empty"
-msgstr "ﺔﻏﺭﺎﻓ ﺔﻈﻓﺎﺤﻟﺍ"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "ﺢﻴﺤﺻ ﻞﻜﺸﺑ ﻆﻔﺤﻳُ ﻦﻟ — ﻪﻋﺎﻄﺘﻗﺍ ﻢﺗﻭ ﻞﻘﺤﻟﺍ ﺍﺬﻬﻟ ﺍﺪًﺟ ﺮﻴﺒﻛ ﻕﻮﺼﻠﻤﻟﺍ auth.json ﻒﻠﻣ"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "ﺔﻟﺍﺯﺇ"
@@ -1787,11 +1823,110 @@ msgstr "ﺔﻟﺍﺯﻹ﻿ﺍ ﺪﻴﻛﺄﺗ ﺕﺍﻮﻄﺧ ﺃﺪﺒﻳ"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "ﻲﺴﻴﺋﺮﻟﺍ ﺭﺍﻮﺤﻟﺍ ﻊﺑﺮﻣ ﻰﻟﺇ ﺩﻮﻌﻳﻭ ﺔﻟﺍﺯﻹ﻿ﺍ ﺕﺍﻮﻄﺧ ﻲﻐﻠﻳ"
 
-msgid "Delete the stored API key server-side"
-msgstr "ﻡﺩﺎﺨﻟﺍ ﻰﻠﻋ ﻥﺰّﺨﻤﻟﺍ API ﺡﺎﺘﻔﻣ ﻑﺬﺤﻳ"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr ".ﺔﻟﺍﺯﻹ﻿ﺍ ﺖﻠﺸﻓ"
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻗﺍ"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "ﻲﻠﺤﻣ ﺝﺫﻮﻤﻧ"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr ".anthropic/claude-opus-4.8 ﻞﺜﻣ ،openrouter.ai/models ﻦﻣ ﻑﺮّﻌﻣ ﻱﺃ"
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "ﻯﺮﺧﺃ ﺓﺮﻣ ﻝﻭﺎﺣ"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK ﺔﻟﺎﺣ ﺙﺪّﺣ"
@@ -1805,11 +1940,38 @@ msgstr "ﺝﺫﺎﻤﻨﻟﺍ ﺝﻮﻟﺎﺘﻛ ﺙﺪّﺣ"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "ﻡﺩﺎﺨﻟﺍ ﻦﻣ ﺝﺫﺎﻤﻨﻟﺍﻭ ﻦﻳﺩﻭّﺰﻤﻟﺍ ﺝﻮﻟﺎﺘﻛ ﻦﻣ ﻖﻘﺤﺘﻟﺍ ﺪﻴﻌﻳ"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﺩﻭّﺰﻣ"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "ﻅﻮﻔﺤﻤﻟﺍ ﻑﺎﻀﺘﺴﻤﻟﺍ ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﺭﺎﻴﺘﺧﻻ﻿ ﺩﻭّﺰﻤﻟﺍ ﻑﺮّﻌﻣ"
+
+msgid "Agent Model"
+msgstr "ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "ﻅﻮﻔﺤﻤﻟﺍ ﻑﺎﻀﺘﺴﻤﻟﺍ ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ ﺭﺎﻴﺘﺧﻻ﻿ ﺝﺫﻮﻤﻨﻟﺍ ﻑﺮّﻌﻣ"
@@ -1838,11 +2000,29 @@ msgstr "ﻞﻫﺆﻣ ﻞﻴﻛﻮﻟﺍ ﺝﺫﻮﻤﻧ"
 msgid "False when the saved model is not available on your plan"
 msgstr "ﻚﺘﻄﺧ ﻲﻓ ﺎﺣًﺎﺘﻣ ﻅﻮﻔﺤﻤﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ ﻥﻮﻜﻳ ﻻ﻿ ﺎﻣﺪﻨﻋ ﺄﻄﺧ"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "ﺩﻭّﺰﻤﻟﺍ"
+
 msgid "LLM provider"
 msgstr "ﻱﻮﻐﻠﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ ﺩﻭّﺰﻣ"
 
 msgid "Model to use with the selected provider"
 msgstr "ﺩﺪﺤﻤﻟﺍ ﺩﻭّﺰﻤﻟﺍ ﻊﻣ ﻪﻣﺍﺪﺨﺘﺳﺍ ﺩﺍﺮﻤﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ"
+
+msgid "API Key"
+msgstr "API ﺡﺎﺘﻔﻣ"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr ".ﺔﻌﻨَّﻘﻣُ ﺔﻨﻳﺎﻌﻣ ﻻ﻿ﺇ ﺽﺮﻌﺗُ ﻻ﻿ ،ﻆﻔﺤﻟﺍ ﺪﻌﺑ .Mixar ﻞﻴﻛﻭ ﺕﺎﺒﻠﻄﻟ ﻻ﻿ﺇ ﻡﺪﺨﺘﺴﻳُ ﻻ﻿ﻭ ﺍﺮًﻔّﺸﻣ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﻥﺰَّﺨﻳُ"
@@ -1850,20 +2030,14 @@ msgstr ".ﺔﻌﻨَّﻘﻣُ ﺔﻨﻳﺎﻌﻣ ﻻ﻿ﺇ ﺽﺮﻌﺗُ ﻻ�
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "(anthropic/claude-opus-4.8 ﻞﺜﻣ) openrouter.ai/models ﻦﻣ ﺝﺫﻮﻤﻧ ﻑﺮّﻌﻣ ﻱﺃ"
 
-msgid "Codex auth.json"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
 msgstr ""
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "(ﺎﻟًﻭﺃ `codex login` ﻞﻐّﺷ) codex/auth.json./~ ﺕﺎﻳﻮﺘﺤﻣ"
 
 msgid "Local mode"
 msgstr "ﻲﻠﺤﻤﻟﺍ ﻊﺿﻮﻟﺍ"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "ﺹﺎﺨﻟﺍ ﻲﻠﺤﻤﻟﺍ ﻚﻣﺩﺎﺧ ﻭﺃ ،Mixar ﻩﺮﻳﺪﻳ"
-
-msgid "Local model"
-msgstr "ﻲﻠﺤﻣ ﺝﺫﻮﻤﻧ"
 
 msgid "Curated model to download and run on this computer"
 msgstr "ﺮﺗﻮﻴﺒﻤﻜﻟﺍ ﺍﺬﻫ ﻰﻠﻋ ﻪﻠﻴﻐﺸﺗﻭ ﻪﻠﻳﺰﻨﺘﻟ ﻰﻘﺘﻨﻣ ﺝﺫﻮﻤﻧ"
@@ -1885,6 +2059,15 @@ msgstr "BYOK ﻂﺸﻧ"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "ﻡﺪﺨﺘﺴﻤﻟﺍ ﺍﺬﻬﻟ byok_active ﻦﻋ ﻡﺩﺎﺨﻟﺍ ﻎﻠﺒﻳُ ﺎﻣﺪﻨﻋ ﺢﻴﺤﺻ"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "ﺭﺍﻮﺤﻟﺍ ﻊﺑﺮﻣ ﺔﻟﺎﺣ"
@@ -1976,6 +2159,27 @@ msgstr "ﻯﺮﺧﺃ ﺓﺮﻣ ﺔﻟﻭﺎﺤﻤﻟﺍ ﻰﺟﺮﻳُ — ﺪ�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "visible_if ﺔﻤﺳ ﺐﺴﺣ ﺱﺮﻬﻔﻣ ﺝﻮﻟﺎﺘﻜﻠﻟ RNA"
 
+msgid "Nothing selected"
+msgstr "ﺭﺎﺘﺨﻣ ءﻲﺷ ﻻ﻿"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "ﺔﻤﻴﻗ"
+
+msgid "Label"
+msgstr "ﻖﺼﻠﻣ"
+
+msgid "Group"
+msgstr "ﺔﻋﻮﻤﺠﻣ"
+
+msgid "Selected"
+msgstr "ﺩﺪﺤﻣ"
+
 msgid "No modes"
 msgstr "ﻉﺎﺿﻭﺃ ﺪﺟﻮﺗ ﻻ﻿"
 
@@ -2035,6 +2239,9 @@ msgstr "{count} ﺓﺰﻫﺎﺟ ﺪﻴﻟﻮﺗ ﺕﺎﻴﻠﻤﻋ"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "ﺔﻌﺑﺎﺘﻤﻠﻟ ﻚﺘﻄﺧ ﻕِّﺭ — ﻚﺗﺪﺻﺭﺃ ﺕﺪﻔﻧ"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻰﺟﺮﻳُ — ﺔﺑﻮﻠﻄﻣ ﺔﻗﺩﺎﺼﻤﻟﺍ"
@@ -2125,6 +2332,9 @@ msgstr "ﺓﺪﻟّﻮﻤﻟﺍ ﺔﺠﻴﺘﻨﻟﺍ ﺩﺭﻮﺘﺳﺍ"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "(ﻚﻟﺫ ﻢﻏﺭ ﻡﺩﺎﺨﻟﺍ ﻰﻠﻋ ﺪﻴﻟﻮﺘﻟﺍ ﻞﻤﺘﻜﻳ ﺪﻗ) ﻰﻐﻠﻣ"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "ﻡﺩﺎﺨﻟﺍ ﺔﺑﺎﺠﺘﺳﺍ ﺔﺠﻟﺎﻌﻣ ﺖﻠﺸﻓ"
@@ -2236,6 +2446,9 @@ msgstr "ﺔﺣﺎﺘﻣ ﺮﻴﻏ ﻞﻴﻛﻮﻟﺍ ﺓﺮﻳﺰﺟ ﺭﺎﻈ�
 
 msgid "Show every job"
 msgstr "ﻡﺎﻬﻤﻟﺍ ﻞﻛ ﺽﺮﻌﻳ"
+
+msgid "Active"
+msgstr "ﻝﺎﻌﻓ"
 
 msgid "Show pending or running jobs"
 msgstr "ﻞﻴﻐﺸﺘﻟﺍ ﺪﻴﻗ ﻭﺃ ﺔﻘﻠّﻌﻤﻟﺍ ﻡﺎﻬﻤﻟﺍ ﺽﺮﻌﻳ"
@@ -2612,9 +2825,6 @@ msgstr "ﻖﻓﺍﻮﺘﻟﺍ ﻒﻳﺮﻌﺗ ﻒﻠﻣ"
 msgid "Density"
 msgstr "ﺔﻓﺎﺜﻜﻟﺍ"
 
-msgid "Default"
-msgstr "ﻲﺿﺍﺮﺘﻓﻹ﻿ﺍ"
-
 msgid "Generation-pane control spacing"
 msgstr "ﺪﻴﻟﻮﺘﻟﺍ ءﺰﺟ ﻲﻓ ﻢﻜﺤﺘﻟﺍ ﺮﺻﺎﻨﻋ ﺪﻋﺎﺒﺗ"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "ﺏﺎﺴﺤﻟﺍ ﻢﺳﺍ"
 
 msgid "Display name for the account greeting"
 msgstr "ﺏﺎﺴﺤﻟﺍ ﺔﻴﺤﺘﻟ ﺽﺮﻌﻟﺍ ﻢﺳﺍ"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "ﺙﺪﺣﺃ ﻒﻠﻣ ﺭﺍﺪﺻﺇ"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "ﺕﺎﻔﻠﻤﻟﺍ"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "ﻞﺻﻷ﻿ﺍ ﺔﻄﻘﻧ"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "ﺔﻴﺋﺎﻘﻠﺘﻟﺍ ﺔﻠﻜﻴﻬﻟﺍ ﺖﻠﺸﻓ"
 msgid "Animate failed"
 msgstr "ﻚﻳﺮﺤﺘﻟﺍ ﻞﺸﻓ"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "({max_faces:,} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﻪﺟﻭ {count:,} ﻰﻠﻋ ﺩﺪﺤﻤﻟﺍ ﻢﺴﺠﻤﻟﺍ ﻱﻮﺘﺤﻳ"
 
@@ -4973,6 +5270,24 @@ msgstr "ﻲﻠﺤﻤﻟﺍ ﻡﺩﺎﺨﻟﺍ ﺝﺫﻮﻤﻧ"
 msgid "Local model last error"
 msgstr "ﻲﻠﺤﻤﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﺄﻄﺧ ﺮﺧﺁ"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "ﺦﺴﻧ"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "ﺮﻣﺃ"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "ﺦﺴﻧ"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "ﺔﺌﻴﻫ"
 
 msgid "Processing..."
 msgstr "...ﺔﺠﻟﺎﻌﻤﻟﺍ ﺭٍﺎﺟ"
@@ -5312,6 +5702,9 @@ msgstr "ﻢﺴﺠﻤﻟﺍ ﺔﺋﺰﺠﺗ"
 msgid "Auto Rig"
 msgstr "ﺔﻴﺋﺎﻘﻠﺗ ﺔﻠﻜﻴﻫ"
 
+msgid "Animate"
+msgstr "ﻚﻳﺮﺤﺗ"
+
 msgid "Add Mesh"
 msgstr "ﺎﻤًﺴﺠﻣ ﻒﺿﺃ"
 
@@ -5413,6 +5806,15 @@ msgstr ".ﻝﻮﻃﺃ ﺎﺘًﻗﻭ ﺮﺜﻛﻷ﻿ﺍ ﺕﺍﻮﻄﺨﻟﺍ �
 
 msgid "The file format used to store the generated image."
 msgstr ".ﺓﺪﻟّﻮﻤﻟﺍ ﺓﺭﻮﺼﻟﺍ ﻦﻳﺰﺨﺘﻟ ﺔﻣﺪﺨﺘﺴﻤﻟﺍ ﻒﻠﻤﻟﺍ ﺔﻐﻴﺻ"
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "(ﻢﺳﻻ﻿ﺍ ﻦﻣ) ﻲﺋﺎﻘﻠﺗ"
@@ -5642,14 +6044,14 @@ msgstr "BaseColor: {error} ﺞﻴﺴﻧ ﻞﻳﺰﻨﺗ ﻞﺸﻓ"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor: {error} ﺞﻴﺴﻧ ﻞﻴﻤﺤﺗ ﻞﺸﻓ"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "{error} :ﺞﻴﺴﻨﻟﺍ ﻞﻳﺰﻨﺗ ءﺎﻨﺛﺃ ﻊﻗﻮﺘﻣ ﺮﻴﻏ ﺄﻄﺧ"
 
 msgid "Failed to apply textures to any object"
 msgstr "ﻦﺋﺎﻛ ﻱﺃ ﻰﻠﻋ ﺞﺳﺎﻨﻤﻟﺍ ﻖﻴﺒﻄﺗ ﻞﺸﻓ"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: ﺞﺳﺎﻨﻣ ﻖﺒّﻃ PBR"
 
 msgid "Both refined and guide masks are required"
 msgstr "ﺎﻤﻫﻼ﻿ﻛ ﻥﺎﺑﻮﻠﻄﻣ ﻱﺩﺎﺷﺭﻹ﻿ﺍﻭ ﻦﺴّﺤﻤﻟﺍ ﻥﺍءﺎﻄﻐﻟﺍ"
@@ -5732,6 +6134,15 @@ msgstr "ﺔﻴﺼﺨﺸﻟﺍ ﺐﻛّﺭ"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "ﺎﻴًﻠﺤﻣ ،ﻱﺩﺎﻋ ﻭﺃ ﻞﻜﻴﻬﻣ ﻢﺴﺠﺑ ﺓﺪﻟّﻮﻤﻟﺍ ءﺍﺰﺟﻷ﻿ﺍ ﻖﻓﺮﻳ"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "ﻂﻘﻓ ﺓﺭﻮﺼﻟﺍ ﻂﻤﻧ ﻡﺪﺨﺘﺳﺍ"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﺓﺭﻮﺼﻟﺍ ﻪﺟّﻮﺗ ،ﻞﻴﻄﻌﺘﻟﺍ ﺪﻨﻋ .(ﻪﺟّﻮﻤﻟﺍ ﻖﻴﺒﻄﺗ ﺭﺍﺮﻤﺘﺳﺍ ﻊﻣ) ﻂﻘﻓ ﺓﺭﻮﺼﻠﻟ ﻲﻨﻔﻟﺍ ﻂﻤﻨﻟﺍ ﻞﻘﻨﻳُ ،ﻞﻴﻌﻔﺘﻟﺍ ﺪﻨﻋ"
+
 msgid "Enter a prompt in the image node"
 msgstr "ﺓﺭﻮﺼﻟﺍ ﺓﺪﻘﻋ ﻲﻓ ﺎﻬًﺟّﻮﻣ ﻞﺧﺩﺃ"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﺝﻮﻟﺎﺘﻛ ﻲﻓ ﺡﺎﺘﻣ ﺮﻴﻏ ﺝﺫﺎﻤﻨﻟﺍ ﺪﻴﻟﻮﺗ"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "ﺪﻌﺑ ﻝﻻ﻿ﺪﺘﺳﻻ﻿ﺍ ﺪﻘﻋ ﻲﻓ ﻡﻮﻋﺪﻣ ﺮﻴﻏ ﺍﺬﻫ ﺝﺫﺎﻤﻨﻟﺍ ﺪﻴﻟﻮﺗ ﻊﺿﻭ"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "ﻞﻌّﻔﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﻲﺛﻼ﻿ﺛ ﺪﻴﻟﻮﺗ ﺝﺫﻮﻤﻧ ﺮﻓﻮﺘﻳ ﻻ﻿"
@@ -5884,6 +6295,9 @@ msgstr "ﺎﻬﺘﺠﻴﺘﻧ ﺔﻗﺎﻄﺒﻟﺍ ﻩﺬﻫ ﻡﺪﺨﺘﺴﺗ
 
 msgid "Mesh"
 msgstr "ﻢﺴﺠﻣ"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "{number} ﻊﺟﺮﻤﻟﺍ"
@@ -6053,11 +6467,11 @@ msgstr "SceneGen ﺩﺍﺮﻴﺘﺳﺍ ﻞﺸﻓ"
 msgid "No image URLs in server response"
 msgstr "ﻡﺩﺎﺨﻟﺍ ﺔﺑﺎﺠﺘﺳﺍ ﻲﻓ ﺭﻮﺼﻠﻟ URL ﻦﻳﻭﺎﻨﻋ ﺪﺟﻮﺗ ﻻ﻿"
 
-msgid "Starting reconstruction..."
-msgstr "...ءﺎﻨﺒﻟﺍ ﺓﺩﺎﻋﺇ ءﺪﺑ ﺭٍﺎﺟ"
-
 msgid "Error: {error}"
 msgstr "{error} :ﺄﻄﺧ"
+
+msgid "Starting reconstruction..."
+msgstr "...ءﺎﻨﺒﻟﺍ ﺓﺩﺎﻋﺇ ءﺪﺑ ﺭٍﺎﺟ"
 
 msgid "Failed to download generated image: {error}"
 msgstr "{error} :ﺓﺪﻟّﻮﻤﻟﺍ ﺓﺭﻮﺼﻟﺍ ﻞﻳﺰﻨﺗ ﻞﺸﻓ"
@@ -6280,9 +6694,6 @@ msgstr "{error} :ﻢﻟﺎﻌﻟﺍ ﻞﻳﻮﺤﺗ/ﻞﻳﺰﻨﺗ ﻞﺸﻓ"
 
 msgid "World imported but produced no objects"
 msgstr "ﺕﺎﻨﺋﺎﻛ ﻱﺃ ﺞﺘﻨﻳ ﻢﻟ ﻪﻨﻜﻟ ﻢﻟﺎﻌﻟﺍ ﺩﺍﺮﻴﺘﺳﺍ ﻢﺗ"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: ﻢﻟﺎﻌﻟﺍ ﺩﺭﻮﺘﺳﺍ"
 
 msgid "Failed to import world: {error}"
 msgstr "{error} :ﻢﻟﺎﻌﻟﺍ ﺩﺍﺮﻴﺘﺳﺍ ﻞﺸﻓ"
@@ -6833,9 +7244,6 @@ msgstr "ﺎﺼًﺼﺨﻣ ﺎﻧًﻮﻟ ﻡﺪﺨﺘﺳﺍ"
 msgid "Custom Colour"
 msgstr "ﺺﺼﺨﻣ ﻥﻮﻟ"
 
-msgid "Selected"
-msgstr "ﺩﺪﺤﻣ"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "ﻩﺮﺻﺎﻨﻋ ﻯﻮﺳ ﺪﻳﺪﺤﺗ ﻦﻜﻤﻳ ﻻ﻿ ﺚﻴﺤﺑ ،ﺮﻘﻨﻟﺍ ﺪﻨﻋ ﻪﻠﺧﺍﺩﻭ ﺭﺎﻃﻹ﻿ﺍ ﺍﺬﻫ ﺪﺣ ﻞﻫﺎﺠﺘﻳ"
 
@@ -6844,6 +7252,18 @@ msgstr "ﻱﻮﻄﻣ"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "ﻩﺍﻮﺘﺤﻣ ﻲﻔﺨﻳﻭ ﻥﺍﻮﻨﻌﺑ ﻂﻳﺮﺸﻛ ﺭﺎﻃﻹ﻿ﺍ ﻢﺳﺮﻳ"
+
+msgid "Unavailable"
+msgstr "ﺡﺎﺘﻣ ﺮﻴﻏ"
+
+msgid "No supported 3D service is available"
+msgstr "ﺔﻣﻮﻋﺪﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﺔﻴﺛﻼ﻿ﺛ ﺔﻣﺪﺧ ﺮﻓﻮﺘﺗ ﻻ﻿"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "ﻦﻴﻌﺟﺮﻣﻭ ءﺎﻄﻐﻟﺎﺑ ﻪﻴﺟﻮﺘﻟﺍ ﻢﻋﺩ ﺭﻮﺼﻟﺍ ﺝﺫﺎﻤﻧ ﻦﻠﻌﺗُ ﻥﺃ ﺐﺠﻳ"
+
+msgid "Attachment settings"
+msgstr ""
 
 msgid "No choices published"
 msgstr "ﺕﺍﺭﺎﻴﺧ ﻱﺃ ﺮﺸﻨﺗُ ﻢﻟ"
@@ -6862,18 +7282,6 @@ msgstr "ﻞﻤﺘﻜﻣ"
 
 msgid "Generation completed"
 msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﻞﻤﺘﻛﺍ"
-
-msgid "Unavailable"
-msgstr "ﺡﺎﺘﻣ ﺮﻴﻏ"
-
-msgid "No supported 3D service is available"
-msgstr "ﺔﻣﻮﻋﺪﻣ ﺩﺎﻌﺑﻷ﻿ﺍ ﺔﻴﺛﻼ﻿ﺛ ﺔﻣﺪﺧ ﺮﻓﻮﺘﺗ ﻻ﻿"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "ﻦﻴﻌﺟﺮﻣﻭ ءﺎﻄﻐﻟﺎﺑ ﻪﻴﺟﻮﺘﻟﺍ ﻢﻋﺩ ﺭﻮﺼﻟﺍ ﺝﺫﺎﻤﻧ ﻦﻠﻌﺗُ ﻥﺃ ﺐﺠﻳ"
-
-msgid "Attachment settings"
-msgstr ""
 
 msgid "Parameter ID"
 msgstr "ﻞﻣﺎﻌﻤﻟﺍ ﻑﺮّﻌﻣ"
@@ -6899,14 +7307,14 @@ msgstr "ﺔﻴﻘﻄﻨﻣ ﺔﻤﻴﻗ"
 msgid "Catalog choice"
 msgstr "ﺝﻮﻟﺎﺘﻜﻟﺍ ﻦﻣ ﺭﺎﻴﺧ"
 
-msgid "Widget"
-msgstr "ﺔﻬﺟﺍﻮﻟﺍ ﺮﺼﻨﻋ"
-
-msgid "Group"
-msgstr "ﺔﻋﻮﻤﺠﻣ"
-
 msgid "Choices"
 msgstr "ﺕﺍﺭﺎﻴﺨﻟﺍ"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "ﺔﻬﺟﺍﻮﻟﺍ ﺮﺼﻨﻋ"
 
 msgid "Visibility Condition"
 msgstr "ﺭﻮﻬﻈﻟﺍ ﻁﺮﺷ"
@@ -6926,11 +7334,14 @@ msgstr "ﻰﻧﺩﻷ﻿ﺍ ﺪﺤﻟﺍ"
 msgid "Maximum"
 msgstr "ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ"
 
-msgid "Value"
-msgstr "ﺔﻤﻴﻗ"
-
 msgid "Value Label"
 msgstr "ﺔﻤﻴﻘﻟﺍ ﺔﻴﻤﺴﺗ"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "ﺲﺒﻘﻤﻟﺍ ﻑﺮّﻌﻣ"
@@ -7948,12 +8359,6 @@ msgstr "ﺓﺪﻟّﻮﻤﻟﺍ ﺞﺳﺎﻨﻤﻟﺍ ﻰﻠﻋ ﻲﻨﻔﻟﺍ 
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "(ﻪﺟّﻮﻤﻟﺍ ﻞﻫﺎﺠﺘﻳُ) ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﻪﺟّﻮﺗ - ﺔﻴﻌﺟﺮﻣ ﺓﺭﻮﺻ"
 
-msgid "Use Image Style Only"
-msgstr "ﻂﻘﻓ ﺓﺭﻮﺼﻟﺍ ﻂﻤﻧ ﻡﺪﺨﺘﺳﺍ"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "ﺓًﺮﺷﺎﺒﻣ ﺞﻴﺴﻨﻟﺍ ﺪﻴﻟﻮﺗ ﺓﺭﻮﺼﻟﺍ ﻪﺟّﻮﺗ ،ﻞﻴﻄﻌﺘﻟﺍ ﺪﻨﻋ .(ﻪﺟّﻮﻤﻟﺍ ﻖﻴﺒﻄﺗ ﺭﺍﺮﻤﺘﺳﺍ ﻊﻣ) ﻂﻘﻓ ﺓﺭﻮﺼﻠﻟ ﻲﻨﻔﻟﺍ ﻂﻤﻨﻟﺍ ﻞﻘﻨﻳُ ،ﻞﻴﻌﻔﺘﻟﺍ ﺪﻨﻋ"
-
 msgid "Output texture resolution in pixels"
 msgstr "ﻞﺴﻜﺒﻟﺎﺑ ﺞﺗﺎﻨﻟﺍ ﺞﻴﺴﻨﻟﺍ ﺔﻗﺩ"
 
@@ -8452,9 +8857,6 @@ msgstr "ﻑﺬﺤﻳُ ﻻ﻿ﻭ ﻲﻠﺻﻷ﻿ﺍ ﻢﺴﺠﻤﻟﺍ ﻰﻔﺨ
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan ﺔﺌﻴﻬﺗ ﻢﺘﺗ ﻢﻟ"
 
-msgid "Format"
-msgstr "ﺔﺌﻴﻫ"
-
 msgid "Inputs"
 msgstr "ﻞﺧﺍﺪﻣ"
 
@@ -8548,26 +8950,23 @@ msgstr "ﺮﻇﺎﻨﻤﻛ ﺎﻬﺘﻓﺎﺿﻹ﻿ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣ
 msgid "Generates as one multi-view job"
 msgstr "ﺮﻇﺎﻨﻤﻟﺍ ﺓﺩﺪﻌﺘﻣ ﺓﺪﺣﺍﻭ ﺔﻤﻬﻤﻛ ﺪﻴﻟﻮﺘﻟﺍ ﻢﺘﻳ"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ﻯﺮﺧﺃ)"
+
 msgid "Video Gen tab not available"
 msgstr "ﺮﻓﻮﺘﻣ ﺮﻴﻏ ﻮﻳﺪﻴﻔﻟﺍ ﺪﻴﻟﻮﺗ ﺐﻳﻮﺒﺗ"
 
 msgid "Selected References"
 msgstr "ﺓﺩﺪﺤﻤﻟﺍ ﻊﺟﺍﺮﻤﻟﺍ"
 
-msgid "Images: {count}"
-msgstr "{count} :ﺭﻮﺼﻟﺍ"
-
-msgid "Videos: {count}"
-msgstr "{count} :ﻮﻳﺪﻴﻔﻟﺍ ﻊﻃﺎﻘﻣ"
+msgid "No references selected — text-to-video"
+msgstr "ﻮﻳﺪﻴﻓ ﻰﻟﺇ ﺺﻧ — ﻊﺟﺍﺮﻣ ﻱﺃ ﺩﺪﺤﺗُ ﻢﻟ"
 
 msgid "A selected video source file is missing"
 msgstr "ﺩﻮﻘﻔﻣ ﺓﺩﺪﺤﻤﻟﺍ ﻮﻳﺪﻴﻔﻟﺍ ﺭﺪﺼﻣ ﺕﺎﻔﻠﻣ ﺪﺣﺃ"
 
-msgid "No references selected — text-to-video"
-msgstr "ﻮﻳﺪﻴﻓ ﻰﻟﺇ ﺺﻧ — ﻊﺟﺍﺮﻣ ﻱﺃ ﺩﺪﺤﺗُ ﻢﻟ"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "ﺭﺍﻭﺩﻷ﻿ﺍ ﻦﻴﻴﻌﺗ ﺪﻨﻋ ﻪﺟّﻮﻤﻟﺍ ﻲﻓ ﻮﻳﺪﻴﻔﻟﺍ/ﺭﻮﺼﻟﺍ ﺐﻴﺗﺮﺗ ﺮﻛﺫﺍ"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "ﻊﺟﺍﺮﻤﻟﺍ ﺩﻭﺪﺣ"
@@ -8644,6 +9043,33 @@ msgstr "ﻞﻜﻟﺍ ﺮﻃّﺃ"
 msgid "Clear Board"
 msgstr "ﺔﺣﻮﻠﻟﺍ ﺢﺴﻣﺍ"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "ﻦﺋﺎﻜﻟﺍ ﻢﺳﺍ"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "ﺕﺎﻜﻳﺮﺤﺘﻟﺍ"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "ﻞﻴﻛﻮﻠﻟ ﺔﻴﺋﺎﻘﻠﺘﻟﺍ ﺔﻠﻜﻴﻬﻟﺍ"
 
@@ -8665,8 +9091,8 @@ msgstr "auto / biped / quadruped / hexapod / octopod / avian / serpentine / aqua
 msgid "Skeleton Spec"
 msgstr "ﻲﻤﻈﻌﻟﺍ ﻞﻜﻴﻬﻟﺍ ﺔﻔﺻﺍﻮﻣ"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "'mixamo' ﻭﺃ 'tripo' :ﻲﻤﻈﻌﻟﺍ ﻞﻜﻴﻬﻟﺍ ﺡﻼ﻿ﻄﺻﺍ"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "(Tripo ﻦﻣ ﺓﺰﻫﺎﺠﻟﺍ ﺕﺎﻛﺮﺤﻟﺍ ﻢﻋﺪﻳ tripo ﻂﻘﻓ) vrm ﻭﺃ tripo, mixamo, actorcore, unity, unreal :ﻡﺎﻈﻌﻟﺍ ﺔﻴﻤﺴﺗ"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "ﻞﻴﻛﻮﻠﻟ PBR ﺪﻴﻟﻮﺗ"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Tripo ﻡﺍﺪﺨﺘﺳﺎﺑ ﻰﻄﻌﻤﻟﺍ ﻢﺴﺠﻤﻟﺍ ﻦﺋﺎﻜﻟ PBR ﺞﺳﺎﻨﻣ ﺪﻟّﻮﻳ"
-
-msgid "Object Name"
-msgstr "ﻦﺋﺎﻜﻟﺍ ﻢﺳﺍ"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "ﺞﻴﺴﻨﻟﺎﺑ ﻩﺅﺎﺴﻛﺇ ﺩﺍﺮﻤﻟﺍ ﺪﻬﺸﻤﻟﺍ ﻲﻓ ﻢﺴﺠﻤﻟﺍ ﻦﺋﺎﻛ ﻢﺳﺍ"
@@ -8917,11 +9340,11 @@ msgstr ""
 msgid "Sync failed: {error}"
 msgstr "{error} :ﺔﻨﻣﺍﺰﻤﻟﺍ ﺖﻠﺸﻓ"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "ﻊﻃﺎﻘﻤﻠﻟ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻲﻓ «ﻮﻳﺪﻴﻔﻟﺍ ﺪﻴﻟﻮﺗ» ﻡﺪﺨﺘﺳﺍ .ﻂﻘﻓ ﺔﺘﺑﺎﺜﻟﺍ ﺭﻮﺼﻟﺍ ﻞﻴﻛﻮﻟﺍ ﻞﺒﻘﻳ :ﻮﻳﺪﻴﻓ {count} ﻲﻄﺨﺗ ﻢﺗ"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "ﻊﻃﺎﻘﻤﻠﻟ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻲﻓ «ﻮﻳﺪﻴﻔﻟﺍ ﺪﻴﻟﻮﺗ» ﻡﺪﺨﺘﺳﺍ .ﻂﻘﻓ ﺔﺘﺑﺎﺜﻟﺍ ﺭﻮﺼﻟﺍ ﻞﻴﻛﻮﻟﺍ ﻞﺒﻘﻳ :({count}) ﻮﻳﺪﻴﻔﻟﺍ ﻊﻃﺎﻘﻣ ﻲﻄﺨﺗ ﻢﺗ"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻲﻓ ﺓﺩﺪﺤﻣ ﺭﻮﺻ ﺪﺟﻮﺗ ﻻ﻿"
@@ -9219,9 +9642,6 @@ msgstr "ﺭﺎﺴﻣ"
 
 msgid "Directory of the selected file(s)"
 msgstr "ﺓﺩﺪﺤﻤﻟﺍ (ﺕﺎﻔﻠﻤﻟﺍ) ﻒﻠﻤﻟﺍ ﺪﻠﺠﻣ"
-
-msgid "Files"
-msgstr "ﺕﺎﻔﻠﻤﻟﺍ"
 
 msgid "Failed to load media: {filepath}"
 msgstr "{filepath} :ﻂﺋﺎﺳﻮﻟﺍ ﻞﻴﻤﺤﺗ ﻞﺸﻓ"
@@ -9823,8 +10243,8 @@ msgstr "ﻝﻻ﻿ﺪﺘﺳﺍ ﺓﺪﻘﻋ ﺩﺪﺣ"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "«ﺪﻟّﻭ» ﻭﺃ Enter ﻂﻐﺿﺍ ﻢﺛ ،ﻪﺟّﻮﻤﻟﺍ ﺭﺮّﺣ"
 
-msgid "Node added to the generation queue"
-msgstr "ﺪﻴﻟﻮﺘﻟﺍ ﺭﺎﻈﺘﻧﺍ ﺔﻤﺋﺎﻗ ﻰﻟﺇ ﺓﺪﻘﻌﻟﺍ ﺔﻓﺎﺿﺇ ﺖﻤﺗ"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "ﺔﺠﻴﺘﻨﻟﺍ ﻰﻟﺇ ﺓﺩﻮﻌﻟﺍﻭ ﺮﻳﺮﺤﺘﻟﺍ ءﺎﻐﻟﻹ﻿ ﻯﺮﺧﺃ ﺓﺮﻣ ﺮﻘﻧﺍ ؛ﺍﺩًﺪﺠﻣ ﺎﻬﻠﻴﻐﺸﺗﻭ ﺎﻬﻄﺒﻀﻟ ﺎﻬﻬﺟّﻮﻣﻭ ﺓﺪﻘﻌﻟﺍ ﻩﺬﻫ ﺕﺍﺩﺍﺪﻋﺇ ﺮﻬﻈﻳُ"
@@ -10839,9 +11259,6 @@ msgstr "ﺎﻴًﺠﻣﺮﺑ ﺎﺼًﻧ ﺓﺪﻟّﻮﻤﻟﺍ ﺔﻣﺎﺨﻟ
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "{result} :ﺎﻬﻘﻴﺒﻄﺗ ﻞﺸﻓ ﻦﻜﻟ ﺔﻣﺎﺨﻟﺍ ﺪﻴﻟﻮﺗ ﻢﺗ"
-
-msgid "Generate Procedural Material"
-msgstr "ﺔﻴﺋﺍﺮﺟﺇ ﺔﻣﺎﺧ ﺪﻟّﻭ"
 
 msgid "Material generation failed"
 msgstr "ﺔﻣﺎﺨﻟﺍ ﺪﻴﻟﻮﺗ ﻞﺸﻓ"
@@ -11877,9 +12294,6 @@ msgstr "ﻥﻮﻠﻟﺍ ﻢﻴﻤﻜﺗ ﺕﺎﺘﺑ"
 
 msgid "Generic Quantization Bits"
 msgstr "ﺔﻣﺎﻌﻟﺍ ﻢﻴﻤﻜﺘﻟﺍ ﺕﺎﺘﺑ"
-
-msgid "Animations"
-msgstr "ﺕﺎﻜﻳﺮﺤﺘﻟﺍ"
 
 msgid "Animation Mode"
 msgstr "ﺔﻛﺮﺤﻟﺍ ﻊﺿﻭ"
@@ -17496,12 +17910,6 @@ msgstr "ﻩﺮﻓﻮﺗ ﺪﻨﻋ GPU ﻰﻠﻋ ﺎﻤًﺋﺍﺩ ﺮﻴّﺼﻳ
 msgid "Always render on the CPU"
 msgstr "CPU ﻰﻠﻋ ﺎﻤًﺋﺍﺩ ﺮﻴّﺼﻳ"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "ﺎﻴًﺿﺍﺮﺘﻓﺍ ﺎﻴًﺟﺭﺎﺧ ﻦﻳﺰﺨﺘﻟﺍ ﻞﻴﻌﻔﺗ"
 
@@ -17579,6 +17987,12 @@ msgstr "ﺎﻤًﺋﺍﺩ ﺭﺎﻃﻹ﻿ﺍ ﻢﻴﻴﻘﺗ"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "ﺭﺎﻃﻺ﻿ﻟ ﺮﻴﻴﻐﺗ ﻞﻛ ﺪﻨﻋ ﺪﻘﻌﻟﺍ ﺓﺮﺠﺷ ﻢﻴّﻘﻳ"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "ﺓﺎﻨﻘﻟﺍ ﺕﺍﺭﺎﻴﺧ"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr ".ﺔﻟﻭﺎﺤﻤﻟﺍ ﺓﺩﺎﻋﻹ﻿ ﺍﺩًﺪﺠﻣ ﻢﺳﺭ
 msgid "View sketch"
 msgstr "ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﺽﺮﻋﺍ"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "(ﺎﻓًﺮﺣ {count} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﺔﺌﻠﺘﻤﻣ ﻞﻴﻛﻮﻟﺍ ﺓﺩﻮﺴﻣ"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "ﺎﻬﺘﺤﺗ ءﻲﺷ ﻻ﻿ — ﺔﻣﻼ﻿ﻌﻟﺍ ﺖﻔﻴﺿﺃُ"
@@ -19109,9 +19523,6 @@ msgstr "ﺕﺍﻭﺩﻷ﻿ﺍ ﻂﻳﺮﺷ"
 
 msgid "Sidebar"
 msgstr "ﻲﺒﻧﺎﺠﻟﺍ ﻂﻳﺮﺸﻟﺍ"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV ﻢﺴﺠﻣ ﺔﺋﺰﺠﺗ ﺡﻮﻟ"
@@ -19536,8 +19947,8 @@ msgstr "...ﻞﻳﺪﻌﺘﻟﺍ ﺭٍﺎﺟ"
 msgid "Awaiting Input..."
 msgstr "...ﻝﺎﺧﺩﻹ﻿ﺍ ﺭﺎﻈﺘﻧﺎﺑ"
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr ".ﻞﻴﻛﻮﻟﺍ ﻰﻟﺇ ﻝﺎﺳﺭﻺ﻿ﻟ ﻮﻳﺪﻴﻔﻟﺍ ﻝﺯﺃ .ﻮﻳﺪﻴﻔﻟﺍ ﻊﺿﻭ ﻮﻳﺪﻴﻔﻟﺍ ﻊﻃﺎﻘﻣ ﺐﻠﻄﺘﺗ"
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "ﻡﺪﺨﺘﺴﻤﻟﺍ ﻑﺮّﻌﻣ"
@@ -19547,6 +19958,78 @@ msgstr "Mixie ﺔﺛﺩﺎﺤﻣ ﻰﻟﺇ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺘﻟ
 
 msgid "Agent expects: {formats}"
 msgstr "{formats} :ﻞﻴﻛﻮﻟﺍ ﻊﻗﻮﺘﻳ"
+
+msgid "Skipped slow image: {name}"
+msgstr "{name} :ﺔﺌﻴﻄﺑ ﺓﺭﻮﺻ ﻲﻄﺨﺗ ﻢﺗ"
+
+msgid "Image encoding failed: {error}"
+msgstr "{error} :ﺓﺭﻮﺼﻟﺍ ﺰﻴﻣﺮﺗ ﻞﺸﻓ"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*ﻒﻗﻭﺃُ*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "ﺔﻴﻗﺮﺗ"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "ﻍﺭﺎﻓ ﺕﺎﻈﺣﻼ﻿ﻤﻟﺍ ﻖﻴﻠﻌﺗ"
@@ -19730,6 +20222,27 @@ msgstr ".ﻞﺻﻷ﻿ﺍ ﻒﻠﻣ ﻲﻓ ﺍﺩًﻮﺟﻮﻣ '{name}' ﺪﻌ�
 
 msgid "Could not add the asset to the scene."
 msgstr ".ﺪﻬﺸﻤﻟﺍ ﻰﻟﺇ ﻞﺻﻷ﻿ﺍ ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "...ﺮﻴﻜﻔﺘﻟﺍ ﺭٍﺎﺟ"
@@ -19880,9 +20393,6 @@ msgstr "{count} ﻝﺪّﻋُ"
 
 msgid "{count} deleted"
 msgstr "{count} ﻑﺬﺣُ"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ﻯﺮﺧﺃ)"
 
 msgid "Created: {names}"
 msgstr "{names} :ﺄﺸﻨﻤُﻟﺍ"
@@ -20046,6 +20556,15 @@ msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ﺔﺛﺩﺎﺤﻤﻟ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﺡﻮﻟ"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Mixar ﺏﺎﺴﺤﺑ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
+
 msgid "Session expired"
 msgstr "ﺔﺴﻠﺠﻟﺍ ﺖﻬﺘﻧﺍ"
 
@@ -20055,31 +20574,27 @@ msgstr ".ﺍﺩًﺪﺠﻣ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻰﺟﺮﻳُ"
 msgid "Login Failed"
 msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﻞﺸﻓ"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar ﺏﺎﺴﺤﺑ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "...ﺢﻔﺼﺘﻤﻟﺍ ﺭﺎﻈﺘﻧﺎﺑ"
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "ﺢﻔﺼﺘﻤﻟﺍ ﺮﺒﻋ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺳ"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-".ﻡﺎﻌﻟﺍ ﻱﻮﻠﻌﻟﺍ ﻂﻳﺮﺸﻟﺍ ﻦﻣ ﺢﺘﻔﺗُ — ﺏﺎﺴﺤﻟﺍ / ﻲﺼﺨﺸﻟﺍ ﻒﻠﻤﻠﻟ ﺔﻟﺪﺴﻨﻤﻟﺍ ﺔﻤﺋﺎﻘﻟﺍ\n"
-"\n"
-"`()layout.mixar_profile_card` ﺔﻄﺳﺍﻮﺑ ﺎﻴًﻠﺻﺃ ﻯﻮﺘﺤﻤﻟﺍ ﻢﺳﺮﻳُ\n"
-"(`interface_mixar_profile_card.cc`): ﺔﻄﺨﻟﺍ ﺓﺭﺎﺷﻭ ،ﺔﻴﺤﺗ،\n"
-"ﺓﺪﺣﺍﻭ ﺔﻗﺎﻄﺒﻛ ﺔﺒﺗﺮﻣ ،ﺏﺎﺴﺤﻟﺍ ﺕﺍءﺍﺮﺟﺇﻭ ﺓﺪﺻﺭﻷ﻿ﺍ ﻙﻼ﻿ﻬﺘﺳﺍ ﺱﺎﻴﻘﻣﻭ\n"
-"ﻞﻛﻭ ﻞﻴﺠﺴﺘﻟﺍ ﻰﻟﻮﺘﺗ Python ﻝﺍﺰﺗ ﻻ﻿ .ﺔﻤﺋﺎﻗ ﻦﻣ ﺎﻟًﺪﺑ\n"
-".ﺕﻼ﻿ﺴﻜﺒﻟﺍ ﻯﻮﺳ ++C ﻰﻟﻮﺘﺗ ﻻ﻿ﻭ — ﺔﻗﺎﻄﺒﻟﺍ ﻪﻴﻋﺪﺘﺴﺗ ﻞﻣﺎﻋ\n"
 
 msgid "Dashboard"
 msgstr "ﻢﻜﺤﺘﻟﺍ ﺔﺣﻮﻟ"
@@ -20309,12 +20824,6 @@ msgstr "{note} :ﺕﺎﻣﻼ﻿ﻌﻟﺍ"
 msgid "Sketch"
 msgstr "ﻲﻄﻴﻄﺨﺗ ﻢﺳﺭ"
 
-msgid "Skipped slow image: {name}"
-msgstr "{name} :ﺔﺌﻴﻄﺑ ﺓﺭﻮﺻ ﻲﻄﺨﺗ ﻢﺗ"
-
-msgid "Image encoding failed: {error}"
-msgstr "{error} :ﺓﺭﻮﺼﻟﺍ ﺰﻴﻣﺮﺗ ﻞﺸﻓ"
-
 msgid "Message sent"
 msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﺖﻠﺳﺭﺃُ"
 
@@ -20536,8 +21045,8 @@ msgstr "ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﻑﺮّﻌﻣ"
 msgid "Restoring checkpoint…"
 msgstr "…ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﺓﺩﺎﻌﺘﺳﺍ ﺭٍﺎﺟ"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "(ﺎﻓًﺮﺣ {count} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ) ﺍﺪًﺟ ﻞﻳﻮﻃ ﻖﺼﻠﻤﻟﺍ ﺺﻨﻟﺍ"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "ﺺﻨﻟﺍ ﻖﺼﻟﺍ"
@@ -20728,11 +21237,14 @@ msgstr "ﺎﻬﻓﺬﺣ ﺩﺍﺮﻤﻟﺍ ﺔﻔﺷﺭﺆﻤﻟﺍ ﺔﺴﻠﺠ
 msgid "Chat removed from history"
 msgstr "ﻞﺠﺴﻟﺍ ﻦﻣ ﺔﺛﺩﺎﺤﻤﻟﺍ ﺖﻠﻳﺯﺃُ"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name}: {error} ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "({count}) ﺕﺎﻘﻓﺮﻤﻟﺍ ﺪﺣ ﻍﻮﻠﺑ ﻢﺗ"
@@ -20740,14 +21252,14 @@ msgstr "({count}) ﺕﺎﻘﻓﺮﻤﻟﺍ ﺪﺣ ﻍﻮﻠﺑ ﻢﺗ"
 msgid "Skipped {name}: {error}"
 msgstr "{name}: {error} ﻲﻄﺨﺗ ﻢﺗ"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}: {error} ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
-
 msgid "These references are already attached"
 msgstr "ﻞﻌﻔﻟﺎﺑ ﺔﻘﻓﺮﻣ ﻊﺟﺍﺮﻤﻟﺍ ﻩﺬﻫ"
 
 msgid "Added {count} image(s)"
 msgstr "ﺓﺭﻮﺻ {count} ﺔﻓﺎﺿﺇ ﺖﻤﺗ"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend ﻒﻠﻣ ﻦﻣ ﻒﺿﺃ"
@@ -20764,6 +21276,9 @@ msgstr "{size} - ﺕﺎﻧﺎﻴﺑ ﻰﻠﻋ ﻱﻮﺘﺤﻳ"
 msgid "{size} - No data"
 msgstr "{size} - ﺕﺎﻧﺎﻴﺑ ﻼ﻿ﺑ"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "blend ﻒﻠﻣ ﻦﻣ ﺓﺭﻮﺻ ﺩﺪﺤﻳ"
 
@@ -20772,6 +21287,12 @@ msgstr "ﻞﻌﻔﻟﺎﺑ ﺔﻓﺎﻀﻣ ﺓﺭﻮﺼﻟﺍ"
 
 msgid "Image not found in blend file"
 msgstr "blend ﻒﻠﻣ ﻲﻓ ﺓﺭﻮﺼﻟﺍ ﻰﻠﻋ ﺮﺜﻌﻳُ ﻢﻟ"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "ﻞﻌﻔﻟﺎﺑ ﺔﻘﻓﺮﻣ ﺓﺭﻮﺼﻟﺍ"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "ﺔﺷﺎﺷ ﺔﻄﻘﻟ ﻂﻘﺘﻟﺍ"
 
@@ -21103,9 +21627,6 @@ msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻞﺸﻓ"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "ﺔﻴﻤﻫﻭ ﺕﺎﻧﺎﻴﺒﺑ ﻞﺼﺘﻣ :ﺭﻮﻄﻤﻟﺍ ﻊﺿﻭ"
 
-msgid "Disconnect"
-msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻗﺍ"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie ﻞﻴﻛﻭ ﻡﺩﺎﺨﺑ ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻘﻳ"
 
@@ -21115,14 +21636,14 @@ msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻘﻧﺍ :ﺭﻮﻄﻤﻟﺍ ﻊﺿﻭ"
 msgid "Disconnected from server"
 msgstr "ﻡﺩﺎﺨﻟﺎﺑ ﻝﺎﺼﺗﻻ﻿ﺍ ﻊﻄﻘﻧﺍ"
 
+msgid "Could not save the chat to History"
+msgstr "ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺣ ﺭﺬﻌﺗ"
+
 msgid "New Chat"
 msgstr "ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "(ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﻴﻟﺎﺤﻟﺍ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺤﺗُ) ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ ﺃﺪﺒﻳ"
-
-msgid "Could not save the chat to History"
-msgstr "ﻞﺠﺴﻟﺍ ﻲﻓ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻆﻔﺣ ﺭﺬﻌﺗ"
 
 msgid "Started new chat session"
 msgstr "ﺓﺪﻳﺪﺟ ﺔﺛﺩﺎﺤﻣ ﺔﺴﻠﺟ ﺕﺃﺪﺑ"
@@ -21160,6 +21681,12 @@ msgstr "...ﺔﻘﺑﺎﺴﻟﺍ ﺔﻤﻬﻤﻟﺍ ﻑﺎﻨﺌﺘﺳﺍ ﺭٍ�
 msgid "Could not resume the previous task"
 msgstr "ﺔﻘﺑﺎﺴﻟﺍ ﺔﻤﻬﻤﻟﺍ ﻑﺎﻨﺌﺘﺳﺍ ﺭﺬﻌﺗ"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "ﻞﺳَﺮﻤُﻟﺍ ﺕﺎﻈﺣﻼ﻿ﻤﻟﺍ ﻖﻴﻠﻌﺗ"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "ﺔﺛﺩﺎﺤﻤﻟﺍ ﻲﻓ ﻂﻘﻓ ﺓءﺍﺮﻘﻠﻟ ﺽﺮﻌﻳُ ،ﺎﻴًﻠﺤﻣ ﻞﺳَﺮﻣُ ﻖﻴﻠﻌﺗ"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﻞﺳَﺮﺗُ ﻢﻟ"
 
@@ -21522,6 +22058,15 @@ msgstr "ﺔﺛﺩﺎﺤﻤﻟﺍ ﻝﺎﺧﺩﺇ"
 
 msgid "Type your message here"
 msgstr "ﺎﻨﻫ ﻚﺘﻟﺎﺳﺭ ﺐﺘﻛﺍ"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "ﺔﺛﺩﺎﺤﻤﻟﺍ ﻞﺋﺎﺳﺭ"
@@ -21660,6 +22205,12 @@ msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺴﻣ"
 
 msgid "Whether user is currently logged in"
 msgstr "ﺎﻴًﻟﺎﺣ ﻝﻮﺧﺪﻟﺍ ﻞﺠّﺴﻣ ﻡﺪﺨﺘﺴﻤﻟﺍ ﻥﺎﻛ ﺍﺫﺇ ﺎﻣ"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴﺗ ﺭٍﺎﺟ"
@@ -21861,9 +22412,6 @@ msgstr "ﺔﺑﺎﺘﻛ"
 
 msgid "File write"
 msgstr "ﻒﻠﻣ ﺔﺑﺎﺘﻛ"
-
-msgid "Command"
-msgstr "ﺮﻣﺃ"
 
 msgid "Shell command"
 msgstr "ﺔﻴﻓﺮﻃ ﺮﻣﺃ"
@@ -23620,9 +24168,6 @@ msgstr "ﺮﺷﺆﻤﻟﺍ ﻱﺫﺎﺣ"
 msgid "Snap 2D cursor"
 msgstr "ﺩﺎﻌﺑﻷ﻿ﺍ ﻲﺋﺎﻨﺛ ﺮﺷﺆﻤﻟﺍ ﻂﻘﺘﻠﻳ"
 
-msgid "Origin"
-msgstr "ﻞﺻﻷ﻿ﺍ ﺔﻄﻘﻧ"
-
 msgid "Mirror selected UVs"
 msgstr "ﺓﺩﺪﺤﻤﻟﺍ UV ﺲﻜﻌﻳ"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "ﻖﺑﺎﺴﻟﺍ ﻰﻟﺇ ﻉﻮﺟﺮﻟﺍ"
 
 msgid "Grid & Relationship Lines"
 msgstr "ﺕﺎﻗﻼ﻿ﻌﻟﺍ ﻁﻮﻄﺧﻭ ﺔﻜﺒﺸﻟﺍ"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "ﺮﻴﻴﺼﺘﻟﺍ ﻙﺮﺤﻣ"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "ﺮﻴﻴﺼﺘﻟﺍ ﺕﺍﺩﺍﺪﻋﺇ"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "ﺕﺎﻧﺎﻴﺒﻟﺍ ﺾﻌﺑ ﺪﻘﻔﺗُ ﺪﻗﻭ ،(Mixar (%d.%d ﻦﻣ ﺙﺪﺣﺃ ﺭﺍﺪﺻﺈﺑ ﻒﻠﻤﻟﺍ ﻆﻔﺣُ"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "ﺙﺪﺣﺃ ﻭﺃ Mixar %s ﻡﺍﺪﺨﺘﺳﺎﺑ ﻪﺤﺘﻓ ﻰﺟﺮﻳ ،ﺙﺪﺣﺃ ﺭﺍﺪﺻﺈﺑ ﻒﻠﻤﻟﺍ ﻆﻔﺣُ"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "ﻦﻳﻮﻠﺘﻟﺍ ءﺪﺒﻟ ﺕﺎﻘﺒﻄﻟﺍ ﺡﻮﻟ ﻲﻓ ﻦﻳﻮﻠﺗ ﺔﻘﺒﻃ ﻒﺿﺃ"
 
@@ -24409,7 +25179,43 @@ msgstr "ﻪﻔﻗﻮﻳ ﻭﺃ ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﺓﺩ�
 msgid "Stop the running turn"
 msgstr "ﻱﺭﺎﺠﻟﺍ ﺭﻭﺪﻟﺍ ﻒﻗﻮﻳ"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"ﻉﺎﺟﺮﺘﺳﺍ\n"
+"\n"
+".ﻪﻨﻴﺴﺤﺗ ﻞﺒﻗ ﻪﺘﺒﺘﻛ ﻱﺬﻟﺍ ﻪﺟّﻮﻤﻟﺍ ﺪﻴﻌﺘﺴﻳ"
+
+msgid "Refining this prompt..."
+msgstr "...ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﻦﻴﺴﺤﺗ ﺭٍﺎﺟ"
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"ﺍﺩًﺪﺠﻣ ﻦﻴﺴﺤﺗ\n"
+"\n"
+".ﻖﺑﺎﺴﻟﺍ ﻦﻴﺴﺤﺘﻟﺍ ﻻ﻿ ،ﺔﻴﻠﺻﻷ﻿ﺍ ﻚﺘﻏﺎﻴﺻ ﺪﻴﻌﺘﺴﻳ ﻉﺎﺟﺮﺘﺳﻻ﻿ﺍ ﻞﻈﻳ .ﻪﻴﻟﺇ ﻞﺳَﺮﻴُﺳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﻯﺮﺧﺃ ﺓﺮﻣ ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﺔﻏﺎﻴﺻ ﺪﻴﻌﻳ"
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"ﻦﻴﺴﺤﺗ\n"
+"\n"
+".ﺝﺫﻮﻤﻨﻟﺍ ﻚﻟﺫ ﺎﻬﻟ ﺐﻴﺠﺘﺴﻳ ﻲﺘﻟﺍ ﻞﻴﺻﺎﻔﺘﻟﺍ ﺎﻔًﻴﻀﻣ ،ﻪﻴﻟﺇ ﻞﺳَﺮﻴُﺳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﺔﻏﺎﻴﺻ ﺪﻴﻌﻳ"
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "ﻊﺟﺮﻤﻟﺍ ﺔﻟﺍﺯﺇ"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﻲﻓ ﺝﺭَﺪﻤُﻟﺍ ﻢﺳﺮﻟﺍﻭ ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﺍﺬﻫ ﻞﻫﺎﺠﺘﻳ"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﺢﺘﻓ"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "ﺭﺎﺘﺨﻣ ءﻲﺷ ﻻ﻿"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "ﺐﻳﻮﺒﺘﻟﺍ ﺕﺎﻣﻼ﻿ﻋ ﻞﻳﺪﺒﺗ ﻞﺒﻗ ءﻼ﻿ﻣﻹ﻿ﺍ ﻭﺃ ﻲﻄﻴﻄﺨﺘﻟﺍ ﻢﺳﺮﻟﺍ ﻪِﻧﺃ"
 
@@ -24607,6 +25413,15 @@ msgstr "ﻱ %d ﺬﻨﻣ"
 msgid "%dw ago"
 msgstr "ﺃ %d ﺬﻨﻣ"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "(%d) ﺪﻴﻟﻮﺘﻟﺍ ﺭٍﺎﺟ"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter ﻝﺎﺳﺭﻺ﻿ﻟ"
 
 msgid "Sketch · Enter to send"
 msgstr "ﻝﺎﺳﺭﻺ﻿ﻟ Enter · ﻲﻄﻴﻄﺨﺗ ﻢﺳﺭ"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "ﻞﻴﻛﻮﻠﻟ ﺔﻣﺎﻌﻟﺍ ﺪﻋﺍﻮﻘﻟﺍﻭ ﻉﻭﺮ
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "ﺍﺩًﺪﺠﻣ ﻝﺍﺆﺴﻟﺎﺑ ﻪﻟ ﺡﺎﻤﺴﻠﻟ ﺮﻘ
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "ﺺﺨﻠﻤﻟﺍ ﻲﻓ ﻪﺗﺍﺭﺍﺮﻗ ﺩﺮﺴﻳﻭ ،ﻚﻟﺍﺆﺳ ﻦﻣ ﺎﻟًﺪﺑ ﻪﺴﻔﻨﺑ ﺔﺣﻮﺘﻔﻤﻟﺍ ﺕﺍﺭﺎﻴﺨﻟﺍ ﻞﻴﻛﻮﻟﺍ ﻢﺴﺤﻳ :ﻲﺋﺎﻘﻠﺘﻟﺍ ﻊﺿﻮﻟﺍ"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "ﺍﺩًﺪﺠﻣ ﻑﺎﻀﺘﺴﻣ ﺝﺫﻮﻤﻧ ﺭﺎﻴﺘﺧﻻ﻿ \"ﻪﺘﻟﺍﺯﺇ ﻭﺃ ﻲﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ ﺮﻴﻴﻐﺗ\" ﺮﺘﺧﺍﻭ ﺔﻤﺋﺎﻘﻟﺍ ﻩﺬﻫ ﺢﺘﻓﺍ .ﺝﺫﻮﻤﻨﻟﺍ ﺩﺪﺤﻳ ﻮﻫﻭ ،ﻡﺍﺪﺨﺘﺳﻻ﻿ﺍ ﺪﻴﻗ ﻚﺑ ﺹﺎﺨﻟﺍ API ﺡﺎﺘﻔﻣ"
-
-msgid "Choose which model the agent runs on"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﻪﻴﻠﻋ ﻞﻤﻌﻳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻟﺍ ﺮﺘﺧﺍ"
 
 msgid "Agent Bubble"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ"
@@ -24858,6 +25670,12 @@ msgstr "ﺔﻘﻠﻐﻤﻟﺍ ﺩﺪﻋ"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "ﺔﻘﻠﻐﻤﻟﺍ ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺬﻓﺍﻮﻧ ﺩﺪﻋ"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﻢﺠﺣ ﻦﻴﻴﻌﺗ"
@@ -25336,6 +26154,9 @@ msgstr "...ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﻲﻓ"
 msgid "Click to edit the prompt and try again"
 msgstr "ﺍﺩًﺪﺠﻣ ﺔﻟﻭﺎﺤﻤﻟﺍﻭ ﻪﺟّﻮﻤﻟﺍ ﺮﻳﺮﺤﺘﻟ ﺮﻘﻧﺍ"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "ﻪﺟّﻮﻤﻟﺍ\n"
 "\n"
 ".ﺓﺪﻘﻌﻟﺍ ﻩﺬﻫ ﻝﺎﺳﺭﻹ﻿ Enter ﻂﻐﺿﺍ .ﻩﺪﻴﻟﻮﺗ ﺪﻳﺮﺗ ﺎﻣ ﻒﺻ"
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"ﻉﺎﺟﺮﺘﺳﺍ\n"
-"\n"
-".ﻪﻨﻴﺴﺤﺗ ﻞﺒﻗ ﻪﺘﺒﺘﻛ ﻱﺬﻟﺍ ﻪﺟّﻮﻤﻟﺍ ﺪﻴﻌﺘﺴﻳ"
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"ﺍﺩًﺪﺠﻣ ﻦﻴﺴﺤﺗ\n"
-"\n"
-".ﻖﺑﺎﺴﻟﺍ ﻦﻴﺴﺤﺘﻟﺍ ﻻ﻿ ،ﺔﻴﻠﺻﻷ﻿ﺍ ﻚﺘﻏﺎﻴﺻ ﺪﻴﻌﺘﺴﻳ ﻉﺎﺟﺮﺘﺳﻻ﻿ﺍ ﻞﻈﻳ .ﻪﻴﻟﺇ ﻞﺳَﺮﻴُﺳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﻯﺮﺧﺃ ﺓﺮﻣ ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﺔﻏﺎﻴﺻ ﺪﻴﻌﻳ"
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"ﻦﻴﺴﺤﺗ\n"
-"\n"
-".ﺝﺫﻮﻤﻨﻟﺍ ﻚﻟﺫ ﺎﻬﻟ ﺐﻴﺠﺘﺴﻳ ﻲﺘﻟﺍ ﻞﻴﺻﺎﻔﺘﻟﺍ ﺎﻔًﻴﻀﻣ ،ﻪﻴﻟﺇ ﻞﺳَﺮﻴُﺳ ﻱﺬﻟﺍ ﺝﺫﻮﻤﻨﻠﻟ ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﺔﻏﺎﻴﺻ ﺪﻴﻌﻳ"
-
-msgid "Refining this prompt..."
-msgstr "...ﻪﺟّﻮﻤﻟﺍ ﺍﺬﻫ ﻦﻴﺴﺤﺗ ﺭٍﺎﺟ"
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "ﺞﻴﺴﻨﻟﺍ ﺕﺎﻋﻮﻤﺠﻣ ﺔﺣﺎﺴﻣ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "ﺞﻴﺴﻨﻟﺍ ﺕﺎﻋﻮﻤﺠﻣ ﺓﺭﺍﺩﻹ﻿ ﻲﺒﻧﺎﺠﻟﺍ ﻂﻳﺮﺸﻟﺍ ﺡﺍﻮﻟﺃ ﻡﺪﺨﺘﺳﺍ"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "ﻝﻭﻷ﻿ﺍ ﻰﻟﺇ ﺓﺩﻮﻌﻟﺍ"
 
@@ -26557,9 +27354,6 @@ msgstr "ﻪﺟﻮﻟﺍ ﺔﻘﻄﻨﻣ "
 msgid "Select a character to animate"
 msgstr "ﺎﻬﻜﻳﺮﺤﺘﻟ ﺔﻴﺼﺨﺷ ﺩﺪّﺣ"
 
-msgid "Animate"
-msgstr "ﻚﻳﺮﺤﺗ"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "ﻞﻴﻐﺸﺘﻟﺍ ﺱﺃﺭ ﻦﻣ ﺔﻴﺋﺪﺒﻤﻟﺍ ﺔﻛﺮﺤﻟﺍ ﻩﺬﻫ ﺢﻴﺗﺎﻔﻣ ﻞﺠّﺴﻳ"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "ﻞﻤﻌﻟﺍ ﺔﺣﺎﺴﻣ ﺔﻤﻬﻣ ﺔﻳﻮﻫ"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "ﺮﻄﺨﻟﺍ ﻥﻮﻠﺑ ءﺍﺮﺟﺇ ﺭﺯ"
 msgid "Borderless quiet action button"
 msgstr "ﺩﻭﺪﺣ ﻼ﻿ﺑ ﺉﺩﺎﻫ ءﺍﺮﺟﺇ ﺭﺯ"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "ﺔﺤﻳﺮﺷ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "ﺮﺴﻳﻷ﻿ﺍ ﻊﺿﻮﻟﺍ ﻖﻟﺰﻨﻣ"
 
@@ -27126,9 +28019,6 @@ msgstr "ﺰﻣﺭ"
 
 msgid "Header glyph"
 msgstr "ﺔﻴﺳﺃﺮﻟﺍ ﺰﻣﺭ"
-
-msgid "Chip"
-msgstr "ﺔﺤﻳﺮﺷ"
 
 msgid "Chip track"
 msgstr "ﺔﺤﻳﺮﺸﻟﺍ ﺭﺎﺴﻣ"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "ﻒﻠﻤﻟﺍ ﺩﺍﺪﺘﻣﺍ ﻲﻔﺼﻣ"
 
 msgid "Write compressed .mixar file"
 msgstr "ﺎﻃًﻮﻐﻀﻣ mixar. ﻒﻠﻣ ﺐﺘﻜﻳ"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "mixar. ﻒﻠﻤﻛ ﻆﻔﺤﻳ"

@@ -1112,6 +1112,9 @@ msgstr "Астатус агәаҭара алымшеит: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Аресурсқәа ршәҟәыԥхьарҭақәа рскан, аԥсахрақәа ргәаҭара, аҿыц аԥхьаԥшрақәа мацара архиара, аԥышәара API ахь ашьҭра"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Алагара…"
 
@@ -1433,11 +1436,47 @@ msgstr "Ахатә ҷыдала асервер"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Mixar еиҳарак ишәыҿыцу OpenAI еиқәыршәоу асервер ахь шәырга (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Аформа адыррақәа иашаӡам — ишәҳәоуп, ацхыраара шәазҿырҧш."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Ҳара ҳган аҿы агха ыҟан. Ишәҳәоуп, еиҭа шәыԥышәа."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Ҷыдала амодель акаталог аԥхьара"
@@ -1481,26 +1520,20 @@ msgstr "Раԥхьа ҷыдала амодель алагара шәыҟаҵа (
 msgid "Base URL and model name are required."
 msgstr "Абазартә URL амодель ахьӡи иаҭахуп."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Ҷыдала асервер HTTP {status} ала аҭак ҟаиҵеит."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Ҷыдала асервер ахь анеира алымшеит. Иҿыцуп ҳәа, абазартә URL иашоу ҳәа шәгәаҭа."
 
-msgid "No models available — contact support"
-msgstr "Амодельқәа ыҟаӡам — ацхыраара шәазҿырҧш"
-
-msgid "Your API key controls the model"
-msgstr "ШәAPI ацаԥха амодель анапхгара аҿуп"
-
 msgid "Custom"
 msgstr "Ахатә"
-
-msgid "Use my own API key…"
-msgstr "Сара сыхатә API ацаԥха схархәоит…"
-
-msgid "Change or remove my API key…"
-msgstr "Сара сы API ацаԥха аԥсахра мамзаргьы ақәгара…"
 
 msgid "Thinking"
 msgstr "Ахәыцра"
@@ -1508,53 +1541,80 @@ msgstr "Ахәыцра"
 msgid "Thinking: {level}"
 msgstr "Ахәыцра: {level}"
 
-msgid "Your key: {name}"
-msgstr "Шәцаԥха: {name}"
+msgid "Mixie"
+msgstr ""
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Астандарттә"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Амодельқәа ыҟаӡам — ацхыраара шәазҿырҧш"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Агент амодель аиқәырхара иаҿу… Ашьҭраанӡа, амодель аԥсахраанӡа шәыԥыжәтәуп."
 
-msgid "Agent Model"
-msgstr "Агент амодель"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "Агент зыҿыцуа амодель алх."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Уажәы иалху амодель азы ахәыцра аҽазышәара."
-
-msgid "No thinking levels for this model"
-msgstr "Ари амодель азы ахәыцра аҩаӡарақәа ыҟаӡам"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Шәхатә API ацаԥха ихархәоуп — ахостингтә модель алхразы ари амениу аҿы «Сара сы API ацаԥха аԥсахра мамзаргьы ақәгара» алх"
-
-msgid "Set Agent Model"
-msgstr "Агент амодель ашьақәыргылара"
-
-msgid "Use this model for the agent"
-msgstr "Ари амодель агент азы шәхы иашәырхәа"
-
-msgid "Provider"
-msgstr "Апровайдер"
-
-msgid "Model"
-msgstr "Амодель"
-
-msgid "Label"
-msgstr "Адырга"
-
-msgid "Thinking Level"
-msgstr "Ахәыцра аҩаӡара"
-
-msgid "No model selected"
-msgstr "Амодель алхым"
-
-msgid "Reset Agent Model"
-msgstr "Агент амодель аиҭашьақәыргылара"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Иеиқәырхоу амодель арыцқьара, Mixar ахала иалхарц"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "Амодель аԥсахра алымшеит"
@@ -1562,113 +1622,107 @@ msgstr "Амодель аԥсахра алымшеит"
 msgid "Could not reset model"
 msgstr "Амодель аиҭашьақәыргылара алымшеит"
 
-msgid "Removing your key…"
-msgstr "Шәцаԥха ақәгара иаҿу…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Апровайдер ала агәаҭара иаҿу…"
+msgid "Use this model for the agent"
+msgstr "Ари амодель агент азы шәхы иашәырхәа"
 
-msgid "AI Provider Settings"
-msgstr "AI апровайдер аиҿкаарақәа"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "Активтә"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Ишьақәыргылам"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Mixar агент шәхатә провайдер аҿы шәыҿырц. Активтәуп аамҭа Mixar акредитқәа агент азыҳәарақәа рзы ирзихуам."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Ари аконфигурациа"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "Аккаунт"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT аподписка"
 
-msgid "API Key"
-msgstr "API Ацаԥха"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Ишәарҭаны иеиқәырхоуп"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Аҳәоу мацара амодель — ачат иаусуеит; 3D азаданиақәа авизуалтә азгәаҭарада иҿыцуеит."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "API Ацаԥха ақәгара…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Апровайдер аиҿкаара"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Ишифртәны иеиқәырхоуп, Mixar агент азыҳәарақәа рзы мацара ихархәоит — аиқәырхара ашьҭахь иҵәаху аԥхьаԥшра мацара иаарԥшуп."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Аинструмент / афункциа ааԥхьара зыднакыло амодель алх — агент иаҭахуп."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "openrouter.ai/models аҟынтәи ахьӡ-код закәызаалак, иаҳҳәап anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "~/.codex/auth.json аҟынтәи аҭагалара"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…мамзаргьы анапыла шәҭарҭәа"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Иҭарҭәан анбанқәа: {count}"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Ҭацәуп — шәара шә-auth.json шәҭарҭәа"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Атерминал аҿы  codex login  шәыҟаҵа, нас зегьы шәҭага мамзаргьы шәҭарҭәа"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "~/.codex/auth.json аҵакы (аҭарҭәара акнопка шәклипборд аԥхьоит)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Шәара шә-ChatGPT аподписка ихархәоит — Mixar акредитқәа ирзихуам."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Шәԥсахрақәа раларҵара алымшеит"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "ШәAPI ацаԥха иқәгахар?"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Агент еиҭа Mixar истандарттәу апровайдер иахыс ихархәоит."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Анаҩстәи агент азыҳәарақәа рзы Mixar акредитқәа ирзихуеит."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Mixar агент уажәы шәпровайдер аҿы иаусуеит — Mixar акредитқәа ирзихуам."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "API ацаԥха иқәган"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "Агент еиҭа Mixar истандарттәу апровайдер ахь игьеит."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Агент азыҳәарақәа рзы Mixar акредитқәа еиҭа ирзихуеит."
-
-msgid "Try Again"
-msgstr "Еиҭа шәыԥышәа"
-
-msgid "Save & Activate"
-msgstr "Аиқәырхара & аҿактәра"
-
-msgid "Keep My Key"
-msgstr "Сара сыцаԥха сыманы"
-
-msgid "Remove API Key"
-msgstr "API Ацаԥха ақәгара"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Ҷыдала AI апрограмма аиҵыхра…"
@@ -1691,8 +1745,14 @@ msgstr "Иҭыган — иҿыцуам"
 msgid "Not downloaded"
 msgstr "Иҭыгам"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Зегьы ари акомпиутер аҿы иаусуеит — шәпромптқәа Mixar агент аоркестрациада иҭыҵуам."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "Амодель"
 
 msgid "Cancel Download"
 msgstr "Аҭыгара аҟәыхра"
@@ -1718,9 +1778,6 @@ msgstr "Абазартә URL"
 msgid "API Key (optional)"
 msgstr "API Ацаԥха (иаҭахым)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Ари акомпиутер аҿы OpenAI еиқәыршәоу асервер закәызаалак — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Ҷыдала апровайдер аиқәырхара алымшеит."
 
@@ -1730,53 +1787,32 @@ msgstr "Ҷыдала апрограммақәа еиҭа рскан"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Ари акомпиутер аҿы иҿыцу ҷыдала AI апрограммақәа еиҭа рскан"
 
+msgid "AI Provider Settings"
+msgstr "AI апровайдер аиҿкаарақәа"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar агент азы шәхатә API ацаԥха шәхы иашәырхәа. Активтәуп аамҭа агент азыҳәарақәа рзы Mixar акредитқәа ирзихуам."
 
 msgid "Validate with the provider and save your API key"
 msgstr "Апровайдер ала агәаҭара, шәAPI ацаԥха аиқәырхара"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Ари апровайдер азы амодель алх, API ацаԥхагьы шәҭага."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Амодель ахьӡ-код API Ацаԥхаи иаҭахуп."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Codex амодель алх, шә-auth.json аизгагьы шәҭага."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Аиқәырхара алымшеит."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Ари амашьына аҟынтәи ~/.codex/auth.json аҭыԥ ахь аԥхьара"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "~/.codex/auth.json ԥым — раԥхьа `codex login` шәыҟаҵа"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "~/.codex/auth.json аԥхьара алымшеит"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "~/.codex/auth.json ҭацәуп"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "auth.json ари аҭыԥ азы еиҳауп, икәыршан — иашаны иеиқәырхахар ауам"
-
-msgid "Loaded auth.json"
-msgstr "auth.json иҭагалан"
-
-msgid "Paste auth.json"
-msgstr "auth.json аҭарҭәара"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Шәклипборд аҟынтәи ~/.codex/auth.json аҭыԥ ахь шәҭарҭәа"
-
-msgid "Clipboard is empty"
-msgstr "Аклипборд ҭацәуп"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Иҭарҭәоу auth.json ари аҭыԥ азы еиҳауп, икәыршан — иашаны иеиқәырхахар ауам"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "Ақәгара"
@@ -1787,11 +1823,110 @@ msgstr "Ақәгара ашьақәырӷәӷәара алагара"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Ақәгара аҟәыхра, ихадоу адиалог ахь ахынҳәра"
 
-msgid "Delete the stored API key server-side"
-msgstr "Иеиқәырхоу API ацаԥха асервер аҟынтәи аныхра"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "Ақәгара алымшеит."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Аимадара аҟәыхра"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Ҷыдала амодель"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "openrouter.ai/models аҟынтәи ахьӡ-код закәызаалак, иаҳҳәап anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Еиҭа шәыԥышәа"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "BYOK аҭагылазаашьа аиҭарҿыцра"
@@ -1805,11 +1940,38 @@ msgstr "Амодельқәа ркаталог аиҭарҿыцра"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Апровайдер+амодель акаталог асервер аҟынтәи еиҭа агәаҭара"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Агент амодель апровайдер"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "Иеиқәырхоу ахостингтә агент амодель алхра апровайдер аидентификатор"
+
+msgid "Agent Model"
+msgstr "Агент амодель"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "Иеиқәырхоу ахостингтә агент амодель алхра амодель аидентификатор"
@@ -1838,11 +2000,29 @@ msgstr "Агент амодель иалхар ауеит"
 msgid "False when the saved model is not available on your plan"
 msgstr "Иеиқәырхоу амодель шәплан аҿы ыҟаӡамзар, иашаӡам"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "Апровайдер"
+
 msgid "LLM provider"
 msgstr "LLM апровайдер"
 
 msgid "Model to use with the selected provider"
 msgstr "Иалху апровайдер ала ихархәатәу амодель"
+
+msgid "API Key"
+msgstr "API Ацаԥха"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "ШәAPI ацаԥха ишифртәны иеиқәырхоуп, Mixar агент азыҳәарақәа рзы мацара ихархәоит. Аиқәырхара ашьҭахь иҵәаху аԥхьаԥшра мацара иаарԥшуп."
@@ -1850,20 +2030,14 @@ msgstr "ШәAPI ацаԥха ишифртәны иеиқәырхоуп, Mixar а
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "openrouter.ai/models аҟынтәи амодель ахьӡ-код закәызаалак (иаҳҳәап anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "Codex auth.json"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "~/.codex/auth.json аҵакы (раԥхьа `codex login` шәыҟаҵа)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Ҷыдала аиҿкаашьа"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Mixar инапхгоит, мамзаргьы шәхатә ҷыдала асервер"
-
-msgid "Local model"
-msgstr "Ҷыдала амодель"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Ари акомпиутер аҿы иҭыгатәу, иҿытәу иалху амодель"
@@ -1885,6 +2059,15 @@ msgstr "BYOK активтәуп"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Асервер ари ахархәаҩ азы byok_active иаҳәозар, иашауп"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Адиалог аҭагылазаашьа"
@@ -1976,6 +2159,27 @@ msgstr "Аԥҵамҭа алымшеит — ишәҳәоуп, еиҭа шәыԥ�
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Акаталог visible_if RNA атрибутла иацаԥхоуп"
 
+msgid "Nothing selected"
+msgstr "Маҷ алхым"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Аҵакы"
+
+msgid "Label"
+msgstr "Адырга"
+
+msgid "Group"
+msgstr "Агәыԥ"
+
+msgid "Selected"
+msgstr "Иалхын"
+
 msgid "No modes"
 msgstr "Аиҿкаашьақәа ыҟаӡам"
 
@@ -2035,6 +2239,9 @@ msgstr "Гәышьҭуп аԥҵамҭақәа: {count}"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Шәкредитқәа хырҵеит — аицаразы шәплан шәиӷьтә"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "Аутентификациа иаҭахуп — ишәҳәоуп, шәыҩнала"
@@ -2125,6 +2332,9 @@ msgstr "Иԥҵоу алҵшәа аимпорт"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Иаҟәыхеит (аԥҵамҭа асервер аҿы иалхар ауеит)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Асервер аҭак аус алымшеит"
@@ -2236,6 +2446,9 @@ msgstr "Агент Аԥенџьыр Ацәаҳәа ыҟаӡам"
 
 msgid "Show every job"
 msgstr "Аусурацыԥхьаӡа аарԥшра"
+
+msgid "Active"
+msgstr "Активтә"
 
 msgid "Show pending or running jobs"
 msgstr "Иԥыжоу, мамзаргьы иҿыцу аусурақәа раарԥшра"
@@ -2612,9 +2825,6 @@ msgstr "Аиқәыршәаратә профиль"
 msgid "Density"
 msgstr "Аплотность"
 
-msgid "Default"
-msgstr "Астандарттә"
-
 msgid "Generation-pane control spacing"
 msgstr "Аԥҵамҭа апанель арыргақәа ринтервал"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "Аккаунт ахьӡ"
 
 msgid "Display name for the account greeting"
 msgstr "Аккаунт азҵаара азы иаарԥштәу ахьӡ"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "Ашәҟәы аверсиа ҿыц"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Ашәҟәқәа"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Аориджин"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "Автоматла Абаҩ алымшеит"
 msgid "Animate failed"
 msgstr "Анимациа алымшеит"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Иалху аҿарҧага ахаҿқәа амоуп: {count:,} (амаксимум {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "Ҷыдала асервер амодель"
 msgid "Local model last error"
 msgstr "Ҷыдала амодель аҵыхәтәантәи агха"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "Ақәҭыхра"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "Акоманда"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "Ақәҭыхра"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "Аформат"
 
 msgid "Processing..."
 msgstr "Аус аҿу..."
@@ -5312,6 +5702,9 @@ msgstr "Аҿарҧага асегментациа"
 msgid "Auto Rig"
 msgstr "Автоматла Абаҩ"
 
+msgid "Animate"
+msgstr "Анимациа"
+
 msgid "Add Mesh"
 msgstr "Аҿарҧага ацҵара"
 
@@ -5413,6 +5806,15 @@ msgstr "Аԥҵамҭаан ихархәоу аиашара ашьаҿақәа р
 
 msgid "The file format used to store the generated image."
 msgstr "Иԥҵоу асахьанҵа аиқәырхаразы ихархәоу ашәҟәы аформат."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Автоматла (ахьӡ аҟынтәи)"
@@ -5642,14 +6044,14 @@ msgstr "BaseColor атекстура аҭыгара алымшеит: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "BaseColor атекстура аҭагалара алымшеит: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Атекстура аҭыгараан хыхьынтәи агха: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "Атекстурақәа амаҭәарк ахь аларҵара алымшеит"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: PBR атекстурақәа раларҵара"
 
 msgid "Both refined and guide masks are required"
 msgstr "Иашатәу анапхгаратәи амаскақәеи иаҭахуп"
@@ -5732,6 +6134,15 @@ msgstr "Аперсонаж аеилаҵара"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Иԥҵоу ахәҭақәа абаҩ змоу, мамзаргьы ажьы хәыҷы ахь ҷыдала реимадара"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "Асахьанҵа Астиль мацара"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Иаҿартәу, асахьанҵа асахьаркыратә астиль мацара ииагалоит (апромпт ихархәоуп). Иаҿыхтәу, асахьанҵа атекстура аԥҵара аиасрала инапхгароит"
+
 msgid "Enter a prompt in the image node"
 msgstr "Асахьанҵа аузел аҿы апромпт шәҭага"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Амодель аԥҵамҭа акаталог аҿы ыҟаӡам"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Ари Амодель аԥҵамҭа аиҿкаашьа маҷкәа аинференциа аузелқәа ирыднакылаӡом"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Аҿактәу 3D аԥҵамҭа амодель ыҟаӡам"
@@ -5884,6 +6295,9 @@ msgstr "Раԥхьа «{name}» шәыԥҵа — ари акарточка ал�
 
 msgid "Mesh"
 msgstr "Аҿарҧага"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Ахьырԥш {number}"
@@ -6053,11 +6467,11 @@ msgstr "Асцена аԥҵамҭа аимпорт алымшеит"
 msgid "No image URLs in server response"
 msgstr "Асервер аҭак аҿы асахьанҵа URL ыҟаӡам"
 
-msgid "Starting reconstruction..."
-msgstr "Ареконструкциа алагара..."
-
 msgid "Error: {error}"
 msgstr "Агха: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Ареконструкциа алагара..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Иԥҵоу асахьанҵа аҭыгара алымшеит: {error}"
@@ -6280,9 +6694,6 @@ msgstr "Адунеи аҭыгара/аиҭакреира алымшеит: {erro
 
 msgid "World imported but produced no objects"
 msgstr "Адунеи иимпорттәуп, аха амаҭәарқәа алымшеит"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Адунеи аимпорт"
 
 msgid "Failed to import world: {error}"
 msgstr "Адунеи аимпорт алымшеит: {error}"
@@ -6833,9 +7244,6 @@ msgstr "Ахатә ԥштәы ахархәара"
 msgid "Custom Colour"
 msgstr "Ахатә ԥштәы"
 
-msgid "Selected"
-msgstr "Иалхын"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Ақәыӷәӷәараан ари арамка аҳәаа аҩныҵҟатәи аҵакы рыӡбар, алахәылацәа мацара алхра ауеит"
 
@@ -6844,6 +7252,18 @@ msgstr "Иеилаҵәоуп"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Арамка ахы змоу абарк иарҳәа, амаҭәар аҵәаха"
+
+msgid "Unavailable"
+msgstr "Ыҟаӡам"
+
+msgid "No supported 3D service is available"
+msgstr "Иднакылоу 3D асервис ыҟаӡам"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Асахьанҵа амодельқәа амаска анапхгара, ахьырԥшқәа ҩба ирыднакылар ауеит"
+
+msgid "Attachment settings"
+msgstr "Ацҵамҭа аиҿкаарақәа"
 
 msgid "No choices published"
 msgstr "Алхрақәа кьыԥхьым"
@@ -6862,18 +7282,6 @@ msgstr "Ихиеит"
 
 msgid "Generation completed"
 msgstr "Аԥҵамҭа ихиеит"
-
-msgid "Unavailable"
-msgstr "Ыҟаӡам"
-
-msgid "No supported 3D service is available"
-msgstr "Иднакылоу 3D асервис ыҟаӡам"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Асахьанҵа амодельқәа амаска анапхгара, ахьырԥшқәа ҩба ирыднакылар ауеит"
-
-msgid "Attachment settings"
-msgstr "Ацҵамҭа аиҿкаарақәа"
 
 msgid "Parameter ID"
 msgstr "Апараметр аидентификатор"
@@ -6899,14 +7307,14 @@ msgstr "Алогикатә ҵакы"
 msgid "Catalog choice"
 msgstr "Акаталог алхра"
 
-msgid "Widget"
-msgstr "Авиджет"
-
-msgid "Group"
-msgstr "Агәыԥ"
-
 msgid "Choices"
 msgstr "Алхрақәа"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Авиджет"
 
 msgid "Visibility Condition"
 msgstr "Аарԥшра аусловие"
@@ -6926,11 +7334,14 @@ msgstr "Аминимум"
 msgid "Maximum"
 msgstr "Амаксимум"
 
-msgid "Value"
-msgstr "Аҵакы"
-
 msgid "Value Label"
 msgstr "Аҵакы адырга"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Асокет аидентификатор"
@@ -7948,12 +8359,6 @@ msgstr "Астиль аиагаратә асахьанҵа — асахьарк�
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Ахьырԥш асахьанҵа — атекстура аԥҵара аиасрала инапхгароит (апромпт ирзымхоит)"
 
-msgid "Use Image Style Only"
-msgstr "Асахьанҵа Астиль мацара"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Иаҿартәу, асахьанҵа асахьаркыратә астиль мацара ииагалоит (апромпт ихархәоуп). Иаҿыхтәу, асахьанҵа атекстура аԥҵара аиасрала инапхгароит"
-
 msgid "Output texture resolution in pixels"
 msgstr "Аҭыҵратә атекстура арезолюциа, пикселқәа рыла"
 
@@ -8452,9 +8857,6 @@ msgstr "Ахатә аҿарҧага иҵәахуп, ианымхеит"
 msgid "Hunyuan not initialized"
 msgstr "Hunyuan инициализациа амам"
 
-msgid "Format"
-msgstr "Аформат"
-
 msgid "Inputs"
 msgstr "Алагаратәқәа"
 
@@ -8548,26 +8950,23 @@ msgstr "Амудборд асахьанҵақәа шәалх, аԥшрақәа �
 msgid "Generates as one multi-view job"
 msgstr "Акы ахарԥшыгатә аԥшрақәа зусура аҳасабала иԥҵоит"
 
+msgid "… (+{count} more)"
+msgstr "… (+еиҳаны {count})"
+
 msgid "Video Gen tab not available"
 msgstr "Авидео аԥҵара атаб ыҟаӡам"
 
 msgid "Selected References"
 msgstr "Иалхыз Ахьырԥшқәа"
 
-msgid "Images: {count}"
-msgstr "Асахьанҵақәа: {count}"
-
-msgid "Videos: {count}"
-msgstr "Авидеоқәа: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Ахьырԥшқәа алхым — аҳәоу авидео ахь"
 
 msgid "A selected video source file is missing"
 msgstr "Иалхыз авидео ахыҵхырҭа ашәҟәы ыҟаӡам"
 
-msgid "No references selected — text-to-video"
-msgstr "Ахьырԥшқәа алхым — аҳәоу авидео ахь"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Арольқәа аныршәоу, апромпт аҟны асахьанҵа/авидео аишьҭагылашьа шәазгәаҭа"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Ахьырԥш Алимитқәа"
@@ -8644,6 +9043,33 @@ msgstr "Зегьы Арамка Аҟны"
 msgid "Clear Board"
 msgstr "Адоска Арыцқьара"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Амаҭәар Ахьӡ"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Аанимациақәа"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Агент Автоматла Абаҩ"
 
@@ -8665,8 +9091,8 @@ msgstr "Аскелет ахкы: автоматла / ҩшьапы / ԥшьшь�
 msgid "Skeleton Spec"
 msgstr "Аскелет Аспецификациа"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Аскелет аконвенциа: 'tripo' ма 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Абаҩқәа рыхьӡҭара: tripo, mixamo, actorcore, unity, unreal ма vrm (Tripo анимациа ирхиоу ашаблонқәа аднакылоит tripo мацара)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "Агент PBR Аԥҵамҭа"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Иарбоу аҿарҧага амаҭәар азы PBR атекстурақәа раԥҵара Tripo ала"
-
-msgid "Object Name"
-msgstr "Амаҭәар Ахьӡ"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Асцена аҟны атекстура зызу аҿарҧага амаҭәар ахьӡ"
@@ -8917,11 +9340,11 @@ msgstr "Амудборд→ачат ацҵамҭақәа рсинхрониза�
 msgid "Sync failed: {error}"
 msgstr "Асинхронизациа алымшеит: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} авидео иабжьыган: агент астатик асахьанҵақәа мацара иднакылоит. Аклипқәа азы амудборд аҟны Авидео Аԥҵара шәырхәа"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "{count} авидеоқәа иабжьыган: агент астатик асахьанҵақәа мацара иднакылоит. Аклипқәа азы амудборд аҟны Авидео Аԥҵара шәырхәа"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Амудборд асахьанҵақәа алхым"
@@ -9219,9 +9642,6 @@ msgstr "Акаталог"
 
 msgid "Directory of the selected file(s)"
 msgstr "Иалхыз ашәҟәқәа ркаталог"
-
-msgid "Files"
-msgstr "Ашәҟәқәа"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Амедиа аҭагалара алымшеит: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "Аинференс аузел шәалх"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Апромпт шәиҭакы, нас Enter ма Аԥҵара шәақәыӷәӷәа"
 
-msgid "Node added to the generation queue"
-msgstr "Аузел аԥҵамҭа ацәаҳәа ахь ицҵан"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Ари аузел аиқәыршәарақәеи апромптеи раарԥшра, еиҭа аиқәыршәареи аус аҟаҵареи азы; еиҭа шәақәыӷәӷәа, аиҭакра аанкыларазы, алкаа ахь ахынҳәразы"
@@ -10839,9 +11259,6 @@ msgstr "Иԥҵоу аматериал аҭак аскрипт алам"
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Аматериал иԥҵан, аха ахархәара алымшеит: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Апроцедуртә Аматериал Аԥҵара"
 
 msgid "Material generation failed"
 msgstr "Аматериал аԥҵара алымшеит"
@@ -11877,9 +12294,6 @@ msgstr "Аԥштә Аквантизациа Абитқәа"
 
 msgid "Generic Quantization Bits"
 msgstr "Азеиԥш Аквантизациа Абитқәа"
-
-msgid "Animations"
-msgstr "Аанимациақәа"
 
 msgid "Animation Mode"
 msgstr "Аанимациа Аиҿкаашьа"
@@ -17496,12 +17910,6 @@ msgstr "Акы ыҟозар еснагь GPU ала архиара"
 msgid "Always render on the CPU"
 msgstr "Еснагь CPU ала архиара"
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Астандартла анҭыҵ изапеканхаз аҿактәра"
 
@@ -17579,6 +17987,12 @@ msgstr "Акадр еснагь ахышәара"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Акадр ԥсахуацыԥхьаӡа аузел аҵла ахышәара"
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Аканал аопциақәа"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "Аескиз аԥхьаԥшра аԥҵара алымшеит. Еиҭа 
 msgid "View sketch"
 msgstr "Аескиз аԥшра"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Агент ачерновик ҭәуп (амаксимум {count} асимвол)"
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Адырга иацҵан — аҵаҩа даҟәым"
@@ -19109,9 +19523,6 @@ msgstr "Ахархәагақәа рпанель"
 
 msgid "Sidebar"
 msgstr "Аган апанель"
-
-msgid "Mixie"
-msgstr ""
 
 msgid "UV Mesh Segmentation panel"
 msgstr "UV аҿарҧага асегментациа апанель"
@@ -19536,8 +19947,8 @@ msgstr "Аԥсахра иаҿуп..."
 msgid "Awaiting Input..."
 msgstr "Аҭалара аԥыжәара..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Авидеоқәа Видео аиҿкаашьа аҭахуп. Агент ахь ашьҭразы авидео шәықәга."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Ахархәаҩ ID"
@@ -19547,6 +19958,78 @@ msgstr "Mixie ачат аҭалара азы ахархәаҩ ID"
 
 msgid "Agent expects: {formats}"
 msgstr "Агент иԥшуеит: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "Ибжьахиан амед асахьанҵа: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Асахьанҵа акодирование алымшеит: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Аанкылоуп*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Аиӷьтәра"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Азҳәара акомментари ҭацәуп"
@@ -19730,6 +20222,27 @@ msgstr "«{name}» аресурс ашәҟәы аҿы уажәы ыҟаӡам."
 
 msgid "Could not add the asset to the scene."
 msgstr "Аресурс асцена ахь ацҵара алымшеит."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Ахәыцра иаҿуп..."
@@ -19880,9 +20393,6 @@ msgstr "иԥсахуп: {count}"
 
 msgid "{count} deleted"
 msgstr "иныхуп: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+еиҳаны {count})"
 
 msgid "Created: {names}"
 msgstr "Иԥҵоуп: {names}"
@@ -20046,6 +20556,15 @@ msgstr "Аҭалара"
 msgid "Login panel for Mixie Chat"
 msgstr "Mixie ачат азы аҭалара апанель"
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Mixar аккаунт ала аҩналара"
+
 msgid "Session expired"
 msgstr "Асеанс иаҵәуп"
 
@@ -20055,31 +20574,27 @@ msgstr "Ишәҳәоуп, еиҭа шәыҩнала."
 msgid "Login Failed"
 msgstr "Аҭалара алымшеит"
 
-msgid "Sign in with your Mixar account"
-msgstr "Mixar аккаунт ала аҩналара"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "Абраузер аԥыжәара..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Абраузер ала аҭалара"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Апрофиль / аккаунт аиҵәыҵәа асиа — зеиԥшла ахы апанель аҟынтәи иаартоуп.\n"
-"\n"
-"Аҵакы ахаҭала иунарбоит `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): абзиара аҳәара, аплан ачип, а\n"
-"кредитқәа рхархәара аметр, аккаунт аусурақәа — акы акарточка ҳасабла,\n"
-"амениу акәымкәа. Python арегистрациагьы, акарточка зыԥхьо аоператорцыԥхьаӡагьы\n"
-"инапхгоит — C++ апикселқәа мацара инапхгоит.\n"
 
 msgid "Dashboard"
 msgstr "Адашборд"
@@ -20309,12 +20824,6 @@ msgstr "Адыргақәа: {note}"
 msgid "Sketch"
 msgstr "Аескиз"
 
-msgid "Skipped slow image: {name}"
-msgstr "Ибжьахиан амед асахьанҵа: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Асахьанҵа акодирование алымшеит: {error}"
-
 msgid "Message sent"
 msgstr "Аҳәамҭа ишьҭан"
 
@@ -20536,8 +21045,8 @@ msgstr "Ахынҳәра Аҭыԥ ID"
 msgid "Restoring checkpoint…"
 msgstr "Ахынҳәра Аҭыԥ ахынҳәра иаҿуп…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Иҭаргылоу атекст еиҳауп (амаксимум {count} асимвол)"
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Атекст аҭаргылара"
@@ -20728,11 +21237,14 @@ msgstr "Аныхра зызу иархивтәу асеанс"
 msgid "Chat removed from history"
 msgstr "Ачат аҭоурых аҟынтәи иқәган"
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "{name} ацҵара алымшаӡом: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Ацҵамҭа аҳәаа ({count}) инагеит"
@@ -20740,14 +21252,14 @@ msgstr "Ацҵамҭа аҳәаа ({count}) инагеит"
 msgid "Skipped {name}: {error}"
 msgstr "Ибжьахиан {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} ацҵара алымшаӡом: {error}"
-
 msgid "These references are already attached"
 msgstr "Ари ахьырԥшқәа уажәы иацҵоуп"
 
 msgid "Added {count} image(s)"
 msgstr "Асахьанҵақәа иацҵан: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend аҟынтәи ацҵара"
@@ -20764,6 +21276,9 @@ msgstr "{size} - адыррақәа ыҟоуп"
 msgid "{size} - No data"
 msgstr "{size} - адыррақәа ыҟаӡам"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr ".blend ашәҟәы аҟынтәи асахьанҵа алхра"
 
@@ -20772,6 +21287,12 @@ msgstr "Асахьанҵа уажәы иацҵоуп"
 
 msgid "Image not found in blend file"
 msgstr "Асахьанҵа .blend ашәҟәы аҿы ԥым"
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Асахьанҵа уажәы иацҵоуп"
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Аекран асахьанҵа аимпыҵара"
 
@@ -21103,9 +21627,6 @@ msgstr "Аимадара алымшеит"
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Dev аиҿкаашьа: ацәгьам адыррақәа рыла аимадара иаҿуп"
 
-msgid "Disconnect"
-msgstr "Аимадара аҟәыхра"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Mixie агент асервер аҟынтәи аимадара аҟәыхра"
 
@@ -21115,14 +21636,14 @@ msgstr "Dev аиҿкаашьа: аимадара иҟәыхран"
 msgid "Disconnected from server"
 msgstr "Асервер аҟынтәи аимадара иҟәыхран"
 
+msgid "Could not save the chat to History"
+msgstr "Ачат Аҭоурых ахь аԥышәара алымшеит"
+
 msgid "New Chat"
 msgstr "Ачат ҿыц"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Ачат ҿыц алагара (уажәтәи ачат Аҭоурых ахь иԥышәоит)"
-
-msgid "Could not save the chat to History"
-msgstr "Ачат Аҭоурых ахь аԥышәара алымшеит"
 
 msgid "Started new chat session"
 msgstr "Ачат асеанс ҿыц илагалоуп"
@@ -21160,6 +21681,12 @@ msgstr "Аԥхьатәи аусура еиҭа алагара иаҿуп..."
 msgid "Could not resume the previous task"
 msgstr "Аԥхьатәи аусура еиҭа алагара алымшеит"
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "Ишьҭоу азҳәара акомментари"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Ҷыдала ишьҭоу акомментари, ачат аҿы аԥхьара мацара иубоит"
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "Аҳәамҭа ишьҭам"
 
@@ -21522,6 +22058,15 @@ msgstr "Ачат аҭалара"
 
 msgid "Type your message here"
 msgstr "Абра аҳәамҭа шәыҩ"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Ачат аҳәамҭақәа"
@@ -21660,6 +22205,12 @@ msgstr "Аҭалара иаҿума"
 
 msgid "Whether user is currently logged in"
 msgstr "Ахархәаҩ уажәы аҭалара иаҿума"
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Аҭалара иаҿума"
@@ -21861,9 +22412,6 @@ msgstr "Аҩра"
 
 msgid "File write"
 msgstr "Ашәҟәы аҩра"
-
-msgid "Command"
-msgstr "Акоманда"
 
 msgid "Shell command"
 msgstr "Ашелл акоманда"
@@ -23620,9 +24168,6 @@ msgstr "Ахырхага Аснап"
 msgid "Snap 2D cursor"
 msgstr "2D ахырхага аснап"
 
-msgid "Origin"
-msgstr "Аориджин"
-
 msgid "Mirror selected UVs"
 msgstr "Иалхыз UV азеиԥш"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Аԥхьатәи ахь Ахынҳәра"
 
 msgid "Grid & Relationship Lines"
 msgstr "Асетка & Аимадара Ацәаҳәақәа"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "Архиара Амотор"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "Архиара Архиарақәа"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Ашәҟәы иаҵәахьоу Mixar аверсиа (%d.%d) ала еиқәырхоуп, адыррақәа рхәҭак ыӡыр ҟалоит"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Ашәҟәы иаҵәахьоу аверсиа ала еиқәырхоуп, Mixar %s ма иаҵәахьоу ала шәаарт"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Асахьаҭәра алагаразы Аслои апанель аҿы Асахьа Аслои шәцҵа"
 
@@ -24409,7 +25179,43 @@ msgstr "Аескиз ачерновик аҿы адиктовка алагара
 msgid "Stop the running turn"
 msgstr "Ицо аход аанкылара"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Ахынҳәра\n"
+"\n"
+"Аиҭаҩра аԥхьа шәыҩыз апромпт еиҭашьақәыргылара."
+
+msgid "Refining this prompt..."
+msgstr "Ари апромпт аиҭаҩра..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Еиҭа Аиҭаҩра\n"
+"\n"
+"Ари апромпт еиҭа шәыҩы, ишьҭатәу амодель азы. Ахынҳәра шәхатәу ажәақәа еиҭанашьақәыргылоит, аԥхьатәи аиҭаҩрам."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Аиҭаҩра\n"
+"\n"
+"Ари апромпт ишьҭатәу амодель азы шәыҩы, амодель иақәырҕәҕәо адетал ацҵаны."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "Ахьырԥш Ақәгара"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Ари аескиз нас ацәаҳәаҿы иҟоу асахьа аҟәыхра"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "Ацәаҳәа Аартра"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Маҷ алхым"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Атабқәа рԥсахра аԥхьа аескиз ма адиктовка шәхиркәшаа"
 
@@ -24607,6 +25413,15 @@ msgstr "%d мш. аԥхьа"
 msgid "%dw ago"
 msgstr "%d мчыбжь. аԥхьа"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Аԥҵара (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter — ашьҭра"
 
 msgid "Sketch · Enter to send"
 msgstr "Аескиз · Enter — ашьҭра"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "Аԥҟарақәа — агент азы апроект нас зеиԥ�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "Автоматла аиҿкаашьа аус ауеит: агент иа
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Автоматла аиҿкаашьа: агент иаартны иҟоу алхрақәа шәара шәазҵаара ада ихала илкаоит, нас илкаақәа аҷыпқәырга аҿы иарбоит"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Шәхатәу API Ацаԥха ахархәоуп, нас уи амодель илкаоит. Ахосттә амодель еиҭа алхразы ари амениу шәаарт нас «Сара API Ацаԥха аԥсахра ма ақәгара» шәылкаа"
-
-msgid "Choose which model the agent runs on"
-msgstr "Агент ицыз амодель шәылкаа"
 
 msgid "Agent Bubble"
 msgstr "Агент Аԥенџьыр"
@@ -24858,6 +25670,12 @@ msgstr "Иарку Ахыԥхьаӡара"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Иарку Агент Аԥенџьыр аԥенџьырқәа рхыԥхьаӡара"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Агент Аԥенџьыр Аԥенџьыр Ашәага Ашьақәыргылара"
@@ -25336,6 +26154,9 @@ msgstr "Ацәаҳәаҿы..."
 msgid "Click to edit the prompt and try again"
 msgstr "Апромпт аиҭакра нас еиҭа азы шәақәыӷәӷәа"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "Апромпт\n"
 "\n"
 "Иԥҵатәу шәыҩы. Ари аузел ашьҭразы Enter шәақәыӷәӷәа."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Ахынҳәра\n"
-"\n"
-"Аиҭаҩра аԥхьа шәыҩыз апромпт еиҭашьақәыргылара."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Еиҭа Аиҭаҩра\n"
-"\n"
-"Ари апромпт еиҭа шәыҩы, ишьҭатәу амодель азы. Ахынҳәра шәхатәу ажәақәа еиҭанашьақәыргылоит, аԥхьатәи аиҭаҩрам."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Аиҭаҩра\n"
-"\n"
-"Ари апромпт ишьҭатәу амодель азы шәыҩы, амодель иақәырҕәҕәо адетал ацҵаны."
-
-msgid "Refining this prompt..."
-msgstr "Ари апромпт аиҭаҩра..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "Атекстурақәа Реизга Аҭыԥ"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Атекстурақәа реизгақәа рнапхгаразы аган панельқәа шәырхә"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Аԥхьатәи ахь ахынҳәра"
 
@@ -26557,9 +27354,6 @@ msgstr "Ишәарҭа Аҭыԥқәа"
 msgid "Select a character to animate"
 msgstr "Анимациазы аперсонаж шәылкаа"
 
-msgid "Animate"
-msgstr "Анимациа"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Аблокинг аҩаӡара аҵыхәтәара аиҳәара ахы аҟынтәи ацаԥха"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Аусура аҭыԥ аусура аидентичность"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "Ашәарҭа аԥштәы змоу аус акнопка"
 msgid "Borderless quiet action button"
 msgstr "Аҳәаада иҵәу аус акнопка"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "Ачип"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Аиҿкаашьа Аслаидер Армарахь"
 
@@ -27126,9 +28019,6 @@ msgstr "Асимвол"
 
 msgid "Header glyph"
 msgstr "Ахы асимвол"
-
-msgid "Chip"
-msgstr "Ачип"
 
 msgid "Chip track"
 msgstr "Ачип амҩа"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "Ашәҟәы аҵыхәтәантәи афильтр"
 
 msgid "Write compressed .mixar file"
 msgstr "Икомпрессцу .mixar ашәҟәы аҩра"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr ".mixar ашәҟәы ҳасабала ахьчара"

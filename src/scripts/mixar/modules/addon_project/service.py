@@ -213,22 +213,36 @@ class AddonProjectService(WorkspaceServiceMixin):
                 )
             except VerificationFailed as exc:
                 return proof.reverted(exc, build_index(root)[1])
+            except Exception:
+                # Files reverted after the proof dry-run reloaded the new
+                # version (e.g. the journal write failed): restore Blender too.
+                if proof is not None and proof.records:
+                    try:
+                        proof.restore()
+                    except Exception:
+                        pass
+                raise
             if proof:
-                result["live"] = proof.go_live()
-            if created:
-                # A commit that CREATES a new add-on package activates it so
-                # the next run_checks (no explicit entrypoint) installs the
-                # NEW add-on; commits that only edit existing add-ons leave
-                # the active entrypoint alone.
-                manifest = set_entrypoint(root, created[0], allow_root_package=False)
-                result["activated_entrypoint"] = created[0]
-                if len(created) > 1:
-                    result["entrypoint_candidates"] = created
-            else:
-                manifest = refresh_entrypoint(
-                    root, manifest, allow_root_package=not is_workspace
-                )
-            result["entrypoint"] = manifest["entrypoint"]
+                result["live"], live_failed = proof.live_or_failure()
+                if live_failed:
+                    result["live_error"] = True
+            # A commit that CREATES a new add-on package activates it so the
+            # next run_checks (no explicit entrypoint) installs the NEW add-on;
+            # commits that only edit existing add-ons leave it alone. Guarded:
+            # the commit already landed, so this never turns into an error.
+            try:
+                if created:
+                    manifest = set_entrypoint(root, created[0], allow_root_package=False)
+                    result["activated_entrypoint"] = created[0]
+                    if len(created) > 1:
+                        result["entrypoint_candidates"] = created
+                else:
+                    manifest = refresh_entrypoint(
+                        root, manifest, allow_root_package=not is_workspace
+                    )
+            except Exception as exc:
+                result["entrypoint_error"] = f"{type(exc).__name__}: {exc}"
+            result["entrypoint"] = manifest.get("entrypoint")
             return result
 
     def run_checks(self, project_id: str, *, reload_blender=False, entrypoint=None) -> dict:

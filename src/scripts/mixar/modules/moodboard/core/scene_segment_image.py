@@ -11,6 +11,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from ...common.utils.image_compression_config import get_compression_settings
+from ...common.utils.image_utils import upload_export_scene
 
 logger = get_logger(__name__)
 
@@ -43,7 +44,6 @@ def compress_image_for_scene_segment(image: bpy.types.Image, img_item=None) -> b
 
     compressed_image = image.copy()
     compressed_image.name = f"{image.name}_compressed"
-    export_scene = bpy.data.scenes.new("_scene_segment_jpeg_export")
     fd, temp_path = tempfile.mkstemp(suffix=".jpg", prefix="_scene_segment_")
     os.close(fd)
     handed_off = False
@@ -58,10 +58,11 @@ def compress_image_for_scene_segment(image: bpy.types.Image, img_item=None) -> b
         # Image.save() can still preserve the source datablock's PNG encoding
         # despite a .jpg filepath. Give save_render() an isolated scene whose
         # output contract is explicitly JPEG so neither the payload MIME nor
-        # the user's render settings can disagree with the bytes on disk.
-        export_scene.render.image_settings.file_format = 'JPEG'
-        export_scene.render.image_settings.quality = settings.quality
-        compressed_image.save_render(temp_path, scene=export_scene)
+        # the user's render settings can disagree with the bytes on disk —
+        # the shared one, whose Standard view also keeps the user's colours
+        # (a fresh scene defaults to AgX, which tone-mapped the segment input).
+        with upload_export_scene('JPEG', settings.quality) as export_scene:
+            compressed_image.save_render(temp_path, scene=export_scene)
         with open(temp_path, 'rb') as handle:
             compressed_bytes = handle.read()
 
@@ -89,7 +90,6 @@ def compress_image_for_scene_segment(image: bpy.types.Image, img_item=None) -> b
                 bpy.data.images.remove(compressed_image)
             except (RuntimeError, ReferenceError):
                 pass
-        bpy.data.scenes.remove(export_scene)
         try:
             os.unlink(temp_path)
         except OSError:

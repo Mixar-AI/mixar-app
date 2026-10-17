@@ -1,0 +1,54 @@
+{
+  "build": {
+    "os": "Ubuntu 26.04.1",
+    "compiler": "GCC 14.3.0",
+    "generator": "Ninja",
+    "environment": "Dev",
+    "cuda": false,
+    "upstream": "fbe6228777e7d9afefcd61a413844e790ae75db7",
+    "linux_libraries": "30d9f881c4b62c52323fd11637eeea56d460e35c",
+    "lfs_fsck": "passed",
+    "embedded_runtime_imports": "passed"
+  },
+  "smoke": {
+    "version": "4.2.3",
+    "save_reopen": true,
+    "packed_texture": true,
+    "cycles_cpu_render": true,
+    "runtime_imports": [
+      "keyring",
+      "mcp",
+      "truststore"
+    ]
+  },
+  "gui_x11": {
+    "version": "4.2.3",
+    "windows": 2,
+    "areas": [
+      "VIEW_3D",
+      "AGENT_BUBBLE"
+    ],
+    "gpu": "NVIDIA GeForce RTX 2050/PCIe/SSE2",
+    "engine_mode_areas": [
+      "VIEW_3D",
+      "MIXIE",
+      "OUTLINER",
+      "AGENT_BUBBLE"
+    ]
+  },
+  "targeted_tests": {
+    "passed": 19
+  },
+  "full_suite": {
+    "passed": 7434,
+    "skipped": 38,
+    "failed": 46,
+    "errors": 15,
+    "remaining_failures_reproduced_on_merged_base": true
+  },
+  "limitations": [
+    "CUDA and OptiX runtime not tested; local build disables both.",
+    "Native Wayland draws successfully but logs EGL_BAD_ALLOC during floating-window creation on this NVIDIA driver. X11/XWayland run has no EGL errors.",
+    "Authenticated backend operations were not tested."
+  ]
+}

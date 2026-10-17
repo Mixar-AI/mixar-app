@@ -33,6 +33,10 @@ APPS = (
     ("COMMAND", "Other app (command)", n_("Give this command to any app that can run a local (stdio) MCP server.")),
 )
 ADDABLE = ("CLAUDE_CODE", "CODEX")
+#: The generic setups the Connect sheet's "Other app" foot offers; every other
+#: app is a sidebar row, in APPS order.
+FORMATS = ("JSON", "COMMAND")
+SIDEBAR = tuple(key for key, _name, _how in APPS if key not in FORMATS)
 CLI_TIMEOUT = 60
 
 

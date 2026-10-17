@@ -90,3 +90,18 @@ def test_a_capture_failure_never_reaches_the_tour(monkeypatch):
 def test_started_defaults_to_english_for_both_codes(events):
     telemetry.started("t")
     assert events == [(EVENT_TOUR_STARTED, {"tour_id": "t", "language": "en", "narration": "en"})]
+
+
+def test_replays_have_separate_correlation_and_no_extra_dropoff_event(events):
+    for run, outcome in [('first-run', 'exited'), ('replay', 'completed')]:
+        telemetry.started('t', tour_run_id=run)
+        telemetry.step('t', 'find-island', 3, tour_run_id=run)
+        telemetry.finished('t', outcome, 'find-island', 12,
+                           tour_run_id=run, step_index=3)
+    assert len(events) == 6
+    assert {name for name, _ in events} == {
+        EVENT_TOUR_STARTED, EVENT_TOUR_STEP, EVENT_TOUR_FINISHED}
+    assert [props['tour_run_id'] for _, props in events] == ['first-run'] * 3 + ['replay'] * 3
+    assert events[2][1]['drop_off'] is True
+    assert events[5][1]['drop_off'] is False
+    assert events[2][1]['step_index'] == 3

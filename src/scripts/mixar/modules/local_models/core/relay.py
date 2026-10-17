@@ -7,7 +7,8 @@
 The backend's LOCAL provider cannot reach the user's machine, so it sends
 an ``llm.request`` JSON-RPC request down the agent WebSocket; this module
 performs that HTTP call against the *local* model server and hands the
-raw response back. Trust model: the backend validates the target it asks
+response back, reducing a path-valued model field to its basename. Trust
+model: the backend validates the target it asks
 for, and this client INDEPENDENTLY re-validates on its own network —
 neither side trusts the other blindly:
 
@@ -48,6 +49,7 @@ from typing import Callable, Iterable, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
+from .model_name import safe_response_body
 
 from ..constants import (
     LOG_PREFIX,
@@ -380,5 +382,5 @@ def handle_llm_request(params: dict, respond: Callable[[dict], None]) -> None:
     respond({
         "status_code": int(status),
         "headers": headers,
-        "body": raw.decode("utf-8", errors="replace"),
+        "body": safe_response_body(raw.decode("utf-8", errors="replace")),
     })

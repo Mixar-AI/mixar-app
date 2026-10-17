@@ -28,6 +28,7 @@ static constexpr float ISLAND_W = 1310.0f;
 static constexpr float SEG_X = 24.0f;
 static constexpr float SEND_W = 114.0f;
 static constexpr float CHIP_GAP = 12.0f;
+static constexpr float CHIP_H = 44.0f;
 static constexpr float CHIP_ICON = 18.0f;
 static constexpr float CHIP_ICON_GAP = 8.0f;
 static constexpr float CHIP_PAD_X = 12.0f;
@@ -49,11 +50,14 @@ static void run(const Scenario &sc, const float text_size, const float window_px
                            SWITCH_W * u,
                            CLEAR_W * u,
                            WAVE_W * u,
-                           text_size};
+                           text_size,
+                           u};
   AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
   agent_chip_forms(
       sc.in, m, [&](const char *s) { return float(std::strlen(s)) * text_size * 0.55f; }, chips);
-  const float span = (ISLAND_W - SEG_X * 2.0f - SEND_W) * u;
+  /* Worst case for the chat row: Refine AND Revert, each a chip-height
+   * square stepped left off Send at the row gap (agent_ui_layout_fit_controls). */
+  const float span = (ISLAND_W - SEG_X * 2.0f - SEND_W - 2.0f * (CHIP_H + CHIP_GAP)) * u;
   const float gap = CHIP_GAP * u;
   const AgentChipFit fit = agent_chip_fit(chips, span, gap);
 
@@ -90,7 +94,8 @@ int main()
   idle.scribble_available = true;
   idle.voice_available = true;
   idle.model_available = true;
-  idle.model_label = "Mixie";
+  idle.chip_badge = "Mixie";
+  idle.chip_name = "Auto";
 
   AgentChipRowInputs capturing = idle;
   capturing.voice_listening = true;
@@ -100,7 +105,7 @@ int main()
   AgentChipRowInputs sketching = capturing;
   sketching.scribble_armed = true;
   sketching.mark_intent = "Point to edit";
-  sketching.model_label = "Claude Sonnet 4.6 · High";
+  sketching.chip_name = "Claude Sonnet 4.6";
 
   AgentChipRowInputs queued = idle;
   queued.mark_count = 2;
@@ -108,11 +113,21 @@ int main()
   queued.voice_listening = true;
   queued.voice_status = "Allow microphone";
 
+  /* A name long enough to walk the elided rung before the badge alone. */
   AgentChipRowInputs long_model = idle;
-  long_model.model_label = "Claude Opus 5 · Extended thinking";
+  long_model.chip_name = "Claude Opus 5 Extended Thinking Preview";
 
   AgentChipRowInputs no_voice = idle;
   no_voice.voice_available = false;
+
+  /* The user's own key in use: the badge names the provider, the name the model. */
+  AgentChipRowInputs key = idle;
+  key.chip_badge = "Claude API";
+  key.chip_name = "Opus 5.5";
+
+  AgentChipRowInputs key_free_form = key;
+  key_free_form.chip_badge = "OpenRouter";
+  key_free_form.chip_name = "anthropic/claude-opus-4.8";
 
   const Scenario scenarios[] = {
       {"idle", idle},
@@ -121,6 +136,8 @@ int main()
       {"queued", queued},
       {"long_model", long_model},
       {"no_voice", no_voice},
+      {"key", key},
+      {"key_free_form", key_free_form},
   };
   /* Native widget text at 100% / 125% / 15-point / 15-point at 125%. */
   const float sizes[] = {11.0f, 13.75f, 15.0f, 18.75f};

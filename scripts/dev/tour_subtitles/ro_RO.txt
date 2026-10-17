@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Salut, sunt Naman de la Mixar.
+Salut, sunt Naman.
 În câteva minute îți voi prezenta aplicația.
 Aceasta este fereastra ta 3D.
 Un spațiu 3D în care te poți deplasa.
@@ -26,9 +26,9 @@ Conectează propria bibliotecă pentru ca agentul să folosească resursele tale
 economisind credite.
 În stânga sus este sertarul scenelor.
 Fiecare scenă are propria filă și propriul agent Mixie.
-Rulează sarcini în paralel și schimbă-le oricând.
-Când scena este gata, treci în Cinema Mode
-pentru a dirija camera și a crea fluxuri video.
+Rulează sarcini în paralel și comută oricând, pentru paralelism real.
+Când ești gata de filmare, treci în Cinema Mode
+pentru a dirija camera și a crea videoclipuri de calitate profesională.
 Ideile încep în 2D.
 Trage moodboardul din dreapta sau apasă tilda.
 Este o pânză pentru referințe și concepte.
@@ -40,6 +40,6 @@ Ai întregul spațiu Blender, cu toate panourile și scurtăturile.
 Mixie funcționează în ambele. Alege ce ți se potrivește.
 Să revenim în Zen Mode.
 Programul nostru pentru parteneri creativi oferă credite
-și o comunitate care modelează viitorul AI și 3D.
+și o comunitate care modelează viitorul AI în media.
 Asta e tot. Acum știi unde este fiecare lucru.
 Hai să creăm 3D împreună.

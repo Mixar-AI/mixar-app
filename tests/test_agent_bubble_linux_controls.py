@@ -319,11 +319,8 @@ def _linux_preprocessor_pass(source):
     """Split `space_agent_bubble.cc` into what a Linux build keeps and what
     the platform guards drop.
 
-    Every conditional in the file is stated as one of
-    ``#if defined(__APPLE__) || defined(_WIN32)``, ``#ifdef __APPLE__`` or
-    ``#ifdef _WIN32`` — all false on Linux — so the plain
-    ``#if``/``#else``/``#endif`` nesting is an exact answer here. Any other
-    conditional form aborts rather than silently guessing.
+    Evaluate the file's Apple, Windows and Linux platform guards. Unknown
+    conditional forms abort rather than silently guessing.
     """
     live = []
     guarded = []
@@ -337,18 +334,25 @@ def _linux_preprocessor_pass(source):
                     "if defined(__APPLE__) || defined(_WIN32)",
                     "ifdef __APPLE__",
                     "ifdef _WIN32",
+                    "ifdef WIN32",
+                    "ifdef __linux__",
+                    "if defined(WIN32) || defined(__linux__)",
                 )
             ), f"unexpected platform conditional: {directive!r}"
-            stack.append((active, False))
-            active = False
+            taken = directive in ("ifdef __linux__", "if defined(WIN32) || defined(__linux__)")
+            stack.append((active, taken))
+            active = active and taken
         elif directive.startswith("else"):
-            parent, _taken = stack[-1]
-            active = parent
+            parent, taken = stack[-1]
+            active = parent and not taken
             stack[-1] = (parent, True)
         elif directive.startswith("endif"):
             active, _taken = stack.pop()
         elif directive.startswith("elif"):
-            raise AssertionError(f"unexpected conditional: {directive!r}")
+            assert directive == "elif defined(__linux__)", directive
+            parent, taken = stack[-1]
+            active = parent and not taken
+            stack[-1] = (parent, True)
         (live if active else guarded).append(line)
     assert not stack, "unbalanced preprocessor conditionals"
     return live, guarded
