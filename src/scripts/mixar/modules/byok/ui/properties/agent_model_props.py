@@ -36,6 +36,12 @@ _WM_ATTRS = (
     'mixar_agent_model_thinking',
     'mixar_agent_model_byok_active',
     'mixar_agent_model_eligible',
+    'mixar_agent_source',
+    'mixar_agent_source_label',
+    'mixar_agent_chip_name',
+    'mixar_agent_source_state',
+    'mixar_agent_tabs',
+    'mixar_agent_rows',
 )
 
 
@@ -78,6 +84,33 @@ def register():
         description="False when the saved model is not available on your plan",
         default=True,
     )
+    # The island's model chip and its popup (core/picker.py decides, C++
+    # draws: agent_ui_provider.cc, agent_ui_model_card*.cc). Written only by
+    # `picker_mirror.apply_to_wm`. `_tabs` / `_rows` are RS/FS-separated
+    # records (`picker.encode_*`); the card keeps its open tab and thinking
+    # disclosure itself.
+    WM.mixar_agent_source = StringProperty(default="MIXIE", options={'SKIP_SAVE'})
+    WM.mixar_agent_source_label = StringProperty(
+        name="Agent Source", description="Who answers the agent: Mixie, your key's provider, or Local",
+        default="", options={'SKIP_SAVE'})
+    WM.mixar_agent_chip_name = StringProperty(
+        name="Agent Model Name", description="The model the agent runs on", default="",
+        options={'SKIP_SAVE'})
+    WM.mixar_agent_source_state = StringProperty(default="OK", options={'SKIP_SAVE'})
+    WM.mixar_agent_tabs = StringProperty(default="", options={'SKIP_SAVE'})
+    WM.mixar_agent_rows = StringProperty(default="", options={'SKIP_SAVE'})
+    # Fill them once at start-up: signed out, no credential or catalog event
+    # would ever write them, and the chip and card would stay blank.
+    bpy.app.timers.register(_first_mirror, first_interval=0.1)
+
+
+def _first_mirror():
+    try:
+        from ...core import picker_mirror
+        picker_mirror.apply_to_wm()
+    except Exception:
+        pass
+    return None
 
 
 def unregister():

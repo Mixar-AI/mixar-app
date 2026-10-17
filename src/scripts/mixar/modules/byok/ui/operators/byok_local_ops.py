@@ -5,10 +5,9 @@
 """Local (this computer) branch of the AI Provider dialog.
 
 Split out of byok_ops.py (500-line rule): the dialog form
-(``byok_dialog_ui._draw_form``) and the Save operator dispatch here when
-the selected provider is ``local``. Drawing uses the shared card
-primitives from ``byok_dialog_ui`` so the branch matches the rest of the
-dialog. Data + save orchestration live in ``byok/core/local_provider.py``;
+(``byok_provider_settings_ui``) and the Save operator dispatch here when
+the selected provider is ``local``. Drawing uses the sheet kit
+(``common/sheet/kit``) so the branch matches the rest of the dialog. Data + save orchestration live in ``byok/core/local_provider.py``;
 the managed download/start/stop operators live in
 ``modules/local_models/ui/operators/local_models_ops.py`` — this file
 only draws and validates.
@@ -19,8 +18,10 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
-from ...core import local_provider
-from . import byok_dialog_ui
+from ...constants import LOCAL_MODE_ITEMS
+from ...core import key_prompt, local_provider
+from mixar.modules.common.sheet import kit as S
+from .byok_state_ops import ensure_dialog_redraw_pump
 
 logger = get_logger(__name__)
 
@@ -104,94 +105,88 @@ def _server_busy_with(wm, model_id: str) -> bool:
 # Drawing (called from MIXAR_BYOK_OT_open_dialog._draw_form)
 # ---------------------------------------------------------------------------
 
-def draw_local_fields(body, wm) -> None:
-    """Local branch of the dialog form. ``body`` is the card section's
-    inner column from ``byok_dialog_ui._draw_form``."""
-    mode_row = body.row(align=True)
-    mode_row.prop(wm, 'byok_form_local_mode', expand=True)
-    body.separator(factor=0.45)
+def _pill(line, operator_id, text, kind=S.SECONDARY):
+    props = S.button(S.sized(line, S.text_width(line, kind, text) + 2 * S.BUTTON_PAD),
+                     operator_id, text, kind)
+    S.gap(line, S.GAP)
+    return props
+
+
+def draw_local_fields(area, wm) -> None:
+    """Local branch of the form, inside the right column's flexible area
+    (`byok_provider_settings_ui.LOCAL_FIELDS_HEIGHT` reserves its room)."""
+    modes = S.row(area, S.CHIP_H, left=S.RIGHT_INSET, packed=True)
+    for ident, name, _desc in LOCAL_MODE_ITEMS:
+        label = iface_(name)
+        chip = S.sized(modes, S.text_width(modes, S.CHIP, label) + 2 * S.CHIP_PAD)
+        chip.prop_enum(wm, 'byok_form_local_mode', ident, text=label)
+        S.tag(chip, S.CHIP, lit=getattr(wm, 'byok_form_local_mode', 'MANAGED') == ident)
+    S.sep(area, S.GAP)
 
     if getattr(wm, 'byok_form_local_mode', 'MANAGED') == 'CUSTOM':
-        _draw_custom(body, wm)
+        _draw_custom(area, wm)
     else:
-        _draw_managed(body, wm)
+        _draw_managed(area, wm)
 
-    body.separator(factor=0.5)
-    byok_dialog_ui.card_label(
-        body,
-        n_("Runs entirely on this computer — your prompts never leave it "
-           "except through Mixar's agent orchestration."),
-        'MUTED',
-    )
+    S.sep(area, S.GAP)
+    for line in (n_("Runs entirely on this computer."),
+                 n_("Your prompts leave it only through Mixar's agent orchestration.")):
+        S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), line, S.NOTE)
 
 
-def _draw_managed(body, wm) -> None:
-    byok_dialog_ui.field_label(body, n_("Model"))
-    byok_dialog_ui.field_dropdown(body, wm, 'byok_form_local_model')
+def _draw_managed(area, wm) -> None:
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), n_("Model"), S.NOTE)
+    S.dropdown(S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN),
+               wm, 'byok_form_local_model')
 
     text, _icon, is_error = managed_status(wm)
-    byok_dialog_ui.card_label(body, text, 'DANGER' if is_error else 'MUTED')
-    body.separator(factor=0.35)
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), text,
+            S.DANGER_TEXT if is_error else S.NOTE, translate=False)
+    S.sep(area, S.GAP)
 
     model_id = _selected_model_id(wm)
-    buttons = body.row(align=True)
-    buttons.scale_y = 1.4
+    buttons = S.row(area, S.BUTTON_H, left=S.RIGHT_INSET, packed=True)
     if getattr(wm, 'mixar_local_dl_active', False):
-        byok_dialog_ui.op_button(
-            buttons, "mixar_local.cancel_download", n_("Cancel Download"), 'CARD')
+        _pill(buttons, "mixar_local.cancel_download", iface_("Cancel Download"))
     elif not model_id:
         buttons.enabled = False
-        buttons.label(text="")
+        S.label(buttons, n_("Choose a model"), S.NOTE)
     elif not _model_downloaded(model_id):
-        props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.download_model", n_("Download"), 'CARD')
-        props.model_id = model_id
+        _pill(buttons, "mixar_local.download_model", iface_("Download")).model_id = model_id
     elif _server_busy_with(wm, model_id):
-        byok_dialog_ui.op_button(buttons, "mixar_local.stop_server", n_("Stop"), 'CARD')
+        _pill(buttons, "mixar_local.stop_server", iface_("Stop"))
     else:
-        props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.start_server", n_("Start"), 'CARD')
-        props.model_id = model_id
-        props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.remove_model", n_("Delete Download"), 'DANGER')
-        props.model_id = model_id
+        _pill(buttons, "mixar_local.start_server", iface_("Start")).model_id = model_id
+        _pill(buttons, "mixar_local.remove_model", iface_("Delete Download"),
+              S.DANGER_BUTTON).model_id = model_id
 
 
-def _draw_custom(body, wm) -> None:
-    byok_dialog_ui.field_label(body, n_("Detected local apps"))
-    detect_row = byok_dialog_ui.field_dropdown(body, wm, 'byok_form_local_detected')
-    detect_row.operator(MIXAR_BYOK_OT_local_rescan.bl_idname,
-                        text="", icon='FILE_REFRESH')
-    body.separator(factor=0.45)
+def _draw_custom(area, wm) -> None:
+    S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), n_("Detected local apps"), S.NOTE)
+    detect = S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
+    S.dropdown(detect, wm, 'byok_form_local_detected')
+    S.gap(detect, S.GAP)
+    rescan = S.sized(detect, S.FIELD_H)
+    S.button(rescan, MIXAR_BYOK_OT_local_rescan.bl_idname, "", S.SECONDARY, icon='FILE_REFRESH')
 
-    byok_dialog_ui.field_label(body, n_("Base URL"))
-    byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_base')
-    body.separator(factor=0.45)
-    byok_dialog_ui.field_label(body, n_("Model"))
-    byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_model')
-    body.separator(factor=0.45)
-    byok_dialog_ui.field_label(body, n_("API Key (optional)"))
-    byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_key')
-    body.separator(factor=0.5)
+    for text, prop in ((n_("Base URL"), 'byok_form_local_custom_base'),
+                       (n_("Model"), 'byok_form_local_custom_model'),
+                       (n_("API Key (optional)"), 'byok_form_local_custom_key')):
+        S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), text, S.NOTE)
+        S.input_field(S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN), wm, prop,
+                      activate=(prop == 'byok_form_local_custom_key'
+                                and key_prompt.focus_is(key_prompt.FOCUS_LOCAL_KEY)))
 
-    byok_dialog_ui.card_label(
-        body,
-        n_("Any OpenAI-compatible server on this computer — Ollama, "
-           "LM Studio, llama.cpp…"),
-        'MUTED',
-    )
-
-
-# ---------------------------------------------------------------------------
-# Save (dispatched from MIXAR_BYOK_OT_save)
-# ---------------------------------------------------------------------------
-# There is deliberately no poll-side gating any more: save_managed /
-# save_custom_async validate everything themselves and return a message
-# the ERROR state shows verbatim ("Start the local model first…"), which
-# beats a silently disabled Save button.
 
 def execute_local(op, wm, on_done):
-    """Run the Local save path. Returns the operator result set."""
+    """Run the Local save path. Returns the operator result set.
+
+    SAVING is set BEFORE the request starts: a request whose worker cannot
+    start answers synchronously (byok_client._run_worker), and its ERROR must
+    not be overwritten by a SAVING with nothing in flight."""
+    wm.byok_dialog_state = 'SAVING'
+    wm.byok_last_error = ''
+    ensure_dialog_redraw_pump()
     if getattr(wm, 'byok_form_local_mode', 'MANAGED') == 'CUSTOM':
         started, err = local_provider.save_custom_async(wm, on_done)
     else:
@@ -200,8 +195,6 @@ def execute_local(op, wm, on_done):
         wm.byok_dialog_state = 'ERROR'
         wm.byok_last_error = err or n_("Could not save the local provider.")
         return {'CANCELLED'}
-    wm.byok_dialog_state = 'SAVING'
-    wm.byok_last_error = ''
     return {'FINISHED'}
 
 

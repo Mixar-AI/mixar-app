@@ -184,7 +184,9 @@ class TestUploadPathContract:
     """Source-level pins: the send path must use the compressing encoder."""
 
     def test_chat_ops_encodes_through_the_compressing_path(self):
-        source = (CHAT / "ui/operators/chat_ops.py").read_text(encoding="utf-8")
+        chat_ops = (CHAT / "ui/operators/chat_ops.py").read_text(encoding="utf-8")
+        assert "encode_outgoing_attachments(" in chat_ops
+        source = (CHAT / "core/attachment_encoding.py").read_text(encoding="utf-8")
         assert "encode_attachment_for_upload" in source
         assert "image_to_base64" not in source, (
             "chat_ops must not encode attachments without compressing them"
@@ -194,21 +196,20 @@ class TestUploadPathContract:
         """The bytes on the wire are JPEG after compression, so a mime guessed
         from the source extension would mis-declare them — Anthropic rejects a
         declared-vs-actual mismatch with a 400."""
-        source = (CHAT / "ui/operators/chat_ops.py").read_text(encoding="utf-8")
+        source = (CHAT / "core/attachment_encoding.py").read_text(encoding="utf-8")
         assert "mime_map" not in source
         assert "b64, mime_type = encoded" in source
 
     def test_one_slow_attachment_does_not_drop_the_others(self):
-        source = (CHAT / "ui/operators/chat_ops.py").read_text(encoding="utf-8")
+        source = (CHAT / "core/attachment_encoding.py").read_text(encoding="utf-8")
         block = source[source.index("for idx, future in enumerate(encoding_futures)"):]
-        block = block[: block.index("total_encode_time")]
-        assert "encoded_attachments = []" not in block, (
+        assert "results = []" not in block, (
             "a per-image failure must skip that image, not wipe the whole set"
         )
         assert block.count("continue") >= 2
 
     def test_blend_data_stays_on_the_main_thread(self):
-        source = (CHAT / "ui/operators/chat_ops.py").read_text(encoding="utf-8")
+        source = (CHAT / "core/attachment_encoding.py").read_text(encoding="utf-8")
         submit = source[source.index("executor.submit("):]
         submit = submit[: submit.index("encoding_futures.append(future)")]
         assert "att.image_source" in submit

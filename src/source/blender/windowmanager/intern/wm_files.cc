@@ -32,10 +32,6 @@
 
 #include <fmt/format.h>
 
-#if defined(__APPLE__) || defined(_WIN32)
-extern "C" void Mixar_FloatingDocksSuppressForModal();
-extern "C" void Mixar_FloatingDocksRestoreAfterModal();
-#endif
 
 #include "MEM_CacheLimiterC-Api.h"
 #include "MEM_guardedalloc.h"
@@ -151,6 +147,8 @@ extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #include "DEG_depsgraph.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
+#include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
 #include "WM_toolsystem.hh"
@@ -175,65 +173,119 @@ static void wm_test_autorun_revert_action_exec(bContext *C);
 
 static CLG_LogRef LOG = {"blend"};
 
-static bool wm_window_contains_agent_bubble_space(const wmWindow *win)
+/**
+ * What #wm_agent_bubble_windows_unlink_for_write takes out of the document for one
+ * write: the island/pill windows, and each one's own temp layout and screen.
+ * Leaving the layouts in wrote two orphan `SPACE_AGENT_BUBBLE` layouts into every
+ * checkpoint taken with the island open; a restore kept them (temp layouts survive
+ * a local file load) and the next save wrote them into the project. They are now
+ * left out of the write too, exactly like the windows.
+ */
+struct AgentBubbleWriteStash {
+  std::vector<wmWindow *> windows;
+  struct LayoutLink {
+    WorkSpace *workspace;
+    WorkSpaceLayout *layout;
+    WorkSpaceLayout *prev;
+  };
+  std::vector<LayoutLink> layouts;
+  struct ScreenLink {
+    bScreen *screen;
+    void *prev;
+  };
+  std::vector<ScreenLink> screens;
+};
+
+static bool wm_layout_used_by_other_window(const wmWindowManager *wm, const WorkSpaceLayout *layout)
 {
-  if (win == nullptr) {
-    return false;
-  }
-
-  bScreen *screen = WM_window_get_active_screen(win);
-  if (screen == nullptr) {
-    return false;
-  }
-
-  for (const ScrArea &area_iter : screen->areabase) {
-    const ScrArea *area = &area_iter;
-    if (area->spacetype == SPACE_AGENT_BUBBLE) {
+  for (const wmWindow &win : wm->windows) {
+    if (WM_window_get_active_layout(&win) == layout) {
       return true;
     }
   }
   return false;
 }
 
-static std::vector<wmWindow *> wm_agent_bubble_windows_unlink_for_write(wmWindowManager *wm)
+static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmain,
+                                                                      wmWindowManager *wm)
 {
-  std::vector<wmWindow *> removed_windows;
+  AgentBubbleWriteStash stash;
   if (wm == nullptr) {
-    return removed_windows;
+    return stash;
   }
 
   bool has_non_bubble_window = false;
   for (const wmWindow &win_iter : wm->windows) {
     const wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       has_non_bubble_window = true;
       break;
     }
   }
   if (!has_non_bubble_window) {
-    return removed_windows;
+    return stash;
   }
 
   for (wmWindow &win_iter : wm->windows.items_mutable()) {
     wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       continue;
     }
     BLI_remlink(&wm->windows, win);
-    removed_windows.push_back(win);
+    stash.windows.push_back(win);
   }
 
-  return removed_windows;
+  /* After every bubble window is out of the list, so a layout shared by two bubble
+   * windows still counts as unused by the remaining (written) windows. */
+  for (wmWindow *win : stash.windows) {
+    WorkSpace *workspace = WM_window_get_active_workspace(win);
+    WorkSpaceLayout *layout = WM_window_get_active_layout(win);
+    if (workspace == nullptr || layout == nullptr || wm_layout_used_by_other_window(wm, layout)) {
+      continue;
+    }
+    bool seen = false;
+    for (const AgentBubbleWriteStash::LayoutLink &link : stash.layouts) {
+      seen = seen || link.layout == layout;
+    }
+    if (seen || BLI_findindex(&workspace->layouts, layout) == -1) {
+      continue;
+    }
+    stash.layouts.push_back({workspace, layout, layout->prev});
+    BLI_remlink(&workspace->layouts, layout);
+    bScreen *screen = BKE_workspace_layout_screen_get(layout);
+    if (bmain != nullptr && screen != nullptr && BLI_findindex(&bmain->screens, screen) != -1) {
+      stash.screens.push_back({screen, screen->id.prev});
+      /* Out of the name map too: the writer validates names against Main (autosave,
+       * turn-checkpoint snapshots), and a name with no datablock read as "Critical data
+       * corruption: Conflicts and/or otherwise invalid data-blocks names" on every
+       * checkpoint taken with the island open, and rebuilt the map under the screens. */
+      BKE_main_namemap_remove_id(*bmain, screen->id);
+      BLI_remlink(&bmain->screens, screen);
+    }
+  }
+
+  return stash;
 }
 
-static void wm_agent_bubble_windows_relink_after_write(
-    wmWindowManager *wm, const std::vector<wmWindow *> &removed_windows)
+static void wm_agent_bubble_windows_relink_after_write(Main *bmain,
+                                                       wmWindowManager *wm,
+                                                       const AgentBubbleWriteStash &stash)
 {
   if (wm == nullptr) {
     return;
   }
-
-  for (wmWindow *win : removed_windows) {
+  /* Reverse order, so each `prev` is back in its list before its successor returns. */
+  for (auto it = stash.screens.rbegin(); it != stash.screens.rend(); ++it) {
+    BLI_insertlinkafter(&bmain->screens, it->prev, it->screen);
+  }
+  if (!stash.screens.empty()) {
+    /* Their names come back with them: rebuilt from Main on the next name lookup. */
+    BKE_main_namemap_clear(*bmain);
+  }
+  for (auto it = stash.layouts.rbegin(); it != stash.layouts.rend(); ++it) {
+    BLI_insertlinkafter(&it->workspace->layouts, it->prev, it->layout);
+  }
+  for (wmWindow *win : stash.windows) {
     BLI_addtail(&wm->windows, win);
   }
 }
@@ -315,7 +367,7 @@ static wmFileReadWMSetupData *wm_file_read_setup_wm_init(bContext *C,
   WM_jobs_kill_all(wm);
 
   for (const wmWindow &win : wm->windows) {
-    if (wm_window_contains_agent_bubble_space(&win)) {
+    if (Mixar_window_has_agent_bubble(&win)) {
       wm_setup_data->old_agent_bubble_windows.add(&win);
     }
   }
@@ -496,7 +548,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
      * session. Matching one would transfer a main window's OS window onto a
      * bubble wmWindow that #wm_file_read_strip_agent_bubble_windows is about
      * to close. */
-    if (wm_window_contains_agent_bubble_space(&win)) {
+    if (Mixar_window_has_agent_bubble(&win)) {
       continue;
     }
     for (wmWindow &old_win : old_wm->windows) {
@@ -523,7 +575,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
     wmWindow *win_new = static_cast<wmWindow *>(wm->windows.first);
     for (wmWindow &win_iter : wm->windows) {
       wmWindow *win = &win_iter;
-      if (!wm_window_contains_agent_bubble_space(win)) {
+      if (!Mixar_window_has_agent_bubble(win)) {
         win_new = win;
         break;
       }
@@ -585,7 +637,7 @@ static void wm_file_read_strip_agent_bubble_windows(bContext *C, wmWindowManager
   bool has_non_bubble_window = false;
   for (wmWindow &win_iter : wm->windows) {
     wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       has_non_bubble_window = true;
       break;
     }
@@ -614,7 +666,7 @@ static void wm_file_read_strip_agent_bubble_windows(bContext *C, wmWindowManager
     closed_one = false;
     for (wmWindow &win_iter : wm->windows) {
       wmWindow *win = &win_iter;
-      if (win->runtime->ghostwin != nullptr || !wm_window_contains_agent_bubble_space(win)) {
+      if (win->runtime->ghostwin != nullptr || !Mixar_window_has_agent_bubble(win)) {
         continue;
       }
       wm_window_close(C, wm, win);
@@ -2299,6 +2351,7 @@ static bool wm_file_write(bContext *C,
                           int fileflags,
                           eBLO_WritePathRemap remap_mode,
                           bool use_save_as_copy,
+                          bool use_thumbnail,
                           ReportList *reports)
 {
   Main *bmain = CTX_data_main(C);
@@ -2360,7 +2413,11 @@ static bool wm_file_write(bContext *C,
   /* Don't forget not to return without! */
   WM_cursor_wait(true);
 
-  if (U.file_preview_type != USER_FILE_PREVIEW_NONE) {
+  /* Mixar: `use_thumbnail` is false for turn-checkpoint snapshot copies. The
+   * AUTO preview renders the scene camera through EEVEE at thumbnail size,
+   * which on a production scene costs seconds (measured 7 s of a 7.5 s save on
+   * a 1.2M-polygon file) for a preview nobody browses. */
+  if (use_thumbnail && U.file_preview_type != USER_FILE_PREVIEW_NONE) {
     /* Blend file thumbnail.
      *
      * - Save before exiting edit-mode, otherwise evaluated-mesh for shared data gets corrupted.
@@ -2418,9 +2475,10 @@ static bool wm_file_write(bContext *C,
   blend_write_params.thumb = thumb;
 
   wmWindowManager *wm = CTX_wm_manager(C);
-  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
+  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
+                                                                                           wm);
   const bool success = BLO_write_file(bmain, filepath, fileflags, &blend_write_params, reports);
-  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
+  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
 
   if (success) {
     const bool do_history_file_update = (G.background == false) &&
@@ -2551,9 +2609,10 @@ bool WM_autosave_write(wmWindowManager *wm, Main *bmain, ReportList *reports)
    * went through the live open path — the state behind the reported
    * crash-on-save of recovered autosave files. */
   BlendFileWriteParams params{};
-  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
+  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
+                                                                                           wm);
   const bool success = BLO_write_file(bmain, filepath, fileflags, &params, reports);
-  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
+  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
 
   /* Restart auto-save timer. */
   wm_autosave_timer_end(wm);
@@ -2592,6 +2651,7 @@ void WM_file_autosave_init(wmWindowManager *wm)
 
 void wm_autosave_timer(Main *bmain, wmWindowManager *wm, wmTimer * /*wt*/)
 {
+  Mixar_StallScope stall_scope("autosave", "wm_autosave_timer");
   wm_autosave_timer_end(wm);
 
   /* If a modal operator is running, don't autosave because we might not be in
@@ -2764,10 +2824,11 @@ static wmOperatorStatus wm_homefile_write_exec(bContext *C, wmOperator *op)
   /* Don't apply any path changes to the current blend file. */
   blend_write_params.use_save_as_copy = true;
 
-  std::vector<wmWindow *> agent_bubble_windows = wm_agent_bubble_windows_unlink_for_write(wm);
+  const AgentBubbleWriteStash agent_bubble_stash = wm_agent_bubble_windows_unlink_for_write(bmain,
+                                                                                           wm);
   const bool success = BLO_write_file(
       bmain, filepath, fileflags, &blend_write_params, op->reports);
-  wm_agent_bubble_windows_relink_after_write(wm, agent_bubble_windows);
+  wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash);
 
   BKE_callback_exec_string(bmain, "", success ? BKE_CB_EVT_SAVE_POST : BKE_CB_EVT_SAVE_POST_FAIL);
 
@@ -4292,8 +4353,13 @@ static wmOperatorStatus wm_save_as_mainfile_exec(bContext *C, wmOperator *op)
   /* Set compression flag. */
   SET_FLAG_FROM_TEST(fileflags, RNA_boolean_get(op->ptr, "compress"), G_FILE_COMPRESS);
 
+  /* Mixar: only #WM_OT_save_as_mainfile defines `thumbnail` (snapshot copies
+   * pass false); #WM_OT_save_mainfile shares this exec and always renders. */
+  PropertyRNA *thumb_prop = RNA_struct_find_property(op->ptr, "thumbnail");
+  const bool use_thumbnail = thumb_prop ? RNA_property_boolean_get(op->ptr, thumb_prop) : true;
+
   const bool success = wm_file_write(
-      C, filepath, fileflags, remap_mode, use_save_as_copy, op->reports);
+      C, filepath, fileflags, remap_mode, use_save_as_copy, use_thumbnail, op->reports);
 
   if ((op->flag & OP_IS_INVOKE) == 0) {
     /* OP_IS_INVOKE is set when the operator is called from the GUI.
@@ -4420,6 +4486,14 @@ void WM_OT_save_as_mainfile(wmOperatorType *ot)
       "Save Copy",
       "Save a copy of the actual working state but does not make saved file active");
   RNA_def_property_flag(prop, PROP_SKIP_SAVE);
+  /* Mixar: snapshot copies (turn checkpoints) skip the file thumbnail, whose
+   * camera render dominates the save time on heavy scenes. */
+  prop = RNA_def_boolean(ot->srna,
+                         "thumbnail",
+                         true,
+                         "Thumbnail",
+                         "Store a file thumbnail (a camera render or screenshot) in the file");
+  RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
 
   static const EnumPropertyItem save_file_extension_items[] = {
       {0, "MIXAR", 0, "Mixar Files", "Save as .mixar file"},
@@ -5149,7 +5223,6 @@ void wm_save_file_overwrite_dialog(bContext *C, wmOperator *op)
 
 static char save_images_when_file_is_closed = true;
 
-static void wm_mixar_floating_docks_suppress_for_modal();
 static void wm_mixar_floating_docks_restore_after_modal();
 
 static void wm_block_file_close_cancel(bContext *C, void *arg_block, void * /*arg_data*/)
@@ -5281,23 +5354,19 @@ static void wm_block_file_close_save_button(ui::Block *block,
 
 static const char *close_file_dialog_name = "file_close_popup";
 
-static void wm_mixar_floating_docks_suppress_for_modal()
+/* The close-file dialog's floating-dock hold, keyed by its block name (one
+ * such dialog at a time). Its buttons release it and so does the pop-up's
+ * free callback; the owner key makes the second release a no-op instead of
+ * undoing another dialog's hold. The release also tags the redraw a dock
+ * needs after being natively hidden (wm_mixar_modal_dialog.cc). */
+static void wm_mixar_floating_docks_suppress_for_modal(bContext *C)
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksSuppressForModal();
-#endif
+  Mixar_floating_docks_hold(C, close_file_dialog_name);
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksRestoreAfterModal();
-  /* wm_draw_update skips natively-hidden windows entirely (see the
-   * Mixar_WindowIsVisible check in wm_draw.cc), so a dock's content is
-   * frozen while suppressed — tag a global redraw so the first visible
-   * frame after the modal closes isn't stale. */
-  WM_main_add_notifier(NC_WINDOW, nullptr);
-#endif
+  Mixar_floating_docks_release(close_file_dialog_name);
 }
 
 static void free_post_file_close_action_restore_floating_docks(void *arg)
@@ -5458,53 +5527,23 @@ static ui::Block *block_create__close_file_dialog(bContext *C, ARegion *region, 
   return block;
 }
 
-/**
- * Mixar: the window the "Save changes before closing?" dialog must open in.
- * Never an Agent Bubble overlay window. The dialog suppresses every floating
- * dock (alpha 0 + ignore mouse) for as long as it is open, so a dialog created
- * inside the island (Cmd+N / Cmd+O / quit with the island focused: the Window
- * keymap fires in the bubble window and the operator's context window IS the
- * island) hides itself together with the island — the user sees the island
- * vanish and nothing else, and the pending action can never be answered.
- * Mirrors `wm_quit_target_window` in wm_window.cc: prefer the bubble's
- * top-level parent (the viewport it overlays), else any main window.
- */
-static wmWindow *wm_close_file_dialog_target_window(wmWindowManager *wm, wmWindow *win)
-{
-  if (win == nullptr || !wm_window_contains_agent_bubble_space(win)) {
-    return win;
-  }
-  wmWindow *win_main = win->parent;
-  while (win_main && win_main->parent) {
-    win_main = win_main->parent;
-  }
-  if (win_main && !wm_window_contains_agent_bubble_space(win_main)) {
-    return win_main;
-  }
-  if (wm != nullptr) {
-    for (wmWindow &iter_win : wm->windows) {
-      if (iter_win.parent == nullptr && !WM_window_is_temp_screen(&iter_win) &&
-          !wm_window_contains_agent_bubble_space(&iter_win))
-      {
-        return &iter_win;
-      }
-    }
-  }
-  return win;
-}
-
 void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
 {
   /* Mixar: host the dialog in a main window when invoked from the Agent
-   * Bubble (see #wm_close_file_dialog_target_window). The popup handler is
-   * registered on the context window, so its buttons — and the post action
-   * they run (read_homefile, open_mainfile, quit) — then execute in the host
-   * window's event loop rather than in an overlay window the read is about
-   * to free. The original context is restored for the caller. */
+   * Bubble (see #Mixar_modal_dialog_host_window). The dialog suppresses every
+   * floating dock (alpha 0 + ignore mouse) while it is open, so a dialog left
+   * inside the island (Cmd+N / Cmd+O / quit with the island focused) would
+   * hide itself together with the island. The popup handler is registered on
+   * the context window, so its buttons — and the post action they run
+   * (read_homefile, open_mainfile, quit) — then execute in the host window's
+   * event loop rather than in an overlay window the read is about to free.
+   * The hold makes the host window key while a dock has the keyboard, and
+   * its last release hands the keyboard back (wm_mixar_modal_dialog.cc).
+   * The original context is restored for the caller. */
   wmWindow *win_ctx = CTX_wm_window(C);
   ScrArea *area_ctx = CTX_wm_area(C);
   ARegion *region_ctx = CTX_wm_region(C);
-  wmWindow *win_dialog = wm_close_file_dialog_target_window(CTX_wm_manager(C), win_ctx);
+  wmWindow *win_dialog = Mixar_modal_dialog_host_window(CTX_wm_manager(C), win_ctx);
   const bool redirected = (win_dialog != win_ctx);
   if (redirected) {
     CTX_wm_window_set(C, win_dialog);
@@ -5512,7 +5551,7 @@ void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
 
   if (!ui::popup_block_name_exists(CTX_wm_screen(C), close_file_dialog_name)) {
     save_images_when_file_is_closed = true;
-    wm_mixar_floating_docks_suppress_for_modal();
+    wm_mixar_floating_docks_suppress_for_modal(C);
 
     ui::popup_block_invoke(
         C,

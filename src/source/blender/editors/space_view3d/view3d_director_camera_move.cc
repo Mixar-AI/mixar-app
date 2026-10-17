@@ -161,12 +161,16 @@ bool director_pointer_on_stage(bContext *C, const wmEvent *event)
   if (ED_area_find_region_xy_visual(area, RGN_TYPE_ANY, event->xy) != region) {
     return false;
   }
-  const int x = event->xy[0] - region->winrct.xmin;
-  const int y = event->xy[1] - region->winrct.ymin;
-  const rcti point = {x, x + 1, y, y + 1};
+  /* Native button queries convert WINDOW pixels to block coordinates. Passing
+   * region-local pixels here misses compact controls whenever the viewport is
+   * offset by the Scenes drawer or timeline, so the walk steals their clicks. */
+  const rcti point = {event->xy[0], event->xy[0] + 1, event->xy[1], event->xy[1] + 1};
   if (ui::region_but_find_rect_over(region, &point) != nullptr) {
     return false;
   }
+  /* Cinema's own painted records, unlike native button queries, are local. */
+  const int x = event->xy[0] - region->winrct.xmin;
+  const int y = event->xy[1] - region->winrct.ymin;
   const float fx = float(x);
   const float fy = float(y);
   for (const CinemaQARecord &record : cinema_qa_records()) {

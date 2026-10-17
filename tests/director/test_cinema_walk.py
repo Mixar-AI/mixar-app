@@ -258,3 +258,37 @@ def test_the_strip_promises_the_left_button():
     block = TOP.split("const Hint walking_hints[", 1)[1].split("};", 1)[0]
     assert '{"LMB"}' in block and "Hold to look" in block
     assert '"Mouse"' not in block
+
+
+# ---- losing window focus ----------------------------------------------------
+
+
+def _deactivate_branch(modal: str) -> str:
+    code = _code(modal)
+    branch = code[code.index("if (event->type == WINDEACTIVATE) {"):]
+    return branch[: branch.index("\n  }\n")]
+
+
+def test_losing_focus_drops_held_keys_and_the_look_drag():
+    """No key-up ever arrives for a key held when the window loses focus
+    (clicking the Agent island, Cmd-Tab), so W would drive on forever and
+    Auto Key would record the drift. The walk itself stays alive."""
+    modal = _block(WALK, "wmOperatorStatus director_walk_modal(")
+    branch = _deactivate_branch(modal)
+    assert "data->held = 0;" in branch
+    assert "data->looking = false;" in branch
+    # The window manager requires every handler to pass WINDEACTIVATE.
+    assert "return OPERATOR_PASS_THROUGH;" in branch
+    assert "director_walk_finish" not in branch
+    # Before any key or button handling could claim it.
+    code = _code(modal)
+    assert code.index("WINDEACTIVATE") < code.index("event->type == LEFTMOUSE")
+
+
+def test_losing_focus_ends_a_nudge_as_one_undo_step():
+    modal = _block(NUDGE, "static wmOperatorStatus director_nudge_modal(")
+    branch = _deactivate_branch(modal)
+    assert "data->held = 0;" in branch
+    assert "return director_nudge_finish(C, op) | OPERATOR_PASS_THROUGH;" in branch
+    code = _code(modal)
+    assert code.index("WINDEACTIVATE") < code.index("director_move_from_key(event->type)")

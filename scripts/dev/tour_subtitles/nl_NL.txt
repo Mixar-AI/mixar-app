@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Hoi, ik ben Naman van Mixar.
+Hoi, ik ben Naman.
 In een paar minuten laat ik je de app zien.
 Dit is je viewport.
 Een 3D-ruimte waarin je kunt bewegen.
@@ -26,9 +26,9 @@ Koppel je eigen bibliotheek zodat de agent je materiaal gebruikt,
 en je credits bespaart.
 Linksboven vind je de scènelade.
 Elke scène heeft een eigen tabblad en Mixie-agent.
-Voer taken naast elkaar uit en wissel op elk moment.
-Als je scène klaar is, ga je naar Cinema Mode
-om de camera te regisseren en videoworkflows te maken.
+Voer taken naast elkaar uit en wissel op elk moment, echt parallel.
+Als je klaar bent om te filmen, ga je naar Cinema Mode
+om de camera te regisseren en video's van productiekwaliteit te maken.
 Ideeën beginnen in 2D.
 Trek het moodboard van rechts open of druk op tilde.
 Het is een canvas voor referenties en concepten.
@@ -40,6 +40,6 @@ De volledige Blender-werkruimte is er, met elk paneel en elke sneltoets.
 Mixie werkt in beide. Kies wat prettig voelt.
 Laten we teruggaan naar Zen Mode.
 Ons programma voor creatieve partners geeft je credits
-en een gemeenschap die de toekomst van AI en 3D vormgeeft.
+en een gemeenschap die de toekomst van AI in de media vormgeeft.
 Dat was het. Nu weet je waar alles zit.
 Laten we samen 3D maken.

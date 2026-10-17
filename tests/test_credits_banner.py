@@ -118,8 +118,14 @@ def test_mask_tool_credit_failure_opens_the_banner_not_a_toast(monkeypatch):
     toasts, banners = [], []
     monkeypatch.setattr(feedback, "toast", lambda kind, title, body="": toasts.append(title))
     monkeypatch.setattr(CB, "request_credits_banner", lambda trigger, **k: banners.append(trigger))
-    feedback.toast_failure("HTTP 402 Payment Required")
+    from mixar.modules.moodboard.constants import SCENE_SEGMENT_CREDITS_ERROR
+
+    feedback.toast_failure(SCENE_SEGMENT_CREDITS_ERROR)
     assert banners == ["mask_tool"] and toasts == []
+    # Text that merely mentions credits or 402 is not an out-of-credits error.
+    feedback.toast_failure("Credits were refunded (job 5b402c)")
+    assert banners == ["mask_tool"] and toasts == [feedback.FAILED_TITLE]
+    toasts.clear()
     feedback.toast_failure("boom")
     assert toasts == [feedback.FAILED_TITLE]
 

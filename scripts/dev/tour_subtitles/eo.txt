@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Saluton, mi estas Naman de Mixar.
+Saluton, mi estas Naman.
 Dum kelkaj minutoj mi montros al vi la aplikaĵon.
 Jen via 3D-vidujo.
 Tridimensia spaco, en kiu vi povas moviĝi.
@@ -26,9 +26,9 @@ Ligu vian propran bibliotekon, por ke la agento uzu viajn rimedojn,
 ŝparante kreditojn.
 Supre maldekstre estas la scenotirkesto.
 Ĉiu sceno havas propran langeton kaj agenton Mixie.
-Rulu taskojn paralele kaj ŝanĝu inter ili iam ajn.
-Kiam la sceno pretas, iru al Cinema Mode
-por direkti la kameraon kaj krei videolaborfluojn.
+Rulu taskojn paralele kaj ŝanĝu iam ajn, por vera paraleleco.
+Kiam vi pretas filmi, iru al Cinema Mode
+por direkti la kameraon kaj krei profesinivelajn videojn.
 Ideoj komenciĝas en 2D.
 Eltiru la etosotabulon de dekstre aŭ premu tildon.
 Ĝi estas kanvaso por referencoj kaj konceptoj.
@@ -40,6 +40,6 @@ La tuta laborspaco de Blender ĉeestas, kun ĉiuj paneloj kaj klavkombinoj.
 Mixie funkcias en ambaŭ. Elektu tion, kio plaĉas al vi.
 Ni revenu al Zen Mode.
 Nia programo por kreivaj partneroj donas kreditojn
-kaj komunumon, kiu formas la estontecon de AI kaj 3D.
+kaj komunumon, kiu formas la estontecon de AI en la amaskomunikiloj.
 Jen ĉio. Vi nun scias, kie ĉio estas.
 Ni kreu 3D kune.

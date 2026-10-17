@@ -40,7 +40,7 @@ _CLASS_TEXT = {
     "platform_config": ("Service misconfigured", "This is on our side and the team has been notified."),
     "unknown": ("Failed", "Try again. If it keeps failing, copy the details and send them to support."),
     "credits": ("Out of credits", "Add credits or upgrade your plan, then try again."),
-    "auth": ("Sign-in required", "Sign in again, then retry."),
+    "auth": ("Sign-in required", "Sign in, then retry."),
     "permission": ("Not allowed", "Your plan or account cannot use this generation."),
     "network": ("Connection problem", "Check your internet connection and try again."),
     "timeout": ("Timed out", "The generation took too long. Try again."),
@@ -119,6 +119,7 @@ def apply_backend_failure(job, data: dict) -> None:
         return
     if data.get("error_class"):
         job.error_class = str(data["error_class"])
+        job.error_class_source = "backend"
     reason = clean_reason(data.get("error_reason"))
     if reason:
         job.error_reason = reason
@@ -145,6 +146,7 @@ def _exception_class(error) -> str:
         AuthorizationError,
         ConnectionError as APIConnectionError,
         InsufficientCreditsError,
+        LoginRequiredError,
         RateLimitError,
         ServerError,
         TimeoutError as APITimeoutError,
@@ -153,7 +155,9 @@ def _exception_class(error) -> str:
 
     if isinstance(error, InsufficientCreditsError):
         return "credits"
-    if isinstance(error, AuthenticationError):
+    # A guest's job fails terminally as "Sign-in required" — the token is
+    # valid, so the queue must never pause it on the auth watcher.
+    if isinstance(error, (AuthenticationError, LoginRequiredError)):
         return "auth"
     if isinstance(error, AuthorizationError):
         detail = str(getattr(error, "message", "") or "").lower()
@@ -184,6 +188,7 @@ def apply_client_failure(job, error, *, stage: str = "submit", message: str = ""
         job.error_class = stage
     else:
         job.error_class = _exception_class(error)
+    job.error_class_source = "client"
     detail = clean_reason(getattr(error, "message", None) or str(error))
     job.error_reason = detail
     generic = classify_error(error)
@@ -211,8 +216,14 @@ def failure_hint(job) -> str:
     """What the user can do next (and whether the credits came back)."""
     cls = getattr(job, "error_class", "") or ""
     hint = _class_text(cls)[1]
-    # Only a class the backend stamped proves the backend failed it.
-    if cls in _REFUNDED_CLASSES and hint:
+    # Only a class the backend stamped proves the backend failed (and so
+    # refunded) it. A client poll/submit failure maps onto the same names
+    # (ServerError -> vendor_transient) while the backend job may still charge.
+    if (
+        cls in _REFUNDED_CLASSES
+        and getattr(job, "error_class_source", "") == "backend"
+        and hint
+    ):
         hint += " Credits for this generation were refunded."
     return hint
 
@@ -233,18 +244,27 @@ def failure_reason(job) -> str:
     if not reason:
         return ""
     message = failure_message(job)
-    if reason == message or reason in message:
+    # "Sign in to Mixar to use this." repeats "Sign in to Mixar to use this":
+    # compare without case and the trailing full stop the two sources differ in.
+    said, extra = _comparable(message), _comparable(reason)
+    if extra == said or extra in said:
         return ""
     return reason
 
 
-def failure_details(job, *, include_ids: bool = True) -> str:
-    """Multi-line explanation for tooltips, toasts and the copy action."""
+def _comparable(text: str) -> str:
+    return " ".join((text or "").casefold().split()).rstrip(" .!")
+
+
+def failure_details(job, *, include_ids: bool = True, include_hint: bool = True) -> str:
+    """Multi-line explanation for tooltips, toasts and the copy action.
+    ``include_hint=False`` for a surface whose button already is the hint
+    (the toast's "Sign in" next to "Sign in, then retry." said it twice)."""
     lines = [failure_message(job)]
     reason = failure_reason(job)
     if reason:
         lines.append(f"Reason: {reason}")
-    hint = failure_hint(job)
+    hint = failure_hint(job) if include_hint else ""
     if hint:
         lines.append(hint)
     if include_ids:

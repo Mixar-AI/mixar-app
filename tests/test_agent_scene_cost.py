@@ -179,7 +179,7 @@ def _pump_result(monkeypatch, scene, to_dict):
     import bpy
 
     monkeypatch.setattr(bpy, "context", SimpleNamespace(scene=scene), raising=False)
-    executor = SimpleNamespace(execute=lambda script: SimpleNamespace(to_dict=lambda: to_dict))
+    executor = SimpleNamespace(execute=lambda script, **_kw: SimpleNamespace(to_dict=lambda: to_dict))
     req = ExecutionRequest("id-1", "pass", tool_name="execute_bpy_script")
     return pump.execute_request(req, executor)
 

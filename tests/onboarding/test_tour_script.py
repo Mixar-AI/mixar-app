@@ -8,14 +8,14 @@ pauses, what the captions read and where the card sits. ``test_tour_beats``
 pins the table's structural invariants; this file pins the presentation
 pass so a re-timing cannot quietly undo it.
 
-Transcript facts (Naman's take of 2026-09-28, silences over ~0.9 s trimmed
-on the source's frame grid, the Mixar logo card kept whole, 2:17.3): "Go on,
-give it a spin." ends 17.16 s; G, R, S at 20.00 / 20.98 / 22.00; "Here are
-some shortcuts that will come handy." 23.42–25.41; "Click it to open it up."
-ends 31.18; "Everything you generate lands in the library." ends 55.73; the
-Scenes line 66.83–77.01; the Cinema Mode line 77.64–84.51; "…or just press
-tilde." ends 89.86; "flip to engine mode." ends 106.84; the closing line
-ends 130.24 and the clip (logo card included) ends at 137.30.
+Transcript facts (Naman's take of 2026-10-14, the delivered cut with only
+its silent lead-in trimmed, no logo card, 2:29.2): "Go on, give it a spin."
+ends 16.53 s; G, R, S at 19.88 / 20.90 / 21.94; "Here are key shortcuts that
+will come handy." 23.72–25.86; "Click it to open it up." ends 34.40;
+"Everything you generate lands in the library." ends 60.16; the Scenes line
+72.56–85.02; the Cinema Mode line 86.70–93.65; "…or just press tilde." ends
+100.30; "flip to Engine mode." ends 120.70; the closing line ends 148.39 and
+the clip ends on the presenter at 149.20.
 """
 
 from __future__ import annotations
@@ -27,14 +27,14 @@ from mixar.modules.onboarding.core.tour.beats import MIXAR_INTRO, find_index
 
 BEATS = {b.id: b for b in MIXAR_INTRO.beats}
 GATE_TAIL_MS = 500
-CLIP_END_MS = 137300
+CLIP_END_MS = 149200
 # (gated beat, last word of its line in ms)
 LAST_WORDS = {
-    "viewport-try": 17160,
-    "find-island": 31180,
-    "library-prompt": 55730,
-    "moodboard-prompt": 89860,
-    "engine-prompt": 106840,
+    "viewport-try": 16530,
+    "find-island": 34400,
+    "library-prompt": 60160,
+    "moodboard-prompt": 100300,
+    "engine-prompt": 120700,
 }
 ACT_CAPTIONS = {
     "intro": "Welcome",
@@ -136,10 +136,10 @@ def test_shortcut_panel_lights_each_key_as_it_is_named():
     panel = _overlay("shortcuts", "shortcut-keys")
     assert panel.kind == B.OVERLAY_KEYS and panel.at_pct is not None
     named = {keys: ms for keys, _label, ms in panel.rows}
-    # G, R and S light on the word; the rest fill in on "Here are some shortcuts".
-    assert (named["G"], named["R"], named["S"]) == (20000, 20980, 22000)
+    # G, R and S light on the word; the rest fill in on "Here are key shortcuts".
+    assert (named["G"], named["R"], named["S"]) == (19880, 20900, 21940)
     rest = [ms for keys, _l, ms in panel.rows if keys not in ("Click", "G", "R", "S")]
-    assert rest and all(23420 <= ms <= 25410 for ms in rest)
+    assert rest and all(23720 <= ms <= 25860 for ms in rest)
     assert [ms for _k, _l, ms in panel.rows] == sorted(ms for _k, _l, ms in panel.rows)
     # Mixar's own two: Shift+M opens Mixie; hold Option/Alt to talk.
     labels = {keys: label for keys, label, _ms in panel.rows}
@@ -152,8 +152,8 @@ def test_island_tabs_follow_the_new_tab_names():
     assert tabs == ["AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "THREE_D"]
     # "3D, Image, Video and World Model" are named in one breath.
     at = {args["tab"]: t for t, name, args in _actions("island-tabs")
-          if name == "island_tab" and t < 49000}
-    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (46120, 46640, 47320, 48020)
+          if name == "island_tab" and t < 53000}
+    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (50480, 50840, 51620, 52200)
     assert _overlay("island-tabs", "model-chip-ring").anchor == B.A_MODEL_CHIP
 
 
@@ -164,7 +164,7 @@ def test_a_cursor_crossing_into_the_island_leads_its_click_by_900ms():
 
 def test_library_points_at_linking_your_own_library_then_resets():
     acts = _actions("library")
-    assert (59070, "library_source", {"source": "LIBRARY"}) in acts
+    assert (63580, "library_source", {"source": "LIBRARY"}) in acts
     assert acts[-1][1:] == ("library_source", {"source": "AI"})
     assert _overlay("library", "library-add-ring").anchor == B.A_LIBRARY_ADD
     # A fresh account has no tiles: the first glide needs somewhere to land.
@@ -231,7 +231,7 @@ def test_creator_program_opens_the_real_help_menu_with_a_callout():
 
 def test_outro_cleans_up_in_the_pause_then_shows_the_replay_note():
     outro = BEATS["outro"]
-    assert outro.actions == ((128650, "tour_cleanup", {}),)
+    assert outro.actions == ((146900, "tour_cleanup", {}),)
     note = _overlay("outro", "replay-hint")
     assert note.kind == B.OVERLAY_CAPTION
     assert note.text == "Replay any time from Help → Start tour"
@@ -251,5 +251,7 @@ def test_overlay_helpers_build_the_expected_overlays():
 
 def test_controls_and_exit_copy():
     assert config.CONTROL_SKIP == "Next"
+    assert config.CONTROL_BACK == "Back"
+    assert config.CONTROL_EXIT == "Skip tour"
     assert config.EXIT_CONFIRM_QUIT == "Leave"
     assert config.EXIT_CONFIRM_BODY == "Two minutes now saves an hour of hunting later."

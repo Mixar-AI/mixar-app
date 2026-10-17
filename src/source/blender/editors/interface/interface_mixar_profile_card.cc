@@ -187,7 +187,11 @@ AccountInfo read_account(bContext *C)
 
   if (wmWindowManager *wm = CTX_wm_manager(C)) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    info.logged_in = read_bool(&wm_ptr, "mixie_chat_is_logged_in");
+    info.logged_in = read_bool(&wm_ptr, "mixie_chat_is_logged_in") &&
+                     !read_bool(&wm_ptr, "mixie_chat_is_guest");
+    if (!info.logged_in) {
+      return info;
+    }
     info.usage_ready = read_bool(&wm_ptr, "mixar_usage_ready");
     info.has_subscription = read_bool(&wm_ptr, "mixar_usage_has_subscription");
     info.can_top_up = read_bool(&wm_ptr, "mixar_usage_can_top_up");
@@ -391,18 +395,20 @@ void add_action(Layout *layout,
   mark_last(layout, element, float(int(icon)));
 }
 
-void add_actions(Layout *layout)
+void add_actions(Layout *layout, const bool logged_in)
 {
   /* Button insets supply the same gap horizontally and vertically. */
   Layout &grid = layout->column(true);
 
-  Layout &top = grid.row(true);
-  top.scale_y_set(ROW_ACTION);
-  add_action(&top, "MIXIE_CHAT_OT_open_dashboard", N_("Dashboard"), MixarCardIcon::Grid,
-             MixarCardElement::CardButton);
-  /* In-app referrals, so an out-of-credit user never has to leave for the web. */
-  add_action(&top, "MIXAR_OT_refer_friend", "Refer a Friend", MixarCardIcon::Gift,
-             MixarCardElement::CardButton);
+  if (logged_in) {
+    Layout &top = grid.row(true);
+    top.scale_y_set(ROW_ACTION);
+    add_action(&top, "MIXIE_CHAT_OT_open_dashboard", N_("Dashboard"), MixarCardIcon::Grid,
+               MixarCardElement::CardButton);
+    /* In-app referrals, so an out-of-credit user never has to leave for the web. */
+    add_action(&top, "MIXAR_OT_refer_friend", "Refer a Friend", MixarCardIcon::Gift,
+               MixarCardElement::CardButton);
+  }
 
   /* Share the chat model picker's dialog and account state. Full width keeps
    * the label readable; invoke is required because execute is a no-op. */
@@ -415,7 +421,7 @@ void add_actions(Layout *layout)
   Layout &connect = grid.row(true);
   connect.scale_y_set(ROW_ACTION);
   connect.operator_context_set(wm::OpCallContext::InvokeDefault);
-  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect AI Apps (MCP)"),
+  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect MCP"),
              MixarCardIcon::Plug, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
@@ -471,13 +477,16 @@ void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
   scope.density = mixar_chrome::density;
   card.mixar_scope_set(scope);
 
-  add_header(&card, info);
-  card.separator(0.6f);
-  add_usage(&card, info);
-
-  add_divider(&card);
-  add_actions(&card);
-  add_divider(&card);
-  add_logout(&card);
+  if (info.logged_in) {
+    add_header(&card, info);
+    card.separator(0.6f);
+    add_usage(&card, info);
+    add_divider(&card);
+  }
+  add_actions(&card, info.logged_in);
+  if (info.logged_in) {
+    add_divider(&card);
+    add_logout(&card);
+  }
 }
 }  // namespace blender::ui

@@ -435,7 +435,8 @@ def test_legacy_fallback_flag_survives_pyrna_wrapper_identity(monkeypatch):
     legacy no-scene-name fallback must match scenes by name, not ``id()``."""
     scene_data = SimpleNamespace(name="Scene", is_generating=False)
     scene_context = SimpleNamespace(name="Scene", is_generating=False)
-    other = SimpleNamespace(name="Other", is_generating=True)
+    # Starts lowered: the listener only lowers flags it raised itself.
+    other = SimpleNamespace(name="Other", is_generating=False)
     monkeypatch.setattr(
         HELPERS.bpy.data, "scenes", [scene_data, other], raising=False
     )

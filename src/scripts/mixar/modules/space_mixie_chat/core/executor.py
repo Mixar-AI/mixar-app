@@ -6,7 +6,6 @@
 
 from mixar.config.logging_config import get_logger
 import ast
-import builtins
 import json
 import sys
 import threading
@@ -20,6 +19,7 @@ import bpy
 from ..constants import (
     AGENT_UNDO_GROUP_PER_TURN,
     AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN,
+    AGENT_UNDO_NEUTRAL_TOOLS,
     is_lane_scene,
     SCRIPT_TIMEOUT_THRESHOLD,
 )
@@ -41,6 +41,8 @@ from .sandbox_modules import (
     RESTRICTED_URLLIB,
     restricted_open,
 )
+from .sandbox_bpy import make_sandboxed_bpy
+from .sandbox_import import make_restricted_import
 from .sandbox_builtins import get_safe_builtins
 from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
@@ -90,34 +92,59 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             self._turns[session_id] = [0, False, False]
             logger.debug("Agent turn started (%s)", session_id[:8])
 
-    def end_agent_turn(self, session_id: Optional[str] = None) -> None:
+    def end_agent_turn(
+        self, session_id: Optional[str] = None, *, checkpoint: bool = False
+    ) -> None:
         """Signal the end of an agent turn. ``None`` ends every session's.
 
-        A turn that ran scripts closes with one more checkpoint: the state the
-        agent left. The pre-turn checkpoint alone makes the turn one-way — an
-        undo returns to it, but nothing captured the finished work, so a redo
-        has nothing to bring back (2026-09-29 lab). Every turn is now bracketed:
-        undo reverts it, redo reapplies it.
+        With ``checkpoint=True`` a turn that ran effectful scripts closes with
+        one more checkpoint: the state the agent left, so undo reverts the
+        turn and redo reapplies it. Only the normal ends pass it (stream
+        complete / error, replay-unavailable, user Abort). Tab close, file
+        load and the undo/redo handlers end turns WITHOUT a step: a push there
+        records a closing tab as still working, or truncates the redo stack
+        from inside the undo handler. The end-all (``None``) form never pushes.
         """
         if session_id is None:
             if self._turns:
-                ran = any(turn[2] for turn in self._turns.values())
                 self._turns.clear()
                 logger.debug("Agent turns ended (all)")
-                if ran:
-                    self._close_turn_checkpoint()
             return
         turn = self._turns.pop(session_id, None)
         if turn is not None:
             logger.debug("Agent turn ended (%s)", session_id[:8])
-            if turn[2]:
-                self._close_turn_checkpoint()
+            if checkpoint and turn[2]:
+                self._close_turn_checkpoint(session_id)
 
-    def _close_turn_checkpoint(self) -> None:
-        if self._window_on_lane_scene():
+    def _lane_pin_blocks_push(self, session_id: str = "") -> bool:
+        """Whether a window on a worker lane must stop a checkpoint.
+
+        The skip exists for the classic undo: a memfile step written while a
+        window shows a lane records the lane as the current scene, and an undo
+        landing on it put the user inside the lane. Per-tab undo never moves the
+        window and tags the step through ``mixar_undo_push(scene=)``, so there
+        the skip only lost checkpoints: a user watching a worker through its
+        card's eye when a turn ended left that turn without its closing step,
+        and an undo then went past the turn's work with no redo to bring it back
+        (review 2026-10-01, R6). A lane alive in the step is never restored by a
+        tab's walk (the C side's lane owner class)."""
+        if not self._window_on_lane_scene():
+            return False
+        try:
+            wm = bpy.context.window_manager
+            per_tab = bool(getattr(wm, "mixar_per_tab_undo", False)) and \
+                callable(getattr(wm, "mixar_undo_push", None))
+        except Exception:  # noqa: BLE001
+            per_tab = False
+        if per_tab and self._session_scene(session_id or self._current_session) is not None:
+            return False
+        return True
+
+    def _close_turn_checkpoint(self, session_id: str = "") -> None:
+        if self._lane_pin_blocks_push(session_id):
             logger.debug("Closing undo checkpoint skipped: window pinned to a lane scene")
             return
-        if not self._push_undo_checkpoint("Mixie Chat Turn"):
+        if not self._push_undo_checkpoint("Mixie Chat Turn", session_id=session_id):
             logger.warning("Closing undo checkpoint failed - the turn's work may not be redoable")
 
     def _should_push_undo(self, grouping: bool = None) -> bool:
@@ -154,17 +181,45 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             return False
         return False
 
-    def _push_undo_checkpoint(self, message: str = "Mixie Chat Script") -> bool:
-        """Push an undo checkpoint; retry once inside an explicit window
-        context (undo_push's poll fails when the script runs without one).
-        Returns True only when a checkpoint was actually created."""
+    @staticmethod
+    def _session_scene(session_id: str):
+        """The scene tab a chat session belongs to, or None."""
+        if not session_id:
+            return None
+        try:
+            for scene in bpy.data.scenes:
+                if getattr(scene, "mixie_session_id", "") == session_id:
+                    return scene
+        except Exception:  # noqa: BLE001 — bpy.data mid-teardown
+            return None
+        return None
+
+    def _push_undo_checkpoint(self, message: str = "Mixie Chat Script", session_id: str = "") -> bool:
+        """Push an undo checkpoint on behalf of the session's tab.
+
+        Per-tab undo (M1) tags every step with a tab. The executor's pushes land
+        from timers while the window shows whatever the user looks at, and a
+        Python `scene=` override is dropped once a window is overridden, so the
+        tab is passed explicitly through `WindowManager.mixar_undo_push` (a
+        one-shot C-side override around ED_undo_push; needs no window). Builds
+        without it fall back to `ed.undo_push`, retried inside a borrowed window
+        because that operator polls for one. Returns True only when a
+        checkpoint was created."""
+        scene = self._session_scene(session_id or self._current_session)
+        wm = bpy.context.window_manager
+        pusher = getattr(wm, "mixar_undo_push", None)
+        if scene is not None and callable(pusher):
+            try:
+                return bool(pusher(message, scene=scene))   # RNA: optional pointer = keyword-only
+            except (RuntimeError, TypeError, AttributeError):
+                logger.debug("mixar_undo_push failed; falling back to ed.undo_push", exc_info=True)
         try:
             bpy.ops.ed.undo_push(message=message)
             return True
         except RuntimeError:
             pass
         try:
-            windows = bpy.context.window_manager.windows
+            windows = wm.windows
             if not windows:
                 return False
             with bpy.context.temp_override(window=windows[0]):
@@ -195,8 +250,16 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 turn[1] = True
         return False
 
-    def execute(self, script: str, push_undo: bool = True, session_id: str = "") -> ExecutionResult:
-        """Execute under one lock, including preparation, snapshots and cleanup."""
+    def execute(
+        self, script: str, push_undo: bool = True, session_id: str = "",
+        tool_name: str = "",
+    ) -> ExecutionResult:
+        """Execute under one lock, including preparation, snapshots and cleanup.
+
+        ``tool_name`` is the backend tool that sent the script. Read-only tools
+        (AGENT_UNDO_NEUTRAL_TOOLS) push no checkpoint and do not mark the turn
+        as having run, so a chat-only turn leaves no no-op undo steps behind.
+        """
         from mixar.modules.common.ui_control.core.ownership import active as ui_active
         if ui_active():
             return ExecutionResult(success=False, error="ui_busy: release native UI control before running scripts")
@@ -208,11 +271,11 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 error="Previous script still executing",
             )
         try:
-            return self._execute_locked(script, push_undo, session_id)
+            return self._execute_locked(script, push_undo, session_id, tool_name)
         finally:
             self._execution_lock.release()
 
-    def _execute_locked(self, script, push_undo, session_id):
+    def _execute_locked(self, script, push_undo, session_id, tool_name=""):
         self._current_session = session_id or ""
         # Capture scene state before execution
         before_state = self._capture_scene_state()
@@ -224,11 +287,12 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         # _should_push_undo; a failed push never aborts the script — it is
         # logged once per turn and retried by the next script, where it used
         # to be silently swallowed (turns got NO checkpoint at all).
+        undo_neutral = tool_name in AGENT_UNDO_NEUTRAL_TOOLS
         turn_record = self._turn()
-        if turn_record is not None:
+        if turn_record is not None and push_undo and not undo_neutral:
             turn_record[2] = True
-        if push_undo and self._should_push_undo():
-            if self._window_on_lane_scene():
+        if push_undo and not undo_neutral and self._should_push_undo():
+            if self._lane_pin_blocks_push():
                 # The routing pin has the window on a worker lane: a memfile
                 # step written now records the lane as the CURRENT scene, so an
                 # undo landing on it would put the user inside the lane. Skip,
@@ -301,7 +365,9 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 # reachable with no dunder, so the AST guard never saw it, and
                 # through the one module every script already has. Leaving bpy
                 # exempt meant this whole class of escape was still open.
-                "bpy": safe_module(bpy),
+                # On top, bpy.ops / bpy.app.driver_namespace are guarded views
+                # refusing the code-execution routes (sandbox_bpy.py).
+                "bpy": make_sandboxed_bpy(safe_module(bpy)),
                 "__name__": "__main__",
                 # Safe modules. Each is wrapped so it cannot hand out a
                 # module from another package: `random._os`, `fractions.sys`,
@@ -358,46 +424,11 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
 
             exec_namespace["__builtins__"]["globals"] = _safe_globals
 
-            # Restricted __import__: allows "import bpy", "import json" etc.
-            # (which are already in exec_namespace) but blocks arbitrary imports.
-            # Addon modules (mixar.*) are allowed through to the real __import__
-            # so pre-written tool scripts can access paint/addon internals.
-            _allowed = set(exec_namespace.keys()) - {"__builtins__", "__name__", "open"}
-            _real_import = builtins.__import__
-            def _restricted_import(name, *args, **kwargs):
-                if name in _allowed:
-                    return exec_namespace[name]
-                # Allow addon's own modules (e.g. mixar.modules.paint.*) and numpy's
-                # internal submodules (numpy lazily imports numpy.core._methods etc.).
-                # mathutils/bmesh/bpy_extras submodules (mathutils.bvhtree, bmesh.ops,
-                # bpy_extras.view3d_utils, ...) grant nothing beyond the already
-                # injected parents — they are reachable as attributes anyway; only
-                # the `import x.y` statement form was being rejected.
-                # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
-                top_module = name.split(".")[0]
-                if top_module in ("mixar", "numpy", "mathutils", "bmesh", "bpy_extras"):
-                    real = _real_import(name, *args, **kwargs)
-                    # `import a.b` binds `a`, so handing back the real package
-                    # here would return the UNWRAPPED module and undo the
-                    # cross-package guard. Return the proxy we already built
-                    # where there is one, and wrap first-party packages so a
-                    # module that does `import os` cannot re-export it.
-                    #
-                    # ONLY for the no-fromlist form. With a fromlist,
-                    # `__import__` returns the LEAF module and the interpreter
-                    # then getattrs the names off it, so substituting the top
-                    # package here broke every `from numpy.linalg import norm`
-                    # / `from mathutils.geometry import ...` with "cannot
-                    # import name". The leaf's own proxy is equally guarded.
-                    fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
-                    if not fromlist and top_module in exec_namespace:
-                        return exec_namespace[top_module]
-                    return safe_module(real)
-                raise ImportError(
-                    f"Module '{name}' is not available. "
-                    f"Allowed modules: {', '.join(sorted(_allowed))}"
-                )
-            exec_namespace["__builtins__"]["__import__"] = _restricted_import
+            # Restricted __import__: resolves pre-injected names, admits a few
+            # packages, refuses the rest and every denied module (sandbox_import.py).
+            exec_namespace["__builtins__"]["__import__"] = make_restricted_import(
+                exec_namespace
+            )
 
             # AST validation: block sandbox escape patterns before compilation
             ast_error = validate_script_ast(script)

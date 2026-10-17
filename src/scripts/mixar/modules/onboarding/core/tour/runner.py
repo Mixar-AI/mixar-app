@@ -32,6 +32,12 @@ Contract (per ``tick()``):
 
 User pause is independent of gate pause and freezes gate deadlines.
 
+``back_beat()`` (the controls' Back) is the one way the clock moves
+backwards: it restarts the current beat, or goes to the previous one when
+pressed within ``BACK_RESTART_MS`` of the beat's start. Actions cannot be
+undone, so it re-arms the target beat's and every later beat's actions and
+gates; replaying forward sets the scene up again.
+
 A gate whose ``advance_to`` cannot be jumped to (missing, or not forward)
 is *consumed* on the first attempt and then behaves like a plain beat: the
 next beat enters at its ``enter_ms``. ``__init__`` rejects such a table up
@@ -44,7 +50,7 @@ from typing import Callable, Optional
 from mixar.config.logging_config import get_logger
 
 from .beats import Tour, build_skip_plan, find_index
-from .config import TERMINAL_END_SLACK_MS
+from .config import BACK_RESTART_MS, TERMINAL_END_SLACK_MS
 
 logger = get_logger(__name__)
 
@@ -287,8 +293,32 @@ class TourRunner:
             self.on_action(name, dict(args))
         self._jump(gate.advance_to)
 
+    def back_beat(self) -> None:
+        """Controls "Back": restart the current beat, or go to the previous
+        one when pressed within ``BACK_RESTART_MS`` of its start, like a
+        player's previous-track button."""
+        beat = self.beat
+        if self.status == STATUS_ENDED or beat is None:
+            return
+        target = self.index
+        if target > 0 and self.last_ms - beat.enter_ms < BACK_RESTART_MS:
+            target -= 1
+        rewound = {b.id for b in self.beats[target:]}
+        self._fired = {key for key in self._fired if key[0] not in rewound}
+        if self._gate_consumed in rewound:
+            self._gate_consumed = None
+        self._end_deadline = None
+        self.status = STATUS_RUNNING
+        ms = self.beats[target].enter_ms
+        self.clock.seek_ms(ms)
+        self.last_ms = ms
+        self._enter(target)
+        self._fire_due_actions(self.beat, ms)
+        if not self.user_paused:
+            self.clock.resume()
+
     def skip_beat(self) -> None:
-        """Controls "Skip step": jump to the next beat (or finish the gate
+        """Controls "Next": jump to the next beat (or finish the gate
         the tour's own way when one is pending)."""
         if self.status == STATUS_ENDED:
             return

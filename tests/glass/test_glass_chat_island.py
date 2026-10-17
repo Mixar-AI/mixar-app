@@ -28,9 +28,9 @@ class TestTheChatMessagePillIsAPane:
     layers share that transform and rounded mask. Messages disable animated
     specular so the material does not compete with reading.
 
-    CHAT is the design's own bubble role, so the wrapper hands over no colour:
-    the tint lives in the token row and each site only says how opaque its pane
-    is. The decision is computed ONCE as `glass_bed`, at the top of the content
+    The bed is the theme's User Bubble colour (Preferences > Themes > Chat
+    must recolour it), and the CHAT role adds only its light and rim over it
+    (``draw_tint = false``); the colour's alpha fades the whole pane. The decision is computed ONCE as `glass_bed`, at the top of the content
     renderer, because the shared bed helper also paints the agent's prose (no
     bed at all), the todo / action containers (a deliberate colour each) and an
     error card (its red) — a style-carried flag would ride into every one of
@@ -44,10 +44,12 @@ class TestTheChatMessagePillIsAPane:
         return _code(_fn_body(CHAT_WIDGETS, "float chat_ui_draw_bubble("))
 
     def test_the_chat_pane_is_one_delegating_draw(self) -> None:
-        """A wrapper that drew its own roundbox would be a second material,
-        free to disagree with the role table."""
+        """One theme-coloured bed, then exactly one glass pane over it; the
+        wrapper never reads the role table itself."""
         body = self._pane()
         assert body.count("mixar_glass_draw(") == 1, "the wrapper does not draw exactly one pane"
+        assert body.count("chat_ui_draw_rounded_rect(rect, radius, color);") == 1
+        assert body.index("chat_ui_draw_rounded_rect(") < body.index("mixar_glass_draw(")
         for forbidden in ("draw_roundbox_4fv", "mixar_glass_tokens", "draw_roundbox_corner_set"):
             assert forbidden not in body, f"the wrapper reaches for {forbidden}"
 
@@ -60,14 +62,15 @@ class TestTheChatMessagePillIsAPane:
         """Messages keep their material still while the user reads."""
         assert "style.draw_specular = false;" in self._pane()
 
-    def test_the_chat_pane_hands_over_no_colour(self) -> None:
-        """The tint is the CHAT row's; a site that passed one lets each bubble
-        pick its own material, which is the drift the role table prevents."""
+    def test_the_chat_pane_paints_the_theme_colour_under_the_glass(self) -> None:
+        """The User Bubble theme colour is the bed; the glass must not tint
+        over it, or the theme setting would have no visible effect."""
         body = self._pane()
-        assert "bg_color" not in body, "the wrapper reads a colour"
+        assert "style.alpha = color[3];" in body
+        assert "style.draw_tint = false;" in body
         touched = set(re.findall(r"style\.([A-Za-z_][A-Za-z0-9_]*)", body))
-        assert touched == {"role", "radius", "alpha", "draw_specular"}, (
-            f"the wrapper touches {sorted(touched)}; only role / radius / alpha / draw_specular"
+        assert touched == {"role", "radius", "alpha", "draw_specular", "draw_tint"}, (
+            f"the wrapper touches {sorted(touched)}"
         )
 
     def test_the_bed_branch_is_an_argument_not_a_style_field(self) -> None:
@@ -77,7 +80,7 @@ class TestTheChatMessagePillIsAPane:
         bubble = self._bubble()
         assert "if (glass) {" in bubble
         assert (
-            "chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color[3]);"
+            "chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color);"
             in bubble
         )
         assert "chat_ui_draw_rounded_rect(&bubble_rect, style->corner_radius, style->bg_color);" in bubble
@@ -104,13 +107,13 @@ class TestTheChatMessagePillIsAPane:
             assert call.rstrip().endswith("glass_bed);"), f"a bed ignores glass_bed: {call!r}"
         assert "chat_ui_draw_ephemeral_bubble(&layout.style," in content
 
-    def test_the_content_panes_hand_over_only_the_alpha(self) -> None:
-        """`bg_color[3]` is the one thing a site says — how opaque its pane is.
-        The RGB comes from the CHAT row and is never read here."""
+    def test_the_content_panes_hand_over_the_theme_colour(self) -> None:
+        """Every site passes the message style's colour (the theme's User
+        Bubble), never one of its own."""
         calls = re.findall(r"chat_ui_draw_glass_pane\(([^;]*)\);", _code(CHAT_CONTENT))
         assert len(calls) == 2
         for call in calls:
-            assert call.strip().endswith("layout.style.bg_color[3]"), (
+            assert call.strip().endswith("layout.style.bg_color"), (
                 f"a call site picks a colour: {call!r}"
             )
 

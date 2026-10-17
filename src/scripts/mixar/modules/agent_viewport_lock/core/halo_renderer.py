@@ -33,11 +33,13 @@ from gpu_extras.batch import batch_for_shader
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.agent_viewport_lock.constants import (
+    HALO_ACTIVE_WM_PROP,
     HALO_ALPHA_MAX,
     HALO_ALPHA_MIN,
     HALO_BAND,
     HALO_COLOR,
     HALO_FALLOFF_EXP,
+    HALO_INSET_WM_PROP,
     HALO_PERIOD_S,
     HALO_STEPS,
 )
@@ -59,9 +61,13 @@ def _ui_scale() -> float:
         return 1.0
 
 
-def _opaque_header_inset(area, region) -> int:
-    """Height hidden by an opaque header bed: only Zen's scene toolbar."""
-    workspace = getattr(bpy.context, "workspace", None)
+def _opaque_header_inset(area, region, workspace=None) -> int:
+    """Height hidden by an opaque header bed: only Zen's scene toolbar.
+
+    ``workspace`` defaults to the context's; the timer-driven native sync
+    passes the window's own, since a timer has no window in its context."""
+    if workspace is None:
+        workspace = getattr(bpy.context, "workspace", None)
     if workspace is None or workspace.name != BASIC_WORKSPACE_NAME:
         return 0
     return top_header_overlap_px(area, region, region_types={'HEADER'})
@@ -125,8 +131,16 @@ def _draw_inner_glow(w: float, h: float, band: float, alpha: float) -> None:
     gpu.state.blend_set('NONE')
 
 
+def _native_halo_available() -> bool:
+    """True when the binary paints the halo itself from the View3D overlay
+    pass (view3d_agent_halo.cc) and offers `mixar.agent_halo_redraw`."""
+    return getattr(getattr(bpy.ops, "mixar", None), "agent_halo_redraw", None) is not None
+
+
 def _draw_callback() -> None:
     try:
+        if _native_halo_available():
+            return  # painted natively; a second glow here would double it
         if not is_agent_executing():
             return
         area = bpy.context.area
@@ -168,9 +182,44 @@ def remove_draw_handler() -> None:
     _handle = None
 
 
-def tag_view3d_redraw() -> None:
-    """Invalidate all 3D viewports so the breathing animation advances."""
+def _sync_native_state(active: bool) -> None:
+    """Mirror on/off and the Zen toolbar inset into the WindowManager ID
+    properties the native painter reads. The inset comes from the largest
+    3D viewport of the first window that has one."""
+    wm = bpy.data.window_managers[0]
+    inset = 0
+    best = -1
+    for window in wm.windows:
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
+            if area.type != 'VIEW_3D':
+                continue
+            region = next((r for r in area.regions if r.type == 'WINDOW'), None)
+            if region is None:
+                continue
+            size = region.width * region.height
+            if size > best:
+                best = size
+                inset = _opaque_header_inset(area, region, getattr(window, "workspace", None))
+    wm[HALO_ACTIVE_WM_PROP] = 1 if active else 0
+    wm[HALO_INSET_WM_PROP] = int(inset)
+
+
+def tag_view3d_redraw(active: bool = True) -> None:
+    """Advance the breathing animation (``active``) or clear the last frame.
+
+    With the native painter the frame is a cursor redraw: the window
+    composites its cached region buffers and runs the overlay pass, so the
+    viewport is not re-rendered for the halo. Without it, every 3D viewport
+    is tagged for a full redraw (the Python POST_PIXEL painter needs one).
+    """
     try:
+        if _native_halo_available():
+            _sync_native_state(active)
+            bpy.ops.mixar.agent_halo_redraw()
+            return
         for window in bpy.data.window_managers[0].windows:
             screen = window.screen
             if screen is None:

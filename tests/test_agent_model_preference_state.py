@@ -37,9 +37,6 @@ from mixar.modules.byok.core import model_menu, model_suggestions, preference_st
 from mixar.modules.byok.ui.operators import agent_model_ops
 from mixar.modules.common.api.services.agent_service import AgentService
 
-MENU_SOURCE = (
-    SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "menus" / "agent_model_menu.py"
-)
 PROPS_SOURCE = (
     SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "properties" / "agent_model_props.py"
 )
@@ -58,7 +55,6 @@ WM_PROPS = (
     "mixar_agent_model_eligible",
 )
 
-MENU_BL_IDNAME = "MIXIE_CHAT_MT_agent_model"
 
 
 def _record(model_id, **overrides):

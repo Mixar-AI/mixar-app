@@ -15,8 +15,8 @@ class MIXIE_CHAT_MT_attach(Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
         row = layout.row()
         row.scale_y = 2.8
-        row.operator("mixie_chat.add_image_from_file", icon='FILE_IMAGE', translate=False,
-                     text=iface_("Images & 3D files") + "\n" + iface_("Add visual references or models"))
+        row.operator("mixie_chat.add_image_from_file", icon='FILE', translate=False,
+                     text=iface_("Files") + "\n" + iface_("Images, 3D models, videos, documents and more"))
         row.mixar_cinema_row(kind='DESCRIPTION')
         row = layout.row()
         row.scale_y = 2.8

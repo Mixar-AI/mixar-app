@@ -71,9 +71,14 @@ def moodboard_snapshot() -> dict[str, Any]:
 def capture_viewport_png() -> bytes:
     """OpenGL viewport still as PNG bytes."""
     scene = bpy.context.scene
-    previous = scene.render.image_settings.file_format
+    settings = scene.render.image_settings
+    previous = settings.file_format
+    previous_media_type = getattr(settings, "media_type", None)
     try:
-        scene.render.image_settings.file_format = "PNG"
+        # media_type BEFORE file_format: a video-output scene rejects PNG on Blender 5.
+        if previous_media_type is not None:
+            settings.media_type = "IMAGE"
+        settings.file_format = "PNG"
         bpy.ops.render.opengl()
         image = bpy.data.images.get("Render Result")
         if image is None:
@@ -94,7 +99,9 @@ def capture_viewport_png() -> bytes:
                 pass
             buffer.close()
     finally:
-        scene.render.image_settings.file_format = previous
+        if previous_media_type is not None:
+            settings.media_type = previous_media_type
+        settings.file_format = previous
 
 
 def capture_moodboard_preview(index: int) -> bytes:

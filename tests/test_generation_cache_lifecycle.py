@@ -37,6 +37,7 @@ def _reset_cache_state(monkeypatch):
         CATALOG_CACHE._etag = None
         CATALOG_CACHE._cache_error = None
         CATALOG_CACHE._is_loading = False
+        CATALOG_CACHE._refresh_pending = False
         CATALOG_CACHE._shutdown_requested = False
         CATALOG_CACHE._lifecycle_epoch += 1
     with CHAT_CACHE._lock:
@@ -44,6 +45,7 @@ def _reset_cache_state(monkeypatch):
         CHAT_CACHE._etag = None
         CHAT_CACHE._cache_error = None
         CHAT_CACHE._is_loading = False
+        CHAT_CACHE._refresh_pending = False
         CHAT_CACHE._shutdown_requested = False
         CHAT_CACHE._lifecycle_epoch += 1
 
@@ -193,6 +195,52 @@ def test_logout_invalidates_inflight_chat_options_response(monkeypatch):
     assert CHAT_CACHE.is_loaded() is False
     assert CHAT_CACHE.is_cache_loading() is False
     assert saved == []
+
+
+@pytest.mark.parametrize("cache, method, refresh, response", [
+    (CATALOG_CACHE, "get_catalog", "refresh_generation_catalog_cache",
+     lambda: _catalog_response([{"key": "image_gen"}])),
+    (CHAT_CACHE, "get_chat_options", "refresh_chat_generate_options_cache",
+     lambda: _chat_response([{"service_key": "image_gen"}])),
+])
+def test_a_refresh_asked_mid_fetch_runs_once_more_after_it(
+        monkeypatch, cache, method, refresh, response):
+    """A UI-language switch asks for a refetch while a revalidation is in flight
+    (sent with the old X-Mixar-Locale, answered 304): the ask must not be dropped,
+    or the old language's server text stays until the next periodic check."""
+    entered = threading.Event()
+    release = threading.Event()
+    second = threading.Event()
+    calls = []
+
+    def fetch(**_kwargs):
+        calls.append(_kwargs)
+        if len(calls) == 1:
+            entered.set()
+            assert release.wait(2.0)
+            return APIResponse(success=True, status_code=304, data=None, headers={})
+        second.set()
+        return response()
+
+    monkeypatch.setattr(SERVICE, "get_generation_catalog_service",
+                        lambda: SimpleNamespace(**{method: fetch}))
+    monkeypatch.setattr(CATALOG_STORAGE, "save", lambda *_a: None)
+    monkeypatch.setattr(CHAT_CACHE, "_save_to_disk", lambda *_a: None)
+
+    worker = threading.Thread(target=cache._fetch_data_sync)
+    worker.start()
+    assert entered.wait(1.0)
+    getattr(cache, refresh)()  # e.g. the locale changed: dropped before the fix
+    release.set()
+    worker.join(2.0)
+    assert second.wait(2.0)
+    for _ in range(200):
+        if not cache.is_cache_loading():
+            break
+        threading.Event().wait(0.01)
+    assert len(calls) == 2
+    assert cache.is_loaded() is True
+    assert cache._refresh_pending is False
 
 
 def test_catalog_storage_path_is_resolved_before_worker_persistence(

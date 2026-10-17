@@ -26,10 +26,14 @@ class MIXAR_OT_scene_render_start(bpy.types.Operator):
     frame_end: bpy.props.IntProperty(default=250, min=-1048574, max=1048574)
     max_faces: bpy.props.IntProperty(default=0, min=0)
     fps: bpy.props.IntProperty(default=0, min=0, max=240)
+    # Agent run identity (JSON) for the terminal generation.agent_result callback;
+    # the backend sends it only to clients advertising scene_render_callbacks_v1.
+    agent_ref_json: bpy.props.StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     def execute(self, context):
         bpy.app.driver_namespace[RESPONSE_NS] = start(
             context, self.job_key, self.kind, self.label, self.expected_session,
+            agent_ref_json=self.agent_ref_json,
             engine=self.engine, samples=self.samples, width=self.width, height=self.height,
             frame_start=self.frame_start if self.use_frame_range else None,
             frame_end=self.frame_end if self.use_frame_range else None, fps=self.fps, max_faces=self.max_faces)

@@ -23,12 +23,14 @@ from ...constants import DEV_MODE, SessionState
 logger = get_logger(__name__)
 
 
-def send_cancel_request_async(session_id: str) -> None:
+def send_cancel_request_async(session_id: str, origin: str = '') -> None:
     """Send a cancel request to the backend in a background thread.
 
-    Shared by New Chat and the history session switcher — both replace
-    the live conversation and must stop any run still streaming on the
-    old session first.
+    Shared by Stop, New Chat, the history session switcher, tab close and
+    undo — each stops any run still streaming on the session. ``origin``
+    says which (stop_button, new_chat, session_switch, tab_closed, …): the
+    backend records it next to ``user_abort`` so a side-effect cancel is
+    not counted as the user pressing Stop.
     """
     if not session_id:
         return
@@ -36,17 +38,20 @@ def send_cancel_request_async(session_id: str) -> None:
     import threading
     thread = threading.Thread(
         target=_send_cancel_request,
-        args=(session_id,),
+        args=(session_id, origin),
         daemon=True,
     )
     thread.start()
 
 
-def _send_cancel_request(session_id: str) -> None:
+def _send_cancel_request(session_id: str, origin: str = '') -> None:
     """Cancel the backend run through the authenticated agent socket."""
     from mixar.modules.common.agent_rpc.client import request
+    payload = {'session_id': session_id}
+    if origin:
+        payload['origin'] = origin
     try:
-        request('cancel', {'session_id': session_id}, mutation=True)
+        request('cancel', payload, mutation=True)
     except Exception as exc:
         logger.warning('Agent cancellation could not be confirmed: %s', exc)
         from ...core.main_thread_executor import run_on_main_thread
@@ -136,6 +141,85 @@ class MIXIE_CHAT_OT_disconnect(Operator):
         return {'FINISHED'}
 
 
+def start_new_chat(scene, report=None) -> None:
+    """Turn ``scene`` into a fresh chat: the live chat is archived to History,
+    its stream, queued events and scripts dropped, the backend session
+    cancelled, and the next message creates a new session.
+
+    The New Chat button's body, shared with sign-out (every open tab belongs
+    to the account that just left; the next identity owns none of them).
+    ``report`` is the operator's ``self.report`` when there is one.
+    """
+    from ...core import voice
+    voice.cancel()
+    session = get_session_manager()
+    scene_name = scene.name
+    from ...core.export_destination import clear_destination
+    clear_destination(session.get_session_id(scene))
+
+    # Cancel any running session before clearing
+    old_session_id = session.get_session_id(scene)
+    if old_session_id:
+        from ...core.export_destination import clear_destination
+        clear_destination(old_session_id)
+
+    # 1. Stop any running agent stream for this scene
+    cleanup_turn_handler(scene_name)
+
+    # 2. Drain queued agent events
+    from ...core.queue_processor import cleanup_event_queue_for_scene
+    cleanup_event_queue_for_scene(scene_name)
+
+    # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
+    flush_executor_queue(session_id=old_session_id)
+
+    # 4. Tell the backend to cancel the old session
+    if old_session_id:
+        send_cancel_request_async(old_session_id, 'new_chat')
+
+    # 5. Archive the current chat to local history before wiping it —
+    #    New Chat is recoverable via the History popover
+    #    (see core/chat_history.py). Best-effort: a failed archive
+    #    must never block starting a fresh chat.
+    try:
+        from ...core.chat_history import archive_current
+        archive_current(scene)
+    except Exception as e:
+        logger.error(f"Failed to archive chat before new session: {e}")
+        if report is not None:
+            report({'WARNING'}, "Could not save the chat to History")
+
+    # Clear messages and incremental markdown cache
+    scene.mixie_chat_messages.clear()
+    scene.mixie_chat_input = ""
+    # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
+    if hasattr(scene, "mixie_chat_user_has_engaged"):
+        scene.mixie_chat_user_has_engaged = False
+    from ...core.markdown_parser import clear_incremental_cache
+    clear_incremental_cache()
+
+    # Dev mode: reset state cycle
+    if DEV_MODE:
+        DevDataProvider.reset_state_cycle()
+
+    # Reset session (keep connected if connected)
+    if session.is_connected(scene):
+        session.clear_streaming()
+        session.clear_session_id(scene)  # Force new session_id on next message
+        session.set_connected(scene)
+    else:
+        session.clear_session_id(scene)
+        session.set_state(scene, SessionState.OFFLINE)
+
+    # The old session is gone — sweep any agentlane:* workspace scenes it
+    # leaked (their backend removal scripts were dropped as stale).
+    try:
+        from ...core.lane_scene_sweep import schedule_lane_scene_sweep
+        schedule_lane_scene_sweep(parent_session_id=old_session_id or "")
+    except Exception as e:
+        logger.debug(f"lane scene sweep scheduling skipped: {e}")
+
+
 class MIXIE_CHAT_OT_new_session(Operator):
     """Start a new chat session"""
     bl_idname = "mixie_chat.new_session"
@@ -148,75 +232,7 @@ class MIXIE_CHAT_OT_new_session(Operator):
         return context.scene is not None
 
     def execute(self, context):
-        from ...core import voice
-        voice.cancel()
-        session = get_session_manager()
-        scene = context.scene
-        scene_name = scene.name
-        from ...core.export_destination import clear_destination
-        clear_destination(session.get_session_id(scene))
-
-        # Cancel any running session before clearing
-        old_session_id = session.get_session_id(scene)
-        if old_session_id:
-            from ...core.export_destination import clear_destination
-            clear_destination(old_session_id)
-
-        # 1. Stop any running agent stream for this scene
-        cleanup_turn_handler(scene_name)
-
-        # 2. Drain queued agent events
-        from ...core.queue_processor import cleanup_event_queue_for_scene
-        cleanup_event_queue_for_scene(scene_name)
-
-        # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
-        flush_executor_queue(session_id=old_session_id)
-
-        # 4. Tell the backend to cancel the old session
-        if old_session_id:
-            send_cancel_request_async(old_session_id)
-
-        # 5. Archive the current chat to local history before wiping it —
-        #    New Chat is recoverable via the History popover
-        #    (see core/chat_history.py). Best-effort: a failed archive
-        #    must never block starting a fresh chat.
-        try:
-            from ...core.chat_history import archive_current
-            archive_current(scene)
-        except Exception as e:
-            logger.error(f"Failed to archive chat before new session: {e}")
-            self.report({'WARNING'}, "Could not save the chat to History")
-
-        # Clear messages and incremental markdown cache
-        scene.mixie_chat_messages.clear()
-        scene.mixie_chat_input = ""
-        # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
-        if hasattr(scene, "mixie_chat_user_has_engaged"):
-            scene.mixie_chat_user_has_engaged = False
-        from ...core.markdown_parser import clear_incremental_cache
-        clear_incremental_cache()
-
-        # Dev mode: reset state cycle
-        if DEV_MODE:
-            DevDataProvider.reset_state_cycle()
-
-        # Reset session (keep connected if connected)
-        if session.is_connected(scene):
-            session.clear_streaming()
-            session.clear_session_id(scene)  # Force new session_id on next message
-            session.set_connected(scene)
-        else:
-            session.clear_session_id(scene)
-            session.set_state(scene, SessionState.OFFLINE)
-
-        # The old session is gone — sweep any agentlane:* workspace scenes it
-        # leaked (their backend removal scripts were dropped as stale).
-        try:
-            from ...core.lane_scene_sweep import schedule_lane_scene_sweep
-            schedule_lane_scene_sweep(parent_session_id=old_session_id or "")
-        except Exception as e:
-            logger.debug(f"lane scene sweep scheduling skipped: {e}")
-
+        start_new_chat(context.scene, report=self.report)
         self.report({'INFO'}, "Started new chat session")
         return {'FINISHED'}
 
@@ -251,6 +267,9 @@ class MIXIE_CHAT_OT_abort_session(Operator):
     bl_description = "Stop the agent"
     bl_options = {'REGISTER'}
 
+    # What pressed it (the Escape keymap sets escape_key); reported to the backend.
+    origin: bpy.props.StringProperty(default='stop_button', options={'SKIP_SAVE', 'HIDDEN'})
+
     @classmethod
     def poll(cls, context):
         if context.scene is None:
@@ -275,6 +294,9 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         session = get_session_manager()
         scene = context.scene
         scene_name = scene.name
+        # Stop on a pending question dismisses it rather than stopping work.
+        origin = ('question_dismissed' if session.get_state(scene) == SessionState.AWAITING_INPUT
+                  else self.origin)
 
         from ...core.export_destination import clear_destination
         clear_destination(session.get_session_id(scene))
@@ -293,7 +315,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # the stream's complete/error event, so nothing else would end it and
         # the next turn would inherit this one's checkpoint budget.
         from ...core.executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
@@ -330,7 +352,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
             logger.debug(f"scribble mark reopen on abort skipped: {e}")
 
         # 5. Send abort to backend
-        self._send_abort_request_async(session.get_session_id(scene))
+        self._send_abort_request_async(session.get_session_id(scene), origin)
 
         # 6. Reset state. Stop cancels the WHOLE run (its background
         # workers included — /agent/cancel closes it server-side).
@@ -395,8 +417,8 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         except Exception as e:
             logger.debug(f"_clear_interrupt_prompt skipped: {e}")
 
-    def _send_abort_request_async(self, session_id: str) -> None:
-        send_cancel_request_async(session_id)
+    def _send_abort_request_async(self, session_id: str, origin: str = 'stop_button') -> None:
+        send_cancel_request_async(session_id, origin)
 
 
 class MIXIE_CHAT_OT_resume_previous_task(Operator):

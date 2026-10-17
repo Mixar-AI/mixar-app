@@ -30,6 +30,7 @@ set(SRC
   intern/wm_event_system.cc
   intern/wm_ui_control.cc
   intern/wm_files.cc
+  intern/wm_mixar_modal_dialog.cc
   intern/wm_files_colorspace.cc
   intern/wm_files_link.cc
   intern/wm_gesture.cc
@@ -48,6 +49,7 @@ set(SRC
   intern/wm_platform_support.cc
   intern/wm_playanim.cc
   intern/wm_splash_screen.cc
+  intern/wm_stall_monitor.cc
   intern/wm_stereo.cc
   intern/wm_subwindow.cc
   intern/wm_surface.cc
@@ -76,6 +78,7 @@ set(SRC
   wm_cursors.hh
   wm_draw.hh
   wm_draw_mixar_glass.hh
+  WM_stall_monitor.hh
   wm_draw_mixar_glass_sync.hh
   wm_event_system.hh
   wm_event_types.hh

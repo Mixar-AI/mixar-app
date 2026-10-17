@@ -97,9 +97,12 @@ def test_login_paths_refresh_agent_settings_and_logout_invalidates():
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     ]
-    # Startup token validation, auto SSO re-login, interactive SSO login.
-    assert called.count("refresh_agent_settings") == 3
-    assert called.count("invalidate_agent_settings") == 1
+    # Startup token validation, auto SSO re-login, interactive SSO login all
+    # finish through the one post-login hook, which refreshes the settings.
+    assert called.count("_apply_account_hooks") == 3
+    assert called.count("refresh_agent_settings") == 1
+    # Logout, and a guest signing in (the account's settings replace the guest's).
+    assert called.count("invalidate_agent_settings") == 2
     # The socket-race workaround is gone, not merely unused.
     assert "_schedule_byok_fetch" not in AUTH_OPS.read_text(encoding="utf-8")
 
@@ -131,6 +134,31 @@ def test_server_reported_removal_still_clears():
     byok_state_ops._on_fetch_done(True, {"byok_active": False, "items": []}, None)
 
     assert credential_state.snapshot()["byok_is_active"] is False
+
+
+def test_the_mirror_records_whether_a_fetch_has_landed():
+    """`turn_credentials.prepare` reads this: before the cold-start fetch the
+    default "inactive" is not knowledge, and a message sent then must not
+    go keyless over a key that is on this device."""
+    _fresh()
+    assert credential_state.snapshot()["byok_state_loaded"] is False
+    byok_state_ops._on_fetch_done(True, SERVER_PAYLOAD, None)
+    assert credential_state.snapshot()["byok_state_loaded"] is True
+    byok_state_ops._on_fetch_done(False, None, "net")       # a failure keeps it
+    assert credential_state.snapshot()["byok_state_loaded"] is True
+    # A server-confirmed removal clears the mirror but keeps it LOADED
+    # (the delete callback passes loaded=True); logout clears it unloaded.
+    epoch = credential_state.current_epoch()
+    credential_state.clear(_wm(), loaded=True)
+    assert credential_state.snapshot()["byok_state_loaded"] is True
+    assert credential_state.snapshot()["byok_is_active"] is False
+    assert credential_state.current_epoch() == epoch + 1
+    credential_state.clear(_wm())
+    assert credential_state.snapshot()["byok_state_loaded"] is False
+    ops = BYOK_OPS.read_text(encoding="utf-8")
+    delete_done = ops[ops.index("def _on_delete_done("):]
+    delete_done = delete_done[:delete_done.index("\nclass ")] if "\nclass " in delete_done else delete_done
+    assert "_clear_cached_state(wm, loaded=True)" in delete_done
 
 
 def test_successful_fetch_applies_server_state():

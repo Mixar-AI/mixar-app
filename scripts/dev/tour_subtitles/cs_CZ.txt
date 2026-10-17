@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-Ahoj, jsem Naman z Mixaru.
+Ahoj, jsem Naman.
 Za pár minut vám ukážu aplikaci.
 Toto je váš 3D pohled.
 Prostor 3D, ve kterém se můžete pohybovat.
@@ -26,9 +26,9 @@ Připojte vlastní knihovnu, aby agent používal vaše podklady,
 a šetřil kredity.
 Vlevo nahoře je panel scén.
 Každá scéna má vlastní záložku a agenta Mixie.
-Spouštějte úlohy souběžně a kdykoli mezi nimi přepínejte.
-Až bude scéna hotová, přepněte do Cinema Mode,
-kde můžete řídit kameru a tvořit postupy pro video.
+Spouštějte úlohy souběžně a kdykoli přepínejte – skutečný paralelismus.
+Až budete připraveni natáčet, přejděte do Cinema Mode,
+kde můžete řídit kameru a tvořit videa v profesionální kvalitě.
 Nápady začínají ve 2D.
 Vytáhněte moodboard zprava nebo stiskněte vlnovku.
 Je to plátno pro reference a koncepty.
@@ -40,6 +40,6 @@ Je tu celé prostředí Blenderu, všechny panely i zkratky.
 Mixie funguje v obou. Vyberte si, co vám vyhovuje.
 Vraťme se do Zen Mode.
 Náš program pro tvůrčí partnery nabízí kredity
-a komunitu, která utváří budoucnost AI a 3D.
+a komunitu, která utváří budoucnost AI v médiích.
 To je vše. Už víte, kde co najít.
 Pojďme společně tvořit ve 3D.

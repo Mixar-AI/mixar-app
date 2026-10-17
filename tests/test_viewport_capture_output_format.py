@@ -28,6 +28,7 @@ CAPTURES = {
     "chat screenshot": _MODULES / "space_mixie_chat/ui/operators/screenshot_ops.py",
     "scribble freeze": _MODULES / "scribble_mark/core/freeze.py",
     "director capture": _MODULES / "director/core/capture.py",
+    "connector snapshot": _MODULES / "connector/core/scene_snapshot.py",
 }
 
 

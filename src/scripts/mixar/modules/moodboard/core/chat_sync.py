@@ -52,6 +52,7 @@ from .chat_sync_deselect import (
     deselect_moodboard_image_by_name,
     deselect_moodboard_image_for_attachment,
 )
+from .chat_sync_videos import selected_video_names, sync_selected_videos
 from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
@@ -108,9 +109,9 @@ def _collect_selected_image_names(scene) -> list[str]:
     names: set[str] = set()
     for mb_img in images_attr:
         img = mb_img.image
-        # Chat attachments are still-image-only today. Keep videos selected on
-        # the board for the future Seedance path without flattening a movie to
-        # a misleading single-frame chat attachment.
+        # Chat PILLS are still-image-only. A selected video is attached as a
+        # context file instead (chat_sync_videos.sync_selected_videos), never
+        # flattened to a misleading single-frame chat attachment.
         if img is None or is_video_item(mb_img):
             continue
         if mb_img.selected:
@@ -127,7 +128,9 @@ def _collect_selected_image_names(scene) -> list[str]:
     # and clicking a node flips `node.selected` instead of any media item's
     # flag. Without this, a selected generated node — unlike a selected upload —
     # never reaches the agent. Videos/3D previews are skipped (attachments are
-    # still-image-only, and model nodes carry a preview_object, not an image).
+    # still-image-only, and model nodes carry a preview_object, not an image):
+    # a selected Video Gen / Upscale node's clip attaches as a context-file
+    # chip through chat_sync_videos.selected_video_items instead.
     nodes_attr = getattr(scene, "mixie_moodboard_action_nodes", None)
     if nodes_attr is not None:
         for node in nodes_attr:
@@ -145,7 +148,9 @@ def _compute_selection_signature(scene) -> tuple:
     """Desired attachment state for this scene, including moodboard-origin count.
 
     The count detects drift when send/clear empties ``pending_attachments``
-    while the board selection has not changed.
+    while the board selection has not changed. Selected VIDEO names ride as a
+    third element so selecting a clip (which adds no pill) still wakes the
+    reconcile that attaches it as a context file.
     """
     names = tuple(_collect_selected_image_names(scene))
 
@@ -156,7 +161,7 @@ def _compute_selection_signature(scene) -> tuple:
             if getattr(att, "is_moodboard", False):
                 mb_att_count += 1
 
-    return (mb_att_count, names)
+    return (mb_att_count, names, selected_video_names(scene))
 
 
 # ----------------------------------------------------------------- #
@@ -289,6 +294,10 @@ def _poll_tick():
             signature[1],
             animate=previous is not None and previous[1] != signature[1],
         )
+        # Videos: context-file chips that follow the board selection like the
+        # pills do (attach on select, board-owned chips detach on deselect).
+        if any(sync_selected_videos(scene)):
+            _redraw_chat_areas()
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)
 

@@ -8,6 +8,7 @@ Extracted from SceneReconDownloaderMixin into standalone functions to
 keep ``scene_recon_queue.py`` under 500 lines.
 """
 
+import contextlib
 import threading
 from typing import Optional, Tuple
 
@@ -18,6 +19,7 @@ from mixar.modules.common.job_queue.core.model_io import (
     new_object_names,
     snapshot_object_uids,
 )
+from mixar.modules.common.job_queue.core.queue_download import pinned_to_job
 from .scene_recon_constants import MAX_CONCURRENT_DOWNLOADS
 
 logger = get_logger(__name__)
@@ -115,45 +117,61 @@ def _handle_glb_download(
 
 
 def try_import_next(job) -> None:
-    """Import downloaded objects. Order-independent when mesh_pose_matrix is present."""
-    made_progress = True
-    while made_progress:
-        made_progress = False
-        for obj_id in sorted(job._downloaded_glbs):
-            entry = job._downloaded_glbs[obj_id]
-            if entry is None:
-                del job._downloaded_glbs[obj_id]
-                if obj_id == job._next_import_id:
-                    job._next_import_id += 1
-                made_progress = True
-                break
-            glb_bytes, pose_data, label = entry
-            if pose_data.get("mesh_pose_matrix") is not None:
-                del job._downloaded_glbs[obj_id]
-                if job._on_object_ready:
-                    try:
-                        before = snapshot_object_uids()
-                        job._on_object_ready(glb_bytes, pose_data, obj_id, label)
-                        _capture_new_objects(job, before)
-                    except Exception as e:
-                        logger.error("[SceneRecon] Import failed for %s: %s", obj_id, e)
-                made_progress = True
-                break
-            else:
-                if obj_id == job._next_import_id:
+    """Import downloaded objects. Order-independent when mesh_pose_matrix is present.
+
+    Imports run with the job's tab pinned: importers link into
+    ``bpy.context.scene``, which otherwise is whichever tab the window shows.
+    One pin covers the whole pass, entered at its first import: each pin flips
+    the window's scene and back, so pinning per object flickered N times.
+    """
+    with contextlib.ExitStack() as pin:
+        pin_state = {"entered": False, "error": None}
+
+        def _import(glb_bytes, pose_data, obj_id, label):
+            if not pin_state["entered"]:
+                pin_state["entered"] = True
+                try:
+                    pin.enter_context(pinned_to_job(job))
+                except Exception as e:  # noqa: BLE001 — the job's tab is gone
+                    pin_state["error"] = e
+            if pin_state["error"] is not None:
+                logger.error(
+                    "[SceneRecon] Import failed for %s: %s", obj_id, pin_state["error"],
+                )
+                return
+            try:
+                before = snapshot_object_uids()
+                job._on_object_ready(glb_bytes, pose_data, obj_id, label)
+                _capture_new_objects(job, before)
+            except Exception as e:
+                logger.error("[SceneRecon] Import failed for %s: %s", obj_id, e)
+
+        made_progress = True
+        while made_progress:
+            made_progress = False
+            for obj_id in sorted(job._downloaded_glbs):
+                entry = job._downloaded_glbs[obj_id]
+                if entry is None:
                     del job._downloaded_glbs[obj_id]
-                    if job._on_object_ready:
-                        try:
-                            before = snapshot_object_uids()
-                            job._on_object_ready(glb_bytes, pose_data, obj_id, label)
-                            _capture_new_objects(job, before)
-                        except Exception as e:
-                            logger.error(
-                                "[SceneRecon] Import failed for %s: %s", obj_id, e,
-                            )
-                    job._next_import_id += 1
+                    if obj_id == job._next_import_id:
+                        job._next_import_id += 1
                     made_progress = True
                     break
+                glb_bytes, pose_data, label = entry
+                if pose_data.get("mesh_pose_matrix") is not None:
+                    del job._downloaded_glbs[obj_id]
+                    if job._on_object_ready:
+                        _import(glb_bytes, pose_data, obj_id, label)
+                    made_progress = True
+                    break
+                else:
+                    if obj_id == job._next_import_id:
+                        del job._downloaded_glbs[obj_id]
+                        if job._on_object_ready:
+                            _import(glb_bytes, pose_data, obj_id, label)
+                        job._next_import_id += 1
+                        made_progress = True
+                        break
 
 
 def _capture_new_objects(job, before: set) -> None:

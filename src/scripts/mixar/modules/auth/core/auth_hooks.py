@@ -41,6 +41,34 @@ def refresh_generation_caches():
         sound_catalog.refresh_async()
     except Exception as e:
         logger.warning(f"Notification sound catalog refresh failed: {e}")
+    _schedule_material_catalog_refresh()
+
+
+def _ensure_material_catalog():
+    """Timer body: (re)start the procedural-material catalog fetch.
+
+    Returns None so the timer runs once (a bool would count as a number and
+    reschedule it).
+    """
+    try:
+        from mixar.modules.paint.procedural_materials.server_catalog import (
+            ensure_server_catalog,
+        )
+        ensure_server_catalog()
+    except Exception as e:
+        logger.warning(f"Material catalog refresh failed: {e}")
+    return None
+
+
+def _schedule_material_catalog_refresh():
+    """The material catalog fetch registers a timer and touches bpy, and this
+    hook may run on an auth worker thread, so hand it to the main thread."""
+    try:
+        import bpy
+
+        bpy.app.timers.register(_ensure_material_catalog, first_interval=0)
+    except Exception as e:
+        logger.warning(f"Material catalog refresh scheduling failed: {e}")
 
 
 def invalidate_generation_caches():
@@ -68,18 +96,17 @@ def invalidate_generation_caches():
 
 
 def maybe_show_onboarding(email: str) -> None:
-    """Trigger the onboarding tour for ``email`` if they haven't
-    completed or skipped it before on this machine.
+    """Trigger the onboarding tour if this device hasn't seen it yet.
 
-    Called from every successful auth path (startup token-validation
-    AND fresh SSO login). The seen-list dedupes — same email won't
-    see the tour twice.
+    Called from every successful auth path (startup token-validation,
+    a fresh SSO login and a guest session). The per-device seen flag
+    dedupes — the tour opens once per device, whoever is signed in.
     """
     if not email:
         return
     try:
-        from mixar.modules.onboarding.core import maybe_show_for_user
-        maybe_show_for_user(email)
+        from mixar.modules.onboarding.core import maybe_show_tour
+        maybe_show_tour(email)
     except Exception as exc:
         logger.warning(f"Onboarding hook failed: {exc}")
 
@@ -125,9 +152,12 @@ def invalidate_agent_settings():
     in `space_mixie_chat/ui/operators/auth_ops.py`.
     """
     try:
-        from mixar.modules.byok.core import credential_state
+        from mixar.modules.byok.core import byok_client, credential_state
 
         credential_state.clear()
+        # The previous account's save / removal must not hold the next
+        # account's dialog and toggle busy (its late answer is epoch-guarded).
+        byok_client.reset_in_flight()
     except Exception as e:
         logger.warning(f"BYOK state clear failed: {e}")
     try:
@@ -142,3 +172,12 @@ def invalidate_agent_settings():
         preference_state.clear()
     except Exception as e:
         logger.warning(f"Agent model preference clear failed: {e}")
+    try:
+        # The stored key stays (it is the user's own, on their own machine);
+        # only the cached user scope is dropped so the next account reads its
+        # own entry.
+        from mixar.modules.byok.core import key_store
+
+        key_store.forget_user()
+    except Exception as e:
+        logger.warning(f"BYOK key store scope clear failed: {e}")

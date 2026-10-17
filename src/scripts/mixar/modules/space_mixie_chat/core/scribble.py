@@ -48,6 +48,7 @@ from ..constants import (
     SCRIBBLE_MAX_POINTS,
     SCRIBBLE_MAX_STROKES,
 )
+from . import composer_limit
 
 logger = get_logger(__name__)
 
@@ -607,7 +608,7 @@ def _append_recognized(scene, text: str) -> None:
         current = ""
     if current and not current[-1].isspace():
         text = " " + text
-    scene.mixie_chat_input = (current + text)[:CHAT_INPUT_MAXLEN]
+    scene.mixie_chat_input = composer_limit.clamp(current + text, CHAT_INPUT_MAXLEN)[0]
     _redraw()
 
 

@@ -26,7 +26,10 @@ from ..constants import (
     RETOPOLOGY_TRIPO_MODEL,
     RETOPOLOGY_TRIPO_SERVICE,
 )
-from mixar.modules.common.job_queue.core.model_io import export_selected_mesh
+from mixar.modules.common.job_queue.core.model_io import (
+    export_selected_mesh,
+    world_bottom_center,
+)
 
 logger = get_logger(__name__)
 
@@ -54,8 +57,11 @@ def snapshot_shared_params(topo) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _retopology_on_imported(job, object_names: str):
+def _retopology_on_imported(job, object_names: str, target_location=None):
     """Post-import for retopology: detect post-processed mesh or fallback.
+
+    *target_location* is the source mesh's :func:`world_bottom_center`, so the
+    fallback-cleaned low-poly overlays its source instead of the world origin.
 
     Either branch also runs ``finalize_generated_material`` on the result so a
     BAKED retopology (Tripo ``bake=True``) gets its messy provider material /
@@ -84,7 +90,9 @@ def _retopology_on_imported(job, object_names: str):
         target = _strip_high_suffix(job.label) + "_low"
         final = None
         try:
-            final = post_import_rename_and_setup(object_names, target, smart_uv=True)
+            final = post_import_rename_and_setup(
+                object_names, target, smart_uv=True,
+                target_location=target_location)
         except Exception as e:
             logger.warning("[Retopology] post_import_rename_and_setup failed: %s", e)
 
@@ -106,13 +114,14 @@ def _strip_high_suffix(name: str) -> str:
     return base
 
 
-def _make_tripo_on_imported(bake: bool):
+def _make_tripo_on_imported(bake: bool, target_location=None):
     """Build the Tripo retopology ``on_imported`` hook.
 
     Tripo's decimated GLB is already a finished low-poly (no GPU post-process),
     so we only rename to the ``*_low`` convention. We Smart-UV unwrap **only**
     when ``bake`` is False — when baking, Tripo bakes textures onto the existing
-    UVs, so re-unwrapping would discard them.
+    UVs, so re-unwrapping would discard them. *target_location* is the source
+    mesh's :func:`world_bottom_center`, so the result overlays its source.
     """
 
     def _on_imported(job, object_names: str):
@@ -126,7 +135,8 @@ def _make_tripo_on_imported(bake: bool):
         final = None
         try:
             final = post_import_rename_and_setup(
-                object_names, target, smart_uv=not bake)
+                object_names, target, smart_uv=not bake,
+                target_location=target_location)
         except Exception as e:
             logger.warning("[Retopology/Tripo] post_import_rename_and_setup failed: %s", e)
 
@@ -256,6 +266,8 @@ def _enqueue_hunyuan(obj, shared, file_bytes, filename):
     from mixar.modules.common.generation_params import assemble_payload
 
     model = shared.get("model_slug") or RETOPOLOGY_HUNYUAN_MODEL
+    # Captured now: the result is placed where the source sits at enqueue time.
+    anchor = world_bottom_center(obj)
     params = {
         "polygon_type": shared.get("polygon_type"),
         "face_level": shared.get("face_level"),
@@ -280,7 +292,7 @@ def _enqueue_hunyuan(obj, shared, file_bytes, filename):
         payload=payload,
         label=obj.name,
         fail_message=n_("Retopology failed"),
-        on_imported=_retopology_on_imported,
+        on_imported=lambda job, names: _retopology_on_imported(job, names, anchor),
         scene_flag="mixie_retopology_is_generating",
     )
 
@@ -301,6 +313,8 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
     service = shared.get("service_key") or RETOPOLOGY_TRIPO_SERVICE
     model = shared.get("model_slug") or RETOPOLOGY_TRIPO_MODEL
     bake = bool(shared.get("tripo_bake", True))
+    # Captured now: the result is placed where the source sits at enqueue time.
+    anchor = world_bottom_center(obj)
     params = {
         "quad": bool(shared.get("tripo_quad", False)),
         "face_limit": shared.get("tripo_face_limit", 10000),
@@ -325,6 +339,6 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
         payload=payload,
         label=obj.name,
         fail_message=n_("Retopology failed"),
-        on_imported=_make_tripo_on_imported(bake),
+        on_imported=_make_tripo_on_imported(bake, anchor),
         scene_flag="mixie_retopology_is_generating",
     )

@@ -10,6 +10,8 @@
  * Reads ThemeSpace values with hardcoded fallbacks.
  */
 
+#include <cstdint>
+
 #include "BLF_api.hh"
 
 #include "DNA_theme_types.h"
@@ -41,6 +43,25 @@ static void theme_color_to_float(const uchar color[4], float out[4])
   out[1] = float(color[1]) / 255.0f;
   out[2] = float(color[2]) / 255.0f;
   out[3] = float(color[3]) / 255.0f;
+}
+
+uint64_t chat_ui_theme_signature()
+{
+  /* FNV-1a over the chat theme block (colours and sizes are edited in place,
+   * so pointer identity proves nothing) and the UI scale the metrics use. */
+  uint64_t h = 1469598103934665603ULL;
+  auto mix = [&h](const void *data, size_t size) {
+    const uchar *p = static_cast<const uchar *>(data);
+    for (size_t i = 0; i < size; i++) {
+      h = (h ^ uint64_t(p[i])) * 1099511628211ULL;
+    }
+  };
+  if (const ThemeSpace *ts = chat_ui_get_theme_space()) {
+    mix(ts, sizeof(*ts));
+  }
+  const float scale = UI_SCALE_FAC;
+  mix(&scale, sizeof(scale));
+  return h;
 }
 
 /** \} */

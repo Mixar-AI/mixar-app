@@ -77,6 +77,10 @@ def test_the_stage_test_is_geometric_not_a_hover_state():
     neither can answer the very first press."""
     stage = _stage()
     assert "ui::region_but_find_rect_over(region, &point)" in stage
+    # This API accepts WINDOW pixels and does its own region/block conversion.
+    # The Scenes drawer and timeline offset the viewport, exposing a local-XY
+    # mistake even while the same control is visibly drawn at the right place.
+    assert "const rcti point = {event->xy[0], event->xy[0] + 1, event->xy[1], event->xy[1] + 1};" in stage
     assert "region_active_but_get" not in MOVE
 
 

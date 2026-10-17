@@ -26,14 +26,25 @@ RETOPOLOGY_TRIPO_MODEL = "tripo_v2"
 
 # Animate capability (Tripo v3 animations API). Service keys == job_queue
 # job_types; models are catalog rows routed by model_ref on the backend.
+# Auto Rig lives under the ``animate`` capability; the retarget service is
+# published under its OWN capability, ``animation`` (display "Animate"), so a
+# shipped Auto Rig node never sees it as a second mode.
 ANIMATE_RIG_SERVICE = "tripo_rig"
 ANIMATE_RIG_MODEL = "tripo_rig_v2_5"
+ANIMATION_CAPABILITY = "animation"
 ANIMATE_RETARGET_SERVICE = "tripo_retarget"
 ANIMATE_RETARGET_MODEL = "tripo_retarget_v2_5"
+# Retarget catalog parameter names (frozen wire contract): the preset list,
+# ``preset:<skeleton>:<name>`` values, and the in-place toggle.
+ANIMATE_PRESETS_PARAM = "animations"
+ANIMATE_IN_PLACE_PARAM = "animate_in_place"
 # Custom property stamped on every object imported from an Auto Rig job;
 # holds OUR queue job id (never Tripo's task id) — the retarget payload
 # sends it and the backend resolves/authorizes the vendor task.
 ANIMATE_RIG_JOB_PROP = "mixar_rig_job_id"
+# Stamped beside it from the rig job result's ``rig_skeleton`` ("biped",
+# "quadruped", ...): the retarget presets are filtered and validated by it.
+ANIMATE_RIG_SKELETON_PROP = "mixar_rig_skeleton"
 
 # glTF import options for every rigged / animated result: the Animate tab's
 # Auto Rig and Animate, the agent's Auto Rig, and the Moodboard Auto Rig node.
@@ -75,19 +86,6 @@ SEGMENT_PARTS_SUFFIX = "_parts"
 # Stamped on every object imported from a segmentation job, holding OUR queue
 # job id — lets the agent (and a later re-segment) recognise generated parts.
 SEGMENT_JOB_PROP = "mixar_segment_job_id"
-
-# ============================================================================
-# POLL CONFIGURATION
-# ============================================================================
-
-# Client-side ceiling on the waiting-for-the-backend phase. It must stay >= the
-# backend's own budgets (job_queue_configs: default_queue_timeout_s +
-# default_execution_timeout_s), or the client cancels a job the user has already
-# paid for while the backend is still working on it.
-MAX_POLL_DURATION = 3600.0  # 60 minutes
-
-# Maximum consecutive poll errors before marking job as FAILED
-MAX_CONSECUTIVE_POLL_ERRORS = 5
 
 # ============================================================================
 # FILE SIZE LIMITS (bytes)

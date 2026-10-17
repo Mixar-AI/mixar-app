@@ -5,8 +5,38 @@
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import uuid
+
+_CHUNK_SIZE = re.compile(rb"([0-9A-Fa-f]+)(?:;[^\r\n]*)?\r\n")
+
+
+def read_body(response, limit):
+    """Up to limit+1 bytes of a relay response body (http.client response).
+
+    The relay answers HTTP/1.0 with Content-Length and closes the connection.
+    Some Windows security software rewrites that to "transfer-encoding: chunked"
+    without chunking the body, and http.client then fails with IncompleteRead
+    (Discord report, Oct 2026). A "chunked" reply is therefore read up to the
+    close and de-chunked only if it really is chunked; relay bodies are JSON
+    objects, which never start with a hex chunk size.
+    """
+    if not response.chunked:
+        return response.read(limit + 1)
+    raw = response.fp.read(limit + 1)
+    if not _CHUNK_SIZE.match(raw):
+        return raw
+    body, at = [], 0
+    while match := _CHUNK_SIZE.match(raw, at):
+        size, at = int(match.group(1), 16), match.end()
+        if size == 0:
+            return b"".join(body)
+        if raw[at + size:at + size + 2] != b"\r\n":
+            break
+        body.append(raw[at:at + size])
+        at += size + 2
+    raise ValueError("Malformed chunked MCP response")
 
 
 def discovery_directory():

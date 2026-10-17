@@ -40,36 +40,44 @@ def _capture(event: str, properties: dict) -> None:
         logger.debug("Tour telemetry %s failed: %s", event, exc)
 
 
-def started(tour_id: str, language: str = "en", narration: str = "en") -> None:
+def started(tour_id: str, language: str = "en", narration: str = "en", *,
+            tour_run_id: str = "") -> None:
     """The tour modal began playing ``tour_id`` for a user who chose
     ``language``, narrated in ``narration`` (both tour language codes)."""
     try:
         from mixar.modules.common.analytics.constants import EVENT_TOUR_STARTED
 
-        _capture(EVENT_TOUR_STARTED, {
+        properties = {
             "tour_id": str(tour_id),
             "language": str(language or "en"),
             "narration": str(narration or "en"),
-        })
+        }
+        if tour_run_id:
+            properties['tour_run_id'] = str(tour_run_id)
+        _capture(EVENT_TOUR_STARTED, properties)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Tour telemetry started failed: %s", exc)
 
 
-def step(tour_id: str, beat_id: str, index: int) -> None:
+def step(tour_id: str, beat_id: str, index: int, *, tour_run_id: str = "") -> None:
     """The runner entered beat ``beat_id`` (``index`` in the table)."""
     try:
         from mixar.modules.common.analytics.constants import EVENT_TOUR_STEP
 
-        _capture(EVENT_TOUR_STEP, {
+        properties = {
             "tour_id": str(tour_id),
             "beat_id": str(beat_id),
             "index": int(index),
-        })
+        }
+        if tour_run_id:
+            properties['tour_run_id'] = str(tour_run_id)
+        _capture(EVENT_TOUR_STEP, properties)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Tour telemetry step failed: %s", exc)
 
 
-def finished(tour_id: str, outcome: str, beat_id: str, elapsed_s: float) -> None:
+def finished(tour_id: str, outcome: str, beat_id: str, elapsed_s: float, *,
+             tour_run_id: str = "", step_index: int = -1) -> None:
     """The tour ended: ``outcome`` is one of ``OUTCOMES`` (anything else is
     reported as ``failed``), ``beat_id`` the beat it ended on, ``elapsed_s``
     wall seconds since ``started``."""
@@ -82,11 +90,18 @@ def finished(tour_id: str, outcome: str, beat_id: str, elapsed_s: float) -> None
             elapsed = round(max(0.0, float(elapsed_s)), 1)
         except (TypeError, ValueError):
             elapsed = 0.0
-        _capture(EVENT_TOUR_FINISHED, {
+        properties = {
             "tour_id": str(tour_id),
             "outcome": outcome,
             "beat_id": str(beat_id),
             "elapsed_s": elapsed,
-        })
+        }
+        if tour_run_id:
+            properties.update({
+                'tour_run_id': str(tour_run_id),
+                'step_index': int(step_index),
+                'drop_off': outcome != OUTCOME_COMPLETED,
+            })
+        _capture(EVENT_TOUR_FINISHED, properties)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Tour telemetry finished failed: %s", exc)

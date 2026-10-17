@@ -127,6 +127,29 @@ def schedule_object_mode_reset() -> None:
     _schedule_object_mode_reset()
 
 
+# Seconds after startup before the viewport display shaders are pre-warmed;
+# late enough to stay out of the first paint and the login fan-out.
+_PREWARM_DELAY_S = 4.0
+_PREWARM_WM_PROP = "mixar_prewarm_display_shaders"
+
+
+def _prewarm_display_shaders():
+    """Ask the native overlay pass to compile the viewport display shader
+    variants now (editors/space_view3d/view3d_display_prewarm.cc). Zen's
+    viewport is in material preview and Engine workspaces open in solid
+    shading, so without this the first Engine switch compiled a shader on
+    the main thread (0.34 s) inside the switch."""
+    try:
+        wm = bpy.data.window_managers[0]
+        wm[_PREWARM_WM_PROP] = 1
+        redraw = getattr(getattr(bpy.ops, "mixar", None), "agent_halo_redraw", None)
+        if redraw is not None:
+            redraw()  # a cursor redraw runs the overlay pass without a viewport redraw
+    except Exception as exc:  # noqa: BLE001 — a warm-up must never fail startup
+        logger.debug("display shader pre-warm skipped: %s", exc)
+    return None
+
+
 def _on_workspace_change() -> None:
     _schedule_object_mode_reset()
 
@@ -166,6 +189,7 @@ def register():
 
     _subscribe_workspace_changes()
     _schedule_object_mode_reset()
+    bpy.app.timers.register(_prewarm_display_shaders, first_interval=_PREWARM_DELAY_S)
 
     if _on_load_post not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(_on_load_post)

@@ -82,6 +82,10 @@ class Job:
     # Failure explanation beyond the one-line user_message — see
     # core/failure_info.py (backend class, provider's own words, vendor code).
     error_class: str = ""
+    # Who stamped ``error_class``: "backend" (apply_backend_failure) or
+    # "client" (a local submit/poll/timeout/download/import failure). Only a
+    # backend-stamped class may claim a refund (failure_info.failure_hint).
+    error_class_source: str = ""
     error_reason: str = ""
     vendor_code: str = ""
     # Session-relative clocks (time.monotonic, not epoch) so they survive

@@ -5,8 +5,8 @@
 
 ``PRESETS[use_case][exporter]`` holds the exporter keyword arguments that
 differ per target engine; ``COMMON`` holds what every preset shares
-(selection only, meshes + armatures, copied/embedded textures, never
-cameras or lights). ``preset_report`` summarises the applied preset for
+(selection only, meshes + armatures, copied/embedded textures, no
+cameras or lights — only the ``web`` glTF preset carries those). ``preset_report`` summarises the applied preset for
 the result dict the backend shows the user.
 """
 
@@ -59,6 +59,13 @@ _FBX_UNITY = {
     "use_tspace": True, "mesh_smooth_type": "FACE",
 }
 _GLTF_GODOT = {"export_apply": True, "export_tangents": True}
+# three.js: the scene's camera and punctual lights travel (``export_web``
+# selects them for a scene export), light power in physical units (what
+# three.js r155+ expects by default) and custom properties as userData.
+_GLTF_WEB = {
+    **_GLTF_GODOT, "export_cameras": True, "export_lights": True,
+    "export_import_convert_lighting_mode": "SPEC", "export_extras": True,
+}
 
 PRESETS = {
     "unreal": {
@@ -72,7 +79,7 @@ PRESETS = {
     },
     "unity": {"fbx": dict(_FBX_UNITY), "gltf": {"export_apply": False}, "usd": dict(_USD_YUP)},
     "godot": {"fbx": dict(_FBX_UNITY), "gltf": dict(_GLTF_GODOT), "usd": dict(_USD_YUP)},
-    "web": {"fbx": dict(_FBX_UNITY), "gltf": dict(_GLTF_GODOT), "usd": dict(_USD_YUP)},
+    "web": {"fbx": dict(_FBX_UNITY), "gltf": dict(_GLTF_WEB), "usd": dict(_USD_YUP)},
     "ar": {
         "fbx": {"apply_scale_options": "FBX_SCALE_ALL"},
         "gltf": dict(_GLTF_GODOT),
@@ -133,6 +140,7 @@ def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) ->
         "leaf_bones": None, "animation_mode": animation_mode,
         "tangents": None, "apply_modifiers": None, "draco": None,
         "image_format": None, "embed_textures": None, "active_scene_only": True,
+        "cameras": False, "lights": False, "custom_properties": False,
     }
     if family == "fbx":
         report.update(
@@ -152,6 +160,8 @@ def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) ->
             image_format=kwargs.get("export_image_format"),
             embed_textures=fmt == "glb",
             active_scene_only=bool(kwargs.get("use_active_scene", False)),
+            cameras=bool(kwargs.get("export_cameras")), lights=bool(kwargs.get("export_lights")),
+            custom_properties=bool(kwargs.get("export_extras")),
         )
     elif family == "usd":
         yup = bool(kwargs.get("convert_orientation"))

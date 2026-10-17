@@ -6,30 +6,18 @@
 """
 Moodboard Text Box Operators
 
-Operators for managing text boxes in the moodboard.
+Operators for editing and deleting text boxes in the moodboard (adding one
+lives in ``textbox_add_ops.py``).
 """
 
 import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
-from mixar.modules.common.i18n import rpt_, tip_
-from ...core.moodboard_utils import get_moodboard_viewport_center
-from ...core.canvas_context import (
-    find_moodboard_canvas_region,
-    redraw_moodboard_canvases,
-)
-from ...core.canvas_mark_mode import exit_canvas_mark_mode
-from ...core.first_use import begin_preview, end_preview, mark_started
+from mixar.modules.common.i18n import rpt_
+from ...core.canvas_context import redraw_moodboard_canvases
 from ...core.image_lifecycle import release_moodboard_image_entry
-from ....common.utils.platform_utils import format_shortcut
-from ...constants import (
-    TEXTBOX_NAVIGATION_EVENTS,
-    TEXTBOX_TEXT_DEFAULT,
-    TEXTBOX_WIDTH_DEFAULT,
-    TEXTBOX_HEIGHT_DEFAULT,
-    TEXTBOX_FONT_SIZE_DEFAULT,
-)
+from ...constants import TEXTBOX_NAVIGATION_EVENTS
 
 
 # Caret glyph appended to the text box while it is being edited, so there is
@@ -45,133 +33,6 @@ _EDIT = {"index": -1, "value": "", "original": "", "select_all": True, "armed": 
 
 def _tag_moodboard_redraw():
     redraw_moodboard_canvases()
-
-
-class MIXIE_OT_moodboard_add_textbox(Operator):
-    bl_idname = "mixie.moodboard_add_textbox"
-    bl_label = "Add Text"
-    bl_description = f"Add a text box to the moodboard ({format_shortcut('T')})"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def description(cls, context, properties):
-        return tip_("Add a text box to the moodboard ({shortcut})").format(
-            shortcut=format_shortcut('T'))
-
-    text: StringProperty(
-        name="",
-        description="Content of the text box",
-        default="",
-        options={'SKIP_SAVE'}
-    )
-
-    # Index of the sample text box being placed during the modal.
-    _tb_index: int = -1
-    _region = None
-
-    def _cursor_view_coords(self, event):
-        """Mouse position (window coords) in the moodboard's canvas space."""
-        region = self._region
-        rx = event.mouse_x - region.x
-        ry = event.mouse_y - region.y
-        return region.view2d.region_to_view(rx, ry)
-
-    def _move_to(self, scene, vx, vy):
-        boxes = scene.mixie_moodboard_textboxes
-        if 0 <= self._tb_index < len(boxes):
-            tb = boxes[self._tb_index]
-            tb.position_x = vx
-            tb.position_y = vy
-
-    def invoke(self, context, event):
-        scene = context.scene
-        # The Text tool takes over the canvas: a still-armed pencil would
-        # otherwise draw a stroke on the first click after the box is placed.
-        exit_canvas_mark_mode(context)
-
-        # Explicit text (e.g. agent/programmatic call) → place immediately.
-        if self.text.strip():
-            return self.execute(context)
-
-        region = find_moodboard_canvas_region(context)
-        if region is None:
-            # No visible moodboard to place into: drop a sample box at 0,0.
-            self.text = TEXTBOX_TEXT_DEFAULT
-            return self.execute(context)
-
-        self._region = region
-
-        # Create a sample text box and follow the cursor until the user clicks.
-        begin_preview(scene, "mixie_moodboard_textboxes")
-        item = scene.mixie_moodboard_textboxes.add()
-        item.text = TEXTBOX_TEXT_DEFAULT
-        item.width = TEXTBOX_WIDTH_DEFAULT
-        item.height = TEXTBOX_HEIGHT_DEFAULT
-        item.font_size = TEXTBOX_FONT_SIZE_DEFAULT
-        item.z_order = len(scene.mixie_moodboard_textboxes) + len(scene.mixie_moodboard_images)
-        self._tb_index = len(scene.mixie_moodboard_textboxes) - 1
-
-        # Select only the new box so it can be grabbed/edited/deleted right away.
-        for tb in scene.mixie_moodboard_textboxes:
-            tb.selected = False
-        for img in scene.mixie_moodboard_images:
-            img.selected = False
-        item.selected = True
-
-        vx, vy = self._cursor_view_coords(event)
-        self._move_to(scene, vx, vy)
-        _tag_moodboard_redraw()
-
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def modal(self, context, event):
-        if event.type in TEXTBOX_NAVIGATION_EVENTS:
-            return {'PASS_THROUGH'}
-        scene = context.scene
-
-        if event.type == 'MOUSEMOVE':
-            vx, vy = self._cursor_view_coords(event)
-            self._move_to(scene, vx, vy)
-            _tag_moodboard_redraw()
-            return {'RUNNING_MODAL'}
-
-        if event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
-            end_preview(scene, "mixie_moodboard_textboxes", committed=True)
-            _tag_moodboard_redraw()
-            self.report({'INFO'}, "Added text box (double-click to edit)")
-            return {'FINISHED'}
-
-        if event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
-            boxes = scene.mixie_moodboard_textboxes
-            if 0 <= self._tb_index < len(boxes):
-                boxes.remove(self._tb_index)
-            end_preview(scene, "mixie_moodboard_textboxes")
-            _tag_moodboard_redraw()
-            return {'CANCELLED'}
-
-        return {'RUNNING_MODAL'}
-
-    def execute(self, context):
-        scene = context.scene
-        exit_canvas_mark_mode(context)
-
-        text = self.text.strip() or TEXTBOX_TEXT_DEFAULT
-        viewport_cx, viewport_cy = get_moodboard_viewport_center()
-        item = scene.mixie_moodboard_textboxes.add()
-        item.text = text
-        item.position_x = viewport_cx
-        item.position_y = viewport_cy
-        item.width = TEXTBOX_WIDTH_DEFAULT
-        item.height = TEXTBOX_HEIGHT_DEFAULT
-        item.font_size = TEXTBOX_FONT_SIZE_DEFAULT
-        item.z_order = len(scene.mixie_moodboard_textboxes) + len(scene.mixie_moodboard_images)
-
-        _tag_moodboard_redraw()
-
-        mark_started(scene)
-        self.report({'INFO'}, "Added text box to moodboard")
-        return {'FINISHED'}
 
 
 class MIXIE_OT_moodboard_edit_textbox(Operator):
@@ -492,7 +353,6 @@ class MIXIE_OT_moodboard_update_textbox_properties(Operator):
 
 
 classes = (
-    MIXIE_OT_moodboard_add_textbox,
     MIXIE_OT_moodboard_edit_textbox,
     MIXIE_OT_moodboard_update_textbox_properties,
     MIXIE_OT_moodboard_delete,

@@ -192,6 +192,11 @@ def test_the_dialog_copies_one_standard_config_and_links_the_guide(monkeypatch):
     assert server["command"].startswith(root) and set(server) == {"command", "args"}
     assert SETUP_GUIDE_URL == "https://www.mixar.app/docs#connect-ai-apps"
     from pathlib import Path
-    dialog = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
-    assert 'text="Copy MCP Config"' in dialog and 'text="Setup Guide"' in dialog
-    assert "default='JSON'" in dialog
+    operators = Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators"
+    dialog = (operators / "connect.py").read_text()
+    assert "default='JSON'" in dialog  # copy_mcp_setup's default client
+    # The sheet's "Other app" foot offers the standard JSON first, and its
+    # sidebar links the guide.
+    from mixar.modules.mcp_bridge.core import app_configs
+    assert app_configs.FORMATS[0] == "JSON"
+    assert "GUIDE_URL = SETUP_GUIDE_URL" in (operators / "connect_sheet_ui.py").read_text()

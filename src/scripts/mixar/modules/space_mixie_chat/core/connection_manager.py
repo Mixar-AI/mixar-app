@@ -290,7 +290,9 @@ class ConnectionManager:
                 # header, so the PUT and the header can never disagree.
                 version = get_runtime_version()
                 token = get_access_token()
-                if token and version:
+                # A guest has no account record to stamp (the route is 403).
+                from ...auth.core.guest import is_guest
+                if token and version and not is_guest():
                     report_client_version(
                         base_url, token, version, device_id=get_device_id()
                     )
@@ -329,6 +331,13 @@ class ConnectionManager:
                 redraw_chat_areas()
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
+            if terminal:
+                # The pair is gone for good or the backend refuses it: hand the
+                # session back to the auth check (a guest is replaced silently,
+                # an account gets the session-expired sign-in) instead of
+                # sitting OFFLINE with no token until a relaunch.
+                from ..ui.operators.auth_ops import recover_session
+                recover_session()
 
         def on_script_execute(
             script: str,

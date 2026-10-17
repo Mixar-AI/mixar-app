@@ -32,6 +32,7 @@ local_models/
 │   ├── server_supervisor.py  # llama-server Popen lifecycle + health
 │   ├── relay.py          # backend llm.request executor (no bpy)
 │   ├── detect.py         # probe known local OpenAI-compatible servers
+│   ├── model_name.py     # local path → basename in saves and relay model fields
 │   ├── download_flow.py  # download worker + 0.5s pump + sticky toast
 │   └── orchestrator.py   # façade: server-state marshalling, fallback/
 │                         #   restart/re-register, lifecycle; re-exports

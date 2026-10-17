@@ -38,8 +38,20 @@ elseif(APPLE)
   list(APPEND INC ${CURL_INCLUDE_DIRS})
 elseif(UNIX)
   find_package(PkgConfig REQUIRED)
-  find_package(CURL REQUIRED)
-  find_package(OpenSSL REQUIRED)
+  find_package(CURL)
+  find_package(OpenSSL)
+  if(NOT CURL_FOUND)
+    message(FATAL_ERROR
+      "Mixar authentication requires libcurl development files. "
+      "Install them (Debian/Ubuntu: libcurl4-openssl-dev, Fedora: libcurl-devel) and re-run."
+    )
+  endif()
+  if(NOT OPENSSL_FOUND)
+    message(FATAL_ERROR
+      "Mixar authentication requires OpenSSL development files. "
+      "Install them (Debian/Ubuntu: libssl-dev, Fedora: openssl-devel) and re-run."
+    )
+  endif()
   list(APPEND LIB ${CURL_LIBRARIES})
   list(APPEND LIB OpenSSL::Crypto)
   list(APPEND INC ${CURL_INCLUDE_DIRS})
@@ -177,6 +189,7 @@ set(SRC
   creator_auth.cc
   mixar_local_auth_server.h
   mixar_sso_success_page.h
+  mixar_sso_failure_page.h
   mixar_local_auth_server.cc
   creator_intern.h
 )
@@ -1815,13 +1828,16 @@ elseif(APPLE)
     MACOSX_BUNDLE_LONG_VERSION_STRING "${_BUNDLE_LONG_VERSION}"
   )
 
-  # Set versioned bundle identifier and display name
+  # The bundle identifier is NEVER versioned (see platform_apple.cmake): it is
+  # part of the code-signing identity the Keychain binds every stored
+  # credential to, so a per-release id re-prompted for each item on every
+  # upgrade. Only the display name carries the version.
   if(DEFINED ENV{MIXAR_VERSION})
     string(REPLACE "." ";" _mixar_ver "$ENV{MIXAR_VERSION}")
     list(GET _mixar_ver 0 _MIXAR_MAJOR)
     list(GET _mixar_ver 1 _MIXAR_MINOR)
     set_target_properties(mixar PROPERTIES
-      MACOSX_BUNDLE_GUI_IDENTIFIER "com.mixar.mixar-${_MIXAR_MAJOR}-${_MIXAR_MINOR}"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "com.mixar.mixar"
       MACOSX_BUNDLE_BUNDLE_NAME "Mixar ${_MIXAR_MAJOR}.${_MIXAR_MINOR}"
     )
   else()

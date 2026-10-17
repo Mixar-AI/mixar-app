@@ -62,3 +62,33 @@ def _preload_real_optional_modules():
 
 
 _preload_real_optional_modules()
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_byok_credential_state():
+    """Leave no BYOK state behind a test.
+
+    `modules/byok/core/credential_state` is process-global. Several suites
+    apply an ``byok_active: true`` payload and never clear it, and from then
+    on every transport test ran with BYOK "active": `turn_transport._send`
+    then resolves the device key on a worker thread (a real keyring read on
+    the developer's machine) instead of dispatching synchronously, so sends
+    that a test inspects right after the call had not happened yet. Reset
+    after each test; the key-store user scope goes with it.
+    """
+    yield
+    state = sys.modules.get("mixar.modules.byok.core.credential_state")
+    if state is not None:
+        try:
+            state.clear()
+        except Exception:  # noqa: BLE001 — never fail teardown over the mirror
+            pass
+    store = sys.modules.get("mixar.modules.byok.core.key_store")
+    if store is not None:
+        try:
+            store.forget_user()
+        except Exception:  # noqa: BLE001
+            pass

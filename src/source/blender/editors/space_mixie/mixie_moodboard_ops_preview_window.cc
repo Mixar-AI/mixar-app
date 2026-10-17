@@ -125,11 +125,15 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
     return OPERATOR_CANCELLED;
   }
 
-  /* Size the window to the media, within bounds. `size` is the pixel size of
-   * the loaded buffer; a movie that has not decoded a frame yet reports zero,
-   * so the floor covers it. */
-  int width = image->gen_x > 0 ? image->gen_x : 0;
-  int height = image->gen_y > 0 ? image->gen_y : 0;
+  /* Size the window to the media, within bounds. Generated size lives on the
+   * base tile; a movie that has not decoded a frame yet reports zero, so the
+   * floor covers it. */
+  int width = 0;
+  int height = 0;
+  if (ImageTile *tile = BKE_image_get_tile(image, 0)) {
+    width = tile->gen_x > 0 ? tile->gen_x : 0;
+    height = tile->gen_y > 0 ? tile->gen_y : 0;
+  }
   ImageUser probe{};
   BKE_imageuser_default(&probe);
   void *lock = nullptr;

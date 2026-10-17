@@ -23,6 +23,8 @@ from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
+from mixar.modules.common.job_queue.core.helpers import create_scene_flag_listener
+from mixar.modules.common.job_queue.core.queue_download import job_scene
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
@@ -101,24 +103,14 @@ class MeshSegmentJob(Job):
         self.queue_position = inner.get("queue_position") or 0
 
         if status == "PENDING":
-            try:
-                scene = bpy.context.scene
-                scene.mixie_mesh_segment_status = "pending"
-                scene.mixie_mesh_segment_current_step = n_("Queued")
-            except Exception:
-                pass
+            self._set_scene_status("pending", n_("Queued"))
             return ("WAIT", [])
         if status in ("SUBMITTED", "POLLING"):
             if not self._processing_started:
                 self._processing_started = True
                 import time
                 self.poll_start_time = time.time()
-            try:
-                scene = bpy.context.scene
-                scene.mixie_mesh_segment_status = "processing"
-                scene.mixie_mesh_segment_current_step = n_("Processing...")
-            except Exception:
-                pass
+            self._set_scene_status("processing", n_("Processing..."))
             return ("RUN", [])
         if status == "DONE":
             result = inner.get("result") or {}
@@ -165,9 +157,9 @@ class MeshSegmentJob(Job):
             on_error("Mesh has no UV map — segmentation results need UVs to apply")
             return True
 
-        # Update scene properties
+        # Update the job's tab, not whichever tab the window shows.
         try:
-            scene = bpy.context.scene
+            scene = job_scene(self)
             scene.mixie_mesh_segment_is_processing = False
             scene.mixie_mesh_segment_status = "completed"
             scene.mixie_mesh_segment_result = str(island_labels)
@@ -179,6 +171,15 @@ class MeshSegmentJob(Job):
 
     def get_poll_interval(self):
         return 2.0
+
+    def _set_scene_status(self, status: str, step: str) -> None:
+        """Progress for the job's own tab (gone tab: nothing to update)."""
+        try:
+            scene = job_scene(self)
+            scene.mixie_mesh_segment_status = status
+            scene.mixie_mesh_segment_current_step = step
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -256,31 +257,18 @@ def enqueue_mesh_segment_job(
 _listener_attached = False
 
 
-def _on_queue_changed(queue: FeatureQueue) -> None:
-    """Sync mesh segment progress to queue activity."""
+def _clear_error(scene) -> None:
     try:
-        scene = bpy.context.scene
-    except Exception:
-        return
-    if scene is None:
-        return
+        scene.mixie_mesh_segment_error = ""
+    except (AttributeError, TypeError):
+        pass
 
-    has_work = queue.has_active_work()
-    was_processing = bool(getattr(scene, "mixie_mesh_segment_is_processing", False))
 
-    if has_work and not was_processing:
-        try:
-            scene.mixie_mesh_segment_is_processing = True
-            scene.mixie_mesh_segment_error = ""
-        except (AttributeError, TypeError):
-            pass
-        return
-
-    if not has_work and was_processing:
-        try:
-            scene.mixie_mesh_segment_is_processing = False
-        except (AttributeError, TypeError):
-            pass
+# Flags the tabs that submitted the active jobs, never the shown tab, and
+# clears each tab's old error as it starts (also while another tab's job runs).
+_on_queue_changed = create_scene_flag_listener(
+    "mixie_mesh_segment_is_processing", on_scene_start=_clear_error,
+)
 
 
 def _get_mesh_segment_queue() -> FeatureQueue:

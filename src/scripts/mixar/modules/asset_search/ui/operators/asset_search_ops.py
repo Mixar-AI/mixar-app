@@ -274,11 +274,17 @@ def _extract_search_image_bytes(img):
         # worse: a user's EXR), while the upload is always image/jpeg —
         # force JPEG the way render_to_jpeg() does, then restore.
         settings = bpy.context.scene.render.image_settings
+        orig_media_type = getattr(settings, "media_type", None)
         orig_format = settings.file_format
+        # media_type first: a video-output scene rejects JPEG on Blender 5.
+        if orig_media_type is not None:
+            settings.media_type = 'IMAGE'
         settings.file_format = 'JPEG'
         try:
             img.save_render(filepath=tmp_path)
         finally:
+            if orig_media_type is not None:
+                settings.media_type = orig_media_type
             settings.file_format = orig_format
         with open(tmp_path, "rb") as fh:
             return fh.read()

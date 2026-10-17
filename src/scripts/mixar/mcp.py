@@ -32,7 +32,7 @@ def local_request(record, method, path, body=None, headers=None, timeout=610):
             "Authorization": "Bearer " + record["token"],
             "Content-Type": "application/json", **(headers or {})})
         response = connection.getresponse()
-        data = response.read(MAX_MESSAGE_BYTES + 1)
+        data = _DISCOVERY.read_body(response, MAX_MESSAGE_BYTES)
         if len(data) > MAX_MESSAGE_BYTES:
             raise ValueError("MCP response exceeds the transport limit")
         return response.status, data
@@ -54,7 +54,7 @@ def discover(instance_id=None):
         except (OSError, ValueError, http.client.HTTPException):
             continue
     if not candidates:
-        raise RuntimeError("Open Mixar, sign in, then use the profile menu > Connect AI Apps (MCP) to enable MCP.")
+        raise RuntimeError("Open Mixar, sign in, then use the profile menu > Connect MCP to enable MCP.")
     if len(candidates) != 1:
         ids = ", ".join(item["instance_id"] for item in candidates)
         raise RuntimeError("Several Mixar windows are available; use --instance with one of: " + ids)

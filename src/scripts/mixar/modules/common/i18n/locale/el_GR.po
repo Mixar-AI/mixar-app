@@ -1112,6 +1112,9 @@ msgstr "Ο έλεγχος κατάστασης απέτυχε: {error}"
 msgid "Scan asset libraries, check for changes, render only new previews, and send to the training API"
 msgstr "Σαρώνει τις βιβλιοθήκες πόρων, ελέγχει για αλλαγές, αποδίδει μόνο νέες προεπισκοπήσεις και τις στέλνει στο API εκπαίδευσης"
 
+msgid "Sign in to Mixar to use this."
+msgstr ""
+
 msgid "Starting…"
 msgstr "Έναρξη…"
 
@@ -1433,11 +1436,47 @@ msgstr "Προσαρμοσμένος τοπικός διακομιστής"
 msgid "Point Mixar at an OpenAI-compatible server you already run (Ollama, LM Studio, llama.cpp, ...)"
 msgstr "Στρέψτε το Mixar σε έναν διακομιστή συμβατό με OpenAI που ήδη εκτελείτε (Ollama, LM Studio, llama.cpp, ...)"
 
-msgid "Invalid form data — please reach out to support."
-msgstr "Μη έγκυρα δεδομένα φόρμας — επικοινωνήστε με την υποστήριξη."
+msgid "Something is wrong with this form. Please contact support."
+msgstr ""
 
 msgid "Something went wrong on our end. Please try again."
 msgstr "Κάτι πήγε στραβά από την πλευρά μας. Δοκιμάστε ξανά."
+
+msgid "Your key works, but Mixar could not save it on this computer. Enter it again to retry."
+msgstr ""
+
+msgid "No saved key on this computer. Enter it in AI Provider Settings."
+msgstr ""
+
+msgid "Signed out before the request finished."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "That is not a valid auth.json — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json has no access or refresh token — run `codex login` and load the file again."
+msgstr ""
+
+msgid "auth.json carries no ChatGPT account id — run `codex login` and load the file again."
+msgstr ""
+
+msgid "Codex sign-in expired — run `codex login` on this computer and try again."
+msgstr ""
+
+msgid "No Codex sign-in found on this computer — run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not read the Codex sign-in file (auth.json)."
+msgstr ""
+
+msgid "Your Codex sign-in needs renewing but its file (auth.json) is not writable — fix the file permissions or run `codex login`, then try again."
+msgstr ""
+
+msgid "Could not renew your Codex sign-in — check your connection and try again."
+msgstr ""
 
 msgid "Reading the local model catalog"
 msgstr "Ανάγνωση του καταλόγου τοπικών μοντέλων"
@@ -1481,26 +1520,20 @@ msgstr "Εκκινήστε πρώτα το τοπικό μοντέλο (πρέπ
 msgid "Base URL and model name are required."
 msgstr "Απαιτούνται το βασικό URL και το όνομα μοντέλου."
 
+msgid "Signed out before the save finished."
+msgstr ""
+
+msgid "Could not reach the local server."
+msgstr ""
+
 msgid "The local server answered HTTP {status}."
 msgstr "Ο τοπικός διακομιστής απάντησε HTTP {status}."
 
 msgid "Could not reach the local server. Check that it is running and the base URL is correct."
 msgstr "Δεν ήταν δυνατή η επικοινωνία με τον τοπικό διακομιστή. Ελέγξτε ότι εκτελείται και ότι το βασικό URL είναι σωστό."
 
-msgid "No models available — contact support"
-msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
-
-msgid "Your API key controls the model"
-msgstr "Το κλειδί API σας ελέγχει το μοντέλο"
-
 msgid "Custom"
 msgstr "Προσαρμοσμένο"
-
-msgid "Use my own API key…"
-msgstr "Χρήση δικού μου κλειδιού API…"
-
-msgid "Change or remove my API key…"
-msgstr "Αλλαγή ή αφαίρεση του κλειδιού API μου…"
 
 msgid "Thinking"
 msgstr "Σκέψη"
@@ -1508,53 +1541,80 @@ msgstr "Σκέψη"
 msgid "Thinking: {level}"
 msgstr "Σκέψη: {level}"
 
-msgid "Your key: {name}"
-msgstr "Το κλειδί σας: {name}"
+msgid "Mixie"
+msgstr "Mixie"
+
+msgid "Add a key"
+msgstr ""
+
+msgid "CREDITS"
+msgstr ""
+
+msgid "NO CREDITS"
+msgstr ""
+
+msgid "MIXAR MODELS"
+msgstr ""
+
+msgid "YOUR KEY"
+msgstr ""
+
+msgid "BRING YOUR OWN KEY"
+msgstr ""
+
+msgid "ON THIS COMPUTER"
+msgstr ""
+
+msgid "Mixar default"
+msgstr ""
+
+msgid "RECOMMENDED"
+msgstr ""
+
+msgid "Default"
+msgstr "Προεπιλογή"
+
+msgid "Sign in to use Mixar models"
+msgstr ""
+
+msgid "Key needed on this computer"
+msgstr ""
+
+msgid "Paused — pick a model to switch back"
+msgstr ""
+
+msgid "No models available — contact support"
+msgstr "Δεν υπάρχουν διαθέσιμα μοντέλα — επικοινωνήστε με την υποστήριξη"
+
+msgid "Not on your plan"
+msgstr ""
+
+msgid "Manage key…"
+msgstr ""
+
+msgid "Enter key…"
+msgstr ""
+
+msgid "Set up local model…"
+msgstr ""
+
+msgid "Change model slug…"
+msgstr ""
+
+msgid "Loading your AI provider settings…"
+msgstr ""
+
+msgid "saved"
+msgstr ""
 
 msgid "Saving agent model… Please wait before sending or changing models."
 msgstr "Αποθήκευση μοντέλου πράκτορα… Περιμένετε πριν στείλετε ή αλλάξετε μοντέλα."
 
-msgid "Agent Model"
-msgstr "Μοντέλο πράκτορα"
+msgid "Mixar cannot accept your key right now — try again in a moment."
+msgstr ""
 
-msgid "Choose which model runs the agent."
-msgstr "Επιλέξτε ποιο μοντέλο εκτελεί τον πράκτορα."
-
-msgid "Reasoning effort for the model currently picked."
-msgstr "Προσπάθεια συλλογισμού για το μοντέλο που είναι επιλεγμένο."
-
-msgid "No thinking levels for this model"
-msgstr "Δεν υπάρχουν επίπεδα σκέψης για αυτό το μοντέλο"
-
-msgid "Your own API key is in use — pick \"Change or remove my API key\" in this menu to choose a hosted model"
-msgstr "Χρησιμοποιείται το δικό σας κλειδί API — επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API μου» σε αυτό το μενού για να διαλέξετε φιλοξενούμενο μοντέλο"
-
-msgid "Set Agent Model"
-msgstr "Ορισμός μοντέλου πράκτορα"
-
-msgid "Use this model for the agent"
-msgstr "Χρησιμοποιεί αυτό το μοντέλο για τον πράκτορα"
-
-msgid "Provider"
-msgstr "Πάροχος"
-
-msgid "Model"
-msgstr "Μοντέλο"
-
-msgid "Label"
-msgstr "Ετικέτα"
-
-msgid "Thinking Level"
-msgstr "Επίπεδο σκέψης"
-
-msgid "No model selected"
-msgstr "Δεν επιλέχθηκε μοντέλο"
-
-msgid "Reset Agent Model"
-msgstr "Επαναφορά μοντέλου πράκτορα"
-
-msgid "Clear the saved model and let Mixar choose"
-msgstr "Καθαρίζει το αποθηκευμένο μοντέλο και αφήνει το Mixar να επιλέξει"
+msgid "Could not fetch Mixar's key-sealing key — check your connection and try again."
+msgstr ""
 
 msgid "Could not change model"
 msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
@@ -1562,113 +1622,107 @@ msgstr "Δεν ήταν δυνατή η αλλαγή μοντέλου"
 msgid "Could not reset model"
 msgstr "Δεν ήταν δυνατή η επαναφορά μοντέλου"
 
-msgid "Removing your key…"
-msgstr "Αφαίρεση του κλειδιού σας…"
+msgid "Pick Agent Model"
+msgstr ""
 
-msgid "Validating with provider…"
-msgstr "Επικύρωση με τον πάροχο…"
+msgid "Use this model for the agent"
+msgstr "Χρησιμοποιεί αυτό το μοντέλο για τον πράκτορα"
 
-msgid "AI Provider Settings"
-msgstr "Ρυθμίσεις παρόχου ΤΝ"
+msgid "Sign-in found: {path}"
+msgstr ""
 
-msgid "Active"
-msgstr "Ενεργό"
+msgid "Not found: {path} — run  codex login"
+msgstr ""
 
-msgid "Not configured"
-msgstr "Δεν έχει ρυθμιστεί"
+msgid "Choose a Codex model."
+msgstr ""
 
-msgid "Run the Mixar agent on your own provider — Mixar credits are not charged while active."
-msgstr "Εκτελέστε τον πράκτορα Mixar στον δικό σας πάροχο — οι πιστώσεις Mixar δεν χρεώνονται όσο είναι ενεργό."
+msgid "Wait for the current reply to finish, then change the model."
+msgstr ""
 
-msgid "Current Configuration"
-msgstr "Τρέχουσα ρύθμιση"
+msgid "Please try again."
+msgstr ""
 
-msgid "Account"
-msgstr "Λογαριασμός"
+msgid "AI Provider settings"
+msgstr ""
+
+msgid "Use Mixar with your own provider - you won't be charged Mixar credits."
+msgstr ""
+
+msgid "Provider: {provider}"
+msgstr ""
+
+msgid "Model: {model}"
+msgstr ""
+
+msgid "Account: {account}"
+msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Συνδρομή ChatGPT"
 
-msgid "API Key"
-msgstr "Κλειδί API"
+msgid "API key: {key}"
+msgstr ""
 
-msgid "Stored securely"
-msgstr "Αποθηκευμένο με ασφάλεια"
+msgid "stored securely"
+msgstr ""
 
-msgid "Text-only model — chat works; 3D tasks run without visual feedback."
-msgstr "Μοντέλο μόνο κειμένου — η συνομιλία λειτουργεί· οι εργασίες 3D εκτελούνται χωρίς οπτική ανατροφοδότηση."
+msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
 
-msgid "Remove API Key…"
-msgstr "Αφαίρεση κλειδιού API…"
+msgid "DISCONNECT THIS SIGN-IN?"
+msgstr ""
 
-msgid "Provider Setup"
-msgstr "Ρύθμιση παρόχου"
+msgid "REMOVE YOUR API KEY?"
+msgstr ""
 
-msgid "Stored encrypted, used only for Mixar agent requests — only a masked preview is shown after saving."
-msgstr "Αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar — μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
+msgid "The agent will use Mixar's models again."
+msgstr ""
 
-msgid "Pick a model that supports tool / function calling — the agent needs it."
-msgstr "Επιλέξτε μοντέλο που υποστηρίζει κλήση εργαλείων / συναρτήσεων — ο πράκτορας το χρειάζεται."
+msgid "Agent chats will use Mixar credits again."
+msgstr ""
 
-msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
-msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
+msgid "The agent stops answering until you add a key again."
+msgstr ""
 
-msgid "Load from ~/.codex/auth.json"
-msgstr "Φόρτωση από το ~/.codex/auth.json"
+msgid "Sign in to use Mixar models instead."
+msgstr ""
 
-msgid "…or paste it manually"
-msgstr "…ή επικολλήστε το χειροκίνητα"
+msgid "Stay connected"
+msgstr ""
 
-msgid "{count} characters pasted"
-msgstr "Επικολλήθηκαν χαρακτήρες: {count}"
+msgid "Keep my key"
+msgstr ""
 
-msgid "Empty — paste your auth.json"
-msgstr "Κενό — επικολλήστε το auth.json σας"
+msgid "DISCONNECTING"
+msgstr ""
 
-msgid "Run  codex login  in your terminal, then load or paste the full"
-msgstr "Εκτελέστε  codex login  στο τερματικό και μετά φορτώστε ή επικολλήστε ολόκληρο το"
+msgid "REMOVING YOUR API KEY"
+msgstr ""
 
-msgid "contents of ~/.codex/auth.json (the paste button reads your clipboard)."
-msgstr "περιεχόμενο του ~/.codex/auth.json (το κουμπί επικόλλησης διαβάζει το πρόχειρο)."
+msgid "Disconnecting…"
+msgstr ""
 
-msgid "Uses your ChatGPT subscription — Mixar credits are not charged."
-msgstr "Χρησιμοποιεί τη συνδρομή ChatGPT σας — οι πιστώσεις Mixar δεν χρεώνονται."
+msgid "Removing your key…"
+msgstr ""
 
-msgid "Couldn't apply your changes"
-msgstr "Δεν ήταν δυνατή η εφαρμογή των αλλαγών σας"
+msgid "SAVED"
+msgstr ""
 
-msgid "Remove your API key?"
-msgstr "Αφαίρεση του κλειδιού API σας;"
+msgid "REMOVED"
+msgstr ""
 
-msgid "The agent will use Mixar's default provider again."
-msgstr "Ο πράκτορας θα χρησιμοποιήσει ξανά τον προεπιλεγμένο πάροχο του Mixar."
+msgid "You are set. Agent chats now run on your own provider."
+msgstr ""
 
-msgid "Mixar credits will be charged for future agent requests."
-msgstr "Οι πιστώσεις Mixar θα χρεώνονται για μελλοντικά αιτήματα του πράκτορα."
+msgid "The agent uses Mixar's models again."
+msgstr ""
 
-msgid "The Mixar agent now runs on your provider — Mixar credits are not charged."
-msgstr "Ο πράκτορας Mixar εκτελείται πλέον στον πάροχό σας — οι πιστώσεις Mixar δεν χρεώνονται."
+msgid "Agent chats use Mixar credits again."
+msgstr ""
 
-msgid "API key removed"
-msgstr "Το κλειδί API αφαιρέθηκε"
-
-msgid "The agent is back on Mixar's default provider."
-msgstr "Ο πράκτορας επέστρεψε στον προεπιλεγμένο πάροχο του Mixar."
-
-msgid "Mixar credits are charged for agent requests again."
-msgstr "Οι πιστώσεις Mixar χρεώνονται ξανά για αιτήματα του πράκτορα."
-
-msgid "Try Again"
-msgstr "Δοκιμή ξανά"
-
-msgid "Save & Activate"
-msgstr "Αποθήκευση και ενεργοποίηση"
-
-msgid "Keep My Key"
-msgstr "Διατήρηση του κλειδιού μου"
-
-msgid "Remove API Key"
-msgstr "Αφαίρεση κλειδιού API"
+msgid "Add a key to talk to the agent again."
+msgstr ""
 
 msgid "Unpacking the local AI runtime…"
 msgstr "Αποσυμπίεση του τοπικού περιβάλλοντος ΤΝ…"
@@ -1691,8 +1745,14 @@ msgstr "Λήφθηκε — δεν εκτελείται"
 msgid "Not downloaded"
 msgstr "Δεν έχει ληφθεί"
 
-msgid "Runs entirely on this computer — your prompts never leave it except through Mixar's agent orchestration."
-msgstr "Εκτελείται εξ ολοκλήρου σε αυτόν τον υπολογιστή — οι προτροπές σας δεν φεύγουν από αυτόν, εκτός μέσω της ενορχήστρωσης πράκτορα του Mixar."
+msgid "Runs entirely on this computer."
+msgstr ""
+
+msgid "Your prompts leave it only through Mixar's agent orchestration."
+msgstr ""
+
+msgid "Model"
+msgstr "Μοντέλο"
 
 msgid "Cancel Download"
 msgstr "Ακύρωση λήψης"
@@ -1718,9 +1778,6 @@ msgstr "Βασικό URL"
 msgid "API Key (optional)"
 msgstr "Κλειδί API (προαιρετικό)"
 
-msgid "Any OpenAI-compatible server on this computer — Ollama, LM Studio, llama.cpp…"
-msgstr "Οποιοσδήποτε διακομιστής συμβατός με OpenAI σε αυτόν τον υπολογιστή — Ollama, LM Studio, llama.cpp…"
-
 msgid "Could not save the local provider."
 msgstr "Δεν ήταν δυνατή η αποθήκευση του τοπικού παρόχου."
 
@@ -1730,53 +1787,32 @@ msgstr "Επανασάρωση τοπικών εφαρμογών"
 msgid "Rescan this computer for running local AI apps"
 msgstr "Ξανασαρώνει αυτόν τον υπολογιστή για τοπικές εφαρμογές ΤΝ που εκτελούνται"
 
+msgid "AI Provider Settings"
+msgstr "Ρυθμίσεις παρόχου ΤΝ"
+
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Χρησιμοποιήστε το δικό σας κλειδί API για τον πράκτορα Mixar. Όσο είναι ενεργό, οι πιστώσεις Mixar δεν χρεώνονται για αιτήματα του πράκτορα."
 
 msgid "Validate with the provider and save your API key"
 msgstr "Επικυρώνει με τον πάροχο και αποθηκεύει το κλειδί API σας"
 
-msgid "Choose a model for this provider and enter an API key."
-msgstr "Επιλέξτε ένα μοντέλο για αυτόν τον πάροχο και εισαγάγετε ένα κλειδί API."
+msgid "Pick a provider."
+msgstr ""
 
-msgid "Model slug and API key are required."
-msgstr "Απαιτούνται το αναγνωριστικό μοντέλου και το κλειδί API."
+msgid "Pick a model."
+msgstr ""
 
-msgid "Choose a Codex model and load your auth.json bundle."
-msgstr "Επιλέξτε ένα μοντέλο Codex και φορτώστε το πακέτο auth.json σας."
+msgid "Enter your API key."
+msgstr ""
 
-msgid "Save failed."
-msgstr "Η αποθήκευση απέτυχε."
+msgid "Enter a model slug and your key."
+msgstr ""
 
-msgid "Read ~/.codex/auth.json from this machine into the field"
-msgstr "Διαβάζει το ~/.codex/auth.json από αυτό το μηχάνημα στο πεδίο"
+msgid "Couldn't save. Try again."
+msgstr ""
 
-msgid "~/.codex/auth.json not found — run `codex login` first"
-msgstr "Το ~/.codex/auth.json δεν βρέθηκε — εκτελέστε πρώτα `codex login`"
-
-msgid "Could not read ~/.codex/auth.json"
-msgstr "Δεν ήταν δυνατή η ανάγνωση του ~/.codex/auth.json"
-
-msgid "~/.codex/auth.json is empty"
-msgstr "Το ~/.codex/auth.json είναι κενό"
-
-msgid "auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Το auth.json είναι πολύ μεγάλο για αυτό το πεδίο και περικόπηκε — δεν θα αποθηκευτεί σωστά"
-
-msgid "Loaded auth.json"
-msgstr "Φορτώθηκε το auth.json"
-
-msgid "Paste auth.json"
-msgstr "Επικόλληση auth.json"
-
-msgid "Paste your ~/.codex/auth.json from the clipboard into the field"
-msgstr "Επικολλά το ~/.codex/auth.json από το πρόχειρο στο πεδίο"
-
-msgid "Clipboard is empty"
-msgstr "Το πρόχειρο είναι κενό"
-
-msgid "Pasted auth.json is too large for this field and was truncated — it will not save correctly"
-msgstr "Το επικολλημένο auth.json είναι πολύ μεγάλο για αυτό το πεδίο και περικόπηκε — δεν θα αποθηκευτεί σωστά"
+msgid "Couldn't save your API key"
+msgstr ""
 
 msgid "Remove"
 msgstr "Remove"
@@ -1787,11 +1823,110 @@ msgstr "Ξεκινά τη ροή επιβεβαίωσης αφαίρεσης"
 msgid "Cancel the remove flow and return to the main dialog"
 msgstr "Ακυρώνει τη ροή αφαίρεσης και επιστρέφει στον κύριο διάλογο"
 
-msgid "Delete the stored API key server-side"
-msgstr "Διαγράφει το αποθηκευμένο κλειδί API στην πλευρά του διακομιστή"
+msgid "Delete your API key: from your Mixar account and from this computer"
+msgstr ""
 
-msgid "Remove failed."
-msgstr "Η αφαίρεση απέτυχε."
+msgid "Couldn't switch back. Try again."
+msgstr ""
+
+msgid "Couldn't remove your API key"
+msgstr ""
+
+msgid "Choose"
+msgstr ""
+
+msgid "Choose this provider or model for your own API key"
+msgstr ""
+
+msgid "Use this model with your key"
+msgstr ""
+
+msgid "Set up a key for this provider"
+msgstr ""
+
+msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
+msgid "Disconnect"
+msgstr "Αποσύνδεση"
+
+msgid "Remove key"
+msgstr ""
+
+msgid "key stored securely"
+msgstr ""
+
+msgid "PROVIDERS"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Local model"
+msgstr "Τοπικό μοντέλο"
+
+msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Enter your OpenRouter API key here."
+msgstr ""
+
+msgid "Codex sign-in file"
+msgstr ""
+
+msgid "Enter API key for {model} here."
+msgstr ""
+
+msgid "LOCAL MODEL ON THIS COMPUTER"
+msgstr ""
+
+msgid "ANY OPENROUTER MODEL"
+msgstr ""
+
+msgid "MODELS"
+msgstr ""
+
+msgid "ALL SUPPORTED {provider} MODELS"
+msgstr ""
+
+msgid "No models available for this provider yet."
+msgstr ""
+
+msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
+msgstr ""
+
+msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
+msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. anthropic/claude-opus-4.8."
+
+msgid "Pick a model that can use tools - the agent needs it. Most current models can."
+msgstr ""
+
+msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgstr ""
+
+msgid "In use: {details}"
+msgstr ""
+
+msgid "Paused, Mixie is answering: {provider} · {model}"
+msgstr ""
+
+msgid "Use my key"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Validating with your provider…"
+msgstr ""
+
+msgid "Try Again"
+msgstr "Δοκιμή ξανά"
+
+msgid "Save & Activate"
+msgstr ""
 
 msgid "Refresh BYOK State"
 msgstr "Ανανέωση κατάστασης BYOK"
@@ -1805,11 +1940,38 @@ msgstr "Ανανέωση καταλόγου μοντέλων"
 msgid "Revalidate the provider+model catalog from the backend"
 msgstr "Επικυρώνει ξανά τον κατάλογο παρόχου και μοντέλου από τον διακομιστή"
 
+msgid "Couldn't switch model"
+msgstr ""
+
+msgid "Use My Key"
+msgstr ""
+
+msgid "Use your own API key. Switches back to the key saved on this computer, or opens AI Provider Settings"
+msgstr ""
+
+msgid "Forget saved key"
+msgstr ""
+
+msgid "Delete the paused API key from this computer. Mixar's servers hold nothing for it"
+msgstr ""
+
+msgid "Couldn't forget the saved key"
+msgstr ""
+
+msgid "Couldn't switch to Mixie"
+msgstr ""
+
+msgid "Couldn't switch to your API key"
+msgstr ""
+
 msgid "Agent Model Provider"
 msgstr "Πάροχος μοντέλου πράκτορα"
 
 msgid "Provider id of the saved hosted-agent model pick"
 msgstr "Αναγνωριστικό παρόχου της αποθηκευμένης επιλογής φιλοξενούμενου μοντέλου πράκτορα"
+
+msgid "Agent Model"
+msgstr "Μοντέλο πράκτορα"
 
 msgid "Model id of the saved hosted-agent model pick"
 msgstr "Αναγνωριστικό μοντέλου της αποθηκευμένης επιλογής φιλοξενούμενου μοντέλου πράκτορα"
@@ -1838,11 +2000,29 @@ msgstr "Καταλληλότητα μοντέλου πράκτορα"
 msgid "False when the saved model is not available on your plan"
 msgstr "Ψευδές όταν το αποθηκευμένο μοντέλο δεν είναι διαθέσιμο στο πρόγραμμά σας"
 
+msgid "Agent Source"
+msgstr ""
+
+msgid "Who answers the agent: Mixie, your key's provider, or Local"
+msgstr ""
+
+msgid "Agent Model Name"
+msgstr ""
+
+msgid "The model the agent runs on"
+msgstr ""
+
+msgid "Provider"
+msgstr "Πάροχος"
+
 msgid "LLM provider"
 msgstr "Πάροχος LLM"
 
 msgid "Model to use with the selected provider"
 msgstr "Μοντέλο για χρήση με τον επιλεγμένο πάροχο"
+
+msgid "API Key"
+msgstr "Κλειδί API"
 
 msgid "Your API key is stored encrypted and used only for Mixar agent requests. After saving, only a masked preview is shown."
 msgstr "Το κλειδί API σας αποθηκεύεται κρυπτογραφημένο και χρησιμοποιείται μόνο για αιτήματα του πράκτορα Mixar. Μετά την αποθήκευση εμφανίζεται μόνο καλυμμένη προεπισκόπηση."
@@ -1850,20 +2030,14 @@ msgstr "Το κλειδί API σας αποθηκεύεται κρυπτογρα
 msgid "Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)"
 msgstr "Οποιοδήποτε slug μοντέλου από το openrouter.ai/models (π.χ. anthropic/claude-opus-4.8)"
 
-msgid "Codex auth.json"
-msgstr "auth.json του Codex"
-
-msgid "Contents of ~/.codex/auth.json (run `codex login` first)"
-msgstr "Περιεχόμενο του ~/.codex/auth.json (εκτελέστε πρώτα `codex login`)"
+msgid "Path to the Codex CLI's auth.json (leave empty for the default location)"
+msgstr ""
 
 msgid "Local mode"
 msgstr "Τοπική κατάσταση"
 
 msgid "Managed by Mixar, or your own local server"
 msgstr "Διαχειρίζεται το Mixar ή ο δικός σας τοπικός διακομιστής"
-
-msgid "Local model"
-msgstr "Τοπικό μοντέλο"
 
 msgid "Curated model to download and run on this computer"
 msgstr "Επιμελημένο μοντέλο για λήψη και εκτέλεση σε αυτόν τον υπολογιστή"
@@ -1885,6 +2059,15 @@ msgstr "BYOK ενεργό"
 
 msgid "True when the server reports byok_active for this user"
 msgstr "Αληθές όταν ο διακομιστής αναφέρει byok_active για αυτόν τον χρήστη"
+
+msgid "Key needed on this device"
+msgstr ""
+
+msgid "Saved key paused"
+msgstr ""
+
+msgid "Your API key is saved on this computer and paused; Mixie is answering"
+msgstr ""
 
 msgid "Dialog State"
 msgstr "Κατάσταση διαλόγου"
@@ -1976,6 +2159,27 @@ msgstr "Η παραγωγή απέτυχε — δοκιμάστε ξανά"
 msgid "Catalog visible_if keyed by RNA attribute"
 msgstr "Το visible_if του καταλόγου κλειδώνεται από ιδιότητα RNA"
 
+msgid "Nothing selected"
+msgstr "Δεν επιλέχθηκε τίποτα"
+
+msgid "{names} +{count}"
+msgstr ""
+
+msgid "No {group} choices are available yet"
+msgstr ""
+
+msgid "Value"
+msgstr "Τιμή"
+
+msgid "Label"
+msgstr "Ετικέτα"
+
+msgid "Group"
+msgstr "Γκρουπ"
+
+msgid "Selected"
+msgstr "Επιλεγμένο"
+
 msgid "No modes"
 msgstr "Καμία κατάσταση"
 
@@ -2035,6 +2239,9 @@ msgstr "Έτοιμες παραγωγές: {count}"
 
 msgid "You're out of credits — upgrade your plan to continue"
 msgstr "Οι πιστώσεις σας εξαντλήθηκαν — αναβαθμίστε το πρόγραμμά σας για να συνεχίσετε"
+
+msgid "Sign in to Mixar to use this"
+msgstr ""
 
 msgid "Authentication required — please sign in"
 msgstr "Απαιτείται έλεγχος ταυτότητας — συνδεθείτε"
@@ -2125,6 +2332,9 @@ msgstr "Εισαγωγή αποτελέσματος παραγωγής"
 
 msgid "Cancelled (generation may still complete on server)"
 msgstr "Ακυρώθηκε (η παραγωγή μπορεί ακόμη να ολοκληρωθεί στον διακομιστή)"
+
+msgid "Sign in"
+msgstr ""
 
 msgid "Failed to process server response"
 msgstr "Αποτυχία επεξεργασίας της απόκρισης διακομιστή"
@@ -2236,6 +2446,9 @@ msgstr "Η ουρά της νησίδας πράκτορα δεν είναι δ�
 
 msgid "Show every job"
 msgstr "Εμφάνιση κάθε εργασίας"
+
+msgid "Active"
+msgstr "Ενεργό"
 
 msgid "Show pending or running jobs"
 msgstr "Εμφάνιση εργασιών σε εκκρεμότητα ή σε εκτέλεση"
@@ -2612,9 +2825,6 @@ msgstr "Προφίλ συμβατότητας"
 msgid "Density"
 msgstr "Πυκνότητα"
 
-msgid "Default"
-msgstr "Προεπιλογή"
-
 msgid "Generation-pane control spacing"
 msgstr "Αποστάσεις χειριστηρίων τμήματος παραγωγής"
 
@@ -2948,7 +3158,7 @@ msgstr ""
 msgid "Bonus Credits Remaining"
 msgstr ""
 
-msgid "Top-up, referral and sign-up bonus credits left"
+msgid "Top-up and referral credits left"
 msgstr ""
 
 msgid "Has Allowance"
@@ -2974,6 +3184,9 @@ msgstr "Όνομα λογαριασμού"
 
 msgid "Display name for the account greeting"
 msgstr "Εμφανιζόμενο όνομα για τον χαιρετισμό λογαριασμού"
+
+msgid "Guest"
+msgstr ""
 
 msgid "Newer File Version"
 msgstr "Νεότερη έκδοση αρχείου"
@@ -3074,16 +3287,28 @@ msgstr ""
 msgid "At most {count} folders can be attached to a chat"
 msgstr ""
 
+msgid "Choose a file to attach"
+msgstr ""
+
+msgid "Hidden files are not shared"
+msgstr ""
+
+msgid "That file cannot be read"
+msgstr ""
+
+msgid "At most {count} files can be attached to a chat"
+msgstr ""
+
 msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
 msgstr ""
 
 msgid "Attach context"
 msgstr ""
 
-msgid "Images & 3D files"
-msgstr ""
+msgid "Files"
+msgstr "Αρχεία"
 
-msgid "Add visual references or models"
+msgid "Images, 3D models, videos, documents and more"
 msgstr ""
 
 msgid "Project folder"
@@ -3095,7 +3320,7 @@ msgstr ""
 msgid "Attach"
 msgstr ""
 
-msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
 msgstr ""
 
 msgid "Attach Folder"
@@ -3110,6 +3335,12 @@ msgstr ""
 msgid "Attached folder: {name}"
 msgstr ""
 
+msgid "Remove File"
+msgstr ""
+
+msgid "Detach this file; the agent can no longer read it"
+msgstr ""
+
 msgid "Remove Folder"
 msgstr ""
 
@@ -3122,10 +3353,37 @@ msgstr ""
 msgid "Opaque id resolved to a folder on this computer only"
 msgstr ""
 
+msgid "File ID"
+msgstr ""
+
+msgid "Opaque id resolved to a file on this computer only"
+msgstr ""
+
+msgid "File kind (video, document, text…) that picks the chip glyph"
+msgstr ""
+
+msgid "Origin"
+msgstr "Αρχή"
+
+msgid "Which attach path made this chip (picker, blend, moodboard); only moodboard chips follow the board selection"
+msgstr ""
+
 msgid "Context Folders"
 msgstr ""
 
 msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
+msgid "Context Files"
+msgstr ""
+
+msgid "Files the agent can read, view and import while it works on this chat"
+msgstr ""
+
+msgid "Context Files ID"
+msgstr ""
+
+msgid "Opaque id of the folder the attached files form for the agent"
 msgstr ""
 
 msgid "Mixar Shot Camera"
@@ -4526,6 +4784,45 @@ msgstr "Ο αυτόματος σκελετός απέτυχε"
 msgid "Animate failed"
 msgstr "Η κίνηση απέτυχε"
 
+msgid "Animate needs a rigged character: connect an Auto Rig result"
+msgstr ""
+
+msgid "This rig can't take preset animations: run Auto Rig again with a Tripo model"
+msgstr ""
+
+msgid "No preset animations are available for {skeleton} rigs yet"
+msgstr ""
+
+msgid "Choose at least one animation preset"
+msgstr ""
+
+msgid "Unknown animation preset(s): {names}"
+msgstr ""
+
+msgid "{names}: not for a {skeleton} rig — pick {skeleton} presets"
+msgstr ""
+
+msgid "Animation imported on its own"
+msgstr ""
+
+msgid "The rigged character it was made for is no longer in the scene"
+msgstr ""
+
+msgid "Its skeleton does not match the rigged character, so it was kept beside it"
+msgstr ""
+
+msgid "No animation imported"
+msgstr ""
+
+msgid "The result held no animation clip, so nothing was added"
+msgstr ""
+
+msgid "Some animations were not applied"
+msgstr ""
+
+msgid "{names}: no bone in common with the character's skeleton"
+msgstr ""
+
 msgid "Selected mesh has {count:,} faces (max {max_faces:,})"
 msgstr "Τα επιλεγμένα πολύγωνα έχουν {count:,} όψεις (μέγ. {max_faces:,})"
 
@@ -4973,6 +5270,24 @@ msgstr "Μοντέλο τοπικού διακομιστή"
 msgid "Local model last error"
 msgstr "Τελευταίο σφάλμα τοπικού μοντέλου"
 
+msgid "Showing the selected app's setup"
+msgstr ""
+
+msgid "Adding"
+msgstr ""
+
+msgid "Adding Mixar to the app"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "The app has Mixar; showing the recap"
+msgstr ""
+
+msgid "Adding Mixar to the app failed"
+msgstr ""
+
 msgid "Mixar added to {app}"
 msgstr ""
 
@@ -5039,61 +5354,13 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Allow AI apps to use Mixar (MCP)"
-msgstr ""
-
-msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
-msgstr ""
-
-msgid "MCP is on: AI apps can connect to this Mixar."
-msgstr ""
-
-msgid "MCP is on, waiting for Mixar's server connection."
-msgstr ""
-
-msgid "Connect AI Apps (MCP)"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
 msgstr ""
 
 msgid "App"
-msgstr ""
-
-msgid "Let your AI assistant use Mixar scenes and controls."
-msgstr ""
-
-msgid "Sign in to Mixar to connect AI apps."
-msgstr ""
-
-msgid "Sign In"
-msgstr ""
-
-msgid "Scene and UI tools are free; only AI generation uses credits."
-msgstr ""
-
-msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Let AI apps control Mixar's interface"
-msgstr ""
-
-msgid "Add to {app}"
-msgstr ""
-
-msgid "Copy"
-msgstr "Αντιγραφή"
-
-msgid "Open Config File"
-msgstr ""
-
-msgid "Then restart the app's MCP connection."
-msgstr ""
-
-msgid "Copy MCP Config"
-msgstr ""
-
-msgid "Setup Guide"
 msgstr ""
 
 msgid "Allow AI Apps to Use Mixar (MCP)"
@@ -5135,7 +5402,7 @@ msgstr ""
 msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
 msgstr ""
 
-msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgid "MCP setup copied. Paste it into your AI app where the dialog says"
 msgstr ""
 
 msgid "Add Mixar to App"
@@ -5161,6 +5428,129 @@ msgstr ""
 
 msgid "Could not open the file; copy the setup instead"
 msgstr ""
+
+msgid "Choose App"
+msgstr ""
+
+msgid "Show this app's setup"
+msgstr ""
+
+msgid "Set up any app that runs a local MCP server"
+msgstr ""
+
+msgid "Choose Setup Format"
+msgstr ""
+
+msgid "Show the setup in this format"
+msgstr ""
+
+msgid "mcpServers JSON"
+msgstr ""
+
+msgid "Command"
+msgstr "Εντολή"
+
+msgid "your app"
+msgstr ""
+
+msgid "Copy"
+msgstr "Αντιγραφή"
+
+msgid "ANY APP THAT RUNS A {server}"
+msgstr ""
+
+msgid "LOCAL MCP SERVER"
+msgstr ""
+
+msgid "ADD MIXAR TO {app}"
+msgstr ""
+
+msgid "SET UP MIXAR IN {app}"
+msgstr ""
+
+msgid "Add Mixar to {app} in one click."
+msgstr ""
+
+msgid "Copy the setup into {app}."
+msgstr ""
+
+msgid "Then restart {app}'s MCP connection. The setup holds a launcher path, never your account."
+msgstr ""
+
+msgid "Paste it where the line above says, then restart {app}'s MCP connection."
+msgstr ""
+
+msgid "Open {file}"
+msgstr ""
+
+msgid "Adding to {app}…"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy setup"
+msgstr ""
+
+msgid "ALREADY IN {app}"
+msgstr ""
+
+msgid "ADDED TO {app}"
+msgstr ""
+
+msgid "Mixar's MCP works for your Mixar account: AI apps see your scenes, and anything they generate uses your credits."
+msgstr ""
+
+msgid "Pick an app on the left after signing in to see its exact setup."
+msgstr ""
+
+msgid "A guest session works too. Turning MCP off never needs an account."
+msgstr ""
+
+msgid "SIGN IN TO CONNECT {apps}"
+msgstr ""
+
+msgid "AI APPS"
+msgstr ""
+
+msgid "Sign in to connect MCP."
+msgstr ""
+
+msgid "Let Claude, Codex, Cursor and other MCP apps use your Mixar scenes - they bring their own model."
+msgstr ""
+
+msgid "APPS"
+msgstr ""
+
+msgid "Other app"
+msgstr ""
+
+msgid "MCP is off · AI apps report Mixar as not connected"
+msgstr ""
+
+msgid "MCP is on · AI apps can connect to this Mixar"
+msgstr ""
+
+msgid "MCP is on · AI apps can use Mixar once it's signed in and connected"
+msgstr ""
+
+msgid "Turn off"
+msgstr ""
+
+msgid "Turn on"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "· your mouse or keyboard always takes over"
+msgstr ""
+
+msgid "Connect Dialog State"
+msgstr ""
+
+msgid "Format"
+msgstr "Μορφή"
 
 msgid "Processing..."
 msgstr "Επεξεργασία..."
@@ -5312,6 +5702,9 @@ msgstr "Τμηματοποίηση πολυγώνων"
 msgid "Auto Rig"
 msgstr "Αυτόματος σκελετός"
 
+msgid "Animate"
+msgstr "Κίνηση"
+
 msgid "Add Mesh"
 msgstr "Προσθήκη πολυγώνων"
 
@@ -5413,6 +5806,15 @@ msgstr "Ο αριθμός βημάτων εκλέπτυνσης κατά την 
 
 msgid "The file format used to store the generated image."
 msgstr "Η μορφή αρχείου που χρησιμοποιείται για την αποθήκευση της δημιουργημένης εικόνας."
+
+msgid "Animate is unavailable in the generation catalog"
+msgstr ""
+
+msgid "No enabled animation model is available"
+msgstr ""
+
+msgid "Connect an Auto Rig result (a rigged character) to Animate"
+msgstr ""
 
 msgid "Auto (from name)"
 msgstr "Αυτόματα (από το όνομα)"
@@ -5642,14 +6044,14 @@ msgstr "Αποτυχία λήψης υφής BaseColor: {error}"
 msgid "Failed to load BaseColor texture: {error}"
 msgstr "Αποτυχία φόρτωσης υφής BaseColor: {error}"
 
+msgid "Failed to apply textures: {error}"
+msgstr ""
+
 msgid "Unexpected error during texture download: {error}"
 msgstr "Απρόσμενο σφάλμα κατά τη λήψη υφής: {error}"
 
 msgid "Failed to apply textures to any object"
 msgstr "Αποτυχία εφαρμογής υφών σε οποιοδήποτε αντικείμενο"
-
-msgid "Lookdev 360: Apply PBR Textures"
-msgstr "Lookdev 360: Εφαρμογή υφών PBR"
 
 msgid "Both refined and guide masks are required"
 msgstr "Απαιτούνται και η εκλεπτυσμένη μάσκα και η μάσκα οδηγού"
@@ -5732,6 +6134,15 @@ msgstr "Συναρμολόγηση χαρακτήρα"
 msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Προσαρτά τα δημιουργημένα μέρη σε σκελετωμένο ή απλό σώμα, τοπικά"
 
+msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Use Image Style Only"
+msgstr "Χρήση μόνο του στυλ εικόνας"
+
+msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
+msgstr "Όταν είναι ενεργό, μεταφέρεται μόνο το καλλιτεχνικό στυλ της εικόνας (η προτροπή εξακολουθεί να ισχύει). Όταν είναι ανενεργό, η εικόνα οδηγεί άμεσα την παραγωγή υφής"
+
 msgid "Enter a prompt in the image node"
 msgstr "Εισαγάγετε προτροπή στον κόμβο εικόνας"
 
@@ -5757,7 +6168,7 @@ msgid "Model Gen is unavailable in the generation catalog"
 msgstr "Η Παραγωγή μοντέλου δεν είναι διαθέσιμη στον κατάλογο παραγωγής"
 
 msgid "This Model Gen mode is not supported by inference nodes yet"
-msgstr "Αυτή η κατάσταση Παραγωγής μοντέλου δεν υποστηρίζεται ακόμη από κόμβους συμπερασμού"
+msgstr ""
 
 msgid "No enabled 3D generation model is available"
 msgstr "Δεν υπάρχει διαθέσιμο ενεργοποιημένο μοντέλο παραγωγής 3D"
@@ -5884,6 +6295,9 @@ msgstr "Δημιουργήστε πρώτα το «{name}» — αυτή η κά
 
 msgid "Mesh"
 msgstr "Πολύγωνα"
+
+msgid "Rigged Character"
+msgstr ""
 
 msgid "Reference {number}"
 msgstr "Αναφορά {number}"
@@ -6053,11 +6467,11 @@ msgstr "Η εισαγωγή SceneGen απέτυχε"
 msgid "No image URLs in server response"
 msgstr "Δεν υπάρχουν URL εικόνας στην απόκριση διακομιστή"
 
-msgid "Starting reconstruction..."
-msgstr "Έναρξη ανακατασκευής..."
-
 msgid "Error: {error}"
 msgstr "Σφάλμα: {error}"
+
+msgid "Starting reconstruction..."
+msgstr "Έναρξη ανακατασκευής..."
 
 msgid "Failed to download generated image: {error}"
 msgstr "Αποτυχία λήψης της δημιουργημένης εικόνας: {error}"
@@ -6280,9 +6694,6 @@ msgstr "Αποτυχία λήψης/μετατροπής κόσμου: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Ο κόσμος εισήχθη αλλά δεν παρήγαγε αντικείμενα"
-
-msgid "World Labs: Import World"
-msgstr "World Labs: Εισαγωγή κόσμου"
 
 msgid "Failed to import world: {error}"
 msgstr "Αποτυχία εισαγωγής κόσμου: {error}"
@@ -6833,9 +7244,6 @@ msgstr "Χρήση προσαρμοσμένου χρώματος"
 msgid "Custom Colour"
 msgstr "Προσαρμοσμένο χρώμα"
 
-msgid "Selected"
-msgstr "Επιλεγμένο"
-
 msgid "Ignore this frame's border and interior when clicking, so only its members can be selected"
 msgstr "Αγνοεί το περίγραμμα και το εσωτερικό αυτού του πλαισίου στο κλικ, ώστε να επιλέγονται μόνο τα μέλη του"
 
@@ -6844,6 +7252,18 @@ msgstr "Συμπτυγμένο"
 
 msgid "Draw the frame as a titled bar and hide its body"
 msgstr "Σχεδιάζει το πλαίσιο ως γραμμή τίτλου και κρύβει το σώμα του"
+
+msgid "Unavailable"
+msgstr "Μη διαθέσιμο"
+
+msgid "No supported 3D service is available"
+msgstr "Δεν υπάρχει διαθέσιμη υποστηριζόμενη υπηρεσία 3D"
+
+msgid "Image models must advertise mask guidance and two references"
+msgstr "Τα μοντέλα εικόνας πρέπει να δηλώνουν καθοδήγηση μάσκας και δύο αναφορές"
+
+msgid "Attachment settings"
+msgstr "Ρυθμίσεις συνημμένου"
 
 msgid "No choices published"
 msgstr "Δεν δημοσιεύτηκαν επιλογές"
@@ -6862,18 +7282,6 @@ msgstr "Ολοκληρώθηκε"
 
 msgid "Generation completed"
 msgstr "Η παραγωγή ολοκληρώθηκε"
-
-msgid "Unavailable"
-msgstr "Μη διαθέσιμο"
-
-msgid "No supported 3D service is available"
-msgstr "Δεν υπάρχει διαθέσιμη υποστηριζόμενη υπηρεσία 3D"
-
-msgid "Image models must advertise mask guidance and two references"
-msgstr "Τα μοντέλα εικόνας πρέπει να δηλώνουν καθοδήγηση μάσκας και δύο αναφορές"
-
-msgid "Attachment settings"
-msgstr "Ρυθμίσεις συνημμένου"
 
 msgid "Parameter ID"
 msgstr "Αναγνωριστικό παραμέτρου"
@@ -6899,14 +7307,14 @@ msgstr "Λογική τιμή"
 msgid "Catalog choice"
 msgstr "Επιλογή καταλόγου"
 
-msgid "Widget"
-msgstr "Γραφικό στοιχείο"
-
-msgid "Group"
-msgstr "Γκρουπ"
-
 msgid "Choices"
 msgstr "Επιλογές"
+
+msgid "Any number of catalog choices, sent as a list"
+msgstr ""
+
+msgid "Widget"
+msgstr "Γραφικό στοιχείο"
 
 msgid "Visibility Condition"
 msgstr "Συνθήκη ορατότητας"
@@ -6926,11 +7334,14 @@ msgstr "Ελάχιστο"
 msgid "Maximum"
 msgstr "Μέγιστο"
 
-msgid "Value"
-msgstr "Τιμή"
-
 msgid "Value Label"
 msgstr "Ετικέτα τιμής"
+
+msgid "Active Choice"
+msgstr ""
+
+msgid "Choice Filter"
+msgstr ""
 
 msgid "Socket ID"
 msgstr "Αναγνωριστικό υποδοχής"
@@ -7948,12 +8359,6 @@ msgstr "Εικόνα μεταφοράς στυλ - εφαρμόζει καλλι
 msgid "Reference image - directly drives texture generation (prompt ignored)"
 msgstr "Εικόνα αναφοράς - οδηγεί άμεσα την παραγωγή υφής (η προτροπή αγνοείται)"
 
-msgid "Use Image Style Only"
-msgstr "Χρήση μόνο του στυλ εικόνας"
-
-msgid "When enabled, only the image's artistic style is transferred (prompt still applies). When disabled, the image directly drives texture generation"
-msgstr "Όταν είναι ενεργό, μεταφέρεται μόνο το καλλιτεχνικό στυλ της εικόνας (η προτροπή εξακολουθεί να ισχύει). Όταν είναι ανενεργό, η εικόνα οδηγεί άμεσα την παραγωγή υφής"
-
 msgid "Output texture resolution in pixels"
 msgstr "Ανάλυση υφής εξόδου σε pixel"
 
@@ -8452,9 +8857,6 @@ msgstr "Τα αρχικά πολύγωνα κρύβονται, δεν διαγρ
 msgid "Hunyuan not initialized"
 msgstr "Το Hunyuan δεν έχει αρχικοποιηθεί"
 
-msgid "Format"
-msgstr "Μορφή"
-
 msgid "Inputs"
 msgstr "Είσοδοι"
 
@@ -8548,26 +8950,23 @@ msgstr "Επιλέξτε εικόνες Moodboard για να τις προσθ�
 msgid "Generates as one multi-view job"
 msgstr "Δημιουργείται ως μία εργασία πολλαπλών όψεων"
 
+msgid "… (+{count} more)"
+msgstr "… (+{count} ακόμη)"
+
 msgid "Video Gen tab not available"
 msgstr "Η καρτέλα παραγωγής βίντεο δεν είναι διαθέσιμη"
 
 msgid "Selected References"
 msgstr "Επιλεγμένες αναφορές"
 
-msgid "Images: {count}"
-msgstr "Εικόνες: {count}"
-
-msgid "Videos: {count}"
-msgstr "Βίντεο: {count}"
+msgid "No references selected — text-to-video"
+msgstr "Δεν έχουν επιλεγεί αναφορές — κείμενο σε βίντεο"
 
 msgid "A selected video source file is missing"
 msgstr "Λείπει ένα επιλεγμένο αρχείο προέλευσης βίντεο"
 
-msgid "No references selected — text-to-video"
-msgstr "Δεν έχουν επιλεγεί αναφορές — κείμενο σε βίντεο"
-
-msgid "Mention image/video order in the prompt when assigning roles"
-msgstr "Αναφέρετε τη σειρά εικόνας/βίντεο στην προτροπή όταν αναθέτετε ρόλους"
+msgid "Name them in the prompt as @Image1, @Video1 — this order"
+msgstr ""
 
 msgid "Reference Limits"
 msgstr "Όρια αναφορών"
@@ -8644,6 +9043,33 @@ msgstr "Πλαίσιο σε όλα"
 msgid "Clear Board"
 msgstr "Καθαρισμός πίνακα"
 
+msgid "Agent Animate"
+msgstr ""
+
+msgid "Retarget preset animations onto an Auto Rig result"
+msgstr ""
+
+msgid "Object Name"
+msgstr "Όνομα αντικειμένου"
+
+msgid "The rigged armature, or any mesh it drives, imported by Auto Rig"
+msgstr ""
+
+msgid "Animations"
+msgstr "Κινήσεις"
+
+msgid "Comma-separated preset values from the animation catalog, e.g. 'preset:biped:walk,preset:biped:idle' (1-10, the rig's skeleton)"
+msgstr ""
+
+msgid "In Place"
+msgstr ""
+
+msgid "Keep the character on the spot instead of travelling with the clip"
+msgstr ""
+
+msgid "Animate started..."
+msgstr ""
+
 msgid "Agent Auto Rig"
 msgstr "Αυτόματος σκελετός πράκτορα"
 
@@ -8665,8 +9091,8 @@ msgstr "Τύπος σκελετού: auto / biped / quadruped / hexapod / octopo
 msgid "Skeleton Spec"
 msgstr "Προδιαγραφή σκελετού"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Σύμβαση σκελετού: 'tripo' ή 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Ονοματοδοσία οστών: tripo, mixamo, actorcore, unity, unreal ή vrm (μόνο το tripo υποστηρίζει τις προκαθορισμένες κινήσεις Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
@@ -8685,9 +9111,6 @@ msgstr "Παραγωγή PBR πράκτορα"
 
 msgid "Generate PBR textures for the given mesh object using Tripo"
 msgstr "Δημιουργία υφών PBR για το δοσμένο αντικείμενο πολυγώνων με Tripo"
-
-msgid "Object Name"
-msgstr "Όνομα αντικειμένου"
 
 msgid "Name of the mesh object in the scene to texture"
 msgstr "Όνομα του αντικειμένου πολυγώνων στη σκηνή που θα υφανθεί"
@@ -8917,11 +9340,11 @@ msgstr "Ανανέωση συγχρονισμού συνημμένων Moodboard
 msgid "Sync failed: {error}"
 msgstr "Ο συγχρονισμός απέτυχε: {error}"
 
-msgid "Skipped {count} video: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Παραλείφθηκε {count} βίντεο: ο πράκτορας δέχεται μόνο ακίνητες εικόνες. Χρησιμοποιήστε την παραγωγή βίντεο στο Moodboard για κλιπ"
+msgid "Attached {count} video as context"
+msgstr ""
 
-msgid "Skipped {count} videos: the agent accepts still images only. Use Video Gen on the moodboard for clips"
-msgstr "Παραλείφθηκαν {count} βίντεο: ο πράκτορας δέχεται μόνο ακίνητες εικόνες. Χρησιμοποιήστε την παραγωγή βίντεο στο Moodboard για κλιπ"
+msgid "Attached {count} videos as context"
+msgstr ""
 
 msgid "No moodboard images selected"
 msgstr "Δεν έχουν επιλεγεί εικόνες Moodboard"
@@ -9219,9 +9642,6 @@ msgstr "Φάκελος"
 
 msgid "Directory of the selected file(s)"
 msgstr "Φάκελος των επιλεγμένων αρχείων"
-
-msgid "Files"
-msgstr "Αρχεία"
 
 msgid "Failed to load media: {filepath}"
 msgstr "Αποτυχία φόρτωσης μέσου: {filepath}"
@@ -9823,8 +10243,8 @@ msgstr "Επιλέξτε έναν κόμβο συμπερασμού"
 msgid "Edit the prompt, then press Enter or Generate"
 msgstr "Επεξεργαστείτε την προτροπή και πατήστε Enter ή Δημιουργία"
 
-msgid "Node added to the generation queue"
-msgstr "Ο κόμβος προστέθηκε στην ουρά παραγωγής"
+msgid "Adjust the settings, then press Generate"
+msgstr ""
 
 msgid "Show this node's settings and prompt so it can be adjusted and run again; click again to cancel editing and go back to the result"
 msgstr "Εμφανίζει τις ρυθμίσεις και την προτροπή αυτού του κόμβου ώστε να ρυθμιστεί και να εκτελεστεί ξανά· κάντε κλικ ξανά για ακύρωση της επεξεργασίας και επιστροφή στο αποτέλεσμα"
@@ -10839,9 +11259,6 @@ msgstr "Η απόκριση του παραγόμενου υλικού δεν π
 
 msgid "Generated material but failed to apply it: {result}"
 msgstr "Το υλικό δημιουργήθηκε, αλλά απέτυχε η εφαρμογή του: {result}"
-
-msgid "Generate Procedural Material"
-msgstr "Δημιουργία διαδικαστικού υλικού"
 
 msgid "Material generation failed"
 msgstr "Η παραγωγή υλικού απέτυχε"
@@ -11877,9 +12294,6 @@ msgstr "Bit κβαντοποίησης χρώματος"
 
 msgid "Generic Quantization Bits"
 msgstr "Bit γενικής κβαντοποίησης"
-
-msgid "Animations"
-msgstr "Κινήσεις"
 
 msgid "Animation Mode"
 msgstr "Κατάσταση κίνησης"
@@ -17496,12 +17910,6 @@ msgstr "Αποδίδει πάντα στην GPU όταν υπάρχει."
 msgid "Always render on the CPU"
 msgstr "Αποδίδει πάντα στην CPU."
 
-msgid "Add-on Projects Folder"
-msgstr ""
-
-msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
-msgstr ""
-
 msgid "Enable Baked Outside by Default"
 msgstr "Ενεργοποίηση φτιαγμένου έξω από προεπιλογή"
 
@@ -17579,6 +17987,12 @@ msgstr "Αξιολόγηση σε κάθε καρέ"
 
 msgid "Evaluate node tree on every frame change"
 msgstr "Αξιολογεί το δέντρο κόμβων σε κάθε αλλαγή καρέ."
+
+msgid "Add-on Projects Folder"
+msgstr ""
+
+msgid "Where the Add-on tab creates new add-ons, one subfolder each; created on first use. Already-linked projects keep their folder"
+msgstr ""
 
 msgid "Channel Options"
 msgstr "Επιλογές καναλιού"
@@ -18783,7 +19197,7 @@ msgstr ""
 msgid "Open Refer a Friend from the profile card, as the user would"
 msgstr ""
 
-msgid "Share your invite link or email it to friends to earn bonus credits"
+msgid "Share your invite link or email it to friends to earn credits when they buy"
 msgstr ""
 
 msgid "Copy Invite Link"
@@ -18945,8 +19359,8 @@ msgstr "Δεν ήταν δυνατή η δημιουργία της προεπι
 msgid "View sketch"
 msgstr "Προβολή σκίτσου"
 
-msgid "Agent draft is full (max {count} characters)"
-msgstr "Το πρόχειρο του πράκτορα είναι πλήρες (μέγιστο {count} χαρακτήρες)."
+msgid "Agent draft is full ({kb} KB)"
+msgstr ""
 
 msgid "Mark added — nothing under it"
 msgstr "Προστέθηκε σημάδι — δεν υπάρχει τίποτα από κάτω"
@@ -19109,9 +19523,6 @@ msgstr "Γραμμή εργαλείων"
 
 msgid "Sidebar"
 msgstr "Πλαϊνή στήλη"
-
-msgid "Mixie"
-msgstr "Mixie"
 
 msgid "UV Mesh Segmentation panel"
 msgstr "Ταμπλό τμηματοποίησης πολυγώνων UV"
@@ -19536,8 +19947,8 @@ msgstr "Τροποποίηση..."
 msgid "Awaiting Input..."
 msgstr "Αναμονή εισόδου..."
 
-msgid "Videos require Video mode. Remove the video to send to Agent."
-msgstr "Τα βίντεο απαιτούν κατάσταση βίντεο. Αφαιρέστε το βίντεο για αποστολή στον πράκτορα."
+msgid "Attach the video as a file: videos become context the agent can watch"
+msgstr ""
 
 msgid "User ID"
 msgstr "Αναγνωριστικό χρήστη"
@@ -19547,6 +19958,78 @@ msgstr "Αναγνωριστικό χρήστη για σύνδεση στη σ�
 
 msgid "Agent expects: {formats}"
 msgstr "Ο πράκτορας αναμένει: {formats}"
+
+msgid "Skipped slow image: {name}"
+msgstr "Παραλείφθηκε αργή εικόνα: {name}"
+
+msgid "Image encoding failed: {error}"
+msgstr "Η κωδικοποίηση εικόνας απέτυχε: {error}"
+
+msgid "Why am I seeing this?"
+msgstr ""
+
+msgid "Switching to Mixar credits…"
+msgstr ""
+
+msgid "Couldn't switch to Mixar credits — try again"
+msgstr ""
+
+msgid "Couldn't resend yet — wait for the current reply to finish, then try again"
+msgstr ""
+
+msgid "AI Provider Settings is already open — enter your key there"
+msgstr ""
+
+msgid "Mixar never keeps your key on its servers. It stays only on the computer where you enter it."
+msgstr ""
+
+msgid "Use Mixar credits instead"
+msgstr ""
+
+msgid "The key for this request was not sealed for Mixar. Update Mixar and try again."
+msgstr ""
+
+msgid "Couldn't secure your key for this request — try again in a moment."
+msgstr ""
+
+msgid "Link your ChatGPT sign-in to continue"
+msgstr ""
+
+msgid "Link sign-in"
+msgstr ""
+
+msgid "Enter your local model's token to continue"
+msgstr ""
+
+msgid "Enter token"
+msgstr ""
+
+msgid "Enter your {provider} API key to continue"
+msgstr ""
+
+msgid "Enter key"
+msgstr ""
+
+msgid "Sign in to Codex again to continue"
+msgstr ""
+
+msgid "Sign in to Codex"
+msgstr ""
+
+msgid "Your Codex sign-in file is not writable — fix its permissions or sign in to Codex again to continue"
+msgstr ""
+
+msgid "Couldn't renew your Codex sign-in — check your connection"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "no Codex sign-in was found"
+msgstr ""
+
+msgid "the sign-in file could not be read"
+msgstr ""
 
 msgid "*Stopped*"
 msgstr "*Διακόπηκε*"
@@ -19622,6 +20105,15 @@ msgstr ""
 
 msgid "Upgrade"
 msgstr "Αναβάθμιση"
+
+msgid "Get a subscription"
+msgstr ""
+
+msgid "This feature uses credits. Subscribe to a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Subscribe"
+msgstr ""
 
 msgid "Feedback comment is empty"
 msgstr "Το σχόλιο αξιολόγησης είναι κενό."
@@ -19730,6 +20222,27 @@ msgstr "Το '{name}' δεν υπάρχει πλέον στο αρχείο πό�
 
 msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
+
+msgid "Sign in to continue"
+msgstr ""
+
+msgid "Sign in to use Mixar models, or add your own key"
+msgstr ""
+
+msgid "Mixar models need a Mixar account. Your own API key works without one."
+msgstr ""
+
+msgid "Your model key isn't working"
+msgstr ""
+
+msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Add your own key"
+msgstr ""
+
+msgid "Fix key"
+msgstr ""
 
 msgid "Thinking..."
 msgstr "Σκέψη..."
@@ -19880,9 +20393,6 @@ msgstr "τροποποιήθηκαν: {count}"
 
 msgid "{count} deleted"
 msgstr "διαγράφηκαν: {count}"
-
-msgid "… (+{count} more)"
-msgstr "… (+{count} ακόμη)"
 
 msgid "Created: {names}"
 msgstr "Δημιουργήθηκαν: {names}"
@@ -20046,6 +20556,15 @@ msgstr "Σύνδεση"
 msgid "Login panel for Mixie Chat"
 msgstr "Ταμπλό σύνδεσης για τη συνομιλία Mixie."
 
+msgid "You're using Mixar as a guest."
+msgstr ""
+
+msgid "Sign in for Mixar models and generation."
+msgstr ""
+
+msgid "Sign in with your Mixar account"
+msgstr "Συνδεθείτε με τον λογαριασμό Mixar"
+
 msgid "Session expired"
 msgstr "Η συνεδρία έληξε."
 
@@ -20055,31 +20574,27 @@ msgstr "Συνδεθείτε ξανά."
 msgid "Login Failed"
 msgstr "Η σύνδεση απέτυχε"
 
-msgid "Sign in with your Mixar account"
-msgstr "Συνδεθείτε με τον λογαριασμό Mixar"
+msgid "Continue in your browser"
+msgstr ""
 
-msgid "Waiting for browser..."
-msgstr "Αναμονή για το πρόγραμμα περιήγησης..."
+msgid "Sign in to Mixar"
+msgstr ""
 
 msgid "Login with Browser"
 msgstr "Σύνδεση με πρόγραμμα περιήγησης"
+
+msgid "You're using Mixar as a guest"
+msgstr ""
 
 msgid ""
 "Profile / account dropdown — opened from the global top bar.\n"
 "\n"
 "The contents are drawn natively by `layout.mixar_profile_card()`\n"
 "(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
-"credit usage meter and the account actions, laid out as one card\n"
+"credit balance and the account actions, laid out as one card\n"
 "rather than a menu. Python still owns registration and every\n"
 "operator the card invokes — C++ owns only pixels.\n"
 msgstr ""
-"Αναπτυσσόμενο προφίλ / λογαριασμού — ανοίγει από την καθολική επάνω γραμμή.\n"
-"\n"
-"Τα περιεχόμενα σχεδιάζονται εγγενώς από το `layout.mixar_profile_card()`\n"
-"(`interface_mixar_profile_card.cc`): χαιρετισμός, η ένδειξη προγράμματος, ο\n"
-"μετρητής χρήσης πιστώσεων και οι ενέργειες λογαριασμού, σε μία κάρτα\n"
-"αντί για μενού. Η Python κρατά την καταχώριση και κάθε\n"
-"τελεστή που καλεί η κάρτα — η C++ κρατά μόνο τα pixel.\n"
 
 msgid "Dashboard"
 msgstr "Πίνακας ελέγχου"
@@ -20309,12 +20824,6 @@ msgstr "Σημάδια: {note}"
 msgid "Sketch"
 msgstr "Σκίτσο"
 
-msgid "Skipped slow image: {name}"
-msgstr "Παραλείφθηκε αργή εικόνα: {name}"
-
-msgid "Image encoding failed: {error}"
-msgstr "Η κωδικοποίηση εικόνας απέτυχε: {error}"
-
 msgid "Message sent"
 msgstr "Το μήνυμα στάλθηκε."
 
@@ -20536,8 +21045,8 @@ msgstr "Αναγνωριστικό σημείου επαναφοράς"
 msgid "Restoring checkpoint…"
 msgstr "Επαναφορά σημείου επαναφοράς…"
 
-msgid "Pasted text too long (max {count} chars)"
-msgstr "Το επικολλημένο κείμενο είναι πολύ μεγάλο (μέγ. {count} χαρακτήρες)."
+msgid "Pasted text too long: {dropped} characters dropped (the message box holds {kb} KB)"
+msgstr ""
 
 msgid "Paste Text"
 msgstr "Επικόλληση κειμένου"
@@ -20728,11 +21237,14 @@ msgstr "Αρχειοθετημένη συνεδρία προς διαγραφή.
 msgid "Chat removed from history"
 msgstr "Η συνομιλία αφαιρέθηκε από το ιστορικό."
 
-msgid "Add Images or 3D Models"
+msgid "Add Files"
 msgstr ""
 
-msgid "Add images or 3D models from files, up to the per-message limit"
+msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
+
+msgid "Cannot add {name}: {error}"
+msgstr "Δεν είναι δυνατή η προσθήκη του {name}: {error}"
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Συμπληρώθηκε το όριο συνημμένων ({count})."
@@ -20740,14 +21252,14 @@ msgstr "Συμπληρώθηκε το όριο συνημμένων ({count})."
 msgid "Skipped {name}: {error}"
 msgstr "Παραλείφθηκε το {name}: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Δεν είναι δυνατή η προσθήκη του {name}: {error}"
-
 msgid "These references are already attached"
 msgstr "Αυτές οι αναφορές είναι ήδη συνημμένες."
 
 msgid "Added {count} image(s)"
 msgstr "Προστέθηκαν εικόνες: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Προσθήκη από το blend"
@@ -20764,6 +21276,9 @@ msgstr "{size} - Με δεδομένα"
 msgid "{size} - No data"
 msgstr "{size} - Χωρίς δεδομένα"
 
+msgid "{name} (video)"
+msgstr ""
+
 msgid "Select image from blend file"
 msgstr "Επιλογή εικόνας από το αρχείο blend"
 
@@ -20772,6 +21287,12 @@ msgstr "Η εικόνα έχει ήδη προστεθεί."
 
 msgid "Image not found in blend file"
 msgstr "Η εικόνα δεν βρέθηκε στο αρχείο blend."
+
+msgid "The video file behind {name} is missing"
+msgstr ""
+
+msgid "Attached {name} as context"
+msgstr ""
 
 msgid "Image already attached"
 msgstr "Η εικόνα είναι ήδη συνημμένη."
@@ -21028,6 +21549,9 @@ msgstr ""
 msgid "Stop this scene's agent, save its chat to History and remove the scene"
 msgstr ""
 
+msgid "Track Scenes Drawer Open"
+msgstr ""
+
 msgid "Capture Screenshot"
 msgstr "Λήψη στιγμιότυπου"
 
@@ -21103,9 +21627,6 @@ msgstr "Αποτυχία σύνδεσης."
 msgid "Dev Mode: Connected with dummy data"
 msgstr "Κατάσταση ανάπτυξης: συνδέθηκε με εικονικά δεδομένα"
 
-msgid "Disconnect"
-msgstr "Αποσύνδεση"
-
 msgid "Disconnect from the Mixie agent server"
 msgstr "Αποσυνδέεται από τον διακομιστή του πράκτορα Mixie."
 
@@ -21115,14 +21636,14 @@ msgstr "Κατάσταση ανάπτυξης: αποσυνδέθηκε"
 msgid "Disconnected from server"
 msgstr "Αποσυνδέθηκε από τον διακομιστή."
 
+msgid "Could not save the chat to History"
+msgstr "Δεν ήταν δυνατή η αποθήκευση της συνομιλίας στο ιστορικό."
+
 msgid "New Chat"
 msgstr "Νέα συνομιλία"
 
 msgid "Start a new chat (the current chat is saved to History)"
 msgstr "Ξεκινά νέα συνομιλία (η τρέχουσα αποθηκεύεται στο ιστορικό)."
-
-msgid "Could not save the chat to History"
-msgstr "Δεν ήταν δυνατή η αποθήκευση της συνομιλίας στο ιστορικό."
 
 msgid "Started new chat session"
 msgstr "Ξεκίνησε νέα συνεδρία συνομιλίας."
@@ -21160,6 +21681,12 @@ msgstr "Συνέχεια προηγούμενης εργασίας..."
 msgid "Could not resume the previous task"
 msgstr "Δεν ήταν δυνατή η συνέχεια της προηγούμενης εργασίας."
 
+msgid "Cancel Sign-in"
+msgstr ""
+
+msgid "Stop waiting for the browser sign-in"
+msgstr ""
+
 msgid "Adjust Last Operation..."
 msgstr ""
 
@@ -21179,6 +21706,9 @@ msgid "Batch Rename..."
 msgstr ""
 
 msgid "Preferences..."
+msgstr ""
+
+msgid "Undo Whole Document..."
 msgstr ""
 
 msgid "Undo History is unavailable while an agent works"
@@ -21496,6 +22026,12 @@ msgstr "Υποβληθέν σχόλιο αξιολόγησης"
 msgid "Locally submitted comment, shown read-only in the chat"
 msgstr "Τοπικά υποβληθέν σχόλιο, εμφανίζεται μόνο για ανάγνωση στη συνομιλία."
 
+msgid "Message box is full"
+msgstr ""
+
+msgid "The message box is full ({kb} KB). Shorten the draft, or send it and continue in the next message."
+msgstr ""
+
 msgid "Message not sent"
 msgstr "Το μήνυμα δεν στάλθηκε."
 
@@ -21522,6 +22058,15 @@ msgstr "Είσοδος συνομιλίας"
 
 msgid "Type your message here"
 msgstr "Πληκτρολογήστε το μήνυμά σας εδώ"
+
+msgid "The chat draft was refined and can be reverted"
+msgstr ""
+
+msgid "A refinement of the chat draft is in flight"
+msgstr ""
+
+msgid "Refine Draft Epoch"
+msgstr ""
 
 msgid "Chat Messages"
 msgstr "Μηνύματα συνομιλίας"
@@ -21660,6 +22205,12 @@ msgstr "Έχει συνδεθεί"
 
 msgid "Whether user is currently logged in"
 msgstr "Αν ο χρήστης είναι συνδεδεμένος αυτή τη στιγμή."
+
+msgid "Is Guest"
+msgstr ""
+
+msgid "Whether the current session is a guest account"
+msgstr ""
 
 msgid "Is Logging In"
 msgstr "Σύνδεση σε εξέλιξη"
@@ -21861,9 +22412,6 @@ msgstr "Εγγραφή"
 
 msgid "File write"
 msgstr "Εγγραφή αρχείου"
-
-msgid "Command"
-msgstr "Εντολή"
 
 msgid "Shell command"
 msgstr "Εντολή κελύφους"
@@ -23620,9 +24168,6 @@ msgstr "Κούμπωμα δρομέα"
 msgid "Snap 2D cursor"
 msgstr "Κουμπώνει τον δισδιάστατο δρομέα"
 
-msgid "Origin"
-msgstr "Αρχή"
-
 msgid "Mirror selected UVs"
 msgstr "Κατοπτρίζει τα επιλεγμένα UV"
 
@@ -24022,11 +24567,41 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
+msgid "Leave NLA tweak mode to change animations"
+msgstr ""
+
+msgid "This animation is no longer on the object"
+msgstr ""
+
+msgid "This clip is inside a meta strip"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Πίσω στο προηγούμενο"
 
 msgid "Grid & Relationship Lines"
 msgstr "Πλέγμα και γραμμές σχέσεων"
+
+msgid "Browse, solo and play animations without leaving Zen Mode"
+msgstr ""
 
 msgid "Render Engine"
 msgstr "Μηχανή απόδοσης"
@@ -24050,6 +24625,24 @@ msgid "Render Settings"
 msgstr "Ρυθμίσεις απόδοσης"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Solo the {track} track"
+msgstr ""
+
+msgid "Mute the {track} track"
+msgstr ""
+
+msgid "Delete the {strip} strip"
+msgstr ""
+
+msgid "Add {animation} to the object as an NLA track"
+msgstr ""
+
+msgid "Play {animation}"
 msgstr ""
 
 msgid "Menu"
@@ -24089,6 +24682,69 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Wait for the render to finish"
+msgstr ""
+
+msgid "Switch to Object Mode to play animations"
+msgstr ""
+
+msgid "Could not change animation: {reason}"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Play Animation"
+msgstr ""
+
+msgid "Solo this clip in the NLA and play it in its own frame range"
+msgstr ""
+
+msgid "Add to Object"
+msgstr ""
+
+msgid "Add this clip to the object as a new NLA track"
+msgstr ""
+
+msgid "Solo Track"
+msgstr ""
+
+msgid "Evaluate only this NLA track, like the NLA editor's star"
+msgstr ""
+
+msgid "Mute Track"
+msgstr ""
+
+msgid "Turn this NLA track off or on"
+msgstr ""
+
+msgid "Delete Strip"
+msgstr ""
+
+msgid "Delete this NLA strip, and its track if it becomes empty"
+msgstr ""
+
+msgid "Stop Animation"
+msgstr ""
+
+msgid "Stop playback, clear the solo and restore the preview range"
+msgstr ""
+
+msgid "Play / Pause Animation"
+msgstr ""
+
+msgid "Pause or resume playback"
+msgstr ""
+
+msgid "Hide Rig"
+msgstr ""
+
+msgid "Hide or show the rig; the character keeps deforming"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24167,6 +24823,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to see its animations"
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to see its clips."
+msgstr ""
+
+msgid "Show Rig"
+msgstr ""
+
+msgid "NLA track: {track}"
+msgstr ""
+
+msgid "Active action"
+msgstr ""
+
+msgid "Not on this object yet; Play or Add puts it on a new track"
+msgstr ""
+
+msgid "Playing {animation}"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24277,6 +24966,27 @@ msgstr ""
 msgid "Visible in Material Preview and Rendered."
 msgstr ""
 
+msgid "Strip"
+msgstr ""
+
+msgid "In file"
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "The active action and NLA strips of this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be played"
+msgstr ""
+
 msgid "Active Modifier"
 msgstr ""
 
@@ -24321,6 +25031,63 @@ msgstr ""
 
 msgid "File saved by newer Mixar version (%d.%d), some data may be lost"
 msgstr "Το αρχείο αποθηκεύτηκε από νεότερη έκδοση Mixar (%d.%d), ορισμένα δεδομένα μπορεί να χαθούν"
+
+msgid "nothing to undo in this tab"
+msgstr ""
+
+msgid "nothing to redo in this tab"
+msgstr ""
+
+msgid "that step is not this tab's"
+msgstr ""
+
+msgid "this tab is already at that step"
+msgstr ""
+
+msgid "the walk did not reach that step"
+msgstr ""
+
+msgid "another tab changed it since that step"
+msgstr ""
+
+msgid "another tab has taken back its own change to it"
+msgstr ""
+
+msgid "this tab made it after that step and another tab uses it now"
+msgstr ""
+
+msgid "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "moved between tabs since that step: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab since that step and deleted there: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab at that step and gone since: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "shared with another tab (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "{name} ({why})"
+msgstr ""
+
+msgid "shared with another tab: {names} (Edit > Undo Whole Document walks every tab)"
+msgstr ""
+
+msgid "a datablock that step edited no longer exists"
+msgstr ""
+
+msgid "'{name}' is shared between tabs"
+msgstr ""
+
+msgid "'{name}' belongs to another tab"
+msgstr ""
 
 msgid "The file was saved by a newer version, open it with Mixar %s or later"
 msgstr "Το αρχείο αποθηκεύτηκε από νεότερη έκδοση, ανοίξτε το με Mixar %s ή νεότερο"
@@ -24397,6 +25164,9 @@ msgstr ""
 msgid "Banner art to draw"
 msgstr ""
 
+msgid "The account has no plan: ask for a subscription instead of an upgrade"
+msgstr ""
+
 msgid "Add a Paint Layer in the Layers panel to start painting"
 msgstr "Προσθέστε ένα στρώμα ζωγραφικής στο ταμπλό Στρωμάτων για να ξεκινήσετε τη ζωγραφική"
 
@@ -24409,7 +25179,43 @@ msgstr "Έναρξη ή διακοπή υπαγόρευσης στο πρόχε�
 msgid "Stop the running turn"
 msgstr "Διακοπή του τρέχοντος γύρου"
 
+msgid ""
+"Revert\n"
+"\n"
+"Restore the prompt you wrote before it was refined."
+msgstr ""
+"Επαναφορά\n"
+"\n"
+"Επαναφορά της προτροπής που γράψατε πριν εξευγενιστεί."
+
+msgid "Refining this prompt..."
+msgstr "Εξευγενισμός αυτής της προτροπής..."
+
+msgid ""
+"Refine Again\n"
+"\n"
+"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
+msgstr ""
+"Εξευγενισμός ξανά\n"
+"\n"
+"Ξαναγράφει αυτή την προτροπή για το μοντέλο στο οποίο θα σταλεί. Η Επαναφορά επαναφέρει τη δική σας διατύπωση, όχι τον προηγούμενο εξευγενισμό."
+
+msgid ""
+"Refine\n"
+"\n"
+"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
+msgstr ""
+"Εξευγενισμός\n"
+"\n"
+"Ξαναγράφει αυτή την προτροπή για το μοντέλο στο οποίο θα σταλεί, προσθέτοντας τη λεπτομέρεια στην οποία αποκρίνεται το μοντέλο."
+
 msgid "Folder context"
+msgstr ""
+
+msgid "Video context"
+msgstr ""
+
+msgid "File context"
 msgstr ""
 
 msgid "View sketch larger. Add instructions in chat, then Send"
@@ -24420,6 +25226,9 @@ msgstr "Αφαίρεση αναφοράς"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Απόρριψη αυτού του σκίτσου και του σχεδίου του στην ουρά"
+
+msgid "Detach {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Detach folder {}; the agent can no longer read it"
 msgstr ""
@@ -24520,9 +25329,6 @@ msgstr "Άνοιγμα ουράς"
 msgid "Select an item"
 msgstr ""
 
-msgid "Nothing selected"
-msgstr "Δεν επιλέχθηκε τίποτα"
-
 msgid "Finish sketching or dictating before switching tabs"
 msgstr "Ολοκληρώστε το σκίτσο ή την υπαγόρευση πριν αλλάξετε καρτέλες"
 
@@ -24607,6 +25413,15 @@ msgstr "πριν %dd"
 msgid "%dw ago"
 msgstr "πριν %dw"
 
+msgid "Who answers the agent and which model"
+msgstr ""
+
+msgid "Saving your change…"
+msgstr ""
+
+msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "Δημιουργία (%d)"
 
@@ -24621,6 +25436,9 @@ msgstr "{} · Enter για αποστολή"
 
 msgid "Sketch · Enter to send"
 msgstr "Σκίτσο · Enter για αποστολή"
+
+msgid "Who answers the agent and which model. Click to change"
+msgstr ""
 
 msgid "No generations yet"
 msgstr ""
@@ -24790,7 +25608,7 @@ msgstr "Κανόνες — επεξεργασία κανόνων έργου κα
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgid "Attach files or a folder the agent can use as context"
 msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -24819,12 +25637,6 @@ msgstr "Η αυτόματη κατάσταση είναι ενεργή: ο πρ�
 
 msgid "Auto mode: the agent decides open choices itself instead of asking you, and lists its decisions in the summary"
 msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασίζει μόνος του τις ανοιχτές επιλογές αντί να σας ρωτά και καταγράφει τις αποφάσεις του στη σύνοψη"
-
-msgid "Your own API key is in use, and it decides the model. Open this menu and pick \"Change or remove my API key\" to choose a hosted model again"
-msgstr "Χρησιμοποιείται το δικό σας κλειδί API και αυτό καθορίζει το μοντέλο. Ανοίξτε αυτό το μενού και επιλέξτε «Αλλαγή ή αφαίρεση του κλειδιού API» για να ξαναεπιλέξετε φιλοξενούμενο μοντέλο"
-
-msgid "Choose which model the agent runs on"
-msgstr "Επιλέξτε σε ποιο μοντέλο εκτελείται ο πράκτορας"
 
 msgid "Agent Bubble"
 msgstr "Φούσκα πράκτορα"
@@ -24858,6 +25670,12 @@ msgstr "Πλήθος κλεισμένων"
 
 msgid "Number of Agent Bubble windows closed"
 msgstr "Αριθμός παραθύρων φούσκας πράκτορα που έκλεισαν"
+
+msgid "Activate Mixar"
+msgstr ""
+
+msgid "Bring Mixar in front of other applications"
+msgstr ""
 
 msgid "Set Agent Bubble Window Size"
 msgstr "Όρισε μέγεθος παραθύρου φούσκας πράκτορα"
@@ -25336,6 +26154,9 @@ msgstr "Σε ουρά..."
 msgid "Click to edit the prompt and try again"
 msgstr "Κάντε κλικ για επεξεργασία της προτροπής και νέα προσπάθεια"
 
+msgid "Check its input and settings, then try again"
+msgstr ""
+
 msgid ""
 "Export\n"
 "\n"
@@ -25413,36 +26234,6 @@ msgstr ""
 "Προτροπή\n"
 "\n"
 "Περιγράψτε τι θα δημιουργηθεί. Πατήστε Enter για υποβολή αυτού του κόμβου."
-
-msgid ""
-"Revert\n"
-"\n"
-"Restore the prompt you wrote before it was refined."
-msgstr ""
-"Επαναφορά\n"
-"\n"
-"Επαναφορά της προτροπής που γράψατε πριν εξευγενιστεί."
-
-msgid ""
-"Refine Again\n"
-"\n"
-"Rewrite this prompt once more for the model it will be sent to. Revert still restores your own wording, not the previous refinement."
-msgstr ""
-"Εξευγενισμός ξανά\n"
-"\n"
-"Ξαναγράφει αυτή την προτροπή για το μοντέλο στο οποίο θα σταλεί. Η Επαναφορά επαναφέρει τη δική σας διατύπωση, όχι τον προηγούμενο εξευγενισμό."
-
-msgid ""
-"Refine\n"
-"\n"
-"Rewrite this prompt for the model it will be sent to, adding the detail that model responds to."
-msgstr ""
-"Εξευγενισμός\n"
-"\n"
-"Ξαναγράφει αυτή την προτροπή για το μοντέλο στο οποίο θα σταλεί, προσθέτοντας τη λεπτομέρεια στην οποία αποκρίνεται το μοντέλο."
-
-msgid "Refining this prompt..."
-msgstr "Εξευγενισμός αυτής της προτροπής..."
 
 msgid ""
 "Assemble\n"
@@ -26008,6 +26799,12 @@ msgstr "Χώρος συνόλων υφών"
 msgid "Use the sidebar panels to manage texture sets"
 msgstr "Χρησιμοποιήστε τα ταμπλό της πλευρικής στήλης για τη διαχείριση συνόλων υφών"
 
+msgid "Agent Halo Redraw"
+msgstr ""
+
+msgid "Advance the agent-working halo animation without re-rendering the viewport"
+msgstr ""
+
 msgid "Back to first"
 msgstr "Πίσω στο πρώτο"
 
@@ -26557,9 +27354,6 @@ msgstr "Ασφαλείς περιοχές"
 msgid "Select a character to animate"
 msgstr "Επιλέξτε χαρακτήρα για κίνηση"
 
-msgid "Animate"
-msgstr "Κίνηση"
-
 msgid "Key this blocking-level motion from the playhead"
 msgstr "Ορισμός αυτής της κίνησης επιπέδου μπλοκαρίσματος από την κεφαλή αναπαραγωγής"
 
@@ -26721,6 +27515,27 @@ msgstr ""
 
 msgid "Workspace task identity"
 msgstr "Ταυτότητα εργασίας χώρου εργασίας"
+
+msgid "Undo waits for the agent's preview render (undoing now would cancel it)"
+msgstr ""
+
+msgid "Undo waits for the render or bake running in '{tab}' (undoing now would cancel it)"
+msgstr ""
+
+msgid "Unavailable while this tab's agent works"
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\"."
+msgstr ""
+
+msgid "Every tab goes back to how the document was at \"{step}\". Tabs that change: {tabs}."
+msgstr ""
+
+msgid "Undo Whole Document"
+msgstr ""
+
+msgid "Step the whole document back one step, every tab at once, as the classic undo did (the Undo entry walks only this tab)"
+msgstr ""
 
 msgid "Image '%s' is not a movie"
 msgstr ""
@@ -26962,6 +27777,84 @@ msgstr "Κουμπί δράσης με απόχρωση κινδύνου"
 msgid "Borderless quiet action button"
 msgstr "Ήσυχο κουμπί δράσης χωρίς περίγραμμα"
 
+msgid "Sheet title; a subtitle follows a newline"
+msgstr ""
+
+msgid "Square close button with a cross"
+msgstr ""
+
+msgid "Dim section caption; spans wrapped in  are bright"
+msgstr ""
+
+msgid "Provider Row"
+msgstr ""
+
+msgid "Sidebar row; the lit one is the graded pill"
+msgstr ""
+
+msgid "Footer Row"
+msgstr ""
+
+msgid "The sidebar's foot row; extra 1.0 draws a terminal glyph instead of the monitor"
+msgstr ""
+
+msgid "Chip"
+msgstr "Τσιπ"
+
+msgid "Model chip; the lit one is filled"
+msgstr ""
+
+msgid "Field prompt text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Small supporting text"
+msgstr ""
+
+msgid "Body text"
+msgstr ""
+
+msgid "Danger-tinted text"
+msgstr ""
+
+msgid "Green pill; extra 1.0 docks it inside the field before it, 2.0 in a snippet's corner"
+msgstr ""
+
+msgid "Outlined grey pill"
+msgstr ""
+
+msgid "Danger Button"
+msgstr ""
+
+msgid "Danger-tinted pill"
+msgstr ""
+
+msgid "Key field backdrop; extra is the docked control's design-px width"
+msgstr ""
+
+msgid "Menu backdrop with a chevron"
+msgstr ""
+
+msgid "Snippet"
+msgstr ""
+
+msgid "Monospace code block (lines split on newlines) on the key field's backdrop; extra is the corner-docked control's design-px width"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Track-and-knob toggle with its label after it; lit is on"
+msgstr ""
+
+msgid "Status Dot"
+msgstr ""
+
+msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Αριστερό ρυθμιστικό κατάστασης"
 
@@ -27126,9 +28019,6 @@ msgstr "Σύμβολο"
 
 msgid "Header glyph"
 msgstr "Σύμβολο κεφαλίδας"
-
-msgid "Chip"
-msgstr "Τσιπ"
 
 msgid "Chip track"
 msgstr "Ράγα τσιπ"
@@ -27967,6 +28857,30 @@ msgstr ""
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
 msgstr ""
 
+msgid "App Active"
+msgstr ""
+
+msgid "A Mixar window has OS focus; False while another application is in front"
+msgstr ""
+
+msgid "Undo History (per-tab)"
+msgstr ""
+
+msgid "JSON of the undo stack, newest first: each step's name, type, tab (scene session_uid) and owner-map summary (Mixar per-tab undo)"
+msgstr ""
+
+msgid "Last Undo Was Document-Wide"
+msgstr ""
+
+msgid "The undo or redo that ran last walked every tab, not one"
+msgstr ""
+
+msgid "Per-tab Undo"
+msgstr ""
+
+msgid "Undo, redo and the history walk the shown scene tab only (on by default; MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)"
+msgstr ""
+
 msgid "Invalid UI event value"
 msgstr ""
 
@@ -28050,6 +28964,12 @@ msgstr "Φίλτρο επέκτασης αρχείου"
 
 msgid "Write compressed .mixar file"
 msgstr "Εγγραφή συμπιεσμένου αρχείου .mixar"
+
+msgid "Thumbnail"
+msgstr ""
+
+msgid "Store a file thumbnail (a camera render or screenshot) in the file"
+msgstr ""
 
 msgid "Save as .mixar file"
 msgstr "Αποθήκευση ως αρχείο .mixar"

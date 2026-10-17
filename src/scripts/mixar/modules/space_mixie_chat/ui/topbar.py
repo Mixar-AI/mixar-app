@@ -36,7 +36,9 @@ from ..constants import SOUND_FEEDBACK_WIDTHS, SessionState  # noqa: F401  (kept
 from ..core import avatar_icon, sound_feedback
 from ..core.completion_sound import OFF, get_completion_sound, get_notifications_muted
 from ...common.utils import topbar_layout
+from ...common.i18n import iface_
 from ...workflow.constants import BASIC_WORKSPACE_NAME
+from .login_panel import draw_profile_sign_in
 
 
 class MIXAR_PT_profile(Panel):
@@ -44,7 +46,7 @@ class MIXAR_PT_profile(Panel):
 
     The contents are drawn natively by `layout.mixar_profile_card()`
     (`interface_mixar_profile_card.cc`): a greeting, the plan chip, the
-    credit usage meter and the account actions, laid out as one card
+    credit balance and the account actions, laid out as one card
     rather than a menu. Python still owns registration and every
     operator the card invokes — C++ owns only pixels.
     """
@@ -60,6 +62,8 @@ class MIXAR_PT_profile(Panel):
 
     def draw(self, context):
         layout = self.layout
+        if not topbar_layout.account_signed_in(context.window_manager):
+            draw_profile_sign_in(layout, context.window_manager)
 
         try:
             layout.mixar_profile_card()
@@ -70,8 +74,10 @@ class MIXAR_PT_profile(Panel):
 
     @staticmethod
     def _draw_fallback_menu(context, layout) -> None:
-        layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
-        if hasattr(bpy.types, "MIXAR_OT_refer_friend"):
+        logged_in = topbar_layout.account_signed_in(context.window_manager)
+        if logged_in:
+            layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
+        if logged_in and hasattr(bpy.types, "MIXAR_OT_refer_friend"):
             refer = layout.row()
             refer.operator_context = 'INVOKE_DEFAULT'
             refer.operator("mixar.refer_friend", text="Refer a Friend", icon='FUND')
@@ -102,9 +108,9 @@ class MIXAR_PT_profile(Panel):
             "wm.url_open", text="Report a Bug", icon='URL',
         ).url = "https://www.mixar.app/bug-report"
 
-        layout.separator()
-
-        layout.operator("mixie_chat.logout", text="Logout", icon='PANEL_CLOSE')
+        if logged_in:
+            layout.separator()
+            layout.operator("mixie_chat.logout", text="Logout", icon='PANEL_CLOSE')
 
 
 
@@ -161,17 +167,8 @@ def _profile_pill_size(context, email, sound):
         email, lane[0], engine=lane[1], sound=sound, selectors=lane[2])
 
 
-def _login_button_size(context, sound):
-    """(ui_units_x, label) for the Login button at the window's width."""
-    lane = _account_lane(context)
-    if lane is None:
-        return topbar_layout.LOGIN_UNITS, "Login"
-    return topbar_layout.login_button(
-        lane[0], engine=lane[1], sound=sound, selectors=lane[2])
-
-
 def _draw_topbar_profile_right(self, context):
-    """Append the profile dropdown / login button to the right side of the top bar.
+    """Append the shared account / guest dropdown to the right of the top bar.
 
     Runs after `TOPBAR_HT_upper_bar.draw_right`, so it lands to the
     right of the view-layer search (the prior right-most item) — which
@@ -189,7 +186,7 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
-    logged_in = getattr(wm, 'mixie_chat_is_logged_in', False)
+    logged_in = topbar_layout.account_signed_in(wm)
     # On the narrowest windows the account button keeps the lane; sound
     # stays reachable from Preferences.
     sound = _show_sound_toggle(context, logged_in)
@@ -201,42 +198,17 @@ def _draw_topbar_profile_right(self, context):
     # for its taller account icon so the label remains fully visible.
     account = layout.row(align=True)
 
-    if logged_in:
-        # Logged in → email pill that opens the profile popover.
-        # ui_units_x mirrors the sizing previously used in the mixie
-        # chat header so the pill width still grows with the email.
-        email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
-        profile_sub = account.row(align=True)
-        # Grows with the email, but never into the centred mode slider: a
-        # short right lane shortens the label, then shows the avatar alone.
-        profile_sub.ui_units_x, label = _profile_pill_size(context, email, sound)
-        # Native account chip (interface_mixar_topbar.cc): dark slab, label,
-        # and a full-height avatar disc at the RIGHT end per the design —
-        # which is also why no `icon=` is passed here (Blender would pin it
-        # to the left slot). The disc carries the stock person glyph: with no
-        # profile picture set, the placeholder social platforms use reads
-        # better than a generated initial.
+    email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
+    caption = email if logged_in else iface_("Guest")
+    profile_sub = account.row(align=True)
+    # Guest uses the same lane budget and avatar-only narrow-window fallback.
+    profile_sub.ui_units_x, label = _profile_pill_size(context, caption, sound)
+    if hasattr(profile_sub, "mixar_topbar_element"):
         profile_sub.popover(panel="MIXAR_PT_profile", text=label, translate=False)
-        if hasattr(profile_sub, "mixar_topbar_element"):
-            profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
-        else:
-            # Older build without the widget: keep an icon so the chip still
-            # reads as an account control.
-            avatar_id = avatar_icon.get_avatar_icon_id(email)
-            if avatar_id:
-                profile_sub.popover(
-                    panel="MIXAR_PT_profile", text=email, icon_value=avatar_id,
-                    translate=False)
+        profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
     else:
-        # Icon-only on windows whose right lane cannot fit the label.
-        account.ui_units_x, label = _login_button_size(context, sound)
-        # Not logged in → login popover (preferred) with operator fallback
-        # for the brief window where the login panel class hasn't
-        # finished registering yet.
-        if hasattr(bpy.types, 'MIXIE_CHAT_PT_login'):
-            account.popover(panel="MIXIE_CHAT_PT_login", text=label, icon='USER')
-        else:
-            account.operator("mixie_chat.login", text=label, icon='USER')
+        profile_sub.popover(panel="MIXAR_PT_profile", text=label,
+                            icon='USER', translate=False)
 
 
 def register():

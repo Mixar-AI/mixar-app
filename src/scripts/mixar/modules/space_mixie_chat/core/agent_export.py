@@ -22,15 +22,16 @@ from __future__ import annotations
 import os
 import re
 import time
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 
 import bpy
 
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
+from .export_materials import temporary_export_materials as _temporary_export_materials
 from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
-    active_mixar_nodes,
+    active_mixar_nodes,  # noqa: F401 — kept importable from here
     clear_repair_cache,
     export_targets,
     material_images,
@@ -40,6 +41,7 @@ from .export_preflight import (
 )
 from .export_presets import PRESETS, preset_kwargs, preset_report, stl_kwargs  # noqa: F401
 from .export_verify import file_clip_names, verify_export
+from .export_web import is_web_gltf, web_scene_objects
 
 EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
               "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz", "stl": ".stl"}
@@ -89,46 +91,6 @@ def _run_operator(fmt: str, filepath: str, use_case: str, animations,
         kwargs["export_format"] = 'GLB' if fmt == "glb" else 'GLTF_SEPARATE'
     status = _exporter(fmt)(filepath=filepath, **kwargs)
     return status, kwargs, mode, warning
-
-
-@contextmanager
-def _temporary_export_materials(meshes):
-    """Swap every Mixar slot to a Principled/image material for export."""
-    from mixar.modules.paint.core.asset_export.bake_and_assign import (
-        create_export_material,
-    )
-
-    assignments, created = [], []
-    try:
-        for obj in meshes:
-            original_index = obj.active_material_index
-            try:
-                for index, material in enumerate(list(obj.data.materials)):
-                    nodes = active_mixar_nodes(material)
-                    if not nodes:
-                        continue
-                    obj.active_material_index = index
-                    export_material = create_export_material(
-                        obj, nodes[0].node_tree.mp, nodes[0].node_tree,
-                    )
-                    if export_material:
-                        assignments.append((obj, index, material))
-                        created.append(export_material)
-            finally:
-                obj.active_material_index = original_index
-        yield
-    finally:
-        for obj, index, material in reversed(assignments):
-            try:
-                obj.data.materials[index] = material
-            except Exception:
-                pass
-        for material in created:
-            try:
-                if material.users == 0:
-                    bpy.data.materials.remove(material)
-            except Exception:
-                pass
 
 
 def scrub_error(exc: BaseException) -> str:
@@ -210,7 +172,12 @@ def run_export(session_id: str, spec: dict) -> dict:
         armatures = _required_armatures(meshes)
         counts = {"mesh_count": len(meshes), "armature_count": len(armatures),
                   "readiness_bypassed": readiness_bypassed}
-        export_objects = set(meshes) | armatures
+        use_case = str(spec.get("use_case") or "other")
+        # three.js: groups, cameras and lights ride along (export_web).
+        staging, scene_objects, web_warning = (
+            web_scene_objects(meshes, str(spec.get("target_scope") or "scene"), scene)
+            if is_web_gltf(use_case, fmt) else (set(), None, ""))
+        export_objects = set(meshes) | armatures | staging
         if bpy.ops.object.select_all.poll():
             bpy.ops.object.select_all(action='DESELECT')
         for obj in export_objects:
@@ -232,14 +199,14 @@ def run_export(session_id: str, spec: dict) -> dict:
                     overrides = ({"path_mode": "RELATIVE"} if staged
                                  else stl_kwargs(spec) if stl else None)
                     status, kwargs, anim_mode, warning = _run_operator(
-                        fmt, filepath, str(spec.get("use_case") or "other"), animations,
-                        overrides,
+                        fmt, filepath, use_case, animations, overrides,
                     )
         if 'FINISHED' not in status:
             raise RuntimeError(f"Blender exporter returned {sorted(status)}")
         if fmt in STATIC_WARNINGS:
             warning = STATIC_WARNINGS[fmt]
             clips = []
+        warning = " ".join(w for w in (warning.strip(), web_warning) if w)
         size = 0
         try:
             size = os.path.getsize(filepath)
@@ -254,6 +221,8 @@ def run_export(session_id: str, spec: dict) -> dict:
                                 else _images_expected(meshes)),
             "compression": "none",
             "stl_scale": kwargs.get("global_scale") if stl else None,
+            "lights": scene_objects["lights"] if scene_objects else None,
+            "cameras": scene_objects["cameras"] if scene_objects else None,
         })
         if verification.get("checked") and verification.get("animations"):
             # Names as the FILE holds them, mapped back to the scene clip names
@@ -272,11 +241,13 @@ def run_export(session_id: str, spec: dict) -> dict:
             "clips": clips,
             "clips_requested": animations,
             "clips_missing": clips_missing,
-            "preset": preset_report(str(spec.get("use_case") or "other"), fmt, kwargs, anim_mode),
+            "preset": preset_report(use_case, fmt, kwargs, anim_mode),
             "textures_folder": textures_folder,
             "verification": verification,
             "duration_ms": int((time.perf_counter() - started) * 1000),
         }
+        if scene_objects is not None:
+            result["scene_objects"] = scene_objects
         _telemetry(context, fmt, spec, success=True, extension=extension, started=started, extra={
             **counts, "clip_count": len(clips),
             "verification_checked": bool(verification.get("checked")),

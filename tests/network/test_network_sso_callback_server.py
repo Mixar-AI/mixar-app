@@ -98,6 +98,17 @@ def test_stray_request_without_code_is_answered_ok(server):
     assert sso.wait_for_code(srv, state, timeout=1) is None
 
 
+def test_cancel_ends_the_wait_within_a_second(server):
+    """A newer sign-in replaces this one: the old callback wait must stop
+    promptly instead of holding its port for the full SSO timeout."""
+    srv, state, _ = server
+    cancel = threading.Event()
+    threading.Timer(0.2, cancel.set).start()
+    started = time.monotonic()
+    assert sso.wait_for_code(srv, state, timeout=30, cancel=cancel) is None
+    assert time.monotonic() - started < 2.5
+
+
 def test_first_code_wins():
     state = sso.CallbackState("s")
     state.accept("first")

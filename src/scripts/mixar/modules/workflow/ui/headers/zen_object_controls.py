@@ -3,6 +3,7 @@
 
 """Floating adaptive bar; native popovers hold the detailed properties."""
 import bpy
+from mixar.modules.common.i18n import tip_
 from ...core.zen_object_controls import selected_object
 
 
@@ -15,6 +16,7 @@ def _section(row, panel, label):
         cell.enabled = False
         cell.label(text=label)
     cell.mixar_style(component="TOOLBAR", variant="SECONDARY")
+    return cell
 
 
 def draw_object_controls(layout, context):
@@ -26,16 +28,17 @@ def draw_object_controls(layout, context):
     grip = row.row(align=True)
     grip.ui_units_x = 1.4
     grip.operator_context = 'INVOKE_DEFAULT'
-    grip.operator('view2d.pan', text='', icon='GRIP')
+    grip.operator('view2d.pan', text='', icon='GRIP_V')
     grip.mixar_style(component="TOOLBAR", variant="GHOST")
     name = row.row(align=True)
     name.ui_units_x = 5.0
-    name.label(text=obj.name if len(obj.name) <= 12 else obj.name[:11] + "…")
+    name.label(text=obj.name if len(obj.name) <= 12 else obj.name[:11] + "…",
+               translate=False)
     name.mixar_style(component="TOOLBAR", variant="GHOST")
     if obj.type == "MESH":
         _section(row, "MIXAR_PT_zen_object_modifiers", "Modifier")
         _section(row, "MIXAR_PT_zen_object_textures", "Textures")
-    else:
+    elif obj.type == "LIGHT":
         controls = row.row(align=True)
         controls.enabled = obj.data.is_editable
         caption = controls.row(align=True)
@@ -54,6 +57,11 @@ def draw_object_controls(layout, context):
         energy.ui_units_x = 6.5
         energy.prop(obj.data, "energy", text="", slider=True)
         energy.mixar_style(component="TOOLBAR", variant="SECONDARY")
+
+    if obj.type in {"MESH", "ARMATURE"}:
+        animations = _section(row, "MIXAR_PT_animations", "Animations")
+        animations.mixar_tooltip(text=tip_(
+            "Browse, solo and play animations without leaving Zen Mode"))
 
     close = row.row(align=True)
     close.ui_units_x = 1.4

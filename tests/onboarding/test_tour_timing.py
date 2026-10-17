@@ -50,7 +50,7 @@ def test_apply_retimes_every_number_and_nothing_else():
             if oa.appear_ms is not None:
                 assert ob.appear_ms == int(oa.appear_ms * 1.3) + 500
     keys = next(ov for ov in out.beats[3].overlays if ov.rows)
-    assert keys.rows[1][2] == int(20000 * 1.3) + 500
+    assert keys.rows[1][2] == int(19880 * 1.3) + 500
     assert keys.rows[1][:2] == ("G", "Move")
 
 

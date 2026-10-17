@@ -48,6 +48,7 @@ static PyMethodDef meth_sound_from_pointer[] = {
      ":rtype: :class:`Factory`"}};
 
 void mixar_capture_register(PyObject *module);
+void mixar_stall_watchdog_register(PyObject *module);
 
 PyObject *BPyInit_audaspace()
 {
@@ -60,6 +61,7 @@ PyObject *BPyInit_audaspace()
   PyModule_AddObject(
       module, "_sound_from_pointer", PyCFunction_New(meth_sound_from_pointer, nullptr));
   mixar_capture_register(module);
+  mixar_stall_watchdog_register(module);
   PyDict_SetItemString(PyImport_GetModuleDict(), "aud", module);
 
   return module;

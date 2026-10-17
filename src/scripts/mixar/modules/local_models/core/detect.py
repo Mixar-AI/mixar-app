@@ -19,6 +19,7 @@ from typing import List
 from mixar.config.logging_config import get_logger
 
 from ..constants import KNOWN_LOCAL_SERVERS
+from .model_name import safe_model_name
 
 logger = get_logger(__name__)
 
@@ -45,7 +46,9 @@ def _probe_one(kind: str, port: int, timeout: float):
     if isinstance(data, list):
         for item in data:
             if isinstance(item, dict) and isinstance(item.get("id"), str):
-                models.append(item["id"])
+                # An unaliased llama.cpp server reports its .gguf path as
+                # the id; offer only the basename (never a local path).
+                models.append(safe_model_name(item["id"]))
     return {"kind": kind, "port": port, "base_url": base_url, "models": models}
 
 

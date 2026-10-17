@@ -236,13 +236,26 @@ class CommitProof:
             for record in self.records
         ]
 
-    def reverted(self, exc, revision: str) -> dict:
-        """The response of a failed proof, after the files were reverted."""
-        restored = [
+    def live_or_failure(self) -> tuple:
+        """``(live, failed)``: go_live after the commit landed. The files are
+        committed and the proposal spent, so an install/enable failure is
+        reported as a failed live entry, never raised as a failed commit."""
+        try:
+            return self.go_live(), False
+        except Exception as exc:
+            return [{"success": False, "message": f"{type(exc).__name__}: {exc}"}], True
+
+    def restore(self) -> list:
+        """Put back what Blender had live for every add-on the proof reloaded."""
+        return [
             restore_live(self.root, name, was_live=self.was_live.get(name, False),
                          allow_root_package=self.allow_root_package)
             for name in self.targets
         ]
+
+    def reverted(self, exc, revision: str) -> dict:
+        """The response of a failed proof, after the files were reverted."""
+        restored = self.restore()
         return {
             "success": False,
             "reverted": True,

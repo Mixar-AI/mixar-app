@@ -5,6 +5,10 @@
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
 
+#if defined(WIN32) || defined(__linux__)
+#  include <algorithm>
+#endif
+
 #include "BKE_screen.hh"
 #include "DNA_windowmanager_types.h"
 #include "ED_mixar_glass.hh"
@@ -58,5 +62,29 @@ bool agent_bubble_island_bed_is_transparent()
 {
   return island_glass.transparent;
 }
+
+#if defined(WIN32) || defined(__linux__)
+void agent_bubble_composited_island_wash(float wash[4])
+{
+  wash[3] = std::max(wash[3], 0.88f);
+}
+
+void agent_bubble_composited_transcript_color(float r_rgba[4], const float wash[4])
+{
+  if (!island_glass.transparent) {
+    return;
+  }
+  /* Preserve the theme hue and stronger user opacity. Framebuffer clears must
+   * be premultiplied: Windows/X11 draw their host with ALPHA_UNDER_PREMUL,
+   * and Wayland's compositor expects premultiplied surface pixels.
+   * This is local bed opacity, never opacity of the whole native window/UI. */
+  constexpr float transcript_min_alpha = 0.88f;
+  const float alpha = std::max(wash[3], transcript_min_alpha);
+  for (int channel = 0; channel < 3; channel++) {
+    r_rgba[channel] = wash[channel] * alpha;
+  }
+  r_rgba[3] = alpha;
+}
+#endif
 
 }  // namespace blender

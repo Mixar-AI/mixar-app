@@ -10,6 +10,16 @@ PORT_SCAN_RANGE = 10          # try DEFAULT_PORT..DEFAULT_PORT+9 if taken
 TOKEN_LENGTH = 16             # url-safe pairing token characters
 WS_PATH = "/ws"
 
+# WebSocket close codes the phone treats as FINAL (no auto-reconnect; it asks
+# for a fresh QR scan). webapp/js/net.js mirrors the 4000-4003 range.
+CLOSE_REPLACED = 4000         # another phone/tab took over this pairing
+CLOSE_PAIRING_EXPIRED = 4001  # the token is stale (new code or restart)
+CLOSE_REPAIRED = 4002         # "New Pairing Code" invalidated this phone
+CLOSE_SERVER_STOPPED = 4003   # the server was stopped in Mixar
+
+# Outbound queue bounds (see core/server.py:_Connection)
+JSON_QUEUE_MAX = 64           # toasts + pongs; state is coalesced separately
+
 # Control loop
 APPLY_TIMER_INTERVAL = 1.0 / 60.0   # main-thread pose apply cadence (seconds)
 CONTROL_STALE_SECONDS = 1.0         # ignore control packets older than this

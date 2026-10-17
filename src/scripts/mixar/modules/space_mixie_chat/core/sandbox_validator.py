@@ -17,6 +17,14 @@ import re
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
+from .sandbox_denylist import (
+    DENIED_ATTR_NAMES,
+    denied_ops_kwargs,
+    is_denied_ops_namespace,
+    op_denial_reason,
+    types_denial_reason,
+)
+
 logger = get_logger(__name__)
 
 # Attribute names that enable sandbox escape via introspection.
@@ -78,6 +86,45 @@ class _SandboxASTValidator(ast.NodeVisitor):
                 f"Line {node.lineno}: access to '{node.attr}' is blocked "
                 f"(sandbox restriction)"
             )
+        elif node.attr in DENIED_ATTR_NAMES:
+            self.violations.append(
+                f"Line {node.lineno}: '{node.attr}' is blocked (sandbox "
+                f"restriction): it runs code outside the sandbox"
+            )
+        else:
+            reason = _ops_chain_denial(node) or _types_chain_denial(node)
+            if reason:
+                self.violations.append(f"Line {node.lineno}: {reason}")
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        # bpy.ops.node.add_node(settings=[...]) eval()s each setting value.
+        func = node.func
+        if (
+            isinstance(func, ast.Attribute)
+            and isinstance(func.value, ast.Attribute)
+            and isinstance(func.value.value, ast.Attribute)
+            and func.value.value.attr == "ops"
+        ):
+            denied = denied_ops_kwargs(func.value.attr)
+            for keyword in node.keywords:
+                if keyword.arg in denied:
+                    self.violations.append(
+                        f"Line {node.lineno}: bpy.ops.{func.value.attr}."
+                        f"{func.attr}({keyword.arg}=...) is blocked (sandbox "
+                        f"restriction): the operator eval()s it"
+                    )
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        # `from bpy.utils import execfile` binds the name without an
+        # Attribute node.
+        for alias in node.names:
+            if alias.name in DENIED_ATTR_NAMES:
+                self.violations.append(
+                    f"Line {node.lineno}: importing '{alias.name}' is blocked "
+                    f"(sandbox restriction): it runs code outside the sandbox"
+                )
         self.generic_visit(node)
 
     def visit_Constant(self, node: ast.Constant) -> None:
@@ -90,6 +137,40 @@ class _SandboxASTValidator(ast.NodeVisitor):
                             f"'{attr}' (sandbox restriction)"
                         )
         self.generic_visit(node)
+
+
+def _ops_chain_denial(node: ast.Attribute):
+    """Reason ``<x>.ops.<ns>`` or ``<x>.ops.<ns>.<op>`` is refused, or None.
+
+    Only the static spelling; computed names are refused at runtime by the
+    bpy.ops proxy (sandbox_bpy.py), which enforces the same set.
+    """
+    value = node.value
+    if isinstance(value, ast.Attribute) and value.attr == "ops":
+        if is_denied_ops_namespace(node.attr):
+            return op_denial_reason(node.attr, "")
+        return None
+    if (
+        isinstance(value, ast.Attribute)
+        and isinstance(value.value, ast.Attribute)
+        and value.value.attr == "ops"
+        and not is_denied_ops_namespace(value.attr)  # reported one level up
+    ):
+        return op_denial_reason(value.attr, node.attr)
+    return None
+
+
+def _types_chain_denial(node: ast.Attribute):
+    """Reason ``<x>.types.<X_OT_y>`` is refused, or None.
+
+    Only the operator-struct spelling is decidable statically; whether a
+    class was registered from Python is checked at runtime by the bpy.types
+    proxy (sandbox_bpy.py), which enforces the same rule.
+    """
+    value = node.value
+    if isinstance(value, ast.Attribute) and value.attr == "types":
+        return types_denial_reason(node.attr)
+    return None
 
 
 def validate_script_ast(script: str) -> Optional[str]:

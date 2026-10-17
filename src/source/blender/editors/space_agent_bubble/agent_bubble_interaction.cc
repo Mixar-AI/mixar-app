@@ -4,15 +4,38 @@
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 #include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_types.hh"
+
+#include "UI_interface_c.hh"
+
+#include "../interface/interface_intern.hh"
 
 #include "agent_bubble_intern.hh"
 
 namespace blender {
+
+/* Switching Zen / Engine is app chrome, not leaving the chat: a press on the
+ * topbar Zen/Engine slider keeps the island open. It used to collapse it
+ * mid-turn, and the collapse hid the island behind the main window for about
+ * 0.3 s before the pill appeared. Only buttons in the pressed area's regions are
+ * seen here: an item in a popup menu would not be (the old "Zen Mode / Engine
+ * Mode" menu is dormant, `mode_menu.py`). */
+static bool agent_bubble_press_hits_mode_switch(bContext *C, const wmEvent *event)
+{
+  const ARegion *region = CTX_wm_region(C);
+  if (region == nullptr) {
+    return false;
+  }
+  const ui::Button *but = ui::but_find_mouse_over(region, event);
+  return but != nullptr && but->optype != nullptr &&
+         STRPREFIX(but->optype->idname, "MIXAR_OT_set_ui_mode_");
+}
 
 bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble, void *pill)
 {
@@ -26,6 +49,16 @@ bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble
   /* A press inside a temporary window (picker, render view, Preferences) is
    * interaction with that window, not an outside click. */
   if (WM_window_is_temp_screen(target)) {
+    return false;
+  }
+  /* While a modal dialog hides the island (splash, close-file, a
+   * `mixar_invoke_modal_dialog`), presses belong to that dialog: collapsing
+   * the hidden island here would bring it back minimised instead of as it was
+   * (wm_mixar_modal_dialog.cc). */
+  if (Mixar_floating_docks_held()) {
+    return false;
+  }
+  if (agent_bubble_press_hits_mode_switch(C, event)) {
     return false;
   }
   wmWindowManager *wm = CTX_wm_manager(C);

@@ -11,7 +11,7 @@ Replays each trigger and each way out, through the real native banner:
    **Upgrade Plan** closes it and reaches the Upgrade destination;
 2. a repeat of a push that carries an id does not reopen it;
 3. **Refer a Friend**, **Creator Program**, **Use your own API key** and
-   **Connect AI apps (MCP)** reach theirs;
+   **Connect MCP** reach theirs;
 4. a click inside the card that is not a button keeps it open; Esc closes it;
    a click on the dimmed backdrop closes it;
 5. a job that fails out of credits opens the banner and pushes no error toast;
@@ -337,7 +337,7 @@ def run(qa):
         qa.step('click_byok', qa.click, surface='credits_banner', text='Use your own API key')
         qa.step('byok_closed', wait_closed, qa)
         open_banner(qa, MANUAL, 'mcp')
-        qa.step('click_mcp', qa.click, surface='credits_banner', text='Connect AI apps (MCP)')
+        qa.step('click_mcp', qa.click, surface='credits_banner', text='Connect MCP')
         qa.step('mcp_closed', wait_closed, qa)
         expect_hits(qa, ['UPGRADE', 'REFER', 'CREATOR', 'BYOK', 'MCP'], 'secondary')
 

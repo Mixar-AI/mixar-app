@@ -224,10 +224,16 @@ def render_to_jpeg(scene, out_path, render_token=None):
 
 def _render_to_jpeg(scene, out_path):
     """Render the staged scene straight to ``out_path`` as JPEG. True on success."""
-    orig_format = scene.render.image_settings.file_format
-    orig_quality = scene.render.image_settings.quality
-    scene.render.image_settings.file_format = 'JPEG'
-    scene.render.image_settings.quality = 80
+    settings = scene.render.image_settings
+    orig_media_type = getattr(settings, "media_type", None)
+    orig_format = settings.file_format
+    orig_quality = settings.quality
+    # media_type BEFORE file_format: on Blender 5 a scene whose output is
+    # video (FFMPEG) rejects JPEG outright, and this renders the user's scene.
+    if orig_media_type is not None:
+        settings.media_type = 'IMAGE'
+    settings.file_format = 'JPEG'
+    settings.quality = 80
     try:
         bpy.ops.render.render()
         render_img = bpy.data.images.get('Render Result')
@@ -236,8 +242,10 @@ def _render_to_jpeg(scene, out_path):
         render_img.save_render(filepath=out_path, scene=scene)
         return True
     finally:
-        scene.render.image_settings.file_format = orig_format
-        scene.render.image_settings.quality = orig_quality
+        if orig_media_type is not None:
+            settings.media_type = orig_media_type
+        settings.file_format = orig_format
+        settings.quality = orig_quality
 
 
 def render_to_image(scene, image_name, pack=True, render_token=None):
