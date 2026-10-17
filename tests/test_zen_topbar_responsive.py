@@ -16,9 +16,9 @@ from mixar.modules.workflow.ui.headers import mode_filter_header as header
 # -- Scene toolbar tiers ----------------------------------------------------
 
 def test_tiers_follow_lane_budgets_not_fixed_breakpoints():
-    # A 1512-logical window (MacBook Pro 14" at 1x) has room for the inline
-    # render engine and samples; they must not collapse into a popover.
-    assert tiers.tier_for_width(1512) == tiers.FULL
+    # Animation browsing stays beside playback; render settings collapse first
+    # on a 1512-logical-pixel window rather than clipping the new control.
+    assert tiers.tier_for_width(1512) == tiers.COMPACT
     assert tiers.tier_for_width(tiers.required_width(tiers.FULL) - 1) == tiers.COMPACT
 
 

@@ -101,6 +101,8 @@ def _patched_header_draw(self, context):
     # move scene settings into native popovers instead of clipping controls.
     tier = zen_scene_controls.header_tier(context)
     left = layout.row(align=False)
+    from ...core.animation_preview import current as animation_preview
+    left.enabled = animation_preview() is None
     # Let child controls own their widths; a smaller parent budget squeezes
     # the leading Add menu before the native header can adapt.
     zen_scene_controls.draw_left(left, context, tier=tier)
@@ -148,7 +150,9 @@ def _patched_tool_header_draw(self, context):
         if _original_tool_header_draw is not None:
             _original_tool_header_draw(self, context)
         return
-    draw_object_controls(self.layout, context)
+    from ...core.animation_preview import current as animation_preview
+    if animation_preview() is None:
+        draw_object_controls(self.layout, context)
 
 
 def _tool_helper():

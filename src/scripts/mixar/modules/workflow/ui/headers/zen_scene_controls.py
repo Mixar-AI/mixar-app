@@ -5,7 +5,7 @@
 
 import bpy
 
-from mixar.modules.common.i18n import n_
+from mixar.modules.common.i18n import n_, tip_
 
 from ...core import viewport_guides, zen_toolbar_layout as tiers
 from ...core.zen_scene import render_samples_binding, sky_enabled
@@ -69,6 +69,19 @@ def draw_render_settings(layout, context, *, vertical=False):
 
 
 def draw_playback(layout, context):
+    from ...core.animation_preview import current
+    if current():
+        row = layout.mixar_surface(theme="ZEN").row(align=True)
+        row.ui_units_x = 5.8
+        row.scale_x = 1.9
+        row.operator("mixar.animation_stop", text="", icon="SNAP_FACE")
+        row.operator("mixar.animation_pause", text="", icon="PAUSE"
+                     if context.window_manager.mixar_animations.playing else "PLAY")
+        last = row.row(align=True)
+        last.enabled = False
+        last.operator("screen.keyframe_jump", text="", icon="NEXT_KEYFRAME").next = True
+        style(row)
+        return
     row = layout.mixar_surface(theme="ZEN").row(align=True)
     row.alignment = "EXPAND"
     row.ui_units_x = 5.8
@@ -174,19 +187,48 @@ def draw_guides(layout, context):
     chip.mixar_style(component="TOOLBAR", variant="GHOST")
 
 
+def draw_animations(layout, context, *, tier):
+    animations = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+    if hasattr(bpy.types, "MIXAR_PT_animations"):
+        compact = tiers.at_most(tier, tiers.NARROW)
+        animations.ui_units_x = 2.0 if compact else 6.0
+        animations.popover(panel="MIXAR_PT_animations",
+                           text="" if compact else "Animations", icon="ACTION")
+        animations.mixar_tooltip(text=tip_("Browse and preview animations without leaving Zen Mode"))
+        style(animations)
+
+
 def draw_right(layout, context, *, tier):
+    from ...core import animation_preview
+    previewing = animation_preview.current() is not None
     # Native row spacing is enough between groups; extra separators double it.
     if not tiers.at_most(tier, tiers.TIGHT):
-        draw_cinema(layout, context)
+        cinema = layout.row()
+        cinema.enabled = not previewing
+        draw_cinema(cinema, context)
     if tiers.overflow_sections(tier) and hasattr(bpy.types, "MIXAR_PT_zen_toolbar_more"):
+        transport = layout.mixar_surface(theme="ZEN").row(align=True)
+        transport.ui_units_x = 3.8
+        playing = (context.window_manager.mixar_animations.playing if previewing
+                   else context.screen.is_animation_playing)
+        transport.operator("mixar.animation_pause" if previewing else "screen.animation_play",
+                           text="", icon="PAUSE" if playing else "PLAY")
+        transport.operator("mixar.animation_stop" if previewing else "screen.animation_cancel",
+                           text="", icon="SNAP_FACE")
+        style(transport)
+        draw_animations(layout, context, tier=tier)
         more = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+        more.enabled = not previewing
         more.ui_units_x = 2.0
         more.popover(panel="MIXAR_PT_zen_toolbar_more", text="", icon="DOWNARROW_HLT")
         style(more)
     else:
         draw_playback(layout, context)
-        draw_sky(layout, context)
-        draw_export(layout)
+        draw_animations(layout, context, tier=tier)
+        settings = layout.row()
+        settings.enabled = not previewing
+        draw_sky(settings, context)
+        draw_export(settings)
 
 
 def draw_export(layout):

@@ -123,7 +123,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 | **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; one folder per scene (the scene id is written back after undo blanks it); 15-day prune on a worker thread, undo-only sessions dropped |
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
 | **onboarding** / **plugin_import** | First-run interactive tour: founder video cut into beats that drive real UI actions with semantic anchors, a fake cursor and state-polled gates (`core/tour/`), replayable from Help ▸ Start tour; one first-time splash language for the UI and tour (all UI locales; ten voices, English bundled and nine CDN packs; English-timed local subtitles when a voice is unavailable); plugin_import copies the user's vanilla-Blender plugins in from Edit ▸ Preferences ▸ Add-ons |
-| **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider, Zen scene toolbar and Mixar topbar widgets |
+| **workflow** | Zen/Engine workspace UI, the topbar slider and Zen scene toolbar; Animations popover beside playback browses slotted actions and previews private scene/object copies without changing the project's animation |
 | **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |
 

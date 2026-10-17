@@ -24330,6 +24330,24 @@ msgstr ""
 msgid "Tangent-space normal texture (Non-Color; requires UVs)"
 msgstr ""
 
+msgid "Select a character or animated object"
+msgstr ""
+
+msgid "This animation is for a different data type"
+msgstr ""
+
+msgid "This animation has no keyframes"
+msgstr ""
+
+msgid "This animation does not match the selected object"
+msgstr ""
+
+msgid "The animation is no longer available"
+msgstr ""
+
+msgid "The animation slot is no longer available"
+msgstr ""
+
 msgid "Back to Previous"
 msgstr "Zurück zum vorherigen"
 
@@ -24358,6 +24376,15 @@ msgid "Render Settings"
 msgstr "Render-Einstellungen"
 
 msgid "Object Controls"
+msgstr ""
+
+msgid "Browse and preview animations without leaving Zen Mode"
+msgstr ""
+
+msgid "{seconds:.1f}s"
+msgstr ""
+
+msgid "Preview {animation} without changing your scene"
 msgstr ""
 
 msgid "Menu"
@@ -24397,6 +24424,33 @@ msgid "Search all modifiers…"
 msgstr ""
 
 msgid "Particles"
+msgstr ""
+
+msgid "Refresh Animations"
+msgstr ""
+
+msgid "Refresh animations after importing or editing clips"
+msgstr ""
+
+msgid "Preview Animation"
+msgstr ""
+
+msgid "Play this animation in a temporary copy; your project stays unchanged"
+msgstr ""
+
+msgid "Could not preview animation: {reason}"
+msgstr ""
+
+msgid "Stop Preview"
+msgstr ""
+
+msgid "Return to your scene and its original animation"
+msgstr ""
+
+msgid "Play / Pause Preview"
+msgstr ""
+
+msgid "Animation Preview Controls"
 msgstr ""
 
 msgid "Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"
@@ -24475,6 +24529,39 @@ msgid "Make Unique"
 msgstr ""
 
 msgid "Copy this material for the active slot so other objects keep their look"
+msgstr ""
+
+msgid "Select an object to preview"
+msgstr ""
+
+msgid "Preview failed. Try another clip."
+msgstr ""
+
+msgid "Finding animations…"
+msgstr ""
+
+msgid "Used in scene"
+msgstr ""
+
+msgid "No matching animations"
+msgstr ""
+
+msgid "No animations assigned"
+msgstr ""
+
+msgid "Try All in file to find other clips."
+msgstr ""
+
+msgid "Select an object to preview its clips."
+msgstr ""
+
+msgid "Preparing preview…"
+msgstr ""
+
+msgid "Previewing"
+msgstr ""
+
+msgid "Preview only · your scene is unchanged"
 msgstr ""
 
 msgid "Scene and View Layer"
@@ -24583,6 +24670,24 @@ msgid "Haze"
 msgstr ""
 
 msgid "Visible in Material Preview and Rendered."
+msgstr ""
+
+msgid "Search animations"
+msgstr ""
+
+msgid "Selected object"
+msgstr ""
+
+msgid "Animations assigned to this object or its rig"
+msgstr ""
+
+msgid "All in file"
+msgstr ""
+
+msgid "Browse every animation; only matching slots can be previewed"
+msgstr ""
+
+msgid "Loop"
 msgstr ""
 
 msgid "Active Modifier"
