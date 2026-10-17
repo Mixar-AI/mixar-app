@@ -11267,8 +11267,8 @@ msgid "Skeleton Spec"
 msgstr "Specifikacija skeleta"
 
 # derived
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konvencija skeleta: 'tripo' ili 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Imenovanje kostiju: tripo, mixamo, actorcore, unity, unreal ili vrm (unapred zadate Tripo animacije podržava samo tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

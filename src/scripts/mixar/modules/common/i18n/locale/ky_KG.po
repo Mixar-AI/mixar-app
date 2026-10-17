@@ -8848,8 +8848,8 @@ msgstr "Скелет түрү: auto / biped / quadruped / hexapod / octopod / av
 msgid "Skeleton Spec"
 msgstr "Скелет спецификациясы"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Скелет келишими: 'tripo' же 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Сөөк аталыштары: tripo, mixamo, actorcore, unity, unreal же vrm (Tripo даяр анимацияларын tripo гана колдойт)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

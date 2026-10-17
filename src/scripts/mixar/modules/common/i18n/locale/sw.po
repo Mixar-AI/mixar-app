@@ -8848,8 +8848,8 @@ msgstr "Aina ya kiunzi: auto / biped / quadruped / hexapod / octopod / avian / s
 msgid "Skeleton Spec"
 msgstr "Maelezo ya Kiunzi"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Kanuni ya kiunzi: 'tripo' au 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Majina ya mifupa: tripo, mixamo, actorcore, unity, unreal au vrm (tripo pekee ndiyo inaauni uhuishaji ulioandaliwa wa Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

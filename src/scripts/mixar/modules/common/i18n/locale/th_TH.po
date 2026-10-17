@@ -8848,8 +8848,8 @@ msgstr "ชนิดโครงกระดูก: auto / biped / quadruped / h
 msgid "Skeleton Spec"
 msgstr "ข้อกำหนดโครงกระดูก"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "รูปแบบโครงกระดูก: 'tripo' หรือ 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "การตั้งชื่อกระดูก: tripo, mixamo, actorcore, unity, unreal หรือ vrm (เฉพาะ tripo เท่านั้นที่รองรับแอนิเมชันสำเร็จรูปของ Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

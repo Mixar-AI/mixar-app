@@ -8848,8 +8848,8 @@ msgstr "कंकाल प्रकार: auto / biped / quadruped / hexapod /
 msgid "Skeleton Spec"
 msgstr "कंकाल विनिर्देश"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "कंकाल परिपाटी: 'tripo' या 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "बोन नामकरण: tripo, mixamo, actorcore, unity, unreal या vrm (केवल tripo ही Tripo प्रीसेट एनिमेशन सपोर्ट करता है)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

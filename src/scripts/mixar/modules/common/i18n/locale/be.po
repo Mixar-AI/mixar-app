@@ -8848,8 +8848,8 @@ msgstr "Тып шкілета: аўта / двуногі / чатырохног�
 msgid "Skeleton Spec"
 msgstr "Спецыфікацыя шкілета"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Канвенцыя шкілета: «tripo» або «mixamo»"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Найменаванне касцей: tripo, mixamo, actorcore, unity, unreal або vrm (гатовыя анімацыі Tripo падтрымлівае толькі tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

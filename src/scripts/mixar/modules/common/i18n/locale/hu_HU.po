@@ -8848,8 +8848,8 @@ msgstr "Csontváztípus: auto / biped / quadruped / hexapod / octopod / avian / 
 msgid "Skeleton Spec"
 msgstr "Csontváz-specifikáció"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Csontváz-konvenció: 'tripo' vagy 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Csontelnevezés: tripo, mixamo, actorcore, unity, unreal vagy vrm (csak a tripo támogatja az előre beállított Tripo-animációkat)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

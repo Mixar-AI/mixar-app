@@ -8848,8 +8848,8 @@ msgstr "Rodzaj szkieletu: auto / biped / quadruped / hexapod / octopod / avian /
 msgid "Skeleton Spec"
 msgstr "Specyfikacja szkieletu"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konwencja szkieletu: 'tripo' lub 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Nazewnictwo kości: tripo, mixamo, actorcore, unity, unreal lub vrm (tylko tripo obsługuje gotowe animacje Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

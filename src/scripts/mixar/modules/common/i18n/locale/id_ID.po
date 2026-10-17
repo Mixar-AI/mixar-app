@@ -8848,8 +8848,8 @@ msgstr "Tipe kerangka: auto / biped / quadruped / hexapod / octopod / avian / se
 msgid "Skeleton Spec"
 msgstr "Spesifikasi Kerangka"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Konvensi kerangka: 'tripo' atau 'mixamo'"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Penamaan tulang: tripo, mixamo, actorcore, unity, unreal atau vrm (hanya tripo yang mendukung animasi preset Tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""

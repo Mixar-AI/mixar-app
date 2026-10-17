@@ -8848,8 +8848,8 @@ msgstr "Griaučių tipas: automatinis / dvikojis / keturkojis / šešiakojis / a
 msgid "Skeleton Spec"
 msgstr "Griaučių specifikacija"
 
-msgid "Skeleton convention: 'tripo' or 'mixamo'"
-msgstr "Griaučių susitarimas: „tripo“ arba „mixamo“"
+msgid "Bone naming: tripo, mixamo, actorcore, unity, unreal or vrm (only tripo takes Tripo animation presets)"
+msgstr "Kaulų pavadinimai: tripo, mixamo, actorcore, unity, unreal arba vrm (iš anksto paruoštas Tripo animacijas palaiko tik tripo)"
 
 msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
 msgstr ""
