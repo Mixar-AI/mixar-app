@@ -100,6 +100,14 @@ result = dict(order=list(s._provider_order), providers=[i[0] for i in s.get_prov
     time.sleep(1)
     mp.open_popup(qa)
     mp.show_tab(qa, 'MIXIE')
+    # The card opens scrolled to the current pick: wheel to the top first.
+    for _ in range(12):
+        if mp.rows(qa) and mp.rows(qa)[0][0] == 'Mixar default':
+            break
+        first = qa.find(**mp.PICK)['widgets'][0]
+        qa.cmd("wheel", widget={"surface": "model_card_row", "index": first['index']}, clicks=1, up=True)
+        time.sleep(.2)
+    time.sleep(.5)
     rows = mp.rows(qa)
     out['mixie_rows'] = rows[:6]
     check(rows and rows[0][0] == 'Mixar default', "Mixie tab opens on Mixar default", rows=rows[:4])

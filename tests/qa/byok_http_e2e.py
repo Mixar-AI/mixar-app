@@ -214,9 +214,13 @@ def run(qa: QA):
     qa.step('login_refresh', qa.eval, LOGIN)
     qa.step('await_catalog_after_login', qa.wait, CATALOG_READY, timeout=30)
     qa.step('await_disk_after_login', qa.wait, DISK_EXISTS, timeout=30)
+    # The snapshot also carries load / device / resume flags: compare the
+    # server-mirrored fields only.
+    want = dict((f, server[f]) for f in MIRROR_FIELDS)
     qa.step('await_mirror_after_login', qa.wait,
-            "__import__('mixar.modules.byok.core.credential_state', fromlist=['x']).snapshot()"
-            f" == {dict((f, server[f]) for f in MIRROR_FIELDS)!r}", timeout=30)
+            "(lambda s: {f: s.get(f) for f in %r})("
+            "__import__('mixar.modules.byok.core.credential_state', fromlist=['x']).snapshot())"
+            " == %r" % (list(MIRROR_FIELDS), want), timeout=30)
     relogin = qa.step('read_mirror_after_login', qa.eval, READ_MIRROR)
     if relogin['providers'] != server['providers'] or diff(relogin['wm'], server, 'wm', 'authoritative'):
         raise ScenarioFail(f"login did not restore the settings: {relogin}")

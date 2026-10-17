@@ -152,6 +152,9 @@ bool pickable(const State &state, int line);
 bool footer_enabled(const State &state, int footer);
 Hit hit_test(const State &state, const Layout &layout, float mx, float my);
 void scroll_into_view(State &state, int line);
+/** After the thinking disclosure on \a line unfolds: bring its levels into
+ * view, keeping \a line itself visible when both do not fit. */
+void reveal_levels(State &state, int line);
 /** Jump (no easing) so the open tab's current pick is in view. */
 void reveal_current(State &state);
 void move_focus(State &state, int step);

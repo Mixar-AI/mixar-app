@@ -47,6 +47,9 @@ class _Collection(list):
     def remove(self, index):
         del self[index]
 
+    def move(self, src, dst):
+        self.insert(dst, self.pop(src))
+
 
 def _scene():
     return SimpleNamespace(name="Scene", mixie_session_id="sess-1", mixie_chat_messages=_Collection())
@@ -312,3 +315,25 @@ def test_nothing_on_this_path_logs_or_keeps_key_material():
         for line in (core / name).read_text(encoding="utf-8").splitlines():
             if "logger." in line:
                 assert "payload" not in line and "byok_key" not in line and "api_key" not in line, (name, line)
+
+
+def test_a_refreshed_card_moves_under_the_message_it_refuses(monkeypatch):
+    """A second refusal in a chat that already holds a key card (a plaintext /
+    sealing refusal, a second key-needed) must show at the bottom, under the
+    refused message — not refresh the old card six bubbles up (QA 2026-10-17,
+    F8: the bottom only read "could not be delivered")."""
+    _loaded(monkeypatch)
+    scene = _scene()
+    first = byok_notice.refusal_card(*_409("openai"))
+    byok_card.show(scene, first)
+    for sender, text in (("USER", "pong?"), ("AGENT", "pong"), ("USER", "plaintext?")):
+        item = scene.mixie_chat_messages.add()
+        item.sender, item.bubble_id, item.text = sender, f"b-{text}", text
+    unsealed = {"code": "byok_key_unsealed", "status_code": 400,
+                "message": "The key for this request was not sealed for Mixar. Update Mixar and try again."}
+    byok_card.show(scene, byok_notice.refusal_card({"message": unsealed["message"], "data": unsealed}, unsealed))
+    cards = _card_bubbles(scene)
+    assert len(cards) == 1                              # still one card
+    assert scene.mixie_chat_messages[-1] is cards[0]    # now the last message
+    assert "not sealed" in cards[0].content or "not sealed" in cards[0].text
+    assert [m.text for m in scene.mixie_chat_messages[:-1]] == ["pong?", "pong", "plaintext?"]

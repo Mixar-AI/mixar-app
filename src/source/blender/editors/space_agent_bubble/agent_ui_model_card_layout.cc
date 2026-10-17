@@ -279,6 +279,18 @@ void scroll_into_view(State &state, const int line)
   state.scroll_target = std::clamp(state.scroll_target, 0.0f, layout.max_scroll);
 }
 
+void reveal_levels(State &state, const int line)
+{
+  int last = line;
+  while (last + 1 < int(state.lines.size()) && state.lines[last + 1].kind == LineKind::Level) {
+    last++;
+  }
+  /* The last level first, then the disclosure: when the block is taller than
+   * the list, the line the user clicked wins. */
+  scroll_into_view(state, last);
+  scroll_into_view(state, line);
+}
+
 void reveal_current(State &state)
 {
   for (int i = 0; i < int(state.lines.size()); i++) {

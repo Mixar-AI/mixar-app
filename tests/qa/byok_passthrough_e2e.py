@@ -87,7 +87,9 @@ def last_agent(s):
 
 
 def chat(qa, text, timeout=240):
-    qa.chat_send(text)
+    # Send as the app is: the harness's default door re-saves its own Codex
+    # key before a send, which would replace the key this scenario set up.
+    qa.chat_send(text, access="off")
     qa.wait(IDLE, timeout=timeout)
     return state(qa)
 
@@ -175,7 +177,7 @@ def run(qa):
     msg = last_agent(s)
     if 'not sealed' not in msg or 'pong' in msg.lower():
         raise ScenarioFail(f'plaintext key: expected the byok_key_unsealed bubble, got {msg[:120]!r}')
-    if s['mirror']['byok_device_key_missing'] or SETTINGS_HINT in msg:
+    if s['mirror']['byok_device_key_missing'] or 'AI Provider Settings' in msg:
         raise ScenarioFail('plaintext key: a 400 must not flip the pill or point at settings')
     s = qa.step('chat on the sealed key again', chat, qa, 'Reply with the single word pong.')
     if 'pong' not in last_agent(s).lower():
@@ -229,7 +231,7 @@ result = h.start_input_stream(session_id=get_session_manager().get_session_id(sc
             "key_store.save = lambda record, user_id=None: False; result = True")
     s = save_openai(qa)
     qa.eval("from mixar.modules.byok.core import key_store; key_store.save = key_store._qa_save; result = True")
-    if s['dialog'] != 'ERROR' or 'could not be stored on this device' not in s['last_error'] or not s['mirror']['byok_is_active']:
+    if s['dialog'] != 'ERROR' or 'could not save it on this computer' not in s['last_error'] or not s['mirror']['byok_is_active']:
         raise ScenarioFail(f'store failure: {s["dialog"]} {s["last_error"]!r}')
     save_openai(qa)
 

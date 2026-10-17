@@ -410,7 +410,12 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
         if (hit.trailing && state->lines[pressed].disclosure) {
           state->thinking_open = !state->thinking_open;
           rebuild_lines(*state);
-          scroll_into_view(*state, int(state->lines.size()) > pressed ? pressed : 0);
+          if (state->thinking_open) {
+            reveal_levels(*state, int(state->lines.size()) > pressed ? pressed : 0);
+          }
+          else {
+            scroll_into_view(*state, int(state->lines.size()) > pressed ? pressed : 0);
+          }
         }
         else if (pickable(*state, pressed)) {
           return run_pick(C, op, state->rows[state->lines[pressed].row]);

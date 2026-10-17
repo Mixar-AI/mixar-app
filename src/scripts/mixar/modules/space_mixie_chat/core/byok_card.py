@@ -60,8 +60,15 @@ def show(scene, card) -> None:
     if scene is None or not hasattr(scene, 'mixie_chat_messages'):
         return
     bubble = _find(scene)
+    messages = scene.mixie_chat_messages
+    if bubble is not None and messages[-1].bubble_id != bubble.bubble_id:
+        # An earlier card further up the chat: the refusal belongs under the
+        # message it refuses, where the user is looking — move it down.
+        index = next(i for i, item in enumerate(messages) if item.bubble_id == bubble.bubble_id)
+        messages.move(index, len(messages) - 1)
+        bubble = messages[-1]
     if bubble is None:
-        bubble = scene.mixie_chat_messages.add()
+        bubble = messages.add()
         bubble.bubble_id = f"{BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
         bubble.sender = 'AGENT'
         bubble.message_type = 'AGENT'

@@ -221,3 +221,19 @@ def test_the_dialog_opens_in_the_main_window_not_the_island():
     assert "context.temp_override(window=host)" in src
     assert "temp_override(window=host, screen=" not in src
     assert "is_agent_bubble_window" in src
+
+
+def test_unfolding_thinking_brings_its_levels_into_view():
+    """Unfolding the current pick's "Thinking" on the last visible row used to
+    leave Low / High below the fold (QA 2026-10-17, F7): the unfold scrolled
+    the disclosure into view only. It now reveals the last level, then keeps
+    the disclosure itself visible when both do not fit."""
+    card = (ISLAND / "agent_ui_model_card.cc").read_text(encoding="utf-8")
+    unfold = card[card.index("state->thinking_open = !state->thinking_open;"):]
+    unfold = unfold[:unfold.index("else if (pickable(")]
+    assert "reveal_levels(*state," in unfold
+    layout = (ISLAND / "agent_ui_model_card_layout.cc").read_text(encoding="utf-8")
+    body = layout[layout.index("void reveal_levels(State &state, const int line)"):]
+    body = body[:body.index("\n}\n")]
+    assert "LineKind::Level" in body
+    assert body.index("scroll_into_view(state, last);") < body.index("scroll_into_view(state, line);")
