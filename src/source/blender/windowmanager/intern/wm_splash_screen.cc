@@ -64,9 +64,9 @@ namespace blender {
  * instead of undoing another dialog's hold (wm_mixar_modal_dialog.cc). */
 static const char wm_mixar_splash_dock_owner = 0;
 
-static void wm_mixar_floating_docks_suppress_for_modal()
+static void wm_mixar_floating_docks_suppress_for_modal(bContext *C)
 {
-  Mixar_floating_docks_hold(&wm_mixar_splash_dock_owner);
+  Mixar_floating_docks_hold(C, &wm_mixar_splash_dock_owner);
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
@@ -432,7 +432,7 @@ static wmOperatorStatus wm_splash_invoke(bContext *C,
                                          wmOperator * /*op*/,
                                          const wmEvent * /*event*/)
 {
-  wm_mixar_floating_docks_suppress_for_modal();
+  wm_mixar_floating_docks_suppress_for_modal(C);
   g_mixar_splash_open_count++;
   ui::popup_block_invoke(
       C, wm_block_splash_create, nullptr, wm_mixar_floating_docks_restore_after_modal_free);
