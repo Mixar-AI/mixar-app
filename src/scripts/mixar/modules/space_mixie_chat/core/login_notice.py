@@ -166,7 +166,7 @@ def session_ready(is_guest: bool) -> None:
     """A sign-in (or a fresh guest session) landed: settle every live notice
     it answers. A guest session answers only a no-session notice."""
     _settle_all(lambda notice: not is_guest or notice["guest"],
-                _GUEST_READY if is_guest else _SIGNED_IN, wait_for_settings=True)
+                _GUEST_READY if is_guest else _SIGNED_IN)
 
 
 def key_saved() -> None:
@@ -185,24 +185,17 @@ def sign_in_failed() -> None:
     redraw_chat_areas()
 
 
-def _settle_all(answers, state, *, wait_for_settings: bool = False) -> None:
+def _settle_all(answers, state) -> None:
     title, body = state
     for scene, msg, notice in list(_live()):
         if answers(notice):
             _notices.pop(msg.bubble_id, None)
-            _settle(scene, msg, title, body, wait_for_settings)
+            _settle(scene, msg, title, body)
     redraw_chat_areas()
 
 
-def _settle(scene, msg, title: str, body: str, wait_for_settings: bool = False) -> None:
-    """Resend the message the refusal stopped, or ask for the send.
-
-    ``wait_for_settings``: a sign-in just changed who is sending; the resend
-    waits for the new identity's model-key settings as well as its socket.
-    Sent before that fetch it went out keyless and an account with its own
-    key active was refused (409 ``byok_key_required``) although this device
-    held the key. Called before `refresh_agent_settings` starts the fetch.
-    """
+def _settle(scene, msg, title: str, body: str) -> None:
+    """Resend the message the refusal stopped, or ask for the send."""
     from . import byok_resend
 
     session_id = getattr(scene, "mixie_session_id", "") or ""
@@ -211,15 +204,10 @@ def _settle(scene, msg, title: str, body: str, wait_for_settings: bool = False) 
         return
     _fill_bubble(msg, f"**{rpt_(title)}**\n\n{rpt_(_SENDING)}", None)
     bubble_id, deadline = msg.bubble_id, time.monotonic() + _RESEND_WAIT_S
-    settings = {"ready": not wait_for_settings}
-    if wait_for_settings:
-        from mixar.modules.byok.core import credential_state
-        # Loaded or failed, the fetch has settled: waiting longer gains nothing.
-        credential_state.on_next_fetch(lambda _loaded: settings.update(ready=True))
 
     def _try():
         # Session id and bubble id only: the transcript can change underneath.
-        if settings["ready"] and _connected() and byok_resend.resend(session_id):
+        if _connected() and byok_resend.resend(session_id):
             _remove(byok_resend._scene_for(session_id), bubble_id)
             return None
         if time.monotonic() < deadline:

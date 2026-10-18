@@ -976,16 +976,14 @@ def _resend_rig(monkeypatch, chat_core, *, connected, sent=True):
     scene.mixie_session_id = "s-1"
     scene.mixie_chat_layout_epoch = 0
     from mixar.modules.space_mixie_chat.core import byok_resend
-    from mixar.modules.byok.core import credential_state
-    resent, fetch_hooks, timers = [], [], []
+    resent, timers = [], []
     monkeypatch.setattr(byok_resend, "pending", lambda sid: object() if sid == "s-1" else None)
     monkeypatch.setattr(byok_resend, "resend", lambda sid: resent.append(sid) or sent)
     monkeypatch.setattr(byok_resend, "_scene_for", lambda sid: scene)
     monkeypatch.setattr(login_notice, "_connected", lambda: connected)
-    monkeypatch.setattr(credential_state, "on_next_fetch", fetch_hooks.append)
     monkeypatch.setattr(login_notice.bpy.app, "timers", SimpleNamespace(
         register=lambda fn, first_interval=0.0: timers.append(fn)), raising=False)
-    return login_notice, scene, msg, resent, fetch_hooks, timers
+    return login_notice, scene, msg, resent, timers
 
 
 def _run(timers):
@@ -994,44 +992,34 @@ def _run(timers):
     return fn()
 
 
-def test_a_sign_in_resends_once_the_accounts_settings_load(monkeypatch, chat_core):
-    """Live run (Satyam, 2026-10-17): the resend went out before the account's
-    model-key settings loaded, keyless, and an account with Codex active was
-    refused with "Link your ChatGPT sign-in" although this device held it."""
-    login_notice, scene, msg, resent, hooks, timers = _resend_rig(
-        monkeypatch, chat_core, connected=True)
+def test_a_sign_in_resends_the_refused_message_and_drops_the_notice(monkeypatch, chat_core):
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
     login_notice.session_ready(is_guest=False)
     assert msg.content == "**You're signed in**\n\nSending your message…"
-    assert _run(timers) is not None and resent == []  # socket up, settings not yet
-    hooks[0](True)
     assert _run(timers) is None and resent == ["s-1"]
     assert len(scene.mixie_chat_messages) == 0
 
 
 def test_no_socket_in_time_asks_for_the_send(monkeypatch, chat_core):
-    login_notice, scene, msg, resent, hooks, timers = _resend_rig(
-        monkeypatch, chat_core, connected=False)
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=False)
     monkeypatch.setattr(login_notice, "_RESEND_WAIT_S", 0.0)
     login_notice.session_ready(is_guest=False)
-    hooks[0](True)
     assert _run(timers) is None and resent == []
     assert len(scene.mixie_chat_messages) == 1
     assert msg.content == "**You're signed in**\n\nSend your message again to continue."
 
 
-def test_a_saved_key_resends_without_waiting_for_a_fetch(monkeypatch, chat_core):
-    login_notice, scene, msg, resent, hooks, timers = _resend_rig(
-        monkeypatch, chat_core, connected=True)
+def test_a_saved_key_resends_too(monkeypatch, chat_core):
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
     login_notice.key_saved()
-    assert hooks == [] and _run(timers) is None and resent == ["s-1"]
+    assert _run(timers) is None and resent == ["s-1"]
     assert len(scene.mixie_chat_messages) == 0
 
 
 def test_removing_the_notice_rebuilds_the_chat_layout(monkeypatch, chat_core):
     """The C++ layout cache rebuilds on a message-count change only: the key
     card added where the notice was removed drew the notice's buttons."""
-    login_notice, scene, msg, resent, hooks, timers = _resend_rig(
-        monkeypatch, chat_core, connected=True)
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
     login_notice._remove(scene, msg.bubble_id)
     assert scene.mixie_chat_layout_epoch == 1
     owned = SimpleNamespace(id_data=scene, content="", text="", action_items=_Items())
