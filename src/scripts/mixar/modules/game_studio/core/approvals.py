@@ -36,21 +36,23 @@ def _expire_locked(now: float) -> None:
 
 
 def _public(request: dict) -> dict:
-    return {"request_id": request["request_id"], "state": request["state"],
+    return {"request_id": request["request_id"], "kind": request["kind"], "state": request["state"],
             "summary": dict(request["summary"]), "error": request.get("error"),
             "error_code": request.get("error_code"), "created": request["created"]}
 
 
-def create(summary: dict, payload: dict) -> str:
-    """A new pending request; any older pending one is superseded."""
+def create(summary: dict, payload: dict, kind: str = "publish") -> str:
+    """A new pending ``kind`` request ("publish" | "launch"); an older pending
+    request of the same kind is superseded."""
     request_id = uuid.uuid4().hex
     now = time.monotonic()
     with _lock:
         for request in _requests.values():
-            if request["state"] == AWAITING:
+            if request["state"] == AWAITING and request["kind"] == kind:
                 request.update(state=CANCELLED, error_code="superseded",
                                error="A newer publish request replaced this one.", token=None)
-        _requests[request_id] = {"request_id": request_id, "state": AWAITING, "created": now,
+        _requests[request_id] = {"request_id": request_id, "kind": kind, "state": AWAITING,
+                                 "created": now,
                                  "summary": dict(summary), "payload": dict(payload), "token": None}
         while len(_requests) > 16:
             _requests.pop(next(iter(_requests)))
@@ -64,12 +66,12 @@ def get(request_id) -> dict | None:
         return _public(request) if request else None
 
 
-def pending() -> dict | None:
-    """The live pending request, if any."""
+def pending(kind: str = "publish") -> dict | None:
+    """The live pending request of ``kind``, if any."""
     with _lock:
         _expire_locked(time.monotonic())
         for request in reversed(_requests.values()):
-            if request["state"] == AWAITING:
+            if request["state"] == AWAITING and request["kind"] == kind:
                 return _public(request)
     return None
 
@@ -104,14 +106,14 @@ def _issue_token(request_id) -> str:
     return token
 
 
-def _claim(request_id, token: str) -> dict | None:
+def _claim(request_id, token: str, kind: str = "publish") -> dict | None:
     """UI operator ``execute`` only: approve with the dialog's token and
     return the payload, once. Wrong/missing token, expiry or a second
     claim return None."""
     with _lock:
         _expire_locked(time.monotonic())
         request = _requests.get(str(request_id or ""))
-        if (request is None or request["state"] != AWAITING or not token
+        if (request is None or request["state"] != AWAITING or request["kind"] != kind or not token
                 or not request.get("token") or not hmac.compare_digest(request["token"], token)):
             return None
         request.update(state=APPROVED, token=None)

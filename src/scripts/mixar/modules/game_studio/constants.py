@@ -44,6 +44,8 @@ GODOT_ENV_VAR = "MIXAR_GODOT_BIN"
 PROGRESS_PREFIX = "MIXAR_PROGRESS "
 RESULT_SCHEMA = "mixar_godot_result_v1"
 PLATFORMS = ("web", "macos", "windows", "linux")
+# Contract v1.1: every game ships for the web and both desktops by default.
+DEFAULT_PLATFORMS = ("web", "macos", "windows")
 # Display names (proper nouns, shown untranslated).
 PLATFORM_NAMES = {"web": "Web", "macos": "macOS", "windows": "Windows", "linux": "Linux"}
 

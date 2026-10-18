@@ -43,7 +43,8 @@ def test_agent_api_has_no_approve_path():
     assert not _names(MODULE / "core/agent_api.py") & (APPROVE_NAMES | {"launch_publish"})
     assert not [n for n in dir(agent_api) if "approve" in n.lower() or "claim" in n.lower()]
     for path in MODULE.rglob("*.py"):
-        if path.name in ("approvals.py", "launch.py", "game_publish_approval_ops.py"):
+        if path.name in ("approvals.py", "launch.py", "game_publish_approval_ops.py",
+                         "game_library_ops.py"):
             continue
         assert not _names(path) & APPROVE_NAMES, path
 

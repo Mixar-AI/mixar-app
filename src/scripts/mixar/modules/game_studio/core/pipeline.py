@@ -122,8 +122,18 @@ def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0) 
             raise JobError(f"The {platform} export produced no file.", "export_failed", result)
         artifacts.append({"platform": platform, "artifact": artifact,
                           "size_bytes": os.path.getsize(artifact),
+                          "launch": _for_platform(result.get("launch"), platform),
+                          "signing": _for_platform(result.get("signing"), platform),
                           "warnings": list(result.get("warnings") or [])})
     return artifacts
+
+
+def _for_platform(value, platform: str):
+    """The fork reports ``launch``/``signing`` as ``{platform: value}`` (v1.1);
+    a plain string is taken as-is. None when absent (web builds)."""
+    if isinstance(value, dict):
+        value = value.get(platform)
+    return str(value) if isinstance(value, str) and value else None
 
 
 def _build_summary(ctx: dict, result: dict) -> dict:
@@ -201,7 +211,8 @@ def _upload_build(client, handle, game_id: str, item: dict, version: str, start:
     handle.progress(start, f"Uploading the {item['platform']} build", force=True)
     digest, size = sha256_file(item["artifact"], handle.cancel_event)
     build = client.create_build(game_id, item["platform"], version,
-                                os.path.basename(item["artifact"]), size, digest)
+                                os.path.basename(item["artifact"]), size, digest,
+                                launch=item.get("launch"), signing=item.get("signing"))
     build_id = str(build.get("build_id") or "")
     if not build_id or not build.get("put_url"):
         raise StoreError("The store did not return an upload slot.", "bad_response")
@@ -209,7 +220,8 @@ def _upload_build(client, handle, game_id: str, item: dict, version: str, start:
                   lambda f: handle.progress(start + span * 0.9 * f, None), handle.cancel_event)
     done = client.complete_build(game_id, build_id)
     return {"build_id": build_id, "platform": item["platform"], "version": version,
-            "size_bytes": size, "sha256": digest,
+            "size_bytes": size, "sha256": digest, "launch": item.get("launch"),
+            "signing": item.get("signing"),
             "review_status": (done.get("build") or done).get("review_status", "pending")}
 
 

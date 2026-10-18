@@ -171,6 +171,9 @@ def test_the_denied_set_is_pinned(denylist):
         "wm.open_mainfile", "wm.revert_mainfile", "wm.recover_last_session",
         "wm.recover_auto_save", "wm.path_open", "wm.url_open", "wm.url_open_preset",
         "file.external_operation",
+        # User-only game actions (game_studio): publish approval, game launch.
+        "mixar.game_publish_approve", "mixar.game_publish", "mixar.game_library_launch",
+        "mixar.game_library_launch_approve", "mixar.game_locate_godot",
     })
     assert denylist.DENIED_OPS_PREFIXES == ("wm.context_", "wm.properties_")
     assert denylist.DENIED_OPS_KWARGS == {"node": frozenset({"settings"})}

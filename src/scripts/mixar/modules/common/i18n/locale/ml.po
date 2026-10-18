@@ -4784,13 +4784,73 @@ msgstr ""
 msgid "Publish"
 msgstr ""
 
+msgid "Play \"{title}\"?"
+msgstr ""
+
+msgid "Mixie asks to launch this game from your Library."
+msgstr ""
+
+msgid "Play"
+msgstr ""
+
 msgid "Failed."
 msgstr ""
 
 msgid "Done."
 msgstr ""
 
+msgid "The game could not start."
+msgstr ""
+
+msgid "Starting the game…"
+msgstr ""
+
+msgid "Only you can start a game, from the Mixar window."
+msgstr ""
+
+msgid "Refresh Library"
+msgstr ""
+
+msgid "Reload your games from the Mixar Store"
+msgstr ""
+
+msgid "Install"
+msgstr ""
+
+msgid "Download, check and install this game for this computer"
+msgstr ""
+
 msgid "Could not start."
+msgstr ""
+
+msgid "Uninstall"
+msgstr ""
+
+msgid "Remove this game from this computer"
+msgstr ""
+
+msgid "Play this installed game in its own window"
+msgstr ""
+
+msgid "Play Game"
+msgstr ""
+
+msgid "Approve launching the game Mixie asked to play"
+msgstr ""
+
+msgid "No game is waiting to be launched."
+msgstr ""
+
+msgid "Mixie asks to start this game from your Library."
+msgstr ""
+
+msgid "This launch request is no longer waiting for approval."
+msgstr ""
+
+msgid "Cancel Launch"
+msgstr ""
+
+msgid "Don't start the game"
 msgstr ""
 
 msgid "Locate Godot…"
@@ -4827,9 +4887,6 @@ msgid "Build"
 msgstr ""
 
 msgid "Export the scene and build the Godot game"
-msgstr ""
-
-msgid "Play"
 msgstr ""
 
 msgid "Building the game…"
@@ -4890,6 +4947,33 @@ msgid "Cancel the waiting publish request"
 msgstr ""
 
 msgid "Game"
+msgstr ""
+
+msgid "Games for {platform}"
+msgstr ""
+
+msgid "Mixie asks to play \"{title}\""
+msgstr ""
+
+msgid "Working…"
+msgstr "പ്രവർത്തിക്കുന്നു…"
+
+msgid "Refresh to load your games"
+msgstr ""
+
+msgid "No games yet. Get some on the Mixar Store."
+msgstr ""
+
+msgid "Not available for this computer"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Version {version}"
+msgstr ""
+
+msgid "self-test failed"
 msgstr ""
 
 msgid "Godot"
@@ -27137,9 +27221,6 @@ msgstr ""
 
 msgid "slot_images index of the tile"
 msgstr ""
-
-msgid "Working…"
-msgstr "പ്രവർത്തിക്കുന്നു…"
 
 msgid "Enabled rules apply on your next message."
 msgstr "പ്രവർത്തനക്ഷമമായ നിയമങ്ങൾ നിങ്ങളുടെ അടുത്ത സന്ദേശത്തിൽ ബാധകമാകും."

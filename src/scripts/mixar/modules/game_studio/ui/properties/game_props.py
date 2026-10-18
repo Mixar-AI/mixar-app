@@ -104,8 +104,8 @@ class MIXAR_GameSettings(PropertyGroup):
 
     # Publish form (session UI state).
     platform_web: BoolProperty(name="Web", default=True)
-    platform_macos: BoolProperty(name="macOS", default=False)
-    platform_windows: BoolProperty(name="Windows", default=False)
+    platform_macos: BoolProperty(name="macOS", default=True)
+    platform_windows: BoolProperty(name="Windows", default=True)
     platform_linux: BoolProperty(name="Linux", default=False)
     tagline: StringProperty(name="Tagline", default="")
     description: StringProperty(name="Description", default="")

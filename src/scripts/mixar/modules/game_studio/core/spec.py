@@ -15,7 +15,7 @@ import copy
 import json
 import re
 
-from ..constants import (DEFAULT_TITLE, PLATFORMS, SCENE_FILE, SKIES, SLUG_MAX, SPEC_PROP,
+from ..constants import (DEFAULT_PLATFORMS, DEFAULT_TITLE, PLATFORMS, SCENE_FILE, SKIES, SLUG_MAX, SPEC_PROP,
                          SPEC_SCHEMA, TEMPLATES, TITLE_MAX, WIN_RULES)
 from . import roles
 
@@ -189,9 +189,9 @@ def validate_spec(spec: dict) -> tuple[list[str], list[str]]:
 
 
 def validate_platforms(platforms) -> tuple[list[str], list[str]]:
-    """``(platforms, errors)``; ``None`` means ``["web"]``."""
+    """``(platforms, errors)``; ``None`` means ``DEFAULT_PLATFORMS``."""
     if platforms is None:
-        return ["web"], []
+        return list(DEFAULT_PLATFORMS), []
     if isinstance(platforms, str):
         platforms = [platforms]
     clean, errors = [], []

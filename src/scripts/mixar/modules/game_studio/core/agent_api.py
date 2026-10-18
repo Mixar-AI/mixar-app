@@ -242,9 +242,10 @@ def game_job_status(job_id=None) -> dict:
         return _redact(job)
     request = approvals.get(job_id)
     if request is not None:
-        return {"job_id": request["request_id"], "kind": "publish", "state": request["state"]
-                if request["state"] != "approved" else "running", "pct": 0.0,
-                "message": "Waiting for the user to approve the publish."
+        settled = "done" if request["kind"] == "launch" else "running"
+        return {"job_id": request["request_id"], "kind": request["kind"], "state": request["state"]
+                if request["state"] != "approved" else settled, "pct": 0.0,
+                "message": f"Waiting for the user to approve the {request['kind']}."
                 if request["state"] == "awaiting_user_approval" else "",
                 "result": None, "error": request["error"], "error_code": request["error_code"]}
     return {"job_id": job_id, "kind": None, "state": "failed", "pct": 0, "message": "",
@@ -279,3 +280,117 @@ def play_game() -> dict:
     import threading
     threading.Thread(target=work, name="mixar-game-play", daemon=True).start()
     return {"ok": True, "launching": True}
+
+
+# --- Mixar Library (contract v1.1) ------------------------------------------------
+
+def _library_refresh(force=False):
+    """The running/started refresh job id, or None when the listing is fresh."""
+    from mixar.config.config import get_community_api_url
+    from . import jobs, library, library_install
+    running = jobs.running("library")
+    if running is not None:
+        return running["job_id"]
+    _games, age, _error = library.listing()
+    if not force and age < library.LISTING_STALE_S:
+        return None
+    return jobs.start("library", library_install.refresh_work(library.library_root(),
+                                                              get_community_api_url()))
+
+
+def library_list(refresh=False) -> dict:
+    """Owned games with their install state on this computer. Returns the
+    last listing at once and refreshes it in the background when stale."""
+    from . import jobs, library
+    jobs.drain()
+    job_id = _library_refresh(bool(refresh))
+    games, _age, error = library.listing()
+    index = library.installed() or {}
+    platform = library.host_platform()
+    out, listed = [], set()
+    for game in games or ():
+        build = game["builds"].get(platform)
+        record = index.get(game["slug"])
+        listed.add(game["slug"])
+        out.append({
+            "slug": game["slug"], "title": game["title"], "game_id": game["game_id"],
+            "platforms": sorted(game["builds"]),
+            "available": {"build_id": build["build_id"], "version": build["version"]} if build else None,
+            "installed": _installed_view(record),
+            "update_available": bool(build and record and record.get("build_id") != build["build_id"]),
+        })
+    for slug, record in index.items():
+        if slug not in listed:
+            out.append({"slug": slug, "title": record.get("title") or slug, "game_id": record.get("game_id"),
+                        "platforms": [], "available": None, "installed": _installed_view(record),
+                        "update_available": False})
+    return _redact({"ok": games is not None or error is None, "platform": platform, "games": out,
+                    "loading": games is None, "refresh_job_id": job_id, "error": error})
+
+
+def _installed_view(record):
+    if not record:
+        return None
+    check = record.get("selftest") or {}
+    return {"build_id": record.get("build_id"), "version": record.get("version"),
+            "selftest_ok": bool(check.get("ok")), "selftest_error": check.get("error")}
+
+
+def start_library_install(slug=None) -> dict:
+    """Install or update ``slug`` for this computer (a job; poll
+    ``game_job_status``). Installing is allowed for the agent; launching is not."""
+    from mixar.config.config import get_community_api_url
+    from . import jobs, library, library_install
+    slug = str(slug or "")
+    if not slug:
+        return {"ok": False, "job_id": None, "state": "failed", "error_code": "bad_request",
+                "error": "slug is required"}
+    running = jobs.running("install")
+    if running is not None:
+        return {"ok": False, "job_id": running["job_id"], "state": "failed", "error_code": "busy",
+                "error": "Another game is installing."}
+    job_id = jobs.start("install", library_install.install_by_slug_work(
+        library.library_root(), get_community_api_url(), slug, library.host_platform()))
+    return {"ok": True, "job_id": job_id, "state": "running"}
+
+
+def start_library_uninstall(slug=None) -> dict:
+    from . import jobs, library, library_install
+    job_id = jobs.start("uninstall", library_install.uninstall_work(library.library_root(), str(slug or "")))
+    return {"ok": True, "job_id": job_id, "state": "running"}
+
+
+def launch_library_game(slug=None) -> dict:
+    """Launching runs a program, so only the user may do it: this asks them
+    in the app (toast / Library panel) and returns ``awaiting_user_approval``;
+    ``--background`` has nobody to ask."""
+    from . import approvals, library
+    slug = str(slug or "")
+    if bpy.app.background:
+        return {"ok": False, "job_id": None, "state": "failed", "error_code": "approval_required_ui",
+                "error": "Launching a game needs the user's click in the Mixar app."}
+    record = (library.installed() or {}).get(slug)
+    if record is None:
+        return {"ok": False, "job_id": None, "state": "failed", "error_code": "not_installed",
+                "error": "That game is not installed (start_library_install first)."}
+    summary = {"title": record.get("title") or slug, "slug": slug, "version": record.get("version")}
+    request_id = approvals.create(summary, {"slug": slug}, kind="launch")
+    _ask_user_launch(request_id, summary)
+    return {"ok": True, "state": "awaiting_user_approval", "request_id": request_id,
+            "job_id": request_id, "summary": summary}
+
+
+def _ask_user_launch(request_id: str, summary: dict) -> None:
+    try:
+        from mixar.modules.common.i18n import n_, rpt_
+        from mixar.modules.common.notifications import get_notification_store
+        from mixar.modules.common.notifications.store import NotificationAction
+        get_notification_store().push(
+            "info", rpt_("Play \"{title}\"?").format(title=summary["title"]),
+            body=rpt_("Mixie asks to launch this game from your Library."),
+            actions=[NotificationAction(label=n_("Play"), operator="mixar.game_library_launch_approve",
+                                        style="primary"),
+                     NotificationAction(label=n_("Cancel"), operator="mixar.game_library_launch_decline")],
+            ttl_ms=int(10 * 60 * 1000), id=f"game-launch-{request_id}")
+    except Exception:  # noqa: BLE001 — the Library panel offers the same buttons
+        pass

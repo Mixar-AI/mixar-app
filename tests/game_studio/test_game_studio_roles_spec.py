@@ -142,7 +142,7 @@ def test_settings_round_trip_through_scene_json(make_scene):
 
 
 def test_platform_and_store_page_validation():
-    assert spec.validate_platforms(None) == (["web"], [])
+    assert spec.validate_platforms(None) == (["web", "macos", "windows"], [])  # v1.1 default
     assert spec.validate_platforms(["web", "WEB", "linux"]) == (["web", "linux"], [])
     assert spec.validate_platforms(["ps5"])[1]
     page, errors = spec.normalize_store_page({"tagline": "x" * 300, "genres": "Platformer",

@@ -95,6 +95,10 @@ else:
         z.writestr("index.html", "<html></html>")
     result = {"action": "export", "project_dir": arg("--path"), "artifact": artifact,
               "platform": platform, "stats": {}}
+    if platform == "macos":
+        result.update(launch={"macos": "Crystal Run.app"}, signing={"macos": "adhoc"})
+    elif platform == "windows":
+        result.update(launch={"windows": "Crystal Run.exe"}, signing={"windows": "unsigned"})
 result.update({"schema": "mixar_godot_result_v1", "ok": True, "warnings": ["fake warning"],
                "error": None, "error_code": None, "duration_s": 0.1})
 json.dump(result, open(result_path, "w"))

@@ -20,9 +20,10 @@ class _Stub(BaseHTTPRequestHandler):
         pass
 
     def _reply(self, status, body):
-        data = json.dumps(body).encode()
+        raw = isinstance(body, bytes)
+        data = body if raw else json.dumps(body).encode()
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/zip" if raw else "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

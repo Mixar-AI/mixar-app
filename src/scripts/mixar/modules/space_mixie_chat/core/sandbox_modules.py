@@ -100,6 +100,9 @@ _DENIED_SUBMODULES = frozenset({
     # app may approve a public publish.
     "mixar.modules.game_studio.core.approvals",
     "mixar.modules.game_studio.core.launch",
+    "mixar.modules.game_studio.core.library",
+    "mixar.modules.game_studio.core.library_install",
+    "mixar.modules.game_studio.core.safe_extract",
     "mixar.modules.game_studio.ui",
 })
 

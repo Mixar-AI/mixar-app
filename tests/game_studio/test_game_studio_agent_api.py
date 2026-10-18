@@ -85,9 +85,10 @@ def test_publish_without_confirm_only_previews(level):
                               {"object": "Coin.001", "role": "collectible"}])
     reply = agent_api.start_game_publish(store_page={"tagline": "Grab gems"})
     assert reply["needs_confirmation"] is True and "job_id" not in reply
-    assert reply["summary"]["action"] == "create" and reply["summary"]["platforms"] == ["web"]
+    assert reply["summary"]["action"] == "create" and reply["summary"]["platforms"] == ["web", "macos", "windows"]
     assert reply["summary"]["store_url"] is None  # never composed client-side
-    assert reply["summary"]["files"] == ["scene.glb", "untitled-game-web.zip"]
+    assert reply["summary"]["files"] == ["scene.glb", "untitled-game-web.zip", "untitled-game-macos.zip",
+                                         "untitled-game-windows.zip"]
     assert level.written == [] and jobs.running() is None
     assert agent_api.start_game_publish(platforms=["ps5"], confirm=True)["error_code"] == "bad_request"
 
@@ -176,7 +177,12 @@ def test_publish_waits_for_the_user_then_uploads(level, stub, monkeypatch):  # n
         "game_id": "g9", "store_url": "http://store.test/games/crystal-run", "review_status": "pending"}
     # The fake fork advertises no "capture": published without store art, said so.
     assert "cannot render store images" in status["result"]["warnings"][0]
-    assert status["result"]["builds"][0]["platform"] == "web"
+    assert [b["platform"] for b in status["result"]["builds"]] == ["web", "macos", "windows"]
+    declared = [json.loads(c["raw"]) for c in stub.calls if c["path"] == "/api/v1/games/g9/builds"]
+    assert [(d["platform"], d.get("launch"), d.get("signing")) for d in declared] == [
+        ("web", None, None), ("macos", "Crystal Run.app", "adhoc"),
+        ("windows", "Crystal Run.exe", "unsigned")]
+    assert len({d["filename"] for d in declared}) == 3  # one zip per platform
     create = json.loads(stub.calls[0]["raw"])
     assert create["tagline"] == "Grab gems" and create["genres"] == ["platformer"]
     assert create["title"] == "Crystal Run" and create["source"] == "mixar"

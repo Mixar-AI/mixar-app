@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import bpy
 
+from ..constants import DEFAULT_PLATFORMS
 from . import exporter, jobs, pipeline
 
 
 def busy() -> dict | None:
-    job = jobs.running()
+    """A running build/export/publish (library jobs don't block a build)."""
+    job = next((j for j in (jobs.running(k) for k in ("build", "export", "publish")) if j), None)
     if job is None:
         return None
     return {"ok": False, "job_id": job["job_id"], "state": "failed", "error_code": "busy",
@@ -70,6 +72,6 @@ def start_approved_publish(request_id: str, payload: dict) -> dict:
     if scene != bpy.context.scene:
         return {"ok": False, "job_id": request_id, "state": "failed", "error_code": "wrong_scene",
                 "error": f"Switch to the scene '{scene.name}' to publish it."}
-    platforms = list(payload.get("platforms") or ["web"])
+    platforms = list(payload.get("platforms") or DEFAULT_PLATFORMS)
     return _run("publish", scene, lambda ctx: pipeline.publish_work(ctx, platforms),
                 payload.get("store_page"), request_id)

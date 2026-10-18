@@ -74,6 +74,13 @@ class _ProgressFile:
         self._handle.close()
 
 
+def _remove(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def _default_token() -> str:
     from mixar.modules.auth.core.auth import get_access_token
     return get_access_token() or ""
@@ -205,10 +212,16 @@ class StoreClient:
         return (data or {}).get("game", data) or {}
 
     def create_build(self, game_id: str, platform: str, version: str, filename: str,
-                     size_bytes: int, sha256: str) -> dict:
-        return self.request("POST", f"api/v1/games/{game_id}/builds", {
-            "platform": platform, "version": version, "filename": filename,
-            "size_bytes": int(size_bytes), "sha256": sha256}) or {}
+                     size_bytes: int, sha256: str, launch=None, signing=None) -> dict:
+        """``launch`` (entry point inside the zip) and ``signing`` come from the
+        fork's export result for desktop builds (contract v1.1)."""
+        body = {"platform": platform, "version": version, "filename": filename,
+                "size_bytes": int(size_bytes), "sha256": sha256}
+        if launch:
+            body["launch"] = launch
+        if signing:
+            body["signing"] = signing
+        return self.request("POST", f"api/v1/games/{game_id}/builds", body) or {}
 
     def complete_build(self, game_id: str, build_id: str) -> dict:
         return self.request("POST", f"api/v1/games/{game_id}/builds/{build_id}/complete") or {}
@@ -225,6 +238,61 @@ class StoreClient:
     def publish(self, game_id: str) -> dict:
         data = self.request("POST", f"api/v1/games/{game_id}/publish")
         return (data or {}).get("game", data) or {}
+
+    # --- v1.1 library --------------------------------------------------------------
+    def library(self):
+        return self.request("GET", "api/v1/me/library")
+
+    def acquire(self, game_id: str) -> dict:
+        return self.request("POST", f"api/v1/games/{game_id}/acquire") or {}
+
+    def download_info(self, game_id: str, build_id: str) -> dict:
+        data = self.request("GET", f"api/v1/games/{game_id}/builds/{build_id}/download") or {}
+        return data.get("download", data) if isinstance(data, dict) else {}
+
+    def fetch(self, url: str, path: str, expected_sha256: str, expected_size: int = 0,
+              on_progress=None, cancel=None) -> str:
+        """Stream a signed download URL (no bearer) to ``path``, hashing as it
+        goes. Raises ``sha256_mismatch``/``size_mismatch`` (and deletes the
+        file) unless the bytes are exactly the store's record."""
+        digest, size = hashlib.sha256(), 0
+        try:
+            response = requests.get(url, stream=True, timeout=UPLOAD_TIMEOUT_S)
+        except requests.exceptions.RequestException as exc:
+            raise _network_error(exc, url, "Library download") from exc
+        try:
+            if not response.ok:
+                raise StoreError(f"The download was refused ({response.status_code}).",
+                                 "download_failed", response.status_code)
+            total = int(expected_size or response.headers.get("Content-Length") or 0)
+            with open(path, "wb") as handle:
+                for chunk in response.iter_content(UPLOAD_CHUNK):
+                    if cancel is not None and cancel.is_set():
+                        raise StoreError("Cancelled.", "cancelled")
+                    digest.update(chunk)
+                    size += len(chunk)
+                    if expected_size and size > expected_size:
+                        raise StoreError("The download is larger than the store's record.",
+                                         "size_mismatch")
+                    handle.write(chunk)
+                    if on_progress is not None and total:
+                        on_progress(min(1.0, size / total))
+        except requests.exceptions.RequestException as exc:
+            _remove(path)
+            raise _network_error(exc, url, "Library download") from exc
+        except BaseException:
+            _remove(path)
+            raise
+        finally:
+            response.close()
+        if expected_size and size != expected_size:
+            _remove(path)
+            raise StoreError("The download is not the size the store recorded.", "size_mismatch")
+        if not expected_sha256 or digest.hexdigest() != expected_sha256.lower():
+            _remove(path)
+            raise StoreError("The download does not match the store's sha256; nothing was installed.",
+                             "sha256_mismatch")
+        return digest.hexdigest()
 
     def upload(self, put_url: str, headers: dict, path: str, on_progress=None, cancel=None) -> None:
         """Signed PUT (media and builds, ~15 min): exactly the returned
