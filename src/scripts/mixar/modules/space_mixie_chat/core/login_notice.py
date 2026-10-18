@@ -37,7 +37,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.auth.core.guest import CTA_FIX_BYOK, CTA_LOGIN, CTA_LOGIN_OR_BYOK
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
-from .ui_utils import redraw_chat_areas
+from .ui_utils import bump_layout_epoch, redraw_chat_areas
 
 logger = get_logger(__name__)
 
@@ -166,7 +166,7 @@ def session_ready(is_guest: bool) -> None:
     """A sign-in (or a fresh guest session) landed: settle every live notice
     it answers. A guest session answers only a no-session notice."""
     _settle_all(lambda notice: not is_guest or notice["guest"],
-                _GUEST_READY if is_guest else _SIGNED_IN)
+                _GUEST_READY if is_guest else _SIGNED_IN, wait_for_settings=True)
 
 
 def key_saved() -> None:
@@ -185,17 +185,24 @@ def sign_in_failed() -> None:
     redraw_chat_areas()
 
 
-def _settle_all(answers, state) -> None:
+def _settle_all(answers, state, *, wait_for_settings: bool = False) -> None:
     title, body = state
     for scene, msg, notice in list(_live()):
         if answers(notice):
             _notices.pop(msg.bubble_id, None)
-            _settle(scene, msg, title, body)
+            _settle(scene, msg, title, body, wait_for_settings)
     redraw_chat_areas()
 
 
-def _settle(scene, msg, title: str, body: str) -> None:
-    """Resend the message the refusal stopped, or ask for the send."""
+def _settle(scene, msg, title: str, body: str, wait_for_settings: bool = False) -> None:
+    """Resend the message the refusal stopped, or ask for the send.
+
+    ``wait_for_settings``: a sign-in just changed who is sending; the resend
+    waits for the new identity's model-key settings as well as its socket.
+    Sent before that fetch it went out keyless and an account with its own
+    key active was refused (409 ``byok_key_required``) although this device
+    held the key. Called before `refresh_agent_settings` starts the fetch.
+    """
     from . import byok_resend
 
     session_id = getattr(scene, "mixie_session_id", "") or ""
@@ -204,10 +211,15 @@ def _settle(scene, msg, title: str, body: str) -> None:
         return
     _fill_bubble(msg, f"**{rpt_(title)}**\n\n{rpt_(_SENDING)}", None)
     bubble_id, deadline = msg.bubble_id, time.monotonic() + _RESEND_WAIT_S
+    settings = {"ready": not wait_for_settings}
+    if wait_for_settings:
+        from mixar.modules.byok.core import credential_state
+        # Loaded or failed, the fetch has settled: waiting longer gains nothing.
+        credential_state.on_next_fetch(lambda _loaded: settings.update(ready=True))
 
     def _try():
         # Session id and bubble id only: the transcript can change underneath.
-        if _connected() and byok_resend.resend(session_id):
+        if settings["ready"] and _connected() and byok_resend.resend(session_id):
             _remove(byok_resend._scene_for(session_id), bubble_id)
             return None
         if time.monotonic() < deadline:
@@ -240,6 +252,10 @@ def _remove(scene, bubble_id: str) -> None:
         if getattr(msg, "bubble_id", "") == bubble_id:
             messages.remove(index)
             break
+    # The C++ layout cache rebuilds on a message-COUNT change only: a bubble
+    # added in this one's place (the key card a refused resend shows) kept
+    # the notice's cached buttons.
+    bump_layout_epoch(scene)
     redraw_chat_areas()
 
 
@@ -267,7 +283,8 @@ def _content(msg, body: str) -> str:
 
 def _fill_bubble(msg, content: str, cta) -> None:
     """Markdown content plus the cta's buttons (presentation only, no turn);
-    ``cta`` None draws no buttons (a settled notice)."""
+    ``cta`` None draws no buttons (a settled notice). The bubble's height
+    changes in place, so the layout cache is bumped."""
     msg.content = content
     msg.text = content
     try:
@@ -284,3 +301,6 @@ def _fill_bubble(msg, content: str, cta) -> None:
         action.label = iface_(label)
         action.value = value
         action.style = "PRIMARY" if index == 0 else "DEFAULT"
+    scene = getattr(msg, "id_data", None)  # the Scene owning the transcript
+    if scene is not None:
+        bump_layout_epoch(scene)
