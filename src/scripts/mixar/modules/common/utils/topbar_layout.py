@@ -120,14 +120,23 @@ def account_signed_in(wm):
             not bool(getattr(wm, "mixie_chat_is_guest", False)))
 
 
+def account_label(wm, email, guest_label="Guest"):
+    """The account pill's text: the account's name, else its email; a guest
+    or signed-out session reads ``guest_label``."""
+    if not account_signed_in(wm):
+        return guest_label
+    return getattr(wm, "mixar_account_name", "") or email or ""
+
+
 def context_account_units(context):
     """`full_account_units` for the account the menu bar is showing."""
     from ..i18n import iface_
 
-    logged_in = account_signed_in(context.window_manager)
+    wm = context.window_manager
     scene = getattr(context, "scene", None)
     email = getattr(scene, "mixie_chat_user_id", "") if scene is not None else ""
-    return full_account_units(logged_in, email or "", iface_("Guest"))
+    label = account_label(wm, email, iface_("Guest"))
+    return full_account_units(account_signed_in(wm), label, label)
 
 
 def engine_full_selectors(window_width, account_units):

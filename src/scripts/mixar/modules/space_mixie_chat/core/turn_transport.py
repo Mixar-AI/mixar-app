@@ -137,11 +137,14 @@ class TurnTransport:
                 processor = get_event_processor()
                 processor._clear_loader_bubbles(target)
                 get_session_manager().set_state(target, previous_state)
+                from mixar.modules.auth.core.guest import login_required_fields
                 from .byok_notice import byok_error_code
-                if byok_error_code(result, result.get('data') or {}):
-                    # A refusal over the user's own key: keep the command so
-                    # the key-missing card can resend it (new id) once the
-                    # key is entered or the account switches to credits.
+                if (byok_error_code(result, result.get('data') or {})
+                        or login_required_fields(result.get('data') or {})):
+                    # A refusal over the user's own key, or a guest asked to
+                    # sign in: keep the command so the key-missing card or
+                    # the sign-in notice can resend it (new id) once the key
+                    # is entered, the account signs in or switches to credits.
                     from . import byok_resend
                     remembered = payload
                     if uploads['backup']:
