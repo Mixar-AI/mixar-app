@@ -103,6 +103,24 @@ def _method_src(name: str) -> str:
     raise AssertionError(f"{name} missing")
 
 
+def test_linux_resize_edges_leave_conversation_clicks_alone():
+    from types import SimpleNamespace
+
+    tree = ast.parse(DRAG_OP_SRC)
+    helper = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                  and n.name == '_linux_resize_edges')
+    ns = {'sys': SimpleNamespace(platform='linux')}
+    exec(compile(ast.Module(body=[helper], type_ignores=[]), str(DRAG_OP), 'exec'), ns)
+    context = SimpleNamespace(window=SimpleNamespace(width=700, height=430))
+    points = [(0, 210, 4), (699, 210, 8), (350, 429, 1), (350, 0, 2),
+              (0, 0, 6), (699, 0, 10), (0, 429, 5), (699, 429, 9),
+              (8, 8, 0), (350, 210, 0), (691, 421, 0)]
+    for x, y, expected in points:
+        assert ns['_linux_resize_edges'](context, SimpleNamespace(mouse_x=x, mouse_y=y)) == expected
+    ns['sys'].platform = 'darwin'
+    assert ns['_linux_resize_edges'](context, SimpleNamespace(mouse_x=0, mouse_y=0)) == 0
+
+
 def test_linux_modal_stops_when_compositor_consumes_release():
     """The native pointer pump can end a drag without a LEFTMOUSE event."""
     import textwrap
@@ -276,6 +294,7 @@ def test_island_content_press_cannot_start_window_drag():
     begin = Mock(return_value={'FINISHED'})
     namespace = {
         '_is_pill_window': lambda area: False,
+        '_linux_resize_edges': lambda context, event: 0,
         '_IS_WINDOWS': False,
         '_linux_client_drag_followup': lambda: False,
         '_event_hits_header': lambda area, event: False,
@@ -311,6 +330,7 @@ def test_x11_header_drag_goes_modal_for_client_followup():
     wm = SimpleNamespace(modal_handler_add=Mock(), event_timer_add=Mock(return_value=object()))
     namespace = {
         '_is_pill_window': lambda area: False,
+        '_linux_resize_edges': lambda context, event: 0,
         '_IS_WINDOWS': False,
         '_linux_client_drag_followup': lambda: True,
         '_event_hits_header': lambda area, event: False,

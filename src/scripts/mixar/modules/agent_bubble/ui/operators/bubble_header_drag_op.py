@@ -98,7 +98,20 @@ def _event_hits_header(area, event) -> bool:
 def _is_pill_window(area) -> bool:
     """The pill window has only a HEADER region (WINDOW and TOOLS are removed
     at creation in space_agent_bubble.cc); the island always has TOOLS."""
-    return not any(r.type == 'TOOLS' for r in area.regions)
+    return (sys.platform.startswith('linux') and getattr(area, 'width', 560) < 560) or not any(
+        r.type == 'TOOLS' for r in area.regions)
+
+
+def _linux_resize_edges(context, event) -> int:
+    """Hit the 8px border, leaving conversation and header controls alone."""
+    if not sys.platform.startswith('linux'):
+        return 0
+    window = context.window
+    x, y = event.mouse_x, event.mouse_y
+    margin = 8
+    edges = 4 if x < margin else 8 if x >= window.width - margin else 0
+    edges |= 2 if y < margin else 1 if y >= window.height - margin else 0
+    return edges
 
 
 def _pill_voice_claimed() -> bool:
@@ -147,6 +160,12 @@ class MIXAR_OT_bubble_header_drag(Operator):
             self._pill_dragging = False
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
+
+        # Frameless Linux windows need client-side edge hit testing. The WM
+        # owns the resize gesture and enforces the native minimum size.
+        edges = _linux_resize_edges(context, event)
+        if edges:
+            return bpy.ops.mixar.bubble_window_begin_resize(edges=edges)
 
         # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region

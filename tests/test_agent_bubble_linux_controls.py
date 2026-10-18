@@ -268,9 +268,9 @@ def test_the_platform_gate_is_an_allowlist():
     src = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "constants.py"
     ).read_text(encoding="utf-8")
-    assert 'sys.platform in {"darwin", "win32"}' in src
+    assert 'sys.platform in {"darwin", "win32", "linux"}' in src
     assert CONST.BUBBLE_WINDOW_CONTROLS_SUPPORTED == (
-        sys.platform in {"darwin", "win32"}
+        sys.platform in {"darwin", "win32", "linux"}
     )
 
 
@@ -339,7 +339,7 @@ def _linux_preprocessor_pass(source):
                     "if defined(WIN32) || defined(__linux__)",
                 )
             ), f"unexpected platform conditional: {directive!r}"
-            taken = directive in ("ifdef __linux__", "if defined(WIN32) || defined(__linux__)")
+            taken = "__linux__" in directive
             stack.append((active, taken))
             active = active and taken
         elif directive.startswith("else"):
