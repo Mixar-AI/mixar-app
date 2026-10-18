@@ -4775,6 +4775,15 @@ msgstr "Mixar 출력"
 msgid "Output aspect ratio this camera frames for"
 msgstr "이 카메라가 프레이밍하는 출력 종횡비입니다"
 
+msgid "Publish \"{title}\" to the Mixar Store?"
+msgstr ""
+
+msgid "Mixie asks to publish it for {platforms}. Builds are playable after review."
+msgstr ""
+
+msgid "Publish"
+msgstr ""
+
 msgid "Could not start."
 msgstr ""
 
@@ -4835,18 +4844,6 @@ msgstr ""
 msgid "Publish the game to the Mixar Store (builds wait for moderator review)"
 msgstr ""
 
-msgid "Publish to Mixar Store?"
-msgstr ""
-
-msgid "The store page becomes public; builds are playable after review."
-msgstr ""
-
-msgid "Publish"
-msgstr ""
-
-msgid "Publishing…"
-msgstr ""
-
 msgid "Stop the running game job"
 msgstr ""
 
@@ -4860,6 +4857,30 @@ msgid "Open Store Page"
 msgstr ""
 
 msgid "Open the game's Mixar Store page in the browser"
+msgstr ""
+
+msgid "Approve publishing this game to the Mixar Store"
+msgstr ""
+
+msgid "No publish is waiting for approval."
+msgstr ""
+
+msgid "{platforms} build(s). The store page goes public now; builds are playable after moderator review."
+msgstr ""
+
+msgid "Only you can approve a publish, from the Mixar window."
+msgstr ""
+
+msgid "This publish request is no longer waiting for approval."
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Cancel Publish"
+msgstr ""
+
+msgid "Cancel the waiting publish request"
 msgstr ""
 
 msgid "Game"
@@ -4905,6 +4926,9 @@ msgid "Build & Publish"
 msgstr ""
 
 msgid "Build & Play"
+msgstr ""
+
+msgid "Mixie asks to publish \"{title}\""
 msgstr ""
 
 msgid "{kind}: {pct}%"
