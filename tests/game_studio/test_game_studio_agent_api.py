@@ -218,3 +218,17 @@ def test_redact_hides_home():
     assert agent_api._redact({"p": os.path.join(home, "x"), "n": [1, None, True]}) == \
         {"p": "~" + os.sep + "x", "n": [1, None, True]}
     assert agent_api._redact("Exported " + os.path.join(home, "g.zip")) == "Exported ~" + os.sep + "g.zip"
+
+
+def test_settled_jobs_replace_the_last_progress_line():
+    jobs.reset_for_tests()
+    done = jobs.create("build")
+    jobs.update(done, pct=90, message="Scanning and importing project assets")
+    jobs.finish(done, result={})
+    failed = jobs.create("export")
+    jobs.update(failed, message="Exporting web")
+    jobs.finish(failed, error="templates missing", error_code="templates_missing")
+    assert jobs.get(done)["message"] == "Done."
+    assert jobs.get(failed)["message"] == "templates missing"
+    from mixar.modules.game_studio.constants import platform_list
+    assert platform_list(["web", "macos", "windows", "linux"]) == "Web, macOS, Windows, Linux"

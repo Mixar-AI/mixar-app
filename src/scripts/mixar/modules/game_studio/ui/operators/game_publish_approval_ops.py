@@ -19,6 +19,7 @@ from bpy.types import Operator
 
 from mixar.config.agent_guard import called_from_agent_script
 from mixar.modules.common.i18n import iface_, rpt_
+from mixar.modules.game_studio.constants import platform_list
 from mixar.modules.game_studio.core import approvals, launch
 
 
@@ -78,7 +79,7 @@ class MIXAR_OT_game_publish_approve(Operator):
             title=iface_("Publish \"{title}\" to the Mixar Store?").format(title=summary["title"]),
             message=iface_("{platforms} build(s). The store page goes public now; builds are "
                            "playable after moderator review.").format(
-                platforms=", ".join(summary["platforms"])),
+                platforms=platform_list(summary["platforms"])),
             confirm_text=iface_("Publish"), translate=False)
 
     def execute(self, context):

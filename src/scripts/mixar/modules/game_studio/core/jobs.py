@@ -99,7 +99,9 @@ def finish(job_id: str, result=None, error=None, error_code=None) -> None:
         job.update(state=JOB_FAILED if failed else JOB_DONE, result=result,
                    error=str(error) if error else None,
                    error_code=str(error_code or "failed") if failed else None,
-                   pct=job["pct"] if failed else 100.0, updated=time.time())
+                   pct=job["pct"] if failed else 100.0, updated=time.time(),
+                   # The last progress line ("Scanning…") must not outlive the job.
+                   message=(str(error) if error else "Failed.") if failed else "Done.")
         _state["dirty"] = True
 
 

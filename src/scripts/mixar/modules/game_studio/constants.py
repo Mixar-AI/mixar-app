@@ -44,6 +44,13 @@ GODOT_ENV_VAR = "MIXAR_GODOT_BIN"
 PROGRESS_PREFIX = "MIXAR_PROGRESS "
 RESULT_SCHEMA = "mixar_godot_result_v1"
 PLATFORMS = ("web", "macos", "windows", "linux")
+# Display names (proper nouns, shown untranslated).
+PLATFORM_NAMES = {"web": "Web", "macos": "macOS", "windows": "Windows", "linux": "Linux"}
+
+
+def platform_list(platforms) -> str:
+    """``["web", "macos"]`` → ``"Web, macOS"`` for display."""
+    return ", ".join(PLATFORM_NAMES.get(p, str(p)) for p in platforms or ())
 EXIT_CODES = {0: None, 1: "failed", 2: "bad_spec", 3: "import_failed",
               4: "templates_missing", 5: "export_failed"}
 VERSION_TIMEOUT_S = 20.0

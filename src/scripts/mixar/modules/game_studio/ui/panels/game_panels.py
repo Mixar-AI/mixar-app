@@ -7,7 +7,7 @@ registry snapshots and ID properties — no process, file or network work."""
 from bpy.types import Panel
 
 from mixar.modules.common.i18n import iface_
-from mixar.modules.game_studio.constants import STORE_PROP
+from mixar.modules.game_studio.constants import STORE_PROP, platform_list
 from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles, spec as game_spec
 
 
@@ -55,7 +55,7 @@ class MIXAR_PT_game_roles(_GamePanel, Panel):
         layout.operator("mixar.game_auto_roles", icon='SHADERFX')
         summary = roles.role_summary([o for o in roles.game_objects(context.scene) if roles.in_game(o)])
         col = layout.column(align=True)
-        for role in ("player", "collectible", "enemy", "hazard", "goal"):
+        for role in ("player", "static", "prop", "collectible", "enemy", "hazard", "goal", "spawn", "decor"):
             count = summary["counts"].get(role, 0)
             if count:
                 col.label(text=iface_("{role}: {count}").format(role=iface_(role.title()), count=count),
@@ -129,7 +129,7 @@ class MIXAR_PT_game_publish(_GamePanel, Panel):
         box = layout.box()
         box.label(text=iface_("Mixie asks to publish \"{title}\"").format(
             title=request["summary"].get("title") or ""), icon='QUESTION', translate=False)
-        box.label(text=", ".join(request["summary"].get("platforms") or ()), translate=False)
+        box.label(text=platform_list(request["summary"].get("platforms")), translate=False)
         row = box.row(align=True)
         row.operator("mixar.game_publish_approve", text="Publish", icon='CHECKMARK').request_id = \
             request["request_id"]

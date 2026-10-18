@@ -4784,6 +4784,12 @@ msgstr ""
 msgid "Publish"
 msgstr ""
 
+msgid "Failed."
+msgstr ""
+
+msgid "Done."
+msgstr ""
+
 msgid "Could not start."
 msgstr ""
 

@@ -24,7 +24,7 @@ import os
 
 import bpy
 
-from ..constants import GODOT_PATH_CONFIG_KEY, STORE_PROP
+from ..constants import STORE_PROP, platform_list
 from . import roles, spec as game_spec
 
 ROLE_LIST_LIMIT = 200
@@ -191,7 +191,7 @@ def _ask_user(request_id: str, summary: dict) -> None:
         from mixar.modules.common.i18n import n_, rpt_
         from mixar.modules.common.notifications import get_notification_store
         from mixar.modules.common.notifications.store import NotificationAction
-        platforms = ", ".join(summary["platforms"])
+        platforms = platform_list(summary["platforms"])
         get_notification_store().push(
             "info", rpt_("Publish \"{title}\" to the Mixar Store?").format(title=summary["title"]),
             body=rpt_("Mixie asks to publish it for {platforms}. Builds are playable after review.")
