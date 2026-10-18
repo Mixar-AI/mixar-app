@@ -51,6 +51,8 @@ LOCAL_FIELDS_HEIGHT = (S.CHIP_H + S.GAP + 4 * (S.NOTE_H + S.FIELD_H)
                        + S.GAP + 2 * S.NOTE_H)
 STORED_NOTE = n_("Stored only on this computer, used only for Mixar agent requests - "
                  "Mixar never keeps a copy.")
+CODEX_STORED_NOTE = n_("Read from this file on this computer, used only for Mixar agent "
+                       "requests - Mixar never keeps a copy.")
 
 
 def provider_label(provider_id):
@@ -200,9 +202,10 @@ class FormPlan:
             items = [(mid, label) for mid, label, _desc in
                      model_suggestions.get_model_items(self.provider) if mid != 'NONE']
             self.chips = S.chip_rows(layout, items, CHIP_ROW_WIDTH)
-            notes = 2 * S.NOTE_H + S.GAP if self.kind == 'codex' else 0.0
+            notes = S.NOTE_H + S.GAP if self.kind == 'codex' else 0.0
             self.need = S.chips_height(len(self.chips)) + S.GAP + notes + strips_h
-            self.bottom = S.key_block_height()
+            # Codex: the sign-in status line sits between the note and the field.
+            self.bottom = S.key_block_height(S.NOTE_H if self.kind == 'codex' else 0.0)
 
     def _plan_strips(self):
         wm, state = self.wm, self.state
@@ -250,12 +253,12 @@ class FormPlan:
                             STORED_NOTE, 'byok_form_api_key', key_prompt.FOCUS_KEY)
         elif self.kind == 'codex':
             from . import byok_codex_ops
-            note, _kind = byok_codex_ops.path_status(wm.byok_form_codex_path or "")
-            # Short prompt; the hint under it names the file in use (empty
-            # field = the default ~/.codex/auth.json, which path_status shows).
+            # The field shows the file in use (prefilled on open); the status
+            # line just above it says whether there is anything left to do.
+            status = byok_codex_ops.path_status(wm.byok_form_codex_path or "")
             self._key_block(col, iface_("Codex sign-in file"),
-                            note, 'byok_form_codex_path', key_prompt.FOCUS_CODEX_PATH,
-                            translate_note=False)
+                            CODEX_STORED_NOTE, 'byok_form_codex_path',
+                            key_prompt.FOCUS_CODEX_PATH, status=status)
         else:
             self._key_block(col, iface_("Enter API key for {model} here.").format(
                 model=model_label(self.provider, wm.byok_form_model)),
@@ -289,9 +292,8 @@ class FormPlan:
 
     def _codex_notes(self, area):
         S.sep(area, S.GAP)
-        for line in (n_("Run  codex login  in your terminal; Mixar uses that sign-in in place."),
-                     n_("Uses your ChatGPT subscription - Mixar credits are not charged.")):
-            S.label(S.row(area, S.NOTE_H, left=S.PROMPT_INSET), line, S.NOTE)
+        S.label(S.row(area, S.NOTE_H, left=S.PROMPT_INSET),
+                n_("Uses your ChatGPT subscription - Mixar credits are not charged."), S.NOTE)
 
     def _openrouter_area(self, area):
         slug = S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
@@ -364,10 +366,17 @@ class FormPlan:
         save.enabled = self.state != 'SAVING'
         S.button(save, OP_SAVE, text, S.PRIMARY, default=True, docked=True)
 
-    def _key_block(self, col, prompt, note, prop, focus, translate_note=True):
+    def _key_block(self, col, prompt, note, prop, focus, translate_note=True, status=None):
+        """``status`` (``(text, ok)``, Codex) adds a dotted line between the
+        note and the field: green when nothing is left but Save."""
         S.label(S.row(col, S.PROMPT_H, left=S.PROMPT_INSET), prompt, S.PROMPT, translate=False)
         S.label(S.row(col, S.NOTE_H, left=S.PROMPT_INSET), note, S.NOTE,
                 translate=translate_note)
+        if status:
+            text, ok = status
+            line = S.row(col, S.NOTE_H, left=S.PROMPT_INSET, right=S.RIGHT_MARGIN)
+            S.status_dot(line, S.STATUS_ON if ok else S.STATUS_DANGER)
+            S.label(line, text, S.NOTE if ok else S.DANGER_TEXT, translate=False)
         S.sep(col, S.NOTE_TO_INPUT)
         field = S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
         field.enabled = self.state != 'SAVING'
