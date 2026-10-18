@@ -8,6 +8,12 @@ Main thread only: the GLB goes through the shared export lane
 OFF, active scene only, modifiers applied), never a second glTF call. The
 spec beside it is a few kilobytes. Everything after this (Godot, hashing,
 upload) belongs to a worker thread.
+
+``boss_fight`` (contract v1.3): the characters' rigs travel with them and
+only their ``<prefix><state>`` clips are exported (an explicit
+``animations`` selection; helper actions stay out). The ``combat`` block
+is resolved AFTER the GLB is written, from the file's own clip timeline
+(``combat.prove``), so every time in the spec is measured, not assumed.
 """
 
 from __future__ import annotations
@@ -17,8 +23,8 @@ import os
 
 import bpy
 
-from ..constants import EXPORT_DIRNAME, GAMES_SUBDIR, SCENE_FILE, SPEC_FILE
-from . import roles, spec as game_spec
+from ..constants import BOSS_TEMPLATE, EXPORT_DIRNAME, GAMES_SUBDIR, SCENE_FILE, SPEC_FILE
+from . import characters as game_characters, combat, roles, spec as game_spec
 
 
 def games_root() -> str:
@@ -48,13 +54,57 @@ def current_spec(scene) -> tuple[dict, list]:
     return game_spec.build_spec(settings, game_spec.build_nodes(objects), app_version()), objects
 
 
-def export_spec(objects) -> dict:
-    """The shared lane's spec for a game GLB of ``objects``."""
+def inspect(scene) -> dict:
+    """Everything a check needs, without writing: ``{spec, objects,
+    characters, errors, warnings, combat_warnings, timing}``.
+    ``spec["combat"]`` holds PREDICTED lengths here (the action's frames /
+    fps); ``write_package`` replaces it, and ``combat_warnings``, with the
+    block proven against the written file."""
+    spec, objects = current_spec(scene)
+    found = game_characters.find(objects)
+    errors, warnings = game_spec.validate_spec(spec, found)
+    timing, problems = {}, []
+    if spec.get("template") == BOSS_TEMPLATE:
+        overrides = game_spec.load_settings(scene).get("combat") or {}
+        spec["combat"], timing, problems = combat.resolve(found, overrides, combat.scene_fps(scene))
+    return {"spec": spec, "objects": objects, "characters": found, "errors": errors,
+            "warnings": warnings, "combat_warnings": problems, "timing": timing}
+
+
+def export_spec(objects, animations=None) -> dict:
+    """The shared lane's spec for a game GLB of ``objects``. ``animations``
+    None exports every clip (v1 templates); a list selects clips."""
     meshes = [obj.name for obj in objects if obj.type == 'MESH']
-    empties = [obj.name for obj in objects if obj.type == 'EMPTY']
-    return {"format": "glb", "use_case": "game", "target_scope": "scene",
-            "mesh_names": meshes, "extra_object_names": empties,
+    extras = [obj.name for obj in objects if obj.type in ('EMPTY', 'ARMATURE')]
+    spec = {"format": "glb", "use_case": "game", "target_scope": "scene",
+            "mesh_names": meshes, "extra_object_names": extras,
             "suggested_filename": SCENE_FILE}
+    if animations is not None:
+        spec["animations"] = list(animations)
+    return spec
+
+
+def _prove_combat(scene, checked: dict, glb: str, clips: list, result: dict) -> None:
+    """Resolve ``spec["combat"]`` against the clip timeline of the GLB just
+    written; the per-clip proof goes to ``result["combat_proof"]``."""
+    spec, warnings = result["spec"], result["warnings"]
+    fps = combat.scene_fps(scene)
+    actions = {name: action for character in checked["characters"]
+               for name, action in character["actions"].items()}
+    try:
+        timeline = combat.read_timeline(glb)
+    except (OSError, ValueError, KeyError, IndexError) as exc:
+        warnings.append(f"could not read the clip timeline of {SCENE_FILE} ({exc.__class__.__name__}); "
+                        "combat timing left out")
+        timeline = {}
+    extra = sorted(set(timeline) - set(clips))
+    if extra:
+        warnings.append(f"{SCENE_FILE} holds clips outside the selection: {', '.join(extra[:6])}")
+    proof = combat.prove(actions, timeline, fps)
+    overrides = game_spec.load_settings(scene).get("combat") or {}
+    spec["combat"], _timing, problems = combat.resolve(checked["characters"], overrides, fps, proof)
+    warnings.extend(problems)
+    result["combat_proof"] = {"fps": round(fps, 4), "rule": "t = frame / fps + shift", "clips": proof}
 
 
 def _write_json(path: str, data: dict) -> None:
@@ -71,8 +121,11 @@ def write_package(scene, game_dir: str = "") -> dict:
     Returns ``{"ok", "game_dir", "export_dir", "spec", "warnings", "errors",
     "export"}``; nothing is written when the spec has errors.
     """
-    spec, objects = current_spec(scene)
-    errors, warnings = game_spec.validate_spec(spec)
+    checked = inspect(scene)
+    spec, objects, errors, warnings = (checked["spec"], checked["objects"], checked["errors"],
+                                       checked["warnings"])
+    boss_fight = spec.get("template") == BOSS_TEMPLATE
+    clips = game_characters.export_clips(checked["characters"]) if boss_fight else None
     if not any(obj.type == 'MESH' for obj in objects):
         errors.append("no visible meshes to export")
     game_dir = game_dir or game_dir_for(spec["slug"])
@@ -82,14 +135,20 @@ def write_package(scene, game_dir: str = "") -> dict:
     if errors:
         return result
     from mixar.modules.space_mixie_chat.core.agent_export import export_to_path
-    exported = export_to_path(os.path.join(export_dir, SCENE_FILE), export_spec(objects))
+    glb = os.path.join(export_dir, SCENE_FILE)
+    exported = export_to_path(glb, export_spec(objects, clips))
     result["export"] = {key: exported.get(key) for key in
-                        ("success", "error", "mesh_count", "file_size_bytes", "warning", "verification")}
+                        ("success", "error", "mesh_count", "file_size_bytes", "warning", "verification",
+                         "clips", "clips_missing")}
     if not exported.get("success"):
         errors.append(f"GLB export failed: {exported.get('error') or 'unknown error'}")
         return result
     if exported.get("warning"):
         warnings.append(exported["warning"])
+    for issue in (exported.get("verification") or {}).get("issues") or ():
+        warnings.append(f"scene.glb: {issue}")
+    if boss_fight:
+        _prove_combat(scene, checked, glb, clips, result)
     try:
         _write_json(os.path.join(export_dir, SPEC_FILE), spec)
     except OSError as exc:

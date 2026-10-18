@@ -12,10 +12,33 @@ PARAMS_PROP = "mixar_game_params"
 # replaces it with a tag on the part's assembly root.
 PART_ONLY_PROP = "mixar_game_part_only"
 ROLES = ("player", "static", "prop", "collectible", "hazard", "enemy",
-         "goal", "spawn", "decor", "ignore")
+         "goal", "spawn", "decor", "ignore", "boss")
 DEFAULT_MESH_ROLE = "static"
 # Role params (all optional) and their JSON types.
-PARAM_TYPES = {"value": int, "speed": float, "damage": int, "patrol_distance": float}
+PARAM_TYPES = {"value": int, "speed": float, "damage": int, "patrol_distance": float,
+               "hp": int, "clip_prefix": str, "display_name": str}
+# Contract v1.3 §1 param bounds: numbers (min, max), strings a pattern / length.
+PARAM_RANGES = {"hp": (1, 100000)}
+CLIP_PREFIX_PATTERN = r"^[A-Za-z0-9_]{1,32}$"
+DISPLAY_NAME_MAX = 40
+
+# --- v1.3 characters (rigged player / boss / enemy) -----------------------
+CHARACTER_ROLES = ("player", "boss", "enemy")
+DEFAULT_CLIP_PREFIX = {"boss": "boss_", "player": "player_", "enemy": "enemy_"}
+# Clip states per role (§3). ``attack_*`` / ``light_<n>`` are families.
+CLIP_STATES = {
+    "boss": ("idle", "walk", "attack_*", "roar", "hit", "death"),
+    "player": ("idle", "run", "light_*", "heavy", "dodge", "hit", "death"),
+    # The contract names no enemy states; an enemy plays the boss's set.
+    "enemy": ("idle", "walk", "attack_*", "roar", "hit", "death"),
+}
+# Pose markers on an action that time its combat windows (§2).
+HIT_MARKERS = ("hit_start", "hit_end")
+HIT_MARKER_SINGLE = "hit"
+HIT_SINGLE_S = 0.12
+IFRAME_MARKERS = ("iframes_start", "iframes_end")
+# Timing sources game_status reports per attack clip (§5).
+TIMING_SOURCES = ("markers", "configured", "default")
 
 # --- §2 game package --------------------------------------------------------
 SPEC_SCHEMA = "mixar_game_spec_v1"
@@ -34,8 +57,11 @@ BUILDS_DIRNAME = "builds"
 RESULTS_DIRNAME = "results"
 GAMES_SUBDIR = "mixar/games"
 
-TEMPLATES = ("third_person", "first_person", "platformer", "top_down")
-WIN_RULES = ("collect_all", "reach_goal", "survive", "score")
+TEMPLATES = ("third_person", "first_person", "platformer", "top_down", "boss_fight")
+WIN_RULES = ("collect_all", "reach_goal", "survive", "score", "defeat_boss")
+BOSS_TEMPLATE = "boss_fight"
+# What switching to boss_fight sets unless the same change sets it (§2).
+BOSS_DEFAULTS = {"win": "defeat_boss", "lives": 1}
 SKIES = ("procedural", "none")
 TITLE_MAX = 80
 SLUG_MAX = 48

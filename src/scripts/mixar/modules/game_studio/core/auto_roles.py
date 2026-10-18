@@ -17,10 +17,18 @@ role (a root word of weight ``STRONG_WORD``: Token, Coin…), weak matches
 for that role (a "DeliveryPickup" station) are dropped. A one-part assembly that is a large flat mesh
 is ground (``static``). Explicitly tagged assemblies are left alone unless
 ``overwrite``.
+
+``boss_fight`` (contract v1.3): the player and the boss are CHARACTERS,
+assemblies whose subtree holds a rig (``characters.rigs``) — a name alone
+never makes one ("boss_playback_preview_Root" holds a camera and the floor).
+The boss is the character named most like one (``BOSS_VOCAB``), else the
+tallest; the player is the best-named of the rest, else the only one left.
+Unrigged assemblies never become the player or the boss.
 """
 
 from __future__ import annotations
 
+from ..constants import BOSS_TEMPLATE
 from .assemblies import Hierarchy
 from .roles import get_role, is_large_flat, name_words
 
@@ -39,7 +47,8 @@ VOCAB = {
 # Words that say "this is a sign/fixture", refusing the role when they name
 # the root or at least half of the parts.
 NEGATIVE = {"collectible": {"sign", "board", "plinth", "pole", "post", "poster", "banner", "stand"}}
-SINGLE = ("player", "goal", "spawn")  # one assembly each
+SINGLE = ("player", "goal", "spawn", "boss")  # one assembly each
+BOSS_VOCAB = {"boss": 4, "monster": 2, "demon": 2, "giant": 2, "dragon": 2, "titan": 2, "golem": 2}
 THRESHOLD = 2.0
 PART_WEIGHT = 2.0
 STRONG_WORD = 3  # a root word this heavy names the role outright
@@ -105,13 +114,44 @@ def _deliberate(obj) -> bool:
     return is_deliberate_part(obj)
 
 
-def suggest_roles(objects, overwrite: bool = False) -> list[dict]:
+def _height(hierarchy, root) -> float:
+    try:
+        return max(float(tuple(p.dimensions)[2]) for p in hierarchy.parts(root))
+    except (ValueError, TypeError, AttributeError, IndexError):
+        return 0.0
+
+
+def _vocab_score(root, vocab) -> int:
+    words = _root_words(root)
+    return sum(weight for word, weight in vocab.items() if word in words)
+
+
+def _cast_characters(hierarchy, found, taken) -> list[dict]:
+    """boss_fight: one boss and one player among the rigged assemblies
+    (a role the user already gave is not cast again)."""
+    picks, rest = {}, list(found)
+    named = [r for r in rest if _vocab_score(r, BOSS_VOCAB) > 0]
+    if not taken["boss"] and (named or len(rest) > 1 or taken["player"]) and rest:
+        boss = max(named or rest, key=lambda r: (_vocab_score(r, BOSS_VOCAB), _height(hierarchy, r)))
+        picks[id(boss)] = ("boss", "rigged character named as a boss" if named else "tallest rigged character")
+        rest.remove(boss)
+    if not taken["player"] and rest:
+        player = max(rest, key=lambda r: _vocab_score(r, VOCAB["player"]))
+        picks[id(player)] = ("player", "rigged character")
+    return [{"object": r.name, "role": picks.get(id(r), (None, ""))[0],
+             "reason": picks.get(id(r), (None, "the boss and the player are already cast"))[1],
+             "parts": len(hierarchy.parts(r)), "score": THRESHOLD, "strong": True} for r in found]
+
+
+def suggest_roles(objects, overwrite: bool = False, template: str = "") -> list[dict]:
     """Suggestions ``[{object, role, reason, parts}]`` for the assemblies of
     ``objects`` (``object`` is the assembly root to tag)."""
+    from .characters import rigs
     hierarchy = Hierarchy(objects)
-    candidates, taken = [], {role: False for role in SINGLE}
+    boss_fight = template == BOSS_TEMPLATE
+    candidates, taken, cast = [], {role: False for role in SINGLE}, []
     for root in hierarchy.assemblies():
-        if getattr(root, "type", "") not in ("MESH", "EMPTY"):
+        if getattr(root, "type", "") not in ("MESH", "EMPTY", "ARMATURE"):
             continue
         if _tagged(hierarchy, root) and not overwrite:
             for role in SINGLE:
@@ -122,16 +162,25 @@ def suggest_roles(objects, overwrite: bool = False) -> list[dict]:
         parts = hierarchy.parts(root)
         if hierarchy.is_container(root) or (not parts and getattr(root, "type", "") != "EMPTY"):
             continue
+        if boss_fight and rigs([root] + hierarchy.descendants(root)):
+            cast.append(root)
+            continue
         if not hierarchy.children(root):  # a loose object
             role, reason = suggest_role(root.name, root.type, tuple(getattr(root, "dimensions", (0, 0, 0))))
             score = THRESHOLD if role else 0.0
         else:
             role, score = _best(score_assembly(root, parts))
             reason = "assembly name and parts"
+            if role is None and len(parts) == 1 and is_large_flat(tuple(getattr(parts[0], "dimensions", ()))):
+                role, score, reason = "static", THRESHOLD, "large flat mesh"
+        if boss_fight and role == "player":  # the player must be a rigged character
+            role = None
         if role:
             candidates.append({"object": root.name, "role": role, "reason": reason,
                                "parts": len(parts), "score": score,
                                "strong": _root_weight(root, role) >= STRONG_WORD})
+    if boss_fight:
+        candidates.extend(_cast_characters(hierarchy, cast, taken))
     # When an assembly is NAMED a clear collectible (Token, Coin, Gem…), ones
     # that only match weakly (a "Pickup" station, a part called Bolt) are not.
     strong = {c["role"] for c in candidates if c["strong"]}

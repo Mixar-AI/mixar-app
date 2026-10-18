@@ -4,7 +4,9 @@
 """``mixar_game_spec_v1`` (contract §2): settings, nodes and validation.
 
 The scene stores only the SETTINGS (title, template, rules, player,
-camera, world, ui) as JSON in ``scene["mixar_game_spec"]``. ``nodes`` are
+camera, world, ui, and the ``configure_game(combat=...)`` overrides under
+``combat``) as JSON in ``scene["mixar_game_spec"]``. The spec's ``combat``
+block is resolved at build time (``combat.resolve``), never stored. ``nodes`` are
 derived from object roles at build time, keyed by object name — the glTF
 node name — so a rename never leaves a stale entry behind.
 """
@@ -15,9 +17,9 @@ import copy
 import json
 import re
 
-from ..constants import (DEFAULT_PLATFORMS, DEFAULT_TITLE, PLATFORMS, SCENE_FILE, SKIES, SLUG_MAX, SPEC_PROP,
-                         SPEC_SCHEMA, TEMPLATES, TITLE_MAX, WIN_RULES)
-from . import roles
+from ..constants import (BOSS_DEFAULTS, BOSS_TEMPLATE, DEFAULT_PLATFORMS, DEFAULT_TITLE, PLATFORMS, SCENE_FILE,
+                         SKIES, SLUG_MAX, SPEC_PROP, SPEC_SCHEMA, TEMPLATES, TITLE_MAX, WIN_RULES)
+from . import combat, roles
 
 DEFAULT_SETTINGS = {
     "title": DEFAULT_TITLE,
@@ -109,9 +111,16 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
             merged["slug"] = slugify(value) if str(value).strip() else ""
         elif key == "template":
             if value in TEMPLATES:
+                if value == BOSS_TEMPLATE and merged.get("template") != BOSS_TEMPLATE:
+                    _boss_defaults(merged, changes)
                 merged["template"] = value
             else:
                 errors.append(f"template must be one of {', '.join(TEMPLATES)}")
+        elif key == "combat":
+            merged["combat"], problems = combat.normalize(value, merged.get("combat"))
+            if not merged["combat"]:
+                merged.pop("combat")
+            errors.extend(problems)
         elif key in SECTIONS:
             if not isinstance(value, dict):
                 errors.append(f"{key} must be an object")
@@ -127,6 +136,15 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
     return merged, errors
 
 
+def _boss_defaults(merged: dict, changes: dict) -> None:
+    """Switching to boss_fight: win ``defeat_boss`` and 1 life, unless the
+    same change sets them (later fields of ``changes`` still apply)."""
+    asked = (changes or {}).get("rules") if isinstance((changes or {}).get("rules"), dict) else {}
+    for field, value in BOSS_DEFAULTS.items():
+        if field not in asked:
+            merged["rules"][field] = value
+
+
 def build_nodes(objects) -> list[dict]:
     """``nodes`` for every object that reaches the game as a role node (a
     tagged assembly root covers its parts: ``"subtree": true``)."""
@@ -135,6 +153,7 @@ def build_nodes(objects) -> list[dict]:
 
 def build_spec(settings: dict, nodes: list[dict], version: str = "") -> dict:
     spec = copy.deepcopy(settings)
+    spec.pop("combat", None)  # overrides only; the exporter adds the resolved block
     spec["slug"] = spec.get("slug") or slugify(spec.get("title"))
     spec.update({
         "schema": SPEC_SCHEMA,
@@ -148,8 +167,9 @@ def build_spec(settings: dict, nodes: list[dict], version: str = "") -> dict:
     return ordered
 
 
-def validate_spec(spec: dict) -> tuple[list[str], list[str]]:
-    """``(errors, warnings)``. Errors block a build; warnings travel along."""
+def validate_spec(spec: dict, characters=None) -> tuple[list[str], list[str]]:
+    """``(errors, warnings)``. Errors block a build; warnings travel along.
+    ``characters`` (``characters.find``) adds the v1.3 rig checks."""
     errors, warnings = [], []
     if spec.get("schema") != SPEC_SCHEMA:
         errors.append(f"schema must be {SPEC_SCHEMA}")
@@ -181,7 +201,34 @@ def validate_spec(spec: dict) -> tuple[list[str], list[str]]:
             warnings.append("win rule score has no collectibles to score with")
     if not any(role in by_role for role in ("static", "prop")):
         warnings.append("no static geometry: the player has nothing to stand on")
+    _validate_boss(spec, by_role, characters, errors, warnings)
     return errors, warnings
+
+
+def _validate_boss(spec, by_role, characters, errors, warnings) -> None:
+    bosses = by_role.get("boss", [])
+    boss_fight = spec.get("template") == BOSS_TEMPLATE
+    if not boss_fight:
+        if bosses:
+            errors.append(f"the boss role needs template {BOSS_TEMPLATE} ({', '.join(bosses[:4])})")
+        if (spec.get("rules") or {}).get("win") == "defeat_boss":
+            errors.append(f"win rule defeat_boss needs template {BOSS_TEMPLATE}")
+        return
+    if not bosses:
+        errors.append("no boss: tag exactly one character root with the 'boss' role")
+    elif len(bosses) > 1:
+        errors.append(f"{len(bosses)} bosses ({', '.join(bosses[:4])}); exactly one is allowed")
+    if (spec.get("rules") or {}).get("win") != "defeat_boss":
+        warnings.append(f"{BOSS_TEMPLATE} is usually won with defeat_boss")
+    for character in characters or ():
+        if character["role"] in ("player", "boss") and not character["rig"]:
+            errors.append(f"{character['object']} has no rig: a {character['role']} needs an "
+                          "armature that deforms its mesh")
+        elif character["rig"]:
+            missing = [state for state in character["missing"] if state in ("idle", "walk", "run")]
+            if missing:
+                warnings.append(f"{character['object']}: no {character['clip_prefix']}"
+                                f"{missing[0].rstrip('*')} clip; the kit uses its fallback")
 
 
 def validate_platforms(platforms) -> tuple[list[str], list[str]]:

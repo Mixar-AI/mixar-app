@@ -21,14 +21,16 @@ from __future__ import annotations
 import json
 import re
 
-from ..constants import DEFAULT_MESH_ROLE, PARAM_TYPES, PARAMS_PROP, PART_ONLY_PROP, ROLE_PROP, ROLES
+from ..constants import (CLIP_PREFIX_PATTERN, DEFAULT_MESH_ROLE, DISPLAY_NAME_MAX, PARAM_RANGES, PARAM_TYPES,
+                         PARAMS_PROP, PART_ONLY_PROP, ROLE_PROP, ROLES)
 
 # A mesh at least this wide whose height is under FLAT_RATIO of its width is
 # ground: static even when a name hint says otherwise ("Lava Floor" stays a
 # hazard only when it is not the whole level).
 LARGE_SPAN = 8.0
 FLAT_RATIO = 0.1
-_GAME_TYPES = ("MESH", "EMPTY")
+# An ARMATURE carries a role too: a rigged character's root may be its rig.
+_GAME_TYPES = ("MESH", "EMPTY", "ARMATURE")
 
 
 def name_words(name: str) -> list[str]:
@@ -73,16 +75,42 @@ def normalize_params(raw) -> tuple[dict, list[str]]:
         if kind is None:
             errors.append(f"unknown param {key!r}")
             continue
+        if kind is str:
+            text, problem = _string_param(key, value)
+            if problem:
+                errors.append(problem)
+            else:
+                clean[key] = text
+            continue
         try:
             if isinstance(value, bool):
                 raise ValueError
             number = kind(value)
             if number != number or abs(float(number)) > 1e6:  # NaN / absurd
                 raise ValueError
-            clean[key] = number
         except (TypeError, ValueError):
             errors.append(f"param {key!r} must be a {kind.__name__}")
+            continue
+        low, high = PARAM_RANGES.get(key, (None, None))
+        if low is not None and not low <= number <= high:
+            errors.append(f"param {key!r} must be between {low} and {high}")
+            continue
+        clean[key] = number
     return clean, errors
+
+
+def _string_param(key, value) -> tuple[str, str]:
+    """``(text, error)`` for the v1.3 string params."""
+    if not isinstance(value, str):
+        return "", f"param {key!r} must be a string"
+    if key == "clip_prefix":
+        if not re.match(CLIP_PREFIX_PATTERN, value):
+            return "", "param 'clip_prefix' must be 1-32 letters, digits or underscores"
+        return value, ""
+    text = " ".join(value.split())
+    if not text or len(text) > DISPLAY_NAME_MAX:
+        return "", f"param {key!r} must be 1-{DISPLAY_NAME_MAX} characters"
+    return text, ""
 
 
 def get_role(obj) -> str | None:
@@ -151,7 +179,7 @@ def set_role(obj, role, params=None, part_only: bool = False) -> tuple[bool, lis
         return False, [f"unknown role {role!r}"]
     if getattr(obj, "type", "") not in _GAME_TYPES:
         return False, [f"{getattr(obj, 'name', '?')!r} is a {getattr(obj, 'type', '?')}; "
-                       "only meshes and empties carry game roles"]
+                       "only meshes, empties and armatures carry game roles"]
     clean, errors = normalize_params(params)
     obj[ROLE_PROP] = valid
     if part_only:
@@ -173,7 +201,7 @@ def is_deliberate_part(obj) -> bool:
 
 
 def game_objects(scene) -> list:
-    """Meshes and empties of ``scene`` in name order (hidden ones included:
+    """Meshes, empties and armatures of ``scene`` in name order (hidden ones included:
     the exporter decides visibility)."""
     objects = [obj for obj in getattr(scene, "objects", ()) or ()
                if getattr(obj, "type", "") in _GAME_TYPES]

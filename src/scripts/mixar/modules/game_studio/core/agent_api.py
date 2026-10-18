@@ -76,28 +76,41 @@ def _godot_status() -> dict:
             "message": verdict.get("message") or ""}
 
 
-def _spec_report(scene) -> dict:
-    from .exporter import current_spec
-    spec, _objects = current_spec(scene)
-    errors, warnings = game_spec.validate_spec(spec)
+def _spec_report(scene, checked=None) -> dict:
+    from .exporter import inspect
+    checked = checked or inspect(scene)
+    spec = checked["spec"]
     settings = {k: v for k, v in spec.items() if k not in ("nodes", "schema", "scene_file",
                                                            "up_axis", "generator")}
-    return {"settings": settings, "node_count": len(spec["nodes"]), "valid": not errors,
-            "errors": errors, "warnings": warnings}
+    return {"settings": settings, "node_count": len(spec["nodes"]), "valid": not checked["errors"],
+            "errors": checked["errors"], "warnings": checked["warnings"] + checked["combat_warnings"]}
+
+
+def _characters_report(checked) -> list:
+    """Contract v1.3 §5: per character its rig, clips by state, missing
+    states and the timing source of each attack/dodge clip."""
+    from .characters import public
+    timing = checked["timing"]
+    return [{**public(c), "timing": {clip: timing[clip] for names in c["clips"].values()
+                                     for clip in names if clip in timing}}
+            for c in checked["characters"]]
 
 
 def game_status() -> dict:
     from . import jobs
     jobs.drain()
+    from .exporter import inspect
     scene = _scene()
     objects = roles.game_objects(scene)
     tagged = [{"object": obj.name, "role": roles.get_role(obj), "params": roles.get_params(obj)}
               for obj in objects if roles.get_role(obj)]
+    checked = inspect(scene)
     return _redact({
         "godot": _godot_status(),
         "roles": {**roles.role_summary([o for o in objects if roles.in_game(o)]),
                   "assignments": tagged[:ROLE_LIST_LIMIT], "truncated": len(tagged) > ROLE_LIST_LIMIT},
-        "spec": _spec_report(scene),
+        "spec": _spec_report(scene, checked),
+        "characters": _characters_report(checked),
         "store": _store_identity(scene),
         "last_build": jobs.last("build"),
         "last_export": jobs.last("export"),
@@ -161,7 +174,8 @@ def auto_assign_roles(apply=False, overwrite=False) -> dict:
     scene = _scene()
     objects = roles.game_objects(scene)
     by_name = {obj.name: obj for obj in objects}
-    suggestions = suggest_roles(objects, overwrite=bool(overwrite))
+    template = game_spec.load_settings(scene).get("template")
+    suggestions = suggest_roles(objects, overwrite=bool(overwrite), template=template)
     if apply:
         hierarchy = _hierarchy(scene)
         if overwrite:
@@ -182,15 +196,16 @@ def auto_assign_roles(apply=False, overwrite=False) -> dict:
 
 
 def configure_game(title=None, template=None, rules=None, player=None, camera=None,
-                   world=None, ui=None) -> dict:
+                   world=None, ui=None, combat=None) -> dict:
+    """``combat`` (v1.3, boss_fight) overrides clip windows in seconds and
+    the boss/player tuning; a clip set to null drops its override."""
     scene = _scene()
     changes = {"title": title, "template": template, "rules": rules, "player": player,
-               "camera": camera, "world": world, "ui": ui}
+               "camera": camera, "world": world, "ui": ui, "combat": combat}
     merged, errors = game_spec.merge_settings(game_spec.load_settings(scene), changes)
     game_spec.save_settings(scene, merged)
-    from .exporter import current_spec
-    spec, _objects = current_spec(scene)
-    return _redact({"ok": not errors, "errors": errors, "spec": spec})
+    from .exporter import inspect
+    return _redact({"ok": not errors, "errors": errors, "spec": inspect(scene)["spec"]})
 
 
 def start_game_build(play=False) -> dict:

@@ -180,6 +180,10 @@ def run_export(session_id: str, spec: dict) -> dict:
             if is_web_gltf(use_case, fmt) else (set(), None, ""))
         if is_game_gltf(use_case, fmt):
             staging = game_scene_objects(meshes, spec.get("extra_object_names"), scene)
+            # A named rig (a tagged character's root) travels and its clips
+            # are selected like those of a deforming rig.
+            armatures |= {obj for obj in staging if obj.type == 'ARMATURE'}
+            counts["armature_count"] = len(armatures)
         export_objects = set(meshes) | armatures | staging
         if bpy.ops.object.select_all.poll():
             bpy.ops.object.select_all(action='DESELECT')
