@@ -21,11 +21,17 @@ and the World (sky or HDRI) come back as one warning line.
 from __future__ import annotations
 
 WEB_USE_CASES = ("web",)
+GAME_USE_CASES = ("game",)
 PUNCTUAL_LIGHTS = ("POINT", "SPOT", "SUN")
 
 
 def is_web_gltf(use_case: str, fmt: str) -> bool:
     return (str(use_case or "").lower() in WEB_USE_CASES
+            and str(fmt or "").lower().lstrip(".") in ("glb", "gltf"))
+
+
+def is_game_gltf(use_case: str, fmt: str) -> bool:
+    return (str(use_case or "").lower() in GAME_USE_CASES
             and str(fmt or "").lower().lstrip(".") in ("glb", "gltf"))
 
 
@@ -90,3 +96,14 @@ def web_scene_objects(meshes, scope: str, scene) -> tuple[set, dict, str]:
         notes.append("The World (sky or HDRI) is not part of glTF; in three.js set "
                      "scene.environment from the same HDRI or the scene is lit by its lights only.")
     return set(lights) | set(cameras) | groups, counts, " ".join(notes)
+
+
+def game_scene_objects(meshes, extra_names, scene) -> set:
+    """Extra objects for a ``game`` glTF export: the EMPTY markers named in
+    ``spec["extra_object_names"]`` (spawn points; the fork reads their
+    transforms by node name) plus every EMPTY ancestor, so hierarchy and
+    names survive. Cameras and lights stay out: the game kit owns both."""
+    by_name = {obj.name: obj for obj in getattr(scene, "objects", ()) or ()}
+    markers = [by_name[name] for name in (extra_names or ()) if name in by_name
+               and getattr(by_name[name], "type", "") == 'EMPTY']
+    return set(markers) | _empty_ancestors(list(meshes) + markers)

@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import re
 import time
+import uuid
 from contextlib import nullcontext
 
 import bpy
@@ -41,7 +42,7 @@ from .export_preflight import (
 )
 from .export_presets import PRESETS, preset_kwargs, preset_report, stl_kwargs  # noqa: F401
 from .export_verify import file_clip_names, verify_export
-from .export_web import is_web_gltf, web_scene_objects
+from .export_web import game_scene_objects, is_game_gltf, is_web_gltf, web_scene_objects
 
 EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
               "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz", "stl": ".stl"}
@@ -177,6 +178,8 @@ def run_export(session_id: str, spec: dict) -> dict:
         staging, scene_objects, web_warning = (
             web_scene_objects(meshes, str(spec.get("target_scope") or "scene"), scene)
             if is_web_gltf(use_case, fmt) else (set(), None, ""))
+        if is_game_gltf(use_case, fmt):
+            staging = game_scene_objects(meshes, spec.get("extra_object_names"), scene)
         export_objects = set(meshes) | armatures | staging
         if bpy.ops.object.select_all.poll():
             bpy.ops.object.select_all(action='DESELECT')
@@ -360,6 +363,28 @@ def run_export_to_remembered(session_id: str, request_id: str, spec: dict) -> di
     if result.get("success"):
         result["folder"] = "chosen earlier"
     return result
+
+
+def export_to_path(filepath: str, spec: dict) -> dict:
+    """First-party export into a path the CLIENT chose (game_studio's
+    ``mixar_export/scene.glb``): the same lane, presets and verification as
+    ``run_export``, overwriting the file. Main thread only; never reachable
+    with a backend-supplied path."""
+    fmt = str(spec.get("format") or "").lower().lstrip(".")
+    extension = EXTENSIONS.get(fmt)
+    if extension is None or os.path.splitext(filepath)[1].lower() != extension:
+        return {"success": False, "error": "Export destination extension mismatch"}
+    try:
+        os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    except OSError as exc:
+        return {"success": False, "error": f"could not create the export folder ({exc.__class__.__name__})"}
+    from .export_destination import clear_destination, set_destination
+    session = f"export-to-path:{uuid.uuid4().hex}"
+    set_destination(session, filepath)
+    try:
+        return run_export(session, {**spec, "destination": "path"})
+    finally:
+        clear_destination(session)
 
 
 def inspect_export(spec: dict) -> dict:

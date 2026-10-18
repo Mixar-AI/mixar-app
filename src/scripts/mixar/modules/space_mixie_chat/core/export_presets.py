@@ -12,7 +12,7 @@ the result dict the backend shows the user.
 
 from __future__ import annotations
 
-USE_CASES = ("unreal", "unity", "godot", "web", "ar", "other")
+USE_CASES = ("unreal", "unity", "godot", "web", "ar", "game", "other")
 
 # What every preset shares, keyed by exporter family.
 COMMON = {
@@ -67,6 +67,12 @@ _GLTF_WEB = {
     "export_import_convert_lighting_mode": "SPEC", "export_extras": True,
 }
 
+# Mixar Godot game package (game_studio): roles travel in game_spec.json, so
+# custom properties stay OUT of the file — Scene/Object RNA extras would carry
+# the chat session and the game spec into a published game.
+_GLTF_GAME = {**_GLTF_GODOT, "export_extras": False,
+              "export_cameras": False, "export_lights": False}
+
 PRESETS = {
     "unreal": {
         "fbx": {
@@ -85,6 +91,7 @@ PRESETS = {
         "gltf": dict(_GLTF_GODOT),
         "usd": {**_USD_YUP, "export_textures_mode": "NEW", "overwrite_textures": True},
     },
+    "game": {"fbx": dict(_FBX_UNITY), "gltf": dict(_GLTF_GAME), "usd": dict(_USD_YUP)},
     "other": {
         "fbx": {"apply_scale_options": "FBX_SCALE_ALL"},
         "gltf": dict(_GLTF_GODOT),
