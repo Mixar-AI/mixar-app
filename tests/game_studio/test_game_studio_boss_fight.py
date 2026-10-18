@@ -314,3 +314,22 @@ def test_game_scene_objects_stage_a_named_rig():
     mesh = NS(name="Boss_Skinned", type="MESH", parent=rig)
     scene = NS(objects=[root, rig, mesh])
     assert game_scene_objects([mesh], ["Boss_Rig"], scene) == {root, rig}
+
+
+def test_time_base_matches_the_forks_measurement_on_the_user_glb():
+    """fork-boss measured the user's GLB: sampler inputs start at 1/30 s, so
+    t = frame / 30 (slam impact frame 29 = 0.967 s, sweep contact frame 26 =
+    0.867 s). The client's proof derives the same rule from the file."""
+    actions = {"boss_attack_slam": Action("boss_attack_slam", 1, 91),
+               "boss_attack_sweep": Action("boss_attack_sweep", 1, 76)}
+    timeline = {"boss_attack_slam": (1 / 30, 91 / 30), "boss_attack_sweep": (1 / 30, 76 / 30)}
+    proof = combat.prove(actions, timeline, FPS)
+    for name, frame, seconds in (("boss_attack_slam", 29, 0.967), ("boss_attack_sweep", 26, 0.867)):
+        assert proof[name]["proven"] and proof[name]["shift"] == 0.0
+        assert round(frame / FPS + proof[name]["shift"], 3) == seconds
+
+
+def test_post_install_selftest_allows_a_boss_fight():
+    """A boss_fight self-test plays a scripted fight (~20 s real time)."""
+    from mixar.modules.game_studio.core import library_install
+    assert library_install.SELFTEST_TIMEOUT_S >= 30
