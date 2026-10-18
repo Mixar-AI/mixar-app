@@ -111,13 +111,15 @@ DENIED_OPS = frozenset({
     "wm.url_open",
     "wm.url_open_preset",
     "file.external_operation",
-    # User-only game actions: approving a public publish, launching an
-    # installed game (an executable), the game-dir/Godot pickers. The
+    # User-only game actions: approving a public publish, running a
+    # downloaded game (launch, or the self-test of the user's install), the
+    # Godot picker. The
     # operators also refuse under an agent frame; this refuses the call.
     "mixar.game_publish_approve",
     "mixar.game_publish",
     "mixar.game_library_launch",
     "mixar.game_library_launch_approve",
+    "mixar.game_library_install",  # the user's install self-tests (runs the game)
     "mixar.game_locate_godot",
 })
 

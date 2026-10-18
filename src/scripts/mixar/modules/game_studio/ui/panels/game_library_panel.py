@@ -74,9 +74,15 @@ class MIXAR_PT_game_library(Panel):
                          icon='FILE_REFRESH').slug = game["slug"]
         row.operator("mixar.game_library_uninstall", text="", icon='TRASH').slug = game["slug"]
         status = iface_("Version {version}").format(version=record.get("version") or "?")
-        if not check.get("ok"):
+        if record.get("selftest") is None:
+            status += " · " + iface_("checked on first Play")
+            icon = 'INFO'
+        elif not check.get("ok"):
             status += " · " + iface_("self-test failed")
-        box.label(text=status, icon='CHECKMARK' if check.get("ok") else 'ERROR', translate=False)
+            icon = 'ERROR'
+        else:
+            icon = 'CHECKMARK'
+        box.label(text=status, icon=icon, translate=False)
 
 
 classes = (MIXAR_PT_game_library,)

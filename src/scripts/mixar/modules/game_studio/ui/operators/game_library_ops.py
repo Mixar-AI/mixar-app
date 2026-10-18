@@ -44,7 +44,7 @@ def _launch(op, slug: str) -> set:
 
 def _refuse_agents(op) -> bool:
     if bpy.app.background or called_from_agent_script():
-        op.report({'ERROR'}, rpt_("Only you can start a game, from the Mixar window."))
+        op.report({'ERROR'}, rpt_("Only you can run a game, from the Mixar window."))
         return True
     return False
 
@@ -67,10 +67,19 @@ class MIXAR_OT_game_library_install(Operator):
     slug: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     def execute(self, context):
-        reply = agent_api.start_library_install(self.slug)
-        if not reply.get("ok"):
-            self.report({'ERROR'}, reply.get("error") or rpt_("Could not start."))
+        # The user's Install also self-tests (runs the game headless), so it
+        # is user-only like Play; agents use agent_api.start_library_install,
+        # which never executes the download.
+        if _refuse_agents(self) or not self.slug:
             return {'CANCELLED'}
+        from mixar.config.config import get_community_api_url
+        from mixar.modules.game_studio.core import jobs
+        if jobs.running("install") is not None:
+            self.report({'ERROR'}, rpt_("Another game is installing."))
+            return {'CANCELLED'}
+        jobs.start("install", library_install.install_by_slug_work(
+            library.library_root(), get_community_api_url(), self.slug, library.host_platform(),
+            run_selftest=True))
         return {'FINISHED'}
 
 

@@ -117,8 +117,14 @@ def selftest(program: str, cwd: str, runner=subprocess.run) -> dict:
     return result
 
 
-def install_work(root: str, api_base: str, game: dict, platform: str, client_factory=None):
-    """Install (or update to) ``game``'s current build for ``platform``."""
+def install_work(root: str, api_base: str, game: dict, platform: str, client_factory=None,
+                 run_selftest: bool = False):
+    """Install (or update to) ``game``'s current build for ``platform``.
+
+    ``run_selftest`` EXECUTES the downloaded program, so only a user-initiated
+    install sets it (the Library's Install button). An agent's install only
+    downloads, verifies and extracts; its self-test runs right before the
+    first user-approved launch (``launch_installed``)."""
     def work(handle):
         from .store_client import StoreClient, StoreError
         build = (game.get("builds") or {}).get(platform)
@@ -162,9 +168,10 @@ def install_work(root: str, api_base: str, game: dict, platform: str, client_fac
                 os.remove(archive)
             except OSError:
                 pass
-        handle.progress(85.0, "Testing the game", force=True)
-        program = executable_for(final, build["launch"], platform)
-        check = selftest(program, final)
+        check = None
+        if run_selftest:
+            handle.progress(85.0, "Testing the game", force=True)
+            check = selftest(executable_for(final, build["launch"], platform), final)
         index = library.load_index(root)
         index[slug] = {"game_id": game["game_id"], "title": game.get("title") or slug,
                        "build_id": build_id, "version": build["version"], "platform": platform,
@@ -177,21 +184,44 @@ def install_work(root: str, api_base: str, game: dict, platform: str, client_fac
     return work
 
 
-def install_by_slug_work(root: str, api_base: str, slug: str, platform: str, client_factory=None):
-    """Refresh the listing on the worker, then install ``slug``."""
+def _find_or_acquire(client, slug: str) -> dict:
+    """``slug`` from ``/me/library``; a free game not owned yet is acquired
+    first (idempotent). A developer's own game never enters their library,
+    so it is read from ``GET /games/{slug}`` (owners see their builds)."""
+    games = library.normalize_listing(client.library())
+    library.set_listing(games)
+    game = next((g for g in games if g["slug"] == slug), None)
+    if game is not None:
+        return game
+    page = client.get_game(slug)
+    game_id = str(page.get("game_id") or page.get("id") or "")
+    if not game_id:
+        raise JobError("No such game on the Mixar Store.", "not_found")
+    acquired = client.acquire(game_id)
+    games = library.normalize_listing(client.library())
+    library.set_listing(games)
+    game = next((g for g in games if g["slug"] == slug), None)
+    if game is None and acquired.get("acquired") is not True:  # the caller's own game
+        game = (library.normalize_listing([page]) or [None])[0]
+    if game is None:
+        raise JobError("That game is not in your library.", "not_owned")
+    return game
+
+
+def install_by_slug_work(root: str, api_base: str, slug: str, platform: str, client_factory=None,
+                         run_selftest: bool = False):
+    """Find (acquiring a free game if needed), then install ``slug``."""
     def work(handle):
         from .store_client import StoreClient, StoreError
+        client = (client_factory or StoreClient)(api_base)
         try:
-            data = (client_factory or StoreClient)(api_base).library()
+            game = _find_or_acquire(client, slug)
         except StoreError as exc:
+            if exc.code == "payments_unavailable":
+                raise JobError("Paid games can't be bought in Mixar yet.", exc.code) from exc
             raise JobError(exc.message, exc.code) from exc
-        games = library.normalize_listing(data)
-        library.set_listing(games)
-        game = next((g for g in games if g["slug"] == slug), None)
-        if game is None:
-            raise JobError("That game is not in your library. Get it on its store page first.",
-                           "not_owned")
-        return install_work(root, api_base, game, platform, client_factory)(handle)
+        return install_work(root, api_base, game, platform, lambda _base: client,
+                            run_selftest)(handle)
     return work
 
 
@@ -207,10 +237,13 @@ def uninstall_work(root: str, slug: str):
     return work
 
 
-def launch_installed(root: str, slug: str, popen=subprocess.Popen) -> dict:
-    """Start an installed game detached. Callers gate this on a user click."""
+def launch_installed(root: str, slug: str, popen=subprocess.Popen, runner=subprocess.run) -> dict:
+    """Start an installed game detached. Callers gate this on a user click
+    (the Play button or an approved launch request), so this is also where
+    an agent-installed build gets its first self-test. Worker threads only."""
     from . import godot_runner
-    record = (library.installed() or {}).get(slug)
+    index = library.load_index(root)
+    record = index.get(slug)
     if record is None:
         return {"ok": False, "error_code": "not_installed", "error": "That game is not installed."}
     install_dir = os.path.join(root, slug, record["build_id"])
@@ -218,6 +251,13 @@ def launch_installed(root: str, slug: str, popen=subprocess.Popen) -> dict:
         program = executable_for(install_dir, record["launch"], record["platform"])
     except (JobError, safe_extract.UnsafeArchive) as exc:
         return {"ok": False, "error_code": "invalid_install", "error": str(exc)}
+    if record.get("selftest") is None:
+        record["selftest"] = selftest(program, install_dir, runner=runner)
+        index[slug] = record
+        library.save_index(root, index)
+    if not record["selftest"].get("ok"):
+        return {"ok": False, "error_code": "selftest_failed",
+                "error": f"The game failed its self-test: {record['selftest'].get('error') or 'unknown'}"}
     if not godot_runner.launch(program, [], popen=popen):
         return {"ok": False, "error_code": "launch_failed", "error": "The game could not be started."}
     return {"ok": True, "slug": slug, "build_id": record["build_id"]}

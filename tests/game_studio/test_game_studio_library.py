@@ -148,9 +148,9 @@ def _client(stub):  # noqa: F811
     return lambda base: StoreClient(stub.base, token_provider=lambda: "tok")
 
 
-def _install(stub, root, platform="macos"):  # noqa: F811
+def _install(stub, root, platform="macos", run_selftest=True):  # noqa: F811
     work = library_install.install_by_slug_work(str(root), stub.base, "crystal-run", platform,
-                                                _client(stub))
+                                                _client(stub), run_selftest=run_selftest)
     return work(Handle())
 
 
@@ -171,7 +171,8 @@ def test_install_verifies_extracts_selftests_and_updates(stub, tmp_path):  # noq
     download = next(c for c in stub.calls if c["path"] == "/files/b2.zip")
     assert "Authorization" not in download["headers"]  # signed URL, no bearer
     listing = agent_api.library_list()
-    assert listing["games"][0]["installed"]["selftest_ok"] and not listing["games"][0]["update_available"]
+    assert listing["games"][0]["installed"]["selftest"] == "passed"
+    assert not listing["games"][0]["update_available"]
 
 
 def test_sha_mismatch_installs_nothing(stub, tmp_path):  # noqa: F811
@@ -223,7 +224,8 @@ def test_windows_entry_point_and_launch_with_fakes(tmp_path):
         "build_id": "bw", "launch": "Crystal Run.exe", "platform": "windows", "title": "Crystal Run"}})
     started = []
     reply = library_install.launch_installed(str(tmp_path / "library"), "crystal-run",
-                                             popen=lambda cmd, **kw: started.append(cmd))
+                                             popen=lambda cmd, **kw: started.append(cmd),
+                                             runner=lambda cmd, **kw: _Done())
     assert reply["ok"] and started[0][0].endswith("Crystal Run.exe") and started[0][1:] == []
     selftest_cmd = []
     library_install.selftest("C:/game/Crystal Run.exe", "C:/game",
@@ -272,9 +274,11 @@ def test_launch_operators_are_user_only():
     from pathlib import Path
     from mixar.modules.space_mixie_chat.core.sandbox_denylist import op_denial_reason
     from mixar.modules.space_mixie_chat.core.sandbox_modules import is_denied_module
-    for op in ("game_library_launch", "game_library_launch_approve", "game_publish_approve"):
+    for op in ("game_library_launch", "game_library_launch_approve", "game_publish_approve",
+               "game_library_install"):
         assert op_denial_reason("mixar", op)
-    assert op_denial_reason("mixar", "game_library_install") is None  # installing is allowed
+    assert op_denial_reason("mixar", "game_library_install")  # the user's install self-tests
+    assert op_denial_reason("mixar", "game_library_refresh") is None
     for name in ("library", "library_install", "safe_extract"):
         assert is_denied_module(f"mixar.modules.game_studio.core.{name}")
     source = (Path(__file__).parents[2] / "src/scripts/mixar/modules/game_studio/ui/operators/"
@@ -293,3 +297,85 @@ def test_quarantine_is_never_stripped():
         code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("#"))
         assert "xattr" not in code.replace("``com.apple.quarantine`` xattr", "") or path.name == "safe_extract.py", path
         assert "removexattr" not in code and '"-d"' not in code and "Zone.Identifier" not in code, path
+
+
+# --- agents install but never execute ---------------------------------------------
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="builds a fake macOS program")
+def test_agent_install_never_runs_the_program(stub, tmp_path, monkeypatch):  # noqa: F811
+    def forbidden(*args, **kwargs):
+        raise AssertionError("the downloaded program was executed")
+
+    monkeypatch.setattr(library_install, "selftest", forbidden)
+    root = tmp_path / "library"
+    root.mkdir()
+    _serve_game(stub, _mac_app())
+    result = _install(stub, root, run_selftest=False)
+    assert result["selftest"] is None
+    assert json.loads((root / "installed.json").read_text())["crystal-run"]["selftest"] is None
+    assert agent_api.library_list()["games"][0]["installed"]["selftest"] == "not_run"
+
+
+def test_agent_api_install_requests_no_selftest(monkeypatch):
+    captured = {}
+
+    def fake_work(*args, **kwargs):
+        captured.update(kwargs)
+        return lambda handle: {}
+
+    monkeypatch.setattr(library_install, "install_by_slug_work", fake_work)
+    monkeypatch.setattr(library, "library_root", lambda: "/tmp/library")
+    import mixar.config.config as config
+    monkeypatch.setattr(config, "get_community_api_url", lambda: "http://store.test")
+    assert agent_api.start_library_install("crystal-run")["ok"]
+    assert captured == {"run_selftest": False}
+
+
+def test_agent_api_has_no_route_to_run_a_download():
+    import ast
+    from pathlib import Path
+    tree = ast.parse((Path(__file__).parents[2] / "src/scripts/mixar/modules/game_studio/core/"
+                      "agent_api.py").read_text(encoding="utf-8"))
+    names = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)} | \
+        {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+    assert not names & {"selftest", "launch_installed", "_claim", "_issue_token"}
+    for call in (n for n in ast.walk(tree) if isinstance(n, ast.Call)):
+        for keyword in call.keywords:
+            if keyword.arg == "run_selftest":
+                assert isinstance(keyword.value, ast.Constant) and keyword.value.value is False
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="runs the fake macOS program")
+def test_first_user_launch_selftests_and_refuses_a_failing_game(stub, tmp_path):  # noqa: F811
+    root = tmp_path / "library"
+    root.mkdir()
+    failing = SELFTEST_SCRIPT.replace("ok = '--headless' in sys.argv", "ok = False")
+    _serve_game(stub, _mac_app(failing))
+    _install(stub, root, run_selftest=False)
+    started = []
+    reply = library_install.launch_installed(str(root), "crystal-run",
+                                             popen=lambda cmd, **kw: started.append(cmd))
+    assert reply["error_code"] == "selftest_failed" and not started
+    index = json.loads((root / "installed.json").read_text())
+    assert index["crystal-run"]["selftest"]["ok"] is False  # recorded, not re-run every Play
+    _serve_game(stub, _mac_app())
+    _install(stub, root, run_selftest=False)
+    reply = library_install.launch_installed(str(root), "crystal-run",
+                                             popen=lambda cmd, **kw: started.append(cmd))
+    assert reply["ok"] and started and started[0][1:] == []
+
+
+def test_free_game_is_acquired_before_install(stub, tmp_path):  # noqa: F811
+    root = tmp_path / "library"
+    root.mkdir()
+    payload = _mac_app()
+    _serve_game(stub, payload)
+    listed = stub.routes[("GET", "/api/v1/me/library")]
+    stub.routes[("GET", "/api/v1/me/library")] = (200, lambda raw: (
+        listed if any(c["path"] == "/api/v1/games/g1/acquire" for c in stub.calls)
+        else (200, _envelope({"items": []}))))
+    stub.routes[("GET", "/api/v1/games/crystal-run")] = (200, _envelope({"game_id": "g1", "slug": "crystal-run"}))
+    stub.routes[("POST", "/api/v1/games/g1/acquire")] = (200, _envelope({"acquired": True}))
+    assert _install(stub, root, run_selftest=False)["build_id"] == "b2"
+    paths = [c["path"] for c in stub.calls]
+    assert paths.index("/api/v1/games/g1/acquire") < paths.index("/api/v1/games/g1/builds/b2/download")

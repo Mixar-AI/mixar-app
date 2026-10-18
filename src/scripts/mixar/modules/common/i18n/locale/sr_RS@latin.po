@@ -5988,7 +5988,7 @@ msgstr ""
 msgid "Starting the game…"
 msgstr ""
 
-msgid "Only you can start a game, from the Mixar window."
+msgid "Only you can run a game, from the Mixar window."
 msgstr ""
 
 msgid "Refresh Library"
@@ -6003,7 +6003,7 @@ msgstr ""
 msgid "Download, check and install this game for this computer"
 msgstr ""
 
-msgid "Could not start."
+msgid "Another game is installing."
 msgstr ""
 
 msgid "Uninstall"
@@ -6034,6 +6034,9 @@ msgid "Cancel Launch"
 msgstr ""
 
 msgid "Don't start the game"
+msgstr ""
+
+msgid "Could not start."
 msgstr ""
 
 msgid "Locate Godot…"
@@ -6155,6 +6158,9 @@ msgid "Update"
 msgstr ""
 
 msgid "Version {version}"
+msgstr ""
+
+msgid "checked on first Play"
 msgstr ""
 
 msgid "self-test failed"

@@ -331,14 +331,16 @@ def library_list(refresh=False) -> dict:
 def _installed_view(record):
     if not record:
         return None
-    check = record.get("selftest") or {}
+    check = record.get("selftest")
     return {"build_id": record.get("build_id"), "version": record.get("version"),
-            "selftest_ok": bool(check.get("ok")), "selftest_error": check.get("error")}
+            "selftest": "not_run" if check is None else ("passed" if check.get("ok") else "failed"),
+            "selftest_error": (check or {}).get("error")}
 
 
 def start_library_install(slug=None) -> dict:
     """Install or update ``slug`` for this computer (a job; poll
-    ``game_job_status``). Installing is allowed for the agent; launching is not."""
+    ``game_job_status``): download, verify, extract — nothing is executed.
+    Installing is allowed for the agent; running the game is not."""
     from mixar.config.config import get_community_api_url
     from . import jobs, library, library_install
     slug = str(slug or "")
@@ -349,8 +351,11 @@ def start_library_install(slug=None) -> dict:
     if running is not None:
         return {"ok": False, "job_id": running["job_id"], "state": "failed", "error_code": "busy",
                 "error": "Another game is installing."}
+    # Agents never execute the download: no self-test here (it runs before
+    # the first user-approved launch).
     job_id = jobs.start("install", library_install.install_by_slug_work(
-        library.library_root(), get_community_api_url(), slug, library.host_platform()))
+        library.library_root(), get_community_api_url(), slug, library.host_platform(),
+        run_selftest=False))
     return {"ok": True, "job_id": job_id, "state": "running"}
 
 
