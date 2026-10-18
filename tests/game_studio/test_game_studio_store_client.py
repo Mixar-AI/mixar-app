@@ -73,6 +73,13 @@ def test_create_game_sends_bearer_and_contract_fields(stub):
     assert body["source"] == "mixar" and body["price_cents"] == 0 and body["platforms"] == ["web"]
 
 
+def test_api_base_with_api_v1_suffix_is_not_doubled(stub):
+    stub.routes[("POST", "/api/v1/games")] = (201, _envelope({"game": {"id": "g1", "slug": "s"}}))
+    client = StoreClient(stub.base + "/api/v1/", token_provider=lambda: "t")
+    assert client.create_game({"title": "S"}) == {"id": "g1", "slug": "s"}
+    assert stub.calls[0]["path"] == "/api/v1/games"
+
+
 def test_build_flow_hashes_and_uploads_without_bearer(stub, tmp_path):
     artifact = tmp_path / "game-web.zip"
     artifact.write_bytes(b"PK" + b"x" * 300000)

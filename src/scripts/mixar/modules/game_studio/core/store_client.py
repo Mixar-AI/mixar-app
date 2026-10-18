@@ -137,9 +137,16 @@ def _http_error(response) -> StoreError:
                       response.status_code, extra)
 
 
+API_PREFIX = "/api/v1"
+
+
 class StoreClient:
     def __init__(self, api_base: str, token_provider=None, refresh=None, session=None):
-        self.api_base = str(api_base or "").rstrip("/")
+        # The routes carry their own ``api/v1``; a base configured with it
+        # (``http://host:8100/api/v1``, as the web app's env names it) would
+        # otherwise request ``/api/v1/api/v1/games``.
+        base = str(api_base or "").rstrip("/")
+        self.api_base = base[:-len(API_PREFIX)] if base.endswith(API_PREFIX) else base
         self._token = token_provider or _default_token
         self._refresh = refresh or _default_refresh
         self._session = session or requests.Session()
