@@ -193,6 +193,21 @@ def set_role(obj, role, params=None, part_only: bool = False) -> tuple[bool, lis
     return True, errors
 
 
+def set_param(obj, key: str, value) -> list[str]:
+    """Change one param of a tagged object, keeping its role and the rest.
+    Main thread only."""
+    if not get_role(obj):
+        return [f"{getattr(obj, 'name', '?')!r} has no role"]
+    clean, errors = normalize_params({**get_params(obj), key: value})
+    if not errors:
+        obj[PARAMS_PROP] = json.dumps(clean, sort_keys=True)
+    return errors
+
+
+def first_with_role(objects, role: str):
+    return next((obj for obj in objects if get_role(obj) == role), None)
+
+
 def is_deliberate_part(obj) -> bool:
     try:
         return bool(obj.get(PART_ONLY_PROP))

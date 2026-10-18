@@ -4,11 +4,13 @@
 """View3D sidebar "Game" tab. Draw only reads: cached Godot verdict, job
 registry snapshots and ID properties — no process, file or network work."""
 
+import time
+
 from bpy.types import Panel
 
 from mixar.modules.common.i18n import iface_
-from mixar.modules.game_studio.constants import STORE_PROP, platform_list
-from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles, spec as game_spec
+from mixar.modules.game_studio.constants import BOSS_TEMPLATE, STORE_PROP, platform_list
+from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles
 from mixar.modules.game_studio.core.assemblies import Hierarchy
 
 
@@ -49,7 +51,7 @@ class MIXAR_PT_game_roles(_GamePanel, Panel):
         obj = context.active_object
         form = context.window_manager.mixar_game
         objects = roles.game_objects(context.scene)
-        if obj is not None and obj.type in ('MESH', 'EMPTY'):
+        if obj is not None and obj.type in ('MESH', 'EMPTY', 'ARMATURE'):
             hierarchy = Hierarchy(objects)
             root = obj if form.role_part_only else hierarchy.assembly_root(obj)
             if root is not obj:
@@ -63,7 +65,7 @@ class MIXAR_PT_game_roles(_GamePanel, Panel):
                              translate=False)
             layout.prop(form, "role_part_only")
         elif obj is not None:
-            layout.label(text="Only meshes and empties have roles", icon='INFO')
+            layout.label(text="Only meshes, empties and armatures have roles", icon='INFO')
         if len(context.selected_objects) > 1:
             layout.operator_menu_enum("mixar.game_set_role", "role", text="Set Role for Selected")
         row = layout.row(align=True)
@@ -71,7 +73,8 @@ class MIXAR_PT_game_roles(_GamePanel, Panel):
         row.operator("mixar.game_auto_roles", text="", icon='FILE_REFRESH').overwrite = True
         summary = roles.role_summary([o for o in objects if roles.in_game(o)])
         col = layout.column(align=True)
-        for role in ("player", "static", "prop", "collectible", "enemy", "hazard", "goal", "spawn", "decor"):
+        for role in ("player", "boss", "static", "prop", "collectible", "enemy", "hazard", "goal", "spawn",
+                     "decor"):
             count = summary["counts"].get(role, 0)
             if count:
                 col.label(text=iface_("{role}: {count}").format(role=iface_(role.title()), count=count),
@@ -107,6 +110,62 @@ class MIXAR_PT_game_settings(_GamePanel, Panel):
         col = layout.column(heading="HUD")
         for name in ("show_score", "show_timer", "title_screen"):
             col.prop(form, name)
+
+
+CHECK_TTL_S = 0.5
+_checked = {"key": None, "at": 0.0, "value": None}
+
+
+def checked_scene(scene) -> dict:
+    """``exporter.inspect`` for the draw callbacks, reused for CHECK_TTL_S
+    so the Build and Combat panels share one walk per redraw burst."""
+    from mixar.modules.game_studio.core.exporter import inspect
+    key, now = (scene.as_pointer(), scene.get("mixar_game_spec", "")), time.monotonic()
+    if _checked["key"] != key or now - _checked["at"] > CHECK_TTL_S:
+        _checked.update(key=key, at=now, value=inspect(scene))
+    return _checked["value"]
+
+
+class MIXAR_PT_game_combat(_GamePanel, Panel):
+    """Boss Fight only: boss HP, the attack windows and where each comes
+    from, and the clips each character is missing (read-only)."""
+    bl_label = "Combat"
+    bl_idname = "MIXAR_PT_game_combat"
+    bl_parent_id = "MIXAR_PT_game_settings"
+
+    @classmethod
+    def poll(cls, context):
+        return context.window_manager.mixar_game.template == BOSS_TEMPLATE
+
+    def draw(self, context):
+        layout = self.layout
+        checked = checked_scene(context.scene)
+        if roles.first_with_role(context.scene.objects, "boss") is not None:
+            layout.prop(context.window_manager.mixar_game, "boss_hp")
+        clips = (checked["spec"].get("combat") or {}).get("clips") or {}
+        sources = {"markers": iface_("markers"), "configured": iface_("configured"),
+                   "default": iface_("kit default")}
+        for character in checked["characters"]:
+            box = layout.box()
+            box.label(text=character["object"], icon='ARMATURE_DATA' if character["rig"] else 'ERROR',
+                      translate=False)
+            if not character["rig"]:
+                box.label(text="No rig: needs an armature that deforms the mesh")
+                continue
+            col = box.column(align=True)
+            for clip, source in sorted(checked["timing"].items()):
+                if not any(clip in names for names in character["clips"].values()):
+                    continue
+                entry = clips.get(clip) or {}
+                window = entry.get("hit") or entry.get("iframes")
+                text = (iface_("{clip}: {start}-{end} s ({source})").format(
+                    clip=clip, start=f"{window[0]:.2f}", end=f"{window[1]:.2f}", source=sources[source])
+                    if window else iface_("{clip}: {source}").format(clip=clip, source=sources[source]))
+                col.label(text=text, translate=False)
+            if character["missing"]:
+                names = ", ".join(character["clip_prefix"] + s.replace("_*", "_1" if s == "light_*" else "_…")
+                                  for s in character["missing"])
+                box.label(text=iface_("Missing: {clips}").format(clips=names), icon='INFO', translate=False)
 
 
 class MIXAR_PT_game_publish(_GamePanel, Panel):
@@ -164,9 +223,8 @@ class MIXAR_PT_game_publish(_GamePanel, Panel):
 
     @staticmethod
     def _draw_checks(layout, context):
-        from mixar.modules.game_studio.core.exporter import current_spec
-        spec, _objects = current_spec(context.scene)
-        errors, warnings = game_spec.validate_spec(spec)
+        checked = checked_scene(context.scene)
+        errors, warnings = checked["errors"], checked["warnings"]
         # Validation lines are fixed client text, shown as built.
         for line in errors[:4]:
             layout.label(text=line, icon='ERROR', translate=False)
@@ -219,5 +277,6 @@ classes = (
     MIXAR_PT_game_godot,
     MIXAR_PT_game_roles,
     MIXAR_PT_game_settings,
+    MIXAR_PT_game_combat,
     MIXAR_PT_game_publish,
 )

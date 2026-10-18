@@ -25,6 +25,7 @@ ROLE_ITEMS = (
     ("collectible", "Collectible", "Picked up for score"),
     ("hazard", "Hazard", "Hurts the player on touch"),
     ("enemy", "Enemy", "Patrols and chases the player"),
+    ("boss", "Boss", "The rigged boss of a Boss Fight (exactly one)"),
     ("goal", "Goal", "Reaching it wins (Reach Goal rule)"),
     ("spawn", "Spawn", "Where the player starts"),
     ("decor", "Decor", "Visual only, no collision"),
@@ -35,12 +36,14 @@ TEMPLATE_ITEMS = (
     ("first_person", "First Person", "Camera at the player's eyes"),
     ("platformer", "Platformer", "Side-on jumping"),
     ("top_down", "Top Down", "Camera looks down on the player"),
+    ("boss_fight", "Boss Fight", "A rigged player duels a rigged boss with a lock-on camera"),
 )
 WIN_ITEMS = (
     ("collect_all", "Collect All", "Win by picking up every collectible"),
     ("reach_goal", "Reach Goal", "Win by entering the goal"),
     ("survive", "Survive", "Win by staying alive until the time limit"),
     ("score", "Score", "Win by reaching the target score"),
+    ("defeat_boss", "Defeat Boss", "Win when the boss's health reaches zero"),
 )
 SKY_ITEMS = (
     ("procedural", "Procedural Sky", "A generated daylight sky"),
@@ -83,6 +86,25 @@ def _view(section, field, choices=None):
     return {"get": get, "set": set}
 
 
+DEFAULT_BOSS_HP = 800  # the fork's default when the boss carries no hp param
+
+
+def _boss():
+    scene = bpy.context.scene
+    return roles.first_with_role(getattr(scene, "objects", ()) or (), "boss") if scene else None
+
+
+def _boss_hp_get(_self):
+    boss = _boss()
+    return int(roles.get_params(boss).get("hp", DEFAULT_BOSS_HP)) if boss is not None else DEFAULT_BOSS_HP
+
+
+def _boss_hp_set(_self, value):
+    boss = _boss()
+    if boss is not None:
+        roles.set_param(boss, "hp", int(value))
+
+
 class MIXAR_GameSettings(PropertyGroup):
     title: StringProperty(name="Title", **_view(None, "title"))
     template: EnumProperty(name="Template", items=TEMPLATE_ITEMS, **_view(None, "template", TEMPLATE_ITEMS))
@@ -101,6 +123,8 @@ class MIXAR_GameSettings(PropertyGroup):
     show_score: BoolProperty(name="Score", **_view("ui", "show_score"))
     show_timer: BoolProperty(name="Timer", **_view("ui", "show_timer"))
     title_screen: BoolProperty(name="Title Screen", **_view("ui", "title_screen"))
+    boss_hp: IntProperty(name="Boss HP", description="The boss's health (its hp role param)",
+                         min=1, max=100000, get=_boss_hp_get, set=_boss_hp_set)
 
     role_part_only: BoolProperty(
         name="This part only",

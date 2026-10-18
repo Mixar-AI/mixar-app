@@ -117,3 +117,31 @@ def test_ui_draw_does_no_blocking_work():
     panels = (MODULE / "ui/panels/game_panels.py").read_text(encoding="utf-8")
     for banned in ("subprocess", "requests", "locate(", "write_package", "agent_api"):
         assert banned not in panels
+
+
+def test_combat_and_characters_stay_pure_for_agent_scripts():
+    # Agent scripts reach these through ``spec``; file reads live in exporter.
+    for name in ("combat", "characters"):
+        source = (MODULE / f"core/{name}.py").read_text(encoding="utf-8")
+        for banned in ("open(", "import bpy", "import os", "subprocess"):
+            assert banned not in source, f"{name}.py uses {banned}"
+    assert "def read_timeline" in (MODULE / "core/exporter.py").read_text(encoding="utf-8")
+
+
+def test_combat_panel_is_boss_fight_only_and_reads_the_shared_check():
+    panels = (MODULE / "ui/panels/game_panels.py").read_text(encoding="utf-8")
+    body = panels[panels.index("class MIXAR_PT_game_combat"):panels.index("class MIXAR_PT_game_publish")]
+    assert "return context.window_manager.mixar_game.template == BOSS_TEMPLATE" in body
+    assert 'bl_parent_id = "MIXAR_PT_game_settings"' in body
+    assert "checked_scene(context.scene)" in body and "inspect(" not in body
+    checks = panels[panels.index("def _draw_checks"):panels.index("def _draw_last")]
+    assert "checked_scene(context.scene)" in checks
+    tuple_src = panels[panels.index("\nclasses = ("):]
+    assert tuple_src.index("MIXAR_PT_game_settings") < tuple_src.index("MIXAR_PT_game_combat")
+
+
+def test_ui_lists_the_v13_choices():
+    props = (MODULE / "ui/properties/game_props.py").read_text(encoding="utf-8")
+    for key in ('("boss", "Boss"', '("boss_fight", "Boss Fight"', '("defeat_boss", "Defeat Boss"',
+                "boss_hp: IntProperty("):
+        assert key in props

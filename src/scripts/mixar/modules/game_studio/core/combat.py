@@ -12,9 +12,10 @@ Nothing else: the client never invents timing, the fork owns defaults.
 Frame → seconds. The glTF exporter samples an action from its first to its
 last frame and writes key times ``frame / fps`` (``fps = render.fps /
 fps_base``; no slide to zero), so a clip on frames 1-91 at 30 fps has key
-times 0.0333-3.0333 and Godot plays it as a 3.033 s clip. ``prove`` reads
+times 0.0333-3.0333 and Godot plays it as a 3.033 s clip. ``prove`` takes
 each animation's sampler input accessor ``min``/``max`` from the written GLB
-and derives ``shift = file_min - first_frame / fps``; a clip is PROVEN when
+(``exporter.read_timeline``; file reads stay out of this module, which agent
+scripts can reach through ``spec``) and derives ``shift = file_min - first_frame / fps``; a clip is PROVEN when
 ``file_max`` also equals ``last_frame / fps + shift`` within half a frame.
 ``length_s`` is the file's ``max``. A clip that fails the proof keeps its
 length but loses its marker windows, with a warning.
@@ -23,9 +24,7 @@ length but loses its marker windows, with a warning.
 from __future__ import annotations
 
 import copy
-import json
 import re
-import struct
 
 from ..constants import HIT_MARKER_SINGLE, HIT_MARKERS, HIT_SINGLE_S, IFRAME_MARKERS
 from .characters import COMBAT_STATES
@@ -176,32 +175,9 @@ def predicted(action, fps: float) -> dict:
     return {"min": start / fps, "max": end / fps, "shift": 0.0, "proven": False}
 
 
-def read_timeline(glb_path: str) -> dict:
-    """``{animation name: (min_s, max_s)}`` from a GLB's JSON chunk (sampler
-    input accessors' ``min``/``max``, which glTF requires)."""
-    with open(glb_path, "rb") as handle:
-        header = handle.read(20)
-        if len(header) < 20 or header[:4] != b"glTF":
-            raise ValueError("not a GLB file")
-        length = struct.unpack("<I", header[12:16])[0]
-        doc = json.loads(handle.read(length))
-    accessors = doc.get("accessors") or []
-    timeline = {}
-    for anim in doc.get("animations") or []:
-        lows, highs = [], []
-        for sampler in anim.get("samplers") or []:
-            acc = accessors[sampler["input"]] if sampler.get("input") is not None else {}
-            if acc.get("min") and acc.get("max"):
-                lows.append(float(acc["min"][0]))
-                highs.append(float(acc["max"][0]))
-        if lows:
-            timeline[str(anim.get("name") or "")] = (min(lows), max(highs))
-    return timeline
-
-
 def prove(actions: dict, timeline: dict, fps: float) -> dict:
     """Per clip ``{min, max, shift, proven, first_frame, last_frame}`` from
-    the written file's ``timeline`` (``read_timeline``)."""
+    the written file's ``timeline`` (``exporter.read_timeline``)."""
     proof, tolerance = {}, 0.5 / fps
     for name, action in actions.items():
         start, end = frame_range(action)

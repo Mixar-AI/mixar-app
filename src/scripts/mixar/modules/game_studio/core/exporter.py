@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import struct
 
 import bpy
 
@@ -84,6 +85,30 @@ def export_spec(objects, animations=None) -> dict:
     return spec
 
 
+def read_timeline(glb_path: str) -> dict:
+    """``{animation name: (min_s, max_s)}`` from a GLB's JSON chunk (sampler
+    input accessors' ``min``/``max``, which glTF requires)."""
+    with open(glb_path, "rb") as handle:
+        header = handle.read(20)
+        if len(header) < 20 or header[:4] != b"glTF":
+            raise ValueError("not a GLB file")
+        length = struct.unpack("<I", header[12:16])[0]
+        doc = json.loads(handle.read(length))
+    accessors = doc.get("accessors") or []
+    timeline = {}
+    for anim in doc.get("animations") or []:
+        lows, highs = [], []
+        for sampler in anim.get("samplers") or []:
+            acc = accessors[sampler["input"]] if sampler.get("input") is not None else {}
+            if acc.get("min") and acc.get("max"):
+                lows.append(float(acc["min"][0]))
+                highs.append(float(acc["max"][0]))
+        if lows:
+            timeline[str(anim.get("name") or "")] = (min(lows), max(highs))
+    return timeline
+
+
+
 def _prove_combat(scene, checked: dict, glb: str, clips: list, result: dict) -> None:
     """Resolve ``spec["combat"]`` against the clip timeline of the GLB just
     written; the per-clip proof goes to ``result["combat_proof"]``."""
@@ -92,7 +117,7 @@ def _prove_combat(scene, checked: dict, glb: str, clips: list, result: dict) -> 
     actions = {name: action for character in checked["characters"]
                for name, action in character["actions"].items()}
     try:
-        timeline = combat.read_timeline(glb)
+        timeline = read_timeline(glb)
     except (OSError, ValueError, KeyError, IndexError) as exc:
         warnings.append(f"could not read the clip timeline of {SCENE_FILE} ({exc.__class__.__name__}); "
                         "combat timing left out")
