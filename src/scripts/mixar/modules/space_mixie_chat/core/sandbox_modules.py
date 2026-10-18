@@ -174,6 +174,14 @@ _DENIED_ATTRS = {
         "keyconfig_set",   # execfile()s a keyconfig .py
         "keyconfig_init",  # same, for the active preset
     }),
+    # Writers of the app config: a script must not redirect where the bearer
+    # token goes (backend/community URLs) or which binary runs (godot_path).
+    # Reads (get_config, get_server_url, ...) stay available.
+    "mixar.config.config": frozenset({
+        "add_config", "_write_config_file", "_create_temp_file", "_config",
+        "_user_overrides", "_protected", "_protected_source", "_protected_get",
+        "set_ui_mode", "set_addon_projects_dir",
+    }),
 }
 
 _SAFE_MODULE_CACHE: dict = {}

@@ -62,6 +62,14 @@ def make_restricted_import(exec_namespace):
             # only refuses denied CHILDREN, not the names on a denied leaf.
             if is_denied_module(name):
                 raise ImportError(f"Module '{name}' is not available in the sandbox.")
+            # `from pkg import denied_child` must be refused HERE: the real
+            # import loads every fromlist submodule, and when the proxy then
+            # refuses the attribute, `from ... import` falls back to
+            # sys.modules["pkg.denied_child"] and binds the REAL module.
+            fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
+            for item in fromlist or ():
+                if isinstance(item, str) and is_denied_module(f"{name}.{item}"):
+                    raise ImportError(f"Module '{name}.{item}' is not available in the sandbox.")
             real = real_import(name, *args, **kwargs)
             # `import a.b` binds `a`, so handing back the real package
             # here would return the UNWRAPPED module and undo the

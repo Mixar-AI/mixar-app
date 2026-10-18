@@ -146,12 +146,44 @@ _config = None
 _user_overrides = {}
 
 
+# Keys that decide where the bearer token goes or which binary runs. Agent
+# scripts may not change them: ``add_config`` refuses them under an agent
+# frame, and their getters read a private snapshot taken at load and updated
+# only by ``add_config``, so mutating ``get_config()``'s dict in place
+# redirects nothing. The sandbox also denies this module's writers
+# (``sandbox_modules._DENIED_ATTRS``).
+PROTECTED_KEYS = frozenset({
+    'backend_url', 'frontend_url', 'community_api_url', 'community_web_url', 'godot_path',
+})
+_protected = {}
+_protected_source = None  # the _config dict the snapshot was taken from
+
+
 def get_config():
     """Get the global configuration, loading it if necessary"""
     global _config
     if _config is None:
         _config = load_mixar_config()
+        _snapshot_protected()
     return _config
+
+
+def _snapshot_protected():
+    global _protected, _protected_source
+    _protected = {k: _config[k] for k in PROTECTED_KEYS if k in _config}
+    _protected_source = _config
+
+
+def _protected_get(key, default=None):
+    """``key`` as loaded or set through ``add_config``, ignoring in-place
+    edits of the live dict."""
+    config = get_config()
+    if config is not _config:  # a test double returned by a patched get_config
+        return config.get(key, default)
+    if _protected_source is not _config:  # _config replaced wholesale (tests, reload)
+        _snapshot_protected()
+    value = _protected.get(key)
+    return default if value is None else value
 
 
 def add_config(key, value):
@@ -161,8 +193,16 @@ def add_config(key, value):
     in-memory value is kept either way so the running session is consistent.
     """
     global _config
+    if key in PROTECTED_KEYS:
+        from .agent_guard import called_from_agent_script
+        if called_from_agent_script():
+            logger.warning("Refused an agent script's write of protected config key %r", key)
+            return False
     if _config is None:
         _config = load_mixar_config()
+    if key in PROTECTED_KEYS:
+        _protected_get(key)  # snapshot the loaded values before this write
+        _protected[key] = value
     _config[key] = value
     _user_overrides[key] = value
 
@@ -228,8 +268,7 @@ def get_environment():
 
 def get_server_url():
     """Get the API server URL (resolved at build time via env vars)."""
-    config = get_config()
-    return config.get('backend_url', 'https://api.mixar.app')
+    return _protected_get('backend_url', 'https://api.mixar.app')
 
 
 def get_dev_bypass_credentials() -> tuple:
@@ -304,8 +343,7 @@ def get_frontend_url():
     Used for browser-facing pages like SSO login.
     Falls back to the API server URL if frontend_url is not configured.
     """
-    config = get_config()
-    return config.get('frontend_url', get_server_url())
+    return _protected_get('frontend_url') or get_server_url()
 
 
 # Mixar Store (mixar-community) bases. A bundled mixar.json older than these
@@ -323,9 +361,14 @@ def _community_fallback(index):
 
 def get_community_api_url():
     """Mixar Store API base (``community_api_url``)."""
-    return str(get_config().get('community_api_url') or _community_fallback(0)).rstrip('/')
+    return str(_protected_get('community_api_url') or _community_fallback(0)).rstrip('/')
 
 
 def get_community_web_url():
     """Mixar Store web base (``community_web_url``) for store-page links."""
-    return str(get_config().get('community_web_url') or _community_fallback(1)).rstrip('/')
+    return str(_protected_get('community_web_url') or _community_fallback(1)).rstrip('/')
+
+
+def get_godot_path():
+    """The user's chosen Mixar Godot binary (``godot_path``), or ''."""
+    return str(_protected_get('godot_path') or '')

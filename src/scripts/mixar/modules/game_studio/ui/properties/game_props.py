@@ -137,9 +137,9 @@ classes = (MIXAR_GameSettings,)
 def _warm_godot_locate():
     # Warm before use: locate (and validate) Godot at idle, off the main thread.
     try:
-        from mixar.config.config import get_config
+        from mixar.config.config import get_godot_path
         from mixar.modules.game_studio.core import godot_locator
-        godot_locator.locate_async(str(get_config().get("godot_path") or ""))
+        godot_locator.locate_async(get_godot_path())
     except Exception:
         pass
     return None

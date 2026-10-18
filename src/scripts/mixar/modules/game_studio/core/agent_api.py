@@ -58,8 +58,8 @@ def _store_identity(scene) -> dict:
 
 def _godot_config() -> str:
     try:
-        from mixar.config.config import get_config
-        return str(get_config().get(GODOT_PATH_CONFIG_KEY) or "")
+        from mixar.config.config import get_godot_path
+        return get_godot_path()
     except Exception:
         return ""
 

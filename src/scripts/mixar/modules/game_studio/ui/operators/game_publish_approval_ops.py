@@ -12,26 +12,19 @@ refuses outright while an agent script is on the call stack.
 """
 
 import os
-import sys
 
 import bpy
 from bpy.props import StringProperty
 from bpy.types import Operator
 
+from mixar.config.agent_guard import called_from_agent_script
 from mixar.modules.common.i18n import iface_, rpt_
 from mixar.modules.game_studio.core import approvals, launch
 
-_EXECUTOR_FILES = (os.path.join("space_mixie_chat", "core", "executor.py"),)
 
 
 def _agent_frame_on_stack() -> bool:
-    frame = sys._getframe(1)
-    while frame is not None:
-        name = frame.f_code.co_filename
-        if name == "<agent_script>" or name.endswith(_EXECUTOR_FILES):
-            return True
-        frame = frame.f_back
-    return False
+    return called_from_agent_script()
 
 
 def _dismiss_toast(request_id: str) -> None:
