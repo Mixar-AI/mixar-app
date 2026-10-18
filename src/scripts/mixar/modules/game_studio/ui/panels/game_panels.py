@@ -9,6 +9,7 @@ from bpy.types import Panel
 from mixar.modules.common.i18n import iface_
 from mixar.modules.game_studio.constants import STORE_PROP, platform_list
 from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles, spec as game_spec
+from mixar.modules.game_studio.core.assemblies import Hierarchy
 
 
 class _GamePanel:
@@ -46,14 +47,29 @@ class MIXAR_PT_game_roles(_GamePanel, Panel):
     def draw(self, context):
         layout = self.layout
         obj = context.active_object
+        form = context.window_manager.mixar_game
+        objects = roles.game_objects(context.scene)
         if obj is not None and obj.type in ('MESH', 'EMPTY'):
-            layout.prop(obj, "mixar_game_role_ui", text=obj.name, translate=False)
+            hierarchy = Hierarchy(objects)
+            root = obj if form.role_part_only else hierarchy.assembly_root(obj)
+            if root is not obj:
+                layout.label(text=iface_("Asset: {name} ({count} parts)").format(
+                    name=root.name, count=len(hierarchy.parts(root))), icon='OUTLINER_OB_EMPTY',
+                    translate=False)
+            layout.prop(root, "mixar_game_role_ui", text=root.name, translate=False)
+            _role, owner = roles.governing(obj)
+            if owner is not None and owner is not root:
+                layout.label(text=iface_("Tagged on {name}").format(name=owner.name), icon='INFO',
+                             translate=False)
+            layout.prop(form, "role_part_only")
         elif obj is not None:
             layout.label(text="Only meshes and empties have roles", icon='INFO')
         if len(context.selected_objects) > 1:
             layout.operator_menu_enum("mixar.game_set_role", "role", text="Set Role for Selected")
-        layout.operator("mixar.game_auto_roles", icon='SHADERFX')
-        summary = roles.role_summary([o for o in roles.game_objects(context.scene) if roles.in_game(o)])
+        row = layout.row(align=True)
+        row.operator("mixar.game_auto_roles", icon='SHADERFX')
+        row.operator("mixar.game_auto_roles", text="", icon='FILE_REFRESH').overwrite = True
+        summary = roles.role_summary([o for o in objects if roles.in_game(o)])
         col = layout.column(align=True)
         for role in ("player", "static", "prop", "collectible", "enemy", "hazard", "goal", "spawn", "decor"):
             count = summary["counts"].get(role, 0)

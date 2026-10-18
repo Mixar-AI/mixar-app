@@ -9,7 +9,7 @@ import json
 import pytest
 
 from mixar.modules.game_studio.constants import PARAMS_PROP, ROLE_PROP, SPEC_PROP
-from mixar.modules.game_studio.core import roles, spec
+from mixar.modules.game_studio.core import auto_roles, roles, spec
 
 
 @pytest.mark.parametrize("name,kind,dims,expected", [
@@ -33,14 +33,14 @@ from mixar.modules.game_studio.core import roles, spec
     ("HeroLight", "LIGHT", (0, 0, 0), None),
 ])
 def test_suggest_role_heuristics(name, kind, dims, expected):
-    assert roles.suggest_role(name, kind, dims)[0] == expected
+    assert auto_roles.suggest_role(name, kind, dims)[0] == expected
 
 
 def test_suggest_roles_keeps_explicit_roles_and_one_player(make_obj):
     tagged = make_obj("Hero")
     tagged[ROLE_PROP] = "enemy"
     objects = [tagged, make_obj("Player"), make_obj("Character"), make_obj("Coin")]
-    suggestions = {s["object"]: s["role"] for s in roles.suggest_roles(objects)}
+    suggestions = {s["object"]: s["role"] for s in auto_roles.suggest_roles(objects)}
     assert "Hero" not in suggestions  # explicit role kept
     assert suggestions["Player"] == "player"
     assert suggestions["Character"] is None  # exactly one player
@@ -89,9 +89,9 @@ def _level(make_obj):
 def test_build_spec_matches_contract_shape(make_obj):
     nodes = spec.build_nodes(_level(make_obj))
     assert nodes == [
-        {"name": "Hero", "role": "player", "params": {}},
-        {"name": "Coin.001", "role": "collectible", "params": {"value": 2}},
-        {"name": "Ground", "role": "static", "params": {}},
+        {"name": "Hero", "role": "player", "params": {}, "subtree": True},
+        {"name": "Coin.001", "role": "collectible", "params": {"value": 2}, "subtree": True},
+        {"name": "Ground", "role": "static", "params": {}},  # untagged: itself only
     ]
     built = spec.build_spec(spec.DEFAULT_SETTINGS | {"title": "Crystal Run"}, nodes, "1.2.3")
     assert list(built)[0] == "schema" and built["schema"] == "mixar_game_spec_v1"

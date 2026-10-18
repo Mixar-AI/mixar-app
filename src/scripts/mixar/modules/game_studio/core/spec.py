@@ -128,13 +128,9 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
 
 
 def build_nodes(objects) -> list[dict]:
-    """``nodes`` for every object that reaches the game, in name order."""
-    nodes = []
-    for obj in objects:
-        if roles.in_game(obj):
-            nodes.append({"name": obj.name, "role": roles.effective_role(obj),
-                          "params": roles.get_params(obj)})
-    return nodes
+    """``nodes`` for every object that reaches the game as a role node (a
+    tagged assembly root covers its parts: ``"subtree": true``)."""
+    return roles.build_role_nodes(objects)
 
 
 def build_spec(settings: dict, nodes: list[dict], version: str = "") -> dict:

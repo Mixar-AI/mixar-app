@@ -6,11 +6,14 @@
 A role is the plain ID property ``obj["mixar_game_role"]`` with optional
 params as a JSON string in ``obj["mixar_game_params"]`` — no RNA
 registration, so a ``--background`` agent reads and writes the same data the
-sidebar does. Untagged meshes play ``static``; untagged empties and every
-other object type are left out of the game.
+sidebar does.
 
-``suggest_role`` is the pure name/shape heuristic behind Auto-assign; it
-never overrides an explicit role unless asked to.
+A role covers the tagged object's whole SUBTREE: tagging an assembly root
+(``SF_HeroBike``) makes all its parts the player. An untagged object takes
+the role of its nearest tagged ancestor (``governing``); an untagged mesh
+with none plays ``static``; untagged empties and other types are left out.
+The spec lists only the role nodes (``build_role_nodes``), not the parts
+they cover. Auto-assign lives in ``auto_roles``.
 """
 
 from __future__ import annotations
@@ -20,17 +23,6 @@ import re
 
 from ..constants import DEFAULT_MESH_ROLE, PARAM_TYPES, PARAMS_PROP, ROLE_PROP, ROLES
 
-# Name words per role, matched against the object's split, de-pluralised name.
-NAME_HINTS = (
-    ("player", ("hero", "player", "character", "avatar", "protagonist")),
-    ("spawn", ("spawn", "spawnpoint", "start")),
-    ("goal", ("goal", "flag", "portal", "exit", "finish")),
-    ("collectible", ("coin", "gem", "pickup", "star", "crystal", "collectible", "token", "jewel")),
-    ("hazard", ("spike", "lava", "hazard", "trap", "acid", "saw")),
-    ("enemy", ("enemy", "monster", "zombie", "slime", "foe", "goblin")),
-    ("prop", ("crate", "barrel", "box", "ball")),
-    ("decor", ("cloud", "grass", "flower", "decor", "decoration")),
-)
 # A mesh at least this wide whose height is under FLAT_RATIO of its width is
 # ground: static even when a name hint says otherwise ("Lava Floor" stays a
 # hazard only when it is not the whole level).
@@ -42,6 +34,7 @@ _GAME_TYPES = ("MESH", "EMPTY")
 def name_words(name: str) -> list[str]:
     """``"GoldCoin.001"`` → ``["gold", "coin", "001"]`` (plural ``s`` dropped)."""
     spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", str(name or ""))
+    spaced = re.sub(r"([A-Za-z])([0-9])", r"\1 \2", spaced)  # Token00 -> Token 00
     words = [w.lower() for w in re.split(r"[^A-Za-z0-9]+", spaced) if w]
     return [w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
             for w in words]
@@ -54,25 +47,6 @@ def is_large_flat(dimensions) -> bool:
         return False
     span = max(x, y)
     return span >= LARGE_SPAN and z <= span * FLAT_RATIO
-
-
-def suggest_role(name: str, obj_type: str, dimensions=(0.0, 0.0, 0.0)) -> tuple[str | None, str]:
-    """``(role, reason)`` for one object; ``(None, "")`` when nothing fits."""
-    if obj_type not in _GAME_TYPES:
-        return None, ""
-    words = set(name_words(name))
-    if obj_type == "EMPTY":
-        if words & set(dict(NAME_HINTS)["spawn"]):
-            return "spawn", "name"
-        return None, ""
-    if is_large_flat(dimensions):
-        return "static", "large flat mesh"
-    for role, hints in NAME_HINTS:
-        if role == "spawn":
-            continue
-        if words & set(hints):
-            return role, "name"
-    return None, ""
 
 
 def validate_role(role) -> str | None:
@@ -119,10 +93,22 @@ def get_role(obj) -> str | None:
         return None
 
 
+def governing(obj):
+    """``(role, owner)``: the explicit role of ``obj`` or of its nearest
+    tagged ancestor, else ``(None, None)``."""
+    node = obj
+    while node is not None:
+        role = get_role(node)
+        if role:
+            return role, node
+        node = getattr(node, "parent", None)
+    return None, None
+
+
 def effective_role(obj) -> str | None:
-    """What the game uses: the explicit role, ``static`` for an untagged
-    mesh, None for anything left out."""
-    role = get_role(obj)
+    """What the game uses for ``obj``: the governing role (its own or its
+    assembly's), ``static`` for an untagged mesh, None for anything left out."""
+    role, _owner = governing(obj)
     if role:
         return role
     return DEFAULT_MESH_ROLE if getattr(obj, "type", "") == "MESH" else None
@@ -182,43 +168,37 @@ def game_objects(scene) -> list:
     return sorted(objects, key=lambda obj: obj.name)
 
 
-def suggest_roles(objects, overwrite: bool = False) -> list[dict]:
-    """Auto-assign suggestions ``[{object, role, reason}]`` for review.
+def is_role_node(obj) -> bool:
+    """True for objects the spec lists: explicitly tagged objects, and
+    untagged meshes no tagged ancestor covers."""
+    if get_role(obj):
+        return True
+    return getattr(obj, "type", "") == "MESH" and governing(obj)[0] is None
 
-    Explicitly tagged objects keep their role unless ``overwrite``. Exactly
-    one player: when several names say "player", the first by name wins and
-    the rest are reported without a suggestion.
-    """
-    suggestions, player_taken = [], False
-    if not overwrite:
-        player_taken = any(get_role(obj) == "player" for obj in objects)
+
+def build_role_nodes(objects) -> list[dict]:
+    """Spec ``nodes`` for the in-game objects, name order. A tagged node's
+    role covers its subtree (``"subtree": true``); its parts are not listed."""
+    nodes = []
     for obj in objects:
-        if not overwrite and get_role(obj):
-            continue
-        role, reason = suggest_role(obj.name, obj.type, tuple(getattr(obj, "dimensions", (0, 0, 0))))
-        if role is None:
-            continue
-        if role == "player":
-            if player_taken:
-                suggestions.append({"object": obj.name, "role": None,
-                                    "reason": "another object is already the player"})
-                continue
-            player_taken = True
-        suggestions.append({"object": obj.name, "role": role, "reason": reason})
-    return suggestions
+        if in_game(obj) and is_role_node(obj):
+            node = {"name": obj.name, "role": effective_role(obj), "params": get_params(obj)}
+            if get_role(obj):
+                node["subtree"] = True
+            nodes.append(node)
+    return nodes
 
 
 def role_summary(objects) -> dict:
-    """``{"counts": {role: n}, "player": name|None, "players": n, "tagged": n}``."""
+    """``{"counts": {role: n}, "player": name|None, "players": n, "tagged": n}``
+    over role NODES (an assembly counts once, not per part)."""
     counts, player, players, tagged = {}, None, 0, 0
-    for obj in objects:
-        role = effective_role(obj)
-        if role is None:
-            continue
-        if get_role(obj):
+    for node in build_role_nodes(objects):
+        role = node["role"]
+        if node.get("subtree"):
             tagged += 1
         counts[role] = counts.get(role, 0) + 1
         if role == "player":
             players += 1
-            player = player or obj.name
+            player = player or node["name"]
     return {"counts": counts, "player": player, "players": players, "tagged": tagged}

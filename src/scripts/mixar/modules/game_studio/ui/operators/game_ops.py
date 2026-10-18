@@ -69,6 +69,8 @@ class MIXAR_OT_game_set_role(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     role: EnumProperty(name="Role", items=ROLE_ITEMS)
+    part_only: BoolProperty(name="This part only",
+                            description="Tag the selected parts, not the assets they belong to")
 
     @classmethod
     def poll(cls, context):
@@ -76,21 +78,28 @@ class MIXAR_OT_game_set_role(Operator):
 
     def execute(self, context):
         role = None if self.role == "NONE" else self.role
-        reply = agent_api.set_game_roles([{"object": obj.name, "role": role}
+        part_only = self.part_only or context.window_manager.mixar_game.role_part_only
+        reply = agent_api.set_game_roles([{"object": obj.name, "role": role, "part_only": part_only}
                                           for obj in context.selected_objects])
         for problem in reply["errors"]:
             self.report({'WARNING'}, f"{problem['object']}: {problem['error']}")
+        roots = sorted({item["applied_to"] for item in reply["applied"]})
+        if roots:
+            self.report({'INFO'}, rpt_("Tagged {names}").format(names=", ".join(roots[:4])))
         return {'FINISHED'}
 
 
 class MIXAR_OT_game_auto_roles(Operator):
-    """Guess roles for untagged objects from their names and shapes"""
+    """Guess a role for each asset from its name and its parts' names"""
     bl_idname = "mixar.game_auto_roles"
     bl_label = "Auto-assign Roles"
     bl_options = {'REGISTER', 'UNDO'}
 
+    overwrite: BoolProperty(name="Replace Existing Roles",
+                            description="Re-assign every asset, replacing roles already set")
+
     def execute(self, context):
-        reply = agent_api.auto_assign_roles(apply=True)
+        reply = agent_api.auto_assign_roles(apply=True, overwrite=self.overwrite)
         count = sum(1 for item in reply["assignments"] if item["role"])
         self.report({'INFO'}, rpt_("Assigned {count} roles").format(count=count))
         return {'FINISHED'}

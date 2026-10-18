@@ -102,6 +102,11 @@ class MIXAR_GameSettings(PropertyGroup):
     show_timer: BoolProperty(name="Timer", **_view("ui", "show_timer"))
     title_screen: BoolProperty(name="Title Screen", **_view("ui", "title_screen"))
 
+    role_part_only: BoolProperty(
+        name="This part only",
+        description="Give the role to the selected part instead of the whole asset it belongs to",
+        default=False)
+
     # Publish form (session UI state).
     platform_web: BoolProperty(name="Web", default=True)
     platform_macos: BoolProperty(name="macOS", default=True)
@@ -127,8 +132,19 @@ def _role_get(obj):
 
 
 def _role_set(obj, index):
+    """Set ``obj``'s role. On an assembly root (the panel draws the root
+    unless "This part only" is on) part-level tags inside are cleared, so
+    one asset carries one role."""
     key = _ROLE_KEYS[index]
     roles.set_role(obj, None if key == "NONE" else key)
+    wm = bpy.context.window_manager
+    form = getattr(wm, "mixar_game", None)
+    if form is not None and not form.role_part_only:
+        from mixar.modules.game_studio.core.assemblies import Hierarchy
+        hierarchy = Hierarchy(roles.game_objects(bpy.context.scene))
+        for part in hierarchy.descendants(obj):
+            if roles.get_role(part):
+                roles.set_role(part, None)
 
 
 classes = (MIXAR_GameSettings,)

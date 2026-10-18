@@ -6060,10 +6060,25 @@ msgstr ""
 msgid "Role"
 msgstr ""
 
+msgid "This part only"
+msgstr ""
+
+msgid "Tag the selected parts, not the assets they belong to"
+msgstr ""
+
+msgid "Tagged {names}"
+msgstr ""
+
 msgid "Auto-assign Roles"
 msgstr ""
 
-msgid "Guess roles for untagged objects from their names and shapes"
+msgid "Guess a role for each asset from its name and its parts' names"
+msgstr ""
+
+msgid "Replace Existing Roles"
+msgstr ""
+
+msgid "Re-assign every asset, replacing roles already set"
 msgstr ""
 
 msgid "Assigned {count} roles"
@@ -6179,6 +6194,12 @@ msgid "Mixar Godot not found"
 msgstr ""
 
 msgid "Roles"
+msgstr ""
+
+msgid "Asset: {name} ({count} parts)"
+msgstr ""
+
+msgid "Tagged on {name}"
 msgstr ""
 
 msgid "Only meshes and empties have roles"
@@ -6383,6 +6404,9 @@ msgid "Timer"
 msgstr ""
 
 msgid "Title Screen"
+msgstr ""
+
+msgid "Give the role to the selected part instead of the whole asset it belongs to"
 msgstr ""
 
 msgid "Web"

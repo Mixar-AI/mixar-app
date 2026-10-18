@@ -67,7 +67,7 @@ def test_roles_configure_and_status_are_json_safe(level):
     assert [a["object"] for a in reply["applied"]] == ["Hero", "Coin.001"]
     assert {e["object"] for e in reply["errors"]} == {"Nope", "Lamp"} and reply["ok"] is False
     suggestions = agent_api.auto_assign_roles()
-    assert {"object": "PlayerSpawn", "role": "spawn", "reason": "name"} in suggestions["assignments"]
+    assert {"object": "PlayerSpawn", "role": "spawn", "reason": "name", "parts": 0} in suggestions["assignments"]
     assert suggestions["applied"] is False and ROLE_PROP not in level.objects.get("PlayerSpawn")
     configured = agent_api.configure_game(title="Crystal Run", rules={"win": "collect_all", "lives": 5},
                                           camera={"distance": "far"})

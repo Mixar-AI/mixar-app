@@ -105,8 +105,24 @@ def game_status() -> dict:
     })
 
 
+def _hierarchy(scene):
+    from .assemblies import Hierarchy
+    return Hierarchy(roles.game_objects(scene))
+
+
+def _clear_parts(hierarchy, root) -> None:
+    """One role per assembly: drop part-level tags inside ``root``."""
+    for part in hierarchy.descendants(root):
+        if roles.get_role(part):
+            roles.set_role(part, None)
+
+
 def set_game_roles(assignments=None) -> dict:
+    """Tag objects. A role belongs to an ASSEMBLY: naming a part tags its
+    assembly root (``applied_to``) and clears part-level tags inside it,
+    unless the assignment says ``"part_only": true``."""
     scene = _scene()
+    hierarchy = _hierarchy(scene)
     applied, errors = [], []
     for item in assignments or ():
         if not isinstance(item, dict):
@@ -117,26 +133,44 @@ def set_game_roles(assignments=None) -> dict:
         if obj is None:
             errors.append({"object": name, "error": "no such object in the active scene"})
             continue
-        done, problems = roles.set_role(obj, item.get("role"), item.get("params"))
+        part_only = bool(item.get("part_only"))
+        target = obj if part_only else hierarchy.assembly_root(obj)
+        done, problems = roles.set_role(target, item.get("role"), item.get("params"))
         if not done:
             errors.append({"object": name, "error": "; ".join(problems)})
             continue
-        applied.append({"object": name, "role": roles.get_role(obj), "params": roles.get_params(obj)})
+        if not part_only:
+            _clear_parts(hierarchy, target)
+        applied.append({"object": name, "applied_to": target.name, "role": roles.get_role(target),
+                        "params": roles.get_params(target),
+                        "parts": len(hierarchy.parts(target))})
         errors.extend({"object": name, "error": p} for p in problems)
     report = _spec_report(scene)
     return _redact({"ok": not errors, "applied": applied, "errors": errors,
                     "spec_errors": report["errors"], "spec_warnings": report["warnings"]})
 
 
-def auto_assign_roles(apply=False) -> dict:
-    """Heuristic suggestions for untagged objects; ``apply=True`` tags them."""
+def auto_assign_roles(apply=False, overwrite=False) -> dict:
+    """Score each ASSEMBLY (root name + part names) and suggest a role for
+    its root; ``apply=True`` tags them. ``overwrite=True`` re-assigns every
+    assembly, replacing existing roles (part-level tags included)."""
+    from .auto_roles import suggest_roles
     scene = _scene()
-    by_name = {obj.name: obj for obj in roles.game_objects(scene)}
-    suggestions = roles.suggest_roles(list(by_name.values()))
+    objects = roles.game_objects(scene)
+    by_name = {obj.name: obj for obj in objects}
+    suggestions = suggest_roles(objects, overwrite=bool(overwrite))
     if apply:
+        hierarchy = _hierarchy(scene)
+        if overwrite:
+            for root in hierarchy.assemblies():
+                if not hierarchy.is_container(root):
+                    roles.set_role(root, None)
+                    _clear_parts(hierarchy, root)
         for item in suggestions:
             if item["role"]:
-                roles.set_role(by_name[item["object"]], item["role"])
+                root = by_name[item["object"]]
+                roles.set_role(root, item["role"])
+                _clear_parts(hierarchy, root)
     return _redact({"ok": True, "assignments": suggestions, "applied": bool(apply)})
 
 

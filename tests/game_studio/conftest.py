@@ -17,9 +17,9 @@ import pytest
 class FakeID(dict):
     """Enough of a Blender ID for ``obj.get/keys/[]=/del``."""
 
-    def __init__(self, name, type_="MESH", dimensions=(1.0, 1.0, 1.0), visible=True):
+    def __init__(self, name, type_="MESH", dimensions=(1.0, 1.0, 1.0), visible=True, parent=None):
         super().__init__()
-        self.name, self.type, self.dimensions = name, type_, dimensions
+        self.name, self.type, self.dimensions, self.parent = name, type_, dimensions, parent
         self.hide_render, self._visible = False, visible
 
     def visible_get(self):
