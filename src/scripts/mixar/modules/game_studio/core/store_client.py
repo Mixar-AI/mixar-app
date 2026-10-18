@@ -27,9 +27,10 @@ logger = get_logger(__name__)
 
 
 class StoreError(Exception):
-    def __init__(self, message: str, code: str = "store_error", status: int = 0):
+    def __init__(self, message: str, code: str = "store_error", status: int = 0, detail=None):
         super().__init__(message)
         self.message, self.code, self.status = message, code, status
+        self.detail = dict(detail or {})  # the store's extra fields (e.g. game_id)
 
 
 def sha256_file(path: str, cancel=None) -> tuple[str, int]:
@@ -109,7 +110,7 @@ def _network_error(exc: BaseException, url: str, context: str) -> StoreError:
 
 
 def _http_error(response) -> StoreError:
-    code, message = f"http_{response.status_code}", ""
+    code, message, extra = f"http_{response.status_code}", "", {}
     try:
         body = response.json()
     except ValueError:
@@ -119,13 +120,18 @@ def _http_error(response) -> StoreError:
         if isinstance(detail, dict):
             code = str(detail.get("code") or code)
             message = str(detail.get("message") or "")
+            extra = {k: v for k, v in detail.items() if k not in ("code", "message")}
+        elif isinstance(detail, list):  # FastAPI request validation (422)
+            code = "invalid_request"
+            message = "; ".join(str(item.get("msg") or "") for item in detail
+                                if isinstance(item, dict))[:300]
         elif isinstance(detail, str):
             message = detail
         message = message or str(body.get("message") or "")
     if response.status_code == 401:
         code, message = "login_required", message or "Sign in to Mixar to publish."
     return StoreError(message or f"The store answered {response.status_code}.", code,
-                      response.status_code)
+                      response.status_code, extra)
 
 
 class StoreClient:

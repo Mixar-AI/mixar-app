@@ -135,7 +135,10 @@ def _create_or_update(client, ctx: dict, fields: dict) -> dict:
     except StoreError as exc:
         if exc.status != 409:
             raise
-        # Slug taken (by another user's game): let the store choose one.
+        mine = exc.detail.get("game_id")
+        if mine:  # our own draft under this slug (the scene lost its identity)
+            return client.update_game(str(mine), {k: v for k, v in fields.items() if k != "slug"})
+        # Taken by someone else: let the store choose a free slug.
         return client.create_game({k: v for k, v in fields.items() if k != "slug"})
 
 
@@ -165,7 +168,7 @@ def publish_work(ctx: dict, platforms, client_factory=None):
                 if not build_id or not build.get("put_url"):
                     raise StoreError("The store did not return an upload slot.", "bad_response")
                 client.upload(build["put_url"], build.get("headers") or {}, item["artifact"],
-                              lambda f, s=start: handle.progress(s + span * 0.9 * f, ""),
+                              lambda f, s=start: handle.progress(s + span * 0.9 * f, None),
                               handle.cancel_event)
                 done = client.complete_build(game_id, build_id)
                 builds.append({"build_id": build_id, "platform": item["platform"], "version": version,

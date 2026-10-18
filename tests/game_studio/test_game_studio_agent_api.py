@@ -170,3 +170,4 @@ def test_redact_hides_home():
     home = os.path.expanduser("~")
     assert agent_api._redact({"p": os.path.join(home, "x"), "n": [1, None, True]}) == \
         {"p": "~" + os.sep + "x", "n": [1, None, True]}
+    assert agent_api._redact("Exported " + os.path.join(home, "g.zip")) == "Exported ~" + os.sep + "g.zip"

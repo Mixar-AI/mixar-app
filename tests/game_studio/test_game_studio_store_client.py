@@ -145,3 +145,28 @@ def test_store_client_never_sets_verify_or_proxies():
     tree = ast.parse(inspect.getsource(store_client))
     keywords = {kw.arg for node in ast.walk(tree) if isinstance(node, ast.Call) for kw in node.keywords}
     assert not keywords & {"verify", "proxies", "cert"}
+
+
+def test_validation_422_and_slug_conflict_detail(stub):
+    stub.routes[("POST", "/api/v1/games")] = (409, {"detail": {
+        "code": "slug_taken", "message": "That store address is taken", "game_id": "g7"}})
+    stub.routes[("PATCH", "/api/v1/games/g1")] = (422, {"detail": [
+        {"loc": ["body", "price_cents"], "msg": "paid games start at $1.00", "type": "value_error"}]})
+    client = _client(stub)
+    with pytest.raises(StoreError) as caught:
+        client.create_game({"title": "x", "slug": "crystal-run"})
+    assert caught.value.code == "slug_taken" and caught.value.detail == {"game_id": "g7"}
+    with pytest.raises(StoreError) as caught:
+        client.update_game("g1", {"price_cents": 50})
+    assert caught.value.code == "invalid_request" and "paid games" in caught.value.message
+
+
+def test_slug_conflict_on_own_draft_updates_it(stub):
+    from mixar.modules.game_studio.core import pipeline
+    stub.routes[("POST", "/api/v1/games")] = (409, {"detail": {
+        "code": "slug_taken", "message": "taken", "game_id": "g7"}})
+    stub.routes[("PATCH", "/api/v1/games/g7")] = (200, _envelope({"id": "g7", "slug": "crystal-run"}))
+    game = pipeline._create_or_update(_client(stub), {"store": {}}, {"title": "Crystal Run",
+                                                                     "slug": "crystal-run"})
+    assert game["id"] == "g7"
+    assert "slug" not in json.loads(stub.calls[-1]["raw"])

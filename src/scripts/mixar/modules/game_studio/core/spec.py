@@ -47,8 +47,10 @@ _FLAGS = {("world", "sun"), ("ui", "show_score"), ("ui", "show_timer"), ("ui", "
 
 
 def slugify(title: str) -> str:
+    """Store slug rules: lowercase letters, digits, single hyphens, >= 3 chars."""
     slug = re.sub(r"[^a-z0-9]+", "-", str(title or "").lower()).strip("-")
-    return slug[:SLUG_MAX].strip("-") or "game"
+    slug = slug[:SLUG_MAX].strip("-") or "game"
+    return slug if len(slug) >= 3 else f"{slug}-game"
 
 
 def load_settings(scene) -> dict:
@@ -205,7 +207,9 @@ def validate_platforms(platforms) -> tuple[list[str], list[str]]:
 
 
 STORE_TEXT_LIMITS = {"tagline": 140, "description": 8000, "content_rating": 32}
-STORE_LIST_LIMIT, STORE_WORD_LIMIT = 10, 40
+# The store keeps 8 genres / 20 tags of up to 32 characters.
+STORE_LIST_LIMIT, STORE_WORD_LIMIT = 8, 32
+CONTENT_RATINGS = ("everyone", "teen", "mature", "unrated")
 
 
 def normalize_store_page(page) -> tuple[dict, list[str]]:
@@ -223,10 +227,15 @@ def normalize_store_page(page) -> tuple[dict, list[str]]:
             if value is None:
                 continue
             text = str(value).strip()[:STORE_TEXT_LIMITS[key]]
-            if key == "content_rating" and not text:
-                continue
+            if key == "content_rating":
+                if not text:
+                    continue
+                if text not in CONTENT_RATINGS:
+                    errors.append(f"content_rating must be one of {', '.join(CONTENT_RATINGS)}")
+                    continue
             clean[key] = text
         elif key in ("genres", "tags"):
+            limit = STORE_LIST_LIMIT if key == "genres" else 20
             items = [value] if isinstance(value, str) else value
             if not isinstance(items, (list, tuple)):
                 errors.append(f"{key} must be a list of words")
@@ -236,7 +245,7 @@ def normalize_store_page(page) -> tuple[dict, list[str]]:
                 word = " ".join(str(item).split())[:STORE_WORD_LIMIT].lower()
                 if word and word not in words:
                     words.append(word)
-            clean[key] = words[:STORE_LIST_LIMIT]
+            clean[key] = words[:limit]
         elif key == "price_cents":
             try:
                 if isinstance(value, bool):

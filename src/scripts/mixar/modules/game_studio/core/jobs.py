@@ -43,8 +43,9 @@ class JobHandle:
     def cancelled(self) -> bool:
         return self.cancel_event.is_set()
 
-    def progress(self, pct: float, message: str = "", force: bool = False) -> None:
-        """Throttled to ~10 updates a second unless ``force``."""
+    def progress(self, pct: float, message: str | None = None, force: bool = False) -> None:
+        """``message=None`` keeps the current status line."""
+        # Throttled to ~10 updates a second unless ``force``.
         now = time.monotonic()
         if not force and now - self._last_report < 0.1:
             return

@@ -38,7 +38,7 @@ def _redact(value):
     if isinstance(value, (list, tuple)):
         return [_redact(v) for v in value]
     if isinstance(value, str):
-        return "~" + value[len(home):] if home and value.startswith(home) else value
+        return value.replace(home, "~") if home and len(home) > 1 else value
     if value is None or isinstance(value, (bool, int, float)):
         return value
     return str(value)
