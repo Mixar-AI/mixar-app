@@ -58,8 +58,8 @@ def _public(job: dict) -> dict:
                                       "result", "error", "error_code")}
 
 
-def create(kind: str) -> str:
-    job_id = uuid.uuid4().hex
+def create(kind: str, job_id: str | None = None) -> str:
+    job_id = job_id or uuid.uuid4().hex
     now = time.time()
     with _lock:
         _jobs[job_id] = {"job_id": job_id, "kind": kind, "state": JOB_RUNNING, "pct": 0.0,
@@ -142,10 +142,11 @@ def cancel(job_id: str) -> bool:
         return True
 
 
-def start(kind: str, work) -> str:
+def start(kind: str, work, job_id: str | None = None) -> str:
     """Run ``work(handle)`` on a daemon thread. Its return value is the job
-    result; raising ``JobError`` (or anything) fails the job."""
-    job_id = create(kind)
+    result; raising ``JobError`` (or anything) fails the job. ``job_id``
+    lets an approved publish keep its request id."""
+    job_id = create(kind, job_id)
     handle = JobHandle(job_id)
 
     def body():

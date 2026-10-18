@@ -152,52 +152,9 @@ def configure_game(title=None, template=None, rules=None, player=None, camera=No
     return _redact({"ok": not errors, "errors": errors, "spec": spec})
 
 
-def _busy() -> dict | None:
-    from . import jobs
-    job = jobs.running()
-    if job is None:
-        return None
-    return {"ok": False, "job_id": job["job_id"], "state": "failed", "error_code": "busy",
-            "error": f"A {job['kind']} job is still running."}
-
-
-def _package(scene) -> dict:
-    from .exporter import write_package
-    return write_package(scene)
-
-
-def _context(scene, package: dict, store_page=None) -> dict:
-    from mixar.config.config import get_community_api_url, get_community_web_url
-    return {"game_dir": package["game_dir"], "title": package["spec"]["title"],
-            "slug": package["spec"]["slug"], "warnings": list(package["warnings"]),
-            "godot_config": _godot_config(), "api_base": get_community_api_url(),
-            "web_base": get_community_web_url(), "store": _store_identity(scene),
-            "scene_name": scene.name, "store_page": store_page or {}}
-
-
-def _refused(package: dict) -> dict:
-    return _redact({"ok": False, "job_id": None, "state": "failed", "error_code": "invalid_spec",
-                    "error": "; ".join(package["errors"]), "errors": package["errors"],
-                    "warnings": package["warnings"]})
-
-
-def _start(kind: str, make_work, store_page=None) -> dict:
-    busy = _busy()
-    if busy:
-        return busy
-    scene = _scene()
-    package = _package(scene)
-    if not package["ok"]:
-        return _refused(package)
-    from . import jobs
-    job_id = jobs.start(kind, make_work(_context(scene, package, store_page)))
-    return _redact({"ok": True, "job_id": job_id, "state": "running",
-                    "warnings": package["warnings"], "game_dir": package["game_dir"]})
-
-
 def start_game_build(play=False) -> dict:
-    from . import pipeline
-    return _start("build", lambda ctx: pipeline.build_work(ctx, bool(play)))
+    from . import launch
+    return _redact(launch.start("build", _scene(), play=play))
 
 
 def start_game_export(platforms=None) -> dict:
@@ -205,13 +162,52 @@ def start_game_export(platforms=None) -> dict:
     if errors:
         return {"ok": False, "job_id": None, "state": "failed", "error_code": "bad_platform",
                 "error": "; ".join(errors)}
-    from . import pipeline
-    return _start("export", lambda ctx: pipeline.export_work(ctx, platforms))
+    from . import launch
+    return _redact(launch.start("export", _scene(), platforms=platforms))
+
+
+def _publish_summary(scene, platforms, page) -> dict:
+    report = _spec_report(scene)
+    identity = _store_identity(scene)
+    settings = report["settings"]
+    slug = identity.get("slug") or settings.get("slug")
+    return {
+        "title": settings.get("title"), "slug": slug, "platforms": platforms,
+        "price_cents": page.get("price_cents", 0), "store_page": page,
+        "files": ["scene.glb"] + [f"{slug}-{platform}.zip" for platform in platforms],
+        "action": "update" if identity.get("game_id") else "create",
+        # Only a URL the store returned earlier; the store owns its URLs.
+        "store_url": identity.get("store_url") or None,
+        "node_count": report["node_count"], "errors": report["errors"],
+        "warnings": report["warnings"],
+        "review": "The store page goes live at once; builds become playable "
+                  "only after a moderator approves them.",
+    }
+
+
+def _ask_user(request_id: str, summary: dict) -> None:
+    """A sticky toast with Publish / Cancel; the buttons run the UI operators."""
+    try:
+        from mixar.modules.common.i18n import n_, rpt_
+        from mixar.modules.common.notifications import get_notification_store
+        from mixar.modules.common.notifications.store import NotificationAction
+        platforms = ", ".join(summary["platforms"])
+        get_notification_store().push(
+            "info", rpt_("Publish \"{title}\" to the Mixar Store?").format(title=summary["title"]),
+            body=rpt_("Mixie asks to publish it for {platforms}. Builds are playable after review.")
+            .format(platforms=platforms),
+            actions=[NotificationAction(label=n_("Publish"), operator="mixar.game_publish_approve",
+                                        style="primary"),
+                     NotificationAction(label=n_("Cancel"), operator="mixar.game_publish_decline")],
+            ttl_ms=int(10 * 60 * 1000), id=f"game-publish-{request_id}")
+    except Exception:  # noqa: BLE001 — the Game tab still offers the same buttons
+        pass
 
 
 def start_game_publish(store_page=None, platforms=None, confirm=False) -> dict:
-    """``confirm=False`` (default) only previews: publishing is public, so
-    the backend asks the user before calling again with ``confirm=True``."""
+    """``confirm=False`` only previews. ``confirm=True`` creates a request the
+    USER must approve in the app (toast or Game tab); nothing here can
+    approve it, and ``--background`` has nobody to ask."""
     platforms, platform_errors = game_spec.validate_platforms(platforms)
     page, page_errors = game_spec.normalize_store_page(store_page)
     errors = platform_errors + page_errors
@@ -219,42 +215,45 @@ def start_game_publish(store_page=None, platforms=None, confirm=False) -> dict:
         return {"ok": False, "job_id": None, "state": "failed", "error_code": "bad_request",
                 "error": "; ".join(errors), "errors": errors}
     scene = _scene()
+    summary = _publish_summary(scene, platforms, page)
     if not confirm:
-        report = _spec_report(scene)
-        identity = _store_identity(scene)
-        from mixar.config.config import get_community_web_url
-        settings = report["settings"]
-        return _redact({
-            "ok": report["valid"], "needs_confirmation": True,
-            "summary": {
-                "title": settings.get("title"), "slug": identity.get("slug") or settings.get("slug"),
-                "platforms": platforms, "store_page": page,
-                "action": "update" if identity.get("game_id") else "create",
-                "store_url": identity.get("store_url")
-                or f"{get_community_web_url()}/games/{settings.get('slug')}",
-                "node_count": report["node_count"], "errors": report["errors"],
-                "warnings": report["warnings"],
-                "review": "The store page goes live at once; builds become playable "
-                          "only after a moderator approves them.",
-            },
-        })
-    from . import pipeline
-    return _start("publish", lambda ctx: pipeline.publish_work(ctx, platforms), page)
+        return _redact({"ok": not summary["errors"], "needs_confirmation": True, "summary": summary})
+    if bpy.app.background:
+        return {"ok": False, "job_id": None, "state": "failed", "error_code": "approval_required_ui",
+                "error": "Publishing needs the user's approval in the Mixar app; "
+                         "this session has no interface."}
+    if summary["errors"]:
+        return _redact({"ok": False, "job_id": None, "state": "failed", "error_code": "invalid_spec",
+                        "error": "; ".join(summary["errors"]), "errors": summary["errors"]})
+    from . import approvals
+    request_id = approvals.create(summary, {"platforms": platforms, "store_page": page,
+                                            "scene_name": scene.name})
+    _ask_user(request_id, summary)
+    return _redact({"ok": True, "state": "awaiting_user_approval", "request_id": request_id,
+                    "job_id": request_id, "summary": summary,
+                    "message": "Waiting for the user to click Publish in Mixar (expires in 10 minutes)."})
 
 
 def game_job_status(job_id=None) -> dict:
-    from . import jobs
+    from . import approvals, jobs
     jobs.drain()
     job = jobs.get(job_id)
-    if job is None:
-        return {"job_id": job_id, "kind": None, "state": "failed", "pct": 0, "message": "",
-                "result": None, "error": "No such job.", "error_code": "unknown_job"}
-    return _redact(job)
+    if job is not None:
+        return _redact(job)
+    request = approvals.get(job_id)
+    if request is not None:
+        return {"job_id": request["request_id"], "kind": "publish", "state": request["state"]
+                if request["state"] != "approved" else "running", "pct": 0.0,
+                "message": "Waiting for the user to approve the publish."
+                if request["state"] == "awaiting_user_approval" else "",
+                "result": None, "error": request["error"], "error_code": request["error_code"]}
+    return {"job_id": job_id, "kind": None, "state": "failed", "pct": 0, "message": "",
+            "result": None, "error": "No such job.", "error_code": "unknown_job"}
 
 
 def cancel_game_job(job_id=None) -> dict:
-    from . import jobs
-    return {"ok": jobs.cancel(job_id), "job_id": job_id}
+    from . import approvals, jobs
+    return {"ok": jobs.cancel(job_id) or approvals.cancel(job_id), "job_id": job_id}
 
 
 def play_game() -> dict:

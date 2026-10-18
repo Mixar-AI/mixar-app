@@ -8,7 +8,7 @@ from bpy.types import Panel
 
 from mixar.modules.common.i18n import iface_
 from mixar.modules.game_studio.constants import STORE_PROP
-from mixar.modules.game_studio.core import godot_locator, jobs, roles, spec as game_spec
+from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles, spec as game_spec
 
 
 class _GamePanel:
@@ -100,6 +100,9 @@ class MIXAR_PT_game_publish(_GamePanel, Panel):
     def draw(self, context):
         layout = self.layout
         form = context.window_manager.mixar_game
+        request = approvals.pending()
+        if request is not None:
+            self._draw_approval(layout, request)
         running = jobs.running()
         if running is not None:
             self._draw_running(layout, running)
@@ -120,6 +123,18 @@ class MIXAR_PT_game_publish(_GamePanel, Panel):
             box.prop(form, "tags")
             box.operator("mixar.game_publish", icon='WORLD')
         self._draw_last(layout, context)
+
+    @staticmethod
+    def _draw_approval(layout, request):
+        box = layout.box()
+        box.label(text=iface_("Mixie asks to publish \"{title}\"").format(
+            title=request["summary"].get("title") or ""), icon='QUESTION', translate=False)
+        box.label(text=", ".join(request["summary"].get("platforms") or ()), translate=False)
+        row = box.row(align=True)
+        row.operator("mixar.game_publish_approve", text="Publish", icon='CHECKMARK').request_id = \
+            request["request_id"]
+        row.operator("mixar.game_publish_decline", text="Cancel", icon='X').request_id = \
+            request["request_id"]
 
     @staticmethod
     def _draw_running(layout, job):

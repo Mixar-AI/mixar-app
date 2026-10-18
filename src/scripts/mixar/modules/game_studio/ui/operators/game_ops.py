@@ -9,7 +9,7 @@ from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy.types import Operator
 
 from mixar.modules.common.i18n import iface_, rpt_
-from mixar.modules.game_studio.core import agent_api, jobs
+from mixar.modules.game_studio.core import agent_api, jobs, spec as game_spec
 from mixar.modules.game_studio.ui.properties.game_props import ROLE_ITEMS
 
 
@@ -125,16 +125,23 @@ class MIXAR_OT_game_publish(Operator):
     bl_label = "Publish to Mixar Store"
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_confirm(
-            self, event, title=iface_("Publish to Mixar Store?"),
-            message=iface_("The store page becomes public; builds are playable after review."),
-            confirm_text=iface_("Publish"), translate=False)
+        # The same approval path the agent's request takes: create the
+        # request, then the approval dialog (the user's click starts it).
+        from mixar.modules.game_studio.core import approvals
+        form = context.window_manager.mixar_game
+        platforms, errors = game_spec.validate_platforms(form.platforms())
+        page, page_errors = game_spec.normalize_store_page(form.store_page())
+        summary = agent_api._publish_summary(context.scene, platforms, page)
+        problems = errors + page_errors + summary["errors"]
+        if problems:
+            self.report({'ERROR'}, "; ".join(problems))
+            return {'CANCELLED'}
+        request_id = approvals.create(summary, {"platforms": platforms, "store_page": page,
+                                                "scene_name": context.scene.name})
+        return bpy.ops.mixar.game_publish_approve('INVOKE_DEFAULT', request_id=request_id)
 
     def execute(self, context):
-        form = context.window_manager.mixar_game
-        reply = agent_api.start_game_publish(store_page=form.store_page(),
-                                             platforms=form.platforms(), confirm=True)
-        return _report_start(self, reply, rpt_("Publishing…"))
+        return self.invoke(context, None)
 
 
 class MIXAR_OT_game_cancel(Operator):

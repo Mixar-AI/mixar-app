@@ -86,7 +86,8 @@ def test_publish_without_confirm_only_previews(level):
     reply = agent_api.start_game_publish(store_page={"tagline": "Grab gems"})
     assert reply["needs_confirmation"] is True and "job_id" not in reply
     assert reply["summary"]["action"] == "create" and reply["summary"]["platforms"] == ["web"]
-    assert reply["summary"]["store_url"] == "http://store.test/games/untitled-game"
+    assert reply["summary"]["store_url"] is None  # never composed client-side
+    assert reply["summary"]["files"] == ["scene.glb", "untitled-game-web.zip"]
     assert level.written == [] and jobs.running() is None
     assert agent_api.start_game_publish(platforms=["ps5"], confirm=True)["error_code"] == "bad_request"
 
@@ -121,7 +122,28 @@ def test_fork_failure_carries_error_code(level, monkeypatch):
     assert status["state"] == "failed" and status["error_code"] == "bad_spec"
 
 
-def test_publish_job_uploads_and_remembers_the_game(level, stub, monkeypatch):  # noqa: F811
+def _fake_ui_app(monkeypatch, scene):
+    """A non-background app whose context scene is ``scene`` (a plain fake,
+    so another suite's swapped ``bpy`` mock can't leak in)."""
+    from types import SimpleNamespace as NS
+    from mixar.modules.game_studio.core import launch
+    fake = NS(app=NS(background=False), context=NS(scene=scene),
+              data=NS(scenes=NS(get=lambda name: scene)))
+    monkeypatch.setitem(sys.modules, "bpy", fake)
+    monkeypatch.setattr(agent_api, "bpy", fake)
+    monkeypatch.setattr(launch, "bpy", fake)
+
+
+def _approve_like_the_ui(request_id):
+    """What the approval operator does after the user's click."""
+    from mixar.modules.game_studio.core import approvals, launch
+    token = approvals._issue_token(request_id)
+    payload = approvals._claim(request_id, token)
+    assert payload is not None
+    return launch.start_approved_publish(request_id, payload)
+
+
+def test_publish_waits_for_the_user_then_uploads(level, stub, monkeypatch):  # noqa: F811
     agent_api.set_game_roles([{"object": "Hero", "role": "player"},
                               {"object": "Coin.001", "role": "collectible"}])
     agent_api.configure_game(title="Crystal Run")
@@ -130,19 +152,25 @@ def test_publish_job_uploads_and_remembers_the_game(level, stub, monkeypatch):  
     from mixar.modules.game_studio.core import store_client
     monkeypatch.setattr(store_client, "_default_token", lambda: "tok")
     stub.routes.update({
-        ("POST", "/api/v1/games"): (201, _envelope({"game": {"id": "g9", "slug": "crystal-run"}})),
-        ("POST", "/api/v1/games/g9/builds"): (200, _envelope({"build_id": "b1", "put_url": stub.base + "/up/b1",
-                                                              "headers": {}})),
+        ("POST", "/api/v1/games"): (201, _envelope({"game": {"game_id": "g9", "slug": "crystal-run"}})),
+        ("POST", "/api/v1/games/g9/builds"): (201, _envelope({"build_id": "b1", "put_url": stub.base + "/up/b1",
+                                                              "method": "PUT", "headers": {}})),
         ("PUT", "/up/b1"): (200, {}),
         ("POST", "/api/v1/games/g9/builds/b1/complete"): (200, _envelope({"build": {"review_status": "pending"}})),
-        ("POST", "/api/v1/games/g9/publish"): (200, _envelope({"game": {"id": "g9"}})),
-        ("GET", "/api/v1/games/g9"): (200, _envelope({"game": {"id": "g9", "review_status": "pending"}})),
+        ("POST", "/api/v1/games/g9/publish"): (200, _envelope({
+            "game_id": "g9", "slug": "crystal-run", "store_url": "http://store.test/games/crystal-run",
+            "review_status": "pending", "builds": [{"build_id": "b1", "review_status": "pending"}]})),
     })
-    bpy = sys.modules["bpy"]
-    monkeypatch.setattr(bpy.data.scenes, "get", lambda name: level)
+    _fake_ui_app(monkeypatch, level)
+    monkeypatch.setattr(agent_api, "_ask_user", lambda *a: None)
     reply = agent_api.start_game_publish(store_page={"tagline": "Grab gems", "genres": ["Platformer"]},
                                          confirm=True)
-    status = _wait(reply["job_id"])
+    assert reply["state"] == "awaiting_user_approval" and reply["job_id"] == reply["request_id"]
+    waiting = agent_api.game_job_status(reply["request_id"])
+    assert waiting["state"] == "awaiting_user_approval" and not stub.calls
+    started = _approve_like_the_ui(reply["request_id"])
+    assert started["ok"] and started["job_id"] == reply["request_id"]
+    status = _wait(reply["request_id"])
     assert status["state"] == "done", status
     assert status["result"] == {"game_id": "g9", "store_url": "http://store.test/games/crystal-run",
                                 "review_status": "pending", "builds": status["result"]["builds"]}
@@ -150,9 +178,28 @@ def test_publish_job_uploads_and_remembers_the_game(level, stub, monkeypatch):  
     create = json.loads(stub.calls[0]["raw"])
     assert create["tagline"] == "Grab gems" and create["genres"] == ["platformer"]
     assert create["title"] == "Crystal Run" and create["source"] == "mixar"
-    assert json.loads(level[STORE_PROP])["game_id"] == "g9"  # drained on the next agent call
+    assert json.loads(level[STORE_PROP])["store_url"] == "http://store.test/games/crystal-run"
     preview = agent_api.start_game_publish()
     assert preview["summary"]["action"] == "update"
+    assert preview["summary"]["store_url"] == "http://store.test/games/crystal-run"
+
+
+def test_profile_required_points_at_the_profile_page(level, stub, monkeypatch):  # noqa: F811
+    agent_api.set_game_roles([{"object": "Hero", "role": "player"},
+                              {"object": "Coin.001", "role": "collectible"}])
+    import mixar.config.config as config
+    monkeypatch.setattr(config, "get_community_api_url", lambda: stub.base)
+    from mixar.modules.game_studio.core import store_client
+    monkeypatch.setattr(store_client, "_default_token", lambda: "tok")
+    stub.routes[("POST", "/api/v1/games")] = (409, {"detail": {
+        "code": "profile_required", "message": "Pick a community handle first"}})
+    _fake_ui_app(monkeypatch, level)
+    monkeypatch.setattr(agent_api, "_ask_user", lambda *a: None)
+    request_id = agent_api.start_game_publish(confirm=True)["request_id"]
+    _approve_like_the_ui(request_id)
+    status = _wait(request_id)
+    assert status["error_code"] == "profile_required"
+    assert "http://store.test/settings/profile" in status["error"]
 
 
 def test_busy_refuses_a_second_job(level, monkeypatch):
