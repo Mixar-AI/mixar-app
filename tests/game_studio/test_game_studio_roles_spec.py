@@ -153,6 +153,8 @@ def test_platform_and_store_page_validation():
     assert page["tags"] == ["cute", "coins"] and page["price_cents"] == 0
     assert len(errors) == 2
     assert spec.slugify("  Crystal Run!! 2 ") == "crystal-run-2" and spec.slugify("!!!") == "game"
+    assert spec.normalize_store_page({"price_cents": 50})[1]  # 0 or >= 100
+    assert spec.normalize_store_page({"price_cents": 499})[0]["price_cents"] == 499
     assert spec.slugify("Go") == "go-game"  # the store wants >= 3 characters
     assert spec.normalize_store_page({"content_rating": "adults"})[1]
     assert spec.normalize_store_page({"content_rating": "teen"})[0]["content_rating"] == "teen"

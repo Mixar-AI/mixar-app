@@ -142,51 +142,86 @@ def _create_or_update(client, ctx: dict, fields: dict) -> dict:
         return client.create_game({k: v for k, v in fields.items() if k != "slug"})
 
 
+def _upload_capsule(client, game_id: str, path: str, cancel) -> str:
+    """Best effort: a failed capsule upload is a warning, never a failed publish."""
+    from .store_client import StoreError, sha256_file
+    if not path or not os.path.isfile(path):
+        return ""
+    try:
+        digest, size = sha256_file(path, cancel)
+        slot = client.create_media(game_id, "capsule", os.path.basename(path), size, digest)
+        client.upload(slot["put_url"], slot.get("headers") or {}, path, None, cancel)
+        client.complete_media(game_id, str(slot["upload_id"]))
+    except (StoreError, KeyError, OSError) as exc:
+        return f"The capsule image was not uploaded ({getattr(exc, 'message', exc.__class__.__name__)})."
+    return ""
+
+
+def _upload_build(client, handle, game_id: str, item: dict, version: str, start: float, span: float) -> dict:
+    from .store_client import StoreError, sha256_file
+    handle.progress(start, f"Uploading the {item['platform']} build", force=True)
+    digest, size = sha256_file(item["artifact"], handle.cancel_event)
+    build = client.create_build(game_id, item["platform"], version,
+                                os.path.basename(item["artifact"]), size, digest)
+    build_id = str(build.get("build_id") or "")
+    if not build_id or not build.get("put_url"):
+        raise StoreError("The store did not return an upload slot.", "bad_response")
+    client.upload(build["put_url"], build.get("headers") or {}, item["artifact"],
+                  lambda f: handle.progress(start + span * 0.9 * f, None), handle.cancel_event)
+    done = client.complete_build(game_id, build_id)
+    return {"build_id": build_id, "platform": item["platform"], "version": version,
+            "size_bytes": size, "sha256": digest,
+            "review_status": (done.get("build") or done).get("review_status", "pending")}
+
+
+def _store_failure(exc, ctx: dict) -> JobError:
+    if exc.code == "profile_required":
+        link = f"{ctx['web_base'].rstrip('/')}/settings/profile"
+        return JobError(f"Claim your Mixar community profile first, then publish again: {link}",
+                        exc.code, {"profile_url": link})
+    return JobError(exc.message, exc.code)
+
+
 def publish_work(ctx: dict, platforms, client_factory=None):
     def work(handle):
-        from .store_client import StoreClient, StoreError, sha256_file
+        from .store_client import StoreClient, StoreError
         godot = _godot(ctx)
         build_stage(ctx, handle, godot, 0.0, 25.0)
         artifacts = export_stage(ctx, handle, godot, platforms, 25.0, 55.0)
         client = (client_factory or StoreClient)(ctx["api_base"])
+        warnings = []
         try:
             handle.progress(56.0, "Creating the store page", force=True)
             game = _create_or_update(client, ctx, store_fields(ctx, platforms))
-            game_id = str(game.get("id") or game.get("game_id") or "")
+            game_id = str(game.get("game_id") or game.get("id") or "")
             if not game_id:
                 raise StoreError("The store did not return a game id.", "bad_response")
-            slug = str(game.get("slug") or ctx["slug"])
+            warning = _upload_capsule(client, game_id, ctx.get("capsule", ""), handle.cancel_event)
+            if warning:
+                warnings.append(warning)
             builds, version = [], time.strftime("%Y.%m.%d.%H%M%S", time.gmtime())
             span = 38.0 / max(1, len(artifacts))
             for index, item in enumerate(artifacts):
-                start = 58.0 + span * index
-                handle.progress(start, f"Uploading the {item['platform']} build", force=True)
-                digest, size = sha256_file(item["artifact"], handle.cancel_event)
-                build = client.create_build(game_id, item["platform"], version,
-                                            os.path.basename(item["artifact"]), size, digest)
-                build_id = str(build.get("build_id") or "")
-                if not build_id or not build.get("put_url"):
-                    raise StoreError("The store did not return an upload slot.", "bad_response")
-                client.upload(build["put_url"], build.get("headers") or {}, item["artifact"],
-                              lambda f, s=start: handle.progress(s + span * 0.9 * f, None),
-                              handle.cancel_event)
-                done = client.complete_build(game_id, build_id)
-                builds.append({"build_id": build_id, "platform": item["platform"], "version": version,
-                               "size_bytes": size, "sha256": digest,
-                               "review_status": (done.get("build") or done).get("review_status", "pending")})
+                builds.append(_upload_build(client, handle, game_id, item, version,
+                                            58.0 + span * index, span))
             handle.progress(97.0, "Publishing", force=True)
-            client.publish(game_id)
-            try:
-                page = client.get_game(game_id)
-            except StoreError:
-                page = {}
+            page = client.publish(game_id) or {}
         except StoreError as exc:
-            raise JobError(exc.message, exc.code) from exc
-        store_url = f"{ctx['web_base'].rstrip('/')}/games/{slug}"
-        identity = {"game_id": game_id, "slug": slug, "store_url": store_url}
-        _remember(ctx.get("scene_name", ""), identity)
-        return {"game_id": game_id, "store_url": store_url,
-                "review_status": str(page.get("review_status") or "pending"), "builds": builds}
+            raise _store_failure(exc, ctx) from exc
+        # The store owns its URLs: open what it returns, never a composed one.
+        store_url = str(page.get("store_url") or game.get("store_url") or "") or None
+        slug = str(page.get("slug") or game.get("slug") or ctx["slug"])
+        _remember(ctx.get("scene_name", ""), {"game_id": game_id, "slug": slug, "store_url": store_url})
+        by_id = {b["build_id"]: b for b in builds}
+        for remote in page.get("builds") or ():
+            local = by_id.get(str(remote.get("build_id") or remote.get("id") or ""))
+            if local is not None and remote.get("review_status"):
+                local["review_status"] = remote["review_status"]
+        result = {"game_id": str(page.get("game_id") or game_id), "store_url": store_url,
+                  "review_status": str(page.get("review_status") or "pending"), "builds": builds}
+        if warnings:
+            result["warnings"] = warnings
+        return result
     return work
 
 

@@ -128,6 +128,9 @@ def _http_error(response) -> StoreError:
         elif isinstance(detail, str):
             message = detail
         message = message or str(body.get("message") or "")
+        data = body.get("data")
+        if isinstance(data, dict) and data.get("game_id"):  # slug_taken on the caller's own game
+            extra.setdefault("game_id", data["game_id"])
     if response.status_code == 401:
         code, message = "login_required", message or "Sign in to Mixar to publish."
     return StoreError(message or f"The store answered {response.status_code}.", code,
@@ -194,12 +197,22 @@ class StoreClient:
     def complete_build(self, game_id: str, build_id: str) -> dict:
         return self.request("POST", f"api/v1/games/{game_id}/builds/{build_id}/complete") or {}
 
+    def create_media(self, game_id: str, kind: str, filename: str, size_bytes: int,
+                     sha256: str) -> dict:
+        return self.request("POST", f"api/v1/games/{game_id}/media", {
+            "kind": kind, "filename": filename, "size_bytes": int(size_bytes),
+            "sha256": sha256}) or {}
+
+    def complete_media(self, game_id: str, upload_id: str) -> dict:
+        return self.request("POST", f"api/v1/games/{game_id}/media/{upload_id}/complete") or {}
+
     def publish(self, game_id: str) -> dict:
         data = self.request("POST", f"api/v1/games/{game_id}/publish")
         return (data or {}).get("game", data) or {}
 
     def upload(self, put_url: str, headers: dict, path: str, on_progress=None, cancel=None) -> None:
-        """Presigned PUT: only the presign's headers, never the bearer."""
+        """Signed PUT (media and builds, ~15 min): exactly the returned
+        headers, never the bearer."""
         body = _ProgressFile(path, on_progress, cancel)
         try:
             response = requests.put(put_url, data=body, headers=dict(headers or {}),

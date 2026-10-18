@@ -210,6 +210,7 @@ STORE_TEXT_LIMITS = {"tagline": 140, "description": 8000, "content_rating": 32}
 # The store keeps 8 genres / 20 tags of up to 32 characters.
 STORE_LIST_LIMIT, STORE_WORD_LIMIT = 8, 32
 CONTENT_RATINGS = ("everyone", "teen", "mature", "unrated")
+MIN_PRICE_CENTS = 100  # paid games start at $1.00 (paid acquire is 501 for now)
 
 
 def normalize_store_page(page) -> tuple[dict, list[str]]:
@@ -251,11 +252,11 @@ def normalize_store_page(page) -> tuple[dict, list[str]]:
                 if isinstance(value, bool):
                     raise ValueError
                 cents = int(value)
-                if cents < 0:
+                if cents < 0 or 0 < cents < MIN_PRICE_CENTS:
                     raise ValueError
                 clean[key] = cents
             except (TypeError, ValueError):
-                errors.append("price_cents must be a whole number >= 0")
+                errors.append("price_cents must be 0 (free) or at least 100")
         else:
             errors.append(f"unknown store_page field {key}")
     return clean, errors

@@ -170,3 +170,22 @@ def test_slug_conflict_on_own_draft_updates_it(stub):
                                                                      "slug": "crystal-run"})
     assert game["id"] == "g7"
     assert "slug" not in json.loads(stub.calls[-1]["raw"])
+
+
+def test_slug_taken_game_id_in_data_and_media_flow(stub, tmp_path):
+    stub.routes[("POST", "/api/v1/games")] = (409, {"detail": {"code": "slug_taken", "message": "taken"},
+                                                    "data": {"game_id": "g8"}})
+    with pytest.raises(StoreError) as caught:
+        _client(stub).create_game({"title": "x", "slug": "abc"})
+    assert caught.value.detail["game_id"] == "g8"
+    image = tmp_path / "capsule.png"
+    image.write_bytes(b"\x89PNG" + b"0" * 100)
+    stub.routes[("POST", "/api/v1/games/g8/media")] = (201, _envelope({
+        "upload_id": "m1", "put_url": stub.base + "/up/m1", "method": "PUT", "headers": {"Content-Type": "image/png"}}))
+    stub.routes[("PUT", "/up/m1")] = (200, {})
+    stub.routes[("POST", "/api/v1/games/g8/media/m1/complete")] = (200, _envelope({}))
+    from mixar.modules.game_studio.core import pipeline
+    assert pipeline._upload_capsule(_client(stub), "g8", str(image), None) == ""
+    declare, put, _done = stub.calls[1:]
+    assert json.loads(declare["raw"])["kind"] == "capsule"
+    assert "Authorization" not in put["headers"] and put["headers"]["Content-Type"] == "image/png"
