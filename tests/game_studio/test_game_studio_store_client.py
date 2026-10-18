@@ -80,6 +80,31 @@ def test_api_base_with_api_v1_suffix_is_not_doubled(stub):
     assert stub.calls[0]["path"] == "/api/v1/games"
 
 
+def test_store_envelope_errors_keep_their_code(stub):
+    """The store's handler sends {status:"failure", message, data:{code, ...}}."""
+    stub.routes[("POST", "/api/v1/games")] = (409, {
+        "status": "failure", "message": "Claim a handle before posting",
+        "data": {"code": "profile_required"}})
+    with pytest.raises(StoreError) as err:
+        _client(stub).create_game({"title": "S"})
+    assert err.value.code == "profile_required" and "handle" in str(err.value)
+    stub.routes[("PATCH", "/api/v1/games/g1")] = (422, {
+        "status": "failure", "message": "invalid request",
+        "data": {"code": "validation", "errors": [{"field": "tags", "message": "too many"}]}})
+    with pytest.raises(StoreError) as err:
+        _client(stub).update_game("g1", {"tags": ["x"] * 30})
+    assert err.value.code == "invalid_request" and "tags: too many" in str(err.value)
+
+
+def test_slug_taken_in_store_envelope_updates_own_game(stub):
+    stub.routes[("POST", "/api/v1/games")] = (409, {
+        "status": "failure", "message": "slug taken",
+        "data": {"code": "slug_taken", "game_id": "g9"}})
+    with pytest.raises(StoreError) as err:
+        _client(stub).create_game({"title": "S", "slug": "s"})
+    assert err.value.code == "slug_taken" and err.value.detail["game_id"] == "g9"
+
+
 def test_build_flow_hashes_and_uploads_without_bearer(stub, tmp_path):
     artifact = tmp_path / "game-web.zip"
     artifact.write_bytes(b"PK" + b"x" * 300000)

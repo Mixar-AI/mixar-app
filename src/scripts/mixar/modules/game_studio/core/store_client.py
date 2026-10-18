@@ -129,6 +129,15 @@ def _http_error(response) -> StoreError:
             message = detail
         message = message or str(body.get("message") or "")
         data = body.get("data")
+        if detail is None and isinstance(data, dict) and data.get("code"):
+            # The store's wire form: its handler moves detail into the
+            # envelope as {status:"failure", message, data:{code, **extra}}.
+            code = str(data["code"])
+            extra = {k: v for k, v in data.items() if k not in ("code", "errors")}
+            if code == "validation":
+                code = "invalid_request"
+                message = "; ".join(f"{e.get('field')}: {e.get('message')}" for e in
+                                    data.get("errors") or () if isinstance(e, dict))[:300] or message
         if isinstance(data, dict) and data.get("game_id"):  # slug_taken on the caller's own game
             extra.setdefault("game_id", data["game_id"])
     if response.status_code == 401:
