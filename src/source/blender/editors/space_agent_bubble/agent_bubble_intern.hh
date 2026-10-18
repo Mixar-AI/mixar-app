@@ -21,6 +21,11 @@ struct bContext;
 struct wmOperatorType;
 struct wmEvent;
 bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble, void *pill);
+#ifdef __linux__
+enum class AgentBubbleWindowEvent { PassThrough, Handled, Resizing };
+AgentBubbleWindowEvent agent_bubble_linux_handle_event(
+    bContext *C, const wmEvent *event, void *bubble, bool minimised);
+#endif
 struct wmWindowManager;
 
 /* -------------------------------------------------------------------- */

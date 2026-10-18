@@ -103,6 +103,44 @@ def _method_src(name: str) -> str:
     raise AssertionError(f"{name} missing")
 
 
+def test_linux_resize_edges_leave_conversation_clicks_alone(tmp_path):
+    """Compile the actual native hit-test: all edges, 2x DPI and out-of-window input."""
+    import subprocess
+    import shutil
+    import pytest
+
+    compiler = shutil.which('c++') or shutil.which('clang++')
+    if not compiler:
+        pytest.skip('C++ compiler unavailable')
+
+    include = ROOT / 'src/source/blender/editors/space_agent_bubble'
+    executable = tmp_path / 'resize-edges'
+    program = r"""
+#include <cassert>
+#include "agent_bubble_resize_edges.hh"
+int main() {
+  const int points[][3] = {
+    {0,210,4}, {699,210,8}, {350,429,1}, {350,0,2},
+    {0,0,6}, {699,0,10}, {0,429,5}, {699,429,9},
+    {10,210,4}, {689,210,8}, {350,419,1}, {350,10,2},
+    {12,12,0}, {350,210,0}, {-1,210,0}, {700,210,0}, {350,430,0}
+  };
+  for (int scale : {1,2}) {
+    for (const auto &p : points) {
+      assert(blender::agent_bubble_resize_edges(p[0]*scale, p[1]*scale,
+                                               700*scale, 430*scale, 12*scale) == p[2]);
+    }
+  }
+}
+"""
+    # Initializer-list iteration is supplied here, keeping the production header minimal.
+    program = '#include <initializer_list>\n' + program
+    subprocess.run([compiler, '-std=c++17', '-I', str(include), '-x', 'c++',
+                    '-o', str(executable), '-'], input=program, text=True,
+                   check=True, capture_output=True)
+    subprocess.run([str(executable)], check=True)
+
+
 def test_linux_modal_stops_when_compositor_consumes_release():
     """The native pointer pump can end a drag without a LEFTMOUSE event."""
     import textwrap
@@ -276,6 +314,7 @@ def test_island_content_press_cannot_start_window_drag():
     begin = Mock(return_value={'FINISHED'})
     namespace = {
         '_is_pill_window': lambda area: False,
+        '_linux_resize_edges': lambda context, event: 0,
         '_IS_WINDOWS': False,
         '_linux_client_drag_followup': lambda: False,
         '_event_hits_header': lambda area, event: False,
@@ -311,6 +350,7 @@ def test_x11_header_drag_goes_modal_for_client_followup():
     wm = SimpleNamespace(modal_handler_add=Mock(), event_timer_add=Mock(return_value=object()))
     namespace = {
         '_is_pill_window': lambda area: False,
+        '_linux_resize_edges': lambda context, event: 0,
         '_IS_WINDOWS': False,
         '_linux_client_drag_followup': lambda: True,
         '_event_hits_header': lambda area, event: False,

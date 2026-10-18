@@ -211,6 +211,8 @@ def _is_pill_window(context) -> bool:
     area = context.area
     if area is None:
         return False
+    if sys.platform.startswith('linux') and getattr(area, 'width', 560) < 560:
+        return True
     for region in area.regions:
         if region.type == 'TOOLS':
             return False
@@ -295,8 +297,8 @@ class AGENT_BUBBLE_HT_header(Header):
             # "Restore." as a partial fragment that looks like a UI
             # bug. Suppressing the tooltip entirely is cleaner.
             #
-            # Where the native window helpers are missing (Linux) the
-            # restore operator is a stub that returns CANCELLED, so the
+            # On platforms without native window controls, the
+            # restore operator returns CANCELLED, so the
             # pill is drawn as a plain label instead of a button: the
             # status still reads, but nothing invites a click that
             # cannot do anything. Reaching the pill at all is already
@@ -333,8 +335,9 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # On macOS: coloured traffic-light circles (custom pill icons).
         # On Windows: minimise + expand icon buttons only.
+        # Linux uses outside-click dismissal and edge resizing; no buttons.
         #
-        # Elsewhere (Linux): no window-state buttons at all. The operators
+        # On unsupported platforms there are no window-state buttons. The operators
         # behind them are compiled-out stubs that return CANCELLED without
         # a message, so drawing them offers a control that silently does
         # nothing — see BUBBLE_WINDOW_CONTROLS_SUPPORTED. The whole row is
@@ -343,7 +346,7 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # Only this row is platform-gated. Dragging the bubble works on
         # every platform, and so do the right-side controls below.
-        if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+        if BUBBLE_WINDOW_CONTROLS_SUPPORTED and not sys.platform.startswith("linux"):
             traffic = layout.row(align=True)
             if _IS_WINDOWS:
                 traffic.operator(

@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "MEM_guardedalloc.h"
 
@@ -178,6 +179,12 @@ extern "C" bool Mixar_WindowBeginNativeDrag(void *window_handle);
 extern "C" bool Mixar_WindowUpdateNativeDrag(void *window_handle);
 extern "C" bool Mixar_WindowEndNativeDrag(void *window_handle);
 extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int height);
+extern "C" bool Mixar_WindowBeginNativeResize(void *window_handle, int edges);
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *width, int *height);
+extern "C" void Mixar_WindowGetContentPixelSize(void *window_handle, int *width, int *height);
+extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height);
+extern "C" void Mixar_WindowSetMinContentSize(void *window_handle, int width, int height);
+extern "C" void Mixar_WindowMakeKey(void *window_handle);
 #endif
 
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
@@ -373,7 +380,7 @@ static void *g_bubble_ghostwin = nullptr;
 static void *g_pill_ghostwin = nullptr;
 /* One-shot: has this bubble already been grown to make room for a
  * conversation? Reset when the bubble window closes. */
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 static void agent_bubble_request_resize(const bContext *C, int target_height, int height_floor);
 #endif
 static bool g_bubble_grown_for_chat = false;
@@ -382,6 +389,21 @@ static bool g_bubble_minimised = false;
 static uintptr_t g_bubble_motion_generation = 0;
 static bool g_bubble_minimise_pending = false;
 static bool g_bubble_expanded = false;
+#ifdef __linux__
+/* Wayland resize/configure delivery is asynchronous. Coalesce rapid mode
+ * changes and keep the last requested geometry until it settles. */
+static int g_linux_transition_width = 0, g_linux_transition_height = 0;
+static int g_linux_transition_stable_ticks = 0;
+static void linux_bubble_sync_transition(bContext *C);
+static void linux_bubble_track_geometry(int width, int height)
+{
+  g_linux_transition_width = (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION) ? 0 : width;
+  g_linux_transition_height = height;
+  g_linux_transition_stable_ticks = 0;
+}
+
+#endif
+
 static bool g_bubble_had_pending_attachments = false;
 static int g_bubble_last_min_height = 0;
 
@@ -1020,7 +1042,7 @@ static void agent_bubble_rect_to_region(const ARegion *region,
 /* Defined further down, next to the other window-sizing helpers; the island's
  * layout pass needs it before that point. */
 static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height);
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 static void bubble_sync_wm_window_size(bContext *C,
                                        void *ghostwin,
                                        int fallback_width,
@@ -1072,7 +1094,7 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
                             mixie_chat_history_read_visible(CTX_wm_manager(C));
   if ((has_conversation || overlay_open) && !g_bubble_grown_for_chat && !g_bubble_pad_active) {
     g_bubble_grown_for_chat = true;
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
     const int floor = AGENT_BUBBLE_DEFAULT_HEIGHT + AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
     if (win->sizey < floor) {
       agent_bubble_request_resize(C, floor, floor);
@@ -1521,7 +1543,7 @@ static int agent_bubble_height_floor_for_attachments(const int attachment_count)
          ((attachment_count > 0) ? AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA : 0);
 }
 
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 static AgentBubbleSize bubble_fit_to_host(int width, int height)
 {
   AgentBubbleSize host{};
@@ -1750,7 +1772,7 @@ static void agent_bubble_request_resize(const bContext *C, int target_height, in
 static void agent_bubble_footer_region_listener(const wmRegionListenerParams *params)
 {
   agent_bubble_glass_region_listener(params);
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
   if (g_bubble_pending_resize_height <= 0) {
     return;
   }
@@ -2528,6 +2550,9 @@ void ED_agent_bubble_windows_closed()
   g_bubble_minimise_pending = false;
   g_bubble_grown_for_chat = false;
   g_bubble_ghostwin = nullptr;
+#ifdef __linux__
+  g_linux_transition_width = 0;
+#endif
   g_pill_ghostwin = nullptr;
   g_bubble_minimised = false;
   g_bubble_expanded = false;
@@ -2565,6 +2590,9 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
     g_bubble_grown_for_chat = false;
     g_bubble_seat_valid = false;
     g_bubble_ghostwin = nullptr;
+#ifdef __linux__
+    g_linux_transition_width = 0;
+#endif
     g_bubble_minimised = false;
     g_bubble_expanded = false;
     g_bubble_pad_active = false;
@@ -2983,6 +3011,20 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     }
   }
 
+#ifdef __linux__
+  if (g_bubble_ghostwin) {
+    if (g_bubble_minimised && !start_minimised) {
+      return WM_operator_name_call(C, "MIXAR_OT_bubble_restore",
+                                   wm::OpCallContext::ExecDefault, nullptr, nullptr);
+    }
+    if (!start_minimised) {
+      Mixar_WindowMakeKey(g_bubble_ghostwin);
+      agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
+    }
+    return OPERATOR_FINISHED;
+  }
+#endif
+
 #if defined(__APPLE__) || defined(_WIN32)
   if (!start_minimised && agent_bubble_repair_existing_windows(C)) {
     return OPERATOR_FINISHED;
@@ -3054,6 +3096,9 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   }
 
 #ifdef __linux__
+  g_bubble_ghostwin = win->runtime->ghostwin;
+  g_bubble_minimised = false;
+  g_bubble_grown_for_chat = false;
   /* Below this floor the island can no longer draw usable controls. Enforce
    * its usable size in the window manager itself, before interactive resizing. */
   Mixar_WindowSetCustomDecoration(
@@ -3062,6 +3107,11 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   agent_bubble_glass_reset(win->runtime->ghostwin);
   agent_bubble_glass_request(C, win->runtime->ghostwin, false);
   WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+  if (start_minimised) {
+    return WM_operator_name_call(C, "MIXAR_OT_bubble_minimise",
+                                 wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
+  agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
 #endif
 
 #if defined(__APPLE__) || defined(_WIN32)
@@ -3543,18 +3593,49 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
   Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
 #elif defined(__linux__)
-  if (!Mixar_WindowSetNativeSize(win->runtime->ghostwin,
-                                std::max(width, AGENT_BUBBLE_MIN_WIDTH),
-                                std::max(height, AGENT_BUBBLE_DEFAULT_HEIGHT)))
-  {
+  if (g_bubble_minimised) {
     return OPERATOR_CANCELLED;
   }
+  const int target_width = std::max(width, AGENT_BUBBLE_MIN_WIDTH);
+  const int target_height = std::max(height, AGENT_BUBBLE_DEFAULT_HEIGHT);
+  if (!Mixar_WindowSetNativeSize(win->runtime->ghostwin, target_width, target_height)) {
+    return OPERATOR_CANCELLED;
+  }
+  linux_bubble_track_geometry(target_width, target_height);
 #else
   (void)width;
   (void)height;
 #endif
 
   return OPERATOR_FINISHED;
+}
+
+static wmOperatorStatus mixar_bubble_window_begin_resize_exec(bContext *C, wmOperator *op)
+{
+#ifdef __linux__
+  wmWindow *win = CTX_wm_window(C);
+  g_linux_transition_width = 0;
+  if (win && !g_bubble_minimised &&
+      win->runtime->ghostwin == g_bubble_ghostwin &&
+      Mixar_WindowBeginNativeResize(g_bubble_ghostwin, RNA_int_get(op->ptr, "edges")))
+  {
+    return OPERATOR_FINISHED;
+  }
+#endif
+  return OPERATOR_CANCELLED;
+}
+
+static void MIXAR_OT_bubble_window_begin_resize(wmOperatorType *ot)
+{
+  ot->name = "Resize Agent Window";
+  ot->idname = "MIXAR_OT_bubble_window_begin_resize";
+  ot->description = "Drag to resize the agent conversation";
+  ot->invoke = [](bContext *C, wmOperator *op, const wmEvent *) {
+    return mixar_bubble_window_begin_resize_exec(C, op);
+  };
+  ot->exec = mixar_bubble_window_begin_resize_exec;
+  ot->flag = OPTYPE_INTERNAL;
+  RNA_def_int(ot->srna, "edges", 10, 1, 10, "Edges", "Native resize edges", 1, 10);
 }
 
 void MIXAR_OT_bubble_set_size(wmOperatorType *ot)
@@ -3959,9 +4040,19 @@ static void minimise_anim_finish(void *user_data)
  * movement never dismisses the island; WM delivers actual button presses.
  * \{ */
 
-void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
+bool ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
 {
-#if defined(__APPLE__) || defined(_WIN32)
+#ifdef __linux__
+  const AgentBubbleWindowEvent handled = agent_bubble_linux_handle_event(
+      C, event, g_bubble_ghostwin, g_bubble_minimised);
+  if (handled != AgentBubbleWindowEvent::PassThrough) {
+    if (handled == AgentBubbleWindowEvent::Resizing) {
+      g_linux_transition_width = 0;
+    }
+    return true;
+  }
+#endif
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
   if (!g_bubble_minimised && g_bubble_ghostwin &&
       agent_bubble_should_dismiss(C, event, g_bubble_ghostwin, g_pill_ghostwin) &&
       !agent_bubble_scribble_active(C))
@@ -3970,6 +4061,7 @@ void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
                           blender::wm::OpCallContext::ExecDefault, nullptr, nullptr);
   }
 #endif
+  return false;
 }
 
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
@@ -4027,6 +4119,10 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   agent_ui_cat_scheduler_sync(CTX_wm_manager(C), g_pill_ghostwin, g_bubble_minimised);
 
   return OPERATOR_FINISHED;
+#elif defined(__linux__)
+  linux_bubble_sync_transition(C);
+  agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
+  return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
 #endif
@@ -4045,6 +4141,8 @@ static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
   return g_bubble_ghostwin != nullptr || g_pill_ghostwin != nullptr;
+#elif defined(__linux__)
+  return g_bubble_ghostwin && g_linux_transition_width > 0;
 #else
   return false;
 #endif
@@ -4062,8 +4160,144 @@ void MIXAR_OT_bubble_hover_tick(wmOperatorType *ot)
 
 /** \} */
 
+#ifdef __linux__
+/* Use one surface for the conversation and resting capsule. This works on
+ * Wayland too, where clients cannot position or hide/reparent toplevels.
+ * Keep the regions (and their chat runtime) alive while the HEADER paints
+ * the same resting-pill renderer used on the other desktop platforms. */
+struct LinuxBubbleRegionState {
+  int type;
+  decltype(ARegion::flag) flag;
+  int sizey;
+};
+static std::vector<LinuxBubbleRegionState> g_linux_bubble_regions;
+static int g_linux_bubble_width = AGENT_BUBBLE_DEFAULT_WIDTH;
+static int g_linux_bubble_height = AGENT_BUBBLE_DEFAULT_HEIGHT;
+
+static void linux_bubble_sync_transition(bContext *C)
+{
+  if (!g_bubble_ghostwin || !g_linux_transition_width) {
+    return;
+  }
+  int width = 0, height = 0;
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
+  const int rounding = std::max(1, int(std::ceil(UI_SCALE_FAC)));
+  if (std::abs(width - g_linux_transition_width) > rounding ||
+      std::abs(height - g_linux_transition_height) > rounding)
+  {
+    g_linux_transition_stable_ticks = 0;
+    Mixar_WindowSetNativeSize(g_bubble_ghostwin, g_linux_transition_width,
+                             g_linux_transition_height);
+    WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+  }
+  else if (++g_linux_transition_stable_ticks >= 3) {
+    g_linux_transition_width = 0;
+  }
+}
+
+static wmOperatorStatus linux_bubble_set_minimised(bContext *C, bool minimised)
+{
+  if (!g_bubble_ghostwin || g_bubble_minimised == minimised) {
+    return minimised ? OPERATOR_CANCELLED : OPERATOR_FINISHED;
+  }
+  wmWindow *win = nullptr;
+  for (wmWindow &candidate : CTX_wm_manager(C)->windows) {
+    if (candidate.runtime->ghostwin == g_bubble_ghostwin) {
+      win = &candidate;
+      break;
+    }
+  }
+  if (!win) {
+    return OPERATOR_CANCELLED;
+  }
+  bScreen *screen = WM_window_get_active_screen(win);
+  ScrArea *area = screen ? static_cast<ScrArea *>(screen->areabase.first) : nullptr;
+  if (!area) {
+    return OPERATOR_CANCELLED;
+  }
+  if (minimised) {
+    if (g_linux_transition_width > 0) {
+      g_linux_bubble_width = g_linux_transition_width;
+      g_linux_bubble_height = g_linux_transition_height;
+    }
+    else {
+      Mixar_WindowGetContentSize(g_bubble_ghostwin, &g_linux_bubble_width, &g_linux_bubble_height);
+    }
+    g_linux_bubble_regions.clear();
+    g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
+    bContext *bubble_context = CTX_copy(C);
+    CTX_wm_window_set(bubble_context, win);
+    CTX_wm_area_set(bubble_context, area);
+    for (ARegion &region : area->regionbase) {
+      g_linux_bubble_regions.push_back({region.regiontype, region.flag, region.sizey});
+      CTX_wm_region_set(bubble_context, &region);
+      if (region.regiontype == RGN_TYPE_HEADER) {
+        ui::UI_region_free_active_but_all(bubble_context, &region);
+        region.flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_DYNAMIC_SIZE);
+        region.sizey = int(std::ceil(pill_rest_height() / UI_SCALE_FAC));
+      }
+      else {
+        region.flag |= RGN_FLAG_HIDDEN;
+        /* A hidden region must release its window-modal text editor before
+         * this same window becomes the pill. The composer already updates
+         * its RNA draft while typing; the normal region teardown retains it. */
+        ED_region_visibility_change_update_ex(bubble_context, area, &region, true, false);
+      }
+    }
+    CTX_free(bubble_context);
+    g_bubble_minimised = true;
+    g_pill_ghostwin = g_bubble_ghostwin;
+    Mixar_WindowSetCustomDecoration(g_bubble_ghostwin, 40, 20, pill_rest_radius());
+    g_linux_transition_width = pill_rest_width();
+    g_linux_transition_height = pill_rest_height();
+    Mixar_WindowSetNativeSize(g_bubble_ghostwin, g_linux_transition_width, g_linux_transition_height);
+  }
+  else {
+    for (ARegion &region : area->regionbase) {
+      for (const LinuxBubbleRegionState &saved : g_linux_bubble_regions) {
+        if (saved.type == region.regiontype) {
+          region.flag = saved.flag;
+          region.sizey = saved.sizey;
+          break;
+        }
+      }
+    }
+    g_bubble_minimised = false;
+    g_pill_ghostwin = nullptr;
+    g_bubble_grown_for_chat = false;
+    Mixar_WindowSetCustomDecoration(g_bubble_ghostwin, AGENT_BUBBLE_MIN_WIDTH,
+                                   AGENT_BUBBLE_DEFAULT_HEIGHT, AGENT_BUBBLE_CORNER_RADIUS);
+    g_linux_transition_width = std::max(g_linux_bubble_width, AGENT_BUBBLE_MIN_WIDTH);
+    g_linux_transition_height = std::max(g_linux_bubble_height,
+                                       agent_bubble_collapsed_height_for_current_attachments(C));
+    Mixar_WindowSetNativeSize(g_bubble_ghostwin, g_linux_transition_width, g_linux_transition_height);
+  }
+  linux_bubble_track_geometry(g_linux_transition_width, g_linux_transition_height);
+  g_bubble_last_min_height = 0;
+  agent_bubble_glass_reset(g_bubble_ghostwin);
+  agent_bubble_glass_request(C, g_bubble_ghostwin, minimised);
+  /* Give viewport shortcuts back on collapse; restore keeps typing with chat. */
+  Mixar_WindowMakeKey(minimised ? g_host_ghostwin : g_bubble_ghostwin);
+  screen->do_refresh = true;
+  ED_area_tag_redraw(area);
+  WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+  if (minimised) {
+    agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, true);
+  }
+  else {
+    /* As on macOS, restoring the window also restores its text editor.
+     * If the resized field is not built yet, its draw consumes the request. */
+    agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
+  }
+  return OPERATOR_FINISHED;
+}
+#endif
+
 static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*op*/)
 {
+#ifdef __linux__
+  return linux_bubble_set_minimised(C, true);
+#else
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_ghostwin == nullptr || g_bubble_minimised) {
     return OPERATOR_CANCELLED;
@@ -4144,6 +4378,7 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
 #else
   return OPERATOR_CANCELLED;
 #endif
+#endif
 }
 
 void MIXAR_OT_bubble_minimise(wmOperatorType *ot)
@@ -4164,6 +4399,9 @@ void MIXAR_OT_bubble_minimise(wmOperatorType *ot)
 
 static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op*/)
 {
+#ifdef __linux__
+  return linux_bubble_set_minimised(C, false);
+#else
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_ghostwin == nullptr || !g_bubble_minimised) {
     return OPERATOR_FINISHED;
@@ -4264,6 +4502,7 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
 #else
   return OPERATOR_CANCELLED;
 #endif
+#endif
 }
 
 void MIXAR_OT_bubble_restore(wmOperatorType *ot)
@@ -4279,6 +4518,23 @@ void MIXAR_OT_bubble_restore(wmOperatorType *ot)
 
 static wmOperatorStatus mixar_bubble_toggle_expand_exec(bContext *C, wmOperator * /*op*/)
 {
+#ifdef __linux__
+  if (!g_bubble_ghostwin || g_bubble_minimised) {
+    return OPERATOR_CANCELLED;
+  }
+  int width = AGENT_BUBBLE_DEFAULT_WIDTH, height = 0;
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
+  const int floor = agent_bubble_collapsed_height_for_current_attachments(C);
+  if (g_linux_transition_width > 0) {
+    width = g_linux_transition_width;
+  }
+  const AgentBubbleSize fitted = bubble_fit_to_host(
+      width, g_bubble_expanded ? floor : std::max(floor, AGENT_BUBBLE_EXPANDED_HEIGHT));
+  bubble_force_size_and_refresh(C, g_bubble_ghostwin, fitted.width, fitted.height);
+  linux_bubble_track_geometry(fitted.width, fitted.height);
+  g_bubble_expanded = !g_bubble_expanded;
+  return OPERATOR_FINISHED;
+#else
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
@@ -4327,6 +4583,7 @@ static wmOperatorStatus mixar_bubble_toggle_expand_exec(bContext *C, wmOperator 
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
+#endif
 #endif
 }
 
@@ -4421,6 +4678,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_agent_bubble_purge_windows);
   WM_operatortype_append(MIXAR_OT_activate_app);
   WM_operatortype_append(MIXAR_OT_bubble_set_size);
+  WM_operatortype_append(MIXAR_OT_bubble_window_begin_resize);
   WM_operatortype_append(MIXAR_OT_bubble_sync_attachment_size);
   WM_operatortype_append(MIXAR_OT_bubble_window_begin_drag);
   WM_operatortype_append(MIXAR_OT_bubble_window_update_drag);

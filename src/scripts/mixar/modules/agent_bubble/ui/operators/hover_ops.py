@@ -13,9 +13,8 @@ mascot visibility scheduling.
 Two gates keep the heartbeat honest:
 
 * ``register()`` is a no-op outside ``BUBBLE_WINDOW_CONTROLS_SUPPORTED``. The
-  operator's exec body is ``#if defined(__APPLE__) || defined(_WIN32)`` around
-  the ``Mixar_Window*`` GHOST helpers, so on Linux every tick could only ever
-  return CANCELLED — a timer that can never do anything should not run.
+  native heartbeat is only available on supported desktop platforms.
+  Linux uses it only while a Wayland size transition is settling.
 * The tick itself is gated on ``op.poll()``, which the operator now really
   implements (false until a bubble or pill window exists). Before that poll
   existed this was an unconditional ``bpy.ops`` invocation ten times a second

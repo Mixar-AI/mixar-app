@@ -199,7 +199,7 @@ def _draw_topbar_profile_right(self, context):
     account = layout.row(align=True)
 
     email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
-    caption = email if logged_in else iface_("Guest")
+    caption = topbar_layout.account_label(wm, email, iface_("Guest"))
     profile_sub = account.row(align=True)
     # Guest uses the same lane budget and avatar-only narrow-window fallback.
     profile_sub.ui_units_x, label = _profile_pill_size(context, caption, sound)

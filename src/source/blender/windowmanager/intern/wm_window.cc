@@ -1194,6 +1194,74 @@ extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int he
          static_cast<GHOST_IWindow *>(window_handle)->setClientSize(width, height) == GHOST_kSuccess;
 }
 
+#ifdef __linux__
+extern "C" void Mixar_WindowMakeKey(void *window_handle)
+{
+  if (window_handle) {
+    static_cast<GHOST_IWindow *>(window_handle)->setOrder(GHOST_kWindowOrderTop);
+  }
+}
+
+extern "C" bool Mixar_WindowBeginNativeResize(void *window_handle, int edges)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->beginWindowResize(edges) == GHOST_kSuccess;
+}
+
+extern "C" void Mixar_WindowSetResizeCursor(void *window_handle, int edges)
+{
+  if (!window_handle) {
+    return;
+  }
+  GHOST_TStandardCursor cursor;
+  switch (edges) {
+    case 1: case 2: cursor = GHOST_kStandardCursorUpDown; break;
+    case 4: case 8: cursor = GHOST_kStandardCursorLeftRight; break;
+    case 5: cursor = GHOST_kStandardCursorTopLeftCorner; break;
+    case 9: cursor = GHOST_kStandardCursorTopRightCorner; break;
+    case 6: cursor = GHOST_kStandardCursorBottomLeftCorner; break;
+    case 10: cursor = GHOST_kStandardCursorBottomRightCorner; break;
+    default: return;
+  }
+  static_cast<GHOST_IWindow *>(window_handle)->setCursorShape(cursor);
+}
+
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *width, int *height)
+{
+  if (!window_handle) {
+    return false;
+  }
+  auto *window = static_cast<GHOST_IWindow *>(window_handle);
+  GHOST_Rect bounds;
+  window->getClientBounds(bounds);
+  *width = bounds.getWidth();
+  *height = bounds.getHeight();
+  return true;
+}
+
+extern "C" void Mixar_WindowGetContentPixelSize(void *window_handle, int *width, int *height)
+{
+  if (Mixar_WindowGetContentSize(window_handle, width, height)) {
+    const float scale = static_cast<GHOST_IWindow *>(window_handle)->getNativePixelSize();
+    *width = int(*width * scale);
+    *height = int(*height * scale);
+  }
+}
+
+extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height)
+{
+  Mixar_WindowSetNativeSize(window_handle, width, height);
+}
+
+extern "C" void Mixar_WindowSetMinContentSize(void *window_handle, int width, int height)
+{
+  if (window_handle) {
+    auto *window = static_cast<GHOST_IWindow *>(window_handle);
+    window->setClientMinimumSize(width, height);
+  }
+}
+#endif
+
 extern "C" bool Mixar_WindowSupportsTransparency(void *window_handle)
 {
   return window_handle &&

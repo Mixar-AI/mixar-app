@@ -32,8 +32,8 @@ from mixar.modules.common.analytics.constants import EVENT_BUBBLE_EXPAND
 from mixar.modules.common.analytics.bubble_events import capture_bubble_state
 
 
-# Every operator here drives a native window-state operator that only exists
-# on macOS and Windows (see BUBBLE_WINDOW_CONTROLS_SUPPORTED). Elsewhere the
+# Every operator here drives native desktop window controls
+# (see BUBBLE_WINDOW_CONTROLS_SUPPORTED). On unsupported platforms the
 # native side returns CANCELLED without touching a window, so these gate
 # themselves rather than running their side effects around a call that will
 # not do anything:

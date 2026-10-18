@@ -24,6 +24,8 @@ set(SRC
   agent_bubble_reference_items.cc
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
+  agent_bubble_linux_interaction.cc
+  agent_bubble_resize_edges.hh
   agent_bubble_pill_voice.cc
   agent_ui_asset_picker.cc
   agent_ui_asset_picker_detail.cc

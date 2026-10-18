@@ -165,7 +165,19 @@ def create_guest_session() -> dict:
         "success": False,
         "disabled": code == GUEST_DISABLED_CODE,
         "message": message or f"Guest session failed: {response.status_code}",
+        # Seconds until the per-network guest limit lets one through again.
+        "retry_after": _retry_after(response) if response.status_code == 429 else 0,
     }
+
+
+def _retry_after(response) -> int:
+    """A 429's ``Retry-After`` header (or body ``retry_after``) in seconds; 0 if absent."""
+    for value in (response.headers.get("Retry-After"), _error_body(response).get("retry_after")):
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError):
+            continue
+    return 0
 
 
 def claim_guest(guest_refresh_token: str) -> dict:
