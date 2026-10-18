@@ -6,10 +6,12 @@ registry snapshots and ID properties — no process, file or network work."""
 
 import time
 
+import bpy
 from bpy.types import Panel
 
 from mixar.modules.common.i18n import iface_
-from mixar.modules.game_studio.constants import BOSS_TEMPLATE, STORE_PROP, platform_list
+from mixar.modules.game_studio.constants import (BOSS_TEMPLATE, PARAMS_PROP, PART_ONLY_PROP, ROLE_PROP,
+                                                 STORE_PROP, platform_list)
 from mixar.modules.game_studio.core import approvals, godot_locator, jobs, roles
 from mixar.modules.game_studio.core.assemblies import Hierarchy
 
@@ -116,29 +118,27 @@ CHECK_TTL_S = 0.5
 _checked = {"key": None, "at": 0.0, "value": None}
 
 
+def _edit_signature(scene) -> tuple:
+    """What an agent script or Auto-assign changes between two draws of one
+    burst: role tags and strike markers. Part of the cache key, so a reused
+    result never predates them (a TTL alone left the panels stale until the
+    next unrelated redraw)."""
+    tags = tuple((obj.name, obj.get(ROLE_PROP), obj.get(PARAMS_PROP), obj.get(PART_ONLY_PROP))
+                 for obj in scene.objects if obj.get(ROLE_PROP) is not None)
+    marks = tuple((act.name, tuple((m.name, m.frame) for m in act.pose_markers))
+                  for act in bpy.data.actions if len(act.pose_markers))
+    return tags, marks
+
+
 def checked_scene(scene) -> dict:
     """``exporter.inspect`` for the draw callbacks, reused for CHECK_TTL_S
     so the Build and Combat panels share one walk per redraw burst."""
     from mixar.modules.game_studio.core.exporter import inspect
-    key, now = (scene.as_pointer(), scene.get("mixar_game_spec", "")), time.monotonic()
+    key = (scene.as_pointer(), scene.get("mixar_game_spec", ""), _edit_signature(scene))
+    now = time.monotonic()
     if _checked["key"] != key or now - _checked["at"] > CHECK_TTL_S:
         _checked.update(key=key, at=now, value=inspect(scene))
-    elif not bpy.app.timers.is_registered(_recheck):
-        # A reused result can predate a role or marker change made in this
-        # burst (an agent script, Auto-assign); look once more after the TTL.
-        bpy.app.timers.register(_recheck, first_interval=CHECK_TTL_S)
     return _checked["value"]
-
-
-def _recheck():
-    """One-shot: redraw the View3D sidebars so the panels re-inspect."""
-    for window in getattr(bpy.context.window_manager, "windows", ()):
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'UI':
-                        region.tag_redraw()
-    return None
 
 
 class MIXAR_PT_game_combat(_GamePanel, Panel):
