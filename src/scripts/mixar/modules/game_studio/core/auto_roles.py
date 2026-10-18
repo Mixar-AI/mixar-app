@@ -92,7 +92,17 @@ def suggest_role(name: str, obj_type: str, dimensions=(0.0, 0.0, 0.0)) -> tuple[
 
 
 def _tagged(hierarchy: Hierarchy, root) -> bool:
-    return bool(get_role(root)) or any(get_role(p) for p in hierarchy.descendants(root))
+    """The user decided this asset: its root is tagged, or a part inside it
+    was tagged on purpose ("This part only"). A part tag without that mark
+    is stale (the old per-part auto-assign) and does not count."""
+    from .roles import is_deliberate_part
+    return bool(get_role(root)) or any(get_role(p) and is_deliberate_part(p)
+                                       for p in hierarchy.descendants(root))
+
+
+def _deliberate(obj) -> bool:
+    from .roles import is_deliberate_part
+    return is_deliberate_part(obj)
 
 
 def suggest_roles(objects, overwrite: bool = False) -> list[dict]:
@@ -105,7 +115,8 @@ def suggest_roles(objects, overwrite: bool = False) -> list[dict]:
             continue
         if _tagged(hierarchy, root) and not overwrite:
             for role in SINGLE:
-                if any(get_role(o) == role for o in [root] + hierarchy.descendants(root)):
+                if get_role(root) == role or any(get_role(o) == role and _deliberate(o)
+                                                 for o in hierarchy.descendants(root)):
                     taken[role] = True
             continue
         parts = hierarchy.parts(root)

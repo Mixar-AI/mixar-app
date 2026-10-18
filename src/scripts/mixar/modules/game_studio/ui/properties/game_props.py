@@ -136,10 +136,11 @@ def _role_set(obj, index):
     unless "This part only" is on) part-level tags inside are cleared, so
     one asset carries one role."""
     key = _ROLE_KEYS[index]
-    roles.set_role(obj, None if key == "NONE" else key)
     wm = bpy.context.window_manager
     form = getattr(wm, "mixar_game", None)
-    if form is not None and not form.role_part_only:
+    part_only = bool(form is not None and form.role_part_only and getattr(obj, "parent", None))
+    roles.set_role(obj, None if key == "NONE" else key, part_only=part_only)
+    if not part_only:
         from mixar.modules.game_studio.core.assemblies import Hierarchy
         hierarchy = Hierarchy(roles.game_objects(bpy.context.scene))
         for part in hierarchy.descendants(obj):

@@ -7,6 +7,10 @@ roles, the ``mixar_game_spec_v1`` package, the fork CLI and job states."""
 # --- §1 roles -------------------------------------------------------------
 ROLE_PROP = "mixar_game_role"
 PARAMS_PROP = "mixar_game_params"
+# Set on a part tagged on purpose ("This part only"). A part-level tag
+# WITHOUT it (left by the old per-part auto-assign) is stale: Auto-assign
+# replaces it with a tag on the part's assembly root.
+PART_ONLY_PROP = "mixar_game_part_only"
 ROLES = ("player", "static", "prop", "collectible", "hazard", "enemy",
          "goal", "spawn", "decor", "ignore")
 DEFAULT_MESH_ROLE = "static"

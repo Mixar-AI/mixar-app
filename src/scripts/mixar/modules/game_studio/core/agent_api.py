@@ -110,10 +110,11 @@ def _hierarchy(scene):
     return Hierarchy(roles.game_objects(scene))
 
 
-def _clear_parts(hierarchy, root) -> None:
-    """One role per assembly: drop part-level tags inside ``root``."""
+def _clear_parts(hierarchy, root, keep_deliberate: bool = False) -> None:
+    """One role per assembly: drop part-level tags inside ``root``
+    (deliberate "This part only" tags too unless ``keep_deliberate``)."""
     for part in hierarchy.descendants(root):
-        if roles.get_role(part):
+        if roles.get_role(part) and not (keep_deliberate and roles.is_deliberate_part(part)):
             roles.set_role(part, None)
 
 
@@ -135,7 +136,8 @@ def set_game_roles(assignments=None) -> dict:
             continue
         part_only = bool(item.get("part_only"))
         target = obj if part_only else hierarchy.assembly_root(obj)
-        done, problems = roles.set_role(target, item.get("role"), item.get("params"))
+        done, problems = roles.set_role(target, item.get("role"), item.get("params"),
+                                        part_only=part_only and target is not hierarchy.assembly_root(obj))
         if not done:
             errors.append({"object": name, "error": "; ".join(problems)})
             continue
@@ -152,8 +154,9 @@ def set_game_roles(assignments=None) -> dict:
 
 def auto_assign_roles(apply=False, overwrite=False) -> dict:
     """Score each ASSEMBLY (root name + part names) and suggest a role for
-    its root; ``apply=True`` tags them. ``overwrite=True`` re-assigns every
-    assembly, replacing existing roles (part-level tags included)."""
+    its root; ``apply=True`` tags them. Assets the user tagged (root tag or
+    a "This part only" part) are kept; stale part tags from the old per-part
+    auto-assign are replaced. ``overwrite=True`` re-assigns everything."""
     from .auto_roles import suggest_roles
     scene = _scene()
     objects = roles.game_objects(scene)
@@ -170,7 +173,11 @@ def auto_assign_roles(apply=False, overwrite=False) -> dict:
             if item["role"]:
                 root = by_name[item["object"]]
                 roles.set_role(root, item["role"])
-                _clear_parts(hierarchy, root)
+                _clear_parts(hierarchy, root, keep_deliberate=not overwrite)
+        if not overwrite:  # stale part tags of assets that got no new role
+            for root in hierarchy.assemblies():
+                if not hierarchy.is_container(root) and not roles.get_role(root):
+                    _clear_parts(hierarchy, root, keep_deliberate=True)
     return _redact({"ok": True, "assignments": suggestions, "applied": bool(apply)})
 
 

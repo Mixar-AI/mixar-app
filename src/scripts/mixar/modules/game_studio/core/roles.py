@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import re
 
-from ..constants import DEFAULT_MESH_ROLE, PARAM_TYPES, PARAMS_PROP, ROLE_PROP, ROLES
+from ..constants import DEFAULT_MESH_ROLE, PARAM_TYPES, PARAMS_PROP, PART_ONLY_PROP, ROLE_PROP, ROLES
 
 # A mesh at least this wide whose height is under FLAT_RATIO of its width is
 # ground: static even when a name hint says otherwise ("Lava Floor" stays a
@@ -136,12 +136,13 @@ def get_params(obj) -> dict:
     return params
 
 
-def set_role(obj, role, params=None) -> tuple[bool, list[str]]:
-    """Tag ``obj``; an empty role clears the tag. Returns ``(applied,
-    errors)``: a bad param is dropped with an error while the role still
-    applies. Main thread only."""
+def set_role(obj, role, params=None, part_only: bool = False) -> tuple[bool, list[str]]:
+    """Tag ``obj``; an empty role clears the tag. ``part_only`` marks a
+    deliberate part tag inside an assembly (kept by Auto-assign). Returns
+    ``(applied, errors)``: a bad param is dropped with an error while the
+    role still applies. Main thread only."""
     if role in (None, ""):
-        for key in (ROLE_PROP, PARAMS_PROP):
+        for key in (ROLE_PROP, PARAMS_PROP, PART_ONLY_PROP):
             if key in obj.keys():
                 del obj[key]
         return True, []
@@ -153,11 +154,22 @@ def set_role(obj, role, params=None) -> tuple[bool, list[str]]:
                        "only meshes and empties carry game roles"]
     clean, errors = normalize_params(params)
     obj[ROLE_PROP] = valid
+    if part_only:
+        obj[PART_ONLY_PROP] = True
+    elif PART_ONLY_PROP in obj.keys():
+        del obj[PART_ONLY_PROP]
     if clean:
         obj[PARAMS_PROP] = json.dumps(clean, sort_keys=True)
     elif PARAMS_PROP in obj.keys():
         del obj[PARAMS_PROP]
     return True, errors
+
+
+def is_deliberate_part(obj) -> bool:
+    try:
+        return bool(obj.get(PART_ONLY_PROP))
+    except Exception:
+        return False
 
 
 def game_objects(scene) -> list:

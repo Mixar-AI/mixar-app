@@ -131,13 +131,24 @@ def test_overwrite_repairs_old_part_tags(cycle_scene, monkeypatch):
     find("hero_bicycle_ChainStay-1")[ROLE_PROP] = "player"
     for part in ("PickupBoard", "PickupFace"):
         find(f"gameplay_elements_{part}")[ROLE_PROP] = "collectible"
-    kept = _auto(cycle_scene, monkeypatch)
-    assert roles.get_role(find("SF_HeroBike")) is None  # an explicit (part) tag is respected
-    assert any(a["object"].startswith("gameplay_elements_Token") for a in kept["assignments"])
-    _auto(cycle_scene, monkeypatch, overwrite=True)
+    # The old auto-assign's part tags are stale: a plain Auto-assign repairs them.
+    _auto(cycle_scene, monkeypatch)
     assert roles.get_role(find("SF_HeroBike")) == "player"
     assert roles.get_role(find("hero_bicycle_ChainStay-1")) is None
     assert roles.get_role(find("gameplay_elements_PickupBoard")) is None
+    assert roles.get_role(find("gameplay_elements_Token05")) == "collectible"
+
+
+def test_deliberate_part_tags_survive_auto_assign(cycle_scene, monkeypatch):
+    find = cycle_scene.objects.get
+    monkeypatch.setattr(agent_api, "_scene", lambda: cycle_scene)
+    agent_api.set_game_roles([{"object": "hero_bicycle_Chainring", "role": "prop", "part_only": True}])
+    _auto(cycle_scene, monkeypatch)
+    assert roles.get_role(find("hero_bicycle_Chainring")) == "prop"  # "This part only" is kept
+    assert roles.get_role(find("SF_HeroBike")) is None  # the user decided this asset
+    _auto(cycle_scene, monkeypatch, overwrite=True)  # replace: everything re-assigned
+    assert roles.get_role(find("SF_HeroBike")) == "player"
+    assert roles.get_role(find("hero_bicycle_Chainring")) is None
 
 
 def test_finish_beats_a_mailbox_flag(make_obj, make_scene):
