@@ -87,6 +87,15 @@ _DENIED_SUBMODULES = frozenset({
     # imports, real builtins). The agent reaches it only through the
     # addon_project RPC, whose commits the user approves -- never from a script.
     "mixar.modules.addon_project",
+    # Game publishing: scripts reach it only through game_studio.core.agent_api
+    # (data in, data out). These start processes, write chosen paths or talk
+    # to the store with the user's token.
+    "mixar.modules.game_studio.core.godot_locator",
+    "mixar.modules.game_studio.core.godot_runner",
+    "mixar.modules.game_studio.core.exporter",
+    "mixar.modules.game_studio.core.jobs",
+    "mixar.modules.game_studio.core.pipeline",
+    "mixar.modules.game_studio.core.store_client",
 })
 
 
