@@ -61,6 +61,12 @@ if "--mixar-version" in args:
     print(json.dumps({"fork": os.environ.get("FAKE_FORK", "mixar-godot"),
                       "fork_version": "1.0.0", "godot": "4.7.2.stable", "capabilities": caps}))
     sys.exit(0)
+missing = os.environ.get("FAKE_TEMPLATES_MISSING", "")
+if "--mixar-export" in args and arg("--mixar-export") in missing.split(","):
+    json.dump({"schema": "mixar_godot_result_v1", "ok": False, "action": "export",
+               "error": "No export template for windows", "error_code": "templates_missing"},
+              open(arg("--mixar-result"), "w"))
+    sys.exit(4)
 fail = os.environ.get("FAKE_FAIL_CODE")
 if fail:
     print("ERROR: something broke")

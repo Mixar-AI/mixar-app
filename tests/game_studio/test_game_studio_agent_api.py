@@ -285,3 +285,16 @@ def test_publish_never_grabs_the_mixar_window():
     for path in root.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         assert "screenshot_area" not in source and "screen.screenshot" not in source, path
+
+
+def test_missing_windows_templates_skip_windows_with_a_warning(level, monkeypatch):
+    agent_api.set_game_roles([{"object": "Hero", "role": "player"},
+                              {"object": "Coin.001", "role": "collectible"}])
+    monkeypatch.setenv("FAKE_TEMPLATES_MISSING", "windows")
+    status = _wait(agent_api.start_game_export()["job_id"])  # default: web + macOS + Windows
+    assert status["state"] == "done", status
+    assert [a["platform"] for a in status["result"]["artifacts"]] == ["web", "macos"]
+    assert "Windows build skipped: export templates not installed." in status["result"]["warnings"]
+    monkeypatch.setenv("FAKE_TEMPLATES_MISSING", "web,windows")
+    status = _wait(agent_api.start_game_export(platforms=["windows"])["job_id"])  # nothing else: fail
+    assert status["state"] == "failed" and status["error_code"] == "templates_missing"

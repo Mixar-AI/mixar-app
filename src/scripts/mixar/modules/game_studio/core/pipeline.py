@@ -103,7 +103,15 @@ def build_stage(ctx: dict, handle, godot: str, low=0.0, high=100.0) -> dict:
     return result
 
 
-def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0) -> list[dict]:
+PLATFORM_LABELS = {"web": "Web", "macos": "macOS", "windows": "Windows", "linux": "Linux"}
+
+
+def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0,
+                 skipped: list | None = None) -> list[dict]:
+    """Export each platform into its own folder. A desktop platform whose
+    export templates are missing is skipped with a warning appended to
+    ``skipped`` (when given) as long as another platform exports; every
+    other failure fails the job."""
     where = paths(ctx["game_dir"])
     os.makedirs(where["results"], exist_ok=True)
     artifacts, span = [], (high - low) / max(1, len(platforms))
@@ -116,6 +124,11 @@ def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0) 
             os.path.join(where["results"], f"export-{platform}.json"), "export",
             on_progress=_scaled(handle, start, start + span), cancel=handle.cancel_event)
         if not result.get("ok"):
+            if (skipped is not None and result.get("error_code") == "templates_missing"
+                    and platform != "web" and len(platforms) > 1):
+                skipped.append(f"{PLATFORM_LABELS.get(platform, platform)} build skipped: "
+                               "export templates not installed.")
+                continue
             raise _fork_failure(result)
         artifact = result.get("artifact")
         if not artifact or not os.path.isfile(artifact):
@@ -129,6 +142,8 @@ def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0) 
                           "signing": _for_platform(result.get("signing"), platform)
                           if platform in DESKTOP_STORE_PLATFORMS else None,
                           "warnings": list(result.get("warnings") or [])})
+    if not artifacts:
+        raise JobError("No platform could be exported.", "templates_missing")
     return artifacts
 
 
@@ -164,8 +179,11 @@ def export_work(ctx: dict, platforms):
     def work(handle):
         godot = _godot(ctx)
         build = build_stage(ctx, handle, godot, 0.0, 40.0)
-        artifacts = export_stage(ctx, handle, godot, platforms, 40.0, 98.0)
-        return {**_build_summary(ctx, build), "artifacts": artifacts}
+        skipped = []
+        artifacts = export_stage(ctx, handle, godot, platforms, 40.0, 98.0, skipped)
+        summary = {**_build_summary(ctx, build), "artifacts": artifacts}
+        summary["warnings"] = summary["warnings"] + skipped
+        return summary
     return work
 
 
@@ -246,13 +264,16 @@ def publish_work(ctx: dict, platforms, client_factory=None):
         verdict = _godot_verdict(ctx)
         godot = verdict["path"]
         build_stage(ctx, handle, godot, 0.0, 22.0)
-        artifacts = export_stage(ctx, handle, godot, platforms, 22.0, 48.0)
+        skipped = []
+        artifacts = export_stage(ctx, handle, godot, platforms, 22.0, 48.0, skipped)
+        offered = [item["platform"] for item in artifacts]  # what the store page offers
         handle.progress(49.0, "Rendering store images", force=True)
         images, warnings = capture_stage(ctx, handle, verdict)
+        warnings = skipped + warnings
         client = (client_factory or StoreClient)(ctx["api_base"])
         try:
             handle.progress(56.0, "Creating the store page", force=True)
-            game = _create_or_update(client, ctx, store_fields(ctx, platforms))
+            game = _create_or_update(client, ctx, store_fields(ctx, offered))
             game_id = str(game.get("game_id") or game.get("id") or "")
             if not game_id:
                 raise StoreError("The store did not return a game id.", "bad_response")
