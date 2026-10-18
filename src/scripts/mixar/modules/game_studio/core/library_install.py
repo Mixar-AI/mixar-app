@@ -94,26 +94,41 @@ def parse_selftest(output: str) -> dict | None:
 
 
 def selftest(program: str, cwd: str, runner=subprocess.run) -> dict:
-    """``--headless -- --mixar-selftest``: ok only on exit 0 AND a
-    ``MIXAR_SELFTEST {"ok": true}`` line."""
+    """``--headless -- --mixar-selftest --mixar-selftest-out=<json>``: ok only
+    on exit 0 AND an ``{"ok": true}`` report. The report is read from the
+    JSON file first (a Windows game is a GUI-subsystem exe whose stdout may
+    be lost), then from the ``MIXAR_SELFTEST {json}`` stdout line."""
     started = time.monotonic()
+    out = os.path.join(cwd, ".mixar-selftest.json")
+    try:
+        os.remove(out)
+    except OSError:
+        pass
     kwargs = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)} \
         if sys.platform.startswith("win") else {}
     try:
-        done = runner([program, "--headless", "--", "--mixar-selftest"], cwd=cwd,
-                      capture_output=True, text=True, errors="replace",
+        done = runner([program, "--headless", "--", "--mixar-selftest", f"--mixar-selftest-out={out}"],
+                      cwd=cwd, capture_output=True, text=True, errors="replace",
                       timeout=SELFTEST_TIMEOUT_S, stdin=subprocess.DEVNULL, **kwargs)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout", "duration_s": SELFTEST_TIMEOUT_S}
     except OSError as exc:
         return {"ok": False, "error": f"launch_failed ({exc.__class__.__name__})", "duration_s": 0.0}
-    report = parse_selftest(done.stdout) or {}
+    report = None
+    try:
+        with open(out, "r", encoding="utf-8") as handle:
+            report = json.load(handle)
+        os.remove(out)
+    except (OSError, ValueError):
+        pass
+    if not isinstance(report, dict):
+        report = parse_selftest(done.stdout) or {}
     ok = done.returncode == 0 and bool(report.get("ok"))
     result = {"ok": ok, "exit_code": done.returncode,
               "duration_s": round(time.monotonic() - started, 2), "report": report}
     if not ok:
         tail = [line for line in (done.stdout or "").splitlines() if line.strip()][-1:]
-        result["error"] = report.get("error") or (tail[0][:200] if tail else "no self-test line")
+        result["error"] = report.get("error") or (tail[0][:200] if tail else "no self-test report")
     return result
 
 

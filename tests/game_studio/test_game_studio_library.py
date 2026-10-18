@@ -32,7 +32,7 @@ SELFTEST_SCRIPT = (f"#!{sys.executable}\n"
                    "if '--mixar-selftest' in sys.argv:\n"
                    "    ok = '--headless' in sys.argv\n"
                    "    print('MIXAR_SELFTEST ' + json.dumps({'ok': ok, 'collected': 1}))\n"
-                   "    sys.exit(0 if ok else 1)\n")
+                   "    sys.exit(0 if ok else 1)\n")  # stdout only: the file path is optional
 
 
 @pytest.fixture(autouse=True)
@@ -230,7 +230,20 @@ def test_windows_entry_point_and_launch_with_fakes(tmp_path):
     selftest_cmd = []
     library_install.selftest("C:/game/Crystal Run.exe", "C:/game",
                              runner=lambda cmd, **kw: selftest_cmd.append(cmd) or _Done())
-    assert selftest_cmd[0][1:] == ["--headless", "--", "--mixar-selftest"]
+    assert selftest_cmd[0][1:4] == ["--headless", "--", "--mixar-selftest"]
+    assert selftest_cmd[0][4].startswith("--mixar-selftest-out=")
+
+
+def test_selftest_reads_the_report_file_when_stdout_is_lost(tmp_path):
+    """A Windows GUI-subsystem exe has no usable stdout: the JSON file decides."""
+    def runner(cmd, **kwargs):
+        path = cmd[-1].split("=", 1)[1]
+        with open(path, "w") as handle:
+            json.dump({"ok": True, "moved_m": 2.0, "errors": []}, handle)
+        return type("Done", (), {"returncode": 0, "stdout": ""})()
+    check = library_install.selftest(str(tmp_path / "Game.exe"), str(tmp_path), runner=runner)
+    assert check["ok"] and check["report"]["moved_m"] == 2.0
+    assert not (tmp_path / ".mixar-selftest.json").exists()
 
 
 class _Done:
