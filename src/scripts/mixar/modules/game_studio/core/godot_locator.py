@@ -124,7 +124,9 @@ def validate(path: str, runner=None) -> dict:
         else:
             verdict = {"found": True, "path": path, "error": None, "message": "",
                        "version": str(data.get("fork_version") or ""),
-                       "godot": str(data.get("godot") or "")}
+                       "godot": str(data.get("godot") or ""),
+                       "capabilities": [str(c) for c in data.get("capabilities") or ()
+                                        if isinstance(c, str)]}
     with _lock:
         _cache[key] = dict(verdict)
     return verdict

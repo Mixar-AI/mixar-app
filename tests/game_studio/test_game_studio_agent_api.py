@@ -172,8 +172,10 @@ def test_publish_waits_for_the_user_then_uploads(level, stub, monkeypatch):  # n
     assert started["ok"] and started["job_id"] == reply["request_id"]
     status = _wait(reply["request_id"])
     assert status["state"] == "done", status
-    assert status["result"] == {"game_id": "g9", "store_url": "http://store.test/games/crystal-run",
-                                "review_status": "pending", "builds": status["result"]["builds"]}
+    assert {k: status["result"][k] for k in ("game_id", "store_url", "review_status")} == {
+        "game_id": "g9", "store_url": "http://store.test/games/crystal-run", "review_status": "pending"}
+    # The fake fork advertises no "capture": published without store art, said so.
+    assert "cannot render store images" in status["result"]["warnings"][0]
     assert status["result"]["builds"][0]["platform"] == "web"
     create = json.loads(stub.calls[0]["raw"])
     assert create["tagline"] == "Grab gems" and create["genres"] == ["platformer"]
@@ -232,3 +234,48 @@ def test_settled_jobs_replace_the_last_progress_line():
     assert jobs.get(failed)["message"] == "templates missing"
     from mixar.modules.game_studio.constants import platform_list
     assert platform_list(["web", "macos", "windows", "linux"]) == "Web, macOS, Windows, Linux"
+
+
+def _capture_ctx(tmp_path, fake_godot):
+    from mixar.modules.game_studio.core import godot_locator
+    project = tmp_path / "game" / "project"
+    project.mkdir(parents=True)
+    return {"game_dir": str(tmp_path / "game")}, godot_locator.validate(fake_godot)
+
+
+class _Handle:
+    import threading
+    cancel_event = threading.Event()
+
+    def progress(self, *args, **kwargs):
+        pass
+
+
+def test_capture_renders_store_art_with_the_fork(tmp_path, fake_godot, monkeypatch):
+    monkeypatch.setenv("FAKE_CAPS", "capture")
+    ctx, verdict = _capture_ctx(tmp_path, fake_godot)
+    assert verdict["capabilities"] == ["capture"]
+    images, warnings = pipeline.capture_stage(ctx, _Handle(), verdict)
+    assert [kind for kind, _ in images] == ["capsule", "screenshot"] and warnings == []
+    with open(images[0][1], "rb") as handle:
+        assert handle.read() == b"\x89PNG1280x720"
+
+
+def test_capture_skipped_without_the_capability_and_failures_warn(tmp_path, fake_godot, monkeypatch):
+    calls = []
+    real_run = pipeline.godot_runner.run
+    monkeypatch.setattr(pipeline.godot_runner, "run", lambda *a, **k: calls.append(a) or real_run(*a, **k))
+    ctx, verdict = _capture_ctx(tmp_path, fake_godot)
+    images, warnings = pipeline.capture_stage(ctx, _Handle(), verdict)
+    assert images == [] and not calls and "cannot render" in warnings[0]  # never an unknown flag
+    monkeypatch.setenv("FAKE_CAPTURE_FAIL", "1")
+    images, warnings = pipeline.capture_stage(ctx, _Handle(), dict(verdict, capabilities=["capture"]))
+    assert images == [] and len(warnings) == 2 and "capture_failed" in warnings[0]
+
+
+def test_publish_never_grabs_the_mixar_window():
+    from pathlib import Path
+    root = Path(__file__).parents[2] / "src/scripts/mixar/modules/game_studio"
+    for path in root.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        assert "screenshot_area" not in source and "screen.screenshot" not in source, path

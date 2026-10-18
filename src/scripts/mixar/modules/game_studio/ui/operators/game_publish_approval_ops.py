@@ -11,8 +11,6 @@ A script calling ``EXEC_DEFAULT`` has no token; one calling
 refuses outright while an agent script is on the call stack.
 """
 
-import os
-
 import bpy
 from bpy.props import StringProperty
 from bpy.types import Operator
@@ -34,27 +32,6 @@ def _dismiss_toast(request_id: str) -> None:
         get_notification_store().dismiss(f"game-publish-{request_id}")
     except Exception:
         pass
-
-
-def _capture_capsule(export_dir: str) -> str:
-    """Best effort: the first 3D view as the store capsule image."""
-    wm = bpy.context.window_manager
-    if getattr(wm, "mixar_window_resizing", False):
-        return ""
-    path = os.path.join(export_dir, "capsule.png")
-    for window in wm.windows:
-        for area in window.screen.areas:
-            if area.type != 'VIEW_3D':
-                continue
-            region = next((r for r in area.regions if r.type == 'WINDOW'), None)
-            try:
-                with bpy.context.temp_override(window=window, screen=window.screen, area=area,
-                                               region=region):
-                    bpy.ops.screen.screenshot_area(filepath=path, check_existing=False)
-            except Exception:
-                return ""
-            return path if os.path.isfile(path) else ""
-    return ""
 
 
 class MIXAR_OT_game_publish_approve(Operator):
@@ -91,7 +68,7 @@ class MIXAR_OT_game_publish_approve(Operator):
             self.report({'ERROR'}, rpt_("This publish request is no longer waiting for approval."))
             return {'CANCELLED'}
         _dismiss_toast(self.request_id)
-        reply = launch.start_approved_publish(self.request_id, payload, _capture_capsule)
+        reply = launch.start_approved_publish(self.request_id, payload)
         if not reply.get("ok"):
             approvals.mark_failed(self.request_id, reply.get("error") or "", reply.get("error_code") or "failed")
             self.report({'ERROR'}, reply.get("error") or rpt_("Could not start."))

@@ -32,12 +32,51 @@ def paths(game_dir: str) -> dict:
     }
 
 
-def _godot(ctx: dict) -> str:
+def _godot_verdict(ctx: dict) -> dict:
     verdict = godot_locator.locate(ctx.get("godot_config", ""))
     if not verdict.get("found"):
         raise JobError(verdict.get("message") or "Mixar Godot was not found.",
                        verdict.get("error") or "godot_missing")
-    return verdict["path"]
+    return verdict
+
+
+def _godot(ctx: dict) -> str:
+    return _godot_verdict(ctx)["path"]
+
+
+# Store art rendered by the fork from the built game (never a window grab of
+# Mixar's UI): (media kind, file name, size).
+CAPTURES = (("capsule", "capsule.png", "1280x720"), ("screenshot", "screenshot-1.png", "1920x1080"))
+CAPTURE_TIMEOUT_S = 180.0
+
+
+def capture_stage(ctx: dict, handle, verdict: dict) -> tuple[list[tuple[str, str]], list[str]]:
+    """``([(kind, path)], warnings)``. Only when the fork advertises the
+    ``capture`` capability: an older fork would treat the flag as unknown
+    and open its editor. A failed capture is a warning, never a failure."""
+    if "capture" not in (verdict.get("capabilities") or ()):
+        return [], ["This Mixar Godot cannot render store images; the game was published without them."]
+    where = paths(ctx["game_dir"])
+    os.makedirs(where["results"], exist_ok=True)
+    images, warnings = [], []
+    for kind, name, size in CAPTURES:
+        out = os.path.join(where["results"], name)
+        try:
+            os.remove(out)
+        except OSError:
+            pass
+        result = godot_runner.run(
+            verdict["path"], ["--path", where["project"], "--mixar-capture", out,
+                              "--mixar-capture-size", size],
+            os.path.join(where["results"], f"capture-{kind}.json"), "capture",
+            cancel=handle.cancel_event, timeout=CAPTURE_TIMEOUT_S)
+        produced = result.get("artifact") or out
+        if result.get("ok") and os.path.isfile(produced):
+            images.append((kind, produced))
+        else:
+            warnings.append(f"The store {kind} image could not be rendered "
+                            f"({result.get('error_code') or 'failed'}).")
+    return images, warnings
 
 
 def _scaled(handle, low: float, high: float):
@@ -142,18 +181,18 @@ def _create_or_update(client, ctx: dict, fields: dict) -> dict:
         return client.create_game({k: v for k, v in fields.items() if k != "slug"})
 
 
-def _upload_capsule(client, game_id: str, path: str, cancel) -> str:
-    """Best effort: a failed capsule upload is a warning, never a failed publish."""
+def _upload_media(client, game_id: str, kind: str, path: str, cancel) -> str:
+    """Best effort: a failed image upload is a warning, never a failed publish."""
     from .store_client import StoreError, sha256_file
     if not path or not os.path.isfile(path):
         return ""
     try:
         digest, size = sha256_file(path, cancel)
-        slot = client.create_media(game_id, "capsule", os.path.basename(path), size, digest)
+        slot = client.create_media(game_id, kind, os.path.basename(path), size, digest)
         client.upload(slot["put_url"], slot.get("headers") or {}, path, None, cancel)
         client.complete_media(game_id, str(slot["upload_id"]))
     except (StoreError, KeyError, OSError) as exc:
-        return f"The capsule image was not uploaded ({getattr(exc, 'message', exc.__class__.__name__)})."
+        return f"The {kind} image was not uploaded ({getattr(exc, 'message', exc.__class__.__name__)})."
     return ""
 
 
@@ -185,20 +224,23 @@ def _store_failure(exc, ctx: dict) -> JobError:
 def publish_work(ctx: dict, platforms, client_factory=None):
     def work(handle):
         from .store_client import StoreClient, StoreError
-        godot = _godot(ctx)
-        build_stage(ctx, handle, godot, 0.0, 25.0)
-        artifacts = export_stage(ctx, handle, godot, platforms, 25.0, 55.0)
+        verdict = _godot_verdict(ctx)
+        godot = verdict["path"]
+        build_stage(ctx, handle, godot, 0.0, 22.0)
+        artifacts = export_stage(ctx, handle, godot, platforms, 22.0, 48.0)
+        handle.progress(49.0, "Rendering store images", force=True)
+        images, warnings = capture_stage(ctx, handle, verdict)
         client = (client_factory or StoreClient)(ctx["api_base"])
-        warnings = []
         try:
             handle.progress(56.0, "Creating the store page", force=True)
             game = _create_or_update(client, ctx, store_fields(ctx, platforms))
             game_id = str(game.get("game_id") or game.get("id") or "")
             if not game_id:
                 raise StoreError("The store did not return a game id.", "bad_response")
-            warning = _upload_capsule(client, game_id, ctx.get("capsule", ""), handle.cancel_event)
-            if warning:
-                warnings.append(warning)
+            for kind, path in images:
+                warning = _upload_media(client, game_id, kind, path, handle.cancel_event)
+                if warning:
+                    warnings.append(warning)
             builds, version = [], time.strftime("%Y.%m.%d.%H%M%S", time.gmtime())
             span = 38.0 / max(1, len(artifacts))
             for index, item in enumerate(artifacts):

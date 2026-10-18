@@ -229,7 +229,7 @@ def test_slug_taken_game_id_in_data_and_media_flow(stub, tmp_path):
     stub.routes[("PUT", "/up/m1")] = (200, {})
     stub.routes[("POST", "/api/v1/games/g8/media/m1/complete")] = (200, _envelope({}))
     from mixar.modules.game_studio.core import pipeline
-    assert pipeline._upload_capsule(_client(stub), "g8", str(image), None) == ""
+    assert pipeline._upload_media(_client(stub), "g8", "capsule", str(image), None) == ""
     declare, put, _done = stub.calls[1:]
     assert json.loads(declare["raw"])["kind"] == "capsule"
     assert "Authorization" not in put["headers"] and put["headers"]["Content-Type"] == "image/png"

@@ -57,8 +57,9 @@ def arg(name):
     return args[args.index(name) + 1] if name in args else None
 if "--mixar-version" in args:
     print("Godot Engine v4.7.2.stable - https://godotengine.org")
+    caps = [c for c in os.environ.get("FAKE_CAPS", "").split(",") if c]
     print(json.dumps({"fork": os.environ.get("FAKE_FORK", "mixar-godot"),
-                      "fork_version": "1.0.0", "godot": "4.7.2.stable"}))
+                      "fork_version": "1.0.0", "godot": "4.7.2.stable", "capabilities": caps}))
     sys.exit(0)
 fail = os.environ.get("FAKE_FAIL_CODE")
 if fail:
@@ -71,7 +72,16 @@ if os.environ.get("FAKE_SLEEP"):
 for pct, step in ((10, "import"), (60, "scene"), (100, "done")):
     print("MIXAR_PROGRESS " + json.dumps({"step": step, "pct": pct, "message": step + "..."}), flush=True)
     print("noise line")
-if "--mixar-build" in args:
+if "--mixar-capture" in args:
+    out_png = arg("--mixar-capture")
+    if os.environ.get("FAKE_CAPTURE_FAIL"):
+        result = {"action": "capture", "ok": False, "error": "no GPU", "error_code": "capture_failed"}
+        json.dump(dict(result, schema="mixar_godot_result_v1"), open(result_path, "w"))
+        sys.exit(1)
+    open(out_png, "wb").write(b"\x89PNG" + arg("--mixar-capture-size").encode())
+    result = {"action": "capture", "project_dir": arg("--path"), "artifact": out_png,
+              "platform": None, "stats": {}}
+elif "--mixar-build" in args:
     spec = json.load(open(arg("--mixar-build")))
     os.makedirs(out, exist_ok=True)
     open(os.path.join(out, "project.godot"), "w").write("; fake\n")

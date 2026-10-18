@@ -25,14 +25,14 @@ def busy() -> dict | None:
             "error": f"A {job['kind']} job is still running."}
 
 
-def context(scene, package: dict, store_page=None, capsule: str = "") -> dict:
+def context(scene, package: dict, store_page=None) -> dict:
     from mixar.config.config import get_community_api_url, get_community_web_url
     from .agent_api import _godot_config, _store_identity
     return {"game_dir": package["game_dir"], "title": package["spec"]["title"],
             "slug": package["spec"]["slug"], "warnings": list(package["warnings"]),
             "godot_config": _godot_config(), "api_base": get_community_api_url(),
             "web_base": get_community_web_url(), "store": _store_identity(scene),
-            "scene_name": scene.name, "store_page": store_page or {}, "capsule": capsule}
+            "scene_name": scene.name, "store_page": store_page or {}}
 
 
 def refused(package: dict) -> dict:
@@ -41,15 +41,14 @@ def refused(package: dict) -> dict:
             "warnings": package["warnings"]}
 
 
-def _run(kind: str, scene, make_work, store_page=None, job_id=None, capsule_hook=None) -> dict:
+def _run(kind: str, scene, make_work, store_page=None, job_id=None) -> dict:
     blocked = busy()
     if blocked:
         return blocked
     package = exporter.write_package(scene)
     if not package["ok"]:
         return refused(package)
-    capsule = capsule_hook(package["export_dir"]) if capsule_hook else ""
-    job_id = jobs.start(kind, make_work(context(scene, package, store_page, capsule or "")), job_id)
+    job_id = jobs.start(kind, make_work(context(scene, package, store_page)), job_id)
     return {"ok": True, "job_id": job_id, "state": "running",
             "warnings": package["warnings"], "game_dir": package["game_dir"]}
 
@@ -62,7 +61,7 @@ def start(kind: str, scene, play=False, platforms=None) -> dict:
     raise ValueError(kind)
 
 
-def start_approved_publish(request_id: str, payload: dict, capsule_hook=None) -> dict:
+def start_approved_publish(request_id: str, payload: dict) -> dict:
     """The user approved ``request_id`` in the UI: export and publish."""
     scene = bpy.data.scenes.get(payload.get("scene_name", ""))
     if scene is None:
@@ -73,4 +72,4 @@ def start_approved_publish(request_id: str, payload: dict, capsule_hook=None) ->
                 "error": f"Switch to the scene '{scene.name}' to publish it."}
     platforms = list(payload.get("platforms") or ["web"])
     return _run("publish", scene, lambda ctx: pipeline.publish_work(ctx, platforms),
-                payload.get("store_page"), request_id, capsule_hook)
+                payload.get("store_page"), request_id)
