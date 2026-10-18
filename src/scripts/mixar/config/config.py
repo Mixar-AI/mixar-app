@@ -306,3 +306,26 @@ def get_frontend_url():
     """
     config = get_config()
     return config.get('frontend_url', get_server_url())
+
+
+# Mixar Store (mixar-community) bases. A bundled mixar.json older than these
+# keys falls back by environment: Dev targets the local community stack.
+_COMMUNITY_FALLBACKS = {
+    'Dev': ('http://127.0.0.1:8100', 'http://127.0.0.1:3000'),
+    'Prod': ('https://community-api.mixar.app', 'https://community.mixar.app'),
+}
+
+
+def _community_fallback(index):
+    env = get_environment()
+    return _COMMUNITY_FALLBACKS.get(env, _COMMUNITY_FALLBACKS['Prod'])[index]
+
+
+def get_community_api_url():
+    """Mixar Store API base (``community_api_url``)."""
+    return str(get_config().get('community_api_url') or _community_fallback(0)).rstrip('/')
+
+
+def get_community_web_url():
+    """Mixar Store web base (``community_web_url``) for store-page links."""
+    return str(get_config().get('community_web_url') or _community_fallback(1)).rstrip('/')

@@ -81,6 +81,16 @@ def generate_config(version_file: str) -> dict:
         "log_level": _env("MIXAR_LOG_LEVEL", "INFO"),
         "backend_url": _env("MIXAR_BACKEND_URL", "https://api.mixar.app"),
         "frontend_url": _env("MIXAR_FRONTEND_URL", "https://www.mixar.app"),
+        # Mixar Store (mixar-community) API and web bases for game publishing.
+        # Dev defaults to the local community stack.
+        "community_api_url": _env(
+            "MIXAR_COMMUNITY_API_URL",
+            "http://127.0.0.1:8100" if environment == "Dev" else "https://community-api.mixar.app",
+        ),
+        "community_web_url": _env(
+            "MIXAR_COMMUNITY_WEB_URL",
+            "http://127.0.0.1:3000" if environment == "Dev" else "https://community.mixar.app",
+        ),
         "app_info": {
             "version": version,
         },
