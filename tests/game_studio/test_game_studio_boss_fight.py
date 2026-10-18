@@ -97,6 +97,11 @@ def test_switching_to_boss_fight_sets_win_and_one_life_unless_asked():
     # Already a boss fight: a later change of lives is not undone.
     again, _ = spec.merge_settings(merged, {"template": "boss_fight", "title": "Ash"})
     assert again["rules"]["lives"] == 3
+    # Leaving: a defeat_boss win (invalid elsewhere) falls back, unless asked.
+    left, errors = spec.merge_settings(again, {"template": "third_person"})
+    assert errors == [] and left["rules"]["win"] == "collect_all"
+    kept, _ = spec.merge_settings(again, {"template": "top_down", "rules": {"win": "survive"}})
+    assert kept["rules"]["win"] == "survive"
 
 
 def test_combat_overrides_merge_validate_and_never_take_a_length():

@@ -132,7 +132,7 @@ def test_combat_panel_is_boss_fight_only_and_reads_the_shared_check():
     panels = (MODULE / "ui/panels/game_panels.py").read_text(encoding="utf-8")
     body = panels[panels.index("class MIXAR_PT_game_combat"):panels.index("class MIXAR_PT_game_publish")]
     assert "return context.window_manager.mixar_game.template == BOSS_TEMPLATE" in body
-    assert 'bl_parent_id = "MIXAR_PT_game_settings"' in body
+    assert "bl_parent_id" not in body and "DEFAULT_CLOSED" not in body  # open where it shows
     assert "checked_scene(context.scene)" in body and "inspect(" not in body
     checks = panels[panels.index("def _draw_checks"):panels.index("def _draw_last")]
     assert "checked_scene(context.scene)" in checks

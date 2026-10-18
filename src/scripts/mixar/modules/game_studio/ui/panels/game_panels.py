@@ -131,7 +131,8 @@ class MIXAR_PT_game_combat(_GamePanel, Panel):
     from, and the clips each character is missing (read-only)."""
     bl_label = "Combat"
     bl_idname = "MIXAR_PT_game_combat"
-    bl_parent_id = "MIXAR_PT_game_settings"
+    # Its own open panel (not inside the closed Game Settings), registered
+    # right after it so it sits below.
 
     @classmethod
     def poll(cls, context):

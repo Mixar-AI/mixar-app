@@ -113,6 +113,9 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
             if value in TEMPLATES:
                 if value == BOSS_TEMPLATE and merged.get("template") != BOSS_TEMPLATE:
                     _boss_defaults(merged, changes)
+                elif value != BOSS_TEMPLATE and merged["rules"].get("win") == "defeat_boss" and \
+                        "win" not in _asked_rules(changes):
+                    merged["rules"]["win"] = DEFAULT_SETTINGS["rules"]["win"]
                 merged["template"] = value
             else:
                 errors.append(f"template must be one of {', '.join(TEMPLATES)}")
@@ -136,10 +139,15 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
     return merged, errors
 
 
+def _asked_rules(changes) -> dict:
+    rules = (changes or {}).get("rules")
+    return rules if isinstance(rules, dict) else {}
+
+
 def _boss_defaults(merged: dict, changes: dict) -> None:
     """Switching to boss_fight: win ``defeat_boss`` and 1 life, unless the
     same change sets them (later fields of ``changes`` still apply)."""
-    asked = (changes or {}).get("rules") if isinstance((changes or {}).get("rules"), dict) else {}
+    asked = _asked_rules(changes)
     for field, value in BOSS_DEFAULTS.items():
         if field not in asked:
             merged["rules"][field] = value
