@@ -5018,7 +5018,7 @@ msgstr ""
 msgid "Tagged on {name}"
 msgstr ""
 
-msgid "Only meshes and empties have roles"
+msgid "Only meshes, empties and armatures have roles"
 msgstr ""
 
 msgid "Set Role for Selected"
@@ -5037,6 +5037,35 @@ msgid "World"
 msgstr "世界"
 
 msgid "HUD"
+msgstr ""
+
+msgid "Combat"
+msgstr ""
+
+msgid ""
+"Boss Fight only: boss HP, the attack windows and where each comes\n"
+"from, and the clips each character is missing (read-only)."
+msgstr ""
+
+msgid "markers"
+msgstr ""
+
+msgid "configured"
+msgstr ""
+
+msgid "kit default"
+msgstr ""
+
+msgid "No rig: needs an armature that deforms the mesh"
+msgstr ""
+
+msgid "{clip}: {start}-{end} s ({source})"
+msgstr ""
+
+msgid "{clip}: {source}"
+msgstr ""
+
+msgid "Missing: {clips}"
 msgstr ""
 
 msgid "Build & Publish"
@@ -5096,6 +5125,12 @@ msgstr ""
 msgid "Patrols and chases the player"
 msgstr ""
 
+msgid "Boss"
+msgstr ""
+
+msgid "The rigged boss of a Boss Fight (exactly one)"
+msgstr ""
+
 msgid "Goal"
 msgstr ""
 
@@ -5144,6 +5179,12 @@ msgstr ""
 msgid "Camera looks down on the player"
 msgstr ""
 
+msgid "Boss Fight"
+msgstr ""
+
+msgid "A rigged player duels a rigged boss with a lock-on camera"
+msgstr ""
+
 msgid "Collect All"
 msgstr ""
 
@@ -5166,6 +5207,12 @@ msgid "Score"
 msgstr ""
 
 msgid "Win by reaching the target score"
+msgstr ""
+
+msgid "Defeat Boss"
+msgstr ""
+
+msgid "Win when the boss's health reaches zero"
 msgstr ""
 
 msgid "Procedural Sky"
@@ -5220,6 +5267,12 @@ msgid "Timer"
 msgstr ""
 
 msgid "Title Screen"
+msgstr ""
+
+msgid "Boss HP"
+msgstr ""
+
+msgid "The boss's health (its hp role param)"
 msgstr ""
 
 msgid "Give the role to the selected part instead of the whole asset it belongs to"
