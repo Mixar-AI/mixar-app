@@ -122,10 +122,17 @@ def export_stage(ctx: dict, handle, godot: str, platforms, low=0.0, high=100.0) 
             raise JobError(f"The {platform} export produced no file.", "export_failed", result)
         artifacts.append({"platform": platform, "artifact": artifact,
                           "size_bytes": os.path.getsize(artifact),
-                          "launch": _for_platform(result.get("launch"), platform),
-                          "signing": _for_platform(result.get("signing"), platform),
+                          # Desktop only: the store refuses launch/signing on web and
+                          # linux builds (the fork reports launch "index.html" for web).
+                          "launch": _for_platform(result.get("launch"), platform)
+                          if platform in DESKTOP_STORE_PLATFORMS else None,
+                          "signing": _for_platform(result.get("signing"), platform)
+                          if platform in DESKTOP_STORE_PLATFORMS else None,
                           "warnings": list(result.get("warnings") or [])})
     return artifacts
+
+
+DESKTOP_STORE_PLATFORMS = ("macos", "windows")
 
 
 def _for_platform(value, platform: str):

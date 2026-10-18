@@ -95,6 +95,8 @@ else:
         z.writestr("index.html", "<html></html>")
     result = {"action": "export", "project_dir": arg("--path"), "artifact": artifact,
               "platform": platform, "stats": {}}
+    if platform == "web":  # the real fork reports this too; the store refuses it on web
+        result.update(launch={"web": "index.html"})
     if platform == "macos":
         result.update(launch={"macos": "Crystal Run.app"}, signing={"macos": "adhoc"})
     elif platform == "windows":
