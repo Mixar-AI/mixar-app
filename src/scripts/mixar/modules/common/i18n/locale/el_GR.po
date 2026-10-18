@@ -4775,6 +4775,345 @@ msgstr "Έξοδος Mixar"
 msgid "Output aspect ratio this camera frames for"
 msgstr "Αναλογία εξόδου για την οποία καδράρει αυτή η κάμερα"
 
+msgid "Could not start."
+msgstr ""
+
+msgid "Locate Godot…"
+msgstr ""
+
+msgid "Point Mixar at the Mixar Godot app or binary"
+msgstr ""
+
+msgid "Check Again"
+msgstr ""
+
+msgid "Look for Mixar Godot again"
+msgstr ""
+
+msgid "Set Game Role"
+msgstr ""
+
+msgid "Give the selected objects a game role"
+msgstr ""
+
+msgid "Role"
+msgstr ""
+
+msgid "Auto-assign Roles"
+msgstr ""
+
+msgid "Guess roles for untagged objects from their names and shapes"
+msgstr ""
+
+msgid "Assigned {count} roles"
+msgstr ""
+
+msgid "Build"
+msgstr ""
+
+msgid "Export the scene and build the Godot game"
+msgstr ""
+
+msgid "Play"
+msgstr ""
+
+msgid "Building the game…"
+msgstr ""
+
+msgid "Export Builds"
+msgstr ""
+
+msgid "Export playable builds for the chosen platforms"
+msgstr ""
+
+msgid "Exporting builds…"
+msgstr ""
+
+msgid "Publish to Mixar Store"
+msgstr ""
+
+msgid "Publish the game to the Mixar Store (builds wait for moderator review)"
+msgstr ""
+
+msgid "Publish to Mixar Store?"
+msgstr ""
+
+msgid "The store page becomes public; builds are playable after review."
+msgstr ""
+
+msgid "Publish"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Stop the running game job"
+msgstr ""
+
+msgid "Open the last built game in its own window"
+msgstr ""
+
+msgid "Build the game first."
+msgstr ""
+
+msgid "Open Store Page"
+msgstr ""
+
+msgid "Open the game's Mixar Store page in the browser"
+msgstr ""
+
+msgid "Game"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "Looking for Mixar Godot…"
+msgstr ""
+
+msgid "Mixar Godot {version}"
+msgstr ""
+
+msgid "Mixar Godot not found"
+msgstr ""
+
+msgid "Roles"
+msgstr ""
+
+msgid "Only meshes and empties have roles"
+msgstr ""
+
+msgid "Set Role for Selected"
+msgstr ""
+
+msgid "{role}: {count}"
+msgstr ""
+
+msgid "Game Settings"
+msgstr ""
+
+msgid "Player"
+msgstr ""
+
+msgid "World"
+msgstr "Κόσμος"
+
+msgid "HUD"
+msgstr ""
+
+msgid "Build & Publish"
+msgstr ""
+
+msgid "Build & Play"
+msgstr ""
+
+msgid "{kind}: {pct}%"
+msgstr ""
+
+msgid "Published, builds in review ({status})"
+msgstr ""
+
+msgid "{kind} finished"
+msgstr ""
+
+msgid "Auto"
+msgstr "Αυτόματα"
+
+msgid "No explicit role: meshes are static, empties are left out"
+msgstr ""
+
+msgid "The character the player controls (exactly one)"
+msgstr ""
+
+msgid "Static"
+msgstr ""
+
+msgid "Solid level geometry"
+msgstr ""
+
+msgid "Prop"
+msgstr ""
+
+msgid "A physics object the player can push"
+msgstr ""
+
+msgid "Collectible"
+msgstr ""
+
+msgid "Picked up for score"
+msgstr ""
+
+msgid "Hazard"
+msgstr ""
+
+msgid "Hurts the player on touch"
+msgstr ""
+
+msgid "Enemy"
+msgstr ""
+
+msgid "Patrols and chases the player"
+msgstr ""
+
+msgid "Goal"
+msgstr ""
+
+msgid "Reaching it wins (Reach Goal rule)"
+msgstr ""
+
+msgid "Spawn"
+msgstr ""
+
+msgid "Where the player starts"
+msgstr ""
+
+msgid "Decor"
+msgstr ""
+
+msgid "Visual only, no collision"
+msgstr ""
+
+msgid "Ignore"
+msgstr ""
+
+msgid "Left out of the game"
+msgstr ""
+
+msgid "Third Person"
+msgstr ""
+
+msgid "Camera follows behind the player"
+msgstr ""
+
+msgid "First Person"
+msgstr ""
+
+msgid "Camera at the player's eyes"
+msgstr ""
+
+msgid "Platformer"
+msgstr ""
+
+msgid "Side-on jumping"
+msgstr ""
+
+msgid "Top Down"
+msgstr ""
+
+msgid "Camera looks down on the player"
+msgstr ""
+
+msgid "Collect All"
+msgstr ""
+
+msgid "Win by picking up every collectible"
+msgstr ""
+
+msgid "Reach Goal"
+msgstr ""
+
+msgid "Win by entering the goal"
+msgstr ""
+
+msgid "Survive"
+msgstr ""
+
+msgid "Win by staying alive until the time limit"
+msgstr ""
+
+msgid "Score"
+msgstr ""
+
+msgid "Win by reaching the target score"
+msgstr ""
+
+msgid "Procedural Sky"
+msgstr ""
+
+msgid "A generated daylight sky"
+msgstr ""
+
+msgid "Plain background"
+msgstr ""
+
+msgid "Title"
+msgstr "Τίτλος"
+
+msgid "Win Rule"
+msgstr ""
+
+msgid "Target Score"
+msgstr ""
+
+msgid "Time Limit (s)"
+msgstr ""
+
+msgid "Lives"
+msgstr ""
+
+msgid "Move Speed"
+msgstr ""
+
+msgid "Jump"
+msgstr ""
+
+msgid "Gravity"
+msgstr ""
+
+msgid "Camera Distance"
+msgstr ""
+
+msgid "Camera Height"
+msgstr ""
+
+msgid "Sky"
+msgstr "Ουρανός"
+
+msgid "Sun"
+msgstr ""
+
+msgid "Ambient"
+msgstr ""
+
+msgid "Timer"
+msgstr ""
+
+msgid "Title Screen"
+msgstr ""
+
+msgid "Web"
+msgstr ""
+
+msgid "macOS"
+msgstr ""
+
+msgid "Windows"
+msgstr ""
+
+msgid "Linux"
+msgstr ""
+
+msgid "Tagline"
+msgstr ""
+
+msgid "Description"
+msgstr "Περιγραφή"
+
+msgid "Genres"
+msgstr ""
+
+msgid "Comma-separated"
+msgstr ""
+
+msgid "Tags"
+msgstr ""
+
+msgid "Game Role"
+msgstr ""
+
+msgid "What this object does in the game"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "Αποτυχία εξαγωγής επιλεγμένων πολυγώνων: {error}"
 
@@ -5669,9 +6008,6 @@ msgstr "Μέντα"
 msgid "Aqua"
 msgstr "Γαλάζιο νερού"
 
-msgid "Sky"
-msgstr "Ουρανός"
-
 msgid "Lilac"
 msgstr "Πασχαλιά"
 
@@ -5851,9 +6187,6 @@ msgstr "Αιώρηση δίπλα στο δεξί χέρι"
 
 msgid "Float by left hand"
 msgstr "Αιώρηση δίπλα στο αριστερό χέρι"
-
-msgid "Auto"
-msgstr "Αυτόματα"
 
 msgid "Point forward"
 msgstr "Δείχνει μπροστά"
@@ -7289,9 +7622,6 @@ msgstr "Η παραγωγή ολοκληρώθηκε"
 msgid "Parameter ID"
 msgstr "Αναγνωριστικό παραμέτρου"
 
-msgid "Description"
-msgstr "Περιγραφή"
-
 msgid "String value"
 msgstr "Τιμή συμβολοσειράς"
 
@@ -7465,9 +7795,6 @@ msgstr "Προεπισκόπηση μάσκας"
 
 msgid "3D Preview"
 msgstr "Προεπισκόπηση 3D"
-
-msgid "Title"
-msgstr "Τίτλος"
 
 msgid "Object Names"
 msgstr "Ονόματα αντικειμένων"
@@ -17362,9 +17689,6 @@ msgstr "Αντικείμενο"
 msgid "Object space"
 msgstr "Χώρος αντικειμένου"
 
-msgid "World"
-msgstr "Κόσμος"
-
 msgid "World space"
 msgstr "Χώρος κόσμου"
 
@@ -20226,6 +20550,27 @@ msgstr "Το '{name}' δεν υπάρχει πλέον στο αρχείο πό�
 msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20660,6 +21005,15 @@ msgid "Pick"
 msgstr "Διάλεγμα"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -25678,6 +26032,18 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
