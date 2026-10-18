@@ -29,6 +29,7 @@ import bpy
 
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
+from .export_emission import baked_emission_masks
 from .export_materials import temporary_export_materials as _temporary_export_materials
 from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
@@ -190,7 +191,7 @@ def run_export(session_id: str, spec: dict) -> dict:
         for obj in export_objects:
             obj.select_set(True)
         context.view_layer.objects.active = meshes[0]
-        staged, textures_folder = 0, ""
+        staged, textures_folder, emission_notes = 0, "", []
         # STL is geometry only: no clip muting, material swap or texture
         # staging — the mesh is written as posed at the current frame.
         stl = fmt == "stl"
@@ -199,10 +200,13 @@ def run_export(session_id: str, spec: dict) -> dict:
         with clip_ctx as (clips, clips_missing):
             with nullcontext() if stl else _temporary_export_materials(meshes):
                 # OBJ: packed / generated images never reach the .mtl, so they
-                # are staged beside the OBJ and referenced relatively.
+                # are staged beside the OBJ and referenced relatively. glTF: a
+                # masked emission strength is baked into the emissive colour.
                 texture_ctx = (staged_obj_textures(meshes, filepath) if fmt == "obj"
                                else nullcontext((0, "")))
-                with texture_ctx as (staged, textures_folder):
+                emission_ctx = (baked_emission_masks(meshes) if fmt in ("glb", "gltf")
+                                else nullcontext(([], [])))
+                with texture_ctx as (staged, textures_folder), emission_ctx as (_baked, emission_notes):
                     overrides = ({"path_mode": "RELATIVE"} if staged
                                  else stl_kwargs(spec) if stl else None)
                     status, kwargs, anim_mode, warning = _run_operator(
@@ -213,7 +217,7 @@ def run_export(session_id: str, spec: dict) -> dict:
         if fmt in STATIC_WARNINGS:
             warning = STATIC_WARNINGS[fmt]
             clips = []
-        warning = " ".join(w for w in (warning.strip(), web_warning) if w)
+        warning = " ".join(w for w in (warning.strip(), web_warning, *emission_notes) if w)
         size = 0
         try:
             size = os.path.getsize(filepath)
