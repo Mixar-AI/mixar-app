@@ -308,6 +308,49 @@ def test_codex_save_sends_access_token_and_account_id_only(monkeypatch, tmp_path
     assert missing.byok_dialog_state == "ERROR" and "codex login" in missing.byok_last_error
 
 
+def test_codex_path_is_prefilled_when_signed_in_and_the_default_is_stored_as_empty(monkeypatch, tmp_path):
+    """The dialog opens with the found sign-in file in the field (the user
+    just clicks Save & Activate); saving that default keeps the reference
+    empty so it follows $CODEX_HOME like the CLI. A typed path is untouched."""
+    from types import SimpleNamespace
+
+    from mixar.modules.byok.core import model_suggestions
+    from mixar.modules.byok.ui.operators import byok_codex_ops
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    auth_file = tmp_path / "auth.json"
+
+    wm = SimpleNamespace(byok_form_codex_path="")
+    byok_codex_ops.prefill_path(wm)
+    assert wm.byok_form_codex_path == ""                       # no sign-in yet: nothing to show
+    assert byok_codex_ops.path_status("") == ("No Codex sign-in found - run  codex login  in your terminal", False)
+    assert not byok_codex_ops.signed_in("")
+
+    auth_file.write_text(json.dumps({"tokens": {
+        "access_token": _jwt({"https://api.openai.com/auth": {"chatgpt_account_id": "acct-1"}}),
+        "refresh_token": "rt-secret",
+    }}))
+    byok_codex_ops.prefill_path(wm)
+    assert wm.byok_form_codex_path == str(auth_file)
+    assert byok_codex_ops.path_status(wm.byok_form_codex_path) == (
+        "Codex sign-in found - just click Save & Activate", True)
+    assert byok_codex_ops.signed_in(wm.byok_form_codex_path)
+
+    typed = SimpleNamespace(byok_form_codex_path="/elsewhere/auth.json")
+    byok_codex_ops.prefill_path(typed)
+    assert typed.byok_form_codex_path == "/elsewhere/auth.json"
+    assert byok_codex_ops.path_status(typed.byok_form_codex_path)[1] is False
+    assert "/elsewhere/auth.json" in byok_codex_ops.path_status(typed.byok_form_codex_path)[0]
+
+
+    saved = {}
+    monkeypatch.setattr(byok_codex_ops.byok_client, "save_credentials", lambda **kw: saved.update(kw))
+    monkeypatch.setattr(model_suggestions, "is_valid_model", lambda provider, model: True)
+    wm.byok_form_model, wm.byok_dialog_state, wm.byok_last_error = "gpt-5", "IDLE", ""
+    assert byok_codex_ops.execute_codex(None, wm, on_done=lambda *a: None) == {'FINISHED'}
+    assert saved["codex_auth_path"] == "" and saved["account_id"] == "acct-1"
+
+
 def test_codex_record_is_materialized_from_the_file_and_renewals_go_back_into_it(monkeypatch, tmp_path):
     """`materialize` completes a Codex record from the CLI's file in a copy;
     `persist_changes` writes renewed tokens INTO the file (never the store)

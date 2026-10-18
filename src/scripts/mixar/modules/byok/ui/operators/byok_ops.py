@@ -33,7 +33,7 @@ from ...core import key_prompt, preference_state
 from ...core.local_switch import (
     deregister_local_if_switched_away as _deregister_local_if_switched_away,
 )
-from . import byok_dialog_ui
+from . import byok_codex_ops, byok_dialog_ui
 from .byok_dialog_support import (
     account_busy as _account_busy,
     prefill_from_prompt as _prefill_from_prompt,
@@ -123,6 +123,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
         _wipe_form_secrets(wm)  # never prefill credential material
+        byok_codex_ops.prefill_path(wm)  # a path, not a credential
         # If a key is saved (in use, or paused on this computer), prefill
         # provider/model so the user sees what's currently saved and can edit
         # from there. Provider assignment can fail if the cache hasn't been
@@ -319,7 +320,6 @@ class MIXAR_BYOK_OT_save(Operator):
         """Codex save: the auth.json bundle is parsed on this machine and only
         the access token + ChatGPT account id reach the server; the refresh
         token stays in this device's credential store (byok_codex_ops)."""
-        from . import byok_codex_ops
         result = byok_codex_ops.execute_codex(self, wm, on_done=_save_callback())
         _redraw_mixie_chat_areas()
         return result

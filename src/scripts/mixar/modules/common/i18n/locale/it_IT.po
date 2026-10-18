@@ -1628,7 +1628,10 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Usa questo modello per l'agente"
 
-msgid "Sign-in found: {path}"
+msgid "Codex sign-in found - just click Save & Activate"
+msgstr ""
+
+msgid "No Codex sign-in found - run  codex login  in your terminal"
 msgstr ""
 
 msgid "Not found: {path} — run  codex login"
@@ -1847,6 +1850,9 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgstr ""
+
 msgid "Disconnect"
 msgstr "Disconnetti"
 
@@ -1890,9 +1896,6 @@ msgid "ALL SUPPORTED {provider} MODELS"
 msgstr ""
 
 msgid "No models available for this provider yet."
-msgstr ""
-
-msgid "Run  codex login  in your terminal; Mixar uses that sign-in in place."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
