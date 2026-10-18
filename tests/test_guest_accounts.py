@@ -974,38 +974,57 @@ def test_a_restored_notice_is_never_rewritten(monkeypatch, chat_core):
 def _resend_rig(monkeypatch, chat_core, *, connected, sent=True):
     login_notice, scene, msg = _notice(monkeypatch, chat_core)
     scene.mixie_session_id = "s-1"
+    scene.mixie_chat_layout_epoch = 0
     from mixar.modules.space_mixie_chat.core import byok_resend
-    resent = []
+    resent, timers = [], []
     monkeypatch.setattr(byok_resend, "pending", lambda sid: object() if sid == "s-1" else None)
     monkeypatch.setattr(byok_resend, "resend", lambda sid: resent.append(sid) or sent)
     monkeypatch.setattr(byok_resend, "_scene_for", lambda sid: scene)
     monkeypatch.setattr(login_notice, "_connected", lambda: connected)
+    monkeypatch.setattr(login_notice.bpy.app, "timers", SimpleNamespace(
+        register=lambda fn, first_interval=0.0: timers.append(fn)), raising=False)
+    return login_notice, scene, msg, resent, timers
 
-    def run_now(fn, first_interval=0.0):
-        while fn() is not None:
-            pass
-    monkeypatch.setattr(login_notice.bpy.app, "timers", SimpleNamespace(register=run_now), raising=False)
-    return login_notice, scene, msg, resent
+
+def _run(timers):
+    """Drive the resend timer until it stops (or reports it is waiting)."""
+    fn = timers[-1]
+    return fn()
 
 
 def test_a_sign_in_resends_the_refused_message_and_drops_the_notice(monkeypatch, chat_core):
-    login_notice, scene, msg, resent = _resend_rig(monkeypatch, chat_core, connected=True)
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
     login_notice.session_ready(is_guest=False)
-    assert resent == ["s-1"] and len(scene.mixie_chat_messages) == 0
+    assert msg.content == "**You're signed in**\n\nSending your message…"
+    assert _run(timers) is None and resent == ["s-1"]
+    assert len(scene.mixie_chat_messages) == 0
 
 
 def test_no_socket_in_time_asks_for_the_send(monkeypatch, chat_core):
-    login_notice, scene, msg, resent = _resend_rig(monkeypatch, chat_core, connected=False)
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=False)
     monkeypatch.setattr(login_notice, "_RESEND_WAIT_S", 0.0)
     login_notice.session_ready(is_guest=False)
-    assert resent == [] and len(scene.mixie_chat_messages) == 1
+    assert _run(timers) is None and resent == []
+    assert len(scene.mixie_chat_messages) == 1
     assert msg.content == "**You're signed in**\n\nSend your message again to continue."
 
 
 def test_a_saved_key_resends_too(monkeypatch, chat_core):
-    login_notice, scene, msg, resent = _resend_rig(monkeypatch, chat_core, connected=True)
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
     login_notice.key_saved()
-    assert resent == ["s-1"] and len(scene.mixie_chat_messages) == 0
+    assert _run(timers) is None and resent == ["s-1"]
+    assert len(scene.mixie_chat_messages) == 0
+
+
+def test_removing_the_notice_rebuilds_the_chat_layout(monkeypatch, chat_core):
+    """The C++ layout cache rebuilds on a message-count change only: the key
+    card added where the notice was removed drew the notice's buttons."""
+    login_notice, scene, msg, resent, timers = _resend_rig(monkeypatch, chat_core, connected=True)
+    login_notice._remove(scene, msg.bubble_id)
+    assert scene.mixie_chat_layout_epoch == 1
+    owned = SimpleNamespace(id_data=scene, content="", text="", action_items=_Items())
+    login_notice._fill_bubble(owned, "**x**\n\ny", None)
+    assert scene.mixie_chat_layout_epoch == 2
 
 
 def test_the_transport_keeps_a_login_refusal_for_the_resend():
