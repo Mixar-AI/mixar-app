@@ -37,7 +37,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.auth.core.guest import CTA_FIX_BYOK, CTA_LOGIN, CTA_LOGIN_OR_BYOK
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
-from .ui_utils import redraw_chat_areas
+from .ui_utils import bump_layout_epoch, redraw_chat_areas
 
 logger = get_logger(__name__)
 
@@ -240,6 +240,10 @@ def _remove(scene, bubble_id: str) -> None:
         if getattr(msg, "bubble_id", "") == bubble_id:
             messages.remove(index)
             break
+    # The C++ layout cache rebuilds on a message-COUNT change only: a bubble
+    # added in this one's place (the key card a refused resend shows) kept
+    # the notice's cached buttons.
+    bump_layout_epoch(scene)
     redraw_chat_areas()
 
 
@@ -267,7 +271,8 @@ def _content(msg, body: str) -> str:
 
 def _fill_bubble(msg, content: str, cta) -> None:
     """Markdown content plus the cta's buttons (presentation only, no turn);
-    ``cta`` None draws no buttons (a settled notice)."""
+    ``cta`` None draws no buttons (a settled notice). The bubble's height
+    changes in place, so the layout cache is bumped."""
     msg.content = content
     msg.text = content
     try:
@@ -284,3 +289,6 @@ def _fill_bubble(msg, content: str, cta) -> None:
         action.label = iface_(label)
         action.value = value
         action.style = "PRIMARY" if index == 0 else "DEFAULT"
+    scene = getattr(msg, "id_data", None)  # the Scene owning the transcript
+    if scene is not None:
+        bump_layout_epoch(scene)
