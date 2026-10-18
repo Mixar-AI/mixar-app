@@ -205,7 +205,9 @@ def configure_game(title=None, template=None, rules=None, player=None, camera=No
     merged, errors = game_spec.merge_settings(game_spec.load_settings(scene), changes)
     game_spec.save_settings(scene, merged)
     from .exporter import inspect
-    return _redact({"ok": not errors, "errors": errors, "spec": inspect(scene)["spec"]})
+    checked = inspect(scene)
+    return _redact({"ok": not errors, "errors": errors, "spec": checked["spec"],
+                    "warnings": checked["combat_warnings"]})
 
 
 def start_game_build(play=False) -> dict:
