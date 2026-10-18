@@ -123,7 +123,22 @@ def checked_scene(scene) -> dict:
     key, now = (scene.as_pointer(), scene.get("mixar_game_spec", "")), time.monotonic()
     if _checked["key"] != key or now - _checked["at"] > CHECK_TTL_S:
         _checked.update(key=key, at=now, value=inspect(scene))
+    elif not bpy.app.timers.is_registered(_recheck):
+        # A reused result can predate a role or marker change made in this
+        # burst (an agent script, Auto-assign); look once more after the TTL.
+        bpy.app.timers.register(_recheck, first_interval=CHECK_TTL_S)
     return _checked["value"]
+
+
+def _recheck():
+    """One-shot: redraw the View3D sidebars so the panels re-inspect."""
+    for window in getattr(bpy.context.window_manager, "windows", ()):
+        for area in window.screen.areas:
+            if area.type == 'VIEW_3D':
+                for region in area.regions:
+                    if region.type == 'UI':
+                        region.tag_redraw()
+    return None
 
 
 class MIXAR_PT_game_combat(_GamePanel, Panel):
@@ -154,15 +169,19 @@ class MIXAR_PT_game_combat(_GamePanel, Panel):
                 box.label(text="No rig: needs an armature that deforms the mesh")
                 continue
             col = box.column(align=True)
+            prefix = character["clip_prefix"]
             for clip, source in sorted(checked["timing"].items()):
                 if not any(clip in names for names in character["clips"].values()):
                     continue
                 entry = clips.get(clip) or {}
                 window = entry.get("hit") or entry.get("iframes")
-                text = (iface_("{clip}: {start}-{end} s ({source})").format(
-                    clip=clip, start=f"{window[0]:.2f}", end=f"{window[1]:.2f}", source=sources[source])
-                    if window else iface_("{clip}: {source}").format(clip=clip, source=sources[source]))
-                col.label(text=text, translate=False)
+                # The box already names the character, so the row shows the
+                # state alone; two columns keep it readable in a narrow sidebar.
+                split = col.split(factor=0.45, align=True)
+                split.label(text=clip[len(prefix):] if clip.startswith(prefix) else clip, translate=False)
+                split.label(text=iface_("{start}-{end} s · {source}").format(
+                    start=f"{window[0]:.2f}", end=f"{window[1]:.2f}", source=sources[source])
+                    if window else sources[source], translate=False)
             if character["missing"]:
                 names = ", ".join(character["clip_prefix"] + s.replace("_*", "_1" if s == "light_*" else "_…")
                                   for s in character["missing"])

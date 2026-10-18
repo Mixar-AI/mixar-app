@@ -5059,10 +5059,7 @@ msgstr ""
 msgid "No rig: needs an armature that deforms the mesh"
 msgstr ""
 
-msgid "{clip}: {start}-{end} s ({source})"
-msgstr ""
-
-msgid "{clip}: {source}"
+msgid "{start}-{end} s · {source}"
 msgstr ""
 
 msgid "Missing: {clips}"
