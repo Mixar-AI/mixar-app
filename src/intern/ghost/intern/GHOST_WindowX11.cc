@@ -1039,12 +1039,17 @@ void GHOST_WindowX11::setCustomDecoration(int min_width, int min_height, float r
   shaped_width_ = shaped_height_ = 0;
   GHOST_Rect bounds;
   getClientBounds(bounds);
+  setClientMinimumSize(min_width, min_height);
+}
+
+void GHOST_WindowX11::setClientMinimumSize(int width, int height)
+{
   XSizeHints hints = {};
   long supplied = 0;
   XGetWMNormalHints(display_, window_, &hints, &supplied);
   hints.flags |= PMinSize;
-  hints.min_width = min_width;
-  hints.min_height = min_height;
+  hints.min_width = width;
+  hints.min_height = height;
   XSetWMNormalHints(display_, window_, &hints);
   XFlush(display_);
 }
@@ -1228,6 +1233,53 @@ GHOST_TSuccess GHOST_WindowX11::beginWindowDrag()
             y,
             mask);
   }
+  return GHOST_kSuccess;
+}
+
+GHOST_TSuccess GHOST_WindowX11::beginWindowResize(int edges)
+{
+  int direction;
+  switch (edges) {
+    case 1: direction = 1; break;
+    case 2: direction = 5; break;
+    case 4: direction = 7; break;
+    case 8: direction = 3; break;
+    case 5: direction = 0; break;
+    case 9: direction = 2; break;
+    case 6: direction = 6; break;
+    case 10: direction = 4; break;
+    default: return GHOST_kFailure;
+  }
+  Window root, child;
+  int root_x, root_y, x, y;
+  unsigned int mask;
+  if (!XQueryPointer(display_, window_, &root, &child, &root_x, &root_y, &x, &y, &mask) ||
+      !(mask & Button1Mask))
+  {
+    return GHOST_kFailure;
+  }
+#ifdef WITH_X11_XINPUT
+  if (system_->xinput_version_.present && system_->xinput_version_.major_version >= 2) {
+    int device_id = 0;
+    if (XIGetClientPointer(display_, None, &device_id) != False) {
+      XIUngrabDevice(display_, device_id, CurrentTime);
+    }
+  }
+#endif
+  XUngrabPointer(display_, CurrentTime);
+  XEvent event = {};
+  event.xclient.type = ClientMessage;
+  event.xclient.window = window_;
+  event.xclient.message_type = XInternAtom(display_, "_NET_WM_MOVERESIZE", False);
+  event.xclient.format = 32;
+  event.xclient.data.l[0] = root_x;
+  event.xclient.data.l[1] = root_y;
+  event.xclient.data.l[2] = direction;
+  event.xclient.data.l[3] = 1;
+  event.xclient.data.l[4] = 1;
+  XSendEvent(display_, root, False,
+             SubstructureRedirectMask | SubstructureNotifyMask, &event);
+  XFlush(display_);
   return GHOST_kSuccess;
 }
 
@@ -1713,8 +1765,10 @@ GHOST_TSuccess GHOST_WindowX11::getStandardCursor(GHOST_TStandardCursor g_cursor
       xcursor_id = XC_bottom_left_corner;
       break;
     case GHOST_kStandardCursorDefault:
-      xcursor = None;
-      return GHOST_kSuccess;
+      /* None inherits the parent's cursor, which may still be a desktop
+       * launch/busy cursor on XWayland. An idle editor needs its own arrow. */
+      xcursor_id = XC_left_ptr;
+      break;
     default:
       xcursor = None;
       return GHOST_kFailure;

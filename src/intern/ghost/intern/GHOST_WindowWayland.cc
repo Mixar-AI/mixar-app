@@ -2156,6 +2156,17 @@ float GHOST_WindowWayland::getWindowCornerRadius() const
   return window_->corner_radius * scale;
 }
 
+/* GHOST client sizes are framebuffer pixels; xdg-shell constraints use
+ * surface coordinates. Keep minimums compatible with setClientSize at HiDPI. */
+static void gwl_window_client_min_size_set(GWL_Window *window, int width, int height)
+{
+  const float scale = window->frame.fractional_scale ?
+                          float(window->frame.fractional_scale) / FRACTIONAL_DENOMINATOR :
+                          float(std::max(1, window->frame.buffer_scale));
+  xdg_toplevel_set_min_size(window->xdg_decor->toplevel,
+                           int(std::ceil(width / scale)), int(std::ceil(height / scale)));
+}
+
 void GHOST_WindowWayland::setCustomDecoration(int min_width, int min_height, float radius)
 {
 #ifdef USE_EVENT_BACKGROUND_THREAD
@@ -2165,7 +2176,7 @@ void GHOST_WindowWayland::setCustomDecoration(int min_width, int min_height, flo
   window_->corner_radius = radius;
   gwl_window_update_corner_input(window_);
   GWL_XDG_Decor_Window &decor = *window_->xdg_decor;
-  xdg_toplevel_set_min_size(decor.toplevel, min_width, min_height);
+  gwl_window_client_min_size_set(window_, min_width, min_height);
   if (decor.toplevel_decor) {
     zxdg_toplevel_decoration_v1_set_mode(
         decor.toplevel_decor, ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
@@ -2191,6 +2202,36 @@ GHOST_TSuccess GHOST_WindowWayland::beginWindowDrag()
     return GHOST_kFailure;
   }
   xdg_toplevel_move(window_->xdg_decor->toplevel, seat, serial);
+  wl_display_flush(system_->wl_display_get());
+  return GHOST_kSuccess;
+}
+
+void GHOST_WindowWayland::setClientMinimumSize(int width, int height)
+{
+#ifdef USE_EVENT_BACKGROUND_THREAD
+  std::lock_guard lock_server_guard{*system_->server_mutex};
+#endif
+  gwl_window_client_min_size_set(window_, width, height);
+  wl_surface_commit(window_->wl.surface);
+}
+
+GHOST_TSuccess GHOST_WindowWayland::beginWindowResize(int edges)
+{
+  /* xdg_toplevel_resize_edge uses these same bit values. */
+  if (edges != 1 && edges != 2 && edges != 4 && edges != 8 &&
+      edges != 5 && edges != 9 && edges != 6 && edges != 10)
+  {
+    return GHOST_kFailure;
+  }
+#ifdef USE_EVENT_BACKGROUND_THREAD
+  std::lock_guard lock_server_guard{*system_->server_mutex};
+#endif
+  uint32_t serial;
+  wl_seat *seat = system_->wl_seat_active_get_with_input_serial(serial);
+  if (!seat) {
+    return GHOST_kFailure;
+  }
+  xdg_toplevel_resize(window_->xdg_decor->toplevel, seat, serial, edges);
   wl_display_flush(system_->wl_display_get());
   return GHOST_kSuccess;
 }

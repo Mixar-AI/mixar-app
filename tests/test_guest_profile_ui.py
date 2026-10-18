@@ -87,3 +87,15 @@ def test_translated_guest_caption_has_same_budget_as_account(width, engine):
     assert units <= max(budget, topbar_layout.PROFILE_AVATAR_UNITS)
     assert topbar_layout.full_account_units(False, 'stale@example.invalid', label) == (
         len(label) * topbar_layout.PROFILE_CHAR_UNITS + topbar_layout.PROFILE_BASE_UNITS)
+
+
+@pytest.mark.parametrize("signed_in, guest, name, label", [
+    (True, False, "Rahul", "Rahul"),
+    (True, False, "", "rahul@mixar.app"),
+    (True, True, "Rahul", "Guest"),
+    (False, False, "Rahul", "Guest"),
+])
+def test_account_pill_reads_the_name_else_the_email(signed_in, guest, name, label):
+    window_manager = SimpleNamespace(mixie_chat_is_logged_in=signed_in,
+                                     mixie_chat_is_guest=guest, mixar_account_name=name)
+    assert topbar_layout.account_label(window_manager, "rahul@mixar.app") == label

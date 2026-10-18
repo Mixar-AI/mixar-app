@@ -1,0 +1,42 @@
+{
+  "baseline": false,
+  "wayland": true,
+  "checks": [
+    {
+      "name": "type_after_pill_without_field_click",
+      "expected": "alpha",
+      "actual": "alpha",
+      "native_focus": null,
+      "passed": true
+    },
+    {
+      "name": "click_field_then_type",
+      "expected": "alpha manual",
+      "actual": "alpha manual",
+      "native_focus": null,
+      "passed": true
+    },
+    {
+      "name": "typing_after_pointer_leaves",
+      "expected": "alpha manual away",
+      "actual": "alpha manual away",
+      "native_focus": null,
+      "passed": true
+    },
+    {
+      "name": "typing_after_outside_click_and_restore",
+      "expected": "alpha manual away reopened",
+      "actual": "alpha manual away reopened",
+      "native_focus": null,
+      "passed": true
+    },
+    {
+      "name": "typing_in_conversation_footer",
+      "expected": "alpha manual away reopened conversation",
+      "actual": "alpha manual away reopened conversation",
+      "native_focus": null,
+      "passed": true
+    }
+  ],
+  "out": "/tmp/mixar-linux-focus/qa-p4795-20261017-221328"
+}

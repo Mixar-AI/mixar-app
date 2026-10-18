@@ -3,10 +3,11 @@
 """Resend a chat/input command a BYOK refusal stopped — the user never retypes.
 
 `turn_transport._send` remembers the refused command here (method, payload,
-the user bubble's command id) when its receipt carries a ``byok_*`` code; the
-key-missing card (`byok_card`), a successful save in AI Provider Settings
-(`byok/core/key_prompt`) and the cold-start fetch (`byok_notice`) call
-`resend`, which re-enters the transport with a NEW command id: the backend
+the user bubble's command id) when its receipt carries a ``byok_*`` code or
+a guest's ``login_required``; the key-missing card (`byok_card`), a
+successful save in AI Provider Settings (`byok/core/key_prompt`), the
+cold-start fetch (`byok_notice`) and a settled sign-in notice
+(`login_notice`) call `resend`, which re-enters the transport with a NEW command id: the backend
 journals the refusal under the old id and would answer a repeat with the
 cached failure. `turn_credentials.prepare` attaches whatever this device
 holds now (a key just saved, nothing after a removal), so the server decides

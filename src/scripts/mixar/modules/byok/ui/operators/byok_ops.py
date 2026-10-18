@@ -33,7 +33,7 @@ from ...core import key_prompt, preference_state
 from ...core.local_switch import (
     deregister_local_if_switched_away as _deregister_local_if_switched_away,
 )
-from . import byok_codex_ops, byok_dialog_ui
+from . import byok_codex_ops, byok_dialog_support, byok_dialog_ui
 from .byok_dialog_support import (
     account_busy as _account_busy,
     prefill_from_prompt as _prefill_from_prompt,
@@ -370,6 +370,7 @@ def _on_save_done(success: bool, data, err, epoch=None):
             # Opened from the chat's key-missing card: resend the refused
             # message now that this device can sign it (once).
             key_prompt.notify_saved()
+            byok_dialog_support.settle_sign_in_notice()
         else:
             if epoch is not None and epoch != credential_state.current_epoch():
                 wm.byok_dialog_state = 'IDLE'

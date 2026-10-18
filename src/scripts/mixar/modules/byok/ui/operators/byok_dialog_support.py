@@ -97,5 +97,15 @@ def prefill_from_prompt(wm, prompt):
         logger.debug("Key prompt prefill skipped — provider or model not in the catalog yet")
 
 
+def settle_sign_in_notice():
+    """A key save landed: a guest's sign-in notice offering "Add your own
+    key" says it worked (`space_mixie_chat/core/login_notice`)."""
+    try:
+        from mixar.modules.space_mixie_chat.core.login_notice import key_saved
+        key_saved()
+    except Exception as exc:  # noqa: BLE001 — the save already landed
+        logger.debug("Sign-in notice settle after key save failed: %s", exc)
+
+
 # Auto-discovery imports every file under ui/ — nothing to register here.
 classes = ()
