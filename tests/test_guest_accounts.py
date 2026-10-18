@@ -508,8 +508,10 @@ def test_every_sign_in_path_goes_through_the_claiming_wrapper():
     # Startup without a pair and a sign-out both become a guest; a guest
     # that signs in leaves its session first.
     assert "_enter_guest_session(fallback=_reauthenticate)" in source
-    # A refused sign-out guest is retried by the same fallback (logout + timer).
-    assert source.count("_enter_guest_session, args=(_guest_seat_refused,)") == 2
+    # A refused sign-out guest is retried by the same fallback (logout, then
+    # the retry worker, which reads the keyring off the main thread).
+    assert source.count("_enter_guest_session, args=(_guest_seat_refused,)") == 1
+    assert "_enter_guest_session(_guest_seat_refused)" in source
     assert source.count("_leave_guest_session(") == 3  # def + two apply paths
     # Every apply path moves the guest's state only through the one
     # post-claim step, after the account's identity is applied.
@@ -810,21 +812,22 @@ def test_an_expired_account_keeps_its_address(monkeypatch):
 
 def _seat(monkeypatch, *, refusal, signed_in=False, token=""):
     from mixar.modules.space_mixie_chat.ui.operators import auth_ops
-    timers, threads, notices = [], [], []
+    timers, threads, notices, keyring_reads = [], [], [], []
     monkeypatch.setattr(auth_ops.bpy.app, "timers", SimpleNamespace(
         register=lambda fn, first_interval=0.0: timers.append((fn, first_interval)),
         is_registered=lambda fn: False, unregister=lambda fn: None), raising=False)
     monkeypatch.setattr(auth_ops.bpy, "context", SimpleNamespace(
         window_manager=SimpleNamespace(mixie_chat_is_logged_in=signed_in)), raising=False)
-    monkeypatch.setattr(auth_ops, "get_access_token", lambda: token)
+    monkeypatch.setattr(auth_ops, "get_access_token", lambda: keyring_reads.append(1) or token)
     monkeypatch.setattr(auth_ops.threading, "Thread",
-                        lambda target, args, **_: SimpleNamespace(start=lambda: threads.append(args)))
+                        lambda target, args=(), **_: SimpleNamespace(start=lambda: threads.append(target)))
     monkeypatch.setattr(auth_ops, "_auth_check_started", False)
     monkeypatch.setattr(auth_ops, "_guest_retry_backoff", 0.0)
     monkeypatch.setattr(auth_ops, "_guest_refusal", refusal)
     from mixar.modules.space_mixie_chat.core import login_notice
     monkeypatch.setattr(login_notice, "add_login_required_chat_message",
                         lambda scene, body="", **_: notices.append(body))
+    monkeypatch.setattr(auth_ops, "_qa_keyring_reads", keyring_reads, raising=False)
     return auth_ops, timers, threads, notices
 
 
@@ -837,7 +840,7 @@ def test_a_rate_limited_guest_is_retried_after_the_server_window(monkeypatch):
     # The chat says why at once, without waiting for a send.
     assert len(notices) == 1 and "about 20 min" in notices[0]
     timers[-1][0]()
-    assert threads == [(auth_ops._guest_seat_refused,)]
+    assert threads == [auth_ops._retry_guest_seat_background]
 
 
 def test_a_network_refusal_backs_off_and_caps(monkeypatch):
@@ -876,7 +879,8 @@ def test_a_send_after_the_window_tries_the_seat_at_once(monkeypatch):
     monkeypatch.setattr(auth_ops, "_guest_retry_backoff", 30.0)
     monkeypatch.setattr(auth_ops, "_guest_retry_due", 0.0)
     assert auth_ops.guest_seat_unavailable(scene=None) is True
-    assert threads == [(auth_ops._guest_seat_refused,)] and notices
+    assert threads == [auth_ops._retry_guest_seat_background] and notices
+    assert auth_ops._qa_keyring_reads == []  # The send stayed off the keyring.
 
 
 def test_a_send_while_signed_in_is_a_plain_connection_error(monkeypatch):
@@ -1026,3 +1030,22 @@ def test_a_pending_guest_seat_lets_the_send_through(monkeypatch):
     props = (MODULES / "space_mixie_chat/ui/properties/chat_props.py").read_text()
     enter = props[props.index("def _execute_send_message"):props.index("def _report_send_refused")]
     assert "if not allowed and not guest_seat_pending():" in enter  # Enter pre-checks too
+
+
+def test_the_retry_reads_the_keyring_only_on_its_worker(monkeypatch):
+    """Review on #1902: no credential-store read on the main thread. The
+    timer and a send decide from in-memory state; the worker reads the pair."""
+    auth_ops, _, threads, _ = _seat(monkeypatch, refusal={"message": "offline"})
+    monkeypatch.setattr(auth_ops, "_guest_retry_backoff", 30.0)
+    auth_ops._retry_guest_seat()
+    assert threads == [auth_ops._retry_guest_seat_background]
+    assert auth_ops._qa_keyring_reads == []
+    calls = []
+    monkeypatch.setattr(auth_ops, "_enter_guest_session", lambda fallback: calls.append(("guest", fallback)))
+    monkeypatch.setattr(auth_ops, "_auth_check_background_safe", lambda: calls.append("check"))
+    auth_ops._retry_guest_seat_background()  # no pair stored: ask for a guest again
+    assert calls == [("guest", auth_ops._guest_seat_refused)]
+    monkeypatch.setattr(auth_ops, "get_access_token", lambda: "pair")
+    calls.clear()
+    auth_ops._retry_guest_seat_background()  # another Mixar signed in meanwhile
+    assert calls == ["check"] and auth_ops._guest_retry_backoff == 0.0

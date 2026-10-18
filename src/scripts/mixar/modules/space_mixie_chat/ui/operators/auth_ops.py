@@ -402,10 +402,10 @@ def _guest_seat_refused() -> None:
 
 
 def _seat_is_empty() -> bool:
-    """Main thread: signed out with no stored pair and no check running."""
-    wm = getattr(bpy.context, 'window_manager', None)
-    return bool(wm and not getattr(wm, 'mixie_chat_is_logged_in', False)
-                and not get_access_token() and not _auth_check_started)
+    """Main thread, no keyring read: a refused guest seat is pending and no
+    check is running. A pair stored meanwhile is the worker's question
+    (`_retry_guest_seat_background`)."""
+    return guest_seat_pending() and not _auth_check_started
 
 
 def _retry_guest_seat():
@@ -418,10 +418,21 @@ def _retry_guest_seat():
         return None
     _auth_check_started = True
     threading.Thread(
-        target=_enter_guest_session, args=(_guest_seat_refused,),
-        daemon=True, name="MixarGuestSession",
+        target=_retry_guest_seat_background, daemon=True, name="MixarGuestSession",
     ).start()
     return None
+
+
+def _retry_guest_seat_background() -> None:
+    """Daemon thread: the keyring read stays off the main thread. A pair
+    stored meanwhile (another Mixar signed in) is checked like a launch;
+    otherwise ask for a guest again."""
+    global _guest_retry_backoff
+    if get_access_token():
+        _guest_retry_backoff = 0.0
+        _auth_check_background_safe()
+        return
+    _enter_guest_session(_guest_seat_refused)
 
 
 def guest_seat_pending() -> bool:
