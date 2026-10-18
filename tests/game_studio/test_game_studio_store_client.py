@@ -204,6 +204,18 @@ def test_slug_conflict_on_own_draft_updates_it(stub):
     assert "slug" not in json.loads(stub.calls[-1]["raw"])
 
 
+def test_slug_conflict_in_store_envelope_updates_own_draft(stub):
+    """The store's real wire form, as the running store sends it."""
+    from mixar.modules.game_studio.core import pipeline
+    stub.routes[("POST", "/api/v1/games")] = (409, {"status": "failure", "message": "taken",
+                                                     "data": {"code": "slug_taken", "game_id": "g8"}})
+    stub.routes[("PATCH", "/api/v1/games/g8")] = (200, _envelope({"id": "g8", "slug": "crystal-run"}))
+    game = pipeline._create_or_update(_client(stub), {"store": {}}, {"title": "Crystal Run",
+                                                                     "slug": "crystal-run"})
+    assert game["id"] == "g8"
+    assert stub.calls[-1]["method"] == "PATCH" and stub.calls[-1]["path"] == "/api/v1/games/g8"
+
+
 def test_slug_taken_game_id_in_data_and_media_flow(stub, tmp_path):
     stub.routes[("POST", "/api/v1/games")] = (409, {"detail": {"code": "slug_taken", "message": "taken"},
                                                     "data": {"game_id": "g8"}})
