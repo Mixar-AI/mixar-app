@@ -102,18 +102,6 @@ def _is_pill_window(area) -> bool:
         r.type == 'TOOLS' for r in area.regions)
 
 
-def _linux_resize_edges(context, event) -> int:
-    """Hit the 8px border, leaving conversation and header controls alone."""
-    if not sys.platform.startswith('linux'):
-        return 0
-    window = context.window
-    x, y = event.mouse_x, event.mouse_y
-    margin = 8
-    edges = 4 if x < margin else 8 if x >= window.width - margin else 0
-    edges |= 2 if y < margin else 1 if y >= window.height - margin else 0
-    return edges
-
-
 def _pill_voice_claimed() -> bool:
     """True when the click landed on the Sketch pill's Voice button and started
     or stopped dictation. The native operator owns the hit test (the painter's
@@ -161,12 +149,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
-        # Frameless Linux windows need client-side edge hit testing. The WM
-        # owns the resize gesture and enforces the native minimum size.
-        edges = _linux_resize_edges(context, event)
-        if edges:
-            return bpy.ops.mixar.bubble_window_begin_resize(edges=edges)
-
+        # Frameless Linux edges are handled natively before UI/keymap dispatch.
         # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region
         if (region is None or region.type != 'HEADER') and not _event_hits_header(

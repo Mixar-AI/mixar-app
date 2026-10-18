@@ -23,7 +23,7 @@ def test_dismissal_requires_an_outside_button_press():
     assert "ELEM(event->type, LEFTMOUSE, MIDDLEMOUSE, RIGHTMOUSE)" in POLICY
     assert "ELEM(target->runtime->ghostwin, bubble, pill)" in POLICY
     wm = (ROOT / "src/source/blender/windowmanager/intern/wm_event_system.cc").read_text()
-    assert "ED_agent_bubble_handle_event(C, event);" in wm
+    assert "event->type != MOUSEMOVE && ED_agent_bubble_handle_event(C, event)" in wm
 
 
 def test_native_height_is_not_capped_at_the_preset():

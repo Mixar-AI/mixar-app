@@ -335,6 +335,7 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # On macOS: coloured traffic-light circles (custom pill icons).
         # On Windows: minimise + expand icon buttons only.
+        # Linux uses outside-click dismissal and edge resizing; no buttons.
         #
         # On unsupported platforms there are no window-state buttons. The operators
         # behind them are compiled-out stubs that return CANCELLED without
@@ -345,9 +346,9 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # Only this row is platform-gated. Dragging the bubble works on
         # every platform, and so do the right-side controls below.
-        if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+        if BUBBLE_WINDOW_CONTROLS_SUPPORTED and not sys.platform.startswith("linux"):
             traffic = layout.row(align=True)
-            if _IS_WINDOWS or sys.platform.startswith("linux"):
+            if _IS_WINDOWS:
                 traffic.operator(
                     "mixar.bubble_close",
                     text="",

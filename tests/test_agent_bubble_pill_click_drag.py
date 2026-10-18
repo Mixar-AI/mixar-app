@@ -103,22 +103,42 @@ def _method_src(name: str) -> str:
     raise AssertionError(f"{name} missing")
 
 
-def test_linux_resize_edges_leave_conversation_clicks_alone():
-    from types import SimpleNamespace
+def test_linux_resize_edges_leave_conversation_clicks_alone(tmp_path):
+    """Compile the actual native hit-test: all edges, 2x DPI and out-of-window input."""
+    import subprocess
+    import shutil
+    import pytest
 
-    tree = ast.parse(DRAG_OP_SRC)
-    helper = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
-                  and n.name == '_linux_resize_edges')
-    ns = {'sys': SimpleNamespace(platform='linux')}
-    exec(compile(ast.Module(body=[helper], type_ignores=[]), str(DRAG_OP), 'exec'), ns)
-    context = SimpleNamespace(window=SimpleNamespace(width=700, height=430))
-    points = [(0, 210, 4), (699, 210, 8), (350, 429, 1), (350, 0, 2),
-              (0, 0, 6), (699, 0, 10), (0, 429, 5), (699, 429, 9),
-              (8, 8, 0), (350, 210, 0), (691, 421, 0)]
-    for x, y, expected in points:
-        assert ns['_linux_resize_edges'](context, SimpleNamespace(mouse_x=x, mouse_y=y)) == expected
-    ns['sys'].platform = 'darwin'
-    assert ns['_linux_resize_edges'](context, SimpleNamespace(mouse_x=0, mouse_y=0)) == 0
+    compiler = shutil.which('c++') or shutil.which('clang++')
+    if not compiler:
+        pytest.skip('C++ compiler unavailable')
+
+    include = ROOT / 'src/source/blender/editors/space_agent_bubble'
+    executable = tmp_path / 'resize-edges'
+    program = r"""
+#include <cassert>
+#include "agent_bubble_resize_edges.hh"
+int main() {
+  const int points[][3] = {
+    {0,210,4}, {699,210,8}, {350,429,1}, {350,0,2},
+    {0,0,6}, {699,0,10}, {0,429,5}, {699,429,9},
+    {10,210,4}, {689,210,8}, {350,419,1}, {350,10,2},
+    {12,12,0}, {350,210,0}, {-1,210,0}, {700,210,0}, {350,430,0}
+  };
+  for (int scale : {1,2}) {
+    for (const auto &p : points) {
+      assert(blender::agent_bubble_resize_edges(p[0]*scale, p[1]*scale,
+                                               700*scale, 430*scale, 12*scale) == p[2]);
+    }
+  }
+}
+"""
+    # Initializer-list iteration is supplied here, keeping the production header minimal.
+    program = '#include <initializer_list>\n' + program
+    subprocess.run([compiler, '-std=c++17', '-I', str(include), '-x', 'c++',
+                    '-o', str(executable), '-'], input=program, text=True,
+                   check=True, capture_output=True)
+    subprocess.run([str(executable)], check=True)
 
 
 def test_linux_modal_stops_when_compositor_consumes_release():

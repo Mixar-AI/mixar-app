@@ -609,16 +609,6 @@ static void agent_bubble_island_controls_header(const bContext *C,
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               TIP_("Scene tabs — this chat's scene; jump to another tab or open a new one"));
   }
-#ifdef __linux__
-  agent_bubble_rect_to_region(region, layout->hdr_rules, &bx, &by, &bw, &bh);
-  const int control_x = region->winx - 3 * bw - 8;
-  uiDefIconButO(block, ui::ButtonType::But, "mixar.bubble_close",
-                blender::wm::OpCallContext::InvokeDefault, ICON_REMOVE,
-                control_x, by, bw, bh, TIP_("Minimise to agent pill (Esc)"));
-  uiDefIconButO(block, ui::ButtonType::But, "mixar.bubble_toggle_expand",
-                blender::wm::OpCallContext::InvokeDefault, ICON_FULLSCREEN_ENTER,
-                control_x + bw, by, bw, bh, TIP_("Expand conversation"));
-#endif
   ui::block_end(C, block);
   ui::block_draw(C, block);
 }
@@ -3027,6 +3017,10 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
       return WM_operator_name_call(C, "MIXAR_OT_bubble_restore",
                                    wm::OpCallContext::ExecDefault, nullptr, nullptr);
     }
+    if (!start_minimised) {
+      Mixar_WindowMakeKey(g_bubble_ghostwin);
+      agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
+    }
     return OPERATOR_FINISHED;
   }
 #endif
@@ -3117,6 +3111,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     return WM_operator_name_call(C, "MIXAR_OT_bubble_minimise",
                                  wm::OpCallContext::ExecDefault, nullptr, nullptr);
   }
+  agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
 #endif
 
 #if defined(__APPLE__) || defined(_WIN32)
@@ -4045,9 +4040,19 @@ static void minimise_anim_finish(void *user_data)
  * movement never dismisses the island; WM delivers actual button presses.
  * \{ */
 
-void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
+bool ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
 {
-#if defined(__APPLE__) || defined(_WIN32)
+#ifdef __linux__
+  const AgentBubbleWindowEvent handled = agent_bubble_linux_handle_event(
+      C, event, g_bubble_ghostwin, g_bubble_minimised);
+  if (handled != AgentBubbleWindowEvent::PassThrough) {
+    if (handled == AgentBubbleWindowEvent::Resizing) {
+      g_linux_transition_width = 0;
+    }
+    return true;
+  }
+#endif
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
   if (!g_bubble_minimised && g_bubble_ghostwin &&
       agent_bubble_should_dismiss(C, event, g_bubble_ghostwin, g_pill_ghostwin) &&
       !agent_bubble_scribble_active(C))
@@ -4056,6 +4061,7 @@ void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
                           blender::wm::OpCallContext::ExecDefault, nullptr, nullptr);
   }
 #endif
+  return false;
 }
 
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
@@ -4115,6 +4121,7 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   return OPERATOR_FINISHED;
 #elif defined(__linux__)
   linux_bubble_sync_transition(C);
+  agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -4218,16 +4225,26 @@ static wmOperatorStatus linux_bubble_set_minimised(bContext *C, bool minimised)
     }
     g_linux_bubble_regions.clear();
     g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
+    bContext *bubble_context = CTX_copy(C);
+    CTX_wm_window_set(bubble_context, win);
+    CTX_wm_area_set(bubble_context, area);
     for (ARegion &region : area->regionbase) {
       g_linux_bubble_regions.push_back({region.regiontype, region.flag, region.sizey});
+      CTX_wm_region_set(bubble_context, &region);
       if (region.regiontype == RGN_TYPE_HEADER) {
+        ui::UI_region_free_active_but_all(bubble_context, &region);
         region.flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_DYNAMIC_SIZE);
         region.sizey = int(std::ceil(pill_rest_height() / UI_SCALE_FAC));
       }
       else {
         region.flag |= RGN_FLAG_HIDDEN;
+        /* A hidden region must release its window-modal text editor before
+         * this same window becomes the pill. The composer already updates
+         * its RNA draft while typing; the normal region teardown retains it. */
+        ED_region_visibility_change_update_ex(bubble_context, area, &region, true, false);
       }
     }
+    CTX_free(bubble_context);
     g_bubble_minimised = true;
     g_pill_ghostwin = g_bubble_ghostwin;
     Mixar_WindowSetCustomDecoration(g_bubble_ghostwin, 40, 20, pill_rest_radius());
@@ -4264,6 +4281,14 @@ static wmOperatorStatus linux_bubble_set_minimised(bContext *C, bool minimised)
   screen->do_refresh = true;
   ED_area_tag_redraw(area);
   WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, nullptr);
+  if (minimised) {
+    agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, true);
+  }
+  else {
+    /* As on macOS, restoring the window also restores its text editor.
+     * If the resized field is not built yet, its draw consumes the request. */
+    agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
+  }
   return OPERATOR_FINISHED;
 }
 #endif

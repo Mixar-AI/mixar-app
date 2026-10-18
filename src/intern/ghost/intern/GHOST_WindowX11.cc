@@ -1765,8 +1765,10 @@ GHOST_TSuccess GHOST_WindowX11::getStandardCursor(GHOST_TStandardCursor g_cursor
       xcursor_id = XC_bottom_left_corner;
       break;
     case GHOST_kStandardCursorDefault:
-      xcursor = None;
-      return GHOST_kSuccess;
+      /* None inherits the parent's cursor, which may still be a desktop
+       * launch/busy cursor on XWayland. An idle editor needs its own arrow. */
+      xcursor_id = XC_left_ptr;
+      break;
     default:
       xcursor = None;
       return GHOST_kFailure;

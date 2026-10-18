@@ -67,6 +67,7 @@
   },
   "cycles": [
     {
+      "method": "LEFTMOUSE",
       "pill": {
         "width": 304,
         "height": 44,
@@ -135,6 +136,7 @@
       }
     },
     {
+      "method": "MIDDLEMOUSE",
       "pill": {
         "width": 304,
         "height": 44,
@@ -203,6 +205,7 @@
       }
     },
     {
+      "method": "ESC",
       "pill": {
         "width": 304,
         "height": 44,
@@ -304,7 +307,14 @@
       ]
     ]
   },
-  "out": "/tmp/mixar-linux-pill-wayland/qa-p4797-20261017-203533",
+  "startup": {
+    "module_load_failures": [],
+    "tracebacks": 0,
+    "login_required": false
+  },
+  "window_buttons": [],
+  "outside_scroll_stays_open": true,
+  "out": "/tmp/mixar-linux-pill-wayland/qa-p4797-20261017-212805",
   "wayland": true,
   "renderer": "llvmpipe (LLVM 21.1.8, 256 bits)"
 }

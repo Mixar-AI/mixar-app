@@ -1208,6 +1208,24 @@ extern "C" bool Mixar_WindowBeginNativeResize(void *window_handle, int edges)
          static_cast<GHOST_IWindow *>(window_handle)->beginWindowResize(edges) == GHOST_kSuccess;
 }
 
+extern "C" void Mixar_WindowSetResizeCursor(void *window_handle, int edges)
+{
+  if (!window_handle) {
+    return;
+  }
+  GHOST_TStandardCursor cursor;
+  switch (edges) {
+    case 1: case 2: cursor = GHOST_kStandardCursorUpDown; break;
+    case 4: case 8: cursor = GHOST_kStandardCursorLeftRight; break;
+    case 5: cursor = GHOST_kStandardCursorTopLeftCorner; break;
+    case 9: cursor = GHOST_kStandardCursorTopRightCorner; break;
+    case 6: cursor = GHOST_kStandardCursorBottomLeftCorner; break;
+    case 10: cursor = GHOST_kStandardCursorBottomRightCorner; break;
+    default: return;
+  }
+  static_cast<GHOST_IWindow *>(window_handle)->setCursorShape(cursor);
+}
+
 extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *width, int *height)
 {
   if (!window_handle) {

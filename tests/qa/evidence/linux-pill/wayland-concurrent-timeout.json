@@ -1,0 +1,14 @@
+{
+  "scenario": "linux_pill_resize.py",
+  "out": "/tmp/mixar-linux-pill-wayland/qa-p4797-20261017-212655",
+  "concurrent_scenario": "linux_bubble_focus.py on Xvfb",
+  "failure": "5 second timeout waiting for the first outside click to produce pill geometry",
+  "observed": {
+    "width": 778,
+    "height": 487,
+    "header_height": 44,
+    "content_regions_hidden": true,
+    "draft_preserved": true
+  },
+  "followup": "The same final binary passed all three transitions and minimum-size checks when replayed serially. Cause of the concurrent timeout is unconfirmed."
+}
