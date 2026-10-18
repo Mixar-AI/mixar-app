@@ -1,0 +1,266 @@
+{
+  "initial": {
+    "width": 678,
+    "height": 407,
+    "messages": [
+      [
+        "linux-pill-fixture",
+        "Linux conversation remains visible after minimizing, restoring, and resizing."
+      ]
+    ],
+    "draft": "Keep this unsent draft",
+    "regions": [
+      [
+        "HEADER",
+        678,
+        81
+      ],
+      [
+        "UI",
+        1,
+        1
+      ],
+      [
+        "TOOLS",
+        678,
+        81
+      ],
+      [
+        "WINDOW",
+        678,
+        245
+      ]
+    ]
+  },
+  "enlarged": {
+    "x": 562,
+    "y": 432,
+    "width": 778,
+    "height": 487
+  },
+  "cycles": [
+    {
+      "method": "LEFTMOUSE",
+      "pill": {
+        "width": 304,
+        "height": 44,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            304,
+            44
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            1,
+            1
+          ],
+          [
+            "WINDOW",
+            1,
+            1
+          ]
+        ]
+      },
+      "restored": {
+        "width": 778,
+        "height": 487,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            778,
+            94
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            778,
+            93
+          ],
+          [
+            "WINDOW",
+            778,
+            300
+          ]
+        ]
+      }
+    },
+    {
+      "method": "MIDDLEMOUSE",
+      "pill": {
+        "width": 304,
+        "height": 44,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            304,
+            44
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            1,
+            1
+          ],
+          [
+            "WINDOW",
+            1,
+            1
+          ]
+        ]
+      },
+      "restored": {
+        "width": 778,
+        "height": 487,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            778,
+            94
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            778,
+            93
+          ],
+          [
+            "WINDOW",
+            778,
+            300
+          ]
+        ]
+      }
+    },
+    {
+      "method": "ESC",
+      "pill": {
+        "width": 304,
+        "height": 44,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            304,
+            44
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            1,
+            1
+          ],
+          [
+            "WINDOW",
+            1,
+            1
+          ]
+        ]
+      },
+      "restored": {
+        "width": 778,
+        "height": 487,
+        "messages": [
+          [
+            "linux-pill-fixture",
+            "Linux conversation remains visible after minimizing, restoring, and resizing."
+          ]
+        ],
+        "draft": "Keep this unsent draft",
+        "regions": [
+          [
+            "HEADER",
+            778,
+            94
+          ],
+          [
+            "UI",
+            1,
+            1
+          ],
+          [
+            "TOOLS",
+            778,
+            93
+          ],
+          [
+            "WINDOW",
+            778,
+            300
+          ]
+        ]
+      }
+    }
+  ],
+  "shrunk": {
+    "x": 562,
+    "y": 432,
+    "width": 560,
+    "height": 230
+  },
+  "startup": {
+    "module_load_failures": [],
+    "tracebacks": 0,
+    "login_required": false
+  },
+  "window_buttons": [],
+  "outside_scroll_stays_open": true,
+  "out": "/tmp/mixar-linux-pill/qa-p4796-20261017-212616",
+  "wayland": false,
+  "renderer": "llvmpipe (LLVM 21.1.8, 256 bits)"
+}

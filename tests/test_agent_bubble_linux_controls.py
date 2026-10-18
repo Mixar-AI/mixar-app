@@ -2,24 +2,11 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The Agent Bubble must not offer window controls it cannot honour.
+"""Native window actions must work wherever they are enabled.
 
-Minimise, restore and expand are native operators whose bodies are compiled
-only for macOS and Windows — the ``Mixar_Window*`` GHOST helpers they call
-exist in ``GHOST_SystemCocoa.mm`` and ``GHOST_SystemWin32.cc`` and nowhere
-else. On Linux the three ``exec`` functions in ``space_agent_bubble.cc`` are
-``return OPERATOR_CANCELLED``; every call site sits inside the same ``#if``,
-and the APIs the cross-platform Cinema gate consumes get Linux definitions,
-so the build compiles and links cleanly with no warning.
-
-The buttons were still drawn, enabled, and dispatching. Clicking one produced
-no window change, no error, no toast and no log line, which reads as frozen
-UI. Worse, the surrounding Python ran its side effects anyway: ESC recorded
-the user-dismissal that mutes the autoshow, and Ctrl/Cmd+Shift+B reported
-FINISHED and logged a "maximized" event for a window that never moved.
-
-What is pinned here is the honesty of the surface, not the platform list:
-where the native side is a stub, nothing is offered and nothing is recorded.
+Linux collapses through the shared outside-click policy and restores from
+the pill. Its header has no window buttons. macOS and Windows retain their
+existing header controls; unsupported platforms offer no native actions.
 """
 
 import sys
@@ -131,9 +118,10 @@ def _context(*, pill: bool):
 
 
 def _draw(monkeypatch, *, supported: bool, pill: bool = False,
-          windows: bool = False):
+          windows: bool = False, platform: str = "darwin"):
     monkeypatch.setattr(HDR, "BUBBLE_WINDOW_CONTROLS_SUPPORTED", supported)
     monkeypatch.setattr(HDR, "_IS_WINDOWS", windows)
+    monkeypatch.setattr(HDR, "sys", SimpleNamespace(platform="win32" if windows else platform))
     monkeypatch.setattr(HDR, "_transport_down", lambda: False)
     monkeypatch.setattr(HDR, "_queue_activity", lambda: None)
     # The macOS-shaped branch draws its traffic lights as custom pill icons
@@ -168,6 +156,13 @@ def test_windows_still_offers_the_window_controls(monkeypatch):
     ops = _draw(monkeypatch, supported=True, windows=True).ops
     assert "mixar.bubble_close" in ops
     assert "mixar.bubble_toggle_expand_tracked" in ops
+
+
+def test_linux_has_no_window_buttons_but_keeps_drag_handle(monkeypatch):
+    layout = _draw(monkeypatch, supported=True, platform="linux")
+    assert not WINDOW_CONTROL_OPS.intersection(layout.ops)
+    assert "▬▬▬▬" in layout.labels
+    assert len(layout.sink["rows"]) == len(_draw(monkeypatch, supported=False).sink["rows"])
 
 
 def test_stubbed_platform_offers_no_window_controls(monkeypatch):
@@ -212,6 +207,12 @@ def test_right_side_controls_are_untouched(monkeypatch):
 def test_pill_is_clickable_where_restore_works(monkeypatch):
     ops = _draw(monkeypatch, supported=True, pill=True).ops
     assert ops == ["mixar.bubble_restore_user"]
+
+
+def test_linux_pill_remains_clickable_without_window_buttons(monkeypatch):
+    assert _draw(monkeypatch, supported=True, pill=True, platform="linux").ops == [
+        "mixar.bubble_restore_user"
+    ]
 
 
 def test_pill_is_a_plain_label_where_restore_is_stubbed(monkeypatch):
@@ -268,9 +269,9 @@ def test_the_platform_gate_is_an_allowlist():
     src = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "constants.py"
     ).read_text(encoding="utf-8")
-    assert 'sys.platform in {"darwin", "win32"}' in src
+    assert 'sys.platform in {"darwin", "win32", "linux"}' in src
     assert CONST.BUBBLE_WINDOW_CONTROLS_SUPPORTED == (
-        sys.platform in {"darwin", "win32"}
+        sys.platform in {"darwin", "win32", "linux"}
     )
 
 
@@ -339,7 +340,7 @@ def _linux_preprocessor_pass(source):
                     "if defined(WIN32) || defined(__linux__)",
                 )
             ), f"unexpected platform conditional: {directive!r}"
-            taken = directive in ("ifdef __linux__", "if defined(WIN32) || defined(__linux__)")
+            taken = "__linux__" in directive
             stack.append((active, taken))
             active = active and taken
         elif directive.startswith("else"):
@@ -373,6 +374,15 @@ def test_the_cinema_seat_functions_have_a_linux_definition():
             f"{signature!r} has no definition that survives a Linux build; "
             "the cross-platform Cinema gate calls it, so Linux fails to link"
         )
+
+
+def test_linux_observes_the_shared_outside_click_policy():
+    live, _ = _linux_preprocessor_pass(BUBBLE_CC.read_text(encoding="utf-8"))
+    handler = "\n".join(live).split("bool ED_agent_bubble_handle_event(", 1)[1]
+    handler = handler.split("static wmOperatorStatus mixar_bubble_hover_tick_exec", 1)[0]
+    assert "agent_bubble_should_dismiss(C, event, g_bubble_ghostwin, g_pill_ghostwin)" in handler
+    assert "!agent_bubble_scribble_active(C)" in handler
+    assert '"MIXAR_OT_bubble_minimise"' in handler
 
 
 def test_no_cinema_seat_global_is_used_without_a_linux_declaration():

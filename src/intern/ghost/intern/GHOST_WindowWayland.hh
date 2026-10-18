@@ -154,6 +154,8 @@ class GHOST_WindowWayland : public GHOST_Window {
   bool hasCustomDecoration() const override;
   bool supportsTransparentRendering() const override { return want_context_params_.use_alpha; }
   GHOST_TSuccess beginWindowDrag() override;
+  GHOST_TSuccess beginWindowResize(int edges) override;
+  void setClientMinimumSize(int width, int height) override;
 
   std::string getTitle() const override;
 

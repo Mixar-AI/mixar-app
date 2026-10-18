@@ -277,6 +277,11 @@ def _apply_account_hooks(user_info: dict, is_guest: bool) -> None:
     Onboarding is per device, so a guest's first launch gets the tour."""
     if not is_guest:
         refresh_generation_caches()
+    try:
+        from ...core.login_notice import session_ready
+        session_ready(is_guest)  # A sign-in notice in the chat says it worked.
+    except Exception as e:  # noqa: BLE001 — never block a sign-in
+        logger.debug("Sign-in notice settle failed: %s", e)
     maybe_show_onboarding(user_info["data"].get("email", ""))
     _auto_connect_websocket()
     refresh_agent_settings()
@@ -360,10 +365,113 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
     bpy.app.timers.register(_apply, first_interval=0.0)
 
 
-def _stay_signed_out() -> None:
-    """Guest fallback after a sign-out: nothing to do but release the latch."""
-    global _auth_check_started
+# A sign-out whose fresh guest was refused (the per-network limit, a network
+# error) left the app with no session at all: the agent sat offline with no
+# word why and nothing tried again. The guest seat is retried on a backoff
+# (never sooner than the server's Retry-After) until a guest or an account
+# takes it; the chat says why at once, and a send in between says it again
+# (the send operator's poll lets it through: `guest_seat_pending`).
+_GUEST_RETRY_MIN_S = 30.0
+_GUEST_RETRY_MAX_S = 600.0
+_guest_refusal: dict = {}      # the last refused create_guest_session() result
+_guest_retry_backoff = 0.0     # 0 = no retry pending
+_guest_retry_due = 0.0         # time.monotonic() of the next attempt
+
+
+def _guest_seat_refused() -> None:
+    """Daemon thread: the sign-out fallback when no fresh guest was issued."""
+    global _auth_check_started, _guest_retry_backoff, _guest_retry_due
     _auth_check_started = False
+    if _guest_refusal.get("disabled"):
+        return  # Guests are off on this backend: signed out is the seat.
+    _guest_retry_backoff = min(
+        _GUEST_RETRY_MAX_S, max(_GUEST_RETRY_MIN_S, _guest_retry_backoff * 2))
+    delay = max(_guest_retry_backoff, float(_guest_refusal.get("retry_after") or 0))
+    _guest_retry_due = time.monotonic() + delay
+    logger.info("No guest session after sign-out (%s); retrying in %.0fs",
+                _guest_refusal.get("message"), delay)
+
+    def _schedule():
+        if bpy.app.timers.is_registered(_retry_guest_seat):
+            bpy.app.timers.unregister(_retry_guest_seat)
+        bpy.app.timers.register(_retry_guest_seat, first_interval=delay)
+        _explain_guest_seat(getattr(bpy.context, 'scene', None), delay)
+        return None
+
+    bpy.app.timers.register(_schedule, first_interval=0.0)
+
+
+def _seat_is_empty() -> bool:
+    """Main thread, no keyring read: a refused guest seat is pending and no
+    check is running. A pair stored meanwhile is the worker's question
+    (`_retry_guest_seat_background`)."""
+    return guest_seat_pending() and not _auth_check_started
+
+
+def _retry_guest_seat():
+    """Timer: try the guest seat again unless someone has taken it."""
+    global _auth_check_started, _guest_retry_backoff
+    if not _seat_is_empty():
+        if _auth_check_started:
+            return _GUEST_RETRY_MIN_S  # A sign-in is running; look again after it.
+        _guest_retry_backoff = 0.0  # A guest or an account holds the seat.
+        return None
+    _auth_check_started = True
+    threading.Thread(
+        target=_retry_guest_seat_background, daemon=True, name="MixarGuestSession",
+    ).start()
+    return None
+
+
+def _retry_guest_seat_background() -> None:
+    """Daemon thread: the keyring read stays off the main thread. A pair
+    stored meanwhile (another Mixar signed in) is checked like a launch;
+    otherwise ask for a guest again."""
+    global _guest_retry_backoff
+    if get_access_token():
+        _guest_retry_backoff = 0.0
+        _auth_check_background_safe()
+        return
+    _enter_guest_session(_guest_seat_refused)
+
+
+def guest_seat_pending() -> bool:
+    """Poll-safe (no keyring read): signed out while a refused guest seat is
+    retried. The send operator's poll admits a send then, so it can say why."""
+    wm = getattr(bpy.context, 'window_manager', None)
+    return bool(_guest_retry_backoff and wm
+                and not getattr(wm, 'mixie_chat_is_logged_in', False))
+
+
+def _explain_guest_seat(scene, wait_s: float) -> None:
+    """The sign-in notice saying why there is no session and what happens next."""
+    from ...core.login_notice import add_login_required_chat_message
+    if wait_s <= 0:
+        body = rpt_("Mixar is starting a guest session. Send again in a moment, or sign in.")
+    elif _guest_refusal.get("retry_after"):
+        body = rpt_("Too many guest sessions were started from this network. "
+                    "Sign in to continue, or Mixar tries again in about {minutes} min.").format(
+            minutes=max(1, round(wait_s / 60)))
+    else:
+        body = rpt_("Mixar couldn't start a guest session. "
+                    "Sign in to continue; Mixar keeps trying in the background.")
+    add_login_required_chat_message(scene, body=body, resolves_on_guest=True)
+
+
+def guest_seat_unavailable(scene) -> bool:
+    """Main thread, from a send that found no connection: True when the app
+    has no session at all. The chat then says why (sign in, or wait for the
+    guest retry) and the guest seat is tried at once if its retry is due."""
+    if not _guest_retry_backoff or not _seat_is_empty():
+        return False
+    wait_s = _guest_retry_due - time.monotonic()
+    if wait_s <= 0:
+        if bpy.app.timers.is_registered(_retry_guest_seat):
+            bpy.app.timers.unregister(_retry_guest_seat)
+        _retry_guest_seat()
+        wait_s = 0
+    _explain_guest_seat(scene, wait_s)
+    return True
 
 
 # A socket whose auth backoff gave up hands the session back here; two of
@@ -430,12 +538,14 @@ def _enter_guest_session(fallback) -> None:
     """Daemon thread: start a fresh guest session, else run ``fallback``.
 
     ``fallback`` is the caller's signed-out behaviour — the browser sign-in
-    at startup, nothing after a sign-out — for a backend whose guest kill
+    at startup, a later retry after a sign-out — for a backend whose guest kill
     switch is off or that cannot be reached.
     """
-    global _auth_check_started
+    global _auth_check_started, _guest_refusal, _guest_retry_backoff
     result = guest.create_guest_session()
+    _guest_refusal = {} if result.get("success") else result
     if result.get("success"):
+        _guest_retry_backoff = 0.0
         user_info = get_user_info()
         if user_info and user_info.get("status") == "success":
             _schedule_apply_login(user_info, refreshed=False)
@@ -543,6 +653,15 @@ def _reauthenticate() -> None:
                 wm.mixie_chat_session_expired = True
             if attempt is not None and hasattr(wm, 'mixie_chat_login_error'):
                 wm.mixie_chat_login_error = ""
+            if guest.is_guest():
+                # A dead guest has no account to re-sign: drop its identity,
+                # or the top bar shows its placeholder address as an account.
+                wm.mixie_chat_is_logged_in = False
+                scene = getattr(bpy.context, 'scene', None)
+                if scene is not None:
+                    scene.mixie_chat_user_id = ""
+                from ....common.updates.core.toasts import tag_topbar_redraw
+                tag_topbar_redraw()
             if hasattr(wm, 'mixie_chat_is_guest'):
                 wm.mixie_chat_is_guest = False
             sync_pending_flag(wm)
@@ -737,6 +856,8 @@ def _release_stuck_login(attempt_id, thread):
             "Browser login did not complete. Please try again."
         )
         redraw_sign_in_surfaces(wm)
+        from ...core.login_notice import sign_in_failed
+        sign_in_failed()
     except Exception as e:
         logger.warning("Login watchdog could not update UI: %s", e)
     return None
@@ -819,6 +940,8 @@ class MIXIE_CHAT_OT_login(Operator):
                         msg = result.get("message", rpt_("Login failed"))
                         live_wm.mixie_chat_login_error = msg
                         logger.warning("SSO login failed: %s", msg)
+                        from ...core.login_notice import sign_in_failed
+                        sign_in_failed()
 
                     # Redraw every surface that shows the auth state
                     redraw_sign_in_surfaces(live_wm)
@@ -910,10 +1033,10 @@ class MIXIE_CHAT_OT_logout(Operator):
         self.report({'INFO'}, "Logged out successfully")
 
         # A fresh guest takes the signed-out seat (never the old guest's
-        # pair); without one the app simply stays signed out.
+        # pair); a refused one is retried (`_guest_seat_refused`).
         _auth_check_started = True
         threading.Thread(
-            target=_enter_guest_session, args=(_stay_signed_out,),
+            target=_enter_guest_session, args=(_guest_seat_refused,),
             daemon=True, name="MixarGuestSession",
         ).start()
         return {'FINISHED'}

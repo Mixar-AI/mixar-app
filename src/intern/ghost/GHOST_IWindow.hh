@@ -71,6 +71,7 @@ class GHOST_IWindow {
 
   /** Use application-drawn chrome and enforce a usable client size (logical units). */
   virtual void setCustomDecoration(int /*min_width*/, int /*min_height*/, float /*radius*/) {}
+  virtual void setClientMinimumSize(int /*width*/, int /*height*/) {}
   /** Native corner radius in framebuffer pixels. */
   virtual float getWindowCornerRadius() const { return 0.0f; }
   virtual bool hasCustomDecoration() const { return false; }
@@ -78,6 +79,8 @@ class GHOST_IWindow {
 
   /** Hand a title-area pointer press to the window manager for interactive movement. */
   virtual GHOST_TSuccess beginWindowDrag() { return GHOST_kFailure; }
+  /** Native edge resize; bits are top=1, bottom=2, left=4, right=8. */
+  virtual GHOST_TSuccess beginWindowResize(int /*edges*/) { return GHOST_kFailure; }
   /** Follow a client-driven drag. X11 implements this; Wayland returns failure
    * because xdg_toplevel_move already owns the pointer. */
   virtual GHOST_TSuccess updateWindowDrag() { return GHOST_kFailure; }

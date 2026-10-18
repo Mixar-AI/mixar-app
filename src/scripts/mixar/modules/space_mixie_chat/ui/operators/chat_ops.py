@@ -103,6 +103,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
         (the message joins the run). One predicate for every send surface."""
         allowed, reason = can_send(context.scene)
         if not allowed:
+            # Signed out while a refused guest session is retried: let the
+            # send through so it can say why in the chat (`execute`).
+            from .auth_ops import guest_seat_pending
+            if guest_seat_pending():
+                return True
             cls.poll_message_set(reason)
         return allowed
 
@@ -238,7 +243,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
         ws_client = get_jsonrpc_client()
 
         if not connection_manager.is_connected or not ws_client:
-            self.report({'ERROR'}, "Not connected to server")
+            # Signed out with no guest (its retry is pending): the chat says
+            # why instead of a bare status-bar error. The draft is kept.
+            from .auth_ops import guest_seat_unavailable
+            if not guest_seat_unavailable(scene):
+                self.report({'ERROR'}, "Not connected to server")
             return {'CANCELLED'}
 
         if not ws_client.connection_id:

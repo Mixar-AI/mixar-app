@@ -531,8 +531,11 @@ def _execute_send_message():
     """
     try:
         from ...core.composer_send import can_send
+        from ..operators.auth_ops import guest_seat_pending
         allowed, reason = can_send(bpy.context.scene)
-        if not allowed:
+        # Signed out while a refused guest session is retried: the operator
+        # says why in the chat (its poll admits the same case).
+        if not allowed and not guest_seat_pending():
             _report_send_refused(reason)
             return
         if hasattr(bpy.ops.mixie_chat, 'send_message'):
@@ -1062,10 +1065,12 @@ def register():
         default='SONNET',
     )
 
-    from ...core.account_identity import register as register_account_identity
+    from ...core.account_identity import register as register_account_identity, session_value
     register_account_identity()
 
-    # Security: password and login state on WindowManager (session-only, never saved to .blend)
+    # Security: password and login state on WindowManager. A WindowManager IS
+    # saved to (and adopted from) a file; the sign-in flags read through
+    # `session_value`, so a file never carries them into another session.
     bpy.types.WindowManager.mixie_chat_password = StringProperty(
         name="Password",
         description="Password for Mixie Chat login",
@@ -1079,6 +1084,7 @@ def register():
         description="Whether user is currently logged in",
         default=False,
         update=_mirror_model_picker,
+        **session_value("mixie_chat_is_logged_in"),
     )
 
     # Mirrors /auth/me's is_guest: logged in on a guest account (no sign-in
@@ -1088,6 +1094,7 @@ def register():
         description="Whether the current session is a guest account",
         default=False,
         update=_mirror_model_picker,
+        **session_value("mixie_chat_is_guest"),
     )
 
     bpy.types.WindowManager.mixie_chat_is_logging_in = BoolProperty(
@@ -1107,6 +1114,7 @@ def register():
         name="Session Expired",
         description="Session expired — re-login required",
         default=False,
+        **session_value("mixie_chat_session_expired"),
     )
 
     bpy.types.Scene.mixie_chat_credits = IntProperty(
@@ -1225,7 +1233,7 @@ def unregister():
         'mixie_chat_quick_prompt_mode', 'mixie_chat_quick_prompt_input',
         'mixie_chat_session_expired', 'mixie_chat_login_error',
         'mixie_chat_is_logging_in', 'mixie_chat_is_logged_in',
-        'mixie_chat_password',
+        'mixie_chat_is_guest', 'mixie_chat_password',
     ):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)

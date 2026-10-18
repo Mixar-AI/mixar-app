@@ -98,7 +98,8 @@ def _event_hits_header(area, event) -> bool:
 def _is_pill_window(area) -> bool:
     """The pill window has only a HEADER region (WINDOW and TOOLS are removed
     at creation in space_agent_bubble.cc); the island always has TOOLS."""
-    return not any(r.type == 'TOOLS' for r in area.regions)
+    return (sys.platform.startswith('linux') and getattr(area, 'width', 560) < 560) or not any(
+        r.type == 'TOOLS' for r in area.regions)
 
 
 def _pill_voice_claimed() -> bool:
@@ -148,6 +149,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
+        # Frameless Linux edges are handled natively before UI/keymap dispatch.
         # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region
         if (region is None or region.type != 'HEADER') and not _event_hits_header(

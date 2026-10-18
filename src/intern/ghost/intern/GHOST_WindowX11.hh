@@ -71,6 +71,8 @@ class GHOST_WindowX11 : public GHOST_Window {
   bool hasCustomDecoration() const override { return custom_decoration_; }
   bool supportsTransparentRendering() const override { return want_context_params_.use_alpha; }
   GHOST_TSuccess beginWindowDrag() override;
+  GHOST_TSuccess beginWindowResize(int edges) override;
+  void setClientMinimumSize(int width, int height) override;
   GHOST_TSuccess updateWindowDrag() override;
   GHOST_TSuccess endWindowDrag() override;
 

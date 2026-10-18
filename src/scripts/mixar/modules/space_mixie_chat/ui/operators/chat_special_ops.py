@@ -255,9 +255,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             return {'FINISHED'}
 
         # Sign-in notice buttons (guest mode): local operators, no dispatch.
-        from ...core.login_notice import BYOK_DIALOG_CHAT_ACTION, SIGN_IN_CHAT_ACTION
+        from ...core.login_notice import BYOK_DIALOG_CHAT_ACTION, SIGN_IN_CHAT_ACTION, sign_in_clicked
         if self.action_value == SIGN_IN_CHAT_ACTION:
-            return bpy.ops.mixie_chat.login()
+            return sign_in_clicked(context.scene)
         if self.action_value == BYOK_DIALOG_CHAT_ACTION:
             return bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT')
 
