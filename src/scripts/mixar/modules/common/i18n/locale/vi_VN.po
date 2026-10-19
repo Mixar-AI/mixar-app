@@ -5287,6 +5287,12 @@ msgstr ""
 msgid "Ambient"
 msgstr ""
 
+msgid "Bake Materials for the Game"
+msgstr ""
+
+msgid "Bake procedural and layered materials to image textures in the background when you build, so the game looks like Mixar (the first build takes longer)"
+msgstr ""
+
 msgid "Lighting Preset"
 msgstr ""
 
