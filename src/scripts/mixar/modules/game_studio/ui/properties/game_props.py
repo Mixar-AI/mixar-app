@@ -149,6 +149,11 @@ class MIXAR_GameSettings(PropertyGroup):
     sky: EnumProperty(name="Sky", items=SKY_ITEMS, **_view("world", "sky", SKY_ITEMS))
     sun: BoolProperty(name="Sun", **_view("world", "sun"))
     ambient: FloatProperty(name="Ambient", min=0.0, max=4.0, **_view("world", "ambient"))
+    bake_materials: BoolProperty(
+        name="Bake Materials for the Game",
+        description="Bake procedural and layered materials to image textures in the background when you "
+                    "build, so the game looks like Mixar (the first build takes longer)",
+        **_flag(None, "bake_materials"))
     preset: EnumProperty(name="Lighting Preset", items=PRESET_ITEMS, **_view("world", "preset", PRESET_ITEMS))
     bloom: BoolProperty(name="Bloom", description="Glow around bright and emissive surfaces", **_flag("world", "bloom"))
     scene_lights: BoolProperty(name="Scene Lights",

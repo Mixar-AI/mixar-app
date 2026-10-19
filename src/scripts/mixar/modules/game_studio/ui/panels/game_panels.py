@@ -117,6 +117,7 @@ class MIXAR_PT_game_settings(_GamePanel, Panel):
             col.prop(form, "fog")
             if form.fog:
                 col.prop(form, "fog_density")
+        layout.prop(form, "bake_materials")
         col = layout.column(heading="HUD")
         for name in ("show_score", "show_timer", "title_screen"):
             col.prop(form, name)

@@ -114,6 +114,7 @@ def game_status() -> dict:
         "excluded": checked["excluded"][:ROLE_LIST_LIMIT],
         "decor_auto": checked["decor_auto"][:ROLE_LIST_LIMIT],
         "procedural_materials": checked["procedural_materials"][:ROLE_LIST_LIMIT],
+        "bake_materials": checked["bake_materials"][:ROLE_LIST_LIMIT],
         "store": _store_identity(scene),
         "last_build": jobs.last("build"),
         "last_export": jobs.last("export"),

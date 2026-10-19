@@ -103,6 +103,11 @@ _DENIED_SUBMODULES = frozenset({
     "mixar.modules.game_studio.core.library",
     "mixar.modules.game_studio.core.library_install",
     "mixar.modules.game_studio.core.safe_extract",
+    # Material baking: saves copies, starts a background Mixar, writes the cache.
+    "mixar.modules.game_studio.core.bake_job",
+    "mixar.modules.game_studio.core.bake_run",
+    "mixar.modules.game_studio.core.bake_passes",
+    "mixar.modules.game_studio.core.bake_child",
     "mixar.modules.game_studio.ui",
 })
 

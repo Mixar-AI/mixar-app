@@ -32,6 +32,8 @@ DEFAULT_SETTINGS = {
     "camera": {"distance": 6.0, "height": 2.5},
     "world": {"sky": "procedural", "sun": True, "ambient": 0.6},
     "ui": {"show_score": True, "show_timer": True, "title_screen": True},
+    # Client-only: bake materials glTF cannot carry (``core/bake_plan``).
+    "bake_materials": True,
 }
 SECTIONS = ("rules", "player", "camera", "world", "ui")
 # Numeric fields: (type, min, max).
@@ -123,6 +125,11 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
                 merged["template"] = value
             else:
                 errors.append(f"template must be one of {', '.join(TEMPLATES)}")
+        elif key == "bake_materials":
+            if isinstance(value, bool):
+                merged["bake_materials"] = value
+            else:
+                errors.append("bake_materials must be true or false")
         elif key == "combat":
             merged["combat"], problems = combat.normalize(value, merged.get("combat"))
             if not merged["combat"]:
@@ -187,6 +194,7 @@ def build_nodes(objects) -> list[dict]:
 def build_spec(settings: dict, nodes: list[dict], version: str = "") -> dict:
     spec = copy.deepcopy(settings)
     spec.pop("combat", None)  # overrides only; the exporter adds the resolved block
+    spec.pop("bake_materials", None)  # a client setting; the fork never sees it
     spec["slug"] = spec.get("slug") or slugify(spec.get("title"))
     spec.update({
         "schema": SPEC_SCHEMA,

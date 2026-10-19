@@ -75,6 +75,12 @@ TITLE_MAX = 80
 SLUG_MAX = 48
 DEFAULT_TITLE = "Untitled Game"
 
+# Material baking for the game GLB (``core/bake_*``): a background Mixar
+# process bakes a temporary copy; only the cache stays in the game folder.
+BAKE_DIRNAME = ".bake"
+BAKE_CACHE_DIRNAME = "bake_cache"
+BAKE_TIMEOUT_S = 45 * 60.0
+
 # --- §3 fork CLI ------------------------------------------------------------
 FORK_MARKER = "mixar-godot"
 GODOT_PATH_CONFIG_KEY = "godot_path"

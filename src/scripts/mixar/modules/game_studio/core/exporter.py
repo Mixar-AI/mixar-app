@@ -25,7 +25,7 @@ import struct
 import bpy
 
 from ..constants import BOSS_TEMPLATE, EXPORT_DIRNAME, GAMES_SUBDIR, SCENE_FILE, SPEC_FILE
-from . import characters as game_characters, combat, roles, spec as game_spec, visuals
+from . import bake_plan, characters as game_characters, combat, roles, spec as game_spec, visuals
 
 
 def games_root() -> str:
@@ -72,7 +72,7 @@ def current_spec(scene, split=None) -> tuple[dict, list]:
 def inspect(scene) -> dict:
     """Everything a check needs, without writing: ``{spec, objects,
     characters, errors, warnings, combat_warnings, timing, excluded,
-    decor_auto, procedural_materials}`` (``excluded``: meshes ``visuals`` leaves out).
+    decor_auto, procedural_materials, bake_materials}`` (``excluded``: meshes ``visuals`` leaves out).
     ``spec["combat"]`` holds PREDICTED lengths here (the action's frames /
     fps); ``write_package`` replaces it, and ``combat_warnings``, with the
     block proven against the written file."""
@@ -85,7 +85,11 @@ def inspect(scene) -> dict:
         overrides = game_spec.load_settings(scene).get("combat") or {}
         spec["combat"], timing, problems = combat.resolve(found, overrides, combat.scene_fps(scene))
     excluded = split[1]
-    procedural = visuals.procedural_materials(objects)
+    bake = bake_plan.plan(objects)["materials"] if game_spec.load_settings(scene).get("bake_materials") else []
+    if bake:
+        warnings.append(f"{len(bake)} material(s) are baked to textures for the game in the background (the "
+                        "first build takes longer): " + ", ".join(bake[:8]) + (" …" if len(bake) > 8 else ""))
+    procedural = [name for name in visuals.procedural_materials(objects) if name not in bake]
     decor_auto = visuals.particle_fields(objects)
     if decor_auto:
         warnings.append(f"{len(decor_auto)} particle-field mesh(es) play as decor, without collision (tag one to "
@@ -100,7 +104,8 @@ def inspect(scene) -> dict:
                         + ", ".join(procedural[:8]) + (" …" if len(procedural) > 8 else ""))
     return {"spec": spec, "objects": objects, "characters": found, "errors": errors,
             "warnings": warnings, "combat_warnings": problems, "timing": timing,
-            "excluded": excluded, "decor_auto": decor_auto, "procedural_materials": procedural}
+            "excluded": excluded, "decor_auto": decor_auto, "procedural_materials": procedural,
+            "bake_materials": bake}
 
 
 def scene_lights(scene) -> list:

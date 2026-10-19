@@ -44,13 +44,13 @@ def parse_progress(line: str) -> dict | None:
             "message": str(data.get("message") or "")}
 
 
-def read_result(path: str) -> dict | None:
+def read_result(path: str, schema: str = RESULT_SCHEMA) -> dict | None:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
         return None
-    if not isinstance(data, dict) or data.get("schema") != RESULT_SCHEMA:
+    if not isinstance(data, dict) or data.get("schema") != schema:
         return None
     return data
 
@@ -80,9 +80,10 @@ def _popen_kwargs() -> dict:
 
 def run(binary: str, args: list, result_path: str, action: str, on_progress=None,
         cancel: threading.Event | None = None, timeout: float = BUILD_TIMEOUT_S,
-        popen=subprocess.Popen) -> dict:
+        popen=subprocess.Popen, schema: str = RESULT_SCHEMA) -> dict:
     """Blocking: run ``binary args… --mixar-result result_path``. Worker
-    threads only."""
+    threads only. Also runs the background bake process (``bake_job``),
+    whose result file carries its own ``schema``."""
     try:
         os.remove(result_path)  # never mistake a previous run's file for this one
     except OSError:
@@ -137,7 +138,7 @@ def run(binary: str, args: list, result_path: str, action: str, on_progress=None
             pass
     if stopped["reason"]:
         return synthesize_result(action, returncode, tail, stopped["reason"])
-    result = read_result(result_path)
+    result = read_result(result_path, schema)
     if result is None:
         return synthesize_result(action, returncode, tail)
     if returncode != 0 and result.get("ok"):

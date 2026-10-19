@@ -15,7 +15,7 @@ from __future__ import annotations
 import bpy
 
 from ..constants import DEFAULT_PLATFORMS
-from . import exporter, jobs, pipeline
+from . import bake_job, exporter, jobs, pipeline
 
 
 def busy() -> dict | None:
@@ -47,12 +47,39 @@ def _run(kind: str, scene, make_work, store_page=None, job_id=None) -> dict:
     blocked = busy()
     if blocked:
         return blocked
+    checked = exporter.inspect(scene)
+    if checked["bake_materials"]:
+        return _run_baked(kind, scene, make_work, checked, store_page, job_id)
     package = exporter.write_package(scene)
     if not package["ok"]:
         return refused(package)
     job_id = jobs.start(kind, make_work(context(scene, package, store_page)), job_id)
     return {"ok": True, "job_id": job_id, "state": "running",
             "warnings": package["warnings"], "game_dir": package["game_dir"]}
+
+
+def _run_baked(kind: str, scene, make_work, checked: dict, store_page, job_id) -> dict:
+    """Materials need a bake: the main thread only saves a temporary copy;
+    the bake, the GLB and the spec come from a background Mixar process
+    (``bake_job``) before the Godot stages."""
+    spec = checked["spec"]
+    errors = list(checked["errors"])
+    if not any(obj.type == 'MESH' for obj in checked["objects"]):
+        errors.append("no visible meshes to export")
+    game_dir = exporter.game_dir_for(spec["slug"])
+    package = {"ok": not errors, "game_dir": game_dir, "spec": spec, "errors": errors,
+               "warnings": list(checked["warnings"])}
+    if errors:
+        return refused(package)
+    try:
+        bake = bake_job.prepare(scene, game_dir)
+    except (OSError, RuntimeError) as exc:
+        return {"ok": False, "job_id": None, "state": "failed", "error_code": "bake_prepare_failed",
+                "error": f"Could not save a copy of the scene to bake ({exc.__class__.__name__})."}
+    work = bake_job.with_bake(bake, make_work(context(scene, package, store_page)))
+    job_id = jobs.start(kind, work, job_id)
+    return {"ok": True, "job_id": job_id, "state": "running", "warnings": package["warnings"],
+            "game_dir": game_dir, "baking": checked["bake_materials"]}
 
 
 def start(kind: str, scene, play=False, platforms=None) -> dict:
