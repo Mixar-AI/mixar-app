@@ -72,9 +72,21 @@ def inspect(scene) -> dict:
             "warnings": warnings, "combat_warnings": problems, "timing": timing}
 
 
-def export_spec(objects, animations=None) -> dict:
+def scene_lights(scene) -> list:
+    """v1.4 ``world.scene_lights``: the scene's visible, renderable lights
+    that no ``ignore`` role covers (a preview rig tagged ignore keeps its
+    lights out), name order. The lane turns area lights into spots."""
+    found = []
+    for obj in getattr(scene, "objects", ()) or ():
+        if getattr(obj, "type", "") == 'LIGHT' and roles.is_visible(obj) and roles.governing(obj)[0] != "ignore":
+            found.append(obj)
+    return sorted(found, key=lambda obj: obj.name)
+
+
+def export_spec(objects, animations=None, lights=None) -> dict:
     """The shared lane's spec for a game GLB of ``objects``. ``animations``
-    None exports every clip (v1 templates); a list selects clips."""
+    None exports every clip (v1 templates); a list selects clips. ``lights``
+    (v1.4) are carried as glTF punctual lights; None keeps them out."""
     meshes = [obj.name for obj in objects if obj.type == 'MESH']
     extras = [obj.name for obj in objects if obj.type in ('EMPTY', 'ARMATURE')]
     spec = {"format": "glb", "use_case": "game", "target_scope": "scene",
@@ -82,6 +94,9 @@ def export_spec(objects, animations=None) -> dict:
             "suggested_filename": SCENE_FILE}
     if animations is not None:
         spec["animations"] = list(animations)
+    if lights is not None:
+        spec["scene_lights"] = True
+        spec["extra_object_names"] = extras + [obj.name for obj in lights]
     return spec
 
 
@@ -161,10 +176,11 @@ def write_package(scene, game_dir: str = "") -> dict:
         return result
     from mixar.modules.space_mixie_chat.core.agent_export import export_to_path
     glb = os.path.join(export_dir, SCENE_FILE)
-    exported = export_to_path(glb, export_spec(objects, clips))
+    lights = scene_lights(scene) if (spec.get("world") or {}).get("scene_lights") else None
+    exported = export_to_path(glb, export_spec(objects, clips, lights))
     result["export"] = {key: exported.get(key) for key in
                         ("success", "error", "mesh_count", "file_size_bytes", "warning", "verification",
-                         "clips", "clips_missing")}
+                         "clips", "clips_missing", "scene_objects")}
     if not exported.get("success"):
         errors.append(f"GLB export failed: {exported.get('error') or 'unknown error'}")
         return result

@@ -23,13 +23,14 @@ import os
 import re
 import time
 import uuid
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 
 import bpy
 
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
 from .export_emission import baked_emission_masks
+from .export_lights import staged_game_lights
 from .export_materials import temporary_export_materials as _temporary_export_materials
 from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
@@ -43,7 +44,8 @@ from .export_preflight import (
 )
 from .export_presets import PRESETS, preset_kwargs, preset_report, stl_kwargs  # noqa: F401
 from .export_verify import file_clip_names, verify_export
-from .export_web import game_scene_objects, is_game_gltf, is_web_gltf, web_scene_objects
+from .export_web import (_empty_ancestors, game_scene_objects, is_game_gltf, is_web_gltf,
+                         web_scene_objects)
 
 EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
               "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz", "stl": ".stl"}
@@ -158,6 +160,7 @@ def run_export(session_id: str, spec: dict) -> dict:
     if animations is not None:
         animations = [str(name) for name in animations]
     counts = {}
+    lights_ctx = ExitStack()
     try:
         if active and mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -185,6 +188,11 @@ def run_export(session_id: str, spec: dict) -> dict:
             # are selected like those of a deforming rig.
             armatures |= {obj for obj in staging if obj.type == 'ARMATURE'}
             counts["armature_count"] = len(armatures)
+            if spec.get("scene_lights"):  # game contract v1.4: the scene's own lights
+                game_lights, light_counts = lights_ctx.enter_context(
+                    staged_game_lights(spec.get("extra_object_names"), scene))
+                staging |= set(game_lights) | _empty_ancestors(game_lights)
+                scene_objects = {"cameras": 0, **light_counts}
         export_objects = set(meshes) | armatures | staging
         if bpy.ops.object.select_all.poll():
             bpy.ops.object.select_all(action='DESELECT')
@@ -209,6 +217,8 @@ def run_export(session_id: str, spec: dict) -> dict:
                 with texture_ctx as (staged, textures_folder), emission_ctx as (_baked, emission_notes):
                     overrides = ({"path_mode": "RELATIVE"} if staged
                                  else stl_kwargs(spec) if stl else None)
+                    if scene_objects is not None and is_game_gltf(use_case, fmt):
+                        overrides = {**(overrides or {}), "export_lights": True}
                     status, kwargs, anim_mode, warning = _run_operator(
                         fmt, filepath, use_case, animations, overrides,
                     )
@@ -273,6 +283,7 @@ def run_export(session_id: str, spec: dict) -> dict:
                           "verification_passed": False, "issue_count": 0})
         return {"success": False, "error": scrub_error(exc)}
     finally:
+        lights_ctx.close()
         clear_repair_cache(session_id)
         try:
             if bpy.ops.object.select_all.poll():

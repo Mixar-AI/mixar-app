@@ -9,7 +9,9 @@ subtree (an Armature modifier pointing at it, or armature parenting). Its
 clips are the ACTIONS on its rigs (active action and NLA strip actions —
 never strip names: helper strips are literally called ``idle``/``walk``)
 named ``<clip_prefix><state>``. ``classify`` maps a clip to its state;
-``attack_*`` and ``light_*`` are families (one or more clips).
+``attack_*`` and ``light_*`` are families (one or more clips). The v1.4
+optional states (``strafe_left``/``strafe_right``/``walk_back``) export like
+the others but are reported apart, as ``optional_missing``.
 
 Pure attribute reads, no ``bpy`` import: the standalone suite drives this
 with fakes, and the exporter, ``game_status`` and the Combat panel share it.
@@ -19,7 +21,7 @@ from __future__ import annotations
 
 import re
 
-from ..constants import CHARACTER_ROLES, CLIP_STATES, DEFAULT_CLIP_PREFIX
+from ..constants import CHARACTER_ROLES, CLIP_STATES, DEFAULT_CLIP_PREFIX, OPTIONAL_STATES
 from . import roles
 
 FAMILIES = {"attack_*": re.compile(r"^attack_[A-Za-z0-9_]+$"), "light_*": re.compile(r"^light_[0-9]+$")}
@@ -37,7 +39,7 @@ def classify(clip: str, prefix: str, role: str) -> str | None:
     if not prefix or not clip.startswith(prefix):
         return None
     rest = clip[len(prefix):]
-    for state in CLIP_STATES.get(role, ()):
+    for state in CLIP_STATES.get(role, ()) + OPTIONAL_STATES.get(role, ()):
         family = FAMILIES.get(state)
         if (family.match(rest) if family else rest == state):
             return state
@@ -88,7 +90,8 @@ def is_character_role(role) -> bool:
 
 def describe(node, role: str, params: dict, subtree) -> dict:
     """``{object, role, rig, rigs, clip_prefix, clips: {state: [clip]},
-    missing: [state], actions: {clip: Action}}`` for one role node.
+    missing: [state], optional_missing: [state], actions: {clip: Action}}``
+    for one role node.
     ``actions`` holds live objects for the exporter; reports drop it."""
     armatures = rigs(subtree)
     prefix = clip_prefix(role, params)
@@ -101,11 +104,13 @@ def describe(node, role: str, params: dict, subtree) -> dict:
         actions[action.name] = action
     for names in clips.values():
         names.sort()
+    states = CLIP_STATES.get(role, ()) + OPTIONAL_STATES.get(role, ())
     return {
         "object": node.name, "role": role, "rig": bool(armatures),
         "rigs": [arm.name for arm in armatures], "clip_prefix": prefix,
-        "clips": {state: clips[state] for state in CLIP_STATES.get(role, ()) if state in clips},
+        "clips": {state: clips[state] for state in states if state in clips},
         "missing": [state for state in CLIP_STATES.get(role, ()) if state not in clips],
+        "optional_missing": [state for state in OPTIONAL_STATES.get(role, ()) if state not in clips],
         "actions": actions,
     }
 

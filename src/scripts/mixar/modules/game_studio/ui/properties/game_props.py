@@ -49,6 +49,12 @@ SKY_ITEMS = (
     ("procedural", "Procedural Sky", "A generated daylight sky"),
     ("none", "None", "Plain background"),
 )
+PRESET_ITEMS = (
+    ("dusk", "Dusk", "Low warm sun, ash-tinted fog"),
+    ("day", "Day", "High white sun, light haze"),
+    ("night", "Night", "Moonlight, deep blue fog"),
+    ("cavern", "Cavern", "No sky light; the scene's lights and lava carry the arena"),
+)
 _ROLE_KEYS = [key for key, *_ in ROLE_ITEMS]
 _cache = {"key": None, "settings": None}
 
@@ -105,6 +111,29 @@ def _boss_hp_set(_self, value):
         roles.set_param(boss, "hp", int(value))
 
 
+def _flag(section, field):
+    """A BoolProperty view onto an optional flag (absent reads False)."""
+    view = _view(section, field)
+    return {"get": lambda self: bool(view["get"](self)), "set": view["set"]}
+
+
+def _fog_on_get(_self):
+    return isinstance(_settings()["world"].get("fog"), dict)
+
+
+def _fog_on_set(_self, value):
+    _write("world", "fog", bool(value))
+
+
+def _fog_density_get(_self):
+    fog = _settings()["world"].get("fog")
+    return float(fog.get("density", 0.0)) if isinstance(fog, dict) else 0.0
+
+
+def _fog_density_set(_self, value):
+    _write("world", "fog", {"density": float(value)})
+
+
 class MIXAR_GameSettings(PropertyGroup):
     title: StringProperty(name="Title", **_view(None, "title"))
     template: EnumProperty(name="Template", items=TEMPLATE_ITEMS, **_view(None, "template", TEMPLATE_ITEMS))
@@ -120,6 +149,14 @@ class MIXAR_GameSettings(PropertyGroup):
     sky: EnumProperty(name="Sky", items=SKY_ITEMS, **_view("world", "sky", SKY_ITEMS))
     sun: BoolProperty(name="Sun", **_view("world", "sun"))
     ambient: FloatProperty(name="Ambient", min=0.0, max=4.0, **_view("world", "ambient"))
+    preset: EnumProperty(name="Lighting Preset", items=PRESET_ITEMS, **_view("world", "preset", PRESET_ITEMS))
+    bloom: BoolProperty(name="Bloom", description="Glow around bright and emissive surfaces", **_flag("world", "bloom"))
+    scene_lights: BoolProperty(name="Scene Lights",
+                               description="Carry this scene's lights into the game (area lights become soft spots)",
+                               **_flag("world", "scene_lights"))
+    fog: BoolProperty(name="Fog", description="Depth and height fog in the arena", get=_fog_on_get, set=_fog_on_set)
+    fog_density: FloatProperty(name="Fog Density", min=0.0, max=1.0, precision=3, step=0.1,
+                               get=_fog_density_get, set=_fog_density_set)
     show_score: BoolProperty(name="Score", **_view("ui", "show_score"))
     show_timer: BoolProperty(name="Timer", **_view("ui", "show_timer"))
     title_screen: BoolProperty(name="Title Screen", **_view("ui", "title_screen"))

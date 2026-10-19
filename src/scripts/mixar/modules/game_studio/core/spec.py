@@ -5,7 +5,8 @@
 
 The scene stores only the SETTINGS (title, template, rules, player,
 camera, world, ui, and the ``configure_game(combat=...)`` overrides under
-``combat``) as JSON in ``scene["mixar_game_spec"]``. The spec's ``combat``
+``combat``) as JSON in ``scene["mixar_game_spec"]``. v1.4's ``world``
+atmosphere fields (``core/world.py``) default for boss_fight on load. The spec's ``combat``
 block is resolved at build time (``combat.resolve``), never stored. ``nodes`` are
 derived from object roles at build time, keyed by object name — the glTF
 node name — so a rename never leaves a stale entry behind.
@@ -18,8 +19,9 @@ import json
 import re
 
 from ..constants import (BOSS_DEFAULTS, BOSS_TEMPLATE, DEFAULT_PLATFORMS, DEFAULT_TITLE, PLATFORMS, SCENE_FILE,
-                         SKIES, SLUG_MAX, SPEC_PROP, SPEC_SCHEMA, TEMPLATES, TITLE_MAX, WIN_RULES)
-from . import combat, roles
+                         SKIES, SLUG_MAX, SPEC_PROP, SPEC_SCHEMA, TEMPLATES, TITLE_MAX, WIN_RULES, WORLD_PRESETS,
+                         BOSS_WORLD_DEFAULTS)
+from . import combat, roles, world as game_world
 
 DEFAULT_SETTINGS = {
     "title": DEFAULT_TITLE,
@@ -44,8 +46,9 @@ _NUMBERS = {
     ("camera", "height"): (float, -50.0, 100.0),
     ("world", "ambient"): (float, 0.0, 4.0),
 }
-_CHOICES = {("rules", "win"): WIN_RULES, ("world", "sky"): SKIES}
-_FLAGS = {("world", "sun"), ("ui", "show_score"), ("ui", "show_timer"), ("ui", "title_screen")}
+_CHOICES = {("rules", "win"): WIN_RULES, ("world", "sky"): SKIES, ("world", "preset"): WORLD_PRESETS}
+_FLAGS = {("world", "sun"), ("world", "bloom"), ("world", "scene_lights"),
+          ("ui", "show_score"), ("ui", "show_timer"), ("ui", "title_screen")}
 
 
 def slugify(title: str) -> str:
@@ -65,6 +68,8 @@ def load_settings(scene) -> dict:
     if isinstance(stored, dict):
         merged, _errors = merge_settings(settings, stored)
         settings = merged
+    if settings.get("template") == BOSS_TEMPLATE:
+        game_world.fill_boss_defaults(settings["world"])
     return settings
 
 
@@ -113,9 +118,8 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
             if value in TEMPLATES:
                 if value == BOSS_TEMPLATE and merged.get("template") != BOSS_TEMPLATE:
                     _boss_defaults(merged, changes)
-                elif value != BOSS_TEMPLATE and merged["rules"].get("win") == "defeat_boss" and \
-                        "win" not in _asked_rules(changes):
-                    merged["rules"]["win"] = DEFAULT_SETTINGS["rules"]["win"]
+                elif value != BOSS_TEMPLATE and merged.get("template") == BOSS_TEMPLATE:
+                    _leave_boss(merged, changes)
                 merged["template"] = value
             else:
                 errors.append(f"template must be one of {', '.join(TEMPLATES)}")
@@ -129,6 +133,14 @@ def merge_settings(base: dict, changes: dict) -> tuple[dict, list[str]]:
                 errors.append(f"{key} must be an object")
                 continue
             for field, field_value in value.items():
+                if (key, field) == ("world", "fog"):
+                    merged["world"]["fog"], problem = game_world.normalize_fog(
+                        field_value, merged["world"].get("fog"))
+                    if merged["world"]["fog"] is None:
+                        merged["world"].pop("fog")
+                    if problem:
+                        errors.append(problem)
+                    continue
                 try:
                     merged[key][field] = _coerce((key, field), field_value)
                 except (TypeError, ValueError) as exc:
@@ -151,6 +163,19 @@ def _boss_defaults(merged: dict, changes: dict) -> None:
     for field, value in BOSS_DEFAULTS.items():
         if field not in asked:
             merged["rules"][field] = value
+
+
+def _leave_boss(merged: dict, changes: dict) -> None:
+    """Leaving boss_fight: a defeat_boss win falls back to the default, and
+    the atmosphere fields still at their boss defaults are dropped (so a
+    third-person game does not start carrying scene lights), unless the same
+    change sets them."""
+    if merged["rules"].get("win") == "defeat_boss" and "win" not in _asked_rules(changes):
+        merged["rules"]["win"] = DEFAULT_SETTINGS["rules"]["win"]
+    asked = (changes or {}).get("world") if isinstance((changes or {}).get("world"), dict) else {}
+    for field, value in BOSS_WORLD_DEFAULTS.items():
+        if field not in asked and merged["world"].get(field) == value:
+            merged["world"].pop(field)
 
 
 def build_nodes(objects) -> list[dict]:

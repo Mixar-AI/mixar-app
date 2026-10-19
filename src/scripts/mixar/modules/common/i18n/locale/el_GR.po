@@ -5036,6 +5036,9 @@ msgstr ""
 msgid "World"
 msgstr "Κόσμος"
 
+msgid "Atmosphere"
+msgstr ""
+
 msgid "HUD"
 msgstr ""
 
@@ -5221,6 +5224,30 @@ msgstr ""
 msgid "Plain background"
 msgstr ""
 
+msgid "Dusk"
+msgstr ""
+
+msgid "Low warm sun, ash-tinted fog"
+msgstr ""
+
+msgid "Day"
+msgstr ""
+
+msgid "High white sun, light haze"
+msgstr ""
+
+msgid "Night"
+msgstr ""
+
+msgid "Moonlight, deep blue fog"
+msgstr ""
+
+msgid "Cavern"
+msgstr ""
+
+msgid "No sky light; the scene's lights and lava carry the arena"
+msgstr ""
+
 msgid "Title"
 msgstr "Τίτλος"
 
@@ -5258,6 +5285,30 @@ msgid "Sun"
 msgstr ""
 
 msgid "Ambient"
+msgstr ""
+
+msgid "Lighting Preset"
+msgstr ""
+
+msgid "Bloom"
+msgstr ""
+
+msgid "Glow around bright and emissive surfaces"
+msgstr ""
+
+msgid "Scene Lights"
+msgstr ""
+
+msgid "Carry this scene's lights into the game (area lights become soft spots)"
+msgstr ""
+
+msgid "Fog"
+msgstr ""
+
+msgid "Depth and height fog in the arena"
+msgstr ""
+
+msgid "Fog Density"
 msgstr ""
 
 msgid "Timer"

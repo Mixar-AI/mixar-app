@@ -32,6 +32,9 @@ CLIP_STATES = {
     # The contract names no enemy states; an enemy plays the boss's set.
     "enemy": ("idle", "walk", "attack_*", "roar", "hit", "death"),
 }
+# v1.4 §1: optional looping player states. Exported and listed when present;
+# a missing one is never an error, only ``optional_missing``.
+OPTIONAL_STATES = {"player": ("strafe_left", "strafe_right", "walk_back")}
 # Pose markers on an action that time its combat windows (§2).
 HIT_MARKERS = ("hit_start", "hit_end")
 HIT_MARKER_SINGLE = "hit"
@@ -62,6 +65,11 @@ WIN_RULES = ("collect_all", "reach_goal", "survive", "score", "defeat_boss")
 BOSS_TEMPLATE = "boss_fight"
 # What switching to boss_fight sets unless the same change sets it (§2).
 BOSS_DEFAULTS = {"win": "defeat_boss", "lives": 1}
+# v1.4 §3 arena atmosphere: optional ``world`` fields. A boss_fight spec
+# fills any it lacks with these; other templates leave them out.
+WORLD_PRESETS = ("dusk", "day", "night", "cavern")
+DEFAULT_FOG = {"density": 0.012, "height": 2.0, "color": [0.55, 0.45, 0.40]}
+BOSS_WORLD_DEFAULTS = {"fog": DEFAULT_FOG, "bloom": True, "preset": "dusk", "scene_lights": True}
 SKIES = ("procedural", "none")
 TITLE_MAX = 80
 SLUG_MAX = 48
