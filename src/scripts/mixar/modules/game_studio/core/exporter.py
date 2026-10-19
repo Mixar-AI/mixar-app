@@ -160,6 +160,44 @@ def read_timeline(glb_path: str) -> dict:
 
 
 
+def strip_rig_object_motion(glb_path: str, rig_names) -> int:
+    """boss_fight: drop every animation channel that moves a character RIG
+    as an object (translation / rotation / scale of the rig node). The kit
+    moves the body; a rig that rotates or translates in a clip tips the
+    character over in game. Bone channels stay. Rewrites only the GLB's JSON
+    chunk (unused accessors are allowed by glTF). Returns channels removed."""
+    with open(glb_path, "rb") as handle:
+        data = handle.read()
+    if data[:4] != b"glTF":
+        raise ValueError("not a GLB file")
+    json_length = struct.unpack("<I", data[12:16])[0]
+    doc = json.loads(data[20:20 + json_length])
+    rest = data[20 + json_length:]
+    rigs = {index for index, node in enumerate(doc.get("nodes") or []) if node.get("name") in set(rig_names)}
+    removed = 0
+    for anim in doc.get("animations") or []:
+        keep = [c for c in anim.get("channels") or []
+                if not (c.get("target", {}).get("node") in rigs
+                        and c.get("target", {}).get("path") in ("translation", "rotation", "scale"))]
+        removed += len(anim.get("channels") or []) - len(keep)
+        used = sorted({c["sampler"] for c in keep})
+        remap = {old: new for new, old in enumerate(used)}
+        anim["samplers"] = [anim["samplers"][i] for i in used]
+        for channel in keep:
+            channel["sampler"] = remap[channel["sampler"]]
+        anim["channels"] = keep
+    if not removed:
+        return 0
+    body = json.dumps(doc, separators=(",", ":")).encode("utf-8")
+    body += b" " * (-len(body) % 4)
+    total = 12 + 8 + len(body) + len(rest)
+    temp = glb_path + ".tmp"
+    with open(temp, "wb") as handle:
+        handle.write(b"glTF" + struct.pack("<II", 2, total) + struct.pack("<I", len(body)) + b"JSON" + body + rest)
+    os.replace(temp, glb_path)
+    return removed
+
+
 def _prove_combat(scene, checked: dict, glb: str, clips: list, result: dict) -> None:
     """Resolve ``spec["combat"]`` against the clip timeline of the GLB just
     written; the per-clip proof goes to ``result["combat_proof"]``."""
@@ -226,6 +264,12 @@ def write_package(scene, game_dir: str = "") -> dict:
     for issue in (exported.get("verification") or {}).get("issues") or ():
         warnings.append(f"scene.glb: {issue}")
     if boss_fight:
+        rigs = [name for character in checked["characters"] for name in character["rigs"]]
+        try:
+            result["rig_object_channels_removed"] = strip_rig_object_motion(glb, rigs)
+        except (OSError, ValueError, KeyError, IndexError) as exc:
+            errors.append(f"could not clean the character rigs' clips in {SCENE_FILE} ({exc.__class__.__name__})")
+            return result
         _prove_combat(scene, checked, glb, clips, result)
     try:
         _write_json(os.path.join(export_dir, SPEC_FILE), spec)

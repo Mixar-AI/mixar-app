@@ -9,6 +9,7 @@ exported clip timeline."""
 import json
 import struct
 import types
+from pathlib import Path
 
 import pytest
 
@@ -333,3 +334,62 @@ def test_post_install_selftest_allows_a_boss_fight():
     """A boss_fight self-test plays a scripted fight (~20 s real time)."""
     from mixar.modules.game_studio.core import library_install
     assert library_install.SELFTEST_TIMEOUT_S >= 30
+
+
+# --- character rigs never move as objects in a clip -----------------------------------
+
+def _glb(tmp_path, doc, binary=b"\0" * 16):
+    body = json.dumps(doc).encode()
+    body += b" " * (-len(body) % 4)
+    bin_chunk = struct.pack("<I", len(binary)) + b"BIN\0" + binary
+    path = tmp_path / "scene.glb"
+    path.write_bytes(b"glTF" + struct.pack("<II", 2, 12 + 8 + len(body) + len(bin_chunk))
+                     + struct.pack("<I", len(body)) + b"JSON" + body + bin_chunk)
+    return path
+
+
+def test_rig_object_motion_is_stripped_and_bones_kept(tmp_path):
+    from mixar.modules.game_studio.core import exporter
+    doc = {"nodes": [{"name": "Player_Rig"}, {"name": "R_Hand"}, {"name": "Boss_Rig"}],
+           "accessors": [{"min": [0.0], "max": [1.0]}] * 6,
+           "animations": [{"name": "player_run",
+                           "samplers": [{"input": 0, "output": i} for i in range(1, 5)],
+                           "channels": [{"sampler": 0, "target": {"node": 0, "path": "rotation"}},
+                                        {"sampler": 1, "target": {"node": 1, "path": "rotation"}},
+                                        {"sampler": 2, "target": {"node": 0, "path": "translation"}},
+                                        {"sampler": 3, "target": {"node": 1, "path": "translation"}}]}]}
+    path = _glb(tmp_path, doc)
+    assert exporter.strip_rig_object_motion(str(path), ["Player_Rig", "Boss_Rig"]) == 2
+    data = path.read_bytes()
+    length = struct.unpack("<I", data[12:16])[0]
+    assert struct.unpack("<I", data[8:12])[0] == len(data)
+    out = json.loads(data[20:20 + length])
+    anim = out["animations"][0]
+    assert [c["target"] for c in anim["channels"]] == [{"node": 1, "path": "rotation"},
+                                                       {"node": 1, "path": "translation"}]
+    assert [c["sampler"] for c in anim["channels"]] == [0, 1] and [s["output"] for s in anim["samplers"]] == [2, 4]
+    assert data[20 + length:].startswith(struct.pack("<I", 16) + b"BIN\0")
+    assert exporter.read_timeline(str(path))["player_run"] == (0.0, 1.0)
+    assert exporter.strip_rig_object_motion(str(path), ["Player_Rig"]) == 0  # idempotent
+
+
+def test_a_prefixed_camera_action_is_never_a_character_clip(make_obj):
+    """A preview camera's object action named like a clip
+    (``player_stride_rebuild_Camera.001Action``) is not a state, and is not
+    on the rig, so it is never exported or played on the character."""
+    from test_game_studio_arena_feel import _rig_with
+    root, subtree = _rig_with(["player_idle", "player_run"], make_obj)
+    camera_action = types.SimpleNamespace(name="player_stride_rebuild_Camera.001Action", frame_range=(1, 145),
+                                          pose_markers=[])
+    camera = make_obj("player_stride_rebuild_Camera.001", "CAMERA")
+    camera.animation_data = types.SimpleNamespace(action=camera_action, nla_tracks=[])
+    assert characters.classify(camera_action.name, "player_", "player") is None
+    found = characters.describe(root, "player", {}, subtree + [camera])
+    assert "player_stride_rebuild_Camera.001Action" not in characters.export_clips([found])
+    assert sorted(found["actions"]) == ["player_idle", "player_run"]
+
+
+def test_boss_fight_export_strips_rig_object_motion_before_the_timeline_proof():
+    source = (Path(__file__).parents[2] / "src/scripts/mixar/modules/game_studio/core/exporter.py").read_text()
+    body = source[source.index("def write_package("):]
+    assert body.index("strip_rig_object_motion(glb, rigs)") < body.index("_prove_combat(scene, checked, glb")
