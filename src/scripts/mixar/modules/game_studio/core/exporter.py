@@ -25,7 +25,7 @@ import struct
 import bpy
 
 from ..constants import BOSS_TEMPLATE, EXPORT_DIRNAME, GAMES_SUBDIR, SCENE_FILE, SPEC_FILE
-from . import characters as game_characters, combat, roles, spec as game_spec
+from . import characters as game_characters, combat, roles, spec as game_spec, visuals
 
 
 def games_root() -> str:
@@ -50,14 +50,15 @@ def app_version() -> str:
 
 def current_spec(scene) -> tuple[dict, list]:
     """``(spec, in_game_objects)`` for ``scene`` as it stands."""
-    objects = [obj for obj in roles.game_objects(scene) if roles.in_game(obj)]
+    objects, _excluded = visuals.split_visible([obj for obj in roles.game_objects(scene) if roles.in_game(obj)])
     settings = game_spec.load_settings(scene)
     return game_spec.build_spec(settings, game_spec.build_nodes(objects), app_version()), objects
 
 
 def inspect(scene) -> dict:
     """Everything a check needs, without writing: ``{spec, objects,
-    characters, errors, warnings, combat_warnings, timing}``.
+    characters, errors, warnings, combat_warnings, timing, excluded,
+    procedural_materials}`` (``excluded``: meshes ``visuals`` leaves out).
     ``spec["combat"]`` holds PREDICTED lengths here (the action's frames /
     fps); ``write_package`` replaces it, and ``combat_warnings``, with the
     block proven against the written file."""
@@ -68,8 +69,18 @@ def inspect(scene) -> dict:
     if spec.get("template") == BOSS_TEMPLATE:
         overrides = game_spec.load_settings(scene).get("combat") or {}
         spec["combat"], timing, problems = combat.resolve(found, overrides, combat.scene_fps(scene))
+    _kept, excluded = visuals.split_visible([obj for obj in roles.game_objects(scene) if roles.in_game(obj)])
+    procedural = visuals.procedural_materials(objects)
+    if excluded:
+        warnings.append(f"{len(excluded)} mesh(es) left out of the game, glTF cannot show them (tag one to keep "
+                        "it): " + ", ".join(f"{e['object']} ({e['reason']})" for e in excluded[:6])
+                        + (" …" if len(excluded) > 6 else ""))
+    if procedural:
+        warnings.append("procedural material(s) export as flat colour; bake or use image textures: "
+                        + ", ".join(procedural[:8]) + (" …" if len(procedural) > 8 else ""))
     return {"spec": spec, "objects": objects, "characters": found, "errors": errors,
-            "warnings": warnings, "combat_warnings": problems, "timing": timing}
+            "warnings": warnings, "combat_warnings": problems, "timing": timing,
+            "excluded": excluded, "procedural_materials": procedural}
 
 
 def scene_lights(scene) -> list:

@@ -111,6 +111,8 @@ def game_status() -> dict:
                   "assignments": tagged[:ROLE_LIST_LIMIT], "truncated": len(tagged) > ROLE_LIST_LIMIT},
         "spec": _spec_report(scene, checked),
         "characters": _characters_report(checked),
+        "excluded": checked["excluded"][:ROLE_LIST_LIMIT],
+        "procedural_materials": checked["procedural_materials"][:ROLE_LIST_LIMIT],
         "store": _store_identity(scene),
         "last_build": jobs.last("build"),
         "last_export": jobs.last("export"),

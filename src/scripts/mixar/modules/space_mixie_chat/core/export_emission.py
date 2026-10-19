@@ -277,3 +277,7 @@ def baked_emission_masks(meshes):
                 bpy.data.images.remove(image)
             except Exception:
                 pass
+
+
+# Shared with game_studio's material checks (procedural base colours).
+upstream_images = _upstream_images

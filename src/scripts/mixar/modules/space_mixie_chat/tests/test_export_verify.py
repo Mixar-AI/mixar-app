@@ -379,3 +379,16 @@ def test_glb_dimensions_are_world_space(tmp_path):
     assert [round(v, 4) for v in lo] == [8.0, 0.0, 0.0]
     assert [round(v, 4) for v in hi] == [14.0, 4.0, 12.0]
     assert export_gltf_bounds.gltf_world_bounds({"nodes": [{"name": "empty"}], "scenes": [{"nodes": [0]}]}) is None
+
+
+def test_objects_sharing_mesh_data_are_counted_by_mesh_nodes():
+    # Six braziers instancing one mesh: glTF writes one mesh used by six nodes.
+    doc = {"meshes": [{"name": "Brazier", "primitives": []}],
+           "nodes": [{"name": f"Brazier_{i:02d}", "mesh": 0} for i in range(6)] + [{"name": "Root"}]}
+    result = {"issues": []}
+    export_verify.summarize_gltf(doc, result)
+    assert result["meshes"] == 1 and result["mesh_nodes"] == 6
+    export_verify._compare(result, {"mesh_count": 6}, "glb")
+    assert not any("mesh(es)" in issue for issue in result["issues"])
+    export_verify._compare(result, {"mesh_count": 7}, "glb")
+    assert "The file holds 6 mesh(es); 7 were expected." in result["issues"]
