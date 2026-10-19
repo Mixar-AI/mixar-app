@@ -41,7 +41,7 @@ def setup_cycles(scene) -> str:
     scene.render.engine = 'CYCLES'
     scene.cycles.samples = 4
     scene.cycles.use_denoising = False
-    scene.render.bake.margin = 8
+    scene.render.bake.margin = 2  # under half the 0.003 island gap at 2048 px
     device = "CPU"
     try:
         prefs = bpy.context.preferences.addons["cycles"].preferences

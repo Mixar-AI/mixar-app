@@ -55,6 +55,37 @@ def _use_own_tree():
     return modules
 
 
+def _apply_dirty_images(manifest_path):
+    """Put the session's painted-but-unsaved pixels into this copy and repack
+    them, so both the bake and the glTF exporter read the live pixels."""
+    if not manifest_path or not os.path.isfile(manifest_path):
+        return
+    import bpy
+    import numpy as np
+    with open(manifest_path, encoding="utf-8") as handle:
+        for item in json.load(handle):
+            image = bpy.data.images.get(item["name"])
+            if image is None or tuple(image.size) != (item["width"], item["height"]):
+                continue
+            pixels = np.load(item["pixels"])
+            if len(pixels) != len(image.pixels):
+                continue
+            image.pixels.foreach_set(pixels)
+            image.update()
+            image.pack()
+
+
+def _single_user_object_relative(scene):
+    """Instances whose material reads Object Info / object coordinates each
+    get their own mesh copy, so each bakes its own variation."""
+    from mixar.modules.game_studio.core import bake_plan
+    for obj in scene.objects:
+        data = getattr(obj, "data", None)
+        if obj.type == 'MESH' and data is not None and data.users > 1 and any(
+                bake_plan.material_verdict(m)["object_relative"] for m in bake_plan._materials(obj)):
+            obj.data = data.copy()
+
+
 def progress(pct, message, step="bake"):
     print("MIXAR_PROGRESS " + json.dumps({"step": step, "pct": round(float(pct), 1), "message": message}),
           flush=True)
@@ -85,6 +116,8 @@ def main():
         if bpy.context.window is not None and bpy.context.window.scene is not scene:
             bpy.context.window.scene = scene
         progress(2, "Preparing the bake")
+        _apply_dirty_images(config.get("dirty_images"))
+        _single_user_object_relative(scene)
         objects, _excluded = visuals.split_visible([o for o in roles.game_objects(scene) if roles.in_game(o)])
         bake_started = time.monotonic()
         stats = bake_run.bake_scene(scene, objects, config["cache_dir"],

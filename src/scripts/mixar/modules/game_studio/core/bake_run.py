@@ -87,9 +87,9 @@ def make_chunks(meshes) -> list[dict]:
             chunk["res"] = resolution(chunk["area"], density)
         if sum(c["res"] ** 2 for c in chunks) <= TOTAL_PIXELS or density <= 16:
             for chunk in chunks:
-                chunk["density"] = density
+                chunk["density"] = round(density, 2)
             return chunks
-        density /= 2.0
+        density *= 0.85  # fine steps, so the cap is used rather than halved past
 
 
 # --- cache key ----------------------------------------------------------------
@@ -126,6 +126,27 @@ def _value(value):
         return str(value)
 
 
+_image_ids: dict = {}
+
+
+def image_identity(image) -> str:
+    """What the image's pixels are: a digest of the packed bytes (the child
+    repacks painted-but-unsaved images, so a paint changes it), or the
+    file's path, size and time."""
+    packed = getattr(image, "packed_file", None)
+    if packed is not None:
+        key = (image.name, packed.size)
+        if key not in _image_ids:
+            _image_ids[key] = hashlib.sha1(bytes(packed.data)).hexdigest()
+        return _image_ids[key]
+    path = bpy.path.abspath(image.filepath) if image.filepath else ""
+    try:
+        stat = os.stat(path)
+        return f"{path}|{stat.st_size}|{int(stat.st_mtime)}"
+    except OSError:
+        return f"{path}|missing|{image.source}"
+
+
 def _tree_signature(tree, depth=0) -> list:
     if tree is None or depth > 8:
         return []
@@ -142,9 +163,7 @@ def _tree_signature(tree, depth=0) -> list:
                 row.append((prop, _value(value) if prop != "color_ramp" else value))
         image = getattr(node, "image", None)
         if image is not None:
-            packed = getattr(image, "packed_file", None)
-            row.append(("image", image.name, tuple(image.size), image.filepath,
-                        getattr(packed, "size", 0) if packed else 0))
+            row.append(("image", image.name, tuple(image.size), image_identity(image)))
         for socket in node.inputs:
             if not socket.is_linked and hasattr(socket, "default_value"):
                 row.append((socket.identifier, _value(socket.default_value)))
@@ -215,6 +234,31 @@ def write_entry(cache_dir: str, key: str, files: dict, uvs: dict, meta: dict) ->
         raise
 
 
+CACHE_SPARE = 8  # entries kept beyond the current build's (recent edits to undo)
+
+
+def prune_cache(cache_dir: str, keep) -> int:
+    """Remove stale entries: everything but ``keep`` and the ``CACHE_SPARE``
+    most recent others, plus abandoned temp directories."""
+    try:
+        names = os.listdir(cache_dir)
+    except OSError:
+        return 0
+    removed = 0
+    others = []
+    for name in names:
+        path = os.path.join(cache_dir, name)
+        if name.startswith(".tmp-"):
+            shutil.rmtree(path, ignore_errors=True)
+            removed += 1
+        elif name not in keep and os.path.isdir(path):
+            others.append((os.path.getmtime(path), path))
+    for _mtime, path in sorted(others, reverse=True)[CACHE_SPARE:]:
+        shutil.rmtree(path, ignore_errors=True)
+        removed += 1
+    return removed
+
+
 # --- the whole bake ----------------------------------------------------------------
 
 def bake_scene(scene, objects, cache_dir: str, progress=lambda pct, message: None) -> dict:
@@ -253,8 +297,10 @@ def bake_scene(scene, objects, cache_dir: str, progress=lambda pct, message: Non
                 stats["baked"] += 1
             bake_passes.assign(chunk, index, images, users)
             stats["chunks"].append({"meshes": len(chunk["meshes"]), "res": chunk["res"],
+                                    "density_px_m": chunk["density"],
                                     "area_m2": round(chunk["area"], 1), "key": key,
                                     "cached": hit})
+        stats["cache_pruned"] = prune_cache(cache_dir, {c["key"] for c in stats["chunks"]})
         return stats
     finally:
         for obj in scene.objects:

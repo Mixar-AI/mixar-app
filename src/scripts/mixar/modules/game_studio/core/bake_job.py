@@ -5,7 +5,9 @@
 
 The user's session does one fast thing on the main thread (``prepare``): it
 saves a temporary copy of the file (``copy=True``, no thumbnail, Agent Bubble
-windows kept open). A worker then runs ``stage``, which starts
+windows kept open), or, for an unmodified file on disk, leaves the copying
+to the worker. It also reads the pixels of painted-but-unsaved images,
+which a file copy would hold stale. A worker then runs ``stage``, which starts
 
     <this Mixar> -b <copy> --python bake_child.py -- --mixar-bake <config>
 
@@ -34,26 +36,69 @@ MESSAGES = {"cancelled": "Cancelled.", "timeout": "Baking took too long and was 
             "launch_failed": "The background bake process could not be started."}
 
 
+def dirty_images():
+    """``[(name, width, height, pixels)]`` for images painted but not saved:
+    a file copy holds their OLD pixels, so the live ones travel beside it.
+    Main thread (pixel reads only; the worker writes them to disk)."""
+    import bpy
+    import numpy as np
+    found = []
+    for image in bpy.data.images:
+        if not image.is_dirty or not image.has_data or image.size[0] == 0:
+            continue
+        pixels = np.empty(len(image.pixels), np.float32)
+        image.pixels.foreach_get(pixels)
+        found.append((image.name, image.size[0], image.size[1], pixels))
+    return found
+
+
 def prepare(scene, game_dir: str) -> dict:
-    """Main thread: save the temporary copy and write the child's config.
-    Returns the plain ``bake`` context the worker needs."""
+    """Main thread: capture what the copy needs and write the child's config.
+    Returns the plain ``bake`` context the worker needs.
+
+    An unmodified file that exists on disk is copied by the worker; otherwise
+    a ``copy=True`` save (no thumbnail, Agent Bubble windows kept) writes it.
+    Painted-but-unsaved images go along as raw pixels (``dirty_images``)."""
     import bpy
     folder = os.path.join(game_dir, BAKE_DIRNAME, uuid.uuid4().hex[:12])
     os.makedirs(folder, exist_ok=True)
     copy = os.path.join(folder, "scene.mixar")
-    try:
-        from mixar.modules.agent_bubble.core.bubble_lifecycle import keep_windows_for_snapshot
-    except Exception:  # noqa: BLE001 — headless builds have no bubble
-        from contextlib import nullcontext as keep_windows_for_snapshot
-    with keep_windows_for_snapshot():
-        bpy.ops.wm.save_as_mainfile(filepath=copy, copy=True, thumbnail=False)
+    dirty = dirty_images()
+    source = bpy.data.filepath
+    if bpy.data.is_dirty or dirty or not source or not os.path.isfile(source):
+        source = ""
+        try:
+            from mixar.modules.agent_bubble.core.bubble_lifecycle import keep_windows_for_snapshot
+        except Exception:  # noqa: BLE001 — headless builds have no bubble
+            from contextlib import nullcontext as keep_windows_for_snapshot
+        with keep_windows_for_snapshot():
+            bpy.ops.wm.save_as_mainfile(filepath=copy, copy=True, thumbnail=False)
     config = {"game_dir": game_dir, "cache_dir": os.path.join(game_dir, BAKE_CACHE_DIRNAME),
-              "scene": scene.name}
+              "scene": scene.name, "dirty_images": os.path.join(folder, "dirty.json") if dirty else ""}
     config_path = os.path.join(folder, "config.json")
     with open(config_path, "w", encoding="utf-8") as handle:
         json.dump(config, handle)
     return {"folder": folder, "copy": copy, "config": config_path, "binary": bpy.app.binary_path,
-            "result": os.path.join(folder, "result.json")}
+            "result": os.path.join(folder, "result.json"), "source": source, "dirty": dirty}
+
+
+def _materialize(bake: dict) -> None:
+    """Worker: copy an unmodified source file, and write the live pixels."""
+    import numpy as np
+    if bake.get("source"):
+        shutil.copyfile(bake["source"], bake["copy"])
+    dirty = bake.get("dirty") or []
+    if dirty:
+        folder = os.path.join(bake["folder"], "dirty")
+        os.makedirs(folder, exist_ok=True)
+        manifest = []
+        for index, (name, width, height, pixels) in enumerate(dirty):
+            path = os.path.join(folder, f"{index}.npy")
+            np.save(path, pixels.astype(np.float32, copy=False))
+            manifest.append({"name": name, "width": width, "height": height, "pixels": path})
+        with open(os.path.join(bake["folder"], "dirty.json"), "w", encoding="utf-8") as handle:
+            json.dump(manifest, handle)
+        bake["dirty"] = []  # release the memory
 
 
 def discard(bake: dict) -> None:
@@ -68,6 +113,7 @@ def stage(bake: dict, handle, low: float = 0.0, high: float = 100.0, runner=godo
 
     handle.progress(low, "Baking materials in the background", force=True)
     try:
+        _materialize(bake)
         result = runner(bake["binary"], ["-b", bake["copy"], "-noaudio", "--python", CHILD_SCRIPT, "--",
                                          "--mixar-bake", bake["config"]],
                         bake["result"], "bake", on_progress=report, cancel=handle.cancel_event,
