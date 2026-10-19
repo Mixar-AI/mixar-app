@@ -126,7 +126,7 @@ def main():
         progress(92, "Exporting the baked scene")
         package = exporter.write_package(scene, game_dir=config["game_dir"])
         result.update(ok=bool(package["ok"]), bake=stats, package={
-            key: package.get(key) for key in ("ok", "errors", "warnings", "game_dir", "export_dir", "export",
+            key: package.get(key) for key in ("ok", "errors", "warnings", "game_dir", "export_dir", "export", "rig_object_channels_removed",
                                               "combat_proof")})
         if not package["ok"]:
             result.update(error="; ".join(package["errors"]) or "export failed", error_code="export_failed")
