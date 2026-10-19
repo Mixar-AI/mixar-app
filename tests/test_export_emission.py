@@ -72,9 +72,15 @@ class Tree:
     def __init__(self, nodes):
         self.nodes = Nodes(nodes)
         self.links = Links()
+        self.nodes.tree = self
 
 
 class Nodes(list):
+    def remove(self, node):  # like Blender: a removed node takes its links along
+        for link in [l for l in self.tree.links if l.from_node is node or l.to_socket.node is node]:
+            self.tree.links.remove(link)
+        list.remove(self, node)
+
     def new(self, kind):
         node = Node("TEX_IMAGE", kind, inputs=[("Vector", None)], outputs=["Color", "Alpha"],
                     image=None, interpolation="Linear", extension="REPEAT")
@@ -121,12 +127,31 @@ def test_detects_mask_times_constant_and_resolves_the_colour_through_the_group()
     assert mask_node.name == "mask" and socket.name == "Color" and k == 5.0  # input 3 is unused
     mesh = types.SimpleNamespace(data=types.SimpleNamespace(uv_layers=[types.SimpleNamespace(name="UV Map")]))
     plan = em._plan(material, [mesh])
-    assert plan[1].name == "mask" and plan[3] == 5.0 and plan[4].image.name == "Boss_Body_basecolor"
+    assert plan[0] == "bake" and plan[2].name == "mask" and plan[4] == 5.0
+    assert plan[5].image.name == "Boss_Body_basecolor" and plan[6] is None
 
 
-def test_other_strength_graphs_are_left_alone():
-    _material, bsdf, math = _boss_material(op="ADD")
+def _floor_material():
+    """The temple floor: Emission Color an unlinked constant, Emission
+    Strength = lava mask × 4."""
+    material, bsdf, math = _boss_material(k=4.0)
+    tree = material.node_tree
+    tree.links.remove(bsdf.inputs["Emission Color"].links[0])
+    bsdf.inputs["Emission Color"].default_value = (1.0, 0.1, 0.002, 1.0)
+    return material, bsdf, math
+
+
+def test_an_unlinked_constant_colour_is_baked():
+    material, _bsdf, _math = _floor_material()
+    mesh = types.SimpleNamespace(data=types.SimpleNamespace(uv_layers=[types.SimpleNamespace(name="arena_floor_UV")]))
+    plan = em._plan(material, [mesh])
+    assert plan[0] == "bake" and plan[4] == 4.0 and plan[5] is None and plan[6] == (1.0, 0.1, 0.002)
+
+
+def test_unbakeable_masked_strength_is_switched_off():
+    material, bsdf, math = _boss_material(op="ADD")  # not mask × k, but texture-driven
     assert em.strength_mask(bsdf) is None
+    assert em._plan(material, [])[0] == "off"
     _material, bsdf, math = _boss_material()
     math.use_clamp = True
     assert em.strength_mask(bsdf) is None
@@ -135,7 +160,7 @@ def test_other_strength_graphs_are_left_alone():
         uv_layers=[types.SimpleNamespace(name="UV Map"), types.SimpleNamespace(name="Lava")]))
     tree = material.node_tree
     tree.nodes[1].uv_map = "Lava"  # the mask reads another UV map than the colour
-    assert em._plan(material, [two_uvs]) == "the mask and the colour use different UV maps"
+    assert em._plan(material, [two_uvs])[0::2] == ("off", "the mask and the colour use different UV maps")
 
 
 # --- pixels -------------------------------------------------------------------------
@@ -186,6 +211,50 @@ def test_bakes_for_the_export_then_restores_and_frees(monkeypatch):
     assert bsdf.inputs["Emission Strength"].links[0].from_node is math
     assert bsdf.inputs["Emission Strength"].default_value == 0.0
     assert len(material.node_tree.nodes) == nodes_before and removed == created
+
+
+def _fake_images(monkeypatch):
+    created, removed = [], []
+
+    class Images:
+        def new(self, name, w, h, alpha=False):
+            image = types.SimpleNamespace(name=name, size=(w, h), colorspace_settings=types.SimpleNamespace(name=""),
+                                          pixels=types.SimpleNamespace(foreach_set=lambda data: None))
+            created.append(image)
+            return image
+
+        def remove(self, image):
+            removed.append(image)
+
+    monkeypatch.setattr(em, "bpy", types.SimpleNamespace(data=types.SimpleNamespace(images=Images())))
+    return created, removed
+
+
+def test_constant_colour_bake_is_temporary(monkeypatch):
+    material, bsdf, math = _floor_material()
+    created, removed = _fake_images(monkeypatch)
+    monkeypatch.setattr(em, "_pixels", lambda image: np.full((3, 3, 4), 1.0, np.float32))
+    mesh = types.SimpleNamespace(data=types.SimpleNamespace(materials=[material], uv_layers=[]))
+    with em.baked_emission_masks([mesh]) as (baked, notes):
+        assert baked == ["Boss_Body"] and created[0].size == (3, 3)  # the mask's grid
+        assert bsdf.inputs["Emission Color"].links[0].from_node.image is created[0]
+        assert bsdf.inputs["Emission Strength"].default_value == 4.0
+    assert not bsdf.inputs["Emission Color"].is_linked
+    assert bsdf.inputs["Emission Color"].default_value == (1.0, 0.1, 0.002, 1.0)
+    assert bsdf.inputs["Emission Strength"].links[0].from_node is math and removed == created
+
+
+def test_switched_off_emission_is_restored(monkeypatch):
+    material, bsdf, math = _boss_material(op="ADD")
+    created, _removed = _fake_images(monkeypatch)
+    mesh = types.SimpleNamespace(data=types.SimpleNamespace(materials=[material], uv_layers=[]))
+    with em.baked_emission_masks([mesh]) as (baked, notes):
+        assert baked == [] and created == []
+        assert not bsdf.inputs["Emission Strength"].is_linked
+        assert bsdf.inputs["Emission Strength"].default_value == 0.0
+        assert notes and "exported without emission" in notes[0]
+    assert bsdf.inputs["Emission Strength"].links[0].from_node is math
+    assert bsdf.inputs["Emission Color"].links[0].from_node.name == "Group"
 
 
 def test_only_gltf_exports_bake():

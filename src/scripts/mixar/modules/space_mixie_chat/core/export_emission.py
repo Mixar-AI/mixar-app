@@ -16,10 +16,15 @@ Image Texture node on the mask's own UV input, unlinks Emission Strength
 and sets it to ``k``. On exit the links, the strength value and the node
 are restored and the image is removed from ``bpy.data``.
 
-Conservative by design: a material is skipped (and named in the returned
-notes) unless the mask and the colour each resolve to exactly one image,
-the mask's UVs are the mesh's only UV map or the one the colour reads, and
-both images hold pixels. Main thread only.
+The colour may be one colour image (followed exactly through group
+sockets) or a constant (an unlinked Emission Color, or an RGB node): the
+temporary image is then ``constant × mask`` on the mask's grid. Anything
+else whose strength is texture-driven — another strength graph, several
+colour images, mask and colour on different UV maps on a multi-UV mesh, an
+image without pixels — is exported WITHOUT emission for that material
+(strength 0 for the export, named in the notes): glTF would otherwise make
+the whole surface glow (a lava floor exported blown-out white). Main thread
+only.
 """
 
 from __future__ import annotations
@@ -129,6 +134,8 @@ def baked_pixels(colour, colour_srgb: bool, mask, mask_socket: str, mask_srgb: b
 
 
 def _uv_ok(meshes, mask_node, colour_node) -> bool:
+    if colour_node is None:  # a constant colour has no UVs
+        return True
     mask_uv, colour_uv = _uv_name(mask_node), _uv_name(colour_node)
     for mesh in meshes:
         layers = [uv.name for uv in getattr(mesh.data, "uv_layers", ())]
@@ -137,33 +144,82 @@ def _uv_ok(meshes, mask_node, colour_node) -> bool:
     return True
 
 
+def _texture_driven(socket) -> bool:
+    return bool(_upstream_images(socket))
+
+
+def _constant_colour(colour_in):
+    """The linear RGB an Emission Color holds without an image: its own
+    value when unlinked, or an RGB node's. None otherwise."""
+    node, socket = _linked_from(colour_in)
+    if node is None:
+        return tuple(colour_in.default_value)[:3]
+    if node.type == 'RGB':
+        return tuple(socket.default_value)[:3]
+    return None
+
+
 def _plan(material, meshes):
-    """``(bsdf, mask_node, mask_socket, k, colour_node)`` or a skip reason."""
+    """``None`` (nothing masked), ``("bake", bsdf, mask_node, mask_socket, k,
+    colour_node | None, constant | None)`` or ``("off", bsdf, reason)``.
+
+    ``off``: the strength is texture-driven but cannot be baked. glTF would
+    then make the WHOLE surface glow, so emission is left out instead."""
     bsdf = _bsdf(material)
     if bsdf is None or not bsdf.inputs["Emission Strength"].is_linked:
         return None
+    strength_in, colour_in = bsdf.inputs["Emission Strength"], bsdf.inputs["Emission Color"]
     found = strength_mask(bsdf)
     if found is None:
-        return "emission strength is not an image mask (× constant)"
+        if _texture_driven(strength_in):
+            return "off", bsdf, "emission strength is not an image mask (× constant)"
+        return None
     mask_node, mask_socket, k = found
-    colours = {id(n.image): n for n in _upstream_images(bsdf.inputs["Emission Color"])
-               if n.image.colorspace_settings.name != 'Non-Color'}
-    if len(colours) != 1:
-        return "emission colour is not one colour image"
-    colour_node = next(iter(colours.values()))
+    constant = _constant_colour(colour_in)
+    colour_node = None
+    if constant is None:
+        colours = {id(n.image): n for n in _upstream_images(colour_in)
+                   if n.image.colorspace_settings.name != 'Non-Color'}
+        if len(colours) != 1:
+            return "off", bsdf, "emission colour is not one colour image or a constant"
+        colour_node = next(iter(colours.values()))
     if not _uv_ok(meshes, mask_node, colour_node):
-        return "the mask and the colour use different UV maps"
-    return bsdf, mask_node, mask_socket.name, k, colour_node
+        return "off", bsdf, "the mask and the colour use different UV maps"
+    return "bake", bsdf, mask_node, mask_socket.name, k, colour_node, constant
 
 
 def _srgb(image) -> bool:
     return image.colorspace_settings.name == 'sRGB' and not image.is_float
 
 
+def _bake_image(name, colour_node, constant, mask_node, mask_socket):
+    import numpy as np
+    mask = _pixels(mask_node.image)
+    if mask is None:
+        return None
+    if colour_node is not None:
+        colour = _pixels(colour_node.image)
+        if colour is None:
+            return None
+        colour_srgb = _srgb(colour_node.image)
+    else:  # a constant (linear) colour on the mask's grid
+        colour = np.empty(mask.shape, np.float32)
+        colour[..., :3], colour[..., 3] = constant, 1.0
+        colour_srgb = False
+    pixels = baked_pixels(colour, colour_srgb, mask, mask_socket, _srgb(mask_node.image))
+    h, w = pixels.shape[:2]
+    image = bpy.data.images.new(f"{TEMP_PREFIX}{name}", w, h, alpha=False)
+    image.colorspace_settings.name = 'sRGB'
+    image.pixels.foreach_set(pixels.ravel())
+    return image
+
+
 @contextmanager
 def baked_emission_masks(meshes):
     """Bake masked emission for every material of ``meshes``; yields
-    ``(baked_material_names, notes)``."""
+    ``(baked_material_names, notes)``. A masked emission that cannot be
+    baked is switched OFF for the export (a missing glow is far less wrong
+    than a whole surface glowing) and named in ``notes``."""
     by_material = {}
     for obj in meshes:
         for material in getattr(obj.data, "materials", ()) or ():
@@ -175,43 +231,41 @@ def baked_emission_masks(meshes):
             plan = _plan(material, users)
             if plan is None:
                 continue
-            if isinstance(plan, str):
-                notes.append(f"{name}: masked emission not baked ({plan})")
-                continue
-            bsdf, mask_node, mask_socket, k, colour_node = plan
-            colour, mask = _pixels(colour_node.image), _pixels(mask_node.image)
-            if colour is None or mask is None:
-                notes.append(f"{name}: masked emission not baked (an image has no pixels)")
-                continue
-            pixels = baked_pixels(colour, _srgb(colour_node.image), mask, mask_socket,
-                                  _srgb(mask_node.image))
-            h, w = pixels.shape[:2]
-            image = bpy.data.images.new(f"{TEMP_PREFIX}{name}", w, h, alpha=False)
-            images.append(image)
-            image.colorspace_settings.name = 'sRGB'
-            image.pixels.foreach_set(pixels.ravel())
-            tree = material.node_tree
+            tree, bsdf = material.node_tree, plan[1]
             colour_in, strength_in = bsdf.inputs["Emission Color"], bsdf.inputs["Emission Strength"]
-            old_colour = [link.from_socket for link in colour_in.links]
-            old_strength = [link.from_socket for link in strength_in.links]
-            old_value = strength_in.default_value
-            node = tree.nodes.new("ShaderNodeTexImage")
-            node.image, node.interpolation, node.extension = image, mask_node.interpolation, mask_node.extension
-            vector, _socket = _linked_from(mask_node.inputs.get("Vector"))
-            if vector is not None:
-                tree.links.new(_socket, node.inputs["Vector"])
-            restores.append((tree, node, colour_in, old_colour, strength_in, old_strength, old_value))
-            tree.links.new(node.outputs["Color"], colour_in)
+            image = None
+            if plan[0] == "bake":
+                _kind, _bsdf_node, mask_node, mask_socket, k, colour_node, constant = plan
+                image = _bake_image(name, colour_node, constant, mask_node, mask_socket)
+                if image is None:
+                    plan = ("off", bsdf, "an image has no pixels")
+            restore = [tree, None, colour_in, None, strength_in,
+                       [link.from_socket for link in strength_in.links], strength_in.default_value]
+            restores.append(restore)
             for link in list(strength_in.links):
                 tree.links.remove(link)
+            if plan[0] == "off":
+                strength_in.default_value = 0.0
+                notes.append(f"{name}: exported without emission ({plan[2]}); glTF cannot mask its strength")
+                continue
+            images.append(image)
+            restore[3] = [link.from_socket for link in colour_in.links]
+            node = tree.nodes.new("ShaderNodeTexImage")
+            restore[1] = node
+            node.image, node.interpolation, node.extension = image, mask_node.interpolation, mask_node.extension
+            vector, socket = _linked_from(mask_node.inputs.get("Vector"))
+            if vector is not None:
+                tree.links.new(socket, node.inputs["Vector"])
+            tree.links.new(node.outputs["Color"], colour_in)
             strength_in.default_value = k
             baked.append(name)
         yield baked, notes
     finally:
         for tree, node, colour_in, old_colour, strength_in, old_strength, old_value in reversed(restores):
             try:
-                tree.nodes.remove(node)
-                for socket in old_colour:
+                if node is not None:
+                    tree.nodes.remove(node)
+                for socket in old_colour or ():
                     tree.links.new(socket, colour_in)
                 for socket in old_strength:
                     tree.links.new(socket, strength_in)
