@@ -100,3 +100,84 @@ def test_procedural_base_colours_are_reported(make_obj, monkeypatch):
     objects = [_mesh(make_obj, "Tower", procedural), _mesh(make_obj, "Floor", textured, STONE),
                _mesh(make_obj, "Tower_2", procedural)]
     assert visuals.procedural_materials(objects) == ["ArenaDetail_DistantStone"]
+
+
+# --- particle fields default to decor --------------------------------------------------
+
+import numpy as np  # noqa: E402
+
+from mixar.modules.game_studio.core import exporter  # noqa: E402
+
+
+class _Seq:
+    def __init__(self, data, width):
+        self.data, self.width = np.asarray(data), width
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def foreach_get(self, _name, out):
+        out[:] = self.data.ravel()
+
+
+def _fake_mesh(parts):
+    """``parts`` = list of (centre, size): one octahedron each."""
+    co, edges, areas = [], [], []
+    for (cx, cy, cz), r in parts:
+        base = len(co)
+        co += [(cx + r, cy, cz), (cx - r, cy, cz), (cx, cy + r, cz), (cx, cy - r, cz), (cx, cy, cz + r), (cx, cy, cz - r)]
+        edges += [(base + a, base + b) for a, b in ((0, 2), (2, 1), (1, 3), (3, 0), (0, 4), (1, 4), (2, 4), (3, 4),
+                                                   (0, 5), (1, 5), (2, 5), (3, 5))]
+        areas += [0.866 * (r * 1.414) ** 2] * 8
+    mesh = types.SimpleNamespace(vertices=_Seq(co, 3), edges=_Seq(edges, 2), polygons=_Seq(areas, 1))
+    mesh.as_pointer = lambda: id(mesh)
+    return mesh
+
+
+def _field(n=65, span=33.0, size=0.04):
+    rng = np.random.default_rng(1)
+    return [((float(x), float(y), float(z)), size) for x, y, z in rng.uniform(0, span, (n, 3)) * [1, 1, 0.1]]
+
+
+def test_particle_field_detection():
+    visuals._field_cache.clear()
+    assert visuals.is_particle_field(_fake_mesh(_field()))  # the temple's ash: 65 bits over 33 m
+    assert not visuals.is_particle_field(_fake_mesh(_field(n=12)))  # too few parts
+    assert not visuals.is_particle_field(_fake_mesh(_field(size=2.0)))  # parts too big (rubble)
+    one = _fake_mesh([((0.0, 0.0, 0.0), 1.0)])
+    assert not visuals.is_particle_field(one)
+
+
+def test_fields_play_as_decor_unless_tagged(make_obj, make_scene):
+    visuals._field_cache.clear()
+    ash = _mesh(make_obj, "arena_atmosphere_Ash", STONE)
+    ash.data = _fake_mesh(_field())
+    ash.data.materials = [STONE]
+    rock = _mesh(make_obj, "Rock", STONE)
+    rock.data = _fake_mesh([((0.0, 0.0, 0.0), 1.0)])
+    rock.data.materials = [STONE]
+    assert visuals.particle_fields([ash, rock]) == [
+        {"object": "arena_atmosphere_Ash", "reason": "particle field (many tiny loose parts)"}]
+    hazard_root = make_obj("Lava_Root", "EMPTY")
+    hazard_root[ROLE_PROP] = "hazard"
+    embers = _mesh(make_obj, "Embers", STONE)
+    embers.data, embers.parent = _fake_mesh(_field()), hazard_root
+    embers.data.materials = [STONE]
+    assert visuals.particle_fields([embers]) == []  # a hazard keeps its role
+    ash[ROLE_PROP] = "static"
+    assert visuals.particle_fields([ash]) == []  # the user decided
+
+
+def test_the_spec_lists_a_field_as_a_decor_node(make_obj, make_scene, monkeypatch):
+    visuals._field_cache.clear()
+    root = make_obj("Temple_Arena_Root", "EMPTY")
+    root[ROLE_PROP] = "static"
+    ash = _mesh(make_obj, "arena_atmosphere_Ash", STONE)
+    ash.data, ash.parent = _fake_mesh(_field()), root
+    ash.data.materials = [STONE]
+    floor = _mesh(make_obj, "Floor", STONE)
+    monkeypatch.setattr(exporter, "app_version", lambda: "")
+    spec, _objects = exporter.current_spec(make_scene([root, ash, floor]))
+    assert {n["name"]: n["role"] for n in spec["nodes"]} == {
+        "Temple_Arena_Root": "static", "arena_atmosphere_Ash": "decor", "Floor": "static"}
+    assert next(n for n in spec["nodes"] if n["name"] == "arena_atmosphere_Ash")["subtree"] is True

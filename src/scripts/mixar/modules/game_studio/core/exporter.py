@@ -48,29 +48,49 @@ def app_version() -> str:
         return ""
 
 
-def current_spec(scene) -> tuple[dict, list]:
+def _game_objects(scene) -> tuple[list, list]:
+    """``(objects, excluded)``: the in-game objects the GLB can show, and
+    the meshes ``visuals`` leaves out."""
+    return visuals.split_visible([obj for obj in roles.game_objects(scene) if roles.in_game(obj)])
+
+
+def current_spec(scene, split=None) -> tuple[dict, list]:
     """``(spec, in_game_objects)`` for ``scene`` as it stands."""
-    objects, _excluded = visuals.split_visible([obj for obj in roles.game_objects(scene) if roles.in_game(obj)])
+    objects, _excluded = split or _game_objects(scene)
     settings = game_spec.load_settings(scene)
-    return game_spec.build_spec(settings, game_spec.build_nodes(objects), app_version()), objects
+    nodes = game_spec.build_nodes(objects)
+    # Particle fields default to decor: a nested decor node overrides the
+    # static role it would get from its ancestor or the untagged default.
+    fields = {item["object"] for item in visuals.particle_fields(objects)}
+    if fields:
+        nodes = sorted([n for n in nodes if n["name"] not in fields]
+                       + [{"name": name, "role": "decor", "params": {}, "subtree": True} for name in fields],
+                       key=lambda n: n["name"])
+    return game_spec.build_spec(settings, nodes, app_version()), objects
 
 
 def inspect(scene) -> dict:
     """Everything a check needs, without writing: ``{spec, objects,
     characters, errors, warnings, combat_warnings, timing, excluded,
-    procedural_materials}`` (``excluded``: meshes ``visuals`` leaves out).
+    decor_auto, procedural_materials}`` (``excluded``: meshes ``visuals`` leaves out).
     ``spec["combat"]`` holds PREDICTED lengths here (the action's frames /
     fps); ``write_package`` replaces it, and ``combat_warnings``, with the
     block proven against the written file."""
-    spec, objects = current_spec(scene)
+    split = _game_objects(scene)
+    spec, objects = current_spec(scene, split)
     found = game_characters.find(objects)
     errors, warnings = game_spec.validate_spec(spec, found)
     timing, problems = {}, []
     if spec.get("template") == BOSS_TEMPLATE:
         overrides = game_spec.load_settings(scene).get("combat") or {}
         spec["combat"], timing, problems = combat.resolve(found, overrides, combat.scene_fps(scene))
-    _kept, excluded = visuals.split_visible([obj for obj in roles.game_objects(scene) if roles.in_game(obj)])
+    excluded = split[1]
     procedural = visuals.procedural_materials(objects)
+    decor_auto = visuals.particle_fields(objects)
+    if decor_auto:
+        warnings.append(f"{len(decor_auto)} particle-field mesh(es) play as decor, without collision (tag one to "
+                        "change it): " + ", ".join(e["object"] for e in decor_auto[:6])
+                        + (" …" if len(decor_auto) > 6 else ""))
     if excluded:
         warnings.append(f"{len(excluded)} mesh(es) left out of the game, glTF cannot show them (tag one to keep "
                         "it): " + ", ".join(f"{e['object']} ({e['reason']})" for e in excluded[:6])
@@ -80,7 +100,7 @@ def inspect(scene) -> dict:
                         + ", ".join(procedural[:8]) + (" …" if len(procedural) > 8 else ""))
     return {"spec": spec, "objects": objects, "characters": found, "errors": errors,
             "warnings": warnings, "combat_warnings": problems, "timing": timing,
-            "excluded": excluded, "procedural_materials": procedural}
+            "excluded": excluded, "decor_auto": decor_auto, "procedural_materials": procedural}
 
 
 def scene_lights(scene) -> list:
@@ -172,6 +192,7 @@ def write_package(scene, game_dir: str = "") -> dict:
     Returns ``{"ok", "game_dir", "export_dir", "spec", "warnings", "errors",
     "export"}``; nothing is written when the spec has errors.
     """
+    visuals.clear_caches()  # the panels' cached verdicts may predate an edit
     checked = inspect(scene)
     spec, objects, errors, warnings = (checked["spec"], checked["objects"], checked["errors"],
                                        checked["warnings"])

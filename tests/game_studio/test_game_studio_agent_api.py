@@ -75,7 +75,7 @@ def test_roles_configure_and_status_are_json_safe(level):
     assert configured["ok"] is False and configured["errors"]
     status = agent_api.game_status()
     json.dumps(status)
-    assert set(status) == {"godot", "roles", "spec", "characters", "excluded", "procedural_materials",
+    assert set(status) == {"godot", "roles", "spec", "characters", "excluded", "decor_auto", "procedural_materials",
                            "store", "last_build", "last_export", "last_publish"}
     assert status["roles"]["player"] == "Hero" and status["spec"]["valid"]
     assert set(status["godot"]) >= {"found", "path", "version"}
