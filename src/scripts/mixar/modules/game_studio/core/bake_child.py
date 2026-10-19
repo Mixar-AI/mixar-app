@@ -82,7 +82,7 @@ def _single_user_object_relative(scene):
     for obj in scene.objects:
         data = getattr(obj, "data", None)
         if obj.type == 'MESH' and data is not None and data.users > 1 and any(
-                bake_plan.material_verdict(m)["object_relative"] for m in bake_plan._materials(obj)):
+                bake_plan.material_verdict(m)["per_object"] for m in bake_plan._materials(obj)):
             obj.data = data.copy()
 
 

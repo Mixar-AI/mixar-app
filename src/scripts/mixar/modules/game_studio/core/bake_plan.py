@@ -33,10 +33,13 @@ PBR_INPUTS = ("Base Color", "Roughness", "Metallic", "Normal", "Emission Color")
 # Plumbing glTF follows from a socket to an image texture.
 PLAIN = {"TEX_IMAGE", "NORMAL_MAP", "SEPARATE_COLOR", "SEPRGB", "SEPARATE_RGB", "REROUTE", "UVMAP",
          "GROUP", "GROUP_INPUT", "GROUP_OUTPUT", "FRAME"}
-# Coordinates that change when meshes are joined into one bake proxy.
+# Per-object inputs. Those in CARRIED travel into a joined bake proxy as
+# mesh attributes (``bake_passes``); any other one forces an in-place bake.
 OBJECT_RELATIVE_OUTPUTS = {("TEX_COORD", "Generated"), ("TEX_COORD", "Object"), ("TEX_COORD", "Camera"),
                            ("TEX_COORD", "Window"), ("TEX_COORD", "Reflection")}
 OBJECT_RELATIVE_NODES = {"OBJECT_INFO"}
+CARRIED = {("TEX_COORD", "Generated"), ("TEX_COORD", "Object"), ("OBJECT_INFO", "Random"),
+           ("OBJECT_INFO", "Location"), ("OBJECT_INFO", "Color")}
 
 
 def _links(socket):
@@ -78,7 +81,8 @@ def _principled(material):
 
 def _verdict(material) -> dict:
     output, surface = _principled(material)
-    verdict = {"needs": False, "reasons": [], "object_relative": False, "unsupported": False}
+    verdict = {"needs": False, "reasons": [], "object_relative": False, "unsupported": False,
+               "per_object": False, "in_place": False}
     if output is None or surface is None:
         return verdict
     if surface.type != 'BSDF_PRINCIPLED':
@@ -93,15 +97,22 @@ def _verdict(material) -> dict:
         kinds = {node.type for node, _out in nodes}
         if kinds - PLAIN or "TEX_IMAGE" not in kinds:
             verdict["reasons"].append(name)
-        if any((node.type, out) in OBJECT_RELATIVE_OUTPUTS or node.type in OBJECT_RELATIVE_NODES
-               for node, out in nodes):
+        relative = [(node.type, out) for node, out in nodes
+                    if (node.type, out) in OBJECT_RELATIVE_OUTPUTS or node.type in OBJECT_RELATIVE_NODES]
+        if relative:
             verdict["object_relative"] = True
+            # Object Info differs per instance: instances need their own mesh.
+            verdict["per_object"] = verdict["per_object"] or any(kind == "OBJECT_INFO" for kind, _o in relative)
+            verdict["in_place"] = verdict["in_place"] or any(r not in CARRIED for r in relative)
     verdict["needs"] = bool(verdict["reasons"])
     return verdict
 
 
 def material_verdict(material) -> dict:
-    """``{needs, reasons: [input], object_relative, unsupported}`` (cached)."""
+    """``{needs, reasons: [input], object_relative, per_object, in_place,
+    unsupported}`` (cached). ``per_object``: reads Object Info, so instances
+    bake apart. ``in_place``: reads a per-object input a proxy cannot carry
+    (camera/window/reflection coordinates, other Object Info outputs)."""
     return visuals._cached("bake", material, _verdict)
 
 

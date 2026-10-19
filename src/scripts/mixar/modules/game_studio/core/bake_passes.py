@@ -121,9 +121,11 @@ def _uv_signature(mesh):
 def bake_objects(scene, meshes) -> list:
     """What each pass bakes: one world-space proxy per UV signature for the
     joinable meshes, and the object-relative meshes in place."""
+    from .bake_attrs import add_attributes
     solo, groups = [], {}
     for obj in meshes:
-        if any(bake_plan.material_verdict(m)["object_relative"] for m in bake_plan._materials(obj)):
+        if any(bake_plan.material_verdict(m)["in_place"] for m in bake_plan._materials(obj)):
+            add_attributes(obj, obj.data)  # its materials may be rewired too
             solo.append(obj)
         else:
             groups.setdefault(_uv_signature(obj.data), []).append(obj)
@@ -134,6 +136,7 @@ def bake_objects(scene, meshes) -> list:
         for obj in members:
             mesh = bpy.data.meshes.new_from_object(obj.evaluated_get(depsgraph), preserve_all_data_layers=True,
                                                    depsgraph=depsgraph)
+            add_attributes(obj, mesh, texspace=obj.data)  # object space, before the move
             mesh.transform(obj.matrix_world)
             part = bpy.data.objects.new("mixar_bake_proxy", mesh)
             scene.collection.objects.link(part)
@@ -288,6 +291,8 @@ def bake_chunk(scene, chunk, index, progress) -> tuple[dict, dict]:
     """Bake one chunk; ``(files, meta)`` with files in a temp directory."""
     meshes, res = chunk["meshes"], chunk["res"]
     materials = sorted({m for obj in meshes for m in bake_plan._materials(obj)}, key=lambda m: m.name)
+    from .bake_attrs import carry_inputs
+    carry_inputs([m for m in materials if bake_plan.material_verdict(m)["object_relative"]])
     targets = bake_objects(scene, meshes)
     folder = tempfile.mkdtemp(prefix="mixar-bake-")
     files, meta = {}, {"res": res, "normal": False, "emit": False, "emit_strength": 0.0,

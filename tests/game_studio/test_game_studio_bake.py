@@ -265,3 +265,40 @@ def test_bake_setting_never_reaches_the_fork():
     assert errors == [] and merged["bake_materials"] is False
     assert spec.merge_settings(spec.DEFAULT_SETTINGS, {"bake_materials": "yes"})[1]
     assert "bake_materials" not in spec.build_spec(merged, [])
+
+
+# --- per-object inputs carried into proxies ---------------------------------------------
+
+@pytest.mark.parametrize("name,cycles_value", [
+    # Object Info Random as Cycles baked it on the user's temple walls.
+    ("temple_ruins_Wall_L_00_00", 0.3719024658), ("temple_ruins_Wall_L_00_01", 0.1117207035),
+    ("temple_ruins_Wall_L_00_02", 0.5407821536), ("temple_ruins_Wall_L_00_03", 0.6478350759),
+])
+def test_object_random_matches_cycles(name, cycles_value):
+    from mixar.modules.game_studio.core import bake_attrs
+    assert bake_attrs.object_random(name) == pytest.approx(cycles_value, abs=1e-6)
+
+
+def test_carried_per_object_inputs_do_not_force_an_in_place_bake():
+    def random_grime(bsdf):
+        info, ramp = Node("OBJECT_INFO", outputs=("Random", "Index")), Node("VALTORGB", inputs=("Fac",),
+                                                                           outputs=("Color",))
+        link(info, "Random", ramp, "Fac")
+        link(ramp, "Color", bsdf, "Base Color")
+        return [info, ramp]
+
+    def by_index(bsdf):
+        info, ramp = Node("OBJECT_INFO", outputs=("Random", "Object Index")), Node("VALTORGB", inputs=("Fac",),
+                                                                                  outputs=("Color",))
+        link(info, "Object Index", ramp, "Fac")
+        link(ramp, "Color", bsdf, "Base Color")
+        return [info, ramp]
+    carried = bake_plan.material_verdict(material("Grime", random_grime))
+    assert carried["per_object"] and not carried["in_place"]
+    assert bake_plan.material_verdict(material("Indexed", by_index))["in_place"]
+
+
+def test_chunk_keys_are_taken_before_any_bake():
+    source = (MODULE / "core/bake_run.py").read_text(encoding="utf-8")
+    body = source[source.index("def bake_scene("):]
+    assert body.index("keys = [chunk_key(chunk) for chunk in chunks]") < body.index("bake_passes.bake_chunk(")

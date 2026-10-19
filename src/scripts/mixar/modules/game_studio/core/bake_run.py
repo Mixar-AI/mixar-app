@@ -15,9 +15,11 @@ never in the user's session. The steps:
    base colour, roughness and metallic (packed as ORM) and emission through
    an Emission-shader stand-in, and the tangent-space normal from the real
    surface. Meshes are joined into world-space proxies, so a pass is one
-   Cycles session rather than one per mesh. A mesh whose material reads
-   object-relative coordinates (Generated / Object / Object Info) is baked
-   in place instead.
+   Cycles session rather than one per mesh. Object / Generated coordinates
+   and Object Info Random / Location / Color travel into the proxy as mesh
+   attributes (``bake_attrs``); a mesh whose material reads another
+   per-object input (camera / window / reflection coordinates, other Object
+   Info outputs) is baked in place instead.
 4. Every material on a chunk mesh is replaced by a Principled material
    reading the chunk's images through ``MixarBake``. That UV map becomes the
    only one, so it is TEXCOORD_0 in the GLB.
@@ -275,11 +277,14 @@ def bake_scene(scene, objects, cache_dir: str, progress=lambda pct, message: Non
     users = bake_passes.mesh_users(objects, {o.data.name for o in planned["meshes"]})
     hidden = {obj.name: obj.hide_render for obj in scene.objects}
     bake_passes.setup_cycles(scene)
+    # Every key before any bake: baking a chunk rewires shared materials
+    # (``bake_attrs``), which would change the keys of later chunks.
+    keys = [chunk_key(chunk) for chunk in chunks]
     try:
         for index, chunk in enumerate(chunks):
             chunk["index"] = index
             low, span = 100.0 * index / len(chunks), 100.0 / len(chunks)
-            key = chunk_key(chunk)
+            key = keys[index]
             entry = cache_entry(cache_dir, key)
             hit = entry is not None
             label = f"Baking materials, part {index + 1} of {len(chunks)}"
