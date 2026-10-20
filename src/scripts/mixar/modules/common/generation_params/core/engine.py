@@ -211,7 +211,16 @@ def _build_group(service_key: str, model_slug: str, parameters: dict):
     annotations: Dict[str, Any] = {}
     schema: Dict[str, Dict[str, Any]] = {}
 
-    for param_name, spec in (parameters or {}).items():
+    # Define the RNA props in catalog ``order``: the island pane draws its
+    # chips in RNA definition order, and the catalog's dict order is NOT the
+    # display order — Postgres JSONB re-sorts keys shortest-first, so ``seed``
+    # used to lead every model's chip row. Same key as ``collect_params``.
+    def _display_order(item):
+        name, spec = item
+        order = spec.get("order") if isinstance(spec, dict) else None
+        return (order if isinstance(order, (int, float)) else 0, name)
+
+    for param_name, spec in sorted((parameters or {}).items(), key=_display_order):
         if not isinstance(spec, dict):
             continue
         if spec.get("visible") is False:

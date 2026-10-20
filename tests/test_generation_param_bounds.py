@@ -132,6 +132,31 @@ def test_whole_group_survives_an_out_of_range_param():
     assert schema["seed"]["attr"] == "p_seed"
 
 
+
+def test_props_are_defined_in_catalog_order_not_jsonb_key_order():
+    """The island pane draws chips in RNA definition order. The catalog dict
+    arrives in Postgres JSONB key order (shortest key first), which put
+    ``seed`` ahead of every FLUX image model's aspect ratio and resolution."""
+
+    class PropertyGroup:
+        pass
+
+    jsonb_ordered = {
+        "seed": {"type": "integer", "default": -1, "order": 4},
+        "resolution": {"type": "string", "default": "1K", "enum": ["1K", "2K"], "order": 1},
+        "aspect_ratio": {"type": "string", "default": "1:1", "enum": ["1:1"], "order": 0},
+        "number_of_images": {"type": "integer", "default": 1, "enum": [1, 2], "order": 2},
+        "unordered": {"type": "boolean", "default": True},
+    }
+    with patch.object(engine.bpy.types, "PropertyGroup", PropertyGroup):
+        cls, schema = engine._build_group("image_gen", "flux-2-pro", jsonb_ordered)
+    assert list(schema) == [
+        # no ``order`` sorts as 0, ties by name — the collect_params key
+        "aspect_ratio", "unordered", "resolution", "number_of_images", "seed",
+    ]
+    props = [name for name in cls.__annotations__ if name.startswith("p_")]
+    assert props == [schema[name]["attr"] for name in schema]
+
 # ---------------------------------------------------------------------------
 # The moodboard node path reads the same catalog bounds into SHARED
 # `value_integer` / `minimum` / `maximum` props, so it needs the same ceiling.
