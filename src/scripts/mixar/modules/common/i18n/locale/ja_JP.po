@@ -10129,6 +10129,9 @@ msgstr "モデルの読み込みをお待ちください"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "プロンプト、画像、複数ビューのうち少なくとも1つを指定してください"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "クロップツール"
 

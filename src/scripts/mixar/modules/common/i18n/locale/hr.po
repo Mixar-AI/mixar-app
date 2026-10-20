@@ -10129,6 +10129,9 @@ msgstr "Pričekajte da se modeli učitaju"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Navedite barem jedno od: upit, sliku ili više pogleda"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Alat izrezivanja"
 

@@ -10129,6 +10129,9 @@ msgstr "ﺪﯿﻨﮐ ﺮﺒﺻ ﺎﻫ‌ﻝﺪﻣ ﻥﺪﺷ ﺭﺎﺑ ﺎﺗ ﺎ
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ﻪﻧﺎﮔﺪﻨﭼ ﯼﺎﻫﺎﻤﻧ ﺎﯾ ،ﺮﯾﻮﺼﺗ ،ﺖﭙﻣﺍﺮﭘ :ﺪﯿﻫﺪﺑ ﺍﺭ ﺎﻫ‌ﻦﯾﺍ ﺯﺍ ﯽﮑﯾ ﻢﮐ‌ﺖﺳﺩ"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "ﺵﺮﺑ ﺭﺍﺰﺑﺍ"
 

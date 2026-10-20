@@ -10129,6 +10129,9 @@ msgstr "Моделдер жүктөлгөнчө күтө туруңуз"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Төмөнкүлөрдүн жок дегенде бирин бериңиз: промпт, сүрөт же бир нече көрүнүш"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Кесүү аспабы"
 

@@ -10129,6 +10129,9 @@ msgstr "Vă rugăm să așteptați încărcarea modelelor"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Furnizați cel puțin unul dintre: prompt, imagine sau vederi multiple"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Instrument decupare"
 

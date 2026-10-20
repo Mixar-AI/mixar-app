@@ -10129,6 +10129,9 @@ msgstr "ﺝﺫﺎﻤﻨﻟﺍ ﻞﻴﻤﺤﺗ ﻢﺘﻳ ﻰﺘﺣ ﺭﺎﻈﺘ�
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ﺓﺩﺪﻌﺘﻣ ﺮﻇﺎﻨﻣ ﻭﺃ ،ﺓﺭﻮﺻ ﻭﺃ ،ﻪﺟّﻮﻣ :ﻲﻠﻳ ﺎﻤﻣ ﻞﻗﻷ﻿ﺍ ﻰﻠﻋ ﺪﺣﺍﻭ ﺮﻴﻓﻮﺗ ﻰﺟﺮﻳُ"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "ﺺﻘﻟﺍ ﺓﺍﺩﺃ"
 

@@ -10129,6 +10129,9 @@ msgstr "โปรดรอให้โมเดลโหลดเสร็จ"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "โปรดระบุอย่างน้อยหนึ่งอย่าง: พรอมต์ ภาพ หรือหลายมุมมอง"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "เครื่องมือตัด"
 

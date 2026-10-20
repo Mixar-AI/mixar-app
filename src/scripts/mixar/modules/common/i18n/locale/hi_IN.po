@@ -10129,6 +10129,9 @@ msgstr "कृपया मॉडल लोड होने की प्रत�
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "इनमें से कम से कम एक दें: प्रॉम्प्ट, छवि या एकाधिक दृश्य"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "कर्तन यंत्र"
 

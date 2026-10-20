@@ -10129,6 +10129,9 @@ msgstr "Lütfen modellerin yüklenmesini bekleyin"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Şunlardan en az birini sağlayın: istem, görsel veya çoklu görünüm"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Kırpma Aracı"
 

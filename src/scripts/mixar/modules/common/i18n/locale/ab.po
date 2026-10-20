@@ -10129,6 +10129,9 @@ msgstr "Амодельқәа рҭагалара шәаԥыжәа"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Акы ма еиҳаны шәыцҵа: апромпт, асахьанҵа, ма ахарԥшыгатә аԥшрақәа"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Акроп Аинструмент"
 

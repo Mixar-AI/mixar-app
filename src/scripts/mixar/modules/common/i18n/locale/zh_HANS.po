@@ -10129,6 +10129,9 @@ msgstr "请等待模型加载"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "请至少提供以下之一：提示词、图像或多视图"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "裁切工具"
 

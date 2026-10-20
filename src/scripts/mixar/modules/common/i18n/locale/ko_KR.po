@@ -10129,6 +10129,9 @@ msgstr "모델이 로드될 때까지 기다려 주세요"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "프롬프트, 이미지, 다중 뷰 중 하나 이상을 제공하세요"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "자르기 도구"
 

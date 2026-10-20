@@ -10129,6 +10129,9 @@ msgstr "Attenda il caricamento dei modelli"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Fornisca almeno uno tra: prompt, immagine o viste multiple"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Strumento ritaglio"
 

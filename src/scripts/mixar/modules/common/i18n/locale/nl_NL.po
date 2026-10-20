@@ -10129,6 +10129,9 @@ msgstr "Wacht tot de modellen zijn geladen"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Geef ten minste één van de volgende op: prompt, afbeelding of meerdere aanzichten"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Bijsnijgereedschap"
 

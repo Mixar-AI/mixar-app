@@ -10129,6 +10129,9 @@ msgstr "ﮟﯾﺮﮐ ﺭﺎﻈﺘﻧﺍ ﺎﮐ ﮯﻧﻮﮨ ﮈﻮﻟ ﮯﮐ ﺰ
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ﻮﯾﻭ ﯽﭩﻠﻣ ﺎﯾ ،ﺮﯾﻮﺼﺗ ،ﭧﭙﻣﺍﺮﭘ :ﮟﯾﺩ ﮏﯾﺍ ﻢﮐ ﺯﺍ ﻢﮐ ﮯﺳ ﮟﯿﻣ ﻥﺍ"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "ﻝﻮﭨ ﺵﺍﺮﺗ"
 

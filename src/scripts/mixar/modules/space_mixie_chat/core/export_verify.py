@@ -22,6 +22,7 @@ import struct
 import zipfile
 
 from .export_gltf_bounds import gltf_world_bounds
+from .export_verification_status import gltf_mesh_instances
 
 # Text formats are legitimately tiny (a cube OBJ is ~900 bytes); binaries
 # below half a KB have no geometry at all.
@@ -118,6 +119,7 @@ def summarize_gltf(doc: dict, result: dict) -> None:
     images = doc.get("images") or []
     accessors = doc.get("accessors") or []
     result["meshes"] = len(meshes)
+    result["mesh_instances"] = gltf_mesh_instances(doc)
     result["nodes"] = len(doc.get("nodes") or [])
     result["materials"] = [str(m.get("name", "")) for m in doc.get("materials") or []]
     result["images"] = len(images)
@@ -320,10 +322,11 @@ def _compare(result: dict, expected: dict, fmt: str) -> None:
     want_meshes = expected.get("mesh_count")
     if expected.get("joined"):
         want_meshes = 1
-    if want_meshes is not None and result.get("meshes") is not None:
-        if int(result["meshes"]) != int(want_meshes):
+    actual_meshes = result.get("mesh_instances", result.get("meshes"))
+    if want_meshes is not None and actual_meshes is not None:
+        if int(actual_meshes) != int(want_meshes):
             issues.append(
-                f"The file holds {result['meshes']} mesh(es); {want_meshes} were expected.")
+                f"The file holds {actual_meshes} mesh(es); {want_meshes} were expected.")
     clips = expected.get("clips")
     if clips:
         # Some exporters bake every clip into one animation named after the

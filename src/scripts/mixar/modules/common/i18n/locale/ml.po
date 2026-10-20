@@ -10129,6 +10129,9 @@ msgstr "മോഡലുകൾ ലോഡ് ആകാൻ ദയവായി ക�
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ഇവയിൽ ഒന്നെങ്കിലും നൽകുക: പ്രോംപ്റ്റ്, ചിത്രം, അല്ലെങ്കിൽ ഒന്നിലധികം വ്യൂകൾ"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "ക്രോപ്പ് ഉപകരണം"
 

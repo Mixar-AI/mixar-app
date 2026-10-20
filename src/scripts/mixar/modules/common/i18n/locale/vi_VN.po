@@ -10129,6 +10129,9 @@ msgstr "Vui lòng chờ các mô hình được nạp"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Hãy cung cấp ít nhất một trong: lời nhắc, hình ảnh hoặc nhiều góc nhìn"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Công Cụ Cắt Xén"
 

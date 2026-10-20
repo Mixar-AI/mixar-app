@@ -10129,6 +10129,9 @@ msgstr "Калі ласка, пачакайце загрузкі мадэляў"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Падайце прынамсі адно: промпт, выяву або некалькі ракурсаў"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Інструмент абрэзкі"
 

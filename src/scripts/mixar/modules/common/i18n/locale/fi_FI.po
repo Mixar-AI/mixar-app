@@ -10129,6 +10129,9 @@ msgstr "Odottakaa, että mallit latautuvat."
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Antakaa vähintään yksi seuraavista: kehote, kuva tai useat näkymät."
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Rajaustyökalu"
 

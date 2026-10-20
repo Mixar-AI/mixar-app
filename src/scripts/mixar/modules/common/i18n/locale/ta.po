@@ -10129,6 +10129,9 @@ msgstr "மாதிரிகள் ஏறும் வரை காத்தி
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ப்ராம்ப்ட், படம் அல்லது பல பார்வைகளில் குறைந்தது ஒன்றைக் கொடுக்கவும்"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "செதுக்குக் கருவி"
 

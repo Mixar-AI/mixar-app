@@ -10129,6 +10129,9 @@ msgstr "Palaukite, kol modeliai bus įkelti"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Pateikite bent vieną iš šių: raginimą, paveikslą arba kelis vaizdus"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Apkirpimo įrankis"
 

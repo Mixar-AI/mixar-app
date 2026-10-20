@@ -10129,6 +10129,9 @@ msgstr "Itxaron, mesedez, ereduak kargatu arte"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Eman hauetako bat gutxienez: gonbita, irudia edo ikuspegi anitz"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Mozketa-tresna"
 

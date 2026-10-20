@@ -10129,6 +10129,9 @@ msgstr "Vent til modellene er lastet"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Oppgi minst ett av: ledetekst, bilde eller flere visninger"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Beskjæringsverktøy"
 

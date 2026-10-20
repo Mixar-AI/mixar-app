@@ -10129,6 +10129,9 @@ msgstr "Harap tunggu hingga model dimuat"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Berikan setidaknya salah satu dari: prompt, gambar, atau beberapa tampak"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Alat Potong"
 

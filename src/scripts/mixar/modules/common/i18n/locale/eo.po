@@ -10129,6 +10129,9 @@ msgstr "Bonvolu atendi, ĝis la modeloj ŝargiĝos"
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Donu almenaŭ unu el: invito, bildo aŭ pluraj vidoj"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "Ilo Eltondi"
 

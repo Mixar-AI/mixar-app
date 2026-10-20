@@ -10129,6 +10129,9 @@ msgstr "გთხოვთ, დაელოდოთ მოდელების
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "მიუთითეთ ერთი მაინც: პრომპტი, გამოსახულება ან მრავალი ხედი"
 
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
+
 msgid "Crop Tool"
 msgstr "ჩამოჭრის ხელსაწყო"
 
