@@ -50,6 +50,7 @@ SCHEMAS = {
     "mixar_scene_new": obj({"name": {"type": "string", "minLength": 1, "maxLength": 63,
                                      "pattern": r"^[^\x00-\x1f\x7f]*$"}}),
     "mixar_scene_switch": obj({"session": TOKEN}, ("session",)),
+    "mixar_scene_close": obj({"session": TOKEN, "contents": {"enum": ["refuse", "discard"]}}, ("session",)),
     "mixar_projects": obj({}),
     "mixar_project_open": obj({"project": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
                                "unsaved": {"enum": ["refuse", "save", "discard"], "default": "refuse"}},
@@ -58,8 +59,8 @@ SCHEMAS = {
 READ_ONLY = {"mixar_ui_observe", "mixar_ui_wait", "mixar_ui_call_status", "mixar_scenes", "mixar_projects"}
 #: Native interface input: offered only while the user has opted in.
 UI_INPUT = {"mixar_ui_observe", "mixar_ui_act", "mixar_ui_wait"}
-#: Replaces the open document (its unsaved changes only with explicit consent).
-DESTRUCTIVE = {"mixar_project_open"}
+#: Replaces the open document / deletes a tab (its work only with explicit consent).
+DESTRUCTIVE = {"mixar_project_open", "mixar_scene_close"}
 DOMAINS = {name: ("scenes" if name.startswith(("mixar_scene", "mixar_project")) else "ui") for name in SCHEMAS}
 DESCRIPTIONS = {
     "mixar_ui_context": "Read UI readiness and current/bound scene. Explicitly select an instance or bind its current session after changing documents. Can release your input ownership.",
@@ -70,6 +71,7 @@ DESCRIPTIONS = {
     "mixar_scenes": "List the open Mixar scene tabs: name, session id, state and which one is shown. Free.",
     "mixar_scene_new": "Create a new Mixar scene tab exactly like the app's + New scene (camera, light, the current tab's render/unit/colour settings), show it, and pin this connection to it so later scene and UI tools target it. Use this instead of bpy.data.scenes.new in a script. At the 32-tab limit it refuses with scene_limit; do not retry, switch to a listed tab. Free.",
     "mixar_scene_switch": "Pin this connection to an existing scene tab by its session id from mixar_scenes and show it in the app. Free.",
+    "mixar_scene_close": "Close a scene tab by its session id from mixar_scenes, like the Scenes drawer: its chat is archived to History, and if this connection was pinned to it, it is pinned to the tab now shown. Refused for the last tab and while an agent (Mixie or another AI app) works in it. If the tab holds objects beyond its starting camera and light it is refused unless contents is 'discard': ask the user first, unless everything in it is work you made in this conversation. Use it to free a slot when mixar_scene_new reports scene_limit. Free.",
     "mixar_projects": "List the user's recent Mixar project files (name, folder, last modified, which is open) and whether the open file has unsaved changes. Use when the user asks to continue earlier work. Free.",
     "mixar_project_open": "Open a recent project by its id from mixar_projects, replacing the open file, and pin this connection to its shown scene tab so later tools target it. Refused while the open file is still working (an agent task, a render or running generation jobs). If the open file has unsaved changes it is refused unless unsaved is 'save' or 'discard': ask the user which first, never choose for them. Free.",
 }

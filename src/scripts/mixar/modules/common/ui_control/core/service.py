@@ -32,8 +32,9 @@ class Request:
 
 
 #: Calls that change the app: claimed once in the durable receipt journal.
-MUTATING = {"mixar_ui_act", "mixar_scene_new", "mixar_scene_switch", "mixar_project_open"}
-SCENE_TOOLS = {"mixar_scenes", "mixar_scene_new", "mixar_scene_switch", "mixar_projects", "mixar_project_open"}
+MUTATING = {"mixar_ui_act", "mixar_scene_new", "mixar_scene_switch", "mixar_scene_close", "mixar_project_open"}
+SCENE_TOOLS = {"mixar_scenes", "mixar_scene_new", "mixar_scene_switch", "mixar_scene_close", "mixar_projects",
+               "mixar_project_open"}
 
 _queue = queue.Queue(MAX_PENDING)
 _active = None
@@ -160,6 +161,8 @@ def _scene_tool(req):
         result = projects.open_project(path, req.args.get("unsaved", "refuse"))
     elif req.name == "mixar_scene_new":
         result = scene_tabs.new_scene(req.args.get("name", ""))
+    elif req.name == "mixar_scene_close":
+        result = scene_tabs.close_scene(req.args["session"], req.args.get("contents", "refuse"))
     else:
         result = scene_tabs.switch_scene(req.args["session"])
     observe.invalidate()  # Observations belong to the scene that was shown.
