@@ -72,6 +72,9 @@ def test_limits_come_from_the_catalog_service(monkeypatch):
         "max_video_bytes": 80 * 1024 * 1024,
         "max_image_bytes": 30 * 1024 * 1024,
         "video_extensions": (".mp4", ".mov"),
+        "min_images": 0,
+        "min_videos": 0,
+        "exclusive_media": False,
     }
 
 
@@ -206,7 +209,7 @@ def test_malformed_published_ceilings_are_ignored(monkeypatch):
             models={
                 "broken": {
                     "reference_limits": {
-                        "max_images": "three", "max_videos": 0, "max_materials": True,
+                        "max_images": "three", "max_videos": -1, "max_materials": True,
                     }
                 }
             },
@@ -217,4 +220,56 @@ def test_malformed_published_ceilings_are_ignored(monkeypatch):
 
     assert limits["max_images"] == 7
     assert limits["max_videos"] == 2
+    assert limits["max_materials"] == 8
+
+
+def _flux_catalog():
+    return _catalog_module(
+        _service_input_spec(),
+        models={
+            "flux-3-video": {"reference_limits": {
+                "max_images": 10, "max_videos": 1, "max_materials": 10,
+                "exclusive_media": True,
+            }},
+            "flux-video-edit": {"reference_limits": {
+                "max_images": 0, "max_videos": 1, "min_videos": 1,
+                "max_materials": 1, "max_video_seconds": 15,
+            }},
+            "zero-materials": {"reference_limits": {"max_materials": 0}},
+        },
+    )
+
+
+def test_a_zero_kind_cap_and_a_floor_are_enforced(monkeypatch):
+    """FLUX Video Edit: exactly one clip, no images — refused before upload."""
+    monkeypatch.setitem(sys.modules, CATALOG_MODULE, _flux_catalog())
+    module = _load_module()
+    limits = module.get_video_generation_limits("video_gen", "flux-video-edit")
+
+    assert limits["max_images"] == 0 and limits["min_videos"] == 1
+    assert module.video_reference_count_error(limits, image_count=1, video_count=1)
+    assert module.video_reference_count_error(limits, image_count=0, video_count=0)
+    assert module.video_reference_count_error(limits, image_count=0, video_count=2)
+    assert module.video_reference_count_error(
+        limits, image_count=0, video_count=1) is None
+
+
+def test_exclusive_media_refuses_images_with_a_video(monkeypatch):
+    """FLUX 3 Video reads images as keyframes OR one video to continue."""
+    monkeypatch.setitem(sys.modules, CATALOG_MODULE, _flux_catalog())
+    module = _load_module()
+    limits = module.get_video_generation_limits("video_gen", "flux-3-video")
+
+    assert limits["exclusive_media"] is True
+    assert module.video_reference_count_error(limits, image_count=2, video_count=1)
+    assert module.video_reference_count_error(
+        limits, image_count=7, video_count=0) is None
+    assert module.video_reference_count_error(
+        limits, image_count=0, video_count=1) is None
+
+
+def test_zero_is_only_a_cap_for_the_per_kind_maxima(monkeypatch):
+    monkeypatch.setitem(sys.modules, CATALOG_MODULE, _flux_catalog())
+    limits = _load_module().get_video_generation_limits("video_gen", "zero-materials")
+
     assert limits["max_materials"] == 8

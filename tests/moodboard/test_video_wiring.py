@@ -262,3 +262,29 @@ def test_every_video_gen_limit_lookup_passes_the_selected_model():
     for source in (operator, drawer, node, handoff):
         assert 'get_video_generation_limits("video_gen")' not in source
         assert "get_video_generation_limits(service_key)" not in source
+
+
+def _reference_use_hint():
+    """The drawer's hint picker, executed on its own (the drawer imports bpy UI)."""
+    import ast
+
+    source = _read(MOODBOARD / "ui/video_gen_drawer.py")
+    tree = ast.parse(source)
+    node = next(
+        n for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == "_reference_use_hint"
+    )
+    namespace = {"n_": lambda text: text}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), "drawer", "exec"), namespace)
+    return namespace["_reference_use_hint"]
+
+
+def test_the_reference_hint_follows_how_the_model_reads_the_selection():
+    """Seedance/H3 address references as @Image1 in the prompt; FLUX 3 Video
+    reads images as keyframes; FLUX Video Edit edits its one clip. Telling a
+    FLUX user to write @Image1 would steer nothing."""
+    hint = _reference_use_hint()
+    assert "@Image1" in hint({"max_images": 30, "max_videos": 10})
+    assert "@Image1" in hint(None)
+    assert "keyframes" in hint({"max_images": 10, "exclusive_media": True})
+    assert "edited" in hint({"max_images": 0, "min_videos": 1})

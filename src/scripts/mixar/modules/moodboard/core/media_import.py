@@ -145,7 +145,7 @@ def import_generated_video(
     Image datablock name used by the queue completion row or Director shot.
     """
     directory = _generated_video_directory()
-    stem = os.path.splitext(os.path.basename(source_path))[0] or "seedance"
+    stem = os.path.splitext(os.path.basename(source_path))[0] or "video"
     filename = f"{stem}_{uuid.uuid4().hex[:10]}.mp4"
     destination = os.path.join(directory, filename)
     image = None
@@ -156,7 +156,7 @@ def import_generated_video(
         image = bpy.data.images.load(destination, check_existing=False)
         if image.source != 'MOVIE' or image.frame_duration < 1:
             raise ValueError(rpt_("Generated result is not a playable video"))
-        image.name = display_name or f"Seedance {uuid.uuid4().hex[:6]}"
+        image.name = display_name or f"Video {uuid.uuid4().hex[:6]}"
 
         scene = bpy.data.scenes.get(scene_name) if scene_name else None
         scene = scene or bpy.context.scene

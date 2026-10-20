@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Catalog-driven Video Gen drawer (Seedance and the MiniMax H3 tiers)."""
+"""Catalog-driven Video Gen drawer (Seedance, MiniMax H3 and the FLUX models)."""
 
 from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
@@ -34,6 +34,20 @@ def _draw_reference_order(col, items, kind, icon):
         )
 
 
+def _reference_use_hint(limits):
+    """How the selected model reads the selection, in the order listed.
+
+    Seedance and MiniMax address references from the prompt; FLUX 3 Video
+    (``exclusive_media``) turns images into keyframes or continues one video,
+    and FLUX Video Edit (no images, one clip required) edits the clip.
+    """
+    if limits and not limits.get("max_images") and limits.get("min_videos"):
+        return n_("The selected video is edited by your prompt")
+    if limits and limits.get("exclusive_media"):
+        return n_("Images become keyframes in this order; one video is continued")
+    return n_("Name them in the prompt as @Image1, @Video1 — this order")
+
+
 def _draw_video_gen(layout, context):
     scene = context.scene
     sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
@@ -52,6 +66,9 @@ def _draw_video_gen(layout, context):
     )
 
     refs = get_selected_moodboard_media_inputs(context)
+    limits = get_video_generation_limits(
+        "video_gen", selected_video_model_slug(scene)
+    )
     selected = draw_section_box(layout, n_("Selected References"), icon='IMAGE_DATA')
     if not refs["count"]:
         draw_hint(selected, n_("No references selected — text-to-video"), icon='INFO')
@@ -63,11 +80,7 @@ def _draw_video_gen(layout, context):
         _draw_reference_order(selected, refs["videos"], "Video", 'FILE_MOVIE')
         if refs["videos"] and not refs["all_video_sources_available"]:
             draw_hint(selected, n_("A selected video source file is missing"), icon='ERROR')
-        draw_hint(
-            selected,
-            n_("Name them in the prompt as @Image1, @Video1 — this order"),
-            icon='INFO',
-        )
+        draw_hint(selected, _reference_use_hint(limits), icon='INFO')
 
     draw_section_separator(layout)
     draw_prompt_section(
@@ -81,9 +94,6 @@ def _draw_video_gen(layout, context):
     draw_capability_selector(settings, tab, "video_gen")
 
     limit_box = draw_section_box(layout, n_("Reference Limits"), icon='INFO')
-    limits = get_video_generation_limits(
-        "video_gen", selected_video_model_slug(scene)
-    )
     if limits is None:
         draw_hint(limit_box, n_("Catalog input config is incomplete"), icon='ERROR')
     else:
@@ -104,6 +114,8 @@ def _draw_video_gen(layout, context):
             iface_("{count} reference materials total").format(count=limits['max_materials']),
             icon='DOT',
         )
+        if limits.get("exclusive_media"):
+            draw_hint(limit_box, n_("Images or one video, not both"), icon='DOT')
 
     draw_generate_footer(
         layout,

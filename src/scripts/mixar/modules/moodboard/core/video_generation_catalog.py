@@ -6,7 +6,9 @@
 
 ``video_gen`` serves more than one model and they do NOT share reference
 ceilings: Seedance 2.5 takes 30 images / 10 videos / 50 materials / 30.2 s,
-the MiniMax H3 family takes 9 / 3 / 12 / 15 s. ``input_spec`` is SERVICE-level
+the MiniMax H3 family takes 9 / 3 / 12 / 15 s, and the FLUX models take
+either keyframe images or one video (FLUX 3 Video) or exactly one clip and no
+images (FLUX Video Edit). ``input_spec`` is SERVICE-level
 and describes the wider set, so a model that has its own ceilings publishes
 them on its catalog row as ``reference_limits`` and they are merged over the
 service spec here. A model that publishes none keeps the service's — which is
@@ -95,6 +97,14 @@ _MODEL_LIMIT_KEYS = {
     "max_video_seconds": "max_video_seconds",
 }
 
+#: Caps a model may set to ZERO, meaning "takes none of this kind" (FLUX
+#: Video Edit takes no images). Every other cap must stay positive.
+_ZERO_ALLOWED_KEYS = frozenset({"max_images", "max_videos"})
+
+#: Model floors (FLUX Video Edit needs exactly one clip) and rules. Absent
+#: means no floor and no rule — every model that predates them.
+_MODEL_FLOOR_KEYS = ("min_images", "min_videos")
+
 
 def selected_video_model_slug(scene, service_key="video_gen"):
     """Resolved model slug for the Video Gen tab's current selection, or "".
@@ -122,6 +132,9 @@ def _apply_model_limits(limits, service_key, model_slug):
     is what the upload endpoint itself validates against, so widening here
     would move the rejection from the client to a charged job.
     """
+    for key in _MODEL_FLOOR_KEYS:
+        limits[key] = 0
+    limits["exclusive_media"] = False
     if not model_slug:
         return limits
     try:
@@ -137,8 +150,16 @@ def _apply_model_limits(limits, service_key, model_slug):
         value = model_limits.get(source)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             continue
-        if 0 < value < limits[target]:
+        floor = 0 if source in _ZERO_ALLOWED_KEYS else 0.000001
+        if floor <= value < limits[target]:
             limits[target] = type(limits[target])(value)
+    for key in _MODEL_FLOOR_KEYS:
+        value = model_limits.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        if value > 0:
+            limits[key] = int(value)
+    limits["exclusive_media"] = model_limits.get("exclusive_media") is True
     return limits
 
 
@@ -168,10 +189,23 @@ def video_reference_count_error(
                 "image modes"
             )
         return None
+    if limits.get("exclusive_media") and image_count and video_count:
+        return rpt_(
+            "This model uses either images or one video, not both: "
+            "deselect one kind"
+        )
     if image_count > limits["max_images"]:
+        if not limits["max_images"]:
+            return rpt_("This model does not take images: deselect them")
         return rpt_("Select at most {count} images").format(count=limits['max_images'])
     if video_count > limits["max_videos"]:
+        if not limits["max_videos"]:
+            return rpt_("This model does not take videos: deselect them")
         return rpt_("Select at most {count} videos").format(count=limits['max_videos'])
+    if image_count < limits.get("min_images", 0):
+        return rpt_("Select at least {count} images").format(count=limits['min_images'])
+    if video_count < limits.get("min_videos", 0):
+        return rpt_("Select at least {count} videos").format(count=limits['min_videos'])
     if image_count + video_count > limits["max_materials"]:
         return rpt_("Select at most {count} reference materials").format(
             count=limits['max_materials'])
