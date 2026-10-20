@@ -29,12 +29,15 @@ def mark_seen() -> None:
     persistence.mark_device_seen_onboarding()
 
 
-def maybe_show_tour(identity: str) -> bool:
+def maybe_show_tour(identity: str, source: str = "unknown") -> bool:
     """Start the onboarding tour if this device hasn't seen it. Returns True
     if the tour was scheduled. ``identity`` is the session's email (an
     account's or a guest's); an empty one means no session yet, and the
     auth-success hook calls again once there is one. Called from that hook
-    and again after a Zen/Engine mode choice.
+    (``source`` ``auto_signin``) and again after a Zen/Engine mode choice
+    (``auto_mode``); ``source`` becomes the operator's ``start_source``.
+    The seen flag is checked again when the timer fires: the device may
+    have seen the tour (Help → Start tour) while the schedule waited.
     """
     import bpy
 
@@ -77,9 +80,14 @@ def maybe_show_tour(identity: str) -> bool:
         op_path = tour_pkg.config.OP_TOUR
         if not _operator_registered(op_path):
             return 0.2
+        if persistence.has_device_seen_onboarding():
+            logger.info("Onboarding: seen while scheduled; not starting")
+            _scheduled = False
+            return None
         try:
             namespace, op_name = op_path.split(".", 1)
-            getattr(getattr(bpy.ops, namespace), op_name)("INVOKE_DEFAULT")
+            getattr(getattr(bpy.ops, namespace), op_name)(
+                "INVOKE_DEFAULT", start_source=source)
         except Exception as exc:
             logger.warning("Onboarding: %s invoke failed: %s", op_path, exc)
         finally:

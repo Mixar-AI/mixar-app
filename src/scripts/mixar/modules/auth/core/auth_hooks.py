@@ -106,7 +106,10 @@ def maybe_show_onboarding(email: str) -> None:
         return
     try:
         from mixar.modules.onboarding.core import maybe_show_tour
-        maybe_show_tour(email)
+        from mixar.modules.onboarding.core.tour.telemetry import (
+            START_SOURCE_AUTO_SIGNIN,
+        )
+        maybe_show_tour(email, START_SOURCE_AUTO_SIGNIN)
     except Exception as exc:
         logger.warning(f"Onboarding hook failed: {exc}")
 

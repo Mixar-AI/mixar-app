@@ -41,6 +41,9 @@ EVENT_GENERATION_REJECTED = "generation.rejected"
 EVENT_TOUR_STARTED = "onboarding.tour_started"
 EVENT_TOUR_STEP = "onboarding.tour_step"
 EVENT_TOUR_FINISHED = "onboarding.tour_finished"
+# The per-device onboarding_seen.json could not be read/parsed or written
+# (op + exception type name only; the tour fails open).
+EVENT_ONBOARDING_SEEN_STATE_ERROR = "onboarding.seen_state_error"
 EVENT_UPDATE_DOWNLOAD = "update.download_finished"
 EVENT_UPDATE_STARTED = "update.install_started"
 EVENT_UPDATE_RESULT = "update.install_result"
