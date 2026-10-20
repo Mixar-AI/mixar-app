@@ -83,6 +83,44 @@ def test_tab_limit_refuses_before_anything_is_made(tabs):
     assert tabs.made == []
 
 
+def test_at_the_limit_new_is_refused_as_final_with_the_tabs_to_reuse(tabs):
+    """The refusal says not to retry and lists the tabs a client can switch
+    to; repeating the call changes nothing, and a freed slot takes the next."""
+    tabs.tabs.extend(Tab(name=f"T{i}", mixie_session_id=f"s{i}") for i in range(MAX_SCENES - 1))
+    refusals = []
+    for _ in range(3):
+        with pytest.raises(UIError) as refused:
+            scene_tabs.new_scene("One more")
+        refusals.append(refused.value.result())
+    assert tabs.made == [] and refusals[0] == refusals[1] == refusals[2]
+    result = refusals[0]
+    assert result["error_type"] == "scene_limit" and result["retryable"] is False
+    assert result["scene_count"] == MAX_SCENES and result["max_scenes"] == MAX_SCENES
+    assert "Do not retry" in result["error"] and "mixar_scene_switch" in result["error"]
+    assert [entry["session"] for entry in result["reuse"]] == [tab.mixie_session_id for tab in tabs.tabs]
+    assert set(result["reuse"][0]) == {"name", "session", "state", "shown"}
+    assert scene_tabs.switch_scene(result["reuse"][1]["session"])["name"] == "T0"
+    tabs.tabs.pop()  # The user closes a tab in the drawer.
+    assert scene_tabs.new_scene("One more")["name"] == "One more" and len(tabs.made) == 1
+
+
+def test_the_limit_refusal_reaches_the_client_whole(tabs, tmp_path, monkeypatch):
+    receipts = Receipts(tmp_path / "receipts.sqlite")
+    monkeypatch.setattr(service, "_receipts", receipts)
+    monkeypatch.setattr(service, "_registered", True)
+    monkeypatch.setattr(service, "_signed_in", lambda: None)
+    monkeypatch.setattr(service.ownership, "active", lambda: False)
+    tabs.tabs.extend(Tab(name=f"T{i}", mixie_session_id=f"s{i}") for i in range(MAX_SCENES - 1))
+    request = service.Request(str(uuid4()), "mixar_scene_new", {}, str(uuid4()), "", float("inf"))
+    monkeypatch.setattr(service, "_active", (request, service._run(request)))
+    service._pump()
+    assert request.result["isError"] is True and request.claimed is False
+    refusal = request.result["structuredContent"]["result"]
+    assert refusal["error_type"] == "scene_limit" and refusal["retryable"] is False
+    assert len(refusal["reuse"]) == MAX_SCENES and refusal["reuse"][0]["session"] == "sess-pool"
+    receipts.close()
+
+
 def test_a_retried_create_never_makes_a_second_tab(tabs, tmp_path, monkeypatch):
     receipts = Receipts(tmp_path / "receipts.sqlite")
     monkeypatch.setattr(service, "_receipts", receipts)
