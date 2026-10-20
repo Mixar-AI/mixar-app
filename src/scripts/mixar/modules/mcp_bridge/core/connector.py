@@ -13,7 +13,7 @@ MAX_BODY = 8 * 1024 * 1024
 #: Tools the desktop serves itself through /ui (never the backend).
 LOCAL_PREFIXES = ("mixar_ui_", "mixar_scene", "mixar_project")
 REBINDS = {"mixar_scene_new", "mixar_scene_switch", "mixar_project_open"}
-REPORTS_BINDING = {"mixar_ui_context", "mixar_scenes", *REBINDS}
+REPORTS_BINDING = {"mixar_ui_context", "mixar_scenes", "mixar_scene_close", *REBINDS}
 #: MCP is off in Mixar's "Connect MCP" sheet: its relay stops and
 #: its launcher manifest says so. "Mixar is not open" sent users (and their AI
 #: app) looking for a closed app while Mixar sat open on the same screen.
@@ -233,6 +233,9 @@ class Connector:
                 # A created or switched scene becomes this connection's target:
                 # backend scene tools and UI actions follow it from now on.
                 self.bound_session = result["session"]
+            if name == "mixar_scene_close" and (result.get("closed") or {}).get("session") == self.bound_session:
+                # Our tab is gone: follow the one now shown, as the drawer does.
+                self.bound_session = result.get("session") or None
             if name == "mixar_scenes":
                 for scene in result.get("scenes", []):
                     scene["bound"] = scene.get("session") == self.bound_session

@@ -71,6 +71,12 @@ def _uuid(value):
     return str(parsed)
 
 
+def held(session_id) -> bool:
+    """True while an AI app connection holds this scene tab's lease."""
+    with _lock:
+        return session_id in _operations
+
+
 def transport_generation():
     with _lock:
         return _transport_generation
