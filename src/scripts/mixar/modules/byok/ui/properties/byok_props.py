@@ -17,7 +17,7 @@ Users see friendly labels; the IDs are what get sent to the server.
 """
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 
 from ...constants import (
     BYOK_API_KEY_MAX_LENGTH,
@@ -197,6 +197,7 @@ _WM_ATTRS = (
     'byok_current_provider',
     'byok_current_model',
     'byok_current_supports_vision',
+    'byok_local_context_window',
     'byok_key_preview',
     'byok_device_key_missing',
     'byok_key_resumable',
@@ -315,6 +316,10 @@ def register():
     # OpenRouter models) run chat fine but skip 3D visual feedback, so the
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
+    # The custom local server's context window read at its last Save (0 =
+    # unknown). Below context_probe.AGENT_MIN_CONTEXT the SAVED recap warns:
+    # the agent's replies would be cut off before they answer.
+    WM.byok_local_context_window = IntProperty(default=0, min=0)
     WM.byok_key_preview = StringProperty(default='')
     # The server holds metadata only; the key lives in this device's
     # credential store. True = active server-side but nothing usable here

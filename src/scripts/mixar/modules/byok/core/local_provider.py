@@ -376,7 +376,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     release = byok_client.hold()
     epoch = credential_state.current_epoch()
 
-    def _after_ping(err):
+    def _after_ping(err, window=None):
         release()
         if credential_state.current_epoch() != epoch:
             # Signed out (or into another account) during the ping: never send
@@ -398,6 +398,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                     orchestrator.refresh_approved_bases()
                 except Exception as exc:
                     logger.warning("Local registration snapshot failed: %s", exc)
+                _remember_context_window(window)
             on_done(success, data, save_err)
 
         byok_client.save_credentials(
@@ -414,9 +415,28 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     # through, the hold is still released).
     _after_ping.release = release
     byok_client._run_worker(
-        "MixarLocalCustomPing", lambda: (_ping_models_endpoint(base_url),), _after_ping,
+        "MixarLocalCustomPing", lambda: _ping_and_measure(base_url, model, api_key), _after_ping,
         (n_("Could not reach the local server."),))
     return True, None
+
+
+def _ping_and_measure(base_url: str, model: str, api_key: Optional[str]) -> tuple:
+    """Worker thread: reachability, then (when reachable) the server's context
+    window for the SAVED recap. A window the server does not report is None."""
+    err = _ping_models_endpoint(base_url)
+    if err:
+        return err, None
+    from mixar.modules.local_models.core import context_probe
+    return None, context_probe.context_window(base_url, model, api_key)
+
+
+def _remember_context_window(window: Optional[int]) -> None:
+    """Main thread: the window the SAVED recap judges (0 = unknown)."""
+    try:
+        import bpy
+        bpy.context.window_manager.byok_local_context_window = int(window or 0)
+    except Exception as exc:
+        logger.debug("Local context window not recorded: %s", exc)
 
 
 def _ping_models_endpoint(base_url: str) -> Optional[str]:

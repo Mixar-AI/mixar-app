@@ -310,6 +310,38 @@ def test_save_managed_registers_token_base_and_vision(monkeypatch):
     assert finished["ok"] is True
 
 
+def test_a_custom_save_records_the_servers_context_window(monkeypatch):
+    """The window read during the save's ping feeds the SAVED recap."""
+    import bpy
+    from mixar.modules.local_models.core import context_probe
+    monkeypatch.setattr(local_provider, "_ping_models_endpoint", lambda _base: None)
+    monkeypatch.setattr(context_probe, "context_window", lambda base, model, key: 8192)
+    monkeypatch.setattr(byok_client, "_run_worker",
+                        lambda name, work, done, failure: done(*work()))
+    monkeypatch.setattr(byok_client, "hold", lambda: (lambda: None))
+    monkeypatch.setattr(byok_client, "save_credentials",
+                        lambda **kw: kw["on_done"](True, {"byok_active": True}, None))
+    wm = SimpleNamespace(byok_form_local_custom_base="http://127.0.0.1:11434",
+                         byok_form_local_custom_model="gemma4:e4b", byok_form_local_custom_key="")
+    finished = {}
+    assert local_provider.save_custom_async(
+        wm, on_done=lambda ok, data, err: finished.update(ok=ok)) == (True, None)
+    assert finished == {"ok": True}
+    assert bpy.context.window_manager.byok_local_context_window == 8192
+
+
+def test_the_saved_recap_warns_about_a_small_local_window():
+    from mixar.modules.byok.ui.operators import byok_dialog_ui
+    wm = SimpleNamespace(byok_current_provider="local", byok_local_context_window=8192)
+    warning = " ".join(byok_dialog_ui._context_warning(wm))
+    assert "8,192 tokens" in warning and "32K" in warning and "OLLAMA_CONTEXT_LENGTH" in warning
+    for window in (0, 32768, 131072):          # unknown, or big enough
+        wm.byok_local_context_window = window
+        assert byok_dialog_ui._context_warning(wm) == []
+    wm.byok_current_provider, wm.byok_local_context_window = "openai", 8192
+    assert byok_dialog_ui._context_warning(wm) == []
+
+
 def test_save_custom_rejects_non_local_base():
     wm = SimpleNamespace(
         byok_form_local_custom_base="https://api.evil.example",
