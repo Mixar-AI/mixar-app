@@ -18,6 +18,7 @@ thread with ``bpy.app.timers.register``.
 import hashlib
 import os
 import threading
+import uuid
 
 import bpy
 
@@ -25,7 +26,10 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
 from ..constants import InstallState
-from . import download, installer, staging, verify
+from . import download, install_gate, installer, staging, verify
+# apply_and_restart's messages when the Windows pre-quit gate stopped it
+# (the toast saying why is up); re-exported for the operator.
+from .install_gate import BLOCKED_BY_OTHER_APPS, WAITING_FOR_BACKGROUND  # noqa: F401
 from .state import get_update_state
 
 logger = get_logger(__name__)
@@ -160,7 +164,7 @@ def _worker(info, eligibility, running_binary):
                 should_cancel=_cancel.is_set,
             )
 
-        verdict, detail = verify.verify_installer(
+        verdict, detail, signer = verify.verify_installer(
             path,
             bundle_path=eligibility.location.target if eligibility.location else "",
             running_binary=running_binary,
@@ -174,7 +178,7 @@ def _worker(info, eligibility, running_binary):
         if verdict == verify.UNVERIFIED:
             logger.warning("Installer signature not verified: %s", detail)
 
-        state.set_ready(path, verdict == verify.VERIFIED)
+        state.set_ready(path, verdict == verify.VERIFIED, signer)
         logger.info("Update %s ready to install (%s)", version, verdict)
 
     except download.UpdateDownloadCancelled:
@@ -245,23 +249,26 @@ def _after_download():
         # The user asked for this before the download finished. Go through
         # the operator rather than quitting here: it owns the unsaved-work
         # confirmation, and minutes may have passed since they clicked.
-        #
-        # This runs inside a bpy.app.timers callback, whose context usually
-        # carries no window — and INVOKE_DEFAULT opens the unsaved-work
-        # confirmation dialog, which needs one. Borrow a window like the
-        # toast dispatcher does; without it the invoke fails, the request
-        # has already been consumed here, and the user is never prompted.
-        try:
-            window = next(iter(bpy.context.window_manager.windows), None)
-            if window is not None:
-                with bpy.context.temp_override(
-                    window=window, screen=window.screen
-                ):
-                    bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
-            else:
+        open_restart_prompt()
+
+
+def open_restart_prompt():
+    """Open the Restart & Update confirmation from a timer (main thread).
+
+    A ``bpy.app.timers`` callback's context usually carries no window — and
+    INVOKE_DEFAULT opens the unsaved-work confirmation dialog, which needs
+    one. Borrow a window like the toast dispatcher does; without it the
+    invoke fails and the user is never prompted.
+    """
+    try:
+        window = next(iter(bpy.context.window_manager.windows), None)
+        if window is not None:
+            with bpy.context.temp_override(window=window, screen=window.screen):
                 bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
-        except Exception:  # noqa: BLE001 - operator may be unavailable
-            logger.error("Could not open the restart prompt", exc_info=True)
+        else:
+            bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+    except Exception:  # noqa: BLE001 - operator may be unavailable
+        logger.error("Could not open the restart prompt", exc_info=True)
 
 
 # ============================================================================
@@ -372,6 +379,16 @@ def apply_and_restart():
         state.set_install_unsupported(eligibility.reason)
         return False, eligibility.reason
 
+    # Windows: nothing else may run from the install directory (ends
+    # abandoned connectors, names what the user must close, or waits for
+    # Mixar's own background work).
+    blocked = install_gate.check(eligibility)
+    if blocked:
+        return False, blocked
+
+    from .update_checker import get_runtime_version
+
+    attempt_id = uuid.uuid4().hex
     global _helper_proc
     try:
         _helper_proc = installer.begin_install(
@@ -380,17 +397,23 @@ def apply_and_restart():
             version=info.latest_version,
             eligibility=eligibility,
             verified=state.signature_verified,
+            signer_thumbprint=state.signer_thumbprint,
+            from_version=get_runtime_version() or "",
+            attempt_id=attempt_id,
         )
     except Exception as e:  # noqa: BLE001 - nothing has changed yet
         logger.error("Could not start the update helper: %s", e, exc_info=True)
         state.set_install_failed(n_("Could not start the updater"))
         return False, n_("Could not start the updater")
 
+    install_gate.reset()
     state.set_installing()
     try:
         from ...analytics.update_events import capture_update_started
 
-        capture_update_started(info.latest_version, state.signature_verified)
+        capture_update_started(
+            info.latest_version, state.signature_verified, attempt_id=attempt_id,
+        )
     except Exception:  # noqa: BLE001 - telemetry is fail-open
         logger.debug("Update start telemetry failed", exc_info=True)
 
@@ -443,7 +466,8 @@ def _abort_pending_install():
     # The staged installer is untouched and still verified — go back to
     # READY so the next click simply tries again.
     if state.installer_path:
-        state.set_ready(state.installer_path, state.signature_verified)
+        state.set_ready(
+            state.installer_path, state.signature_verified, state.signer_thumbprint)
     else:
         state.set_install_failed(n_("Mixar didn't close"))
 

@@ -29,6 +29,7 @@ location was unavailable so it can warn instead of failing at the UAC
 prompt.
 """
 
+import ntpath
 import os
 import shutil
 import subprocess
@@ -38,7 +39,12 @@ import tempfile
 from mixar.config.logging_config import get_logger
 
 from ..constants import (
+    HELPER_LOG_KEEP_BYTES,
+    HELPER_LOG_MAX_BYTES,
+    HELPER_LOG_NAME,
     HELPER_RESULT_NAME,
+    MSI_LOG_NAME,
+    MSI_PREV_LOG_NAME,
     PARTIAL_SUFFIX,
     STAGING_DIR_NAME,
     STAGING_VENDOR_DIR,
@@ -153,10 +159,12 @@ def _grant_machine_read(path: str) -> None:
     """
     if not _is_windows():
         return
+    from .app_paths import windows_system_dir
+
     try:
         subprocess.run(
             [
-                "icacls", path,
+                ntpath.join(windows_system_dir(), "icacls.exe"), path,
                 "/grant", f"{_SID_USERS}:(OI)(CI)RX",
                 "/grant", f"{_SID_ADMINS}:(OI)(CI)F",
             ],
@@ -220,17 +228,27 @@ def installer_path(staging: StagingDir, version: str, extension: str) -> str:
 
 
 def purge_stale(staging: StagingDir, keep_filenames=()) -> None:
-    """Delete previously staged installers, helpers and logs.
+    """Delete previously staged installers and helpers; keep the evidence.
 
     A 400 MB installer per release adds up, and a stale helper script from
     a cancelled attempt must never be found and run later.  Anything named
-    in *keep_filenames* survives.
+    in *keep_filenames* survives, and so does the helper's result while it
+    is still unread: reading it at the next launch is what reports the
+    attempt.  The logs are always kept — they are the only record of why
+    an attempt failed, and the update check that purges runs seconds after
+    the relaunch has read (and deleted) the result. ``update.log`` is
+    trimmed to its tail instead; the MSI logs are overwritten per attempt.
     """
     keep = set(keep_filenames)
+    keep.update((HELPER_LOG_NAME, MSI_LOG_NAME, MSI_PREV_LOG_NAME))
     try:
         entries = os.listdir(staging.path)
     except OSError:
         return
+    if HELPER_RESULT_NAME in entries:
+        keep.add(HELPER_RESULT_NAME)
+    if HELPER_LOG_NAME in entries:
+        _trim_log(os.path.join(staging.path, HELPER_LOG_NAME))
 
     for name in entries:
         if name in keep:
@@ -243,6 +261,24 @@ def purge_stale(staging: StagingDir, keep_filenames=()) -> None:
                 os.remove(target)
         except OSError as e:
             logger.debug("Could not purge stale update file %s: %s", target, e)
+
+
+def _trim_log(path: str) -> None:
+    """Cut *path* back to its last HELPER_LOG_KEEP_BYTES once it is too big.
+
+    Starts at a line boundary so the first kept line is whole.
+    """
+    try:
+        if os.path.getsize(path) <= HELPER_LOG_MAX_BYTES:
+            return
+        with open(path, "rb") as handle:
+            handle.seek(-HELPER_LOG_KEEP_BYTES, os.SEEK_END)
+            tail = handle.read()
+        tail = tail[tail.find(b"\n") + 1:]
+        with open(path, "wb") as handle:
+            handle.write(tail)
+    except OSError as e:
+        logger.debug("Could not trim %s: %s", path, e)
 
 
 def result_path(staging_dir_path: str) -> str:

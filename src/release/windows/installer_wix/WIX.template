@@ -68,6 +68,10 @@
         <Property Id="LAUNCHAPP" Value="1" />
         <Property Id="JOINDISCORD" Value="1" />
         <SetProperty Id="REINSTALLMODE" Value="amus" Before="FindRelatedProducts" Sequence="first">NOT REINSTALLMODE</SetProperty>
+        <!-- Writes InstallLocation into the Uninstall key. The in-app updater
+             reads it to tell the registered install from a portable copy and
+             to relaunch the directory the MSI actually upgraded. -->
+        <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALL_ROOT]" After="CostFinalize" />
 
         <UIRef Id="WixUI_ErrorProgressText" />
         <CustomAction Id="LaunchMixar"

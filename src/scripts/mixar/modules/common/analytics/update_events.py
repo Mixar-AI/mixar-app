@@ -29,26 +29,45 @@ def capture_update_download(version: str, outcome: str, *, context=None) -> None
     )
 
 
-def capture_update_started(version: str, verified: bool, *, context=None) -> None:
+def capture_update_started(
+    version: str, verified: bool, *, attempt_id: str = "", context=None,
+) -> None:
     """The helper was spawned and Mixar is quitting to install."""
     capture(
         EVENT_UPDATE_STARTED,
-        {"target_version": version, "signature_verified": bool(verified)},
+        {
+            "target_version": version,
+            "signature_verified": bool(verified),
+            "attempt_id": attempt_id or None,
+        },
         context=context,
     )
+
+
+# Diagnostics an install_result may carry beyond version/outcome/stage. A
+# fixed list, so nothing the helper writes (paths in particular) can ship
+# by accident; every value is a version, an enum, a number or basenames.
+RESULT_DETAIL_KEYS = (
+    "from_version", "running_version", "exit_code", "msi_error",
+    "failure_reason", "attempt_id", "helper_version", "install_kind",
+    "installed_version", "relaunch_matched", "relaunch_kind",
+    "locking_processes", "wait_s",
+)
 
 
 def capture_update_result(
-    version: str, outcome: str, stage: str, *, context=None,
+    version: str, outcome: str, stage: str, *, details=None, context=None,
 ) -> None:
     """What the helper reported, read on the next launch.
 
-    ``stage`` is where it stopped (``install``/``verify``/``wait``/...),
-    ``outcome`` is ``success``, ``failed`` or ``no_effect`` — the last one
-    being "the installer claimed success but the old build started".
+    ``stage`` is where it stopped (``install``/``verify``/``wait``/
+    ``locked``/...), ``outcome`` is ``success``, ``pending_reboot``,
+    ``failed`` or ``no_effect`` — the last one being "the installer
+    claimed success but another build started". *details* holds the
+    :data:`RESULT_DETAIL_KEYS`; anything else is dropped.
     """
-    capture(
-        EVENT_UPDATE_RESULT,
-        {"target_version": version, "outcome": outcome, "stage": stage},
-        context=context,
-    )
+    properties = {"target_version": version, "outcome": outcome, "stage": stage}
+    for key in RESULT_DETAIL_KEYS:
+        if key in (details or {}):
+            properties[key] = details[key]
+    capture(EVENT_UPDATE_RESULT, properties, context=context)
