@@ -50,6 +50,19 @@ def _register_voice_push_to_talk(kc):
 
 
 def register():
+    """Commit the full set, or remove every item before bootstrap retries.
+
+    UI discovery can reach this module before abort_session's RNA properties
+    exist. A partial list must never masquerade as successful registration.
+    """
+    try:
+        _register_keymaps()
+    except Exception:
+        unregister()
+        raise
+
+
+def _register_keymaps():
     """Register keymap for Mixie Chat space."""
     if addon_keymaps:
         return  # Already registered — prevents double-registration on timer retry
@@ -170,8 +183,8 @@ def register():
             type='ESC',
             value='PRESS',
         )
-        kmi_abort.properties.origin = 'escape_key'
         addon_keymaps.append((km_mixie, kmi_abort))
+        kmi_abort.properties.origin = 'escape_key'
         logger.debug("Registered Escape shortcut for abort")
 
         # Text selection (click-drag) + copy (Cmd/Ctrl+C) in the message area.
@@ -212,7 +225,9 @@ def register():
 
 def unregister():
     """Unregister keymap for Mixie Chat space."""
-    for km, kmi in addon_keymaps:
+    if bpy.app.timers.is_registered(register):
+        bpy.app.timers.unregister(register)
+    for km, kmi in reversed(addon_keymaps):
         km.keymap_items.remove(kmi)
     addon_keymaps.clear()
     logger.debug("Unregistered keymap")
