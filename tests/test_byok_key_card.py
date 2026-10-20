@@ -215,7 +215,11 @@ def test_the_dialog_operator_takes_the_prefill_and_resends_on_save():
         body = src[src.index(method):]
         body = body[:body.index("\n    def ")]
         assert "key_prompt.dismiss(saving=_saving(context.window_manager))" in body
-    assert "def _saving(wm)" in src and "== 'SAVING'" in src
+    # The helper lives beside the dialog's other helpers (byok_ops is at the
+    # 500-line rule) and is imported under the same name.
+    assert "saving as _saving," in src
+    support = (BYOK_OPS.parent / "byok_dialog_support.py").read_text(encoding="utf-8")
+    assert "def saving(wm)" in support and "== 'SAVING'" in support
 
 
 def test_the_slot_action_operator_hands_card_values_to_the_card_first():

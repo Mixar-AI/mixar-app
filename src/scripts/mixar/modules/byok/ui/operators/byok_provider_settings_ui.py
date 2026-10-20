@@ -347,6 +347,9 @@ class FormPlan:
 
     def _save_text(self):
         if self.state == 'SAVING':
+            from ...core import local_provider
+            if self.kind == 'local' and local_provider.waiting_for_start():
+                return iface_("Waiting for the local model to start…")
             return iface_("Validating with your provider…")
         if self.state == 'ERROR':
             return iface_("Try Again")

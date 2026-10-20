@@ -46,6 +46,10 @@ def turn_in_flight(context) -> bool:
         return False
 
 
+def saving(wm) -> bool:
+    return getattr(wm, 'byok_dialog_state', '') == 'SAVING'
+
+
 def account_busy() -> bool:
     """Another change of the key or the pick is in flight: an island toggle /
     model switch, a save / removal sent from a dialog closed mid-request, or a
