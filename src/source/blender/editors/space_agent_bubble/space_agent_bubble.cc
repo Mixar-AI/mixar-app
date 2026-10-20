@@ -676,6 +676,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
       ui::button_placeholder_set(input_but, state->placeholder);
       ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
+      /* Draft editing has its own native text undo. Committing even an
+       * untouched auto-focused field must not push document undo: opening
+       * Checkpoints would otherwise look like a scene edit after restore. */
+      ui::button_flag_disable(input_but, ui::BUT_UNDO);
     }
   }
 
@@ -1339,6 +1343,8 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
           ui::button_placeholder_set(input_but, empty_probe.placeholder);
           ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
           ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
+          /* Drafts use native text undo, never the document's undo stack. */
+          ui::button_flag_disable(input_but, ui::BUT_UNDO);
           /* Emboss is required for clicks, but its default inner is opaque
            * #121212. When frost is showing, recolour the chrome as a wash
            * (but->col[3] == 0 means "no override", so this cannot be 0). */

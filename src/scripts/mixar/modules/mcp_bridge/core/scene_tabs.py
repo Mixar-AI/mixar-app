@@ -99,13 +99,26 @@ def _target(session: str):
     return matches[0]
 
 
+def _refuse_at_limit():
+    """Final, and names the way out: a scripted client that retried this
+    refusal spun on it for minutes."""
+    shown, count = _shown(), len(_ops().real_scenes())
+    reuse = [_entry(scene, shown) for scene in _ops().ordered_tabs()]
+    reuse.sort(key=lambda entry: entry["state"] != "idle")  # Idle tabs first; stable otherwise.
+    raise UIError("scene_limit",
+                  f"Mixar has {count} scene tabs (limit {MAX_SCENES}). Do not retry mixar_scene_new: switch to "
+                  "an existing tab with mixar_scene_switch (sessions in reuse), close one you no longer need "
+                  "with mixar_scene_close (ask the user first if it holds their work), or ask the user to "
+                  "close tabs in Mixar's Scenes drawer",
+                  {"retryable": False, "scene_count": count, "max_scenes": MAX_SCENES, "reuse": reuse})
+
+
 def preflight(name: str, args: dict) -> None:
     """Every refusal happens before the call is claimed, so a refused call has
     a clean "failed" receipt instead of an uncertain one."""
     _gate()
     if name == "mixar_scene_new" and len(_ops().real_scenes()) >= MAX_SCENES:
-        raise UIError("scene_limit", f"Mixar already has {MAX_SCENES} scene tabs; reuse one with "
-                                     "mixar_scene_switch or close one with mixar_scene_close")
+        _refuse_at_limit()
     if name == "mixar_scene_switch":
         _target(args["session"])
     if name == "mixar_scene_close":

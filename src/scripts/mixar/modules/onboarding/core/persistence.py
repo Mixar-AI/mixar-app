@@ -14,15 +14,23 @@ The flag is per device, not per account: a guest's identity is a fresh
 placeholder email, so a per-email list could never dedupe it and the tour
 kept coming back. Files written before this keyed the flag by email
 (``users_seen``); any entry there means the device has seen it.
+
+The file is replaced atomically (``common/utils/atomic_json``). A read or
+parse failure counts as "not seen" (the tour fails open) and a write
+failure leaves the flag unwritten (the next deliberate ending tries again);
+either is reported once per process as ``onboarding.seen_state_error``
+with the exception's type name only — never the path or its message.
 """
 
 import json
 import os
 import threading
+from pathlib import Path
 
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.atomic_json import write_json_atomic
 
 logger = get_logger(__name__)
 
@@ -48,6 +56,14 @@ def _seen_path() -> str:
     return os.path.join(_data_dir(), _FILENAME)
 
 
+def _report(op: str, exc: BaseException) -> None:
+    try:
+        from mixar.modules.onboarding.core.tour import telemetry
+        telemetry.seen_state_error(op, exc)
+    except Exception:  # noqa: BLE001 - telemetry is fail-open
+        pass
+
+
 def _read() -> dict:
     path = _seen_path()
     if not os.path.isfile(path):
@@ -55,10 +71,13 @@ def _read() -> dict:
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = json.load(fh)
+        if not isinstance(data, dict):
+            raise ValueError("seen file is not a JSON object")
     except Exception as exc:
         logger.warning("Onboarding persistence: read failed: %s", exc)
+        _report("read", exc)
         return {}
-    return data if isinstance(data, dict) else {}
+    return data
 
 
 def has_device_seen_onboarding() -> bool:
@@ -78,10 +97,9 @@ def mark_device_seen_onboarding() -> None:
         if _read().get("seen") is True:
             return
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8") as fh:
-                json.dump({"seen": True}, fh, indent=2)
+            write_json_atomic(Path(path), {"seen": True})
         except Exception as exc:
             logger.warning("Onboarding persistence: write failed: %s", exc)
+            _report("write", exc)
             return
     logger.info("Onboarding: marked this device as seen")

@@ -16,14 +16,16 @@ import bpy
 
 from mixar.modules.onboarding.core.tour import config as tour_config
 from mixar.modules.onboarding.core.tour import is_available as tour_available
+from mixar.modules.onboarding.core.tour.telemetry import START_SOURCE_HELP_MENU
 
 
 def _draw_tour_entry(self, context):
     if not tour_available():
         return
     self.layout.separator()
-    self.layout.operator(tour_config.OP_TOUR,
-                         text=tour_config.HELP_MENU_START_TOUR, icon="PLAY")
+    op = self.layout.operator(tour_config.OP_TOUR,
+                              text=tour_config.HELP_MENU_START_TOUR, icon="PLAY")
+    op.start_source = START_SOURCE_HELP_MENU
 
 
 def register():

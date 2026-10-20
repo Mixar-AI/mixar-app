@@ -40,7 +40,7 @@ from lib import ScenarioFail, run_scenario  # noqa: E402
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/modal-dialog-docks'))
 OUT.mkdir(parents=True, exist_ok=True)
 USER = 'qa.modal-dialog@example.invalid'
-PROFILE = {'text': USER, 'area_type': 'TOPBAR'}
+PROFILE = {'text': 'QA Modal Dialog', 'area_type': 'TOPBAR'}
 SETTINGS = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
 KEY_FIELD = {'prop': 'byok_form_api_key', 'popup': True}
 WM = 'bpy.context.window_manager'
@@ -62,12 +62,14 @@ scene = drv.main_window().scene
 saved = (C.snapshot(), list(M._provider_cache), copy.deepcopy(M._model_cache),
          copy.deepcopy(M._platform_records), M.is_loaded(),
          bpy.context.preferences.view.show_tooltips, wm.mixie_chat_is_logged_in,
-         scene.mixie_chat_user_id, scene.mixie_chat_input)
+         scene.mixie_chat_user_id, scene.mixie_chat_input, wm.mixie_chat_is_guest, wm.mixar_account_name)
 M.populate_from_payload({{'providers': [{{'id': 'openai', 'label': 'QA Provider',
     'models': [{{'id': 'qa-one', 'label': 'QA Model One', 'platform_available': True}}]}}]}})
 C.clear()
 wm.byok_form_provider = 'openai'
 wm.mixie_chat_is_logged_in = True
+wm.mixie_chat_is_guest = False
+wm.mixar_account_name = 'QA Modal Dialog'
 scene.mixie_chat_user_id = {USER!r}
 bpy.context.preferences.view.show_tooltips = False
 O._qa_modal_dialog_fixture = saved
@@ -88,6 +90,8 @@ bpy.context.window_manager.mixie_chat_is_logged_in = saved[6]
 scene = drv.main_window().scene
 scene.mixie_chat_user_id = saved[7]
 scene.mixie_chat_input = saved[8]
+bpy.context.window_manager.mixie_chat_is_guest = saved[9]
+bpy.context.window_manager.mixar_account_name = saved[10]
 O._wipe_form_secrets(bpy.context.window_manager)
 del O._qa_modal_dialog_fixture
 result = True

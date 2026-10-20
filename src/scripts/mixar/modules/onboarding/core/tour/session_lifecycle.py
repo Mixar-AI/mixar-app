@@ -11,10 +11,15 @@ failure after resources were acquired runs ``stop`` so no draw handler,
 clock or texture outlives a failed start. ``stop`` is idempotent and
 never raises; it distinguishes deliberate endings (``completed``,
 ``exited`` → mark seen, run the completion cleanup that leaves the
-moodboard open) from interruptions (``cancelled``, ``host-closed``,
-``error``, ``file-loaded`` → restore the pre-tour state). The seen flag is
+moodboard open) from interruptions (``quit``, ``window-closed``,
+``cancelled``, ``host-closed``, ``error``, ``file-loaded`` → restore the
+pre-tour state; the reasons are ``telemetry.STOP_*``). The seen flag is
 also written as soon as the first beat is over, so a user who quits midway
 is not shown the tour again on the next launch.
+
+Blender has no "quitting" flag, so ``note_app_exiting`` (an ``exit_pre``
+handler, ``ui/properties/tour_props.py``) records it: the modal's
+``cancel`` then reports ``quit`` rather than ``window-closed``.
 """
 
 import time
@@ -54,6 +59,21 @@ FALLBACK_TICK_INTERVAL_S = 1.0 / 30.0
 
 # Endings the user chose or reached: the tour has been seen.
 DELIBERATE_ENDINGS = ("completed", "exited")
+
+_app_exiting = False
+
+
+def note_app_exiting() -> None:
+    """The app is quitting (``exit_pre``): a modal cancel from now on is a quit."""
+    global _app_exiting
+    _app_exiting = True
+
+
+def cancel_reason() -> str:
+    """Stop reason for a cancelled modal: ``quit`` once the app is exiting,
+    otherwise its window closed."""
+    from . import telemetry
+    return telemetry.STOP_QUIT if _app_exiting else telemetry.STOP_WINDOW_CLOSED
 
 
 def _subtitles_for(language: str, narration: str):
@@ -200,7 +220,8 @@ class SessionLifecycleMixin:
         if t is not None:
             try:
                 t.started(self.tour.id, self.language, self.narration,
-                          tour_run_id=self.tour_run_id)
+                          tour_run_id=self.tour_run_id,
+                          start_source=getattr(self, "start_source", ""))
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s started (rate=%.2f silent=%s narration=%s)",
@@ -283,7 +304,8 @@ class SessionLifecycleMixin:
                 elapsed = time.monotonic() - getattr(self, "_started_wall", time.monotonic())
                 t.finished(self.tour.id, reason, beat_id, elapsed,
                            tour_run_id=self.tour_run_id,
-                           step_index=self.runner.index if self.runner else -1)
+                           step_index=self.runner.index if self.runner else -1,
+                           start_source=getattr(self, "start_source", ""))
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Tour %s stopped: %s", self.tour.id, reason)

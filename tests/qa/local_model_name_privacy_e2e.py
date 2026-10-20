@@ -16,7 +16,7 @@ to prove the unfixed behavior in the same app against the same real server.
 import json
 import os
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario  # noqa: E402
@@ -25,12 +25,12 @@ OUT = Path(os.environ.get('QA_SCENARIO_OUT', 'build/qa/model-name-privacy'))
 OUT.mkdir(parents=True, exist_ok=True)
 WM = 'bpy.data.window_managers[0]'
 STATE = "bpy.app.driver_namespace['qa_model_privacy']"
-BASENAME = Path(os.environ.get('MIXAR_TEST_GGUF', 'QA-Model.gguf')).name
+BASENAME = PureWindowsPath(os.environ.get('MIXAR_TEST_GGUF', 'QA-Model.gguf')).name
 HUB_ID = 'hf.co/qa/model:QA-Model.gguf'
 
 SETUP = r'''
 import bpy, os, json, threading, importlib
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from types import SimpleNamespace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 assert os.environ.get('MIXAR_QA') == '1'
@@ -112,7 +112,7 @@ def probe_and_relay():
         port = urllib.parse.urlsplit(fixture.base).port
         fixture.detected = detect._probe_one('llama_cpp', port, 5)
         relay.set_approved_bases([fixture.base])
-        body = json.dumps({'model': Path(path).name, 'max_tokens': 8,
+        body = json.dumps({'model': PureWindowsPath(path).name, 'max_tokens': 8,
             'temperature': 0, 'messages': [{'role': 'user', 'content': 'Say hello.'}]})
         if real_base:
             req = urllib.request.Request(fixture.base + '/v1/chat/completions',
@@ -199,6 +199,7 @@ f = {STATE}
 assert f.error is None, f.error
 expected = [{BASENAME!r}] if f.raw_model else [{BASENAME!r}, {HUB_ID!r}]
 assert f.detected['models'] == expected, f.detected
+assert f.relayed and 'body' in f.relayed, ('relay transport failed', f.relayed)
 reply = __import__('json').loads(f.relayed['body'])
 assert reply['model'] == {BASENAME!r}, reply
 if f.raw_model:
@@ -215,8 +216,8 @@ result = {{'detected': f.detected['models'], 'response_model': reply['model'],
 ''')
         qa.step('open_provider_dialog', qa.eval,
                 "result=str(bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT'))")
-        qa.step('choose_local_provider', qa.cmd, 'choose',
-                widget={'prop': 'byok_form_provider', 'popup': True}, item='Local (this computer)')
+        qa.step('choose_local_provider', qa.click,
+                op='MIXAR_BYOK_OT_pick', text='Local model', popup=True)
         # Mode is an expanded enum (two row buttons), not a dropdown.
         qa.step('choose_custom_server', qa.click,
                 prop='byok_form_local_mode', text='Custom local server', popup=True)
@@ -254,11 +255,12 @@ result = {{'model': wm.byok_current_model, 'state': wm.byok_dialog_state}}
                 f'assert {WM}.byok_form_local_custom_model == {BASENAME!r}\nresult=True')
         qa.step('saved_model_snap', qa.cmd, 'snap', path=after_path,
                 target={'op': 'MIXAR_BYOK_OT_save', 'popup': True}, margin=900)
-        qa.step('close_dialog', qa.click, text='Cancel', popup=True)
+        qa.step('close_dialog', qa.press, 'ESC',
+                window=qa.find(op='MIXAR_BYOK_OT_save', popup=True)['widgets'][0]['window'])
         return {'setup': setup, 'transport': transport, 'saved': saved,
                 'screenshots': [before, after_path], 'real_inference': setup['real_inference']}
     finally:
-        hits = qa.find(prop='byok_form_provider', popup=True)['widgets']
+        hits = qa.find(op='MIXAR_BYOK_OT_save', popup=True)['widgets']
         if hits:
             qa.press('ESC', window=hits[0]['window'])
         qa.step('restore_fixture_boundaries', qa.eval, CLEANUP)
