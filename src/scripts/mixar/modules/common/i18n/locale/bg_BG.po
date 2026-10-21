@@ -1907,7 +1907,10 @@ msgstr "Всеки slug от openrouter.ai/models, напр. anthropic/claude-op
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Приложен отново е ход {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Приложени отново са ходове {first}–{last}"
 
-msgid "queued"
-msgstr "в опашката"
-
 msgid "Restoring a checkpoint…"
 msgstr "Възстановяване на точка за възстановяване…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' вече го няма във файла с ресурса."
 msgid "Could not add the asset to the scene."
 msgstr "Ресурсът не можа да се добави в сцената."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Не можа да се продължи автоматично — на
 msgid "The request could not be completed."
 msgstr "Заявката не можа да се изпълни."
 
-msgid "Message could not be delivered"
-msgstr "Съобщението не можа да се достави"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Съобщението ви не стигна до Mixie. Проверете връзката си и го изпратете отново."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Сървърът не е достъпен. Моля, проверете връзката и опитайте отново."
@@ -20498,12 +20510,6 @@ msgstr "Поднови задачата"
 
 msgid "Start fresh"
 msgstr "Започни начисто"
-
-msgid "delivery uncertain"
-msgstr "доставката е несигурна"
-
-msgid "could not be delivered"
-msgstr "не можа да се достави"
 
 msgid "Voice input unavailable."
 msgstr "Гласовото въвеждане не е налично."

@@ -133,10 +133,12 @@ class MIXAR_BYOK_OT_forget_stored_key(Operator):
 # Pause: DELETE the server rows, keep the record
 # ---------------------------------------------------------------------------
 
-def pause(wm, then=None) -> bool:
+def pause(wm, then=None, otherwise=None) -> bool:
     """Ask the server to forget the key (the record stays); False when
     nothing started. ``then`` runs on the main thread after a successful
-    pause — the island popup chains the hosted pick it was asked for."""
+    pause — the island popup chains the hosted pick it was asked for;
+    ``otherwise`` after a failed one (the chat's sign-in notice resends
+    anyway, `space_mixie_chat/core/login_notice.py`)."""
     if not _can_toggle() or not credential_state.begin_toggle(False, wm):
         return False
     epoch = credential_state.current_epoch()
@@ -144,13 +146,13 @@ def pause(wm, then=None) -> bool:
     _redraw()
 
     def _done(success, removed_count, err):
-        _on_pause_done(success, removed_count, err, epoch, pref_epoch, then)
+        _on_pause_done(success, removed_count, err, epoch, pref_epoch, then, otherwise)
 
     byok_client.delete_credentials(on_done=_done, forget_local=False)
     return True
 
 
-def _on_pause_done(success, removed_count, err, epoch, pref_epoch, then=None):
+def _on_pause_done(success, removed_count, err, epoch, pref_epoch, then=None, otherwise=None):
     """Main-thread callback: adopt "inactive", or re-read and explain."""
     try:
         if credential_state.current_epoch() != epoch:
@@ -168,15 +170,16 @@ def _on_pause_done(success, removed_count, err, epoch, pref_epoch, then=None):
                 {"mixar_agent_model_byok_active": False}, epoch=pref_epoch)
             logger.info("BYOK key paused: %d row(s) deleted, record kept on this device",
                         removed_count)
-            if then is not None:
-                try:
-                    then()
-                except Exception as e:  # noqa: BLE001 — the pause itself landed
-                    logger.warning("BYOK pause follow-up failed: %s", e)
         else:
             logger.warning("BYOK pause failed: %s", err)
             _toast(n_("Couldn't switch to Mixie"), err)
             credential_state.refresh()
+        follow = then if success else otherwise
+        if follow is not None:
+            try:
+                follow()
+            except Exception as e:  # noqa: BLE001 — the pause itself settled
+                logger.warning("BYOK pause follow-up failed: %s", e)
         # The server owns the hosted pick's byok_active; read it either way.
         preference_state.refresh()
     except Exception as e:  # noqa: BLE001 — a callback must never raise into a timer

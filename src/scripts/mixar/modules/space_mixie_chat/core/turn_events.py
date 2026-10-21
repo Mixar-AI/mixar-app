@@ -37,10 +37,13 @@ _commands = {}
 # the next connection's request_status says the server never saw it: the
 # server keys receipts on (user, command id) plus a content digest, so a
 # resend that races a late original only ever returns the first receipt —
-# it can never run twice. Bounded: after the last attempt the bubble is
-# marked undelivered and the tab leaves BUSY.
+# it can never run twice. Bounded: after the last attempt it settles as
+# undelivered (one plain-language agent message) and the tab leaves BUSY.
 _outbox = {}
 _MAX_REDELIVERIES = 3
+# Held commands the server answered: only these can have started a turn whose
+# response a drop then lost (a resend still in flight, or refused, cannot).
+_answered = set()
 _blocked = set()
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_ITEMS = 512
@@ -118,6 +121,8 @@ def acknowledged(command_id):
     """The server answered this command: stop holding it. Returns how many
     times it had been resent (0 when it was delivered first time)."""
     entry = _outbox.pop(command_id, None)
+    if entry:
+        _answered.add(command_id)
     return entry['attempts'] if entry else 0
 
 
@@ -278,7 +283,7 @@ def _consume(method, params):
             return
         if not tid:
             local = [t for t in _turns.values() if t.session_id == sid]
-            pending = any(entry[0] == sid for entry in _commands.values())
+            pending = any(entry[0] == sid and cid in _answered for cid, entry in _commands.items())
             completed = local[-1].complete if local else saved.get('complete', False)
             if completed and not pending and not any(not t.complete for t in local):
                 return  # Between wake-ups or after the run; nothing is missing locally.
@@ -314,6 +319,7 @@ def _consume(method, params):
         entry = _commands.get(command_id) if params.get('uncertain') or method == 'agent.command.delivered' else _commands.pop(command_id, None)
         if not params.get('uncertain') and method == 'agent.command.result':
             _outbox.pop(command_id, None)
+            _answered.discard(command_id)
         if entry and entry[0] not in _blocked and entry[1]:
             scene = _resolve(entry[0])
             if scene is not None:
@@ -499,7 +505,7 @@ def reconnect(session_ids=None):
                 _redeliver(cid, session_id)
                 return
             if state in ('pending', 'accepted') and cid in _outbox:
-                # It arrived after all: drop the "delivery uncertain" mark.
+                # It arrived after all: delivered, nothing to resend.
                 acknowledged(cid)
                 handle_turn_notification('agent.command.delivered', {
                     'command_id': cid, 'session_id': session_id, 'ok': True,
@@ -577,6 +583,7 @@ def reset():
     _turns.clear()
     _commands.clear()
     _outbox.clear()
+    _answered.clear()
     _staging.clear()
     _bindings.clear()
     _blocked.clear()

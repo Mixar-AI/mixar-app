@@ -1907,7 +1907,10 @@ msgstr "Ľubovoľný identifikátor z openrouter.ai/models, napr. anthropic/clau
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Kolo {turn} bolo znova použité"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Kolá {first}–{last} boli znova použité"
 
-msgid "queued"
-msgstr "vo fronte"
-
 msgid "Restoring a checkpoint…"
 msgstr "Obnovuje sa bod obnovenia…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' sa už v súbore aktíva nenachádza."
 msgid "Could not add the asset to the scene."
 msgstr "Aktívum sa nepodarilo pridať do scény."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Nepodarilo sa automaticky pokračovať – ak chcete v stavbe pokračova
 msgid "The request could not be completed."
 msgstr "Požiadavku sa nepodarilo dokončiť."
 
-msgid "Message could not be delivered"
-msgstr "Správu sa nepodarilo doručiť"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaša správa sa k Mixie nedostala. Skontrolujte pripojenie a odošlite ju znova."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Server je nedostupný. Skontrolujte pripojenie a skúste to znova."
@@ -20498,12 +20510,6 @@ msgstr "Obnoviť úlohu"
 
 msgid "Start fresh"
 msgstr "Začať odznova"
-
-msgid "delivery uncertain"
-msgstr "doručenie neisté"
-
-msgid "could not be delivered"
-msgstr "nepodarilo sa doručiť"
 
 msgid "Voice input unavailable."
 msgstr "Hlasový vstup nie je k dispozícii."

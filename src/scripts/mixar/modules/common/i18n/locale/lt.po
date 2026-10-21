@@ -1907,7 +1907,10 @@ msgstr "Bet kuris identifikatorius iš openrouter.ai/models, pvz. anthropic/clau
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Iš naujo pritaikytas ėjimas {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Iš naujo pritaikyti ėjimai {first}–{last}"
 
-msgid "queued"
-msgstr "eilėje"
-
 msgid "Restoring a checkpoint…"
 msgstr "Atkuriamas kontrolinis taškas…"
 
@@ -20229,6 +20229,9 @@ msgstr "„{name}“ ištekliaus faile nebėra."
 msgid "Could not add the asset to the scene."
 msgstr "Nepavyko pridėti ištekliaus į sceną."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Nepavyko tęsti automatiškai — pokalbyje paspauskite Enter ties „co
 msgid "The request could not be completed."
 msgstr "Užklausos nepavyko įvykdyti."
 
-msgid "Message could not be delivered"
-msgstr "Žinutės nepavyko pristatyti"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Jūsų žinutė nepasiekė Mixie. Patikrinkite ryšį ir išsiųskite ją dar kartą."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Nepavyko pasiekti serverio. Patikrinkite ryšį ir bandykite dar kartą."
@@ -20498,12 +20510,6 @@ msgstr "Tęsti užduotį"
 
 msgid "Start fresh"
 msgstr "Pradėti iš naujo"
-
-msgid "delivery uncertain"
-msgstr "pristatymas neaiškus"
-
-msgid "could not be delivered"
-msgstr "nepavyko pristatyti"
 
 msgid "Voice input unavailable."
 msgstr "Balso įvestis neprieinama."

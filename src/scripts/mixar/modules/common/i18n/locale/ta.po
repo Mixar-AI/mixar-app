@@ -1907,7 +1907,10 @@ msgstr "openrouter.ai/models-இலிருந்து ஏதேனும் �
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "திருப்பம் {turn} மீண்டும் இடப்
 msgid "Reapplied turns {first}–{last}"
 msgstr "திருப்பங்கள் {first}–{last} மீண்டும் இடப்பட்டன"
 
-msgid "queued"
-msgstr "வரிசையில்"
-
 msgid "Restoring a checkpoint…"
 msgstr "மீட்டெடுப்பு புள்ளி மீட்டெடுக்கப்படுகிறது…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' இனி சொத்துக் கோப்பில் இ
 msgid "Could not add the asset to the scene."
 msgstr "சொத்தைக் காட்சியில் சேர்க்க முடியவில்லை."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "தானாகத் தொடர முடியவில்லை —
 msgid "The request could not be completed."
 msgstr "கோரிக்கையை முடிக்க முடியவில்லை."
 
-msgid "Message could not be delivered"
-msgstr "செய்தியை வழங்க முடியவில்லை"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "உங்கள் செய்தி Mixie-ஐ அடையவில்லை. இணைப்பைச் சரிபார்த்து, மீண்டும் அனுப்பவும்."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "சேவையகத்தை அடைய முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயலவும்."
@@ -20498,12 +20510,6 @@ msgstr "பணியைத் தொடர்"
 
 msgid "Start fresh"
 msgstr "புதிதாகத் தொடங்கு"
-
-msgid "delivery uncertain"
-msgstr "வழங்கல் உறுதியில்லை"
-
-msgid "could not be delivered"
-msgstr "வழங்க முடியவில்லை"
 
 msgid "Voice input unavailable."
 msgstr "குரல் உள்ளீடு கிடைக்கவில்லை."

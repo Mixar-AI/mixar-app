@@ -2362,7 +2362,10 @@ msgstr "Bilo koja oznaka sa openrouter.ai/models, npr. anthropic/claude-opus-4.8
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -25752,9 +25755,6 @@ msgid "Reapplied turns {first}–{last}"
 msgstr "Ponovo su primenjeni krugovi {first}–{last}"
 
 # derived
-msgid "queued"
-msgstr "u redu"
-
 # derived
 msgid "Restoring a checkpoint…"
 msgstr "Vraćanje tačke vraćanja…"
@@ -25933,6 +25933,9 @@ msgstr "„{name}“ više nije u datoteci resursa."
 msgid "Could not add the asset to the scene."
 msgstr "Nije bilo moguće dodati resurs u scenu."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -25946,6 +25949,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -25990,8 +25996,14 @@ msgid "The request could not be completed."
 msgstr "Zahtev nije mogao da se dovrši."
 
 # derived
-msgid "Message could not be delivered"
-msgstr "Poruka nije mogla da se isporuči"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaša poruka nije stigla do Mixie. Proverite vezu, pa je pošaljite ponovo."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 # derived
 msgid "Couldn't reach the server. Please check your connection and try again."
@@ -26268,13 +26280,7 @@ msgid "Start fresh"
 msgstr "Počni iznova"
 
 # derived
-msgid "delivery uncertain"
-msgstr "isporuka neizvesna"
-
 # derived
-msgid "could not be delivered"
-msgstr "nije moglo da se isporuči"
-
 # derived
 msgid "Voice input unavailable."
 msgstr "Glasovni unos nije dostupan."

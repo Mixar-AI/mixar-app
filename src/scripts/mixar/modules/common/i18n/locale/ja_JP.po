@@ -1907,7 +1907,10 @@ msgstr "openrouter.ai/models の任意のスラッグ（例: anthropic/claude-op
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20092,9 +20095,6 @@ msgstr "ターン {turn} を再適用しました"
 msgid "Reapplied turns {first}–{last}"
 msgstr "ターン {first}–{last} を再適用しました"
 
-msgid "queued"
-msgstr "待機中"
-
 msgid "Restoring a checkpoint…"
 msgstr "チェックポイントを復元中…"
 
@@ -20233,6 +20233,9 @@ msgstr "'{name}' はもうアセットファイル内にありません。"
 msgid "Could not add the asset to the scene."
 msgstr "アセットをシーンに追加できませんでした。"
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20246,6 +20249,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20281,8 +20287,14 @@ msgstr "自動的に再開できませんでした — ビルドを再開する�
 msgid "The request could not be completed."
 msgstr "リクエストを完了できませんでした。"
 
-msgid "Message could not be delivered"
-msgstr "メッセージを配信できませんでした"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "メッセージが Mixie に届きませんでした。接続を確認してから、もう一度送信してください。"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "サーバーに接続できませんでした。接続を確認して、もう一度お試しください。"
@@ -20502,12 +20514,6 @@ msgstr "タスクを再開"
 
 msgid "Start fresh"
 msgstr "新しく始める"
-
-msgid "delivery uncertain"
-msgstr "配信が不確実"
-
-msgid "could not be delivered"
-msgstr "配信できませんでした"
 
 msgid "Voice input unavailable."
 msgstr "音声入力を利用できません。"

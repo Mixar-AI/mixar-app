@@ -74,8 +74,9 @@ def draw_dialog(layout, wm):
     plan = _plan(sheet, wm, state)
     geo = S.Geometry(form.sidebar_rows(), plan.need, plan.bottom)
     body = sheet.split(factor=S.SPLIT_FACTOR, align=True)
-    form.draw_sidebar(body.column(align=True), wm, geo,
-                      enabled=state in ('IDLE', 'ERROR') and not form.device_key_missing(wm))
+    # A missing key never locks the providers: picking another one is how the
+    # user replaces the saved key from here.
+    form.draw_sidebar(body.column(align=True), wm, geo, enabled=state in ('IDLE', 'ERROR'))
     plan.build(S.fixed(body.column(align=True), geo.right), geo)
 
 

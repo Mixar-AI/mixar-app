@@ -1907,7 +1907,10 @@ msgstr "Cualquier identificador de openrouter.ai/models, p. ej., anthropic/claud
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Se volvió a aplicar el turno {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Se volvieron a aplicar los turnos {first}–{last}"
 
-msgid "queued"
-msgstr "en cola"
-
 msgid "Restoring a checkpoint…"
 msgstr "Restaurando un punto de control…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' ya no está en el archivo del recurso."
 msgid "Could not add the asset to the scene."
 msgstr "No se pudo agregar el recurso a la escena."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "No se pudo reanudar automáticamente; presione Enter sobre \"continue\" 
 msgid "The request could not be completed."
 msgstr "No se pudo completar la solicitud."
 
-msgid "Message could not be delivered"
-msgstr "No se pudo entregar el mensaje"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Tu mensaje no llegó a Mixie. Revisa tu conexión y vuelve a enviarlo."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "No se pudo conectar con el servidor. Revise su conexión y vuelva a intentarlo."
@@ -20498,12 +20510,6 @@ msgstr "Reanudar tarea"
 
 msgid "Start fresh"
 msgstr "Empezar de cero"
-
-msgid "delivery uncertain"
-msgstr "entrega incierta"
-
-msgid "could not be delivered"
-msgstr "no se pudo entregar"
 
 msgid "Voice input unavailable."
 msgstr "La entrada de voz no está disponible."

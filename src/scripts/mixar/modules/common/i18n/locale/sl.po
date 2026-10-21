@@ -1907,7 +1907,10 @@ msgstr "Katera koli oznaka z openrouter.ai/models, npr. anthropic/claude-opus-4.
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Poteza {turn} je znova uveljavljena"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Poteze {first}–{last} so znova uveljavljene"
 
-msgid "queued"
-msgstr "v čakalni vrsti"
-
 msgid "Restoring a checkpoint…"
 msgstr "Obnavljanje obnovitvene točke …"
 
@@ -20229,6 +20229,9 @@ msgstr "»{name}« ni več v datoteki sredstva."
 msgid "Could not add the asset to the scene."
 msgstr "Sredstva ni bilo mogoče dodati v sceno."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Samodejno nadaljevanje ni uspelo — v klepetu pritisnite Enter pri »co
 msgid "The request could not be completed."
 msgstr "Zahteve ni bilo mogoče dokončati."
 
-msgid "Message could not be delivered"
-msgstr "Sporočila ni bilo mogoče dostaviti"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaše sporočilo ni prispelo do Mixie. Preverite povezavo in ga pošljite znova."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Strežnika ni bilo mogoče doseči. Preverite povezavo in poskusite znova."
@@ -20498,12 +20510,6 @@ msgstr "Nadaljuj nalogo"
 
 msgid "Start fresh"
 msgstr "Začni znova"
-
-msgid "delivery uncertain"
-msgstr "dostava ni zanesljiva"
-
-msgid "could not be delivered"
-msgstr "ni bilo mogoče dostaviti"
 
 msgid "Voice input unavailable."
 msgstr "Glasovni vnos ni na voljo."

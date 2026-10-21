@@ -1907,7 +1907,10 @@ msgstr "Elke slug van openrouter.ai/models, bijv. anthropic/claude-opus-4.8."
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Beurt {turn} opnieuw toegepast"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Beurten {first}–{last} opnieuw toegepast"
 
-msgid "queued"
-msgstr "in wachtrij"
-
 msgid "Restoring a checkpoint…"
 msgstr "Checkpoint wordt hersteld…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' staat niet meer in het assetbestand."
 msgid "Could not add the asset to the scene."
 msgstr "Kon het asset niet aan de scène toevoegen."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Kon niet automatisch hervatten — druk in de chat op Enter bij \"contin
 msgid "The request could not be completed."
 msgstr "Het verzoek kon niet worden voltooid."
 
-msgid "Message could not be delivered"
-msgstr "Bericht kon niet worden afgeleverd"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Je bericht heeft Mixie niet bereikt. Controleer je verbinding en verstuur het opnieuw."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Kan de server niet bereiken. Controleer uw verbinding en probeer het opnieuw."
@@ -20498,12 +20510,6 @@ msgstr "Taak hervatten"
 
 msgid "Start fresh"
 msgstr "Opnieuw beginnen"
-
-msgid "delivery uncertain"
-msgstr "aflevering onzeker"
-
-msgid "could not be delivered"
-msgstr "kon niet worden afgeleverd"
 
 msgid "Voice input unavailable."
 msgstr "Spraakinvoer niet beschikbaar."

@@ -1907,7 +1907,10 @@ msgstr "Bất kỳ slug nào từ openrouter.ai/models, ví dụ anthropic/claud
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Đã áp dụng lại lượt {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Đã áp dụng lại các lượt {first}–{last}"
 
-msgid "queued"
-msgstr "đang chờ"
-
 msgid "Restoring a checkpoint…"
 msgstr "Đang quay về điểm khôi phục…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' không còn trong tập tin tài sản."
 msgid "Could not add the asset to the scene."
 msgstr "Không thể thêm tài sản vào cảnh."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Không thể tự động tiếp tục — hãy nhấn Enter với \"con
 msgid "The request could not be completed."
 msgstr "Không thể hoàn tất yêu cầu."
 
-msgid "Message could not be delivered"
-msgstr "Không thể gửi tin nhắn"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Tin nhắn của bạn chưa đến được Mixie. Hãy kiểm tra kết nối rồi gửi lại."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Không thể kết nối tới máy chủ. Hãy kiểm tra kết nối và thử lại."
@@ -20498,12 +20510,6 @@ msgstr "Tiếp tục tác vụ"
 
 msgid "Start fresh"
 msgstr "Bắt đầu lại"
-
-msgid "delivery uncertain"
-msgstr "chưa rõ đã gửi được chưa"
-
-msgid "could not be delivered"
-msgstr "không gửi được"
 
 msgid "Voice input unavailable."
 msgstr "Nhập bằng giọng nói không khả dụng."

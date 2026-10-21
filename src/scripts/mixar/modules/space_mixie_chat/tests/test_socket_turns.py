@@ -291,8 +291,10 @@ def test_missing_delivery_is_not_hidden_by_open_run(env, monkeypatch, pending):
     if pending != 'turn':
         event(0, {'type': 'turn_end', 'status': 'in_progress'})
     events._drain()
-    if pending == 'command':
+    if pending == 'command':  # admitted by the server, its turn never rendered
         events.expect(env.scene, 'new-command')
+        events.remember_unsent('new-command', 'chat', {}, None)
+        events.acknowledged('new-command')
     info = {'status': 'unavailable'}
     if pending == 'unknown_turn':
         info['turn_id'] = 'missed-wakeup'
@@ -300,6 +302,33 @@ def test_missing_delivery_is_not_hidden_by_open_run(env, monkeypatch, pending):
     monkeypatch.setattr(events, '_replay_unavailable', unavailable)
     events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
     unavailable.assert_called_once()
+
+
+@pytest.mark.parametrize('held', [True, False])
+def test_a_command_the_server_has_not_answered_is_not_a_lost_response(env, monkeypatch, held):
+    """QA 2026-10-20: a sign-in reconnected the socket as the account and the
+    sign-in notice resent the refused message on it. The account cannot read
+    the guest's journal (``missing``), the resend's 409 had not arrived yet,
+    and the chat said "The connection lost part of this response" above the
+    key card. A command still awaiting its first answer (held, or not yet
+    dispatched) started no turn a drop could have cut."""
+    started()
+    event(0, {'type': 'turn_end', 'status': 'completed'})
+    events._drain()
+    events.expect(env.scene, 'resend')
+    if held:
+        events.remember_unsent('resend', 'chat', {}, None)
+    unavailable = MagicMock()
+    monkeypatch.setattr(events, '_replay_unavailable', unavailable)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': {
+        'status': 'unavailable', 'missing': True}})
+    unavailable.assert_not_called()
+    callback = MagicMock()
+    events._commands['resend'] = ('sid', callback)
+    events._consume('agent.command.result', {'command_id': 'resend', 'ok': False,
+                                             'data': {'code': 'byok_key_required'}})
+    callback.assert_called_once()  # its own result still settles it
+    assert 'resend' not in events._answered
 
 
 def test_saved_completed_turn_does_not_require_retained_journal(env, monkeypatch):

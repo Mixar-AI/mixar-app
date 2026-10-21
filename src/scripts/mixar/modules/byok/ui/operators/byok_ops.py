@@ -470,6 +470,8 @@ def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)
             _deregister_local_if_switched_away(None)
+            # Opened from the chat's key card: resend on Mixar credits (once).
+            key_prompt.notify_removed()
         else:
             # Back on the confirm step, error shown: Remove retries, Keep backs
             # out (the form's Try Again would re-run Save with no key).

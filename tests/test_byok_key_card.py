@@ -27,7 +27,7 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.byok.core import credential_state, key_prompt  # noqa: E402
-from mixar.modules.byok.ui.operators import byok_dialog_ui  # noqa: E402
+from mixar.modules.byok.ui.operators import byok_dialog_support, byok_dialog_ui  # noqa: E402
 from mixar.modules.common.sheet import kit as byok_sheet  # noqa: E402
 from mixar.modules.space_mixie_chat.constants import SessionState  # noqa: E402
 from mixar.modules.space_mixie_chat.core import byok_card, byok_notice, byok_resend, composer_send  # noqa: E402
@@ -46,9 +46,13 @@ class _Collection(list):
     def remove(self, index):
         del self[index]
 
+    def move(self, src, dst):
+        self.insert(dst, self.pop(src))
+
 
 def _scene():
-    scene = SimpleNamespace(name="Scene", mixie_session_id="sess-1", mixie_chat_messages=_Collection())
+    scene = SimpleNamespace(name="Scene", mixie_session_id="sess-1", mixie_chat_messages=_Collection(),
+                            mixie_chat_layout_epoch=0)
     user = scene.mixie_chat_messages.add()
     user.sender, user.bubble_id, user.text = "USER", "cmd-old", "make a chair"
     return scene
@@ -71,7 +75,15 @@ def f(monkeypatch):
         return True
 
     handler._send = _send
+    clock = [1000.0]
     monkeypatch.setattr(byok_card, "redraw_chat_areas", lambda: None)
+    # The double-click guard has its own tests; elsewhere a click is never
+    # within it, and no turn is in flight.
+    monkeypatch.setattr(byok_card, "_clock", lambda: clock[0])
+    monkeypatch.setattr(byok_card, "CLICK_GUARD_S", 0.0)
+    monkeypatch.setattr(byok_dialog_support, "turn_in_flight", lambda context: False)
+    byok_card._filled_at.clear()
+    byok_card._held.clear()
     monkeypatch.setattr(byok_resend, "_scene_for", lambda sid: scene if sid == "sess-1" else None)
     monkeypatch.setattr(byok_resend, "_handler_for", lambda sc: handler)
     monkeypatch.setattr(byok_resend, "_begin_turn", lambda sc, interjecting: states.append(("busy", interjecting)))
@@ -85,7 +97,7 @@ def f(monkeypatch):
                          {"session_id": "sess-1", "message": "make a chair", "byok_key": "sk-x"}, False)
     byok_card.show(scene, _openai_card())
     yield SimpleNamespace(scene=scene, sent=sent, states=states, handler=handler,
-                          bubble=scene.mixie_chat_messages[-1])
+                          bubble=scene.mixie_chat_messages[-1], clock=clock)
     byok_card._cards.clear()
     byok_resend._records.clear()
     byok_resend._auto_ids.clear()
@@ -117,6 +129,52 @@ def test_resend_waits_while_the_session_cannot_take_a_send(f, monkeypatch):
     assert byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_RESEND) is True
     assert f.bubble.text.startswith("Couldn't resend yet")
     assert [a.value for a in f.bubble.action_items][0] == byok_card.ACTION_ENTER
+
+
+def test_a_repeat_refusal_moves_the_one_card_under_the_newest_message(f):
+    card_id = f.bubble.bubble_id
+    retry = f.scene.mixie_chat_messages.add()
+    retry.sender, retry.bubble_id, retry.text = "USER", "cmd-retry", "make a chair"
+    byok_card.show(f.scene, _openai_card())
+    assert [m.bubble_id for m in f.scene.mixie_chat_messages] == ["cmd-old", "cmd-retry", card_id]
+    assert f.scene.mixie_chat_messages[-1].text.startswith("Enter your OpenAI API key")
+
+
+def test_every_card_change_re_lays_out_the_native_chat(f):
+    """The native layout cache keys on the message count: a card moved to the
+    end (or refreshed in place) with the count unchanged would draw stale
+    rows unless the layout epoch moves."""
+    assert f.scene.mixie_chat_layout_epoch == 1  # the first show
+    count = len(f.scene.mixie_chat_messages)
+    f.scene.mixie_chat_messages.move(len(f.scene.mixie_chat_messages) - 1, 0)
+    byok_card.show(f.scene, _openai_card())  # a repeat refusal: moved, not added
+    assert len(f.scene.mixie_chat_messages) == count
+    assert f.scene.mixie_chat_messages[-1].bubble_id.startswith(byok_card.BUBBLE_PREFIX)
+    assert f.scene.mixie_chat_layout_epoch == 2
+    card_id = f.scene.mixie_chat_messages[-1].bubble_id
+    byok_card.handle_action(f.scene, card_id, byok_card.ACTION_WHY)  # refreshed in place
+    assert f.scene.mixie_chat_layout_epoch == 3
+
+
+def test_why_unfolds_one_line_however_often_a_stale_button_is_clicked(f):
+    """A click dispatched on a cached hit target before the re-layout lands
+    on a Why button that is already gone."""
+    card = _openai_card()
+    for _ in range(3):
+        assert byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_WHY) is True
+    assert f.bubble.text == f"{card.line}\n\n{card.why_line}"
+    assert f.bubble.text.count(card.why_line) == 1
+    assert byok_card.ACTION_WHY not in [a.value for a in f.bubble.action_items]
+
+
+def test_a_new_refusal_after_why_resets_the_card(f):
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_WHY)
+    card = _openai_card()
+    byok_card.show(f.scene, card)
+    bubble = f.scene.mixie_chat_messages[-1]
+    assert bubble.text == card.line
+    assert [a.value for a in bubble.action_items] == [
+        byok_card.ACTION_ENTER, byok_card.ACTION_USE_CREDITS, byok_card.ACTION_WHY]
 
 
 def test_try_again_resends_and_drops_the_card(f):
@@ -159,6 +217,28 @@ def test_enter_key_opens_the_dialog_prefilled_and_a_successful_save_resends_once
     assert len(f.sent) == 1 and f.sent[0][1]["message"] == "make a chair"
     assert not key_prompt.is_open()
     assert [m.bubble_id for m in f.scene.mixie_chat_messages] == ["cmd-old"]
+
+
+def test_removing_the_key_in_the_card_opened_dialog_resends_on_credits(f, monkeypatch):
+    """Remove key / Disconnect in the dialog is "Use Mixar credits instead":
+    the dialog already applied the removal, the card resends once and goes."""
+    _dialog(monkeypatch, [])
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_ENTER)
+    key_prompt.take()
+    epoch = f.scene.mixie_chat_layout_epoch
+    key_prompt.notify_removed()        # the DELETE's echo landed
+    key_prompt.notify_saved()          # nothing left to run
+    assert len(f.sent) == 1 and f.sent[0][1]["message"] == "make a chair"
+    assert [m.bubble_id for m in f.scene.mixie_chat_messages] == ["cmd-old"]
+    assert f.scene.mixie_chat_layout_epoch == epoch + 1
+    assert not key_prompt.is_open()
+
+
+def test_the_dialog_removal_tells_the_card():
+    src = BYOK_OPS.read_text(encoding="utf-8")
+    done = src[src.index("def _on_delete_done("):]
+    success = done[:done.index("        else:")]
+    assert "key_prompt.notify_removed()" in success and "wm.byok_dialog_state = 'REMOVED'" in success
 
 
 def test_codex_cards_focus_the_sign_in_file_field(f, monkeypatch):
@@ -267,6 +347,117 @@ def test_a_failed_removal_keeps_the_key_and_the_card(f, removal):
     assert f.bubble.text == "Couldn't switch to Mixar credits — try again"
     assert [a.value for a in f.bubble.action_items] == [
         byok_card.ACTION_ENTER, byok_card.ACTION_USE_CREDITS, byok_card.ACTION_WHY]
+
+
+# ---------------------------------------------------------------------------
+# Stale clicks: the native hit targets are the cached layout
+# ---------------------------------------------------------------------------
+
+def test_the_resend_dismissal_re_lays_out_the_chat(f):
+    """The resend adds its placeholder before the card goes, so the message
+    count ends where it started: only the epoch tells the native layout the
+    card's buttons are gone."""
+    epoch = f.scene.mixie_chat_layout_epoch
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_RESEND)
+    assert not any(m.bubble_id.startswith(byok_card.BUBBLE_PREFIX) for m in f.scene.mixie_chat_messages)
+    assert f.scene.mixie_chat_layout_epoch == epoch + 1
+
+
+def test_a_click_on_a_dismissed_card_does_nothing(f, removal, monkeypatch):
+    opened = []
+    _dialog(monkeypatch, opened)
+    card_id = f.bubble.bubble_id
+    byok_card.dismiss(f.scene)
+    for value in (byok_card.ACTION_USE_CREDITS, byok_card.ACTION_ENTER, byok_card.ACTION_RESEND):
+        assert byok_card.handle_action(f.scene, card_id, value) is True
+    assert removal.deletes == [] and opened == [] and f.sent == []
+
+
+def test_use_credits_waits_while_a_turn_is_in_flight(f, removal, monkeypatch):
+    monkeypatch.setattr(byok_dialog_support, "turn_in_flight", lambda context: True)
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_USE_CREDITS)
+    assert removal.deletes == [] and f.sent == []
+    assert f.bubble.text.startswith("Couldn't resend yet")
+    assert [a.value for a in f.bubble.action_items] == [
+        byok_card.ACTION_ENTER, byok_card.ACTION_USE_CREDITS, byok_card.ACTION_WHY]
+
+
+def test_a_click_right_after_the_card_changes_is_ignored(f, removal, monkeypatch):
+    """Why unfolds a line and slides "Use Mixar credits instead" under the
+    pointer: the second press of a double click must not remove the key."""
+    monkeypatch.setattr(byok_card, "CLICK_GUARD_S", 0.5)
+    f.clock[0] = 1000.2                       # shown at 1000.0: too soon
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_WHY)
+    assert f.bubble.text == _openai_card().line
+    f.clock[0] = 1000.6
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_WHY)
+    assert f.bubble.text.endswith(_openai_card().why_line)
+    f.clock[0] = 1000.8                       # the double click's second press
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_USE_CREDITS)
+    assert removal.deletes == []
+    f.clock[0] = 1001.2
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_USE_CREDITS)
+    assert len(removal.deletes) == 1
+
+
+# ---------------------------------------------------------------------------
+# A refused interjection, and the turn ending
+# ---------------------------------------------------------------------------
+
+SESSION_PY = SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "core" / "session.py"
+
+
+def _card_ids(scene):
+    return [m.bubble_id for m in scene.mixie_chat_messages if m.bubble_id.startswith(byok_card.BUBBLE_PREFIX)]
+
+
+def test_a_refused_interjections_card_waits_for_its_turn_to_settle(f, monkeypatch):
+    """The card would land between the streaming turn's bubbles: it is held,
+    and posted (under everything) once the turn stops streaming."""
+    monkeypatch.setattr(sys.modules["bpy"].data, "scenes", [f.scene], raising=False)
+    byok_card.dismiss(f.scene)
+    f.scene.mixie_chat_state = 'BUSY'
+    streamed = f.scene.mixie_chat_messages.add()
+    streamed.sender, streamed.bubble_id = "AGENT", "turn-reply"
+    byok_card.show(f.scene, _openai_card())
+    assert _card_ids(f.scene) == []
+    byok_card.turn_settled(f.scene)          # a run closing while still BUSY: still held
+    assert _card_ids(f.scene) == []
+    f.scene.mixie_chat_state = 'IDLE'
+    byok_card.turn_settled(f.scene)
+    assert f.scene.mixie_chat_messages[-1].bubble_id.startswith(byok_card.BUBBLE_PREFIX)
+    assert f.scene.mixie_chat_messages[-1].text == _openai_card().line
+    byok_card.turn_settled(f.scene)          # posted once
+    assert len(_card_ids(f.scene)) == 1
+    assert byok_resend.pending("sess-1") is not None  # the refused message is still remembered
+
+
+def test_the_busy_line_is_restored_when_no_turn_runs_any_more(f, removal, monkeypatch):
+    monkeypatch.setattr(sys.modules["bpy"].data, "scenes", [f.scene], raising=False)
+    running = [True]
+    monkeypatch.setattr(byok_dialog_support, "turn_in_flight", lambda context: running[0])
+    byok_card.handle_action(f.scene, f.bubble.bubble_id, byok_card.ACTION_USE_CREDITS)
+    assert f.bubble.text.startswith("Couldn't resend yet")
+    byok_card.turn_settled(f.scene)          # another tab still streams
+    assert f.bubble.text.startswith("Couldn't resend yet")
+    running[0] = False
+    epoch = f.scene.mixie_chat_layout_epoch
+    byok_card.turn_settled(f.scene)
+    assert f.bubble.text == _openai_card().line
+    assert [a.value for a in f.bubble.action_items] == [
+        byok_card.ACTION_ENTER, byok_card.ACTION_USE_CREDITS, byok_card.ACTION_WHY]
+    assert f.scene.mixie_chat_layout_epoch == epoch + 1 and removal.deletes == []
+
+
+def test_the_session_tells_the_card_when_a_turn_stops_streaming_or_its_run_closes():
+    src = SESSION_PY.read_text(encoding="utf-8")
+    set_state = src[src.index("    def set_state("):src.index("    def _turn_eased(")]
+    assert "if old_str == SessionState.BUSY.value.upper():" in set_state
+    assert set_state.rstrip().count("SessionManager._turn_eased(scene)") == 1
+    closed = src[src.index("        if was_open and not open:"):src.index("    def clear_all_runs(")]
+    assert "SessionManager._turn_eased(scene)" in closed
+    eased = src[src.index("    def _turn_eased("):]
+    assert "turn_settled(scene)" in eased[:eased.index("\n    @")]
 
 
 # ---------------------------------------------------------------------------

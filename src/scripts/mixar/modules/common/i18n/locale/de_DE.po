@@ -1907,7 +1907,10 @@ msgstr "Beliebiger Slug von openrouter.ai/models, z. B. anthropic/claude-opus-4.
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Runde {turn} erneut angewendet"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Runden {first}–{last} erneut angewendet"
 
-msgid "queued"
-msgstr "eingereiht"
-
 msgid "Restoring a checkpoint…"
 msgstr "Checkpoint wird wiederhergestellt…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' ist nicht mehr in der Asset-Datei enthalten."
 msgid "Could not add the asset to the scene."
 msgstr "Das Asset konnte nicht zur Szene hinzugefügt werden."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Automatisches Fortsetzen nicht möglich – drücken Sie im Chat bei \"c
 msgid "The request could not be completed."
 msgstr "Die Anfrage konnte nicht abgeschlossen werden."
 
-msgid "Message could not be delivered"
-msgstr "Nachricht konnte nicht zugestellt werden"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Ihre Nachricht hat Mixie nicht erreicht. Prüfen Sie Ihre Verbindung und senden Sie sie erneut."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Der Server ist nicht erreichbar. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
@@ -20498,12 +20510,6 @@ msgstr "Aufgabe fortsetzen"
 
 msgid "Start fresh"
 msgstr "Neu beginnen"
-
-msgid "delivery uncertain"
-msgstr "Zustellung ungewiss"
-
-msgid "could not be delivered"
-msgstr "konnte nicht zugestellt werden"
 
 msgid "Voice input unavailable."
 msgstr "Spracheingabe nicht verfügbar."

@@ -1907,7 +1907,10 @@ msgstr "openrouter.ai/models аҟынтәи ахьӡ-код закәызаала
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Атур {turn} еиҭа ихархәан"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Атурқәа {first}–{last} еиҭа ихархәан"
 
-msgid "queued"
-msgstr "ацәаҳәа аҿы"
-
 msgid "Restoring a checkpoint…"
 msgstr "Ахынҳәра Аҭыԥ ахынҳәра иаҿуп…"
 
@@ -20229,6 +20229,9 @@ msgstr "«{name}» аресурс ашәҟәы аҿы уажәы ыҟаӡам."
 msgid "Could not add the asset to the scene."
 msgstr "Аресурс асцена ахь ацҵара алымшеит."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Автоматла еиҭа алагара алымшеит — ачат
 msgid "The request could not be completed."
 msgstr "Аҳәара алгара алымшеит."
 
-msgid "Message could not be delivered"
-msgstr "Аҳәамҭа ашьҭра алымшеит"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Шәыҳәамҭа Mixie ахь инеизомызт. Аимадара шәгәаҭ, нас еиҭах ишәышьҭ."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Асервер ахь анеира алымшеит. Ишәҳәоуп, аимадара шәгәаҭ, еиҭа шәыԥышәа."
@@ -20498,12 +20510,6 @@ msgstr "Аусура еиҭа алагара"
 
 msgid "Start fresh"
 msgstr "Аҿыц алагара"
-
-msgid "delivery uncertain"
-msgstr "ашьҭра еилкаам"
-
-msgid "could not be delivered"
-msgstr "ашьҭра алымшеит"
 
 msgid "Voice input unavailable."
 msgstr "Абжьы аҭалара ыҟаӡам."

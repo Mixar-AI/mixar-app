@@ -1907,7 +1907,10 @@ msgstr "Slug apa pun dari openrouter.ai/models, mis. anthropic/claude-opus-4.8."
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -20088,9 +20091,6 @@ msgstr "Giliran {turn} diterapkan ulang"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Giliran {first}–{last} diterapkan ulang"
 
-msgid "queued"
-msgstr "mengantre"
-
 msgid "Restoring a checkpoint…"
 msgstr "Memulihkan titik pemulihan…"
 
@@ -20229,6 +20229,9 @@ msgstr "'{name}' tidak lagi ada di berkas aset."
 msgid "Could not add the asset to the scene."
 msgstr "Tidak dapat menambahkan aset ke adegan."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20242,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20277,8 +20283,14 @@ msgstr "Tidak dapat melanjutkan secara otomatis — tekan Enter pada \"continue\
 msgid "The request could not be completed."
 msgstr "Permintaan tidak dapat diselesaikan."
 
-msgid "Message could not be delivered"
-msgstr "Pesan tidak dapat dikirim"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Pesan Anda tidak sampai ke Mixie. Periksa koneksi Anda, lalu kirim ulang."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Tidak dapat menjangkau server. Periksa koneksi Anda dan coba lagi."
@@ -20498,12 +20510,6 @@ msgstr "Lanjutkan tugas"
 
 msgid "Start fresh"
 msgstr "Mulai dari awal"
-
-msgid "delivery uncertain"
-msgstr "pengiriman tidak pasti"
-
-msgid "could not be delivered"
-msgstr "tidak dapat dikirim"
 
 msgid "Voice input unavailable."
 msgstr "Masukan suara tidak tersedia."

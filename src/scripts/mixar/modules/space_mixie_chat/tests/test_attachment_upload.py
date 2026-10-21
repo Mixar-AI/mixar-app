@@ -205,7 +205,7 @@ def test_a_reconnect_during_the_upload_keeps_the_message_for_redelivery(transpor
     turn_events._drain()
     cid = msg.bubble_id
     assert cid in turn_events._outbox and turn_events.command_pending(cid)
-    assert msg.delivery_hint == 'delivery uncertain'  # never "could not be delivered"
+    assert msg.delivery_hint == ''  # held for redelivery: no label, no error yet
     assert turn_events._outbox[cid]['payload']['attachments'][0]['type'] == 'image_ref'
 
 
@@ -227,7 +227,8 @@ def test_the_byok_card_keeps_the_images_themselves(transport, monkeypatch):
     monkeypatch.setattr(byok_resend, 'remember', lambda *a: remembered.append(a))
     monkeypatch.setattr(byok_notice, 'byok_error_code', lambda result, data: 'byok_key_required')
     monkeypatch.setattr(queue_processor, 'get_event_processor', lambda: SimpleNamespace(
-        _clear_loader_bubbles=lambda target: None, handle_command_error=lambda result, target: None))
+        _clear_loader_bubbles=lambda target: None,
+        handle_command_error=lambda result, target, interjection=False: None))
     handler = turn_transport.create_turn_handler(scene.name)
     handler.start_input_stream('sid', 'submit', text='x', attachments=[_image(PNG)])
     sent_payload, cid = calls[0][0][1], calls[0][1]['command_id']
