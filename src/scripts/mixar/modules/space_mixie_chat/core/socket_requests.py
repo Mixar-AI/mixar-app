@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Bounded outbound requests, responses and callback deadlines."""
 import json
-import threading
 import time
 from queue import Full
 from typing import Any, Callable, Optional
@@ -135,7 +134,10 @@ class SocketRequests:
                                queued_bytes=getattr(self._outbound, 'queued_bytes', None),
                                frame_bytes=len(encoded.encode('utf-8')))
                 self._connected = False
-                threading.Thread(target=self._ws.close, daemon=True).start()
+                # Wake the reader at once: a close in a thread left it in its
+                # 10 s read and the app reconnected ~11 s late (disconnect matrix).
+                from . import socket_liveness
+                socket_liveness.abort(self._ws)
             return False
 
     def queue_response(self, request_id: str, result: dict) -> bool:

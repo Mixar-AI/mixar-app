@@ -160,8 +160,12 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._auth = AuthBackoffManager()
 
         # How each socket ended (socket_diagnostics.py); reported on the next handshake.
+        # A sandbox helper keeps no state file: only the app's own client can
+        # say the app died while connected.
         from .socket_diagnostics import SocketDiagnostics
-        self._diag = SocketDiagnostics()
+        self._diag = SocketDiagnostics(instance_id='' if role else connection_id)
+        self._failed_sockets = 0  # since the last good handshake
+        self._last_wait_s = 0.0   # the backoff slept before the current connect
 
         # Request ID counter
         self._request_id = 0
