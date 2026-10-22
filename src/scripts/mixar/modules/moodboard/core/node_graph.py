@@ -421,12 +421,10 @@ _ACCEPTED_SOURCE_TYPES = {
     # A MESH that carries a rig: an Auto Rig / Animate card, or a rigged
     # import. ``connect_nodes`` enforces the rig part.
     'ANIMATE': {'MESH'},
-    'UV_UNWRAP': {'MESH'},
 }
 
 MESH_FEATURE_ACTIONS = frozenset(
-    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE',
-     'UV_UNWRAP'})
+    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE'})
 
 
 def _graph_node_by_id(scene, node_id: str):

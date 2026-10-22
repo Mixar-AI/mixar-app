@@ -442,7 +442,6 @@ NODE_TEMPLATES = (
     ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', 'pbr_generation'),
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', 'retopology'),
     ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', 'mesh_segmentation'),
-    ('UV_UNWRAP', n_("Smart UV"), 'UV', 'uv_unwrapping'),
     ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', 'animate'),
     ('ANIMATE', n_("Animate"), 'ACTION', 'animation'),
     ('MESH_REFERENCE', n_("Add Mesh"), 'OUTLINER_OB_MESH', None),

@@ -44,14 +44,9 @@ FEATURE_MESH_SEGMENT = "mesh_segment"
 # which keys on the job label.
 FEATURE_TRIPO_SEGMENT = "tripo_segment"
 FEATURE_SMART_SEGMENT = "smart_segment"
-# Tripo Smart UV (/v3/mesh/uv) — re-unwrap a mesh's UVs.
-FEATURE_TRIPO_UV = "tripo_uv"
 FEATURE_SCENE_RECON = "scene_recon"
 FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"
-# Layer-mask generation: also a brush_gen backend job (purpose="layer_mask"),
-# but its own client queue so it never locks the brush panel and vice versa.
-FEATURE_LAYER_MASK_GEN = "layer_mask_gen"
 FEATURE_LOOKDEV = "lookdev"
 FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
 FEATURE_WORLD_LABS = "world_labs"
@@ -153,7 +148,6 @@ __all__ = (
     "FEATURE_HUNYUAN_RAPID",
     "FEATURE_HUNYUAN_PART",
     "FEATURE_HUNYUAN_UV",
-    "FEATURE_TRIPO_UV",
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
     "FEATURE_VIDEO_GEN",
@@ -165,7 +159,6 @@ __all__ = (
     "FEATURE_SCENE_RECON",
     "FEATURE_MATGEN",
     "FEATURE_BRUSH_GEN",
-    "FEATURE_LAYER_MASK_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
     "FEATURE_WORLD_LABS",

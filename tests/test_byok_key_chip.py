@@ -328,7 +328,7 @@ def test_success_adopts_the_echo_and_failure_keeps_the_model_and_toasts(state, m
     from mixar.modules.byok.ui.operators import byok_switch_ops as ops
 
     toasts, refreshed = [], []
-    monkeypatch.setattr(ops, '_toast', lambda err, title=None: toasts.append(err))
+    monkeypatch.setattr(ops, '_toast', toasts.append)
     monkeypatch.setattr(ops, '_redraw', lambda: None)
     monkeypatch.setattr(ops.preference_state, 'refresh', lambda: refreshed.append(True))
     monkeypatch.setattr(credential_state, 'apply_to_wm', lambda wm=None: None)

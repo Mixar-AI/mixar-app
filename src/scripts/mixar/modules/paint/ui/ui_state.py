@@ -120,16 +120,11 @@ class MixarUILayer(bpy.types.PropertyGroup):
     )
 
 
-NO_BRUSH_MODEL = "NONE"
-
-
 def _get_brush_model_items(self, context):
     """Dynamic enum callback for brush generation models.
 
     Sources the generation catalog's ``brush_gen`` service (surface
-    "paint"). Fails closed: before the catalog loads (offline / pre-auth) it
-    offers only NO_BRUSH_MODEL, which the generate operators refuse — model
-    slugs live in the catalog, never here.
+    "paint"); falls back to hardcoded flash/pro (offline / pre-auth).
     """
     try:
         from mixar.bootstrap.generation_catalog_cache import (
@@ -142,7 +137,7 @@ def _get_brush_model_items(self, context):
                 return items
     except Exception:
         pass
-    return [(NO_BRUSH_MODEL, "No models available", "Sign in, then refresh the models")]
+    return [("flash", "Flash", "Fast generation"), ("pro", "Pro", "Higher quality")]
 
 
 class MixarUIState(bpy.types.PropertyGroup):

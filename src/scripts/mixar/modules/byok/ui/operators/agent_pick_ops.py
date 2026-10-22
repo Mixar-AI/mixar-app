@@ -12,11 +12,10 @@ request the account needs (byok-local-models.md, "The island model picker"):
                                           kept), THEN set the hosted pick
     Mixie row, key not pausable        -> AI Provider Settings (Remove lives there)
     key row, that key in use           -> switch the key's model in place
-    key level, that key in use         -> change the key's thinking level
     key row, that key paused           -> resume the key on that model
     key row, anything else             -> AI Provider Settings
     Local row                          -> nothing (Local is picked in the dialog)
-    Mixie thinking level               -> set the hosted pick with that level
+    thinking level                     -> set the hosted pick with that level
 
 One account mutation at a time (`byok_dialog_support.account_busy`) and
 never while a turn is in flight (`turn_in_flight`): the backend binds a
@@ -101,8 +100,6 @@ class MIXAR_OT_agent_pick(Operator):
         if self.source == TAB_KEY:
             if state["key_provider"] and provider == state["key_provider"]:
                 if not model or model == state["key_model"]:
-                    if thinking and state["key_thinking"] not in (None, thinking):
-                        return {'FINISHED'} if byok_switch_ops.set_level(wm, thinking) else {'CANCELLED'}
                     return {'FINISHED'}
                 return {'FINISHED'} if byok_switch_ops.switch(wm, model) else {'CANCELLED'}
             if state["resumable"] and provider == state["resume_provider"]:

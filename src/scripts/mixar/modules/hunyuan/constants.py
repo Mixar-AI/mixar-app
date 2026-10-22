@@ -87,14 +87,6 @@ SEGMENT_PARTS_SUFFIX = "_parts"
 # job id — lets the agent (and a later re-segment) recognise generated parts.
 SEGMENT_JOB_PROP = "mixar_segment_job_id"
 
-# Tripo Smart UV (/v3/mesh/uv): re-unwrap a mesh, remap its textures. Tripo
-# fails anything above 80,000 equivalent triangles (a quad counts as two), so
-# the client refuses those before upload.
-TRIPO_UV_SERVICE = "tripo_uv"
-TRIPO_UV_MODEL = "tripo_uv_v1"
-TRIPO_UV_MAX_TRIANGLES = 80000
-TRIPO_UV_RESULT_SUFFIX = "_uv"
-
 # ============================================================================
 # FILE SIZE LIMITS (bytes)
 # ============================================================================
@@ -105,7 +97,6 @@ MAX_FILE_SIZE_TRIPO_RETOPOLOGY = 150 * 1024 * 1024  # 150 MB (Tripo mesh limit)
 MAX_FILE_SIZE_ANIMATE_RIG = 150 * 1024 * 1024  # 150 MB (aligned with backend upload cap)
 MAX_FILE_SIZE_SEGMENT = 150 * 1024 * 1024    # 150 MB (Tripo mesh limit)
 MAX_FILE_SIZE_UV = 100 * 1024 * 1024         # 100 MB
-MAX_FILE_SIZE_TRIPO_UV = 150 * 1024 * 1024   # 150 MB (Tripo mesh limit)
 
 # ============================================================================
 # PROPERTY DEFAULTS

@@ -330,8 +330,6 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Update View2D before drawing to prevent automatic validation from distorting canvas */
   mixie_moodboard_region_set_view2d(region);
-  /* Movie cards re-register as they draw; hover is matched against this frame. */
-  moodboard_video_cards_frame_begin(region);
 
   /* Setup View2D for infinite canvas */
   View2D *v2d = &region->v2d;

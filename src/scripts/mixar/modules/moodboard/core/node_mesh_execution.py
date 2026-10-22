@@ -16,9 +16,7 @@ from .media_utils import is_still_item
 from .node_graph import action_node_by_id, input_media_items
 from .node_job_bridge import ensure_graph_listener
 from .node_client_params import PBR_STYLE_ONLY_PARAM
-from .node_schema import (
-    UV_UNWRAP_SERVICE_KEYS, collect_node_params, node_model_slug, node_service_key,
-)
+from .node_schema import collect_node_params, node_model_slug, node_service_key
 from .mesh_sources import mesh_input_objects
 
 logger = get_logger(__name__)
@@ -49,20 +47,12 @@ _MESH_FEATURE_ROUTING = {
         'import_options': ANIMATE_IMPORT_OPTIONS,
         'armature_in_front': True,
     },
-    # Tripo Smart UV. Pinned to tripo_uv (UV_UNWRAP_SERVICE_KEYS); no scene
-    # flag — the card's own state tracks the job.
-    'UV_UNWRAP': {
-        'capability': 'uv_unwrapping',
-        'feature_key': 'tripo_uv',
-        'scene_flag': '',
-    },
 }
 
 
 def _mesh_result_hook(scene_name: str, node_id: str,
                       texture_finalize: bool = False, base_name: str = "",
-                      armature_in_front: bool = False, uv_bake=None,
-                      uv_source_bounds=None):
+                      armature_in_front: bool = False):
     """Embed the imported result mesh INTO the producing node.
 
     Like Generate 3D, the feature node's generate UI is replaced by the result
@@ -77,12 +67,6 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     When *armature_in_front* is set (Auto Rig), the import lands exactly like
     every other Auto Rig import: stamped with the rig job id and skeleton
     (the Animate card and the agent read them back) and shown In Front.
-
-    When *uv_bake* is not None (Smart UV), the import is fitted onto
-    *uv_source_bounds* (the source's world box recorded at submit; Tripo
-    returns the mesh centred and normalised to 1 m), renamed ``<source>_uv``
-    (baked textures become a paint layer) and the UV atlas preview lands on
-    the board beside the node.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -117,14 +101,6 @@ def _mesh_result_hook(scene_name: str, node_id: str,
             except Exception as e:
                 logger.warning(
                     "[TextureGen] node PBR post-import processing failed: %s", e)
-        if uv_bake is not None:
-            from mixar.modules.hunyuan.core.tripo_uv_enqueue import (
-                add_uv_atlas_to_board, finalize_uv_import,
-            )
-
-            result = finalize_uv_import(
-                object_names, base_name, uv_bake, source_bounds=uv_source_bounds)
-            add_uv_atlas_to_board(job, scene_name, base_name, node=node)
 
         create_asset_result(scene, node, result)
         return result  # see AsyncGLBJob.on_imported
@@ -219,21 +195,9 @@ def _run_mesh_feature(context, node, operator):
 
     routing = _MESH_FEATURE_ROUTING[node.action_type]
     capability = routing['capability']
-    is_uv = node.action_type == 'UV_UNWRAP'
-    selected_service = node_service_key(node)
-    if is_uv and selected_service not in UV_UNWRAP_SERVICE_KEYS:
-        selected_service = next(iter(UV_UNWRAP_SERVICE_KEYS))
-    service_key = resolve_service_key(capability, selected_service)
-    if not service_key or (is_uv and service_key not in UV_UNWRAP_SERVICE_KEYS):
+    service_key = resolve_service_key(capability, node_service_key(node))
+    if not service_key:
         raise ValueError(rpt_("This 3D feature is unavailable in the generation catalog"))
-    uv_source_bounds = None
-    if is_uv:
-        from mixar.modules.hunyuan.core.tripo_uv_enqueue import check_triangle_limit
-        from mixar.modules.hunyuan.core.tripo_uv_placement import source_world_bounds
-
-        check_triangle_limit(meshes)
-        # The exported meshes' world box: the normalised result is fitted onto it.
-        uv_source_bounds = source_world_bounds(meshes)
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
         raise ValueError(rpt_("No enabled model is available for this feature"))
@@ -257,10 +221,6 @@ def _run_mesh_feature(context, node, operator):
             ) from exc
 
         file_bytes, filename = export_selected_mesh(context, "GLB")
-    if is_uv:
-        from mixar.modules.hunyuan.core.tripo_uv_enqueue import check_export_size
-
-        check_export_size(file_bytes)
     payload = {
         "file_bytes_b64": base64.b64encode(file_bytes).decode(),
         "file_filename": filename,
@@ -285,8 +245,6 @@ def _run_mesh_feature(context, node, operator):
         texture_finalize=(node.action_type == 'PBR_GEN'),
         base_name=meshes[0].name,
         armature_in_front=routing.get('armature_in_front', False),
-        uv_bake=bool(params.get("bake", True)) if is_uv else None,
-        uv_source_bounds=uv_source_bounds,
     )
     extra = {}
     if routing.get('import_options'):
@@ -298,8 +256,7 @@ def _run_mesh_feature(context, node, operator):
         model=model,
         payload=payload,
         label=meshes[0].name,
-        display_label=("Smart UV" if is_uv
-                       else node.action_type.replace('_', ' ').title()),
+        display_label=node.action_type.replace('_', ' ').title(),
         origin_capability_key=capability,
         graph_node_id=node.node_id,
         fail_message=n_("3D generation failed"),

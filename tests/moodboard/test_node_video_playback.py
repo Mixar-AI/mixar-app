@@ -31,17 +31,15 @@ def test_node_owned_media_is_still_hidden_from_the_standalone_tile_hit_test():
     assert "embedded_node_id" in lookup
 
 
-def test_node_preview_movies_draw_the_hover_controls():
+def test_node_preview_movies_draw_the_play_affordance():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
 
     assert "IMA_SRC_MOVIE" in draw
     assert "moodboard_video_playback_frame" in draw
     assert "mixie_draw_moodboard_video_overlay" in draw
-    # Hover is keyed by the owning node, like the click.
-    assert "CTX_wm_region(C), node_id, preview_bounds)" in draw
     # The overlay is shared with standalone tiles, not reimplemented.
-    card = _read(SPACE_MIXIE / "mixie_moodboard_video_card.cc")
-    assert "void mixie_draw_moodboard_video_overlay(" in card
+    images = _read(SPACE_MIXIE / "mixie_draw_moodboard_images.cc")
+    assert "void mixie_draw_moodboard_video_overlay(" in images
 
 
 def test_clicking_a_node_preview_toggles_playback_before_the_move_modal():
@@ -59,10 +57,10 @@ def test_clicking_a_node_preview_toggles_playback_before_the_move_modal():
     # comes from the ONE shared definition the draw pass uses, so the target
     # cannot drift off the glyph at any zoom.
     video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
-    assert "moodboard_video_card_button_at(v2d, preview_bounds, mouse_x, mouse_y)" in video
+    assert "moodboard_video_play_radius(v2d, preview_bounds)" in video
     assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" not in video
     assert "double_click" in video
-    assert "moodboard_video_card_press(" in video
+    assert "moodboard_toggle_video_playback" in video
 
 
 def test_asset_double_click_still_selects_objects_rather_than_playing():
@@ -83,13 +81,10 @@ def test_node_preview_click_toggles_by_media_index():
     ``mixie_moodboard_images``; a node index would silently toggle some
     unrelated media item."""
     video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
-    press = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview_window.cc")
 
     assert "moodboard_find_embedded_media_index(scene_ptr, node_id)" in video
     assert "moodboard_item_is_video(scene_ptr, media_index)" in video
-    assert "C, scene_ptr, media_index, button, nullptr, node_id, reports)" in video
-    assert "moodboard_toggle_video_playback(C, scene_ptr, media_index, reports)" in press
-    assert "moodboard_toggle_video_mute(C, scene_ptr, media_index, reports)" in press
+    assert "moodboard_toggle_video_playback(C, scene_ptr, media_index, reports)" in video
 
 
 def test_preview_bounds_have_a_single_definition():
@@ -106,17 +101,15 @@ def test_preview_bounds_have_a_single_definition():
 
 
 def test_playback_state_is_pruned_against_main():
-    """Node deletion frees the generated movie it owns, so a session keyed on
+    """Node deletion frees the generated movie it owns, so an entry keyed on
     the freed Image would be inherited by a datablock reusing that address."""
-    session = _read(SPACE_MIXIE / "mixie_moodboard_video_session.cc")
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 
-    prune = session.split("void video_sessions_prune(Main *bmain)")[1].split("\n}\n")[0]
-    assert "BLI_findindex(&bmain->images" in prune
-    assert "audio_stop(it->second);" in prune
+    assert "prune_dead_playback_entries" in preview
+    assert "BLI_findindex(&bmain->images" in preview
     # Before a toggle looks its image up, and on every redraw tick.
-    assert "video_sessions_prune(bmain);" in preview
-    assert "video_sessions_prune(G_MAIN);" in preview
+    assert "prune_dead_playback_entries(CTX_data_main(C));" in preview
+    assert "prune_dead_playback_entries(G_MAIN);" in preview
 
 
 def test_export_reaches_media_owned_by_a_selected_node():

@@ -198,8 +198,6 @@ static void drawer_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
   const bool resize = event &&
                       view3d_moodboard_drawer_resize_contains_xy(area, region, event->xy);
   WM_cursor_set(win, resize ? WM_CURSOR_X_MOVE : WM_CURSOR_DEFAULT);
-  /* Movie cards in the drawer dim and show their controls while hovered. */
-  ed::mixie::moodboard_video_card_hover_update(win, area, region);
 }
 
 /** \} */

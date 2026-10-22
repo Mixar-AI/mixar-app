@@ -311,27 +311,6 @@ def test_sandbox_preserves_exact_callbacks_but_removes_impostors(monkeypatch):
     assert handlers.load_pre == [preview_render._before_load]
 
 
-def test_every_handler_preview_render_installs_survives_the_sandbox(monkeypatch):
-    """The first agent render installs preview_render's handlers from inside a
-    sandboxed script; cleanup must keep every one of them (not a hand-kept
-    subset), or undo stops settling the job and the sweeps stop for the session."""
-    from mixar.modules.space_mixie_chat.core import executor_handlers, preview_render
-
-    names = executor_handlers.HandlerCleanupMixin._HANDLER_NAMES
-    handlers = SimpleNamespace(**{name: [] for name in names})
-    fake = SimpleNamespace(app=SimpleNamespace(handlers=handlers))
-    monkeypatch.setattr(executor_handlers, "bpy", fake)
-    monkeypatch.setattr(preview_render, "bpy", fake)
-    executor = executor_handlers.HandlerCleanupMixin()
-    snapshot = executor._snapshot_handlers()
-
-    preview_render._install()
-    installed = {name: list(getattr(handlers, name)) for name in names if getattr(handlers, name)}
-    assert {"undo_pre", "redo_pre", "load_post", "undo_post", "redo_post"} <= installed.keys()
-    executor._cleanup_handlers(snapshot)
-    assert {name: list(getattr(handlers, name)) for name in installed} == installed
-
-
 def test_script_executor_inherits_the_handler_cleanup():
     src = (CHAT_ROOT / "core/executor.py").read_text()
     import re

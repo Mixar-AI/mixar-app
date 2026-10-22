@@ -15,9 +15,8 @@ from . import tool_snapshot
 
 CATALOG_TIMEOUT_SECONDS = 7
 
-# Model-visible: names no AI app, only the steps any of them offers.
-RECONNECT = ("ask the user to reconnect the mixar MCP server in their AI app (its /mcp command or MCP "
-             "settings), or to start a new session")
+RECONNECT = ("ask the user to reconnect the Mixar MCP server (Claude Code: /mcp, then reconnect mixar; "
+             "Codex: start a new session)")
 NEXT_STEPS = {
     "available": "",
     "reconnect": "The scene tools were not available when this session started; " + RECONNECT + ".",

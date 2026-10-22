@@ -128,10 +128,7 @@ class Inspection:
         # and stall UI drawing even with INVOKE_DEFAULT. Cycles' render job does
         # its material work off the UI thread, on the user's configured device.
         engine = 'BLENDER_WORKBENCH' if shading == 'solid' else 'CYCLES'
-        if scene.render.engine != engine:
-            # Every engine assignment, even of the same value, runs Blender's
-            # engine-changed update (viewport resets, node-tree updates).
-            self.set(scene.render, 'engine', engine)
+        self.set(scene.render, 'engine', engine)
         if shading == 'solid':
             self.set(scene.display.shading, 'color_type', 'MATERIAL')
             self.set(scene.display, 'render_aa', '5')

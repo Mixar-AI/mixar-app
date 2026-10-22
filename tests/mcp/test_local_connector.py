@@ -169,7 +169,7 @@ def test_stdio_unknown_outcome_does_not_retry(relay, monkeypatch):
     assert len(attempts) == 1
     detail = responses[0]["error"]["data"]
     assert detail["outcome"] == "unknown"
-    assert str(uuid.UUID(detail["call_id"])) and set(detail) == {"call_id", "outcome"}
+    assert str(uuid.UUID(detail["request_id"])) == detail["retry_meta"]["mixar/request-id"]
 
 
 def test_stdio_forgets_a_desktop_that_went_away(relay, monkeypatch):
