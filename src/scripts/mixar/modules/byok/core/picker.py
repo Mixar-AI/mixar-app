@@ -130,6 +130,10 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
         "key_provider": "" if local_active else provider,
         "key_model": ((switching or credential.get("byok_current_model") or "")
                       if active and not local_active else ""),
+        # None = no level rows: no key in use, a switch saving (the new model
+        # starts on its default) or a backend that does not report levels.
+        "key_thinking": (credential.get("byok_current_thinking")
+                         if active and not local_active and not switching else None),
         "key_missing": active and bool(credential.get("byok_device_key_missing")),
         "local_model": (credential.get("byok_current_model") or "") if local_active else "",
         "resumable": resumable and not model_suggestions.is_local(resume_provider),
@@ -184,6 +188,22 @@ def build_tabs(state: Dict[str, Any]) -> List[Tab]:
 # Rows
 # ---------------------------------------------------------------------------
 
+def _thinking_rows(tab: str, provider: str, model: str, levels: Sequence[str],
+                   current: str, enabled: bool) -> List[Row]:
+    """The current model's "Thinking: …" disclosure and its levels, for any
+    tab. They always ride the wire; the island card folds them (it owns that
+    state, not Python). No levels, no rows."""
+    if not levels:
+        return []
+    rows = [Row(tab, ROW_THINKING, model_menu.format_thinking_label(current),
+                enabled=enabled, provider=provider, model=model)]
+    rows += [Row(tab, ROW_LEVEL, iface_(model_menu.format_thinking_level(level)),
+                 current=level == current, enabled=enabled,
+                 provider=provider, model=model, thinking=level)
+             for level in levels]
+    return rows
+
+
 def _mixie_rows(state, models: Sequence[Dict[str, Any]]) -> List[Row]:
     rows: List[Row] = []
     live = state["hosted_ok"]
@@ -211,16 +231,8 @@ def _mixie_rows(state, models: Sequence[Dict[str, Any]]) -> List[Row]:
                         provider=provider, model=model,
                         thinking=state["hosted_thinking"] if is_current else ""))
         if is_current:
-            if levels:
-                # The disclosure and its levels always ride the wire; the
-                # island card folds them (it owns that state, not Python).
-                rows.append(Row(TAB_MIXIE, ROW_THINKING,
-                                model_menu.format_thinking_label(state["hosted_thinking"]),
-                                enabled=live, provider=provider, model=model))
-                for level in levels:
-                    rows.append(Row(TAB_MIXIE, ROW_LEVEL, iface_(model_menu.format_thinking_level(level)),
-                                    current=level == state["hosted_thinking"], enabled=live,
-                                    provider=provider, model=model, thinking=level))
+            rows += _thinking_rows(TAB_MIXIE, provider, model, levels,
+                                   state["hosted_thinking"], live)
     return rows
 
 
@@ -245,10 +257,17 @@ def _key_rows(state) -> List[Row]:
         # A provider with no catalog list (Kimi) or a model the catalog has
         # since dropped: the key's own model still gets its row.
         listed.insert(0, (current_model, catalog_labels.chip_model_label(provider, current_model)))
+    level = state["key_thinking"]
     for mid, label in listed:
-        rows.append(Row(TAB_KEY, ROW_MODEL, label, current=(not paused and mid == current_model),
+        is_current = not paused and mid == current_model
+        # Like a Mixie row, the current one carries its level: re-picking it sends nothing.
+        rows.append(Row(TAB_KEY, ROW_MODEL, label, current=is_current,
                         meta=iface_(n_("saved")) if (paused and mid == current_model) else "",
-                        enabled=live, provider=provider, model=mid))
+                        enabled=live, provider=provider, model=mid,
+                        thinking=(level or "") if is_current else ""))
+        if is_current and level is not None:
+            rows += _thinking_rows(TAB_KEY, provider, mid,
+                                   model_suggestions.thinking_levels(provider, mid), level, live)
     rows.append(Row(TAB_KEY, ROW_FOOTER, iface_(ENTER_KEY) if state["key_missing"] else iface_(MANAGE_KEY)))
     return rows
 
@@ -285,7 +304,9 @@ def chip(state: Dict[str, Any]) -> Dict[str, str]:
         label, name = iface_(LOCAL_LABEL), state["local_model"]
     elif source == TAB_KEY:
         label = _provider_name(state["key_provider"])
-        name = catalog_labels.chip_model_label(state["key_provider"], state["key_model"])
+        name = model_menu.chip_label(
+            catalog_labels.chip_model_label(state["key_provider"], state["key_model"]),
+            state["key_thinking"] or "")
     else:
         label = iface_(MIXIE_LABEL)
         name = model_menu.chip_label(state["hosted_label"], state["hosted_thinking"]) or iface_(DEFAULT_CHIP)

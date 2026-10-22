@@ -212,6 +212,17 @@ def get_platform_models() -> list[dict]:
     return [dict(record) for record in _platform_records if record["platform_available"]]
 
 
+def thinking_levels(provider: str, model: str) -> list[str]:
+    """The catalog's thinking levels for one model of a user's key, in server
+    order; [] when the model is not in the catalog or offers none. Codex reads
+    the "openai" group (see _MODEL_SOURCE_PROVIDER)."""
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    for record in _platform_records:
+        if record["provider_id"] == source and record["model_id"] == model:
+            return list(record["thinking_levels"])
+    return []
+
+
 def is_loaded() -> bool:
     """True iff populate() has been called at least once, regardless of
     whether it populated any real providers.
