@@ -29,14 +29,11 @@
 #include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_rect.h"
-#include "BLI_set.hh"
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
-#include "BKE_global.hh"
 #include "BKE_image.hh"
 #include "BKE_layer.hh"
-#include "BKE_main.hh"
 #include "BKE_scene.hh"
 #include "BLI_string.h"
 #include "BKE_screen.hh"
@@ -1010,59 +1007,6 @@ static void wm_draw_stall_name(const ScrArea *area, const ARegion *region, char 
   BLI_snprintf(r_name, len, "%s/%s", space, region_name);
 }
 
-/* Mixar: a region whose draw a draw lock skipped (a render job reading the scene, a bake,
- * #BKE_spacedata_draw_locks) still has its `do_draw` cleared below, so it would keep whatever its
- * buffer held until something tags it again: for a freshly created viewport buffer that is
- * black, for the whole render. Remember such regions and tag them once the lock is gone
- * (#wm_draw_update_test_window). Pointers are only compared, never dereferenced, so a region
- * freed meanwhile costs nothing; past a bound, entries no screen still owns are pruned. */
-static Set<const ARegion *> &wm_draw_lock_skipped_regions()
-{
-  static Set<const ARegion *> regions;
-  return regions;
-}
-
-static bool wm_draw_region_draw_locked(const ARegion &region)
-{
-  return region.runtime->type && region.runtime->type->do_lock;
-}
-
-static void wm_draw_note_lock_skipped(const ARegion &region, const bool locked)
-{
-  if (!locked) {
-    return;
-  }
-  Set<const ARegion *> &regions = wm_draw_lock_skipped_regions();
-  if (regions.size() >= 64) {
-    /* Drop regions freed since they were noted (area closes, screen changes), never a live
-     * one that is still waiting for its redraw. */
-    Set<const ARegion *> live;
-    for (const bScreen &screen : G_MAIN->screens) {
-      for (const ARegion &screen_region : screen.regionbase) {
-        live.add(&screen_region);
-      }
-      for (const ScrArea &area : screen.areabase) {
-        for (const ARegion &area_region : area.regionbase) {
-          live.add(&area_region);
-        }
-      }
-    }
-    regions.remove_if([&](const ARegion *noted) { return !live.contains(noted); });
-  }
-  regions.add(&region);
-}
-
-static void wm_draw_retag_after_draw_lock(ARegion &region)
-{
-  Set<const ARegion *> &regions = wm_draw_lock_skipped_regions();
-  if (regions.is_empty() || wm_draw_region_draw_locked(region)) {
-    return;
-  }
-  if (regions.remove(&region)) {
-    ED_region_tag_redraw(&region);
-  }
-}
-
 static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bool stereo)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -1115,8 +1059,6 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
 
     CTX_wm_region_set(C, &region);
     bool use_viewport = WM_region_use_viewport(area, &region);
-    /* The lock is toggled from the job thread: sample it on both sides of the draw. */
-    bool draw_locked = wm_draw_region_draw_locked(region);
 
     char stall_name[64];
     wm_draw_stall_name(area, &region, stall_name, sizeof(stall_name));
@@ -1158,8 +1100,6 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
 
     GPU_debug_group_end();
 
-    draw_locked |= wm_draw_region_draw_locked(region);
-    wm_draw_note_lock_skipped(region, draw_locked);
     region.runtime->do_draw = 0;
     CTX_wm_region_set(C, nullptr);
   }
@@ -1679,7 +1619,6 @@ static bool wm_draw_update_test_window(Main *bmain, bContext *C, wmWindow *win)
 
   ED_screen_areas_iter (win, screen, area) {
     for (ARegion &region : area->regionbase) {
-      wm_draw_retag_after_draw_lock(region);
       wm_region_test_gizmo_do_draw(C, area, &region, true);
       wm_region_test_render_do_draw(scene, depsgraph, area, &region);
 #ifdef WITH_XR_OPENXR

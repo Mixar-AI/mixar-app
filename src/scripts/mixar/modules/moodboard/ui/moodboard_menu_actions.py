@@ -23,7 +23,6 @@ MESH_CONTINUATIONS = (
     ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', "pbr_generation"),
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', "retopology"),
     ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', "mesh_segmentation"),
-    ('UV_UNWRAP', n_("Smart UV"), 'UV', "uv_unwrapping"),
     ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', "animate"),
 )
 # Local, so it has no capability. Offered only from a body it can rig parts
@@ -47,11 +46,7 @@ def _is_rigged_asset(asset) -> bool:
 def mesh_continuations_for(scene, source_id: str) -> list:
     """The "Continue in 3D" entries a mesh source offers. Read-only (menu draws).
 
-    The catalog-gated mesh features — gated per action type exactly like Node
-    Templates (``capability_available(..., action_type=...)``), so a capability
-    whose only services the card cannot run (``uv_unwrapping`` serving just
-    ``hunyuan_uv``, ``mesh_segmentation`` serving just ``tripo_segment``) offers
-    no entry — plus Assemble when the source is a body
+    The catalog-gated mesh features, plus Assemble when the source is a body
     Assemble can use: an Auto Rig result, a mesh that already has an armature,
     or a Generate-to-3D result while Auto Rig is unavailable (a static,
     unrigged assembly), plus Animate when the source carries an Auto Rig job.
@@ -63,8 +58,7 @@ def mesh_continuations_for(scene, source_id: str) -> list:
     action = action_node_by_id(scene, source_id)
     if action is not None and action.action_type == 'ASSEMBLE':
         return []
-    entries = [entry for entry in MESH_CONTINUATIONS
-               if capability_available(entry[3], action_type=entry[0])]
+    entries = [entry for entry in MESH_CONTINUATIONS if capability_available(entry[3])]
     if action is not None:
         body = action.action_type == 'AUTO_RIG' or (
             action.action_type == 'MODEL_3D' and not template_available('AUTO_RIG')
@@ -73,8 +67,7 @@ def mesh_continuations_for(scene, source_id: str) -> list:
         body = _is_rigged_asset(asset_node_by_id(scene, source_id))
     if body:
         entries.append(ASSEMBLE_CONTINUATION)
-    if source_carries_rig(scene, source_id) and capability_available(
-            ANIMATE_CONTINUATION[3], action_type=ANIMATE_CONTINUATION[0]):
+    if source_carries_rig(scene, source_id) and capability_available(ANIMATE_CONTINUATION[3]):
         entries.append(ANIMATE_CONTINUATION)
     return entries
 

@@ -296,8 +296,8 @@ def test_node_fields_explain_themselves_on_hover_not_with_an_icon():
 
 def test_a_result_can_be_opened_in_its_own_preview_window():
     """A card is a thumbnail sized for the graph, not for judging a result.
-    Upstream reuses an open temporary Image Editor window, so there is one
-    preview window and the next press replaces what it shows."""
+    Each press opens a NEW window -- nothing reuses or reclaims an existing one,
+    which is what lets several results be compared side by side."""
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview_window.cc")
     tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
     space = _read(SPACE_MIXIE / "space_mixie.cc")
@@ -311,14 +311,12 @@ def test_a_result_can_be_opened_in_its_own_preview_window():
     assert "WM_window_open(" in preview
     assert "SPACE_IMAGE" in preview
     assert "ED_space_image_set(bmain, sima, image, false)" in preview
-    # Reuse is upstream's (WM_window_open with temp); nothing here hunts for one.
+    # Nothing looks for an existing preview to reuse -- that is the feature.
     assert "WM_window_find" not in preview
 
-    # A movie gets the video player (own clock, sound and controls) instead of
-    # the Image Editor's scene-frame playback.
+    # A movie needs its range and auto-refresh, or it sits on frame one.
+    assert "IMA_ANIM_ALWAYS" in preview
     assert "IMA_SRC_MOVIE" in preview
-    assert '"MIXIE_OT_moodboard_video_player"' in preview
-    assert "IMA_ANIM_ALWAYS" not in preview
 
     # REGISTER operator: a remembered id would preview the wrong card.
     assert "PROP_SKIP_SAVE" in preview.split("RNA_def_string(")[1]

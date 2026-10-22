@@ -49,7 +49,6 @@ _CAPABILITY_BY_FEATURE = {
     "hunyuan_part": "mesh_segmentation",
     "retopology": "retopology",
     "hunyuan_uv": "uv_unwrapping",
-    "tripo_uv": "uv_unwrapping",
     "animate": "animate",
 }
 

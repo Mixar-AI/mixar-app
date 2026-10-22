@@ -8,9 +8,9 @@
  *
  * Split out of #mixie_moodboard_ops_graph.cc (500-line rule). A generated movie
  * carries `embedded_node_id`, which excludes it from the standalone-tile
- * hit-test that serves an uploaded movie -- so its node has to offer the same
- * hover controls itself (Preview, Play/Pause, Sound), plus a double-click
- * anywhere on the tile to toggle playback.
+ * hit-test that starts playback for an uploaded movie -- so its node has to
+ * offer the same affordances itself: the centred play/pause button, or a
+ * double-click anywhere on the tile.
  */
 
 #include "mixie_moodboard_ops_common.hh"
@@ -36,17 +36,20 @@ bool moodboard_graph_node_video_click(bContext *C,
   }
   rctf preview_bounds{};
   moodboard_graph_node_preview_bounds(node_rect, &preview_bounds);
-  /* Same controls and geometry as an uploaded movie's card, through the
-   * shared definition the draw pass uses, so the target follows the glyph. */
-  int button = moodboard_video_card_button_at(v2d, preview_bounds, mouse_x, mouse_y);
-  if (button == MOODBOARD_VIDEO_CARD_NONE && double_click) {
-    button = MOODBOARD_VIDEO_CARD_PLAY;
-  }
-  if (button == MOODBOARD_VIDEO_CARD_NONE) {
+  /* Radius through the shared definition the draw pass uses: a fixed PIXEL
+   * size converted into canvas units, capped against the tile so the target
+   * follows the glyph when zooming shrinks it. */
+  const float play_radius = moodboard_video_play_radius(v2d, preview_bounds);
+  const float delta_x = mouse_x - BLI_rctf_cent_x(&preview_bounds);
+  const float delta_y = mouse_y - BLI_rctf_cent_y(&preview_bounds);
+  const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
+                               play_radius * play_radius;
+  if (!double_click && !play_button_hit) {
     return false;
   }
-  *r_status = moodboard_video_card_press(
-      C, scene_ptr, media_index, button, nullptr, node_id, reports);
+  *r_status = moodboard_toggle_video_playback(C, scene_ptr, media_index, reports) ?
+                  OPERATOR_FINISHED :
+                  OPERATOR_CANCELLED;
   return true;
 }
 

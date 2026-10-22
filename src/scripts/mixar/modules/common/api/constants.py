@@ -71,7 +71,6 @@ class APIModule(Enum):
     PROMPT_REFINE = "prompt-refine"
     REFERRALS = "referrals"
     NOTIFICATIONS = "notifications"
-    SCENE_PUBLISH = "scene-publish"
 
 
 # ============================================================================

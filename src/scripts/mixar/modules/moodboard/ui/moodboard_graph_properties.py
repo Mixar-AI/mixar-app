@@ -42,7 +42,7 @@ from ..core.node_action_types import ACTION_TYPES  # noqa: F401 (public re-expor
 
 # Mesh -> mesh continuations. Schema and execution must share this set.
 MESH_FEATURE_ACTIONS = frozenset(
-    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ANIMATE', 'UV_UNWRAP'}
+    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ANIMATE'}
 )
 
 ACTION_STATES = (
@@ -63,7 +63,6 @@ _MESH_FEATURE_CAPABILITY = {
     # Retarget is its own capability so a shipped Auto Rig card never lists
     # it as a second mode.
     'ANIMATE': "animation",
-    'UV_UNWRAP': "uv_unwrapping",
 }
 
 

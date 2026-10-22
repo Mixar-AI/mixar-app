@@ -75,8 +75,8 @@ EXPECTED_TIPS = {
     # popups below to verify that callback does not repeat the RNA description.
     OPS[0]: "Rename this image or video in place. Enter applies the new name, "
             "Escape keeps the old one",
-    OPS[1]: "Open this image or video in the preview window. "
-            "An open preview window is reused and shows this instead",
+    OPS[1]: "Open this image or video in its own preview window. "
+            "Several can be open at once",
     OPS[2]: "Save selected images or copy selected videos to disk",
 }
 

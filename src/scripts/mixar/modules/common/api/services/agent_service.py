@@ -100,16 +100,6 @@ class AgentService(BaseService):
             payload["account_id"] = account_id
         return self.put("byok", json=payload)
 
-    def patch_byok(self, thinking_level: Optional[str]) -> APIResponse:
-        """PATCH /agent/byok — change ONLY the thinking level of the current
-        BYOK (None = the model's own default). No key, no re-validation; the
-        echo has GET /agent/byok's ``{byok_active, default}`` shape.
-
-        404 = no BYOK credential; 422 = a level the model does not offer
-        (user-safe ``message``); 405 = a backend from before levels.
-        """
-        return self.patch("byok", json={"thinking_level": thinking_level})
-
     def delete_credentials_all(self) -> APIResponse:
         """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
         return self.delete("credentials/all")

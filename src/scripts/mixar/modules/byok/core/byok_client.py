@@ -489,33 +489,6 @@ def forget_stored_key(on_done: Callable[[bool], None]) -> None:
     _run_worker("MixarBYOKForget", _work, on_done, (False,))
 
 
-def set_thinking_level(
-    level: Optional[str],
-    on_done: Callable[[bool, Optional[dict], Optional[str]], None],
-) -> None:
-    """PATCH /agent/byok — the key's thinking level only (None = the model's
-    default); nothing is sealed or re-validated. A 422 shows the server's
-    message; 404 / 405 (no key any more, a backend before levels) answer
-    ``(False, None, None)``: nothing the user can act on. Counted in flight."""
-    on_done = _track(on_done)
-    epoch = _account_epoch()
-
-    def _work():
-        if epoch != _account_epoch():
-            return False, None, _SIGNED_OUT_MSG
-        try:
-            return _translate(get_agent_service().patch_byok(level))
-        except Exception as e:  # noqa: BLE001 — the rest is shaped by the worker
-            status, message = getattr(e, "status_code", None), getattr(e, "message", None)
-            if status in (404, 405):
-                return False, None, None
-            if status == 422 and isinstance(message, str) and message:
-                return False, None, message
-            raise
-
-    _run_worker("MixarBYOKLevel", _work, on_done, (False, None, _GENERIC_SERVER_ERROR_MSG))
-
-
 # ---------------------------------------------------------------------------
 # This device's copy of the key (worker thread; the store blocks)
 # ---------------------------------------------------------------------------

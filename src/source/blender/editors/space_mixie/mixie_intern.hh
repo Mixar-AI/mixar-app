@@ -24,8 +24,6 @@
  * hit-test and drag. Split out for the 500-line rule; included here so
  * every translation unit that includes this header still sees them. */
 #include "mixie_moodboard_hit_geometry.hh"
-/* Movie card hover controls and sound (500-line rule), same arrangement. */
-#include "mixie_moodboard_video_card.hh"
 
 /* internal exports only */
 
@@ -435,7 +433,6 @@ float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);
 /** Stop inline movie playback and its redraw tick. */
 void mixie_moodboard_video_playback_shutdown();
 
-
 /** Deselect all moodboard content, graph nodes, and links. */
 void moodboard_deselect_all(PointerRNA *scene_ptr);
 
@@ -486,7 +483,6 @@ void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame(wmOperatorType *ot);
 void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot);
-void MIXIE_OT_moodboard_video_player(wmOperatorType *ot);
 void MIXIE_OT_moodboard_rename_media(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);

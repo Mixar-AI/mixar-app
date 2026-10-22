@@ -58,9 +58,7 @@ def submit(owner, name, args, call_id, session=""):
         digest = _receipts.digest(session, name, args)
         prior = _receipts.prior(call_id, digest)
         if prior:
-            replayed = replay(prior)
-            return envelope(replayed, call_id, failed=replayed["status"] != "succeeded",
-                            recovery=_recovery(name, replayed))
+            return envelope(prior, call_id, failed=prior["status"] != "succeeded")
     timeout = args.get("timeout", ACTION_TIMEOUT) + 2 if name == "mixar_ui_wait" else ACTION_TIMEOUT
     req = Request(owner, name, args, call_id, session, time.monotonic()+timeout)
     with _request_lock:
@@ -75,12 +73,8 @@ def submit(owner, name, args, call_id, session=""):
         raise UIError("ui_busy", "UI request queue is full; no action accepted") from None
     if not req.done.wait(timeout+1):
         req.cancelled.set()
-        if name in MUTATING:
-            return envelope({"error_type": "outcome_unknown", "error": "UI response timed out; inspect the "
-                             "current UI and this call's mixar_ui_call_status before further action"},
-                            call_id, failed=True, recovery="outcome_unknown")
-        return envelope({"error_type": "outcome_unknown",
-                         "error": "UI response timed out; inspect the current UI before further action"},
+        return envelope({"error_type": "outcome_unknown", "call_id": call_id,
+                         "error": "UI response timed out; inspect the receipt and current UI before further action"},
                         call_id, failed=True)
     return req.result
 
@@ -95,37 +89,15 @@ def cancel(owner, call_id=None):
                 req.cancelled.set()
 
 
-def envelope(result, call_id, *, failed=False, blocks=(), recovery=None):
-    """The model reads ``content`` and ``structuredContent``: the result and, only
-    when ``recovery`` names an open receipt status, ``usage: {call_id, status}``
-    for mixar_ui_call_status. Local tools move no credits, so they otherwise show
-    no usage block (the backend's response-minimization rule); the full receipt
-    rides in ``_meta`` alone."""
+def envelope(result, call_id, *, failed=False, blocks=()):
     import json
-    usage = {"call_id": call_id, "status": recovery or ("failed" if failed else "succeeded"),
-             "surface": "local_ui", "invocation_credits": 0, "credits_charged": 0,
-             "generation_credits": None, "generation_billing": "existing_job_queue"}
-    payload = {"result": result}
-    if recovery:
-        payload["usage"] = {"call_id": call_id, "status": recovery}
+    usage = {"request_id": call_id, "surface": "local_ui", "invocation_credits": 0,
+             "credits_charged": 0, "generation_credits": None,
+             "generation_billing": "existing_job_queue"}
+    payload = {"result": result, "usage": usage}
     return {"content": [{"type": "text", "text": json.dumps(payload)}, *blocks],
             "structuredContent": payload, "isError": failed,
             "_meta": {"mixar/request-id": call_id, "mixar/usage": usage}}
-
-
-def replay(prior):
-    """A recovered mutation: its recorded status, never a second execution."""
-    return {"replayed": True, "status": prior["status"]}
-
-
-def _recovery(name, result, *, failed=False, claimed=False):
-    """The receipt status the model needs for mixar_ui_call_status, or None: only a
-    claimed mutation that did not succeed, or a replay whose outcome is open."""
-    if name not in MUTATING:
-        return None
-    if isinstance(result, dict) and result.get("replayed"):
-        return None if result.get("status") == "succeeded" else result.get("status") or "outcome_unknown"
-    return "outcome_unknown" if failed and claimed else None
 
 
 def _signed_in():
@@ -178,7 +150,7 @@ def _scene_tool(req):
     digest = _receipts.digest(req.session, req.name, req.args)
     prior = _receipts.prior(req.call_id, digest)
     if prior:
-        return replay(prior)
+        return prior
     if req.name == "mixar_project_open":
         path = projects.preflight(req.args)
     else:
@@ -243,7 +215,7 @@ def _run(req):
         digest = _receipts.digest(req.session, req.name, req.args)
         prior = _receipts.prior(req.call_id, digest)
         if prior:
-            return replay(prior), []
+            return prior, []
         observe.resolve(req.owner, req.args["context"], req.args["target"])
         ownership.prepare(req.owner)
         _receipts.claim(req.call_id, digest)
@@ -275,8 +247,7 @@ def _finish(req, result, *, failed=False, status="succeeded", blocks=()):
         except Exception:
             failed = True
             result = {**result, "error_type": "outcome_unknown", "receipt_status": "outcome_unknown"}
-    req.result = envelope(result, req.call_id, failed=failed, blocks=blocks,
-                          recovery=_recovery(req.name, result, failed=failed, claimed=req.claimed))
+    req.result = envelope(result, req.call_id, failed=failed, blocks=blocks)
     req.done.set()
     with _request_lock:
         _requests.pop((req.owner, req.call_id), None)

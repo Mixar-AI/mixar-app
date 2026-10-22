@@ -58,8 +58,6 @@ _OUTPUT_TYPES = {
     # Rigged character in, the SAME character (now animated) out, so a second
     # Animate card or an export can chain off it.
     'ANIMATE': 'MESH',
-    # Same mesh, new UVs: chains onward like any other mesh result.
-    'UV_UNWRAP': 'MESH',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -68,11 +66,7 @@ _MESH_FEATURE_CAPABILITY = {
     'MESH_SEGMENT': 'mesh_segmentation',
     'AUTO_RIG': 'animate',
     'ANIMATE': 'animation',
-    'UV_UNWRAP': 'uv_unwrapping',
 }
-# The Smart UV card runs Tripo only; other uv_unwrapping services (Hunyuan UV)
-# stay off it even when the catalog lists them.
-UV_UNWRAP_SERVICE_KEYS = frozenset({'tripo_uv'})
 # The injected single MESH input's id/label; "mesh" unless named here.
 _MESH_SOCKET_DEFAULT = ("mesh", n_("Mesh"))
 _MESH_SOCKET_NAMES = {'ANIMATE': ("rig", n_("Rigged Character"))}
@@ -100,8 +94,7 @@ MODEL_3D_SERVICE_KEYS = frozenset({'model_3d', 'image_to_3d', 'hunyuan_rapid'})
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
 _PROMPTLESS_ACTION_TYPES = frozenset(
-    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE', 'ANIMATE',
-     'UV_UNWRAP'})
+    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE', 'ANIMATE'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -115,9 +108,6 @@ def services_for_action(action_type: str, services) -> list:
     """Keep only catalog services executable by this canvas node type."""
     if action_type == 'CHARACTER_PARTS':
         return [service for service in services if service.get("key") == 'scene_gen']
-    if action_type == 'UV_UNWRAP':
-        return [service for service in services
-                if service.get("key") in UV_UNWRAP_SERVICE_KEYS]
     if action_type == 'MASK_DETAIL':
         # Component-detail generation runs on the plain image_gen service.
         return [service for service in services if service.get("key") == 'image_gen']

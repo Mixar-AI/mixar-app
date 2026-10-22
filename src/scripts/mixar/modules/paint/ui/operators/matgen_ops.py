@@ -56,15 +56,6 @@ class MATGEN_OT_GenerateMaterial(Operator):
         description="Called from chat/agent context",
         default=False,
     )
-    # Agent invocation: the mat_gen catalog model slug (its pipeline), and the
-    # objects to add the finished material to as a procedural layer.
-    model: StringProperty(name="Model", default="", options={'SKIP_SAVE'})
-    object_names: StringProperty(
-        name="Apply to Objects",
-        description="Comma-separated object names that get the material as a layer when it arrives",
-        default="", options={'SKIP_SAVE'},
-    )
-    layer_name: StringProperty(name="Layer Name", default="", options={'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -82,7 +73,7 @@ class MATGEN_OT_GenerateMaterial(Operator):
         # Direct (agent) invocation: explicit params override UI/WM state.
         if self.query.strip():
             query = self.query.strip()
-            pipeline = self.pipeline.strip() or self.model.strip() or "fast"
+            pipeline = self.pipeline.strip() or "fast"
         else:
             query = wm.mixar_matgen_query.strip()
             pipeline = wm.mixar_matgen_pipeline
@@ -99,13 +90,9 @@ class MATGEN_OT_GenerateMaterial(Operator):
         try:
             from ...procedural_materials.matgen_queue import enqueue_matgen_job
 
-            object_names = [n.strip() for n in self.object_names.split(",") if n.strip()]
             job = enqueue_matgen_job(
                 prompt=query,
-                model=self.model.strip() or None,
                 pipeline=pipeline,
-                apply_to_object_names=object_names,
-                layer_name=self.layer_name.strip(),
             )
             if job is None:
                 set_agent_gen_reason(context, "Material generation already queued (duplicate)")

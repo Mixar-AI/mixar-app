@@ -27,8 +27,7 @@ def _scene(actions_=(), assets=()):
 def catalog(monkeypatch):
     """Every mesh feature is live; Auto Rig's template availability is the knob."""
     state = {'auto_rig': True}
-    monkeypatch.setattr(actions, "capability_available",
-                        lambda capability, action_type=None: True)
+    monkeypatch.setattr(actions, "capability_available", lambda capability: True)
     monkeypatch.setattr(actions, "template_available",
                         lambda template: state['auto_rig'] if template == 'AUTO_RIG' else True)
     return state
@@ -43,8 +42,7 @@ def test_a_rig_result_continues_into_assemble(catalog):
     entries = actions.mesh_continuations_for(scene, "rig")
     # Assemble and Animate are the two continuations only a rig offers.
     assert _ids(entries) == [
-        'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'UV_UNWRAP', 'AUTO_RIG', 'ASSEMBLE',
-        'ANIMATE',
+        'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE',
     ]
     assert entries[-2] == actions.ASSEMBLE_CONTINUATION
     assert entries[-1] == actions.ANIMATE_CONTINUATION
@@ -80,8 +78,7 @@ def test_an_asset_offers_assemble_only_when_its_mesh_has_an_armature(catalog):
 
 
 def test_unavailable_mesh_features_are_filtered(catalog, monkeypatch):
-    monkeypatch.setattr(actions, "capability_available",
-                        lambda capability, action_type=None: capability == "animate")
+    monkeypatch.setattr(actions, "capability_available", lambda capability: capability == "animate")
     scene = _scene([NS(node_id="rig", action_type='AUTO_RIG', result_names="")])
     assert _ids(actions.mesh_continuations_for(scene, "rig")) == ['AUTO_RIG', 'ASSEMBLE']
 

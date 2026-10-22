@@ -21,26 +21,10 @@ DISABLED = ("MCP is turned off in Mixar. Ask the user to open Mixar's profile me
             "choose \"Connect MCP\" and click Turn on beside \"MCP is off\", then try again")
 
 
-class Unconfirmed(RuntimeError):
-    """A tool call reached Mixar but its answer was lost: it may have run. Only
-    then does the AI app's model see the call UUID, to recover it by status."""
-
-
-class Refused(RuntimeError):
-    """The relay answered with an error status (``status``) instead of a result."""
-
-    def __init__(self, message, status):
-        super().__init__(message)
-        self.status = status
-
-
 def request(record, method, path, payload=None, headers=None, timeout=10):
-    try:
-        body = None if payload is None else json.dumps(payload, allow_nan=False).encode()
-    except ValueError:
-        raise Refused("MCP request arguments must be finite JSON values", 400) from None
+    body = None if payload is None else json.dumps(payload, allow_nan=False).encode()
     if body and len(body) > MAX_BODY:
-        raise Refused("MCP request exceeds the local transport limit", 413)
+        raise ValueError("MCP request exceeds the local transport limit")
     conn = http.client.HTTPConnection("127.0.0.1", record["port"], timeout=timeout)
     try:
         conn.request(method, path, body=body, headers={
@@ -54,7 +38,7 @@ def request(record, method, path, payload=None, headers=None, timeout=10):
                 reason = str(json.loads(raw)["error"])[:200]
             except (ValueError, KeyError, TypeError):
                 reason = ""
-            raise Refused(reason or "Mixar connector unavailable (HTTP %d)" % response.status, response.status)
+            raise RuntimeError(reason or "Mixar connector unavailable (HTTP %d)" % response.status)
         return json.loads(raw) if raw else None
     finally:
         conn.close()
@@ -239,25 +223,9 @@ class Connector:
         message = {"jsonrpc": "2.0", "id": call_id, "method": "tools/call", "params": {
             "name": name, "arguments": arguments, "_meta": meta}}
         # Only transport discovery retries. This request is deliberately attempted ONCE.
-        try:
-            response = request(record, "POST", "/ui" if local else "/mcp", message, headers,
-                               timeout=600 if not local else 35)
-        except Refused as exc:
-            if exc.status < 500 or exc.status == 503:
-                raise  # Refused before dispatch (signed out, MCP off, connecting, rate limit).
-            raise Unconfirmed(str(exc)) from exc
-        except ConnectionRefusedError:
-            raise  # Nothing listened, so nothing was sent.
-        except (OSError, ValueError, http.client.HTTPException) as exc:
-            raise Unconfirmed("Mixar's answer to this call was lost: %s"
-                              % (str(exc)[:200] or type(exc).__name__)) from exc
-        if not isinstance(response, dict) or "result" not in response:
-            # A JSON-RPC error is a refusal before dispatch (invalid protocol
-            # parameters); anything else leaves the outcome unknown.
-            error = response.get("error") if isinstance(response, dict) else None
-            if isinstance(error, dict):
-                raise RuntimeError("Mixar rejected the tool call: %s" % str(error.get("message", ""))[:200])
-            raise Unconfirmed("Mixar returned no result for this call")
+        response = request(record, "POST", "/ui" if local else "/mcp", message, headers, timeout=600 if not local else 35)
+        if "result" not in response:
+            raise RuntimeError("Mixar rejected the tool call; recover using its call ID")
         if not response["result"].get("isError") and name in REPORTS_BINDING:
             payload = response["result"]["structuredContent"]
             result = payload["result"]

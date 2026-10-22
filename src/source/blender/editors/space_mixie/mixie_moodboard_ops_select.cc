@@ -234,30 +234,30 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   }
 
   /* A movie keeps the normal image-like canvas interactions everywhere
-   * except its hover controls: Preview (left), Play/Pause (centre) and Sound
-   * (right) act directly, and a double-click anywhere on the movie toggles
-   * playback, without interfering with drag/resize gestures. */
+   * except its centered playback affordance. Single-clicking that button,
+   * or double-clicking anywhere on the movie, toggles playback directly in
+   * its moodboard block without interfering with drag/resize gestures. */
   if (clicked_index != -1 && element_type == MOODBOARD_ELEMENT_IMAGE &&
       clicked_handle == -1 && moodboard_item_is_video(&scene_ptr, clicked_index))
   {
-    /* Shared with the draw pass and the node hit-test, so the target the user
-     * aims at never drifts from the glyph at any zoom. */
+    const float center_x = clicked_pos_x + clicked_width * 0.5f;
+    const float center_y = clicked_pos_y + clicked_height * 0.5f;
+    /* Shared with the draw pass: a fixed PIXEL size in canvas units, capped
+     * against the tile so a zoomed-out button and its target shrink together. */
     const rctf media_rect = {clicked_pos_x,
                              clicked_pos_x + clicked_width,
                              clicked_pos_y,
                              clicked_pos_y + clicked_height};
-    int button = moodboard_video_card_button_at(v2d, media_rect, mouse_x, mouse_y);
-    if (button == MOODBOARD_VIDEO_CARD_NONE && event->val == KM_DBL_CLICK) {
-      button = MOODBOARD_VIDEO_CARD_PLAY;
-    }
-    if (button != MOODBOARD_VIDEO_CARD_NONE) {
-      PropertyRNA *items = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
-      PointerRNA item;
-      RNA_property_collection_lookup_int(&scene_ptr, items, clicked_index, &item);
-      char media_id[MIXIE_GRAPH_ID_BUF];
-      mixie_rna_string_get_clamped(&item, "node_id", media_id, sizeof(media_id));
-      return moodboard_video_card_press(
-          C, &scene_ptr, clicked_index, button, media_id, nullptr, op->reports);
+    const float play_radius = moodboard_video_play_radius(v2d, media_rect);
+    const float delta_x = mouse_x - center_x;
+    const float delta_y = mouse_y - center_y;
+    const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
+                                 play_radius * play_radius;
+
+    if (event->val == KM_DBL_CLICK || play_button_hit) {
+      return moodboard_toggle_video_playback(C, &scene_ptr, clicked_index, op->reports) ?
+                 OPERATOR_FINISHED :
+                 OPERATOR_CANCELLED;
     }
   }
 

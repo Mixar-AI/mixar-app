@@ -82,37 +82,3 @@ def test_non_web_export_carries_no_scene_objects(fake_scene):
     result = agent_export.run_export("sess", {"format": "glb", "target_scope": "scene",
                                               "use_case": "godot"})
     assert result["success"] is True and "scene_objects" not in result
-
-
-def test_export_to_path_runs_the_web_publish_profile_without_a_picker(fake_scene, monkeypatch):
-    """Publish to Web reuses the lane with its own destination: the profile
-    adds Draco/WebP, telemetry is tagged, and the read-back expects the
-    Draco it asked for instead of flagging it."""
-    from mixar.modules.space_mixie_chat.core import export_verify
-
-    events = []
-    from mixar.modules.common.analytics import export_events
-    monkeypatch.setattr(export_events, "capture", lambda e, p, context=None: events.append((e, p)))
-    real_summary = export_verify.summarize_gltf
-
-    def with_draco(doc, result):
-        real_summary(doc, result)
-        result["draco"] = True
-
-    monkeypatch.setattr(export_verify, "summarize_gltf", with_draco)
-    dest = str(fake_scene.tmp / "scene.glb")
-    result = agent_export.export_to_path(dest, {
-        "format": "glb", "target_scope": "scene", "use_case": "web",
-        "profile": "web_publish", "animations": []}, via="web_publish", tool="publish_to_web")
-    assert result["success"] is True, result
-    kwargs = fake_scene.calls["exporter"][0]
-    assert kwargs["export_draco_mesh_compression_enable"] is True
-    assert kwargs["export_draco_mesh_compression_level"] == 6
-    assert kwargs["export_image_format"] == "WEBP" and kwargs["export_cameras"] is True
-    assert result["preset"]["draco"] is True and result["preset"]["image_format"] == "WEBP"
-    assert not any("Draco" in issue for issue in result["verification"]["issues"])
-    assert events[0][1]["via"] == "web_publish" and events[0][1]["tool"] == "publish_to_web"
-    # No destination was parked or consumed for a session.
-    assert export_destination.pop_destination("sess") is None
-    assert agent_export.export_to_path(str(fake_scene.tmp / "scene.fbx"),
-                                       {"format": "glb"})["success"] is False

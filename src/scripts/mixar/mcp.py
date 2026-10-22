@@ -127,7 +127,8 @@ class StdioBridge:
                 return
             error = {"code": -32000, "message": str(exc)}
             if call_id:
-                error["data"] = {"call_id": call_id, "outcome": "unknown"}
+                error["data"] = {"request_id": call_id, "outcome": "unknown",
+                                 "retry_meta": {"mixar/request-id": call_id}}
             self.respond({"jsonrpc": "2.0", "id": request.get("id") if isinstance(request, dict) else None,
                           "error": error})
 
