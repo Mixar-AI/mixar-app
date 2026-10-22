@@ -104,6 +104,16 @@ def test_generated_batch_records_outcome_and_keeps_cancelled_installer(tmp_path,
     run_batch_case(win_installer, tmp_path, sys.executable, cancelled=cancelled)
 
 
+@pytest.mark.parametrize('cancelled', [False, True])
+def test_helper_deletes_the_in_progress_marker(tmp_path, cancelled):
+    """_run_helper plants update-in-progress.json and fails if it survives;
+    the timeout, locked and verify paths are covered by their own cases."""
+    from tests.qa.windows_update_probe import run_batch_case
+
+    run_batch_case(win_installer, tmp_path, sys.executable, cancelled=cancelled)
+    assert not (tmp_path / 'User Name' / win_installer.HELPER_MARKER_NAME).exists()
+
+
 def test_helper_waits_for_a_live_app_before_installing(tmp_path):
     from tests.qa.windows_update_probe import run_wait_case
 
@@ -126,6 +136,12 @@ def test_lock_released_during_the_wait_installs(tmp_path):
     from tests.qa.windows_update_probe import run_lock_case
 
     run_lock_case(win_installer, tmp_path, sys.executable, release_after=10)
+
+
+def test_a_respawned_connector_is_ended_and_the_install_proceeds(tmp_path):
+    from tests.qa.windows_update_probe import run_connector_case
+
+    run_connector_case(win_installer, tmp_path, sys.executable)
 
 
 def test_finish_relaunches_the_registered_install_first(tmp_path):

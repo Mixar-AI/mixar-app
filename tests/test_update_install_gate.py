@@ -4,11 +4,13 @@
 
 """Restart & Update's Windows pre-quit gate, driven through apply_and_restart.
 
-Canned process tables stand in for the native one: an abandoned connector
-is ended and the update goes ahead, a program the user must close stops it
-with the close-apps toast, and Mixar's own background work is waited for by
-one timer that continues the update once the table is clear — or stops on
-Cancel, on a state change, or when something the user must close appears.
+Canned process tables stand in for the native one: a Mixar connector (live
+or abandoned) is ended and the update goes ahead, a program the user must
+close stops it with the close-apps toast, and Mixar's own background work
+is waited for by one timer that continues the update once the table is
+clear — or stops on Cancel, on a state change, or when something the user
+must close appears. The connector's "updating" marker is written when the
+quit is scheduled and cleared when it is aborted.
 """
 
 import os
@@ -90,10 +92,17 @@ def _row(pid, ppid, name, path, created, window=False):
 BACKFILL = _row(901, OWN, "mixar.exe", MIXAR, created=20)        # our own work
 ORPHAN_CONNECTOR = _row(902, 99999, "python.exe", PYTHON, created=30)
 OTHER_WINDOW = _row(903, 1, "mixar.exe", MIXAR, created=5, window=True)
+# Claude Code -> cmd.exe (the launcher script) -> the connector's python.
+CLAUDE_CONNECTOR = [
+    _row(300, 1, "Claude.exe", r"C:\Users\u\Claude\Claude.exe", created=3),
+    _row(301, 300, "cmd.exe", r"C:\Windows\System32\cmd.exe", created=4),
+    _row(302, 301, "python.exe", PYTHON, created=4),
+]
 
 
 @pytest.fixture
 def gate(monkeypatch, tmp_path):
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
     timers = FakeTimers()
     fake_bpy = SimpleNamespace(
         app=SimpleNamespace(timers=timers, binary_path=""),
@@ -167,24 +176,87 @@ def test_an_abandoned_connector_that_survives_is_named(gate):
     gate.began.assert_not_called()
 
 
+def test_a_live_connector_is_ended_and_the_update_proceeds(gate):
+    """An AI app's MCP server holds no user work and is stale once Mixar
+    restarts: the user is not asked to close Claude or Codex."""
+    gate.table += CLAUDE_CONNECTOR
+
+    assert install_flow.apply_and_restart() == (True, "")
+
+    (ended,), _ = gate.terminate.call_args
+    assert (ended.kind, ended.name, ended.pid, ended.created) == (
+        win_processes.CONNECTOR, "Claude", 302, 4)
+    gate.began.assert_called_once()
+    assert gate.state.install_state is InstallState.INSTALLING
+
+
+def test_a_live_connector_that_survives_is_named_after_its_app(gate):
+    gate.table += CLAUDE_CONNECTOR
+    gate.terminate.return_value = False
+
+    assert install_flow.apply_and_restart() == (False, install_flow.BLOCKED_BY_OTHER_APPS)
+
+    assert "Claude (using the Mixar connector)" in _toast().body
+    gate.began.assert_not_called()
+
+
 def test_programs_the_user_must_close_stop_the_update(gate):
-    gate.table += [
-        _row(300, 1, "Claude.exe", r"C:\Users\u\Claude\Claude.exe", created=3),
-        _row(301, 300, "cmd.exe", r"C:\Windows\System32\cmd.exe", created=4),
-        _row(302, 301, "python.exe", PYTHON, created=4),
-        OTHER_WINDOW, BACKFILL,
-    ]
+    gate.table += CLAUDE_CONNECTOR + [OTHER_WINDOW, BACKFILL]
 
     assert install_flow.apply_and_restart() == (False, install_flow.BLOCKED_BY_OTHER_APPS)
 
     item = _toast()
     assert item.title == "Close other apps to update"
-    assert "Claude (using the Mixar connector)" in item.body
     assert "Another Mixar window" in item.body
+    assert "Claude" not in item.body  # never the user's to close
+    gate.terminate.assert_not_called()  # ended only once the update goes ahead
     assert "mixar.exe" not in item.body  # our own work is not the user's to close
     assert install_gate._poll not in gate.timers.registered
     gate.began.assert_not_called()
     assert gate.state.install_state is InstallState.READY
+
+
+def test_a_connector_is_left_alone_until_the_background_wait_clears(gate):
+    """The AI app keeps working through its connector while Mixar's own
+    work finishes: the poll must not kill it every BACKGROUND_POLL_S."""
+    gate.table += CLAUDE_CONNECTOR + [BACKFILL]
+    # An ended process leaves the table (the check runs again before the quit).
+    gate.terminate.side_effect = lambda holder: gate.table.remove(
+        next(row for row in gate.table if row["pid"] == holder.pid)) or True
+
+    assert install_flow.apply_and_restart() == (False, install_flow.WAITING_FOR_BACKGROUND)
+    assert install_gate._poll() == BACKGROUND_POLL_S
+    gate.terminate.assert_not_called()
+
+    gate.table.remove(BACKFILL)
+    assert install_gate._poll() is None
+
+    gate.terminate.assert_called_once()
+    assert gate.terminate.call_args[0][0].pid == 302
+    gate.began.assert_called_once()
+    assert gate.state.install_state is InstallState.INSTALLING
+
+
+def test_the_quit_marks_the_connector_updating_and_an_abort_clears_it(gate, monkeypatch):
+    """A connector an AI app starts while Mixar is gone must wait for the
+    helper's relaunch instead of cold-starting the old binary."""
+    from mixar.modules.mcp_bridge.core import installation
+
+    popen = MagicMock()
+    monkeypatch.setattr(installation.subprocess, "Popen", popen)
+    assert not installation.updating()
+
+    assert install_flow.apply_and_restart() == (True, "")
+
+    assert installation.updating()
+    assert installation.start_in_progress()
+    assert installation.start_app() is False
+    popen.assert_not_called()
+
+    install_flow._abort_pending_install()
+
+    assert not installation.updating()
+    assert not installation.start_in_progress()
 
 
 def test_background_work_is_waited_for_and_the_update_continues(gate):

@@ -117,6 +117,30 @@ def test_pid_wait_pipe_is_unquoted():
     assert '"%SYS32%' not in pipe
 
 
+def test_connectors_are_ended_after_mixar_exits_and_before_the_lock_wait():
+    """Helper v4: a connector an AI app respawned since the app's own check
+    is ended, so it cannot turn the install into a reboot; everything else
+    from the install directory is still only waited for."""
+    script = _script()
+    gone = script.index(":gone")
+    end = script.index('"{}"'.format(win_installer._PS_END_CONNECTORS))
+    lock = script.index(":lockloop")
+
+    assert gone < end < lock
+    line = next(l for l in script.splitlines() if win_installer._PS_END_CONNECTORS in l)
+    assert line.startswith('if not "%INSTALLDIR%"=="" "%PWSH%" -NoProfile')
+    assert 'Stop-Process -Id $p.ProcessId -Force' in win_installer._PS_END_CONNECTORS
+    assert "Stop-Process" not in win_installer._PS_LOCKS  # the wait still closes nothing
+    # Only pythons; a Mixar binary among the live ancestors means background work.
+    assert "-notlike 'python*'" in win_installer._PS_END_CONNECTORS
+    assert "'mixar.exe','mixar-launcher.exe','blender.exe','blender-launcher.exe'" in (
+        win_installer._PS_END_CONNECTORS)
+    assert "$q.CreationDate -gt $c.CreationDate" in win_installer._PS_END_CONNECTORS
+    # Log lines carry basename and pid, never a path.
+    assert "$p.ExecutablePath+" not in win_installer._PS_END_CONNECTORS
+    assert "helper_version=4" in script
+
+
 def test_delayed_expansion_is_forced_off():
     first = _script().splitlines()[:3]
     assert "setlocal enableextensions disabledelayedexpansion" in first

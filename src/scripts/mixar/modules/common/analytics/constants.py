@@ -47,6 +47,8 @@ EVENT_ONBOARDING_SEEN_STATE_ERROR = "onboarding.seen_state_error"
 EVENT_UPDATE_DOWNLOAD = "update.download_finished"
 EVENT_UPDATE_STARTED = "update.install_started"
 EVENT_UPDATE_RESULT = "update.install_result"
+# A launch quit because a helper was still installing an update.
+EVENT_UPDATE_BLOCKED = "update.blocked_mid_install"
 # The whole-window out-of-credits banner: what opened it, and what the user
 # chose (UPGRADE / REFER / CREATOR / DISMISS).
 EVENT_CREDITS_BANNER_SHOWN = "credits.banner_shown"

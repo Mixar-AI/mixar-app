@@ -14,6 +14,7 @@ content: versions, an outcome enum, and a stage.
 
 from .capture import capture
 from .constants import (
+    EVENT_UPDATE_BLOCKED,
     EVENT_UPDATE_DOWNLOAD,
     EVENT_UPDATE_RESULT,
     EVENT_UPDATE_STARTED,
@@ -42,6 +43,11 @@ def capture_update_started(
         },
         context=context,
     )
+
+
+def capture_update_blocked(version: str, *, context=None) -> None:
+    """Mixar was opened while a helper installed *version*, and quit."""
+    capture(EVENT_UPDATE_BLOCKED, {"target_version": version}, context=context)
 
 
 # Diagnostics an install_result may carry beyond version/outcome/stage. A

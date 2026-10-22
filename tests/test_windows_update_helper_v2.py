@@ -197,9 +197,12 @@ def test_apply_stops_and_names_the_apps_holding_the_install(monkeypatch, tmp_pat
     location = app_paths.InstallLocation(INSTALL_DIR, True, "", kind="msi")
     monkeypatch.setattr(installer, "check_eligibility",
                         lambda info: installer.Eligibility(True, location=location, extension=".msi"))
+    # A live connector is ended first; one that survives is what the user is
+    # asked to close (named after its AI app).
     claude = win_processes.Holder(win_processes.CONNECTOR, "claude", 302, 302)
     monkeypatch.setattr(install_gate, "_is_windows", lambda: True)
     monkeypatch.setattr(install_gate, "_holders", lambda install_dir: [claude])
+    monkeypatch.setattr(win_processes, "terminate", lambda holder: False)
     began = MagicMock()
     monkeypatch.setattr(installer, "begin_install", began)
     shown = MagicMock()
@@ -279,9 +282,13 @@ def test_helper_waits_for_processes_in_the_install_dir_without_closing_them():
     assert "if %LOCKWAIT% GEQ 60 goto locked" in lock
     assert "call :result locked locked" in lock
     assert 'type "%LOCKS%" >>"%RESULT%"' in lock
-    # Never force-closes anything.
+    # The wait never force-closes anything (only the connector end step
+    # before it does, and only connector pythons — helper v4).
     for verb in ("taskkill", "Stop-Process", ".Kill(", "Terminate"):
-        assert verb not in script
+        assert verb not in lock
+        assert verb not in win_installer._PS_LOCKS
+        assert verb not in win_installer._PS_INSTALL
+        assert verb not in win_installer._PS_FINISH
     # Basenames only reach the result file.
     assert "$_.Name -replace" in win_installer._PS_LOCKS
     assert "ExecutablePath -join" not in win_installer._PS_LOCKS
@@ -295,7 +302,7 @@ def test_helper_result_carries_the_attempt_fields():
 
     for line in ("version=%VERSION%", "stage=%~1", "exit=%~2",
                  "from_version=%FROM_VERSION%", "attempt_id=%ATTEMPT%",
-                 "helper_version=3", "wait_s=%WAITED%"):
+                 "helper_version=4", "wait_s=%WAITED%"):
         assert f'echo {line}' in record, line
     assert 'set "FROM_VERSION=3.3.6"' in script
     assert 'set "ATTEMPT=0123abcd"' in script
@@ -329,7 +336,7 @@ def test_helper_exit_status_is_the_installers():
     assert "exit 1602" in win_installer._PS_INSTALL
 
 
-@pytest.mark.parametrize("name", ["_PS_INSTALL", "_PS_VERIFY", "_PS_LOCKS", "_PS_FINISH"])
+@pytest.mark.parametrize("name", ["_PS_INSTALL", "_PS_VERIFY", "_PS_END_CONNECTORS", "_PS_LOCKS", "_PS_FINISH"])
 def test_powershell_snippets_survive_batch_quoting(name):
     """Embedded in -Command "...": a quote would end the argument and a
     percent sign would be expanded by cmd."""
@@ -388,7 +395,10 @@ def test_purge_keeps_the_result_until_read_and_the_logs_always(tmp_path):
     assert sorted(os.listdir(tmp_path)) == logs
 
 
-def test_msi_writes_its_install_location():
+def test_msi_install_location_is_left_to_cpack():
+    # CPack's generated properties.wxi already sets ARPINSTALLLOCATION from
+    # INSTALL_ROOT; a second SetProperty in the template fails light.exe
+    # with LGHT0091 (duplicate SetARPINSTALLLOCATION).
     template = (ROOT / "src" / "release" / "windows" / "installer_wix"
                 / "WIX.template").read_text(encoding="utf-8")
-    assert '<SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALL_ROOT]"' in template
+    assert '<SetProperty Id="ARPINSTALLLOCATION"' not in template

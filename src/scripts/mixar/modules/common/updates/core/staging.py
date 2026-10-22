@@ -222,6 +222,22 @@ def resolve_staging_dir() -> StagingDir:
     raise OSError("No writable staging directory found for updates")
 
 
+def existing_staging_dirs() -> list:
+    """Every candidate staging directory that already exists, best first.
+
+    Creates nothing — the startup check runs before anything else touches
+    staging. The shared Windows directory may hold another account's
+    update, which is just as live for this machine.
+    """
+    candidates = _windows_candidates() if _is_windows() else _posix_candidates()
+    paths = []
+    for root, _shared in candidates:
+        path = os.path.join(root, STAGING_VENDOR_DIR, STAGING_DIR_NAME)
+        if path not in paths and os.path.isdir(path):
+            paths.append(path)
+    return paths
+
+
 def installer_path(staging: StagingDir, version: str, extension: str) -> str:
     """Full path of the staged installer for *version*."""
     return os.path.join(staging.path, f"Mixar-{version}{extension}")
@@ -238,7 +254,16 @@ def purge_stale(staging: StagingDir, keep_filenames=()) -> None:
     an attempt failed, and the update check that purges runs seconds after
     the relaunch has read (and deleted) the result. ``update.log`` is
     trimmed to its tail instead; the MSI logs are overwritten per attempt.
+
+    Nothing is touched while the update-in-progress marker names a live
+    helper: its script, installer and marker are in use (another Mixar is
+    mid-update). A stale marker is purged like any leftover.
     """
+    from .install_marker import guards_staging
+
+    if guards_staging(staging.path):
+        logger.info("An update is being installed - leaving %s as it is", staging.path)
+        return
     keep = set(keep_filenames)
     keep.update((HELPER_LOG_NAME, MSI_LOG_NAME, MSI_PREV_LOG_NAME))
     try:

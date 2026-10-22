@@ -137,7 +137,13 @@ def test_anything_else_from_the_install_dir_is_named_by_basename():
 
 
 def test_what_the_user_must_close():
+    # CONNECTOR stays closable for the one that could not be ended: the
+    # toast then names its AI app.
     assert wp.USER_CLOSABLE == {wp.MIXAR_WINDOW, wp.CONNECTOR, wp.OTHER}
+
+
+def test_what_the_update_ends():
+    assert wp.ENDED_BY_UPDATE == {wp.CONNECTOR, wp.ABANDONED_CONNECTOR}
 
 
 def test_the_table_is_native_not_a_subprocess():

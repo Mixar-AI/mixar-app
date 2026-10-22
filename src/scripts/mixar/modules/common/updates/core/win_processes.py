@@ -15,7 +15,9 @@ Each holder is classified by what the user can do about it:
 - ``MIXAR_WINDOW`` — another Mixar with a visible window; the user closes it.
 - ``CONNECTOR`` — the Mixar connector (MCP server, ``<install>\\python\\bin\\
   python.exe``) kept running by a live AI app such as Claude, Codex or
-  Cursor, named after that app; the user closes it.
+  Cursor, named after that app. It is a stateless forwarder whose cached
+  port and token are stale once Mixar restarts, so the update ends it (the
+  AI app respawns or reconnects it); one that cannot be ended is named.
 - ``BACKGROUND`` — Mixar's own work: our descendants, a windowless Mixar
   (the asset-preview backfill ``mixar.exe -b`` an earlier session left
   running, indexing render shards) or a python started by a Mixar. It ends
@@ -59,8 +61,11 @@ CONNECTOR = "connector"
 BACKGROUND = "background"
 ABANDONED_CONNECTOR = "abandoned_connector"
 OTHER = "other"
-# What only the user can end: Restart & Update stops and names these.
+# What Restart & Update stops for and names: what only the user can end,
+# plus a connector that could not be ended (named after its AI app).
 USER_CLOSABLE = frozenset({MIXAR_WINDOW, CONNECTOR, OTHER})
+# Ended before quitting: they hold no user work.
+ENDED_BY_UPDATE = frozenset({CONNECTOR, ABANDONED_CONNECTOR})
 
 # One process holding the install directory. ``name`` is what a toast may
 # show (a basename, "Mixar", or the AI app hosting a connector); ``created``
@@ -71,6 +76,7 @@ _TH32CS_SNAPPROCESS = 0x00000002
 _PROCESS_TERMINATE = 0x0001
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _ERROR_INVALID_PARAMETER = 87  # OpenProcess on a PID that no longer exists
+_STILL_ACTIVE = 259  # GetExitCodeProcess of a process that has not exited
 _GWL_EXSTYLE = -20
 _WS_EX_TOOLWINDOW = 0x00000080
 _PATH_CHARS = 32768
@@ -206,6 +212,8 @@ def _win32():
         (kernel32.GetProcessTimes, [handle, filetime, filetime, filetime, filetime],
          wintypes.BOOL),
         (kernel32.TerminateProcess, [handle, wintypes.UINT], wintypes.BOOL),
+        (kernel32.GetExitCodeProcess, [handle, ctypes.POINTER(wintypes.DWORD)],
+         wintypes.BOOL),
         (kernel32.CloseHandle, [handle], wintypes.BOOL),
         (user32.EnumWindows, [enum_proc, wintypes.LPARAM], wintypes.BOOL),
         (user32.IsWindowVisible, [wintypes.HWND], wintypes.BOOL),
@@ -322,6 +330,29 @@ def blocking_apps(install_dir: str, own_pid: int) -> list:
         [(holder.kind, holder.name, holder.pid) for holder in holders],
     )
     return holders
+
+
+def process_state(pid: int):
+    """``(alive, created)`` for *pid* (Windows).
+
+    ``alive`` is False once the process has exited (or the PID was never
+    used); ``created`` is its creation time in FILETIME ticks, None when
+    Windows denies access — the process then counts as alive. Raises when
+    the Win32 calls themselves fail; callers decide what that means.
+    """
+    w = _win32()
+    handle = w.kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+    if not handle:
+        return w.ctypes.get_last_error() != _ERROR_INVALID_PARAMETER, None
+    try:
+        code = w.wintypes.DWORD()
+        # An exited process lives on while someone holds a handle to it.
+        if (w.kernel32.GetExitCodeProcess(handle, w.ctypes.byref(code))
+                and code.value != _STILL_ACTIVE):
+            return False, None
+        return True, _created(w, handle)
+    finally:
+        w.kernel32.CloseHandle(handle)
 
 
 def terminate(holder) -> bool:

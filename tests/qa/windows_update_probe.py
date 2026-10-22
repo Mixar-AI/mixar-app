@@ -10,7 +10,9 @@ Beyond the plain install: the install-directory lock wait (a python.exe kept
 running from a fake install dir, with the wait shortened in the generated
 script only), the registry-first relaunch and MSI error extraction of the
 post-install PowerShell (Get-ItemProperty and Start-Process shadowed), and
-the signer pin of the pre-install re-verify. Windows only; stdlib only, so
+the signer pin of the pre-install re-verify. Every run plants the app's
+update-in-progress marker and requires the helper to have deleted it,
+whichever way it ended. Windows only; stdlib only, so
 it imports anywhere.
 """
 import base64
@@ -131,11 +133,16 @@ def _run_helper(module, root, msi, env, python, *, lock_wait_s=None, exit_wait_s
         script = script.replace(line, f'if %LOCKWAIT% GEQ {int(lock_wait_s)} goto locked')
     script_path = root / 'helper.cmd'
     script_path.write_text(script, encoding='cp1252', newline='\r\n')
+    # The app's update-in-progress marker: every exit path must delete it.
+    marker = root / module.HELPER_MARKER_NAME
+    marker.write_text('{"helper_pid": 0}', encoding='utf-8')
     process = subprocess.run(
         [os.path.join(_system32(), 'cmd.exe'), '/d', '/c', str(script_path)], env=env,
         cwd=root, capture_output=True, timeout=timeout, creationflags=_NO_WINDOW,
     )
-    return process, _record(root / 'update-result.txt')
+    record = _record(root / 'update-result.txt')
+    assert not marker.exists(), ('update-in-progress marker left behind', record)
+    return process, record
 
 
 def _installed_arguments(args_path, msi, root):
@@ -190,17 +197,19 @@ def run_wait_case(module, root, python, *, app_exits_after=None):
     return {'result': record, 'returncode': process.returncode}
 
 
-def start_holder(install_dir, python, seconds):
-    """Keep a python.exe running FROM *install_dir* for *seconds*.
+def start_holder(install_dir, python, seconds, *, name=None):
+    """Keep a copy of *python* running FROM *install_dir* for *seconds*.
 
     A copy of *python* with the DLLs beside it (and a venv's pyvenv.cfg),
-    pointed back at its standard library through PYTHONHOME.
+    pointed back at its standard library through PYTHONHOME. *name* renames
+    the copy: ``python.exe`` reads as a Mixar connector to the helper (v4
+    ends it); any other basename is a program it only waits for.
     """
     source = Path(python).resolve()
     install_dir = Path(install_dir)
     install_dir.mkdir(parents=True, exist_ok=True)
     for item in [source, *source.parent.glob('*.dll')]:
-        shutil.copy2(item, install_dir / item.name)
+        shutil.copy2(item, install_dir / (name if item is source and name else item.name))
     for cfg in (source.parent / 'pyvenv.cfg', source.parent.parent / 'pyvenv.cfg'):
         if cfg.is_file():
             shutil.copy2(cfg, install_dir / 'pyvenv.cfg')
@@ -210,17 +219,21 @@ def start_holder(install_dir, python, seconds):
         capture_output=True, text=True, timeout=30, creationflags=_NO_WINDOW,
     ).stdout.strip()
     return subprocess.Popen(
-        [str(install_dir / source.name), '-S', '-c', f'import time; time.sleep({seconds})'],
+        [str(install_dir / (name or source.name)), '-S', '-c', f'import time; time.sleep({seconds})'],
         env=dict(os.environ, PYTHONHOME=home), creationflags=_NO_WINDOW,
     )
 
 
+# Not a python: the helper waits for it instead of ending it.
+HOLDER_NAME = 'mixar-worker.exe'
+
+
 def run_lock_case(module, root, python, *, release_after=None):
-    """A process from the install dir holds it: locked, or installed once it exits."""
+    """A program from the install dir holds it: locked, or installed once it exits."""
     root, msi, args_path, env = _prepare(root, python)
     install_dir = root / 'Mixar Install'
     # Locked: outlives the shortened wait. Released: exits within the real one.
-    holder = start_holder(install_dir, python, release_after or 40)
+    holder = start_holder(install_dir, python, release_after or 40, name=HOLDER_NAME)
     try:
         process, record = _run_helper(
             module, root, msi, env, python, install_dir=str(install_dir),
@@ -230,12 +243,36 @@ def run_lock_case(module, root, python, *, release_after=None):
         holder.kill()
     if release_after is None:
         assert (record.get('stage'), record.get('exit')) == ('locked', 'locked'), record
-        assert 'python.exe' in record.get('locks', '').lower().split(','), record
+        assert HOLDER_NAME in record.get('locks', '').lower().split(','), record
         assert msi.exists() and not args_path.exists(), record
     else:
         assert (record.get('stage'), record.get('exit')) == ('install', '0'), record
         assert int(record.get('wait_s', '0')) >= 3, record
         _installed_arguments(args_path, msi, root)
+    return {'result': record, 'returncode': process.returncode}
+
+
+def run_connector_case(module, root, python):
+    """A python.exe from the install dir with no Mixar among its ancestors is
+    a connector an AI app respawned: the helper (v4) ends it and installs,
+    rather than waiting it out and recording ``locked``."""
+    root, msi, args_path, env = _prepare(root, python)
+    install_dir = root / 'Mixar Install'
+    holder = start_holder(install_dir, python, 40)  # outlives the shortened wait
+    try:
+        process, record = _run_helper(
+            module, root, msi, env, python, install_dir=str(install_dir),
+            lock_wait_s=6, timeout=120,
+        )
+        ended = holder.poll() is not None
+    finally:
+        holder.kill()
+    assert ended, 'the connector python was not ended'
+    assert (record.get('stage'), record.get('exit')) == ('install', '0'), record
+    assert 'locks' not in record, record
+    log = (root / 'update.log').read_text(encoding='utf-8', errors='replace')
+    assert f'Ended Mixar connector python.exe (pid {holder.pid})' in log, log
+    _installed_arguments(args_path, msi, root)
     return {'result': record, 'returncode': process.returncode}
 
 

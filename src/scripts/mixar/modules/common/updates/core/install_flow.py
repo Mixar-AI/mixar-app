@@ -26,7 +26,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
 from ..constants import InstallState
-from . import download, install_gate, installer, staging, verify
+from . import download, install_gate, install_marker, installer, staging, verify
 # apply_and_restart's messages when the Windows pre-quit gate stopped it
 # (the toast saying why is up); re-exported for the operator.
 from .install_gate import BLOCKED_BY_OTHER_APPS, WAITING_FOR_BACKGROUND  # noqa: F401
@@ -406,6 +406,19 @@ def apply_and_restart():
         state.set_install_failed(n_("Could not start the updater"))
         return False, n_("Could not start the updater")
 
+    # A Mixar opened mid-install quits instead of running half-replaced
+    # files or purging the helper's script; failing to say so never blocks.
+    install_marker.write(
+        os.path.dirname(path), _helper_proc.pid, info.latest_version, attempt_id)
+    # A connector an AI app starts while we are gone must wait for the
+    # helper's relaunch, not cold-start the old or half-replaced binary.
+    try:
+        from mixar.modules.mcp_bridge.core import installation as connector_installation
+
+        connector_installation.mark_updating()
+    except Exception:  # noqa: BLE001 - the marker is a guard, never a blocker
+        logger.debug("Could not write the connector's updating marker", exc_info=True)
+
     install_gate.reset()
     state.set_installing()
     try:
@@ -462,7 +475,16 @@ def _abort_pending_install():
         except Exception:  # noqa: BLE001 - already exited, or access denied
             logger.debug("Could not kill the update helper", exc_info=True)
 
+    try:
+        from mixar.modules.mcp_bridge.core import installation as connector_installation
+
+        connector_installation.clear_updating()  # connectors may cold-start again
+    except Exception:  # noqa: BLE001 - it expires on its own
+        logger.debug("Could not clear the connector's updating marker", exc_info=True)
+
     state = get_update_state()
+    if state.installer_path:
+        install_marker.remove(os.path.dirname(state.installer_path))
     # The staged installer is untouched and still verified — go back to
     # READY so the next click simply tries again.
     if state.installer_path:

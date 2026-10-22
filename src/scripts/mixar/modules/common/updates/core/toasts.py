@@ -345,6 +345,26 @@ def push_background_wait_toast() -> None:
     tag_topbar_redraw()
 
 
+def push_finishing_update_toast() -> None:
+    """This launch found an update still being installed and is quitting.
+
+    No actions: the app closes a few seconds later, and the helper opens
+    the updated Mixar when it is done.
+    """
+    from ...notifications.store import get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+
+    get_notification_store().push(
+        type_str="update",
+        title=n_("Mixar is finishing an update"),
+        body=n_("It will reopen automatically when it's done."),
+        priority="normal",
+        ttl_ms=0,
+        id=UPDATE_NOTIFICATION_ID,
+        dismissible=False,
+    )
+
+
 def report_previous_update_result() -> None:
     """Tell the user what happened to an update we started last session.
 

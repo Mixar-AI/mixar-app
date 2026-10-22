@@ -10,15 +10,19 @@ directory: Windows Installer replaces an in-use file only at the next
 reboot, so the relaunch would start the old build. :mod:`win_processes`
 says who holds it; this module acts on the answer, on the main thread:
 
-- an abandoned connector (a Mixar-connector python whose AI app is gone)
-  holds no user work and is ended; one that cannot be ended is named;
-- another Mixar window, a live connector or any other program is the
-  user's to close: the "Close other apps to update" toast names them;
+- another Mixar window or any other program is the user's to close: the
+  "Close other apps to update" toast names them;
 - Mixar's own background work ends by itself: the "Finishing background
   work" toast stays up while a timer re-checks every BACKGROUND_POLL_S and
   continues the update once it is clear. Cancel stops it. A wait that
   outlasts BACKGROUND_WAIT_MAX_S stops waiting here and leaves what is
-  left to the helper's own bounded wait.
+  left to the helper's own bounded wait;
+- a Mixar connector (the python an AI app such as Claude or Codex keeps
+  running as its MCP server, or one whose AI app is gone) holds no user
+  work and is stale once Mixar restarts, so it is ended — but only once
+  the two checks above have let the update go ahead, never while the
+  update then stops anyway or on every poll of a background wait. One
+  that cannot be ended is named.
 
 Other platforms pass straight through.
 """
@@ -57,20 +61,27 @@ def _holders(install_dir):
     return win_processes.blocking_apps(install_dir, os.getpid())
 
 
-def _end_abandoned(holders):
-    """End every abandoned connector; one still running is named instead."""
+def _end_connectors(holders):
+    """End every Mixar connector, live or abandoned; one still running is named instead.
+
+    A live connector keeps its kind so the toast names the AI app behind it;
+    an abandoned one has no app to name and is shown by its basename.
+    """
     from . import win_processes
 
     remaining = []
     for holder in holders:
-        if holder.kind != win_processes.ABANDONED_CONNECTOR:
+        if holder.kind not in win_processes.ENDED_BY_UPDATE:
             remaining.append(holder)
-        elif win_processes.terminate(holder):
-            logger.info("Ended abandoned Mixar connector %s (pid %s)", holder.name, holder.pid)
+            continue
+        live = holder.kind == win_processes.CONNECTOR
+        what = "Mixar connector of %s" % holder.name if live else (
+            "abandoned Mixar connector %s" % holder.name)
+        if win_processes.terminate(holder):
+            logger.info("Ended %s (pid %s)", what, holder.pid)
         else:
-            logger.warning(
-                "Could not end abandoned Mixar connector %s (pid %s)", holder.name, holder.pid)
-            remaining.append(holder._replace(kind=win_processes.OTHER))
+            logger.warning("Could not end %s (pid %s)", what, holder.pid)
+            remaining.append(holder if live else holder._replace(kind=win_processes.OTHER))
     return remaining
 
 
@@ -88,44 +99,57 @@ def check(eligibility) -> str:
     """May the install go ahead? Main thread.
 
     Returns ``""`` when it may; otherwise the toast saying why is up and
-    the value is apply_and_restart's message.
+    the value is apply_and_restart's message. Connectors are ended only
+    on the way to ``""``: the AI app would lose its MCP server for nothing
+    if the update then stopped, and a background wait polls this every
+    BACKGROUND_POLL_S while the user keeps working with that app.
     """
     global _wait_since, _waited_out
     if not _is_windows() or eligibility.location is None:
         return ""
     from . import win_processes
 
-    holders = _end_abandoned(_holders(eligibility.location.target))
-    closable = [holder for holder in holders if holder.kind in win_processes.USER_CLOSABLE]
+    holders = _holders(eligibility.location.target)
+    connectors = [holder for holder in holders if holder.kind in win_processes.ENDED_BY_UPDATE]
+    others = [holder for holder in holders if holder.kind not in win_processes.ENDED_BY_UPDATE]
+    closable = [holder for holder in others if holder.kind in win_processes.USER_CLOSABLE]
     if closable:
         _stop()
         from .toasts import push_close_apps_toast
 
         push_close_apps_toast(closable)
         return BLOCKED_BY_OTHER_APPS
-    if not holders or _waited_out:
-        _stop()
-        return ""
+    if others and not _waited_out:
+        names = ", ".join(sorted({holder.name for holder in others}))
+        now = time.monotonic()
+        if _wait_since is None:
+            _wait_since = now
+            logger.info("Update waiting for Mixar background work: %s", names)
+            from .toasts import push_background_wait_toast
 
-    names = ", ".join(sorted({holder.name for holder in holders}))
-    now = time.monotonic()
-    if _wait_since is None:
-        _wait_since = now
-        logger.info("Update waiting for Mixar background work: %s", names)
-        from .toasts import push_background_wait_toast
+            push_background_wait_toast()
+        elif now - _wait_since >= BACKGROUND_WAIT_MAX_S:
+            logger.warning(
+                "Mixar background work (%s) still running after %.0fs - updating anyway; "
+                "the helper waits for it", names, now - _wait_since)
+            # One-shot: the caller re-checks at once, and that check proceeds.
+            _wait_since, _waited_out = None, True
+            return ""
+        if not bpy.app.timers.is_registered(_poll):
+            # Persistent: opening a file while waiting would otherwise drop
+            # the timer and leave the wait toast up with nothing polling.
+            bpy.app.timers.register(_poll, first_interval=BACKGROUND_POLL_S, persistent=True)
+        return WAITING_FOR_BACKGROUND
 
-        push_background_wait_toast()
-    elif now - _wait_since >= BACKGROUND_WAIT_MAX_S:
-        logger.warning(
-            "Mixar background work (%s) still running after %.0fs - updating anyway; "
-            "the helper waits for it", names, now - _wait_since)
-        _wait_since, _waited_out = None, True
-        return ""
-    if not bpy.app.timers.is_registered(_poll):
-        # Persistent: opening a file while waiting would otherwise drop the
-        # timer and leave the wait toast up with nothing polling.
-        bpy.app.timers.register(_poll, first_interval=BACKGROUND_POLL_S, persistent=True)
-    return WAITING_FOR_BACKGROUND
+    # The update goes ahead: now the connectors are ended.
+    survivors = _end_connectors(connectors)
+    _stop()
+    if survivors:
+        from .toasts import push_close_apps_toast
+
+        push_close_apps_toast(survivors)
+        return BLOCKED_BY_OTHER_APPS
+    return ""
 
 
 def reset() -> None:

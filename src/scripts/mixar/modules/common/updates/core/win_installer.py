@@ -17,11 +17,16 @@ Design notes, each one a failure this replaces:
 - **It waits for our PID, not for a fixed delay.**  Windows Installer
   refuses to replace files that are still open, and a sleep long enough
   to be safe is long enough to feel broken.
-- **Then for everything else running from the install directory.**  A
-  file in use is not an error to msiexec: it defers the replacement to the
-  next reboot and returns 3010, and the relaunch starts the old build.
-  The helper waits (bounded) and records ``stage=locked`` with the process
-  basenames rather than installing; it never closes anything.
+- **Then it ends Mixar connectors and waits for everything else running
+  from the install directory.**  A file in use is not an error to msiexec:
+  it defers the replacement to the next reboot and returns 3010, and the
+  relaunch starts the old build.  An AI app respawns its MCP server (our
+  ``python.exe``) on its next tool call, so one may appear after the app's
+  own pre-quit check; connectors hold no user work and are stale once
+  Mixar restarts, so the helper ends them (helper v4) — a python started by
+  a Mixar is background work and is left alone.  For anything else the
+  helper waits (bounded) and records ``stage=locked`` with the process
+  basenames rather than installing; it never closes a window.
 - **Elevation is explicit.**  ``Start-Process -Verb RunAs`` raises the UAC
   prompt and reports whether the user accepted, instead of letting
   ``msiexec`` fail with 1925 in the cases where it will not self-elevate.
@@ -45,6 +50,9 @@ Design notes, each one a failure this replaces:
   ``cmd.exe`` itself is started by absolute path with AutoRun off (``/d``).
   Delayed expansion is forced off: a registry ``DelayedExpansion=1``
   would strip the ``!`` from ``/qb!`` and give the MSI a Cancel button.
+- **It clears the update-in-progress marker** (``install_marker``) on
+  every exit path, right before the relaunch: while it names this helper,
+  a Mixar opened by hand quits instead of purging this very script.
 - **The re-check pins the signer.**  Just before installing, the MSI must
   still be validly signed by the certificate whose thumbprint the app
   verified (``%SIGNER%``), not merely by anyone.
@@ -63,6 +71,7 @@ from mixar.config.logging_config import get_logger
 
 from ..constants import (
     HELPER_LOG_NAME,
+    HELPER_MARKER_NAME,
     HELPER_VERSION,
     HELPER_WAIT_FOR_EXIT_S,
     HELPER_WAIT_FOR_LOCKS_S,
@@ -142,6 +151,39 @@ _PS_LOCKS = (
     "}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}"
 )
 
+# End every python running from the install directory that is NOT Mixar's
+# own background work (one with a Mixar binary among its live ancestors):
+# that is a Mixar connector an AI app respawned since the app's own check.
+# Each end (or failure to) is one log line with basename and pid, never a
+# path. The exit code is informational; the lock wait follows regardless.
+_PS_END_CONNECTORS = (
+    "try{"
+    "$d=$env:INSTALLDIR.TrimEnd('\\')+'\\';"
+    "$all=@(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop);"
+    "$by=@{};foreach($p in $all){$by[[int]$p.ProcessId]=$p};"
+    "$mixar=@('mixar.exe','mixar-launcher.exe','blender.exe','blender-launcher.exe');"
+    "foreach($p in $all){"
+    "if(-not $p.ExecutablePath -or "
+    "-not $p.ExecutablePath.StartsWith($d,[StringComparison]::OrdinalIgnoreCase)){continue};"
+    "if($p.Name -notlike 'python*'){continue};"
+    "$own=$false;$c=$p;$seen=@{};"
+    "while($c -and -not $seen.ContainsKey([int]$c.ProcessId)){"
+    "$seen[[int]$c.ProcessId]=$true;"
+    "$q=$by[[int]$c.ParentProcessId];"
+    # A parent younger than its child is a reused PID, not an ancestor.
+    "if(-not $q -or ($q.CreationDate -and $c.CreationDate -and "
+    "$q.CreationDate -gt $c.CreationDate)){break};"
+    "if($mixar -contains $q.Name.ToLower()){$own=$true;break};"
+    "$c=$q};"
+    "if($own){continue};"
+    "try{Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop;"
+    "Write-Output ('Ended Mixar connector '+$p.Name+' (pid '+$p.ProcessId+')')}"
+    "catch{Write-Output ('Could not end Mixar connector '+$p.Name+' (pid '+$p.ProcessId+'): '"
+    "+$_.Exception.Message)}};"
+    "exit 0"
+    "}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}"
+)
+
 # After the installer (or instead of it): record what Windows Installer now
 # says is installed and where, the MSI's first error code, and relaunch —
 # the registered InstallLocation first, so the copy that comes back is the
@@ -193,6 +235,7 @@ set "MSILOG={msi_log}"
 set "MSIPREVLOG={msi_prev_log}"
 set "RESULT={result}"
 set "LOCKS={locks}"
+set "MARKER={marker}"
 set "PID={pid}"
 set "VERSION={version}"
 set "FROM_VERSION={from_version}"
@@ -222,6 +265,7 @@ goto waitloop
 :timeout
 echo [%DATE% %TIME%] Mixar (pid %PID%) still running after {wait_s}s - aborting >>"%LOG%" 2>&1
 call :result wait timeout
+del /f /q "%MARKER%" >nul 2>&1
 exit /b 2
 
 :gone
@@ -229,12 +273,19 @@ rem let Windows release the file handles the installer needs
 "%SYS32%\\ping.exe" -n 3 127.0.0.1 >nul
 set /a WAITED+=2
 
+rem ---- end Mixar connectors respawned since the app's own check ---------
+rem An AI app restarts its MCP server (our python.exe) on its next tool
+rem call; one started after Restart & Update checked would keep the python
+rem runtime in use and turn the install into a reboot. Connectors hold no
+rem user work and are stale once Mixar restarts, so they are ended here as
+rem the app did before quitting. A python started by a Mixar is left alone.
+if not "%INSTALLDIR%"=="" {powershell} "{ps_end_connectors}" >>"%LOG%" 2>&1
+
 rem ---- wait for everything else running from the install directory -----
-rem Other Mixar windows, the asset-preview worker and MCP servers started by
-rem AI apps all run binaries from there. Windows Installer cannot replace a
-rem file in use: it defers it to the next reboot, reports 3010, and the
-rem relaunch starts the old build. They are waited for, never closed - the
-rem user may have unsaved work in them.
+rem Other Mixar windows and the asset-preview worker run binaries from
+rem there. Windows Installer cannot replace a file in use: it defers it to
+rem the next reboot, reports 3010, and the relaunch starts the old build.
+rem They are waited for, never closed - the user may have unsaved work.
 set /a LOCKWAIT=0
 :lockloop
 if "%INSTALLDIR%"=="" goto unlocked
@@ -281,6 +332,9 @@ if "%INSTALL_EXIT%"=="3010" del /f /q "%MSI%" >nul 2>&1
 
 :finish
 rem ---- record what was installed, then bring Mixar back -----------------
+rem Every exit path but the timeout comes through here. The in-progress
+rem marker goes first: the Mixar about to start must not find it naming us.
+del /f /q "%MARKER%" >nul 2>&1
 rem Runs whatever the installer decided. The registered InstallLocation is
 rem tried first; the fixed candidates below only when PowerShell cannot run.
 {powershell} "{ps_finish}" >>"%LOG%" 2>&1
@@ -370,6 +424,7 @@ def build_script(
         msi_prev_log=os.path.join(staging_dir, MSI_PREV_LOG_NAME),
         result=result_path(staging_dir),
         locks=os.path.join(staging_dir, "mixar-update-locks.txt"),
+        marker=os.path.join(staging_dir, HELPER_MARKER_NAME),
         pid=int(pid),
         version=version,
         from_version=from_version,
@@ -386,6 +441,7 @@ def build_script(
             if require_signature else ""
         ),
         ps_install=_PS_INSTALL,
+        ps_end_connectors=_PS_END_CONNECTORS,
         ps_locks=_PS_LOCKS,
         ps_finish=_PS_FINISH,
         relaunch=_relaunch_block(relaunch_candidates),
