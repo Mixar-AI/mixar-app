@@ -3705,6 +3705,13 @@ extern "C" void Mixar_WindowMakeKey(void *window_handle)
   SetForegroundWindow(hwnd);
 }
 
+/* True when the window is the foreground window (see the Cocoa twin). */
+extern "C" bool Mixar_WindowIsKey(void *window_handle)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  return hwnd != nullptr && ::GetForegroundWindow() == hwnd;
+}
+
 extern "C" void Mixar_WindowSetFloatingLevel(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
@@ -3878,6 +3885,20 @@ extern "C" void Mixar_WindowOrderFrontNoActivate(void *window_handle)
 
   SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOACTIVATE);
+}
+
+/* Bring Mixar's main window to the foreground after a browser sign-in
+ * succeeded. Best-effort: a minimised window is restored first, and
+ * Mixar_WindowMakeKey carries the AttachThreadInput workaround for a
+ * process that has lost foreground permission. */
+extern "C" void Mixar_AppActivate(void *window_handle)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) return;
+  if (IsIconic(hwnd)) {
+    ShowWindow(hwnd, SW_RESTORE);
+  }
+  Mixar_WindowMakeKey(window_handle);
 }
 
 extern "C" void Mixar_WindowSetParent(void *child_handle, void *parent_handle)

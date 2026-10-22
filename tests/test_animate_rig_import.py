@@ -18,16 +18,18 @@ heuristic, which divides each bone's length by the armature scale.
 
 The fix is the import options alone, not post-import cleanup: nothing extra
 is created, TEMPERANCE keeps the joint-to-joint bone lengths, and the
-armature keeps Blender's default Octahedral display. The hooks stamp the
-rig job id and turn the armature's In Front on, which the importer only sets
-alongside the bone-shape Icosphere. Every Auto Rig entry point (Animate tab, agent, Moodboard
-node) imports with the ONE ``ANIMATE_IMPORT_OPTIONS`` dict. Verified end to
-end against the real Blender 5.2 importer (``bpy`` module): metre and
-centimetre rigs both import as exactly Armature + mesh, no extra collection,
-Octahedral 0.1 / 0.36 m bones, and baked animation deforms the mesh
-identically under every bone heuristic.
+armature keeps Blender's default Octahedral display. The hook stamps the
+rig job id AND the rig's skeleton (``rig_skeleton`` from the job result) and
+turns the armature's In Front on, which the importer only sets alongside the
+bone-shape Icosphere. Every Auto Rig entry point (Animate tab, agent,
+Moodboard node) imports with the ONE ``ANIMATE_IMPORT_OPTIONS`` dict and
+lands through the ONE ``stamp_rig_import`` hook. Verified end to end against
+the real Blender 5.2 importer (``bpy`` module): metre and centimetre rigs
+both import as exactly Armature + mesh, no extra collection, Octahedral
+0.1 / 0.36 m bones, and baked animation deforms the mesh identically under
+every bone heuristic.
 
-``_rig_on_imported`` does ``import bpy`` INSIDE itself (this repo's lazy-
+``stamp_rig_import`` does ``import bpy`` INSIDE itself (this repo's lazy-
 import convention), which re-resolves ``sys.modules["bpy"]`` at CALL time.
 Patching must target that same live module object rather than a name bound
 at this test file's collection time — some other test file in the full
@@ -53,10 +55,12 @@ install_bpy_mock()
 from mixar.modules.hunyuan.constants import (
     ANIMATE_IMPORT_OPTIONS,
     ANIMATE_RIG_JOB_PROP,
+    ANIMATE_RIG_SKELETON_PROP,
 )
 from mixar.modules.hunyuan.core.animate_enqueue import (
-    _animate_on_imported,
-    _rig_on_imported,
+    find_rig_job_id,
+    find_rig_skeleton,
+    stamp_rig_import,
 )
 from mixar.modules.moodboard.core import node_graph, node_mesh_execution
 
@@ -105,8 +109,13 @@ def _patch_objects(monkeypatch, objects):
     )
 
 
-def _job(job_id="job-123"):
-    return SimpleNamespace(backend_job_id=job_id)
+def _job(job_id="job-123", skeleton="biped"):
+    # ``rig_skeleton`` rides beside ``result_files`` in the job result dict,
+    # which ``_parse_standard_poll`` keeps whole on ``job.result_data``.
+    result = {"result_files": [{"type": "GLB", "url": "u"}]}
+    if skeleton:
+        result["rig_skeleton"] = skeleton
+    return SimpleNamespace(backend_job_id=job_id, result_data=result)
 
 
 def test_import_options_create_nothing_but_the_rig():
@@ -126,13 +135,47 @@ def test_rig_import_is_stamped_octahedral_and_in_front(monkeypatch):
     char_mesh = _FakeObject("char1", type='MESH')
     _patch_objects(monkeypatch, [armature, char_mesh])
 
-    _rig_on_imported(_job(), "Armature, char1")
+    stamp_rig_import(_job(), "Armature, char1")
 
     assert armature[ANIMATE_RIG_JOB_PROP] == "job-123"
     assert char_mesh[ANIMATE_RIG_JOB_PROP] == "job-123"
+    # The skeleton lands beside the job id on EVERY imported object.
+    assert armature[ANIMATE_RIG_SKELETON_PROP] == "biped"
+    assert char_mesh[ANIMATE_RIG_SKELETON_PROP] == "biped"
     assert armature.data.display_type == 'OCTAHEDRAL'
     assert armature.show_in_front is True
     assert char_mesh.show_in_front is False  # only the armature
+
+
+def test_a_rig_job_without_a_skeleton_stamps_only_the_job_id(monkeypatch):
+    armature = _FakeObject("Armature", type='ARMATURE')
+    _patch_objects(monkeypatch, [armature])
+
+    stamp_rig_import(_job(skeleton=""), "Armature")
+
+    assert armature[ANIMATE_RIG_JOB_PROP] == "job-123"
+    assert armature.get(ANIMATE_RIG_SKELETON_PROP) is None
+    # A legacy job object with no result_data at all stamps the id too.
+    stamp_rig_import(SimpleNamespace(backend_job_id="job-9"), "Armature")
+    assert armature[ANIMATE_RIG_JOB_PROP] == "job-9"
+
+
+def test_rig_stamps_are_found_through_parent_and_armature_modifier():
+    armature = _FakeObject("Armature", type='ARMATURE')
+    armature[ANIMATE_RIG_JOB_PROP] = "job-123"
+    armature[ANIMATE_RIG_SKELETON_PROP] = "quadruped"
+    armature.parent = None
+    child = _FakeObject("Body", type='MESH')
+    child.parent = armature
+    child.modifiers = []
+    skinned = _FakeObject("Cape", type='MESH')
+    skinned.parent = None
+    skinned.modifiers = [SimpleNamespace(type='ARMATURE', object=armature)]
+
+    assert find_rig_job_id(child) == "job-123"
+    assert find_rig_skeleton(child) == "quadruped"
+    assert find_rig_job_id(skinned) == "job-123"
+    assert find_rig_skeleton(skinned) == "quadruped"
 
 
 def test_pre_existing_object_is_never_touched(monkeypatch):
@@ -140,22 +183,12 @@ def test_pre_existing_object_is_never_touched(monkeypatch):
     imported = _FakeObject("Armature", type='ARMATURE')
     _patch_objects(monkeypatch, [mine, imported])
 
-    _rig_on_imported(_job(), "Armature")
+    stamp_rig_import(_job(), "Armature")
 
     assert imported[ANIMATE_RIG_JOB_PROP] == "job-123"
     assert imported.show_in_front is True
     assert mine.get(ANIMATE_RIG_JOB_PROP) is None
     assert mine.show_in_front is False
-
-
-def test_animated_copy_is_in_front_without_a_rig_stamp(monkeypatch):
-    armature = _FakeObject("Armature", type='ARMATURE')
-    _patch_objects(monkeypatch, [armature])
-
-    _animate_on_imported(_job(), "Armature")
-
-    assert armature.show_in_front is True
-    assert armature.get(ANIMATE_RIG_JOB_PROP) is None
 
 
 def _enqueue_generation_keywords(function_name):
@@ -169,11 +202,7 @@ def _enqueue_generation_keywords(function_name):
         if isinstance(node, ast.Call)
         and getattr(node.func, "id", None) == "enqueue_generation"
     )
-    return {
-        kw.arg: kw.value.id
-        for kw in call.keywords
-        if isinstance(kw.value, ast.Name)
-    }
+    return {kw.arg: ast.unparse(kw.value) for kw in call.keywords}
 
 
 def test_rig_and_animate_imports_share_the_options():
@@ -181,9 +210,10 @@ def test_rig_and_animate_imports_share_the_options():
     animate = _enqueue_generation_keywords("enqueue_retarget_job")
 
     assert rig["import_options"] == "ANIMATE_IMPORT_OPTIONS"
-    assert rig["on_imported"] == "_rig_on_imported"
+    assert rig["on_imported"] == "stamp_rig_import"
     assert animate["import_options"] == "ANIMATE_IMPORT_OPTIONS"
-    assert animate["on_imported"] == "_animate_on_imported"
+    # The retarget result is MERGED onto the stamped rig, never kept as a copy.
+    assert animate["on_imported"].startswith("merge_hook(")
 
 
 def test_moodboard_auto_rig_node_imports_like_every_other_auto_rig():
@@ -198,7 +228,7 @@ def test_moodboard_auto_rig_node_imports_like_every_other_auto_rig():
             assert not other.get('armature_in_front'), kind
 
 
-def test_moodboard_auto_rig_result_hook_shows_the_armature_in_front(monkeypatch):
+def test_moodboard_auto_rig_result_hook_stamps_and_shows_the_armature_in_front(monkeypatch):
     armature = _FakeObject("Armature", type='ARMATURE')
     char_mesh = _FakeObject("char1", type='MESH')
     _patch_objects(monkeypatch, [armature, char_mesh])
@@ -224,6 +254,11 @@ def test_moodboard_auto_rig_result_hook_shows_the_armature_in_front(monkeypatch)
     assert armature.show_in_front is True
     assert armature.data.display_type == 'OCTAHEDRAL'
     assert char_mesh.show_in_front is False
+    # The node path stamps exactly like enqueue_rig_jobs: job id AND skeleton,
+    # on every imported object, so the Animate card can read them back.
+    for obj in (armature, char_mesh):
+        assert obj[ANIMATE_RIG_JOB_PROP] == "job-123"
+        assert obj[ANIMATE_RIG_SKELETON_PROP] == "biped"
     assert results == [(scene, node, "Armature, char1")]
 
 

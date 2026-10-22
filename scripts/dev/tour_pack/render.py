@@ -8,8 +8,9 @@ One filter graph does the whole edit so no intermediate file is written:
 every kept run is trimmed from the dub (video + audio, 25 ms audio fades at
 each cut), the last run is padded with a frozen frame when the dub's
 presenter tail is shorter than the English one, the English logo card is
-appended (its own silent audio), and the concatenation is scaled to
-1280×720 @ 24 fps, loudness-normalised to −16 LUFS and encoded H.264 + AAC
+appended when the English take has one (its own silent audio), and the
+concatenation is scaled to ``OUT_W``×``OUT_H`` (the 4:3 take at 960×720)
+@ 24 fps, loudness-normalised to −16 LUFS and encoded H.264 + AAC
 with forced keyframes at the act boundaries. A second pass splits the file
 losslessly at those keyframes into ``part-<k>.mp4``.
 """
@@ -20,6 +21,9 @@ import os
 import subprocess
 
 from plan import FADE_MS
+
+OUT_W, OUT_H = 960, 720    # the founder take is 4:3; config.CARD_ASPECT matches
+MIN_CARD_MS = 1000         # a shorter "card" is the take's last frames, not a card
 
 
 def _sec(ms) -> str:
@@ -32,12 +36,14 @@ def _run(argv):
 
 def render(dub_path: str, english_path: str, runs, card_start_raw_en_ms: int,
            english_duration_ms: int, act_boundaries_ms, out_path: str,
-           crf: int = 22, preset: str = "medium", source_fps: float = 25.0) -> None:
+           crf: int = 22, preset: str = "medium", source_fps: float = 25.0,
+           crop: str = "") -> None:
     """Runs are concatenated at the DUB's frame rate and converted to 24 fps
     once, so rounding to the output grid happens one time for the whole
     file instead of once per run (per-run conversion drifted the act
     boundaries by up to 150 ms). ``cli.reconcile`` then moves the timing
-    table onto the split parts' real boundaries."""
+    table onto the split parts' real boundaries. ``crop`` (an ffmpeg crop
+    filter) removes the dub's letterbox bars before scaling."""
     parts_v, parts_a = [], []
     graph = []
     for i, r in enumerate(runs):
@@ -55,23 +61,24 @@ def render(dub_path: str, english_path: str, runs, card_start_raw_en_ms: int,
         parts_v.append(f"[v{i}]")
         parts_a.append(f"[a{i}]")
     n = len(runs)
-    # The English logo card, scaled to the dub's frame size and rate before concat.
-    graph.append(f"[1:v]trim=start={_sec(card_start_raw_en_ms)}:end={_sec(english_duration_ms)},"
-                 f"setpts=PTS-STARTPTS,scale=iw:ih[vcard_raw]")
-    graph.append(f"[1:a]atrim=start={_sec(card_start_raw_en_ms)}:end={_sec(english_duration_ms)},"
-                 f"asetpts=PTS-STARTPTS,volume=0[acard]")
-    parts_v.append("[vcard]")
-    parts_a.append("[acard]")
-    # Every video branch to the output geometry/rate so concat sees one format.
+    card = english_duration_ms - card_start_raw_en_ms >= MIN_CARD_MS
+    scale = f"scale={OUT_W}:{OUT_H}:flags=lanczos"
     fps_src = f"{source_fps:.3f}"
+    if card:
+        # The English logo card, scaled to the dub's frame size and rate before concat.
+        graph.append(f"[1:v]trim=start={_sec(card_start_raw_en_ms)}:end={_sec(english_duration_ms)},"
+                     f"setpts=PTS-STARTPTS,scale=iw:ih[vcard_raw]")
+        graph.append(f"[1:a]atrim=start={_sec(card_start_raw_en_ms)}:end={_sec(english_duration_ms)},"
+                     f"asetpts=PTS-STARTPTS,volume=0[acard]")
+        graph.append(f"[vcard_raw]{scale},fps={fps_src},format=yuv420p[vcard]")
+        graph.append("[acard]aresample=48000,aformat=channel_layouts=stereo[ascard]")
+    # Every video branch to the output geometry/rate so concat sees one format.
+    pre = f"{crop}," if crop else ""
     for i in range(n):
-        graph.append(f"[v{i}]scale=1280:720:flags=lanczos,fps={fps_src},format=yuv420p[vs{i}]")
-    graph.append(f"[vcard_raw]scale=1280:720:flags=lanczos,fps={fps_src},format=yuv420p[vcard]")
-    for i in range(n + 1):
-        graph.append(f"[a{i}]aresample=48000,aformat=channel_layouts=stereo[as{i}]" if i < n
-                     else "[acard]aresample=48000,aformat=channel_layouts=stereo[ascard]")
-    concat_in = "".join(f"[vs{i}][as{i}]" for i in range(n)) + "[vcard][ascard]"
-    graph.append(f"{concat_in}concat=n={n + 1}:v=1:a=1[vc_src][ac]")
+        graph.append(f"[v{i}]{pre}{scale},fps={fps_src},format=yuv420p[vs{i}]")
+        graph.append(f"[a{i}]aresample=48000,aformat=channel_layouts=stereo[as{i}]")
+    concat_in = "".join(f"[vs{i}][as{i}]" for i in range(n)) + ("[vcard][ascard]" if card else "")
+    graph.append(f"{concat_in}concat=n={n + int(card)}:v=1:a=1[vc_src][ac]")
     graph.append("[vc_src]fps=24[vc]")
     graph.append("[ac]loudnorm=I=-16:TP=-1.5:LRA=11[aout]")
     kf = ",".join(_sec(ms) for ms in act_boundaries_ms if ms > 0)

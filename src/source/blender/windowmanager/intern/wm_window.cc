@@ -68,6 +68,7 @@
 #include "WM_api.hh"
 #include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
+#include "WM_mixar.hh"
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
@@ -446,38 +447,6 @@ wmWindow *wm_window_copy_test(bContext *C,
 static void wm_close_agent_bubble_windows(bContext *C,
                                            wmWindowManager *wm,
                                            wmWindow *skip_win);
-static bool wm_window_contains_agent_bubble_space(const wmWindow *win);
-
-/**
- * The window the quit flow (confirmation popup, delayed-exit handler) should
- * run in. Never an Agent Bubble overlay window: the save-confirmation popup
- * is unusable in the small frameless overlay, and quitting destroys bubble
- * windows (`wm_close_agent_bubble_windows`, the save_pre purge), which would
- * tear down the window hosting the quit dialog and abort the quit.
- */
-static wmWindow *wm_quit_target_window(wmWindowManager *wm, wmWindow *win)
-{
-  if (win == nullptr || !wm_window_contains_agent_bubble_space(win)) {
-    return win;
-  }
-  /* Prefer the bubble's top-level parent (the viewport it overlays). */
-  wmWindow *win_main = win->parent;
-  while (win_main && win_main->parent) {
-    win_main = win_main->parent;
-  }
-  if (win_main && !wm_window_contains_agent_bubble_space(win_main)) {
-    return win_main;
-  }
-  for (wmWindow &iter_win_iter : wm->windows) {
-    wmWindow *iter_win = &iter_win_iter;
-    if (iter_win->parent == nullptr && !WM_window_is_temp_screen(iter_win) &&
-        !wm_window_contains_agent_bubble_space(iter_win))
-    {
-      return iter_win;
-    }
-  }
-  return win;
-}
 
 static void wm_save_file_on_quit_dialog_callback(bContext *C, void * /*user_data*/)
 {
@@ -503,8 +472,12 @@ void wm_quit_with_optional_confirmation_prompt(bContext *C, wmWindow *win)
 
   /* Quitting from the Dock / Cmd+Q while the Agent Bubble is the active
    * window routes the quit request to the bubble — redirect to a main
-   * window so the quit flow survives the bubble windows being closed. */
-  win = wm_quit_target_window(wm, win);
+   * window, the same host every dock-hiding dialog uses. Never an Agent
+   * Bubble overlay window: the save-confirmation popup is unusable in the
+   * small frameless overlay, and quitting destroys bubble windows
+   * (`wm_close_agent_bubble_windows`, the save_pre purge), which would tear
+   * down the window hosting the quit dialog and abort the quit. */
+  win = Mixar_modal_dialog_host_window(wm, win);
 
   /* The popup will be displayed in the context window which may not be set
    * here (this function gets called outside of normal event handling loop). */
@@ -564,21 +537,6 @@ static rctf *stored_window_bounds(eSpace_Type space_type)
   return nullptr;
 }
 
-static bool wm_window_contains_agent_bubble_space(const wmWindow *win)
-{
-  bScreen *screen = WM_window_get_active_screen(win);
-  if (screen == nullptr) {
-    return false;
-  }
-  for (ScrArea &area_iter : screen->areabase) {
-    ScrArea *area = &area_iter;
-    if (area->spacetype == SPACE_AGENT_BUBBLE) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * Close every Agent Bubble window except \a skip_win.
  *
@@ -611,7 +569,7 @@ static void wm_close_agent_bubble_windows(bContext *C,
     closed_one = false;
     for (wmWindow &iter_win_iter : wm->windows) {
       wmWindow *iter_win = &iter_win_iter;
-      if (iter_win == skip_win || !wm_window_contains_agent_bubble_space(iter_win)) {
+      if (iter_win == skip_win || !Mixar_window_has_agent_bubble(iter_win)) {
         continue;
       }
       wm_window_close(C, wm, iter_win);
@@ -645,7 +603,7 @@ static bool wm_window_is_last_main_window(wmWindowManager *wm, wmWindow *win)
   {
     /* Mixar: bubble/pill overlay windows never count as remaining main windows. */
     if (win_other != win && win_other->parent == nullptr && !WM_window_is_temp_screen(win_other) &&
-        !wm_window_contains_agent_bubble_space(win_other))
+        !Mixar_window_has_agent_bubble(win_other))
     {
       return false;
     }
@@ -733,7 +691,7 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
    * `bpy.ops.wm.window_close()`, and the recursive child-window close
    * above) funnels through, so checking here — rather than in each
    * caller — is what actually guarantees the cache can never go stale. */
-  const bool was_agent_bubble_win = wm_window_contains_agent_bubble_space(win);
+  const bool was_agent_bubble_win = Mixar_window_has_agent_bubble(win);
 
   wm_window_free(C, wm, win);
 
@@ -747,7 +705,7 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
      * minimised/expanded/pad flags and its Cinema seat, and vice versa). */
     bool bubble_remains = false;
     for (wmWindow &other : wm->windows) {
-      if (wm_window_contains_agent_bubble_space(&other)) {
+      if (Mixar_window_has_agent_bubble(&other)) {
         bubble_remains = true;
         break;
       }
@@ -1051,7 +1009,7 @@ void WM_window_decoration_style_apply(const wmWindow *win, const bScreen *screen
   /* These chromeless windows own their native material. On Cocoa, applying
    * the title-bar theme also replaces the clear NSWindow background with an
    * opaque colour, hiding the glass after activation or a theme refresh. */
-  if (wm_window_contains_agent_bubble_space(win)) {
+  if (Mixar_window_has_agent_bubble(win)) {
     return;
   }
   wm_window_decoration_style_set_from_theme(win, screen);
@@ -1183,6 +1141,133 @@ static void wm_window_ensure_eventstate(wmWindow *win)
 
 static bool wm_window_update_size_position(wmWindow *win);
 
+/* Mixar's Linux bubble supplies its own chrome. Keep native backend details in GHOST. */
+#ifdef __linux__
+extern "C" void Mixar_GHOST_RequestNextWindowCustomDecoration(void);
+extern "C" void Mixar_GHOST_ClearNextWindowCustomDecoration(void);
+#endif
+extern "C" void Mixar_WindowSetCustomDecoration(void *window_handle, int width, int height, float radius)
+{
+  if (window_handle) {
+    static_cast<GHOST_IWindow *>(window_handle)->setCustomDecoration(width, height, radius);
+  }
+}
+
+extern "C" bool Mixar_WindowBeginNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->beginWindowDrag() == GHOST_kSuccess;
+}
+
+extern "C" bool Mixar_WindowUpdateNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->updateWindowDrag() == GHOST_kSuccess;
+}
+
+extern "C" bool Mixar_WindowEndNativeDrag(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->endWindowDrag() == GHOST_kSuccess;
+}
+
+#ifdef __linux__
+static void mixar_pump_native_window_drags(wmWindowManager *wm)
+{
+  if (wm == nullptr) {
+    return;
+  }
+  /* XTest/xdotool XI2 motion often never becomes MOUSEMOVE after begin
+   * ungrabs the implicit button grab. The idle loop still runs every
+   * few milliseconds; XQueryPointer follows the server pointer. */
+  for (wmWindow &win : wm->windows) {
+    if (win.runtime && win.runtime->ghostwin) {
+      Mixar_WindowUpdateNativeDrag(win.runtime->ghostwin);
+    }
+  }
+}
+#endif
+
+extern "C" bool Mixar_WindowSetNativeSize(void *window_handle, int width, int height)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->setClientSize(width, height) == GHOST_kSuccess;
+}
+
+#ifdef __linux__
+extern "C" void Mixar_WindowMakeKey(void *window_handle)
+{
+  if (window_handle) {
+    static_cast<GHOST_IWindow *>(window_handle)->setOrder(GHOST_kWindowOrderTop);
+  }
+}
+
+extern "C" bool Mixar_WindowBeginNativeResize(void *window_handle, int edges)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->beginWindowResize(edges) == GHOST_kSuccess;
+}
+
+extern "C" void Mixar_WindowSetResizeCursor(void *window_handle, int edges)
+{
+  if (!window_handle) {
+    return;
+  }
+  GHOST_TStandardCursor cursor;
+  switch (edges) {
+    case 1: case 2: cursor = GHOST_kStandardCursorUpDown; break;
+    case 4: case 8: cursor = GHOST_kStandardCursorLeftRight; break;
+    case 5: cursor = GHOST_kStandardCursorTopLeftCorner; break;
+    case 9: cursor = GHOST_kStandardCursorTopRightCorner; break;
+    case 6: cursor = GHOST_kStandardCursorBottomLeftCorner; break;
+    case 10: cursor = GHOST_kStandardCursorBottomRightCorner; break;
+    default: return;
+  }
+  static_cast<GHOST_IWindow *>(window_handle)->setCursorShape(cursor);
+}
+
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *width, int *height)
+{
+  if (!window_handle) {
+    return false;
+  }
+  auto *window = static_cast<GHOST_IWindow *>(window_handle);
+  GHOST_Rect bounds;
+  window->getClientBounds(bounds);
+  *width = bounds.getWidth();
+  *height = bounds.getHeight();
+  return true;
+}
+
+extern "C" void Mixar_WindowGetContentPixelSize(void *window_handle, int *width, int *height)
+{
+  if (Mixar_WindowGetContentSize(window_handle, width, height)) {
+    const float scale = static_cast<GHOST_IWindow *>(window_handle)->getNativePixelSize();
+    *width = int(*width * scale);
+    *height = int(*height * scale);
+  }
+}
+
+extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height)
+{
+  Mixar_WindowSetNativeSize(window_handle, width, height);
+}
+
+extern "C" void Mixar_WindowSetMinContentSize(void *window_handle, int width, int height)
+{
+  if (window_handle) {
+    auto *window = static_cast<GHOST_IWindow *>(window_handle);
+    window->setClientMinimumSize(width, height);
+  }
+}
+#endif
+
+extern "C" bool Mixar_WindowSupportsTransparency(void *window_handle)
+{
+  return window_handle &&
+         static_cast<GHOST_IWindow *>(window_handle)->supportsTransparentRendering();
+}
+
 /* Belongs to below. */
 static void wm_window_ghostwindow_add(wmWindowManager *wm,
                                       const char *title,
@@ -1200,6 +1285,25 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
   }
 
   GPUBackendType gpu_backend = GPU_backend_type_selection_get();
+#ifdef __linux__
+  {
+    const bScreen *screen = WM_window_get_active_screen(win);
+    if (screen && win->parent) {
+      for (const ScrArea &area : screen->areabase) {
+        if (area.spacetype == SPACE_AGENT_BUBBLE) {
+          /* Motif decorations=0 must be on the X11 window before map.
+           * xfwm4 frames a DIALOG at first map and later ignores Motif
+           * decoration changes once the rounded bounding shape exists. */
+          Mixar_GHOST_RequestNextWindowCustomDecoration();
+          if (gpu_backend == GPU_BACKEND_OPENGL) {
+            gpu_settings.flags |= GHOST_gpuTransparent;
+          }
+          break;
+        }
+      }
+    }
+  }
+#endif
   gpu_settings.context_type = wm_ghost_drawing_context_type(gpu_backend);
   gpu_settings.preferred_device = GPU_backend_preferred_device_get();
   if (GPU_backend_vsync_is_overridden()) {
@@ -1232,6 +1336,9 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
       false,
       is_dialog,
       static_cast<GHOST_IWindow *>((win->parent) ? win->parent->runtime->ghostwin : nullptr));
+#ifdef __linux__
+  Mixar_GHOST_ClearNextWindowCustomDecoration();
+#endif
 
   if (ghost_window) {
     win->runtime->gpuctx = GPU_context_create(ghost_window, nullptr);
@@ -2473,6 +2580,9 @@ void wm_window_events_process(const bContext *C)
   const int sleep_us_default = 5000;
   int sleep_us = has_event ? 0 : sleep_us_default;
   has_event |= wm_window_timers_process(C, &sleep_us);
+#ifdef __linux__
+  mixar_pump_native_window_drags(CTX_wm_manager(C));
+#endif
 #ifdef WITH_XR_OPENXR
   /* XR events don't use the regular window queues. So here we don't only trigger
    * processing/dispatching but also handling. */
@@ -3479,6 +3589,11 @@ static void wm_window_csd_title_redraw_tag(wmWindowManager *wm, wmWindow *win)
 bool WM_window_is_csd(const wmWindow *win)
 {
 #ifdef WITH_GHOST_CSD
+  if (win->runtime->ghostwin &&
+      static_cast<GHOST_IWindow *>(win->runtime->ghostwin)->hasCustomDecoration())
+  {
+    return false;
+  }
   if (g_system_use_csd && !WM_window_is_fullscreen(win)) {
     return true;
   }

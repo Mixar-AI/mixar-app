@@ -143,42 +143,6 @@ static void mixar_uvedit_translate(Scene *scene,
   }
 }
 
-static void mixar_uvedit_rotate(Scene *scene,
-                                const Span<Object *> objects,
-                                const float center[2],
-                                float angle)
-{
-  BMFace *f;
-  BMLoop *l;
-  BMIter iter, liter;
-  float *luv;
-
-  float cos_angle = cosf(angle);
-  float sin_angle = sinf(angle);
-
-  for (Object *obedit : objects) {
-    BMEditMesh *em = BKE_editmesh_from_object(obedit);
-    const BMUVOffsets offsets = BM_uv_map_offsets_get(em->bm);
-
-    BM_ITER_MESH (f, &iter, em->bm, BM_FACES_OF_MESH) {
-      if (!uvedit_face_visible_test(scene, f)) {
-        continue;
-      }
-
-      BM_ITER_ELEM (l, &liter, f, BM_LOOPS_OF_FACE) {
-        if (uvedit_uv_select_test(scene, em->bm, l, offsets)) {
-          luv = BM_ELEM_CD_GET_FLOAT_P(l, offsets.uv);
-
-          float uv[2] = {luv[0] - center[0], luv[1] - center[1]};
-
-          luv[0] = cos_angle * uv[0] - sin_angle * uv[1] + center[0];
-          luv[1] = sin_angle * uv[0] + cos_angle * uv[1] + center[1];
-        }
-      }
-    }
-  }
-}
-
 static void mixar_uvedit_scale(Scene *scene,
                                const Span<Object *> objects,
                                const float center[2],
@@ -242,59 +206,6 @@ bool mixar_uvedit_bounds(Scene *scene,
   }
 
   return found;
-}
-
-static bool mixar_uvedit_active(Scene *scene, const Span<Object *> objects, float center[2])
-{
-  for (Object *obedit : objects) {
-    BMEditMesh *em = BKE_editmesh_from_object(obedit);
-    const BMUVOffsets offsets = BM_uv_map_offsets_get(em->bm);
-
-    BMFace *efa = BM_mesh_active_face_get(em->bm, true, false);
-    if (efa) {
-      BMLoop *l;
-      BMIter liter;
-      BM_ITER_ELEM (l, &liter, efa, BM_LOOPS_OF_FACE) {
-        if (uvedit_uv_select_test(scene, em->bm, l, offsets)) {
-          float *luv = BM_ELEM_CD_GET_FLOAT_P(l, offsets.uv);
-          copy_v2_v2(center, luv);
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-static bool mixar_uvedit_pivot_center(Scene *scene,
-                                      SpaceImage *sima,
-                                      const Span<Object *> objects,
-                                      int pivot,
-                                      float center[2])
-{
-  switch (pivot) {
-    case V3D_AROUND_CENTER_BOUNDS: {
-      float min_uv[2], max_uv[2];
-      if (mixar_uvedit_bounds(scene, objects, min_uv, max_uv)) {
-        mid_v2_v2v2(center, min_uv, max_uv);
-        return true;
-      }
-      return false;
-    }
-    case V3D_AROUND_CURSOR:
-      copy_v2_v2(center, sima->cursor);
-      return true;
-    case V3D_AROUND_CENTER_MEDIAN:
-    case V3D_AROUND_LOCAL_ORIGINS:
-      return mixar_uvedit_center(scene, objects, center) > 0;
-    case V3D_AROUND_ACTIVE:
-      if (mixar_uvedit_active(scene, objects, center)) {
-        return true;
-      }
-      return mixar_uvedit_center(scene, objects, center) > 0;
-    default:
-      return mixar_uvedit_center(scene, objects, center) > 0;
-  }
 }
 
 /** \} */

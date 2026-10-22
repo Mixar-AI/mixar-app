@@ -32,10 +32,6 @@
 
 #include <fmt/format.h>
 
-#if defined(__APPLE__) || defined(_WIN32)
-extern "C" void Mixar_FloatingDocksSuppressForModal();
-extern "C" void Mixar_FloatingDocksRestoreAfterModal();
-#endif
 
 #include "MEM_CacheLimiterC-Api.h"
 #include "MEM_guardedalloc.h"
@@ -151,6 +147,7 @@ extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #include "DEG_depsgraph.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_stall_monitor.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
@@ -175,26 +172,6 @@ static void wm_history_file_write();
 static void wm_test_autorun_revert_action_exec(bContext *C);
 
 static CLG_LogRef LOG = {"blend"};
-
-static bool wm_window_contains_agent_bubble_space(const wmWindow *win)
-{
-  if (win == nullptr) {
-    return false;
-  }
-
-  bScreen *screen = WM_window_get_active_screen(win);
-  if (screen == nullptr) {
-    return false;
-  }
-
-  for (const ScrArea &area_iter : screen->areabase) {
-    const ScrArea *area = &area_iter;
-    if (area->spacetype == SPACE_AGENT_BUBBLE) {
-      return true;
-    }
-  }
-  return false;
-}
 
 /**
  * What #wm_agent_bubble_windows_unlink_for_write takes out of the document for one
@@ -240,7 +217,7 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
   bool has_non_bubble_window = false;
   for (const wmWindow &win_iter : wm->windows) {
     const wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       has_non_bubble_window = true;
       break;
     }
@@ -251,7 +228,7 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
 
   for (wmWindow &win_iter : wm->windows.items_mutable()) {
     wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       continue;
     }
     BLI_remlink(&wm->windows, win);
@@ -278,6 +255,11 @@ static AgentBubbleWriteStash wm_agent_bubble_windows_unlink_for_write(Main *bmai
     bScreen *screen = BKE_workspace_layout_screen_get(layout);
     if (bmain != nullptr && screen != nullptr && BLI_findindex(&bmain->screens, screen) != -1) {
       stash.screens.push_back({screen, screen->id.prev});
+      /* Out of the name map too: the writer validates names against Main (autosave,
+       * turn-checkpoint snapshots), and a name with no datablock read as "Critical data
+       * corruption: Conflicts and/or otherwise invalid data-blocks names" on every
+       * checkpoint taken with the island open, and rebuilt the map under the screens. */
+      BKE_main_namemap_remove_id(*bmain, screen->id);
       BLI_remlink(&bmain->screens, screen);
     }
   }
@@ -295,6 +277,10 @@ static void wm_agent_bubble_windows_relink_after_write(Main *bmain,
   /* Reverse order, so each `prev` is back in its list before its successor returns. */
   for (auto it = stash.screens.rbegin(); it != stash.screens.rend(); ++it) {
     BLI_insertlinkafter(&bmain->screens, it->prev, it->screen);
+  }
+  if (!stash.screens.empty()) {
+    /* Their names come back with them: rebuilt from Main on the next name lookup. */
+    BKE_main_namemap_clear(*bmain);
   }
   for (auto it = stash.layouts.rbegin(); it != stash.layouts.rend(); ++it) {
     BLI_insertlinkafter(&it->workspace->layouts, it->prev, it->layout);
@@ -381,7 +367,7 @@ static wmFileReadWMSetupData *wm_file_read_setup_wm_init(bContext *C,
   WM_jobs_kill_all(wm);
 
   for (const wmWindow &win : wm->windows) {
-    if (wm_window_contains_agent_bubble_space(&win)) {
+    if (Mixar_window_has_agent_bubble(&win)) {
       wm_setup_data->old_agent_bubble_windows.add(&win);
     }
   }
@@ -562,7 +548,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
      * session. Matching one would transfer a main window's OS window onto a
      * bubble wmWindow that #wm_file_read_strip_agent_bubble_windows is about
      * to close. */
-    if (wm_window_contains_agent_bubble_space(&win)) {
+    if (Mixar_window_has_agent_bubble(&win)) {
       continue;
     }
     for (wmWindow &old_win : old_wm->windows) {
@@ -589,7 +575,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
     wmWindow *win_new = static_cast<wmWindow *>(wm->windows.first);
     for (wmWindow &win_iter : wm->windows) {
       wmWindow *win = &win_iter;
-      if (!wm_window_contains_agent_bubble_space(win)) {
+      if (!Mixar_window_has_agent_bubble(win)) {
         win_new = win;
         break;
       }
@@ -651,7 +637,7 @@ static void wm_file_read_strip_agent_bubble_windows(bContext *C, wmWindowManager
   bool has_non_bubble_window = false;
   for (wmWindow &win_iter : wm->windows) {
     wmWindow *win = &win_iter;
-    if (!wm_window_contains_agent_bubble_space(win)) {
+    if (!Mixar_window_has_agent_bubble(win)) {
       has_non_bubble_window = true;
       break;
     }
@@ -680,7 +666,7 @@ static void wm_file_read_strip_agent_bubble_windows(bContext *C, wmWindowManager
     closed_one = false;
     for (wmWindow &win_iter : wm->windows) {
       wmWindow *win = &win_iter;
-      if (win->runtime->ghostwin != nullptr || !wm_window_contains_agent_bubble_space(win)) {
+      if (win->runtime->ghostwin != nullptr || !Mixar_window_has_agent_bubble(win)) {
         continue;
       }
       wm_window_close(C, wm, win);
@@ -5237,7 +5223,6 @@ void wm_save_file_overwrite_dialog(bContext *C, wmOperator *op)
 
 static char save_images_when_file_is_closed = true;
 
-static void wm_mixar_floating_docks_suppress_for_modal();
 static void wm_mixar_floating_docks_restore_after_modal();
 
 static void wm_block_file_close_cancel(bContext *C, void *arg_block, void * /*arg_data*/)
@@ -5369,23 +5354,19 @@ static void wm_block_file_close_save_button(ui::Block *block,
 
 static const char *close_file_dialog_name = "file_close_popup";
 
-static void wm_mixar_floating_docks_suppress_for_modal()
+/* The close-file dialog's floating-dock hold, keyed by its block name (one
+ * such dialog at a time). Its buttons release it and so does the pop-up's
+ * free callback; the owner key makes the second release a no-op instead of
+ * undoing another dialog's hold. The release also tags the redraw a dock
+ * needs after being natively hidden (wm_mixar_modal_dialog.cc). */
+static void wm_mixar_floating_docks_suppress_for_modal(bContext *C)
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksSuppressForModal();
-#endif
+  Mixar_floating_docks_hold(C, close_file_dialog_name);
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  Mixar_FloatingDocksRestoreAfterModal();
-  /* wm_draw_update skips natively-hidden windows entirely (see the
-   * Mixar_WindowIsVisible check in wm_draw.cc), so a dock's content is
-   * frozen while suppressed — tag a global redraw so the first visible
-   * frame after the modal closes isn't stale. */
-  WM_main_add_notifier(NC_WINDOW, nullptr);
-#endif
+  Mixar_floating_docks_release(close_file_dialog_name);
 }
 
 static void free_post_file_close_action_restore_floating_docks(void *arg)
@@ -5546,53 +5527,23 @@ static ui::Block *block_create__close_file_dialog(bContext *C, ARegion *region, 
   return block;
 }
 
-/**
- * Mixar: the window the "Save changes before closing?" dialog must open in.
- * Never an Agent Bubble overlay window. The dialog suppresses every floating
- * dock (alpha 0 + ignore mouse) for as long as it is open, so a dialog created
- * inside the island (Cmd+N / Cmd+O / quit with the island focused: the Window
- * keymap fires in the bubble window and the operator's context window IS the
- * island) hides itself together with the island — the user sees the island
- * vanish and nothing else, and the pending action can never be answered.
- * Mirrors `wm_quit_target_window` in wm_window.cc: prefer the bubble's
- * top-level parent (the viewport it overlays), else any main window.
- */
-static wmWindow *wm_close_file_dialog_target_window(wmWindowManager *wm, wmWindow *win)
-{
-  if (win == nullptr || !wm_window_contains_agent_bubble_space(win)) {
-    return win;
-  }
-  wmWindow *win_main = win->parent;
-  while (win_main && win_main->parent) {
-    win_main = win_main->parent;
-  }
-  if (win_main && !wm_window_contains_agent_bubble_space(win_main)) {
-    return win_main;
-  }
-  if (wm != nullptr) {
-    for (wmWindow &iter_win : wm->windows) {
-      if (iter_win.parent == nullptr && !WM_window_is_temp_screen(&iter_win) &&
-          !wm_window_contains_agent_bubble_space(&iter_win))
-      {
-        return &iter_win;
-      }
-    }
-  }
-  return win;
-}
-
 void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
 {
   /* Mixar: host the dialog in a main window when invoked from the Agent
-   * Bubble (see #wm_close_file_dialog_target_window). The popup handler is
-   * registered on the context window, so its buttons — and the post action
-   * they run (read_homefile, open_mainfile, quit) — then execute in the host
-   * window's event loop rather than in an overlay window the read is about
-   * to free. The original context is restored for the caller. */
+   * Bubble (see #Mixar_modal_dialog_host_window). The dialog suppresses every
+   * floating dock (alpha 0 + ignore mouse) while it is open, so a dialog left
+   * inside the island (Cmd+N / Cmd+O / quit with the island focused) would
+   * hide itself together with the island. The popup handler is registered on
+   * the context window, so its buttons — and the post action they run
+   * (read_homefile, open_mainfile, quit) — then execute in the host window's
+   * event loop rather than in an overlay window the read is about to free.
+   * The hold makes the host window key while a dock has the keyboard, and
+   * its last release hands the keyboard back (wm_mixar_modal_dialog.cc).
+   * The original context is restored for the caller. */
   wmWindow *win_ctx = CTX_wm_window(C);
   ScrArea *area_ctx = CTX_wm_area(C);
   ARegion *region_ctx = CTX_wm_region(C);
-  wmWindow *win_dialog = wm_close_file_dialog_target_window(CTX_wm_manager(C), win_ctx);
+  wmWindow *win_dialog = Mixar_modal_dialog_host_window(CTX_wm_manager(C), win_ctx);
   const bool redirected = (win_dialog != win_ctx);
   if (redirected) {
     CTX_wm_window_set(C, win_dialog);
@@ -5600,7 +5551,7 @@ void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
 
   if (!ui::popup_block_name_exists(CTX_wm_screen(C), close_file_dialog_name)) {
     save_images_when_file_is_closed = true;
-    wm_mixar_floating_docks_suppress_for_modal();
+    wm_mixar_floating_docks_suppress_for_modal(C);
 
     ui::popup_block_invoke(
         C,

@@ -4457,7 +4457,13 @@ void wm_event_do_handlers(bContext *C)
       CTX_wm_area_set(C, area_event_inside(C, event->xy));
       CTX_wm_region_set(C, region_event_inside_for_event(C, event));
 
-      ED_agent_bubble_handle_event(C, event);
+      if (event->type != MOUSEMOVE && ED_agent_bubble_handle_event(C, event)) {
+        win.event_queue_check_click = false;
+        win.event_queue_check_drag = false;
+        BLI_remlink(&win.runtime->event_queue, event);
+        wm_event_free_last_handled(&win, event);
+        continue;
+      }
 
       /* MVC demands to not draw in event handlers...
        * but we need to leave it for GPU selecting etc. */
@@ -4595,6 +4601,12 @@ void wm_event_do_handlers(bContext *C)
 
       /* Update previous mouse position for following events to use. */
       copy_v2_v2_int(win.runtime->eventstate->prev_xy, event->xy);
+
+      /* Paint the native border cursor after normal hover/selection handlers.
+       * Text selection and content drags must keep receiving border motion. */
+      if (event->type == MOUSEMOVE) {
+        ED_agent_bubble_handle_event(C, event);
+      }
 
       /* Un-link and free here, Blender-quit then frees all. */
       BLI_remlink(&win.runtime->event_queue, event);

@@ -25,6 +25,12 @@ Every glTF import in the app goes through :func:`import_gltf`:
    and animation channels of anything else are pruned, with every index
    reference remapped (a ``.glb`` or a ``.gltf``; materials, accessors and
    buffers are left alone, unreferenced entries there are valid glTF).
+   "Reaches" includes every joint and ``skeleton`` of a kept skin, with their
+   descendants and ancestor chain (a parentless ancestor becomes a scene
+   root): a skin keeps all its joints or, if one is invalid, is dropped whole.
+   ``KHR_animation_pointer`` channels have their ``/nodes/N`` and
+   ``/meshes/N`` pointers remapped, or go with their target. A failed write
+   leaves the original file and no ``.tmp`` behind.
 2. The import runs; any scene it still created is removed, after its objects
    were linked into the active scene so nothing generated is lost.
 3. Both are reported as ``[SCENES] event=import.scenes_stripped``.
@@ -36,6 +42,7 @@ which applies the same rewrite to job uploads before a provider sees them.
 from __future__ import annotations
 
 import json
+import re
 import os
 import struct
 from typing import Any, NamedTuple
@@ -77,6 +84,92 @@ def _replace_list(doc: dict, key: str, values: list) -> None:
         doc.pop(key, None)
 
 
+_POINTER = re.compile(r"^/(nodes|meshes)/(\d+)(/.*)?$")
+
+
+def _reach(nodes: list, skins: list, roots: list) -> tuple[set, list]:
+    """``(reachable, extra_roots)``: what the kept scene reaches through
+    ``children``, plus every joint and ``skeleton`` of a skin a reached node
+    uses — with their descendants and their ancestor chain (not the ancestors'
+    other children) — to a fixed point. A skin never loses a joint: a partial
+    joint list no longer matches ``inverseBindMatrices`` and binds weights to
+    the wrong bones, which is worse than no skin. ``extra_roots`` are the
+    parentless ancestors pulled in; they join the kept scene's roots."""
+    size = len(nodes)
+
+    def node_at(i):
+        return nodes[i] if isinstance(nodes[i], dict) else {}
+
+    def children(i):
+        return [c for c in (node_at(i).get("children") or []) if _index(c, size) is not None]
+
+    parents: dict[int, int] = {}
+    for p in range(size):
+        for c in children(p):
+            parents.setdefault(c, p)
+    reachable: set[int] = set()
+    expanded: set[int] = set()
+
+    def descend(start):
+        stack = [start]
+        while stack:
+            i = stack.pop()
+            if i in expanded:
+                continue
+            expanded.add(i)
+            reachable.add(i)
+            stack.extend(children(i))
+
+    for root in roots:
+        descend(root)
+    extra_roots: list[int] = []
+    while True:
+        wanted: set[int] = set()
+        for i in reachable:
+            s = _index(node_at(i).get("skin"), len(skins))
+            skin = skins[s] if s is not None and isinstance(skins[s], dict) else {}
+            wanted.update(j for j in (skin.get("joints") or []) if _index(j, size) is not None)
+            if _index(skin.get("skeleton"), size) is not None:
+                wanted.add(skin["skeleton"])
+        missing = sorted(wanted - expanded)
+        if not missing:
+            return reachable, extra_roots
+        for j in missing:
+            chain, top = [], j
+            while top in parents and parents[top] not in reachable and parents[top] not in chain \
+                    and parents[top] != j:
+                top = parents[top]
+                chain.append(top)
+            descend(j)
+            reachable.update(chain)
+            if top not in parents and top not in extra_roots:
+                extra_roots.append(top)
+
+
+def _remap_channel(channel: dict, target: dict, node_map: dict, mesh_map: dict):
+    """The channel with its target remapped, or None when it targets a dropped
+    node or mesh. A ``KHR_animation_pointer`` channel has no ``target.node``:
+    ``/nodes/N/...`` and ``/meshes/N/...`` pointers are remapped, any other
+    pointer (materials, lights, ...) is kept verbatim."""
+    node_index = target.get("node")
+    if node_index is not None:
+        if node_index not in node_map:
+            return None
+        return dict(channel, target=dict(target, node=node_map[node_index]))
+    extensions = target.get("extensions")
+    ext = extensions.get("KHR_animation_pointer") if isinstance(extensions, dict) else None
+    pointer = ext.get("pointer") if isinstance(ext, dict) else None
+    match = _POINTER.match(pointer) if isinstance(pointer, str) else None
+    if match is None:
+        return channel
+    kind, old, rest = match.group(1), int(match.group(2)), match.group(3) or ""
+    new = (node_map if kind == "nodes" else mesh_map).get(old)
+    if new is None:
+        return None
+    ext = dict(ext, pointer=f"/{kind}/{new}{rest}")
+    return dict(channel, target=dict(target, extensions=dict(extensions, KHR_animation_pointer=ext)))
+
+
 def strip_gltf_json(doc: dict) -> Stripped:
     """Keep only the document's default scene and what it reaches. Mutates
     ``doc``; returns what was dropped. A document with one scene and no
@@ -93,15 +186,8 @@ def strip_gltf_json(doc: dict) -> Stripped:
 
     nodes = doc.get("nodes") if isinstance(doc.get("nodes"), list) else []
     roots = [i for i in (kept_scene.get("nodes") or []) if _index(i, len(nodes)) is not None]
-    reachable = set()
-    stack = list(roots)
-    while stack:
-        i = stack.pop()
-        if i in reachable:
-            continue
-        reachable.add(i)
-        node = nodes[i] if isinstance(nodes[i], dict) else {}
-        stack.extend(c for c in (node.get("children") or []) if _index(c, len(nodes)) is not None)
+    skins = doc.get("skins") if isinstance(doc.get("skins"), list) else []
+    reachable, extra_roots = _reach(nodes, skins, roots)
     if len(scenes) == 1 and len(reachable) == len(nodes):
         return _NOTHING
 
@@ -131,14 +217,14 @@ def strip_gltf_json(doc: dict) -> Stripped:
                 node["mesh"] = new_mesh
     _replace_list(doc, "meshes", [meshes[i] for i in used_meshes])
 
-    skins = doc.get("skins") if isinstance(doc.get("skins"), list) else []
     used_skins = sorted({n["skin"] for n in new_nodes if _index(n.get("skin"), len(skins)) is not None})
     new_skins, skin_map = [], {}
     for old in used_skins:
         skin = dict(skins[old]) if isinstance(skins[old], dict) else {}
-        joints = [node_map[j] for j in (skin.get("joints") or []) if j in node_map]
-        if not joints:
-            continue
+        original = skin.get("joints") if isinstance(skin.get("joints"), list) else []
+        joints = [node_map[j] for j in original if j in node_map]
+        if not joints or len(joints) != len(original):
+            continue                               # never a partial joint list; the node drops its skin
         skin["joints"] = joints
         skeleton = skin.get("skeleton")
         if skeleton in node_map:
@@ -166,12 +252,8 @@ def strip_gltf_json(doc: dict) -> Stripped:
             target = channel.get("target") if isinstance(channel, dict) else None
             if not isinstance(target, dict):
                 continue
-            node_index = target.get("node")
-            if node_index is None:
-                channels.append(channel)
-            elif node_index in node_map:
-                channel = dict(channel)
-                channel["target"] = dict(target, node=node_map[node_index])
+            channel = _remap_channel(channel, target, node_map, mesh_map)
+            if channel is not None:
                 channels.append(channel)
         if channels:
             animation = dict(animation)
@@ -180,7 +262,7 @@ def strip_gltf_json(doc: dict) -> Stripped:
     _replace_list(doc, "animations", new_animations)
 
     kept_scene = dict(kept_scene)
-    scene_nodes = [node_map[i] for i in roots if i in node_map]
+    scene_nodes = [node_map[i] for i in roots + extra_roots if i in node_map]
     if scene_nodes:
         kept_scene["nodes"] = scene_nodes
     else:
@@ -242,9 +324,16 @@ def keep_default_scene(filepath: str) -> Stripped:
         if not stripped:
             return _NOTHING
         tmp = filepath + ".tmp"
-        with open(tmp, "wb") as f:
-            f.write(out)
-        os.replace(tmp, filepath)
+        try:
+            with open(tmp, "wb") as f:
+                f.write(out)
+            os.replace(tmp, filepath)
+        finally:
+            if os.path.exists(tmp):                 # the write or replace failed (e.g. a Windows lock)
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
         return stripped
     except (ValueError, struct.error, OSError, UnicodeDecodeError, TypeError, AttributeError) as error:
         logger.debug("gltf import guard: %s left unchanged: %s", filepath, error)

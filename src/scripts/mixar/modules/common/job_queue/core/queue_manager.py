@@ -684,11 +684,19 @@ class FeatureQueue(DownloadMixin):
                     self._request_credits_banner()
                     continue
                 try:
-                    from mixar.modules.common.notifications import (
+                    from mixar.modules.common.notifications.store import (
+                        NotificationAction,
                         get_notification_store,
                     )
-                    # Sentence, the provider's own reason, what to do.
-                    message = failure_details(job, include_ids=False)
+                    # "Sign-in required" (a guest's job) offers the sign-in.
+                    actions = [NotificationAction(
+                        label=n_("Sign in"), operator="mixie_chat.login",
+                        style="primary",
+                    )] if getattr(job, "error_class", "") == "auth" else None
+                    # Sentence, the provider's own reason, what to do — the
+                    # last left out when a button already is what to do.
+                    message = failure_details(job, include_ids=False,
+                                              include_hint=not actions)
                     # display_label strips the agent-batch prefix + dedup hash
                     # ("ImageGen: a hero [3f2a]") that the raw label carries.
                     title = (
@@ -698,6 +706,7 @@ class FeatureQueue(DownloadMixin):
                     )
                     get_notification_store().push(
                         "error", title, body=message, priority="high",
+                        actions=actions,
                     )
                 except Exception as e:
                     logger.debug(
@@ -868,6 +877,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
+            job.error_class_source = "client"
             job.error_reason = job.error
             self._notify()
             self._pump()
@@ -943,6 +953,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
+            job.error_class_source = "client"
             job.error_reason = job.error
         elif job.state == JobState.RUNNING_DOWNLOAD:
             # The worker thread should have failed itself long before this;
@@ -955,6 +966,7 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Download timed out — please retry")
             job.error_class = "download"
+            job.error_class_source = "client"
             job.error_reason = job.error
         else:
             return

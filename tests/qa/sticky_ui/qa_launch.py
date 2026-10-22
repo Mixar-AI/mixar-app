@@ -98,7 +98,10 @@ def start(harness: Path, build: Path, port: int, out_root: Path, *, mixed: bool 
         (profile / sub).mkdir(parents=True, exist_ok=True)
     (profile / "scripts/startup/qa_boot.py").write_text((harness / "qa_boot_startup.py").read_text())
     email = cfg["dev_bypass"]["username"].strip().lower()
-    (profile / "datafiles/mixar/onboarding_seen.json").write_text(json.dumps({"users_seen": [email]}))
+    # Guest builds have no bypass email. Mark the isolated device as seen too,
+    # otherwise the first-run tour can intercept this scenario's input.
+    (profile / "datafiles/mixar/onboarding_seen.json").write_text(
+        json.dumps({"seen": True, "users_seen": [email]}))
     env = dict(os.environ,
                MIXAR_QA="1", MIXAR_USER_RESOURCES=str(profile), MIXAR_QA_OUT=str(out),
                MIXAR_QA_PORT=str(port), MIXAR_QA_RECORD="0",

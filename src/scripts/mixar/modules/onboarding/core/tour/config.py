@@ -35,10 +35,13 @@ VIDEO_FPS_FALLBACK = 24.0
 # ---------------------------------------------------------------------------
 # Bumped with every re-cut of the English take or change to the beat table;
 # a pack built for another version is never played.
-TOUR_PACK_VERSION = 1
+TOUR_PACK_VERSION = 2              # 2: the 4:3 take of 2026-10-14
 # Public manifest on the releases CDN (no auth: the first-time splash
-# starts the download before login). Override for QA/staging.
-PACKS_MANIFEST_URL = "https://cdn.mixar.app/tour-packs/manifest.json"
+# starts the download before login). Override for QA/staging. Versioned:
+# each client reads its own pack version's manifest, so a new version's
+# packs never take the dubs away from an older client (the unversioned
+# tour-packs/manifest.json stays at 1 for clients up to 4.2.3).
+PACKS_MANIFEST_URL = f"https://cdn.mixar.app/tour-packs/{TOUR_PACK_VERSION}/manifest.json"
 ENV_PACKS_MANIFEST_URL = "MIXAR_TOUR_PACKS_URL"
 # QA: a local folder laid out like the cache (``<code>/part-<k>.mp4``,
 # ``<code>/timing.json``, ``manifest.json``) that stands in for cache + CDN.
@@ -80,6 +83,9 @@ SKIP_DWELL_MS = 500
 # The terminal beat counts as reached this close to its clip end: an audio
 # clock can settle a few ms short of the file's end and never cross it.
 TERMINAL_END_SLACK_MS = 250
+# Back restarts the current beat; pressed within this many ms of the beat's
+# start it goes to the previous beat instead, like a player's previous track.
+BACK_RESTART_MS = 2000
 CLICK_PULSE_SECONDS = 0.6
 CURSOR_GLIDE_RATE = 6.0          # exponential ease constant (1/s)
 CURSOR_ORBIT_RADIUS = 46.0
@@ -91,41 +97,58 @@ CARD_MOVE_RATE = 8.0             # exponential ease of the card rect (1/s)
 CARD_MOVE_SNAP_PX = 0.5          # within this of the target the rect snaps
 CONTROL_REVEAL_RATE = 10.0       # exponential ease of the controls strip (1/s)
 
-SPEED_OPTIONS = (1.0, 1.25, 1.5, 2.0)
-
 # ---------------------------------------------------------------------------
 # Video card geometry (logical px, multiplied by the UI scale).
 #
 # The card is the video and nothing else: a dark rounded background only
 # ``CARD_PAD`` larger than the frame, a hairline progress bar along the
-# frame's bottom edge and the caption pill. The controls live in a
-# translucent strip INSIDE the bottom of the video (``CARD_CONTROLS_H``)
-# that is invisible until the pointer hovers the card, the tour is paused
-# or the exit dialog is up.
+# frame's bottom edge and the caption pill. The transport controls (Back,
+# Play/Pause, Next) are a cluster of discs in the middle of the video that
+# is invisible until the pointer hovers the card, the tour is paused or the
+# exit dialog is up. "Skip tour" is a
+# quiet pill in the video's top-right corner that never fully hides.
 # ---------------------------------------------------------------------------
 # Two sizes only: "hero" for the framed intro/outro, "half" for every
-# beat over the live UI (the old 300 px "card" read as a thumbnail).
+# beat over the live UI. Widths are 3/4 of the 16:9 card's, so the 4:3
+# card keeps its height (225 / 315 px) instead of covering more UI.
 CARD_VARIANTS = {
-    "hero": 560,
-    "half": 400,
+    "hero": 420,
+    "half": 300,
 }
-CARD_ASPECT = 16.0 / 9.0
+CARD_ASPECT = 4.0 / 3.0            # the founder take is 1440x1080 (shipped 960x720)
 CARD_MARGIN = 28
-CARD_CONTROLS_H = 28             # inner controls strip, bottom of the video
 # Keep CARD_RADIUS <= 2.8 * CARD_PAD: the video quad has square corners
 # and must stay inside the rounded background's corner arcs.
 CARD_RADIUS = 5
 CARD_PAD = 2
 CARD_PROGRESS_H = 2
+CARD_PROGRESS_H_REVEALED = 4     # the hairline thickens while the controls show
 CARD_BG = (0.09, 0.09, 0.11, 0.96)
 CARD_PROGRESS_BG = (1.0, 1.0, 1.0, 0.12)
 CARD_PROGRESS_FG = (0.205, 0.780, 0.430, 0.95)   # MIXAR_BRAND_GREEN
-CONTROLS_FILM = (0.0, 0.0, 0.0, 0.62)          # strip film at full reveal
-CONTROLS_FILM_BANDS = 4                        # stacked bands faking a gradient
+CONTROLS_SCRIM = (0.0, 0.0, 0.0, 0.25)         # over the whole video while controls show
 CONTROL_TEXT = (0.92, 0.92, 0.94, 0.95)
 CONTROL_TEXT_DIM = (0.65, 0.66, 0.70, 0.9)
 CONTROL_FONT_PX = 13
-SUBTITLE_FONT_PX = 15            # subtitle band inside the video, above the controls
+# The centre transport cluster: Back and Next discs either side of a larger
+# Play/Pause disc. It shrinks, never clips, on a tiny video.
+CONTROL_PLAY_D = 56
+CONTROL_SIDE_D = 42
+CONTROL_CLUSTER_GAP = 18
+CONTROL_GLYPH_FRAC = 0.4         # glyph height, times the disc diameter
+CONTROL_DISC = (0.0, 0.0, 0.0, 0.5)
+CONTROL_DISC_HOVER = (0.0, 0.0, 0.0, 0.72)
+# "Skip tour": always on the video, quiet until the card is hovered.
+SKIP_TOUR_FONT_PX = 12
+SKIP_TOUR_INSET = 10
+SKIP_TOUR_PAD_X = 10
+SKIP_TOUR_PAD_Y = 5
+SKIP_TOUR_BG = (0.0, 0.0, 0.0, 0.68)
+SKIP_TOUR_BG_HOVER = (0.0, 0.0, 0.0, 0.85)
+# While the controls are hidden only the label dims; the pill keeps its
+# film so the label stays readable over a bright frame.
+SKIP_TOUR_REST_ALPHA = 0.9
+SUBTITLE_FONT_PX = 15            # subtitle band inside the bottom of the video
 SUBTITLE_MAX_LINES = 3
 SUBTITLE_BG = (0.0, 0.0, 0.0, 0.55)
 SUBTITLE_TEXT = (0.97, 0.97, 0.97, 1.0)
@@ -135,9 +158,6 @@ GATE_CAPTION_ALPHA_FLOOR = 0.6                 # always readable while gated
 # session's eased 0..1 `gate_film`), so the pause reads as intentional.
 GATE_FILM_ALPHA = 0.15
 CAPTION_UNDER_GAP = 12                         # px between the card and a caption under it
-PAUSED_DISC = (0.0, 0.0, 0.0, 0.45)
-PAUSED_GLYPH = (1.0, 1.0, 1.0, 0.85)
-PAUSED_DISC_RADIUS = 26
 
 # ---------------------------------------------------------------------------
 # Overlays.
@@ -185,7 +205,8 @@ EXIT_CONFIRM_QUIT = "Leave"
 CONTROL_PAUSE = "Pause"
 CONTROL_RESUME = "Play"
 CONTROL_SKIP = "Next"
-CONTROL_EXIT = "Exit"
+CONTROL_BACK = "Back"
+CONTROL_EXIT = "Skip tour"
 HELP_MENU_START_TOUR = "Start tour"
 
 

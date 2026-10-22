@@ -20,6 +20,8 @@ EVENT_MOODBOARD_SIDEBAR = "moodboard.sidebar_toggled"
 EVENT_CHAT_MODE = "agent.mode_changed"
 EVENT_CHAT_HISTORY = "agent.history_toggled"
 EVENT_MESSAGE_SENT = "agent.message_sent"
+# The composer buffer (CHAT_INPUT_MAXLEN) was hit: a draft could not grow.
+EVENT_COMPOSER_CAP_HIT = "agent.composer_cap_hit"
 EVENT_BUBBLE_STATE = "agent_bubble.state_changed"
 EVENT_BUBBLE_EXPAND = "agent_bubble.expand_toggled"
 EVENT_EXPORT = "export.completed"
@@ -41,9 +43,14 @@ EVENT_GENERATION_REJECTED = "generation.rejected"
 EVENT_TOUR_STARTED = "onboarding.tour_started"
 EVENT_TOUR_STEP = "onboarding.tour_step"
 EVENT_TOUR_FINISHED = "onboarding.tour_finished"
+# The per-device onboarding_seen.json could not be read/parsed or written
+# (op + exception type name only; the tour fails open).
+EVENT_ONBOARDING_SEEN_STATE_ERROR = "onboarding.seen_state_error"
 EVENT_UPDATE_DOWNLOAD = "update.download_finished"
 EVENT_UPDATE_STARTED = "update.install_started"
 EVENT_UPDATE_RESULT = "update.install_result"
+# A launch quit because a helper was still installing an update.
+EVENT_UPDATE_BLOCKED = "update.blocked_mid_install"
 # The whole-window out-of-credits banner: what opened it, and what the user
 # chose (UPGRADE / REFER / CREATOR / DISMISS).
 EVENT_CREDITS_BANNER_SHOWN = "credits.banner_shown"
@@ -79,6 +86,8 @@ WORKSPACE_NAME_ALLOWLIST = frozenset({
 # bubble_header_drag is a modal driver whose meaningful outcome (pill toggle)
 # is already reported as agent_bubble.state_changed.
 IGNORED_OPERATORS = frozenset({
+    # Native drawer -> Python capture bridge; it already emits one ui.action.
+    "mixie_chat.track_scene_drawer_open",
     "notification.toast_hover",
     # Fires success=false on every actionless toast click — chrome, not usage.
     "notification.toast_click",

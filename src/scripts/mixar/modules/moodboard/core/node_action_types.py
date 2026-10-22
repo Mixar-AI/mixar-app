@@ -19,4 +19,5 @@ ACTION_TYPES = (
     ('WORLD_LABS', "Generate Splat", "Generate a Gaussian splat from a prompt or image"),
     ('CHARACTER_PARTS', "Character Parts", "Generate 3D parts from the connected image masks"),
     ('ASSEMBLE', "Assemble Character", "Attach generated parts to a rigged or plain body, locally"),
+    ('ANIMATE', "Animate", "Apply preset animations to the connected rigged character"),
 )

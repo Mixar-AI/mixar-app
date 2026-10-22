@@ -48,7 +48,10 @@ class MIXAR_OT_agent_bubble_drag_history(Operator):
         scene.mixar_bubble_history_lines = 0 if current > 0 else _OPEN_LINES
         # Tag every viewport so the popup re-renders right away.
         for window in context.window_manager.windows:
-            for area in window.screen.areas:
+            screen = window.screen
+            if screen is None:
+                continue
+            for area in screen.areas:
                 area.tag_redraw()
         return {"FINISHED"}
 

@@ -316,4 +316,74 @@ def test_run_loop_reconnects_after_backend_restart(monkeypatch):
     assert events.count("connected") == 1
     assert DISCONNECT_REASON_AUTH_FAILED not in events
     assert client._auth.failure_count == 0
-    assert sleeps == [1.0, 2.0, 4.0]  # plain exponential backoff, no stop
+    # Plain exponential backoff, no stop — each wait jittered by +/-20%.
+    assert len(sleeps) == 3
+    for slept, base in zip(sleeps, (1.0, 2.0, 4.0)):
+        assert 0.8 * base <= slept <= 1.2 * base
+
+
+# --------------------------------------------------------------------------
+# Backpressure: close 1013 ("capacity; retry in Ns") and jitter (XR-1)
+# --------------------------------------------------------------------------
+
+def _close_with(code: int, reason: bytes):
+    return (ABNF.OPCODE_CLOSE, struct.pack("!H", code) + reason)
+
+
+def _run_once(monkeypatch, sockets):
+    """Run the loop through ONE failed connect and return the sleep taken."""
+    sleeps = []
+    client = _make_client(monkeypatch, sockets)
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        client._running.clear()
+
+    monkeypatch.setattr(jc.time, "sleep", sleep)
+    client._run_loop()
+    return client, sleeps
+
+
+def test_capacity_close_during_handshake_waits_for_the_server(monkeypatch):
+    client, sleeps = _run_once(
+        monkeypatch, [FakeWS([_close_with(1013, b"capacity; retry in 15s")])])
+    assert len(sleeps) == 1 and 12.0 <= sleeps[0] <= 18.0
+    assert client._server_retry_after is None  # consumed by that one wait
+    assert client._current_delay == 2.0  # jitter never feeds the backoff
+
+
+def test_capacity_close_reason_sets_the_wait(monkeypatch):
+    _, sleeps = _run_once(
+        monkeypatch, [FakeWS([_close_with(1013, b"capacity; retry in 40s")])])
+    assert 32.0 <= sleeps[0] <= 48.0
+
+
+def test_capacity_close_without_a_hint_defaults_to_15s(monkeypatch):
+    _, sleeps = _run_once(monkeypatch, [FakeWS([_close_with(1013, b"")])])
+    assert 12.0 <= sleeps[0] <= 18.0
+
+
+def test_abnormal_close_keeps_the_normal_backoff_within_jitter(monkeypatch):
+    for _ in range(20):
+        client, sleeps = _run_once(monkeypatch, [FakeWS([_close(1006)])])
+        assert 0.8 <= sleeps[0] <= 1.2
+        assert client._server_retry_after is None
+
+
+def test_capacity_close_in_the_receive_loop_is_recorded():
+    client = _connected_client([_close_with(1013, b"capacity; retry in 20s")])
+    client._receive_loop()
+    assert client._server_retry_after == 20.0
+    assert client._auth.failure_count == 0
+
+
+def test_reconnect_sleep_takes_the_larger_wait():
+    from mixar.modules.space_mixie_chat.core.jsonrpc_frames import (
+        reconnect_sleep, server_retry_after,
+    )
+    fixed = lambda lo, hi: 1.0  # noqa: E731
+    assert reconnect_sleep(30.0, 15.0, uniform=fixed) == 30.0
+    assert reconnect_sleep(1.0, 15.0, uniform=fixed) == 15.0
+    assert reconnect_sleep(4.0, None, uniform=fixed) == 4.0
+    assert server_retry_after(1012, "retry in 99s") is None
+    assert server_retry_after(1013, "capacity; retry in 7s") == 7.0

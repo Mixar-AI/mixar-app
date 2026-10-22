@@ -10,13 +10,22 @@ the phone accepts it a single time in Safari. Generation prefers the
 `cryptography` package and falls back to the system `openssl` binary; when
 neither is available the server runs plain HTTP and the app degrades to
 joystick-only control (sensors unavailable without TLS).
+
+The pair is generated in a private (0700) temp folder beside the cache —
+the key is created 0600 and never exists world-readable — then moved into
+place key first. A cached pair is reused only while it loads and its SAN
+still covers the address in the QR code; otherwise it is regenerated.
 """
 
 from __future__ import annotations
 
 import datetime
+import ipaddress
 import os
+import shutil
+import ssl
 import subprocess
+import tempfile
 
 CERT_BASENAME = "mixar_virtual_camera"
 CERT_DAYS = 3650
@@ -42,16 +51,85 @@ def cert_paths() -> tuple[str, str]:
 
 
 def ensure_certificate(hosts: list[str]) -> tuple[str, str] | None:
-    """Return (cert_path, key_path), generating if missing. None = no TLS."""
+    """Return (cert_path, key_path), generating if needed. None = no TLS.
+
+    A cached pair that cannot be loaded (a torn write, a mismatched key) or
+    whose SAN misses ``hosts[0]`` (the LAN address changed) is replaced.
+    """
     cert_path, key_path = cert_paths()
     if os.path.isfile(cert_path) and os.path.isfile(key_path):
-        return cert_path, key_path
+        if _pair_loads(cert_path, key_path) and _san_covers(cert_path, hosts):
+            return cert_path, key_path
+    return regenerate(hosts)
 
-    if _generate_with_cryptography(cert_path, key_path, hosts):
+
+def regenerate(hosts: list[str]) -> tuple[str, str] | None:
+    """Discard the cached pair and generate a fresh one. None = no TLS."""
+    cert_path, key_path = cert_paths()
+    # The old pair stays until a new one is ready (os.replace overwrites):
+    # if generation fails, a pair that only missed the current IP is still
+    # better than no TLS.
+    try:
+        work = tempfile.mkdtemp(prefix=".vcam-tls-", dir=os.path.dirname(key_path))
+    except OSError:
+        return None
+    try:
+        tmp_cert = os.path.join(work, os.path.basename(cert_path))
+        tmp_key = os.path.join(work, os.path.basename(key_path))
+        if not (_generate_with_cryptography(tmp_cert, tmp_key, hosts)
+                or _generate_with_openssl(tmp_cert, tmp_key, hosts)):
+            return None
+        # Key first: a crash between the two leaves no cert, so the next
+        # start regenerates instead of pairing a new cert with an old key.
+        os.replace(tmp_key, key_path)
+        os.replace(tmp_cert, cert_path)
         return cert_path, key_path
-    if _generate_with_openssl(cert_path, key_path, hosts):
-        return cert_path, key_path
-    return None
+    except OSError:
+        return None
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def _pair_loads(cert_path: str, key_path: str) -> bool:
+    """Can a server context load this cert + key pair?"""
+    try:
+        from mixar.modules.common.network import server_ssl_context
+
+        server_ssl_context().load_cert_chain(cert_path, key_path)
+        return True
+    except (ssl.SSLError, OSError, ValueError):
+        return False
+    except Exception:
+        return False
+
+
+def _san_covers(cert_path: str, hosts: list[str]) -> bool:
+    """Does the cert's SAN name ``hosts[0]``? True when it cannot be checked
+    (no ``cryptography``): a readable pair beats a needless regeneration."""
+    if not hosts:
+        return True
+    try:
+        from cryptography import x509
+    except ImportError:
+        return True
+    try:
+        with open(cert_path, "rb") as fh:
+            cert = x509.load_pem_x509_certificate(fh.read())
+        san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    except Exception:
+        return False
+    host = hosts[0]
+    try:
+        return ipaddress.ip_address(host) in san.get_values_for_type(x509.IPAddress)
+    except ValueError:
+        return host in san.get_values_for_type(x509.DNSName)
+
+
+def _write_private(path: str, data: bytes) -> None:
+    """Create ``path`` 0600 from the first byte (never umask-wide, then chmod)."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
 
 
 def _generate_with_cryptography(cert_path: str, key_path: str,
@@ -61,7 +139,6 @@ def _generate_with_cryptography(cert_path: str, key_path: str,
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.x509.oid import NameOID
-        import ipaddress
     except ImportError:
         return False
 
@@ -88,17 +165,16 @@ def _generate_with_cryptography(cert_path: str, key_path: str,
             .add_extension(x509.SubjectAlternativeName(sans), critical=False)
             .sign(key, hashes.SHA256())
         )
-        with open(key_path, "wb") as fh:
-            fh.write(
-                key.private_bytes(
-                    serialization.Encoding.PEM,
-                    serialization.PrivateFormat.PKCS8,
-                    serialization.NoEncryption(),
-                )
-            )
+        _write_private(
+            key_path,
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            ),
+        )
         with open(cert_path, "wb") as fh:
             fh.write(cert.public_bytes(serialization.Encoding.PEM))
-        os.chmod(key_path, 0o600)
         return True
     except Exception:
         return False
@@ -122,6 +198,8 @@ def _generate_with_openssl(cert_path: str, key_path: str,
         result = subprocess.run(
             cmd, capture_output=True, timeout=30, check=False
         )
+        # openssl creates the key itself; the private 0700 work folder is
+        # what keeps it unreadable until this chmod.
         if result.returncode == 0 and os.path.isfile(cert_path):
             os.chmod(key_path, 0o600)
             return True

@@ -41,7 +41,7 @@ from ...constants import (
     MAX_ATTACHMENTS_PER_MESSAGE,
 )
 from mixar.modules.common.i18n import rpt_
-from ...core import validate_image_file
+from ...core import composer_limit, validate_image_file
 from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.clipboard_image import read_clipboard_image
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
@@ -94,14 +94,18 @@ def append_clipboard_text_to_input(context, report=None):
     # Append clipboard to current input (at end)
     new_input = scene.mixie_chat_input + clipboard_text
 
-    # Clamp to the composer property's own maxlen (CHAT_INPUT_MAXLEN, the
-    # RNA limit on scene.mixie_chat_input) so a long paste warns instead of
-    # being silently truncated by RNA at a different, smaller bound.
-    if len(new_input) > CHAT_INPUT_MAXLEN:
-        if report is not None:
-            report({'WARNING'},
-                   rpt_("Pasted text too long (max {count} chars)").format(count=CHAT_INPUT_MAXLEN))
-        new_input = new_input[:CHAT_INPUT_MAXLEN]
+    # Clamp to what the composer property actually keeps (CHAT_INPUT_MAXLEN
+    # UTF-8 bytes) so a long paste warns with the number of characters lost
+    # instead of RNA truncating silently.
+    new_input, dropped = composer_limit.clamp(new_input, CHAT_INPUT_MAXLEN)
+    if dropped:
+        from mixar.modules.common.analytics.essential_events import capture_composer_cap_hit
+        capture_composer_cap_hit("paste", len(new_input.encode("utf-8")), dropped, context=context)
+    if dropped and report is not None:
+        report({'WARNING'},
+               rpt_("Pasted text too long: {dropped} characters dropped "
+                    "(the message box holds {kb} KB)").format(
+                   dropped=dropped, kb=CHAT_INPUT_MAXLEN // 1024))
 
     scene.mixie_chat_input = new_input
     redraw_chat_areas()

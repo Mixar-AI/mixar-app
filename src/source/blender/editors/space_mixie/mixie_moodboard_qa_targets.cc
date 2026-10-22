@@ -206,15 +206,17 @@ void moodboard_qa_targets(const wmWindow *win,
     }
 
     /* Output "+" handle: same formula as moodboard_find_output_socket_under_mouse
-     * (rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, centre-y). */
+     * (rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, centre-y), and the same
+     * occlusion rule: a handle under a later picture or card is neither
+     * painted nor clickable, so a scenario must not be offered it either. */
+    const float handle_x = canvas_rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
+    const float handle_y = BLI_rctf_cent_y(&canvas_rect);
+    if (!blender::ed::mixie::moodboard_graph_point_covered_above(
+            cache, node_id.c_str(), handle_x, handle_y))
     {
       View2D *hv2d = &const_cast<ARegion *>(region)->v2d;
       float hx, hy;
-      blender::ui::view2d_view_to_region_fl(hv2d,
-                                  canvas_rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
-                                  BLI_rctf_cent_y(&canvas_rect),
-                                  &hx,
-                                  &hy);
+      blender::ui::view2d_view_to_region_fl(hv2d, handle_x, handle_y, &hx, &hy);
       const int radius = int(blender::ed::mixie::moodboard_socket_hit_radius_px(hv2d, true));
       MixarQATarget h;
       h.surface = "moodboard_output";

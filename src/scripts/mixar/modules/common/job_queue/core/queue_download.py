@@ -263,6 +263,7 @@ class DownloadMixin:
             job.error = f"Import failed: {e}"
             job.user_message = n_("Failed to import the generated model")
             job.error_class = "import"
+            job.error_class_source = "client"
             job.error_reason = clean_reason(f"{type(e).__name__}: {e}")
             # Don't leave the downloaded temp file behind — repeated failed
             # imports would otherwise accumulate multi-MB files in tempdir.
@@ -284,9 +285,12 @@ class DownloadMixin:
             # step predates it too.
             try:
                 from mixar.modules.common.utils.undo import push_undo_step
+                # The step belongs to the job's tab, not to whatever tab the
+                # window shows when the download lands (per-tab undo).
                 push_undo_step(
                     iface_("Import {name}").format(name=job.label) if job.label
-                    else n_("Import Generated Result")
+                    else n_("Import Generated Result"),
+                    scene=resolve_job_scene(job.scene_name, _job_session_id(job)),
                 )
             except Exception as undo_error:  # noqa: BLE001 — never demote a success
                 logger.warning(
@@ -308,6 +312,7 @@ class DownloadMixin:
         job.error = message
         if message != "Download cancelled":
             job.error_class = "download"
+            job.error_class_source = "client"
             job.error_reason = clean_reason(message)
         if user_message:
             job.user_message = user_message
@@ -399,3 +404,22 @@ class _pinned_scene:
             except Exception:  # noqa: BLE001
                 pass
         return False
+
+
+def job_scene(job):
+    """The tab *job* was submitted from, or None when that tab is gone.
+
+    For job code that runs after submit (poll parsing, result handling,
+    listeners): ``bpy.context.scene`` there is whichever tab the window shows,
+    which with parallel scene tabs is often not the job's.
+    """
+    return resolve_job_scene(getattr(job, "scene_name", "") or "", _job_session_id(job))
+
+
+def pinned_to_job(job):
+    """Context manager making *job*'s tab the current scene.
+
+    For result code that reads ``bpy.context.scene`` indirectly (importers,
+    caller-supplied callbacks). Raises RuntimeError when the tab is gone.
+    """
+    return _pinned_scene(getattr(job, "scene_name", "") or "", _job_session_id(job))

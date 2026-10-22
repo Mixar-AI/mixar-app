@@ -230,7 +230,9 @@ def _register_bubble_keymap() -> None:
     except Exception as e:  # noqa: BLE001
         logger.warning("agent_bubble: RMB block keymap bind failed: %s", e)
 
-    # LEFTMOUSE PRESS → drag-resize.
+    # LEFTMOUSE PRESS → drag-resize. Window-level is the fallback; the
+    # HEADER keymap is what C++ ensures so a press inside the island
+    # chrome reaches the operator with context.region already HEADER.
     try:
         km = kc.keymaps.new(name="Window", space_type='EMPTY')
         kmi = km.keymap_items.new(
@@ -239,6 +241,17 @@ def _register_bubble_keymap() -> None:
             value='PRESS',
         )
         _keymap_items.append((km, kmi))
+        header_km = kc.keymaps.new(
+            name="Agent Bubble Header",
+            space_type='AGENT_BUBBLE',
+            region_type='HEADER',
+        )
+        header_kmi = header_km.keymap_items.new(
+            idname="mixar.bubble_header_drag",
+            type='LEFTMOUSE',
+            value='PRESS',
+        )
+        _keymap_items.append((header_km, header_kmi))
     except Exception as e:  # noqa: BLE001
         logger.warning(
             "agent_bubble: header-drag keymap bind failed: %s", e

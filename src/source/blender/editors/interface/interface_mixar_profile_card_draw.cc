@@ -39,6 +39,7 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
+#include "interface_mixar_sheet.hh"
 #include "UI_mixar_theme.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
@@ -204,6 +205,11 @@ void UI_mixar_profile_card_draw_element(
   mixar_theme_copy_u(MixarThemeSlot::Fg3, MX_FG_3, fg3_u);
   mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
   mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
+
+  /* The AI Provider sheet owns every one of its elements' chrome. */
+  if (UI_mixar_sheet_draw_element(but, rect, element)) {
+    return;
+  }
 
   /* Topbar elements are buttons too, but they own their own chrome — check
    * them before the card-button painter claims them. */

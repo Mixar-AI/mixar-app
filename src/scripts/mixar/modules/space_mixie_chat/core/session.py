@@ -143,9 +143,18 @@ class SessionManager:
                 pass
 
         SessionManager._sync_active_scene(scene, is_active)
+        if old_str == SessionState.BUSY.value.upper():
+            SessionManager._turn_eased(scene)
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"STATE CHANGE [{scene.name}]: {old_str} -> {new_str}")
+
+    @staticmethod
+    def _turn_eased(scene) -> None:
+        """The turn stopped streaming or its run closed: the BYOK card posts a
+        held interjection refusal and drops a stale "Couldn't resend yet"."""
+        from .byok_card import turn_settled
+        turn_settled(scene)
 
     @staticmethod
     def _sync_active_scene(scene, turn_active: bool) -> None:
@@ -216,6 +225,7 @@ class SessionManager:
             if notify:
                 from .completion_sound import play_completion_sound
                 play_completion_sound()
+            SessionManager._turn_eased(scene)
         if changed and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 f"RUN [{scene.name}]: {'open' if open else 'closed'} {run_id[:8]}"

@@ -12,9 +12,10 @@ Owns the data behind the Local branch of the AI Provider dialog:
 - the "Detected local apps" mirror (populated by a worker-thread probe of
   known Ollama/LM Studio/oMLX/llama.cpp ports, marshalled to the main
   thread — never probed from a draw);
-- the two save paths: managed (requires the supervised server healthy,
-  registers base_url + manifest api-token with the backend) and custom
-  (worker-thread reachability ping of ``<base>/v1/models`` first).
+- the two save paths: managed (registers base_url + manifest api-token with
+  the backend once the supervised server serves the model — a Save pressed
+  while it starts waits for it; otherwise the refusal names the missing step)
+  and custom (worker-thread reachability ping of ``<base>/v1/models`` first).
 
 Both saves go through the ordinary ``PUT /agent/byok``
 (`byok_client.save_credentials`) with the extended ``base_url`` /
@@ -23,6 +24,7 @@ the local_models manifest + refresh the relay's approved bases.
 """
 
 import threading
+import time
 import urllib.request
 from typing import Callable, List, Optional, Tuple
 
@@ -187,20 +189,142 @@ def apply_detected_selection(wm, identifier: str) -> None:
 # Save paths
 # ---------------------------------------------------------------------------
 
+#: A managed Save pressed while its server starts waits for it (main-thread
+#: poll) instead of refusing: prod 2026-10-19 showed users clicking Save every
+#: second under "Starting…" and reading "Start the local model first" each time.
+_STARTING = ("spawning", "waiting_health")
+_START_POLL_S = 0.5
+_START_WAIT_S = 600.0  # "a big model can take a few minutes"
+_waiting_model: Optional[str] = None
+
+#: Why a managed Save cannot go out now; the key is the telemetry reason.
+MANAGED_REFUSALS = {
+    "local_no_model": n_("Choose a local model first."),
+    "local_not_downloaded": n_("Download the model first, then press Start."),
+    "local_other_model": n_("Another local model is running. Pick it, or stop it and start this one."),
+    "local_stopped": n_("The local model stopped. Press Start to try again."),
+    "local_not_running": n_("Press Start to run the model, then save."),
+    "local_start_timeout": n_("The local model did not finish starting. Press Start to try again."),
+}
+
+
+def waiting_for_start() -> bool:
+    """True while a Save waits for the managed server it was pressed during."""
+    return _waiting_model is not None
+
+
+def refusal_reason(message: Optional[str]) -> str:
+    """Telemetry reason of a managed-save message ("" when it is not one)."""
+    return next((key for key, text in MANAGED_REFUSALS.items() if text == message), "")
+
+
+def _server(wm) -> Tuple[str, str]:
+    return (getattr(wm, 'mixar_local_server_model', '') or '',
+            getattr(wm, 'mixar_local_server_state', '') or '')
+
+
+def _stopped_message(wm) -> str:
+    # The orchestrator stores its own msgids; the dialog translates either.
+    return getattr(wm, 'mixar_local_last_error', '') or MANAGED_REFUSALS["local_stopped"]
+
+
+def _managed_refusal(wm, model_id: str) -> str:
+    """The step the user is missing, read from what the sheet shows."""
+    from mixar.modules.local_models.core import runtime
+
+    server_model, state = _server(wm)
+    if server_model == model_id and state in ("crashed", "failed"):
+        return _stopped_message(wm)
+    if server_model and server_model != model_id and state in _STARTING + ("ready",):
+        return MANAGED_REFUSALS["local_other_model"]
+    try:
+        downloaded = runtime.model_files_present(model_id)
+    except Exception:
+        downloaded = True  # unknown: do not send the user to download again
+    if not downloaded:
+        return MANAGED_REFUSALS["local_not_downloaded"]
+    return MANAGED_REFUSALS["local_not_running"]
+
+
+def _serving(model_id: str) -> Optional[dict]:
+    from mixar.modules.local_models.core import server_supervisor
+
+    current = server_supervisor.current()
+    if server_supervisor.is_healthy() and current and current.get("model_id") == model_id:
+        return current
+    return None
+
+
+def _await_start(wm, model_id: str, row: dict, on_done: Callable) -> None:
+    """Save once the server this Save was pressed under is serving the model;
+    fail with the server's own reason when it stops or never gets there."""
+    import bpy
+
+    global _waiting_model
+    _waiting_model = model_id
+    deadline = time.monotonic() + _START_WAIT_S
+
+    def poll():
+        global _waiting_model
+        if _waiting_model != model_id:
+            return None  # a newer Save took over
+        try:
+            current = _serving(model_id)
+            if current:
+                _waiting_model = None
+                _put_managed(current, row, model_id, on_done)
+                return None
+            server_model, state = _server(wm)
+            if server_model == model_id and state in _STARTING + ("ready",) \
+                    and time.monotonic() < deadline:
+                return _START_POLL_S
+            _waiting_model = None
+            timed_out = time.monotonic() >= deadline
+            _wait_failed(on_done, MANAGED_REFUSALS["local_start_timeout"] if timed_out
+                         else _stopped_message(wm))
+        except Exception as exc:
+            _waiting_model = None
+            logger.warning("Local save wait failed: %s", exc)
+            _wait_failed(on_done, MANAGED_REFUSALS["local_stopped"])
+        return None
+
+    bpy.app.timers.register(poll, first_interval=_START_POLL_S, persistent=True)
+
+
+def _wait_failed(on_done: Callable, message: str) -> None:
+    """The waited Save ends before any request: report it here (byok_client
+    reports the requests it sends)."""
+    from . import save_events
+    save_events.report("failed", LOCAL_PROVIDER_ID, refusal_reason(message) or "local_stopped")
+    on_done(False, None, message)
+
+
 def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
-    """Managed save: the supervised server must be healthy and serving the
-    selected model. Registers ``http://127.0.0.1:<port>`` + the manifest
-    api-token with the backend. Returns (started, ui_error)."""
-    from mixar.modules.local_models.core import manifest, server_supervisor
+    """Managed save: registers ``http://127.0.0.1:<port>`` + the manifest
+    api-token with the backend once the supervised server serves the selected
+    model — at once when it already does, after it finishes starting when Save
+    was pressed under "Starting…". Returns (started, ui_error)."""
+    global _waiting_model
 
     model_id = wm.byok_form_local_model
     row = model_row(model_id)
+    _waiting_model = None  # any earlier wait is superseded by this Save
     if row is None:
-        return False, n_("Choose a local model first.")
-    current = server_supervisor.current()
-    if (not server_supervisor.is_healthy() or not current
-            or current.get("model_id") != model_id):
-        return False, n_("Start the local model first (it must be running to save).")
+        return False, MANAGED_REFUSALS["local_no_model"]
+    current = _serving(model_id)
+    if current:
+        _put_managed(current, row, model_id, on_done)
+        return True, None
+    server_model, state = _server(wm)
+    if server_model == model_id and state in _STARTING:
+        _await_start(wm, model_id, row, on_done)
+        return True, None
+    return False, _managed_refusal(wm, model_id)
+
+
+def _put_managed(current: dict, row: dict, model_id: str, on_done: Callable) -> None:
+    from mixar.modules.local_models.core import manifest
+
     base_url = current["base_url"]
     supports_vision = bool(row.get("vision"))
 
@@ -224,7 +348,6 @@ def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
         supports_vision=supports_vision,
         on_done=_wrapped,
     )
-    return True, None
 
 
 def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
@@ -233,7 +356,9 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     from mixar.modules.local_models.core import relay
 
     base_url = (wm.byok_form_local_custom_base or "").strip().rstrip("/")
-    model = (wm.byok_form_local_custom_model or "").strip()
+    from mixar.modules.local_models.core.model_name import safe_model_name
+    # A typed or detected .gguf path is sent (and remembered) as its basename.
+    model = safe_model_name(wm.byok_form_local_custom_model or "")
     # Many local servers need no key. The backend's local provider accepts a
     # keyless credential (api_key null) — omit the field entirely when blank.
     api_key = (wm.byok_form_local_custom_key or "").strip() or None
@@ -243,11 +368,22 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     if invalid:
         return False, invalid
 
-    def _thread():
-        err = _ping_models_endpoint(base_url)
-        _schedule_on_main(_after_ping, err)
+    from . import byok_client, credential_state
 
-    def _after_ping(err):
+    # Counted from now, not from the PUT: the dialog may be closed and
+    # reopened during the ping, and must not offer Remove / the toggle a key
+    # this save is about to (re)create.
+    release = byok_client.hold()
+    epoch = credential_state.current_epoch()
+
+    def _after_ping(err, window=None):
+        release()
+        if credential_state.current_epoch() != epoch:
+            # Signed out (or into another account) during the ping: never send
+            # this save with the next account's token. The save callback sees
+            # the stale epoch and leaves the dialog idle.
+            on_done(False, None, n_("Signed out before the save finished."))
+            return
         if err:
             on_done(False, None, err)
             return
@@ -262,9 +398,9 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                     orchestrator.refresh_approved_bases()
                 except Exception as exc:
                     logger.warning("Local registration snapshot failed: %s", exc)
+                _remember_context_window(window)
             on_done(success, data, save_err)
 
-        from . import byok_client
         byok_client.save_credentials(
             provider=LOCAL_PROVIDER_ID,
             model=model,
@@ -274,10 +410,33 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
             on_done=_wrapped,
         )
 
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarLocalCustomPing"
-    ).start()
+    # Guaranteed delivery: a ping that dies still answers, so the count
+    # above is always released (and at shutdown, with no timer to answer
+    # through, the hold is still released).
+    _after_ping.release = release
+    byok_client._run_worker(
+        "MixarLocalCustomPing", lambda: _ping_and_measure(base_url, model, api_key), _after_ping,
+        (n_("Could not reach the local server."),))
     return True, None
+
+
+def _ping_and_measure(base_url: str, model: str, api_key: Optional[str]) -> tuple:
+    """Worker thread: reachability, then (when reachable) the server's context
+    window for the SAVED recap. A window the server does not report is None."""
+    err = _ping_models_endpoint(base_url)
+    if err:
+        return err, None
+    from mixar.modules.local_models.core import context_probe
+    return None, context_probe.context_window(base_url, model, api_key)
+
+
+def _remember_context_window(window: Optional[int]) -> None:
+    """Main thread: the window the SAVED recap judges (0 = unknown)."""
+    try:
+        import bpy
+        bpy.context.window_manager.byok_local_context_window = int(window or 0)
+    except Exception as exc:
+        logger.debug("Local context window not recorded: %s", exc)
 
 
 def _ping_models_endpoint(base_url: str) -> Optional[str]:

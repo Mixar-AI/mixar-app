@@ -259,18 +259,23 @@ def _win_dib_to_png(dib_data, temp_path):
 
 
 def _paste_linux(temp_path):
-    """Linux: Use xclip to grab image/png data from clipboard."""
-    try:
-        result = subprocess.run([
-            'xclip', '-selection', 'clipboard',
-            '-target', 'image/png', '-o'
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5)
-    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-        logger.debug(f"xclip failed: {e}")
-        return None
+    """Linux: grab image/png clipboard data via wl-paste (Wayland) or xclip (X11)."""
+    xclip_cmd = ['xclip', '-selection', 'clipboard', '-target', 'image/png', '-o']
+    if os.environ.get('WAYLAND_DISPLAY'):
+        # Fall back to xclip for XWayland clipboards when wl-paste is missing.
+        commands = (['wl-paste', '--type', 'image/png'], xclip_cmd)
+    else:
+        commands = (xclip_cmd,)
 
-    if result.returncode == 0 and result.stdout:
-        with open(temp_path, 'wb') as f:
-            f.write(result.stdout)
-        return temp_path
+    for cmd in commands:
+        try:
+            result = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5)
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            logger.debug(f"{cmd[0]} failed: {e}")
+            continue
+        if result.returncode == 0 and result.stdout:
+            with open(temp_path, 'wb') as f:
+                f.write(result.stdout)
+            return temp_path
     return None

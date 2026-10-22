@@ -255,3 +255,38 @@ def test_a_byok_only_populate_call_does_not_leave_stale_records():
     model_suggestions.populate(providers=[("x", "X", "X")], models={})
 
     assert model_suggestions.get_platform_models() == []
+
+
+def test_the_provider_list_follows_the_backend_order():
+    """The backend's `provider_order` places every provider, this client's own
+    OpenRouter / Codex / Local included; the client never decides the order."""
+    payload = _payload(_provider("anthropic", "Anthropic", [_model("a")]),
+                       _provider("openai", "OpenAI", [_model("o")]),
+                       _provider("newco", "Newco", [_model("n")]))
+    payload["provider_order"] = ["openai", "codex", "anthropic", "openrouter", "local"]
+    model_suggestions.populate_from_payload(payload)
+    ids = [item[0] for item in model_suggestions.get_provider_items()]
+    assert ids == ["openai", "codex", "anthropic", "openrouter", "local", "newco"]
+
+
+def test_without_a_catalog_order_the_default_order_applies():
+    """Signed out, a guest before its catalog lands, or an older backend: the
+    built-in default (the backend's order as of this release) sorts the list."""
+    model_suggestions.populate_from_payload(
+        _payload(_provider("anthropic", "Anthropic", [_model("a")]),
+                 _provider("openai", "OpenAI", [_model("o")])))
+    ids = [item[0] for item in model_suggestions.get_provider_items()]
+    assert ids == ["openai", "codex", "anthropic", "openrouter", "local"]
+    # Nothing loaded at all (signed out): the client options in that order,
+    # after the loading / empty sentinel.
+    model_suggestions.clear()
+    ids = [item[0] for item in model_suggestions.get_provider_items()]
+    assert ids[1:] == ["codex", "openrouter", "local"]
+
+
+def test_the_default_order_matches_the_backend():
+    """The fallback mirrors the backend's PROVIDER_ORDER (mixar-backend
+    modules/agent/schemas/supported_model.py); keep the two in step."""
+    assert model_suggestions.DEFAULT_PROVIDER_ORDER == (
+        "openai", "codex", "anthropic", "gemini", "openrouter",
+        "vertex", "bedrock", "kimi", "fugu", "local")

@@ -80,7 +80,7 @@ const char *target_label(const Target target, const bool subscribe)
     case TARGET_BYOK:
       return "Use your own API key";
     case TARGET_MCP:
-      return "Connect AI apps (MCP)";
+      return "Connect MCP";
     case TARGET_CLOSE:
       return "Close";
     default:

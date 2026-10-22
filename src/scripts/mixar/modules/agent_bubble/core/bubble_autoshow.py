@@ -15,6 +15,7 @@ arm_autoshow helper that schedules the timer.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.sign_in import sign_in_holds_autoshow
 from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core.bubble_lifecycle import (
     has_agent_bubble_windows,
@@ -36,7 +37,10 @@ def find_target_context():
     """
     wm = bpy.context.window_manager
     for window in wm.windows:
-        for area in window.screen.areas:
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
             if area.type == 'VIEW_3D':
                 region = next(
                     (r for r in area.regions if r.type == 'WINDOW'), None
@@ -44,9 +48,10 @@ def find_target_context():
                 if region is not None:
                     return window, area, region
     for window in wm.windows:
-        if not window.screen.areas:
+        screen = window.screen
+        if screen is None or not screen.areas:
             continue
-        area = window.screen.areas[0]
+        area = screen.areas[0]
         region = next(
             (r for r in area.regions if r.type == 'WINDOW'), None
         )
@@ -113,6 +118,12 @@ def _autoshow_bubble_inner():
         _st.autoshow_attempts = 0
         _st.autoshow_start_minimised = False
         return None
+
+    if sign_in_holds_autoshow():
+        # The user is in the browser for a sign-in (common/utils/sign_in.py):
+        # do not open an OS window over it. Not an attempt — poll until
+        # Mixar is the active app again.
+        return 0.5
 
     _st.autoshow_attempts += 1
 

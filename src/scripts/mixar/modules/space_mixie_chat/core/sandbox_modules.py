@@ -20,6 +20,9 @@ Blocked capabilities:
   resolves "0.__class__.__base__.__subclasses__" against the REAL getattr and
   hands back the object, walking straight past the dunder guard
 - open(): write mode restricted to temp directory only
+- bpy: every ``_``-prefixed attribute of bpy and its submodules. The private
+  helpers are plain functions with the real builtins and no denial of their
+  own: bpy.utils._test_import(name, set()) returns the real module it imports.
 """
 
 import builtins
@@ -71,7 +74,77 @@ _DENIED_SUBMODULES = frozenset({
     "numpy.f2py",        # compiles and loads native extensions
     "numpy.distutils",   # build machinery: compilers, subprocesses
     "numpy.testing",     # pytest bootstrapping
+    # File and pickle IO: numpy.load(allow_pickle=True) unpickles -> arbitrary
+    # code; loadtxt/genfromtxt/DataSource also fetch URLs past RESTRICTED_URLLIB.
+    # Refusing the modules closes the aliases the identity check below would
+    # otherwise have to chase through every private implementation module.
+    "numpy.lib.format",
+    "numpy.lib.npyio",
+    "numpy.lib._npyio_impl",
+    "numpy.lib._datasource",
+    "numpy.lib._format_impl",
+    # The agent's add-on workspace writes, installs and enables add-ons (real
+    # imports, real builtins). The agent reaches it only through the
+    # addon_project RPC, whose commits the user approves -- never from a script.
+    "mixar.modules.addon_project",
 })
+
+
+def is_denied_module(name) -> bool:
+    """True when ``name`` is a denied module or lives inside one."""
+    if not isinstance(name, str):
+        return False
+    return any(name == d or name.startswith(d + ".") for d in _DENIED_SUBMODULES)
+
+
+# numpy functions refused by IDENTITY, so an alias under any path or name is
+# caught (numpy 2.x moved them between numpy.lib.npyio, numpy.lib._npyio_impl,
+# numpy._core.* and numpy.rec; identity does not care). Same risks as the
+# modules above: pickle -> code, arbitrary file write, URL fetch.
+_NUMPY_DENIED_PATHS = (
+    "load", "save", "savez", "savez_compressed", "savetxt", "loadtxt",
+    "genfromtxt", "fromfile", "fromregex", "memmap",
+    "lib.npyio.DataSource", "lib.format.open_memmap", "lib.format.read_array",
+    "lib.format.write_array", "rec.fromfile",
+)
+_numpy_denied: dict = {}
+
+
+def _numpy_denied_ids() -> dict:
+    """id -> dotted path of every denied numpy callable (built once, lazily:
+    numpy is imported by the executor, not by this module)."""
+    if _numpy_denied:
+        return _numpy_denied
+    import numpy
+
+    for path in _NUMPY_DENIED_PATHS:
+        obj = numpy
+        for part in path.split("."):
+            obj = getattr(obj, part, None)
+            if obj is None:
+                break
+        if obj is not None:
+            # The dict keeps the object alive, so its id cannot be reused.
+            _numpy_denied[id(obj)] = ("numpy." + path, obj)
+    try:
+        from numpy._pytesttester import PytestTester
+        _numpy_denied["tester_type"] = ("numpy.test", PytestTester)
+    except ImportError:  # pragma: no cover - layout change
+        pass
+    return _numpy_denied
+
+
+def _denied_numpy_value(value):
+    """The dotted name of a denied numpy object, or None."""
+    denied = _numpy_denied_ids()
+    hit = denied.get(id(value))
+    if hit is not None and hit[1] is value:
+        return hit[0]
+    tester = denied.get("tester_type")
+    # numpy.test / numpy.<sub>.test run pytest, which imports and runs files.
+    if tester is not None and isinstance(value, tester[1]):
+        return tester[0]
+    return None
 
 # Same-package ATTRIBUTES that are not safe for the same reason -- they run
 # Python from disk. `bpy.utils` is the live case: it is the module every agent
@@ -84,6 +157,8 @@ _DENIED_ATTRS = {
         "load_scripts_extensions",
         "modules_from_path",
         "register_submodule_factory",
+        "keyconfig_set",   # execfile()s a keyconfig .py
+        "keyconfig_init",  # same, for the active preset
     }),
 }
 
@@ -117,13 +192,20 @@ def safe_module(module, root: str = None):
             # blocks the escape dunders in scripts; refuse them here too so
             # the proxy is safe on its own, keeping only the informational
             # ones scripts legitimately read.
-            if (
-                attr.startswith("__")
-                and attr.endswith("__")
-                and attr not in _MODULE_INFO_DUNDERS
-            ):
+            if attr.startswith("__") and attr.endswith("__"):
+                if attr not in _MODULE_INFO_DUNDERS:
+                    raise AttributeError(
+                        f"{name}.{attr} is not available in the sandbox."
+                    )
+            elif root == "bpy" and attr.startswith("_"):
+                # bpy's private module helpers are plain functions with the
+                # real builtins and no denial of their own: bpy.utils.
+                # _test_import(name, set()) returns the real module it
+                # imports; bpy.ops._op_create_function builds any operator
+                # from a string.
                 raise AttributeError(
-                    f"{name}.{attr} is not available in the sandbox."
+                    f"{name}.{attr} is not available in the sandbox: private "
+                    f"bpy helpers are not part of the sandboxed API."
                 )
             if attr in _DENIED_ATTRS.get(name, ()):
                 raise AttributeError(
@@ -134,15 +216,22 @@ def safe_module(module, root: str = None):
             # imported at all, and several of these are lazy attributes whose
             # import has side effects (numpy resolves numpy.ctypeslib through
             # a module-level __getattr__).
-            if f"{name}.{attr}" in _DENIED_SUBMODULES:
+            if is_denied_module(f"{name}.{attr}"):
                 raise AttributeError(
                     f"{name}.{attr} is not available in the sandbox: it "
                     f"bridges out of Python."
                 )
             value = getattr(module, attr)
+            if root == "numpy":
+                denied = _denied_numpy_value(value)
+                if denied:
+                    raise AttributeError(
+                        f"{name}.{attr} is not available in the sandbox: "
+                        f"{denied} reads or writes files outside it."
+                    )
             if isinstance(value, types.ModuleType):
                 child = getattr(value, "__name__", "")
-                if child in _DENIED_SUBMODULES:
+                if is_denied_module(child):
                     # An alias under another attribute name.
                     raise AttributeError(
                         f"{name}.{attr} is not available in the sandbox: "
@@ -242,7 +331,9 @@ def restricted_open(path, mode='r', *args, **kwargs):
         # realpath the prefix too: on macOS /var is a symlink to /private/var, so a
         # realpath'd target never starts with the un-normalized gettempdir() -> blocked.
         temp_prefix = _osp.realpath(_tf.gettempdir())
-        if not real.startswith(temp_prefix):
+        # Boundary, not bare prefix: startswith(temp_prefix) alone also admits
+        # sibling directories that merely share the prefix (/tmp/foo vs /tmp/foobar).
+        if not (real == temp_prefix or real.startswith(temp_prefix + _osp.sep)):
             raise PermissionError(
                 f"open() with write mode is restricted to temp directory. "
                 f"Cannot write to: {path}"

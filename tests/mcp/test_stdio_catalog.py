@@ -82,7 +82,7 @@ def test_backend_discovery_hints_survive_the_launcher():
 def test_catalog_index_merges_ui_tools_and_answers_the_ui_domain_locally():
     async def check(client, connector):
         merged = (await client.call_tool("mixar_tool_catalog", {})).structured_content["result"]
-        assert merged["domains"] == {"build": 1, "ui": 5, "scenes": 5}
+        assert merged["domains"] == {"build": 1, "ui": 5, "scenes": 6}
         assert {"mixar_ui_observe", "execute_bpy_script"} <= {entry["name"] for entry in merged["tools"]}
         ui_only = (await client.call_tool("mixar_tool_catalog", {"domain": "ui"})).structured_content
         assert {entry["domain"] for entry in ui_only["result"]["tools"]} == {"ui"}

@@ -167,7 +167,7 @@ def test_a_job_that_stages_media_first_still_sends_its_origin(monkeypatch):
 
 def test_the_launcher_points_to_the_profile_menu():
     source = (SCRIPTS / "mixar" / "mcp.py").read_text()
-    assert "Help >" not in source and "profile menu > Connect AI Apps (MCP)" in source
+    assert "Help >" not in source and "profile menu > Connect MCP" in source
 
 
 def test_the_relay_thread_never_touches_blender(monkeypatch):

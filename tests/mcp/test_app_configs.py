@@ -140,8 +140,12 @@ def test_claude_code_missing_cli_points_to_the_copy_button(monkeypatch):
 
 
 def test_the_dialog_offers_add_copy_open_and_the_guide():
-    dialog = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
-    for text in ('"mixar.mcp_add_to_app"', 'text="Copy"', 'text="Open Config File"',
-                 'text="Copy MCP Config"', 'text="Setup Guide"', "translation_context=PRODUCT_NAMES"):
-        assert text in dialog
+    operators = Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators"
+    dialog = (operators / "connect.py").read_text()
+    sheet = (operators / "connect_sheet_ui.py").read_text() + (operators / "connect_sheet_plans.py").read_text()
+    for text in ('"mixar.mcp_add_to_app"', 'iface_("Copy")', 'iface_("Open {file}")', 'iface_("Copy setup")',
+                 'iface_("Add to {app}")', 'iface_("Guide")', "GUIDE_URL"):
+        assert text in sheet, text
+    assert "translation_context=PRODUCT_NAMES" in dialog
     assert app_configs.ADDABLE == ("CLAUDE_CODE", "CODEX")
+    assert app_configs.FORMATS == ("JSON", "COMMAND")

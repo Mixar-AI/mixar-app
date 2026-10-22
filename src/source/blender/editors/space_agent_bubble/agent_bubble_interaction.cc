@@ -9,6 +9,7 @@
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_types.hh"
 
 #include "UI_interface_c.hh"
@@ -48,6 +49,13 @@ bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble
   /* A press inside a temporary window (picker, render view, Preferences) is
    * interaction with that window, not an outside click. */
   if (WM_window_is_temp_screen(target)) {
+    return false;
+  }
+  /* While a modal dialog hides the island (splash, close-file, a
+   * `mixar_invoke_modal_dialog`), presses belong to that dialog: collapsing
+   * the hidden island here would bring it back minimised instead of as it was
+   * (wm_mixar_modal_dialog.cc). */
+  if (Mixar_floating_docks_held()) {
     return false;
   }
   if (agent_bubble_press_hits_mode_switch(C, event)) {

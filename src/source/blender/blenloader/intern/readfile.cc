@@ -85,6 +85,7 @@
 #include "BKE_library.hh"
 #include "BKE_main.hh" /* for Main */
 #include "BKE_main_idmap.hh"
+#include "BKE_undo_tabs.hh"
 #include "BKE_main_invariants.hh"
 #include "BKE_main_namemap.hh"
 #include "BKE_material.hh"
@@ -120,6 +121,7 @@
 #include "IMB_colormanagement.hh"
 
 #include "readfile.hh"
+#include "readfile_image_undo.hh"
 #include "versioning_common.hh"
 
 namespace blender {
@@ -2662,6 +2664,15 @@ static bool direct_link_id(FileData *fd,
       break;
   }
 
+  /* RNA pixel edits followed by Image.pack() do not necessarily tag ID_RECALC_SOURCE.
+   * Never transplant live ImBuf/GPU caches over a different restored packed source.
+   * Unchanged sources (including dirty, unpacked paint buffers) keep their caches. */
+  if ((fd->flags & FD_FLAGS_IS_MEMFILE) && id_old != nullptr && GS(id->name) == ID_IM &&
+      blo::image_packed_sources_changed(*id_cast<Image *>(id), *id_cast<Image *>(id_old)))
+  {
+    id->recalc |= ID_RECALC_SOURCE;
+  }
+
   /* try to restore (when undoing) or clear ID's cache pointers. */
   if (id_type->foreach_cache != nullptr) {
     BKE_idtype_id_foreach_cache(
@@ -2882,6 +2893,205 @@ static void read_undo_tag_all_noundo_ids(FileData *fd)
  * practice they need to be handled separately, to ensure that their order in the new bmain list
  * matches the one from the read blend-file. Reading linked 'placeholder' entries in a memfile
  * relies on current library being the last item in the new main list. */
+/**
+ * Mixar per-tab undo (M2): after the memfile's IDs were read, the old Main
+ * still holds every live ID the memfile did not mention. For a whole-document
+ * undo they die with the old Main. For a partial restore of one tab, only that
+ * tab's may die (it created them after the step); everything else is moved
+ * into the new Main untouched, the way the no-undo types are.
+ */
+static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
+{
+  Main *new_bmain = fd->bmain;
+  Main *old_bmain = fd->old_bmain;
+  BLI_assert(old_bmain->curlib == nullptr);
+  int kept = 0;
+  MainListsArray lbarray = BKE_main_lists_get(*old_bmain);
+  int i = lbarray.size();
+  while (i--) {
+    ListBaseT<ID> *old_lb = lbarray[i];
+    if (BLI_listbase_is_empty(old_lb)) {
+      continue;
+    }
+    ID *id_first = static_cast<ID *>(old_lb->first);
+    const IDTypeInfo *id_type = BKE_idtype_get_info_from_id(id_first);
+    if (id_type->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO) {
+      continue; /* moved already, before the read */
+    }
+    if (id_type->id_code == ID_LI) {
+      /* A library that appeared after the step (the first sculpt-mode entry
+       * links the essentials brush library) is the library machinery's: its
+       * split Main is moved by #read_undo_libraries_preserve_never_undo_libraries
+       * when never-undo IDs use it. Moving the Library ID here as well linked it
+       * twice and left `blo_join_main` spinning on a cyclic list (M5). */
+      continue;
+    }
+    ListBaseT<ID> *new_lb = which_libbase(new_bmain, id_type->id_code);
+    ID *id_next = nullptr;
+    for (ID *id = id_first; id != nullptr; id = id_next) {
+      id_next = static_cast<ID *>(id->next);
+      if (BKE_undo_tabs_partial_decide(id->session_uid, true) == UndoPartialDecision::Restore) {
+        continue; /* the tab's own: created after the step, dies with the old Main */
+      }
+      BLI_remlink(old_lb, id);
+      BLI_addtail(new_lb, id);
+      /* Keep the list in name order, as every other path that adds an ID does
+       * (review 2026-10-01, R10: a kept foreign datablock was listed last). */
+      id_sort_by_name(new_lb, id, nullptr);
+      id->tag |= ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED;
+      id->newid = nullptr;
+      id->orig_id = nullptr;
+      BKE_main_idmap_insert_id(fd->new_idmap_uid, id);
+      if (new_bmain->id_map != nullptr) {
+        BKE_main_idmap_insert_id(new_bmain->id_map, id);
+      }
+      kept++;
+    }
+  }
+  CLOG_DEBUG(&LOG_UNDO, "UNDO(tab): %d foreign datablocks kept across the restore", kept);
+
+  /* Names are unique per type in a Main. A datablock the walked tab gets back may
+   * carry a name another tab's datablock took since the step (the tab deleted
+   * "ob.001", another tab's copy became "ob.001", the undo brings the first one
+   * back). The name fix after reading renamed whichever came second, which could
+   * be the other tab's: one tab's undo renamed another tab's object (the invariant
+   * test, 2026-10-02). The kept datablock keeps its name; the restored one gets
+   * the next free suffix. */
+  MainListsArray new_lbarray = BKE_main_lists_get(*new_bmain);
+  for (ListBaseT<ID> *lb : new_lbarray) {
+    Set<std::string> kept_names;
+    for (ID *id = static_cast<ID *>(lb->first); id; id = static_cast<ID *>(id->next)) {
+      if (id->lib == nullptr && (id->tag & ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED) &&
+          BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore)
+      {
+        kept_names.add(id->name + 2);
+      }
+    }
+    if (kept_names.is_empty()) {
+      continue;
+    }
+    Vector<ID *> renamed;
+    for (ID *id = static_cast<ID *>(lb->first); id; id = static_cast<ID *>(id->next)) {
+      if (id->lib != nullptr || !kept_names.contains(id->name + 2) ||
+          BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore)
+      {
+        continue;
+      }
+      Set<std::string> taken;
+      for (ID *other = static_cast<ID *>(lb->first); other; other = static_cast<ID *>(other->next)) {
+        if (other->lib == nullptr) {
+          taken.add(other->name + 2);
+        }
+      }
+      char base[MAX_ID_NAME];
+      int number = 0;
+      BLI_string_split_name_number(id->name + 2, '.', base, &number);
+      char name[MAX_ID_NAME - 2];
+      for (int n = std::max(number, 0) + 1; n < 1000000; n++) {
+        SNPRINTF(name, "%s.%03d", base, n);
+        if (!taken.contains(name)) {
+          break;
+        }
+      }
+      CLOG_INFO(&LOG_UNDO,
+                "UNDO(tab): '%s' brought back as '%s': another tab's datablock has that name now",
+                id->name + 2,
+                name);
+      BLI_strncpy(id->name + 2, name, sizeof(id->name) - 2);
+      renamed.append(id);
+    }
+    for (ID *id : renamed) {
+      id_sort_by_name(lb, id, nullptr);
+    }
+  }
+}
+
+/**
+ * Mixar per-tab undo (the invariant test, 2026-10-02, ASAN): a datablock a partial
+ * restore keeps holds its live pointers. One of them could still reach a datablock
+ * left in the old Main, which is freed with it: a kept mesh of another tab pointing
+ * at a material the walked tab's restore did not read back (heap-use-after-free in
+ * the user-count recount). Every kept datablock's pointers are checked: one aimed
+ * at a datablock re-read at a new address is pointed at that copy, one aimed at a
+ * datablock nothing read back is rescued into the new Main as it is. A kept
+ * datablock never points at freed memory, whatever the ownership rules decided.
+ */
+static void read_undo_partial_rescue_kept_references(FileData *fd)
+{
+  Main *new_bmain = fd->bmain;
+  Main *old_bmain = fd->old_bmain;
+  Set<ID *> in_new;
+  Vector<ID *> queue;
+  {
+    ID *id;
+    FOREACH_MAIN_ID_BEGIN (new_bmain, id) {
+      in_new.add(id);
+      if (id->tag & ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED) {
+        queue.append(id);
+      }
+    }
+    FOREACH_MAIN_ID_END;
+  }
+  struct Rescue {
+    FileData *fd;
+    Main *new_bmain;
+    Main *old_bmain;
+    Set<ID *> *in_new;
+    Vector<ID *> *queue;
+    int remapped = 0;
+    int rescued = 0;
+  } data{fd, new_bmain, old_bmain, &in_new, &queue};
+  for (int64_t i = 0; i < queue.size(); i++) {
+    BKE_library_foreach_ID_link(
+        new_bmain,
+        queue[i],
+        [](LibraryIDLinkCallbackData *cb_data) -> int {
+          Rescue *r = static_cast<Rescue *>(cb_data->user_data);
+          ID *p = *cb_data->id_pointer;
+          if (p == nullptr || ID_IS_LINKED(p) ||
+              (cb_data->cb_flag & (IDWALK_CB_EMBEDDED | IDWALK_CB_EMBEDDED_NOT_OWNING)) ||
+              r->in_new->contains(p))
+          {
+            return IDWALK_RET_NOP;
+          }
+          ID *copy = static_cast<ID *>(BKE_main_idmap_lookup_uid(r->fd->new_idmap_uid, p->session_uid));
+          if (copy != nullptr && copy != p) {
+            *cb_data->id_pointer = copy;
+            r->remapped++;
+            return IDWALK_RET_NOP;
+          }
+          ListBaseT<ID> *old_lb = which_libbase(r->old_bmain, GS(p->name));
+          if (old_lb == nullptr || BLI_findindex(old_lb, p) == -1) {
+            return IDWALK_RET_NOP;
+          }
+          ListBaseT<ID> *new_lb = which_libbase(r->new_bmain, GS(p->name));
+          BLI_remlink(old_lb, p);
+          BLI_addtail(new_lb, p);
+          id_sort_by_name(new_lb, p, nullptr);
+          p->tag |= ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED;
+          p->newid = nullptr;
+          p->orig_id = nullptr;
+          BKE_main_idmap_insert_id(r->fd->new_idmap_uid, p);
+          if (r->new_bmain->id_map != nullptr) {
+            BKE_main_idmap_insert_id(r->new_bmain->id_map, p);
+          }
+          r->in_new->add(p);
+          r->queue->append(p);
+          r->rescued++;
+          return IDWALK_RET_NOP;
+        },
+        &data,
+        IDWALK_NOP);
+  }
+  if (data.remapped || data.rescued) {
+    CLOG_INFO(&LOG_UNDO,
+              "UNDO(tab): kept datablocks' pointers: %d pointed at the re-read copy, %d datablock(s) "
+              "rescued from the old Main",
+              data.remapped,
+              data.rescued);
+  }
+}
+
 static void read_undo_reuse_noundo_local_ids(FileData *fd)
 {
   Main *new_bmain = fd->bmain;
@@ -3034,6 +3244,76 @@ static void read_undo_libraries_preserve_never_undo_libraries(FileData *fd)
       read_undo_move_libmain_data(fd, lib_bmain, nullptr);
     }
   }
+}
+
+/**
+ * Mixar per-tab undo (review 2026-10-02, Codex P1): linked data another tab
+ * still uses must survive one tab's restore. The memfile only knows the
+ * libraries and linked IDs of the step it holds:
+ *
+ * - a library linked after that step is not in it, so its whole split Main
+ *   stayed in the old Main and was freed with it;
+ * - a linked ID of a library the memfile does know, but linked after the step,
+ *   was listed as unused and discarded by #read_undo_libraries_cleanup_unused_ids.
+ *
+ * Either way a kept foreign datablock (another tab's collection holding a
+ * linked object) pointed at freed memory: the library vanished and showing the
+ * other tab crashed in its depsgraph. Under a partial restore, every library
+ * with a linked ID the walked tab does not own is moved into the new Main as a
+ * whole (#read_undo_move_libmain_data, the never-undo path: a Library ID is
+ * never moved on its own), and those IDs are taken off the unused list. The
+ * walked tab's own linked IDs (linked after the step) are still discarded.
+ */
+static void read_undo_partial_keep_foreign_linked(FileData *fd)
+{
+  Main *old_bmain = fd->old_bmain;
+  Main *new_bmain = fd->bmain;
+  BLI_assert(old_bmain->split_mains && new_bmain->split_mains);
+  auto is_foreign = [](const ID *id) {
+    return BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore;
+  };
+  int libs_moved = 0, ids_kept = 0;
+  /* Libraries the memfile did not mention (cannot iterate the split Mains while moving them). */
+  Vector<Main *> old_libmains = {old_bmain->split_mains->as_span().drop_front(1)};
+  for (Main *lib_bmain : old_libmains) {
+    Library *lib = lib_bmain->curlib;
+    if (lib == nullptr || (lib->flag & LIBRARY_FLAG_IS_ARCHIVE)) {
+      continue;
+    }
+    bool any_foreign = false;
+    ID *id_iter;
+    FOREACH_MAIN_ID_BEGIN (lib_bmain, id_iter) {
+      if (!any_foreign && is_foreign(id_iter)) {
+        any_foreign = true;
+      }
+    }
+    FOREACH_MAIN_ID_END;
+    if (any_foreign) {
+      read_undo_move_libmain_data(fd, lib_bmain, nullptr);
+      libs_moved++;
+    }
+  }
+  /* Every library in the new Main: keep the foreign IDs the cleanup would discard. */
+  for (Main *lib_bmain : new_bmain->split_mains->as_span().drop_front(1)) {
+    Library *lib = lib_bmain->curlib;
+    if (lib == nullptr || (lib->flag & LIBRARY_FLAG_IS_ARCHIVE)) {
+      continue;
+    }
+    Vector<ID *> keep;
+    for (ID *id : lib->runtime->unused_ids_on_undo) {
+      if (is_foreign(id)) {
+        keep.append(id);
+      }
+    }
+    for (ID *id : keep) {
+      lib->runtime->unused_ids_on_undo.remove(id);
+    }
+    ids_kept += int(keep.size());
+  }
+  CLOG_DEBUG(&LOG_UNDO,
+             "UNDO(tab): %d foreign library(ies) moved, %d foreign linked datablock(s) kept",
+             libs_moved,
+             ids_kept);
 }
 
 /* Once all ID BHeads have been read, remove the regular linked IDs that have been moved from the
@@ -3192,8 +3472,21 @@ static void read_libblock_undo_restore_identical(
   if (GS(id_old->name) == ID_OB) {
     Object *ob = id_cast<Object *>(id_old);
     /* For undo we stay in object mode during undo presses, so keep editmode disabled for re-used
-     * data-blocks too. */
-    ob->mode &= ~OB_MODE_EDIT;
+     * data-blocks too.
+     *
+     * Mixar per-tab undo (review 2026-10-02): not for another tab's object a partial restore
+     * keeps as it is. Its edit-mode data is kept with it (memfile_undo.cc), and clearing the
+     * flag dropped the user out of edit mode in a tab they never undid. */
+    const bool foreign_kept = BKE_undo_tabs_partial_active() &&
+                              BKE_undo_tabs_partial_tab() != UNDO_TAB_DOCUMENT &&
+                              BKE_undo_tabs_partial_decide(id_old->session_uid, true) !=
+                                  UndoPartialDecision::Restore;
+    /* ...and only while it still has its edit-mode data: its data may be the walked
+     * tab's (restored, the edit data freed), and an object flagged EDIT with no edit
+     * data crashed the next edit-mode undo push (the invariant test, 2026-10-02). */
+    if (!foreign_kept || !BKE_object_is_in_editmode(ob)) {
+      ob->mode &= ~OB_MODE_EDIT;
+    }
   }
   if (GS(id_old->name) == ID_LI) {
     Library *lib = reinterpret_cast<Library *>(id_old);
@@ -3346,6 +3639,40 @@ static bool read_libblock_undo_restore(
     return true;
   }
 
+  /* Mixar per-tab undo (M2): a partial restore of one tab. IDs that tab does
+   * not own keep their live datablock whatever the memfile says (the same
+   * path as an unchanged ID); one with no live counterpart is not read at
+   * all — it is not this tab's to bring back. */
+  /* The "identical chunk" shortcut below is only valid between ADJACENT memfile
+   * steps: the flags are computed at write time against the neighbouring step,
+   * and a document-wide history jump decodes every step in between. A per-tab
+   * walk jumps straight to its target, so for the tab's own IDs the live
+   * datablock may differ from the target however the flags read; they are
+   * always re-read (in place when live). */
+  bool force_reread = false;
+  if (do_partial_undo && BKE_undo_tabs_partial_active()) {
+    const UndoPartialDecision decision = BKE_undo_tabs_partial_decide(id->session_uid,
+                                                                       id_old != nullptr);
+    force_reread = (decision == UndoPartialDecision::Restore);
+    if (decision == UndoPartialDecision::Keep) {
+      CLOG_DEBUG(&LOG_UNDO,
+                 "UNDO(tab): keep %s (uid %u) -> another tab's / global, kept as-is",
+                 id->name,
+                 id->session_uid);
+      read_libblock_undo_restore_identical(fd, main, id, id_old, bhead, id_tag);
+      *r_id_old = id_old;
+      return true;
+    }
+    if (decision == UndoPartialDecision::Skip) {
+      CLOG_DEBUG(&LOG_UNDO,
+                 "UNDO(tab): skip %s (uid %u) -> not live, not this tab's",
+                 id->name,
+                 id->session_uid);
+      *r_id_old = nullptr;
+      return true;
+    }
+  }
+
   if (!do_partial_undo) {
     CLOG_DEBUG(&LOG_UNDO,
                "UNDO: read %s (uid %u) -> no partial undo, always read at new address",
@@ -3355,7 +3682,7 @@ static bool read_libblock_undo_restore(
   }
 
   /* Restore local datablocks. */
-  if (id_old != nullptr && read_libblock_is_identical(fd, bhead)) {
+  if (id_old != nullptr && !force_reread && read_libblock_is_identical(fd, bhead)) {
     /* Local datablock was unchanged, restore from the old main. */
     CLOG_DEBUG(&LOG_UNDO,
                "UNDO: read %s (uid %u) -> keep identical data-block",
@@ -4297,9 +4624,16 @@ BlendFileData *blo_read_file_internal(FileData *fd, const char *filepath)
     }
   }
 
+  if (is_undo && BKE_undo_tabs_partial_active()) {
+    read_undo_partial_keep_foreign_leftovers(fd);
+    read_undo_partial_rescue_kept_references(fd);
+  }
   if (is_undo) {
     /* Move remaining libraries containing 'no undo' IDs from old to new Main. */
     read_undo_libraries_preserve_never_undo_libraries(fd);
+    if (BKE_undo_tabs_partial_active() && BKE_undo_tabs_partial_tab() != UNDO_TAB_DOCUMENT) {
+      read_undo_partial_keep_foreign_linked(fd);
+    }
     /* Remove from the new Main regular linked IDs that are unused. */
     read_undo_libraries_cleanup_unused_ids(fd);
   }

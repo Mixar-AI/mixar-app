@@ -92,6 +92,36 @@ enum class MixarCardElement : uint8_t {
    * otherwise, so a dropdown's list matches the value blocks it opens from.
    * Painted in `interface_mixar_cinema_row.cc`. */
   CinemaRow,
+  /** The sheet dialogs (`interface_mixar_sheet.cc`: AI Provider settings,
+   * Connect MCP): the elements of the designer's 2x artboard, tagged
+   * from Python through `layout.mixar_sheet*`. `lit` marks the current
+   * choice; `progress` is a per-kind payload (the input's trailing width, a
+   * pill's docked state, the footer row's glyph). */
+  SheetTitle,
+  SheetClose,
+  SheetCaption,
+  SheetProviderRow,
+  SheetFooterRow,
+  SheetChip,
+  SheetPrompt,
+  SheetNote,
+  SheetBody,
+  SheetDangerText,
+  SheetPrimary,
+  SheetSecondary,
+  SheetDangerButton,
+  /** Native Text / Menu buttons keep their stock input and text passes; these
+   * two kinds only pick the sheet backdrop in `interface_widgets.cc`. */
+  SheetInput,
+  SheetDropdown,
+  /** Monospace code block on the key field's backdrop (Connect MCP);
+   * `progress` is the design-px width of the control docked in its corner. */
+  SheetSnippet,
+  /** Track-and-knob toggle with its label after it; `lit` is on. */
+  SheetSwitch,
+  /** The disc leading a status line: `lit` green, `progress` 1.0 danger,
+   * otherwise dim. */
+  SheetStatusDot,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,

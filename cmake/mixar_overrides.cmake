@@ -22,6 +22,7 @@ endif()
 #   MIXAR_CUDA=0           no CUDA, no OptiX, no cubins at all
 #   MIXAR_CUDA_BINARIES=0  keep CUDA/OptiX device support, skip the cubins
 #   MIXAR_CUDA_ARCH=sm_89  narrow CYCLES_CUDA_BINARIES_ARCH to your own card
+#   MIXAR_CUDA_BUILD_SERIAL=1 build cubins one at a time to cap peak RAM
 #
 # WITH_CYCLES_CUDA_BINARIES is the expensive one: it compiles the WHOLE Cycles
 # kernel with nvcc once per architecture in CYCLES_CUDA_BINARIES_ARCH (ten
@@ -52,13 +53,19 @@ endmacro()
 
 mixar_env_bool(MIXAR_CUDA ON MIXAR_CUDA_ENABLED)
 mixar_env_bool(MIXAR_CUDA_BINARIES ${MIXAR_CUDA_ENABLED} MIXAR_CUDA_BINARIES_ENABLED)
+mixar_env_bool(MIXAR_CUDA_BUILD_SERIAL OFF MIXAR_CUDA_BUILD_SERIAL_ENABLED)
 if(NOT MIXAR_CUDA_ENABLED)
   set(MIXAR_CUDA_BINARIES_ENABLED OFF)
 endif()
 
 set(WITH_CYCLES_DEVICE_CUDA ${MIXAR_CUDA_ENABLED} CACHE BOOL "Enable Cycles NVIDIA CUDA compute support" FORCE)
 set(WITH_CYCLES_CUDA_BINARIES ${MIXAR_CUDA_BINARIES_ENABLED} CACHE BOOL "Build Cycles NVIDIA CUDA binaries" FORCE)
+set(WITH_CYCLES_CUDA_BUILD_SERIAL ${MIXAR_CUDA_BUILD_SERIAL_ENABLED} CACHE BOOL "Build Cycles CUDA binaries serially" FORCE)
 set(WITH_CUDA_DYNLOAD ON CACHE BOOL "Dynamically load CUDA libraries at runtime" FORCE)
+
+if(NOT "$ENV{CUDA_TOOLKIT_ROOT_DIR}" STREQUAL "")
+  set(CUDA_TOOLKIT_ROOT_DIR "$ENV{CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "CUDA toolkit root" FORCE)
+endif()
 
 # OptiX rides with CUDA (requires the NVIDIA OptiX SDK).
 set(WITH_CYCLES_DEVICE_OPTIX ${MIXAR_CUDA_ENABLED} CACHE BOOL "Enable Cycles NVIDIA OptiX support" FORCE)
@@ -73,7 +80,7 @@ if(MIXAR_CUDA_BINARIES_ENABLED AND NOT "$ENV{MIXAR_CUDA_ARCH}" STREQUAL "")
 endif()
 
 if(MIXAR_CUDA_ENABLED)
-  message(STATUS "Mixar: CUDA/OptiX ON (cubins: ${MIXAR_CUDA_BINARIES_ENABLED})")
+  message(STATUS "Mixar: CUDA/OptiX ON (cubins: ${MIXAR_CUDA_BINARIES_ENABLED}, serial: ${MIXAR_CUDA_BUILD_SERIAL_ENABLED})")
 else()
   message(STATUS "Mixar: CUDA/OptiX OFF (MIXAR_CUDA=$ENV{MIXAR_CUDA})")
 endif()

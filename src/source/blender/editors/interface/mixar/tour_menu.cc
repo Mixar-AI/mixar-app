@@ -38,6 +38,7 @@
 
 #include "UI_interface_layout.hh"
 #include "UI_resources.hh"
+#include "RNA_access.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -245,6 +246,33 @@ int Mixar_refresh_popups(wmWindow *win)
       ED_region_tag_refresh_ui(&region);
       ED_region_tag_redraw(&region);
       count++;
+    }
+  }
+  return count;
+}
+
+/* Async animation browsing refreshes only its own live panel. Never retain a
+ * Python Region pointer after a popover closes, or rebuild unrelated menus. */
+int Mixar_refresh_popover(wmWindow *win, const char *panel_id)
+{
+  bScreen *screen = win ? WM_window_get_active_screen(win) : nullptr;
+  if (screen == nullptr) {
+    return 0;
+  }
+  int count = 0;
+  for (ARegion &region : screen->regionbase) {
+    if (region.regiontype != RGN_TYPE_TEMPORARY || region.runtime == nullptr) {
+      continue;
+    }
+    for (ui::Block &block : region.runtime->uiblocks) {
+      if (block.handle != nullptr && block.handle->srna_owner != nullptr &&
+          STREQ(RNA_struct_identifier(block.handle->srna_owner), panel_id))
+      {
+        ED_region_tag_refresh_ui(&region);
+        ED_region_tag_redraw(&region);
+        count++;
+        break;
+      }
     }
   }
   return count;

@@ -42,6 +42,16 @@ the C++ hit-test) from here; a press the panel does not claim stays
 consumed, so an empty part of the card band never falls through to
 viewport selection mid-turn.
 
+A menu, popover or dialog already open in the lock's window outranks it.
+Blender inserts this later modal AHEAD of the pop-up's own handler, so
+without a yield it ate the pop-up's clicks over the viewport rectangle (the
+dialog floats there) and its hotkey letters (an API key containing "s"):
+AI Provider Settings could not be cancelled once the halo started. While
+native ``Window.mixar_popup_block_open()`` reports a pop-up block, every
+event passes through; the pop-up's handler blocks everything it does not use
+("Always break, never let events pass through"), so nothing leaks to the
+select/edit keymaps below it.
+
 Started programmatically by the bootstrap tick when the agent enters
 BUSY / MODIFYING; self-stops via a short timer when the agent leaves
 those states (so the first post-completion click isn't eaten).
@@ -146,6 +156,9 @@ class MIXAR_OT_agent_viewport_block(Operator):
 
         # Only intercept when the pointer is over a 3D viewport canvas.
         if et in BLOCK_MOUSE_TYPES or et in BLOCK_KEY_TYPES:
+            # A pop-up open in this window owns the event (see module doc).
+            if self._popup_open(win):
+                return {"PASS_THROUGH"}
             # If the lock started during a drag, it precedes that older modal.
             # Deliver its captured release even outside the board so the drag
             # can end. Never unlock a fresh viewport press or an armed tool.
@@ -177,6 +190,19 @@ class MIXAR_OT_agent_viewport_block(Operator):
         return {"PASS_THROUGH"}
 
     # -- helpers -----------------------------------------------------------
+
+    @staticmethod
+    def _popup_open(win) -> bool:
+        """A menu / popover / dialog block is open in ``win``. Binaries
+        without the native query never yield (the previous behaviour)."""
+        probe = getattr(win, "mixar_popup_block_open", None)
+        if probe is None:
+            return False
+        try:
+            return probe() is True
+        except Exception as e:  # noqa: BLE001 — never break the lock
+            logger.debug("popup query skipped: %s", e)
+            return False
 
     @staticmethod
     def _view3d_region_under_pointer(context, event):

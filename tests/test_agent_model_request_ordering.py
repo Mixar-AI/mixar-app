@@ -38,10 +38,8 @@ def transport(monkeypatch):
 
 
 def pick(model):
-    op = ops.MIXAR_OT_agent_model_set()
-    op.provider, op.model, op.label, op.thinking_level = 'openai', model, model, ''
-    op.report = lambda *args: None
-    return op.execute(SimpleNamespace(window_manager=SimpleNamespace()))
+    """What the island card's `mixar.agent_pick` runs for a Mixie row."""
+    return ops.set_hosted(SimpleNamespace(), 'openai', model, '', label=model)
 
 
 def payload(model):
@@ -51,22 +49,20 @@ def payload(model):
 
 def test_only_one_write_can_run_and_failure_restores_confirmed_pick(transport):
     state.apply_from_payload(payload('original'))
-    assert pick('A') == {'FINISHED'}
-    assert pick('B') == {'CANCELLED'}
-    reset = ops.MIXAR_OT_agent_model_reset()
-    reset.report = lambda *args: None
-    assert reset.execute(SimpleNamespace(window_manager=None)) == {'CANCELLED'}
+    assert pick('A') is True
+    assert pick('B') is False
+    assert ops.reset_hosted(None) is False
     assert len(transport.saves) == 1 and not transport.deletes
     transport.saves[0]['on_done'](False, None, 'rejected A')
     assert state.snapshot()['mixar_agent_model_id'] == 'original'
     assert not state.mutation_pending()
-    assert pick('B') == {'FINISHED'}
+    assert pick('B') is True
     transport.saves[1]['on_done'](False, None, 'rejected B')
     assert state.snapshot()['mixar_agent_model_id'] == 'original'
 
 
 def test_pending_change_blocks_send_before_any_transport_work(transport, monkeypatch):
-    assert pick('A') == {'FINISHED'}
+    assert pick('A') is True
     scene = SimpleNamespace(mixie_chat_mode='AGENT', mixie_chat_input='keep my draft')
     monkeypatch.setattr(composer_send, 'get_session_manager',
                         lambda: pytest.fail('send crossed pending-model barrier'))
@@ -144,9 +140,7 @@ def test_old_account_completion_cannot_unlock_new_account_write(transport):
 
 def test_reset_blocks_send_until_delete_ack(transport):
     state.apply_from_payload(payload('A'))
-    op = ops.MIXAR_OT_agent_model_reset()
-    op.report = lambda *args: None
-    assert op.execute(SimpleNamespace(window_manager=None)) == {'FINISHED'}
+    assert ops.reset_hosted(None) is True
     assert state.mutation_pending()
     transport.deletes[0]['on_done'](False, None, 'rejected')
     assert not state.mutation_pending()

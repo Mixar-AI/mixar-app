@@ -114,7 +114,7 @@ def capture(event: str, properties: dict | None = None, *, context=None) -> None
         # cached — on that path.
         if _suppressed or _shutdown or not is_enabled() or not event:
             return
-        if not _has_auth_token():
+        if not _has_auth_token() or _is_guest():
             return
         common = _common_properties(context)
         payload = {
@@ -180,6 +180,17 @@ def _send(batch: list[dict]) -> None:
         _post_batch(batch)
     except Exception as exc:  # noqa: BLE001 - analytics is deliberately fail-open
         logger.debug("Telemetry delivery failed: %s", exc)
+
+
+def _is_guest() -> bool:
+    """Guests hold a token but are not users: no telemetry (the backend
+    answers 403 anyway, and nothing may attribute a guest's events to the
+    account that later claims it)."""
+    try:
+        from mixar.modules.auth.core.guest import is_guest
+        return is_guest()
+    except Exception:
+        return False
 
 
 def _has_auth_token() -> bool:
@@ -252,9 +263,11 @@ def _successful(result) -> bool:
 def _capture_operator_result(op_id, result, context):
     try:
         from .journey_events import operator_outcome
+        from .essential_events import cinema_operator_properties
         operator_outcome(op_id, result, context)
         capture(EVENT_OPERATOR, {
             "operator": op_id, "success": _successful(result),
+            **cinema_operator_properties(op_id, result, context),
         }, context=context)
     except Exception:
         pass

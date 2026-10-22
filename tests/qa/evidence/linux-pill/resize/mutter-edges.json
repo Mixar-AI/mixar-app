@@ -1,0 +1,226 @@
+[
+  {
+    "edge": "w",
+    "before": {
+      "x": 568,
+      "y": 460,
+      "width": 678,
+      "height": 407
+    },
+    "after": {
+      "x": 536,
+      "y": 460,
+      "width": 710,
+      "height": 407
+    },
+    "cursor": {
+      "name": "sb_h_double_arrow",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "5a31c757cc7351c79ffb203681ac7b9ed1c965c775f212cac384d6ec1fa4ef17"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "e",
+    "before": {
+      "x": 536,
+      "y": 460,
+      "width": 710,
+      "height": 407
+    },
+    "after": {
+      "x": 536,
+      "y": 460,
+      "width": 742,
+      "height": 407
+    },
+    "cursor": {
+      "name": "sb_h_double_arrow",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "5a31c757cc7351c79ffb203681ac7b9ed1c965c775f212cac384d6ec1fa4ef17"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "n",
+    "before": {
+      "x": 536,
+      "y": 460,
+      "width": 742,
+      "height": 407
+    },
+    "after": {
+      "x": 536,
+      "y": 436,
+      "width": 742,
+      "height": 431
+    },
+    "cursor": {
+      "name": "sb_v_double_arrow",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        13
+      ],
+      "pixels_sha256": "8715b7f1da69cf579c77ac7c5421ae496444a6dcb2e855468af159a05836adbe"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "s",
+    "before": {
+      "x": 536,
+      "y": 436,
+      "width": 742,
+      "height": 431
+    },
+    "after": {
+      "x": 536,
+      "y": 436,
+      "width": 742,
+      "height": 455
+    },
+    "cursor": {
+      "name": "sb_v_double_arrow",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        13
+      ],
+      "pixels_sha256": "8715b7f1da69cf579c77ac7c5421ae496444a6dcb2e855468af159a05836adbe"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "nw",
+    "before": {
+      "x": 536,
+      "y": 436,
+      "width": 742,
+      "height": 455
+    },
+    "after": {
+      "x": 504,
+      "y": 412,
+      "width": 774,
+      "height": 479
+    },
+    "cursor": {
+      "name": "top_left_corner",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "ea86961cbc20003e49eb0bf57f84490cdcf84158a936e535b1817a6df52b2cc0"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "ne",
+    "before": {
+      "x": 504,
+      "y": 412,
+      "width": 774,
+      "height": 479
+    },
+    "after": {
+      "x": 504,
+      "y": 388,
+      "width": 806,
+      "height": 503
+    },
+    "cursor": {
+      "name": "top_right_corner",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "eb25b8a2166e1f79340657e57221dc866b416a354407c9182207c9c5cecf010b"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "sw",
+    "before": {
+      "x": 504,
+      "y": 388,
+      "width": 806,
+      "height": 503
+    },
+    "after": {
+      "x": 472,
+      "y": 388,
+      "width": 838,
+      "height": 527
+    },
+    "cursor": {
+      "name": "bottom_left_corner",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "3cfcd70642555b2cf1cea3840a3b7eaaf1baef04ec25408d757dfc51dd361b29"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  },
+  {
+    "edge": "se",
+    "before": {
+      "x": 472,
+      "y": 388,
+      "width": 838,
+      "height": 527
+    },
+    "after": {
+      "x": 472,
+      "y": 388,
+      "width": 870,
+      "height": 551
+    },
+    "cursor": {
+      "name": "bottom_right_corner",
+      "width": 24,
+      "height": 24,
+      "hotspot": [
+        12,
+        12
+      ],
+      "pixels_sha256": "56c1ba280a57b0a1ec40c4c92c5325a060b67d09d0cc49afd93e790d3e513295"
+    },
+    "anchor_preserved": true,
+    "resize_cursor_visible": true,
+    "passed": true
+  }
+]
