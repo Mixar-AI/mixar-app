@@ -382,6 +382,27 @@ def test_begin_publish_refusals_never_export(monkeypatch):
     assert exports == []
 
 
+def test_workspace_failure_releases_publish_claim(monkeypatch):
+    from mixar.modules.web_publish.core import pipeline
+
+    monkeypatch.setattr(pipeline, "_signed_in", lambda: True)
+    monkeypatch.setattr(pipeline, "_telemetry", lambda *a: None)
+    monkeypatch.setattr(pipeline, "ensure_timer", lambda: None)
+    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [object()])
+
+    def disk_full():
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(pipeline.workspace, "make_export_workspace", disk_full)
+    context = SimpleNamespace(scene=SimpleNamespace(name="Loft", mixar_web_publish=_props()))
+    result = pipeline.begin_publish(context)
+    assert result["ok"] is False
+    state = get_publish_state()
+    assert not state.busy
+    assert state.snapshot()[0].status == "ERROR"
+    assert state.begin("retry", "Loft", "panel")
+
+
 def test_mirror_files_the_result_on_the_published_scene_not_the_shown_one(monkeypatch):
     from mixar.modules.web_publish.core import pipeline
 
