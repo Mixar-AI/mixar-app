@@ -11,11 +11,12 @@ from mixar.modules.byok.constants import (
     BYOK_TURN_KEY_FIELD,
 )
 from mixar.modules.common.agent_rpc.client import command, call
-from mixar.modules.common.i18n import n_
+from mixar.config.logging_config import get_logger
 from .agent_events import AgentEvent
 from .chat_payloads import build_chat_payload, collect_user_preferences
 from . import attachment_upload, command_retry, turn_events
 
+logger = get_logger(__name__)
 _handlers = {}
 # Per session, sends that wait behind a message whose images are still
 # uploading: the server receives a session's messages in the order sent.
@@ -95,7 +96,6 @@ class TurnTransport:
         # One ID follows this exact user bubble through out-of-order acknowledgements.
         if user_message is not None:
             user_message.bubble_id = command_id
-            user_message.delivery_hint = 'queued' if joining else ''
         elif retry_of:
             for item in scene.mixie_chat_messages:
                 if item.sender == 'USER' and item.bubble_id == retry_of:
@@ -127,16 +127,20 @@ class TurnTransport:
                 self._send(method, payload, None, interjecting, retry_of=command_id,
                            attachments_backup=uploads['backup'])
                 return
-            for item in target.mixie_chat_messages:
-                if item.sender == 'USER' and item.bubble_id == command_id:
-                    # English state tokens: the chat renderer translates them when drawn.
-                    item.delivery_hint = (n_('delivery uncertain') if result.get('uncertain') else
-                                          '' if result.get('ok', True) else n_('could not be delivered'))
-                    break
-            if result.get('ok') is False and not result.get('cancelled') and not result.get('uncertain') and not joining:
+            # The user's bubble never carries a delivery label. A refusal (or
+            # a message the client gave up resending) is ONE agent message
+            # from handle_command_error: the BYOK card, the sign-in or credits
+            # notice, or a plain-language error. A cancel was delivered and
+            # shows its own state; "uncertain" is still being resent.
+            refused = (result.get('ok') is False and not result.get('cancelled')
+                       and not result.get('uncertain'))
+            if refused:
                 processor = get_event_processor()
-                processor._clear_loader_bubbles(target)
-                get_session_manager().set_state(target, previous_state)
+                if not joining:
+                    # An interjection's turn keeps running: its loader and
+                    # state are that turn's, not this message's.
+                    processor._clear_loader_bubbles(target)
+                    get_session_manager().set_state(target, previous_state)
                 from mixar.modules.auth.core.guest import login_required_fields
                 from .byok_notice import byok_error_code
                 if (byok_error_code(result, result.get('data') or {})
@@ -153,7 +157,7 @@ class TurnTransport:
                         remembered = dict(payload)
                         attachment_upload.restore(remembered, uploads['backup'])
                     byok_resend.remember(payload['session_id'], command_id, method, remembered, joining)
-                processor.handle_command_error(result, target)
+                processor.handle_command_error(result, target, interjection=joining)
             self._running = False
 
         turn_events.expect(scene, command_id, settled)
@@ -166,10 +170,8 @@ class TurnTransport:
             try:
                 command(method, payload, ack, command_id=command_id)
             except Exception as exc:
-                turn_events.handle_turn_notification('agent.command.result', {
-                    'session_id': payload['session_id'], 'command_id': command_id,
-                    'ok': False, 'message': str(exc),
-                })
+                turn_events.handle_turn_notification('agent.command.result',
+                                                     _unsent(payload['session_id'], command_id, exc))
 
         def ack(result):
             if command_retry.is_busy(result) and not busy_retries:
@@ -183,7 +185,7 @@ class TurnTransport:
                     and (result.get('data') or {}).get('uncertain'))
             if not lost and turn_events.acknowledged(command_id) and isinstance(result, dict) \
                     and not result.get('code') and result.get('state') != 'complete':
-                # A resend after a dead socket was admitted: clear "delivery uncertain".
+                # A resend after a dead socket was admitted: it is delivered.
                 turn_events.handle_turn_notification('agent.command.delivered', {
                     'session_id': payload['session_id'], 'command_id': command_id, 'ok': True,
                 })
@@ -237,10 +239,8 @@ class TurnTransport:
                     })
                     return
                 turn_events.acknowledged(command_id)  # refused before sending: shown, not held
-                turn_events.handle_turn_notification('agent.command.result', {
-                    'session_id': payload['session_id'], 'command_id': command_id,
-                    'ok': False, 'message': str(exc),
-                })
+                turn_events.handle_turn_notification('agent.command.result',
+                                                     _unsent(payload['session_id'], command_id, exc))
                 outcome['ok'] = False
 
         # Synchronous while BYOK is inactive (the platform path keeps its
@@ -354,6 +354,14 @@ def _socket_connected():
     from .jsonrpc_client import get_jsonrpc_client
     client = get_jsonrpc_client()
     return bool(client is not None and client.is_connected)
+
+
+def _unsent(session_id, command_id, exc):
+    """The result of a command the client could not send. The exception's
+    text is logged, never shown: ``send_failure`` words the agent message."""
+    logger.warning(f"[CONN] command {command_id[:8]} could not be sent: {exc}")
+    return {'session_id': session_id, 'command_id': command_id, 'ok': False, 'unsent': True,
+            'status_code': getattr(exc, 'status_code', None)}
 
 
 def _stale_transport_key(result):

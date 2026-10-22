@@ -14,11 +14,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from test_byok_dialog_ui import (  # noqa: E402
-    FakeLayout, INTERFACE_DIR, RNA_UI_API, ROOT, SCRIPTS, WM_OPERATORS, _draw,
+    FakeLayout, INTERFACE_DIR, RNA_UI_API, ROOT, SCRIPTS, WM_OPERATORS, _draw, _wm,
 )
 
-from mixar.modules.byok.core import model_suggestions  # noqa: E402
+from mixar.modules.byok.core import key_prompt, model_suggestions  # noqa: E402
 from mixar.modules.byok.ui.operators import byok_dialog_ui  # noqa: E402
+from mixar.modules.byok.ui.operators import byok_provider_settings_ui as form  # noqa: E402
 from mixar.modules.common.sheet import kit as byok_sheet  # noqa: E402
 
 RNA_WM_MIXAR_POPUP = ROOT / "src" / "source" / "blender" / "makesrna" / "intern" / "rna_wm_mixar_popup.cc"
@@ -176,17 +177,117 @@ def test_the_dialog_opens_as_a_padding_free_sheet():
     assert "Clash" not in SHEET_CC.read_text(encoding="utf-8")
 
 
-def test_a_key_needed_locks_provider_and_model(monkeypatch):
-    """The account's key is not on this computer: provider and model stay as
-    saved (sidebar and chips disabled), only the key is asked for."""
+_KEY_MISSING = dict(byok_is_active=True, byok_device_key_missing=True,
+                    byok_current_provider='anthropic', byok_current_model='claude-fable-5-1')
+
+
+def _draw_seeing_sidebar(monkeypatch, **wm_extra):
+    """Draw the IDLE sheet; also return the sidebar's ``enabled``."""
+    seen, real = [], form.draw_sidebar
+    monkeypatch.setattr(form, "draw_sidebar",
+                        lambda col, wm, geo, enabled: seen.append(enabled) or real(col, wm, geo, enabled))
+    log = _draw('IDLE', card_api=True, **wm_extra)
+    (enabled,) = seen
+    return log, enabled
+
+
+def _labels(log, text):
+    return [e for e in log if e.startswith("sheet_label:") and text in e]
+
+
+def test_a_key_needed_on_the_saved_provider_asks_only_for_the_key(monkeypatch):
+    """The account's key is not on this computer and the form shows its
+    provider: the model chips stay as saved and only the key is asked for —
+    but the providers stay live and the key can still be removed."""
     _with_catalog(monkeypatch)
-    log = _draw('IDLE', card_api=True, byok_is_active=True, byok_device_key_missing=True,
-                byok_current_provider='anthropic', byok_current_model='claude-fable-5-1',
-                byok_form_provider='anthropic', byok_form_model='claude-fable-5-1')
-    assert any("Key needed on this computer" in e and e.startswith("sheet_label:DANGER_TEXT")
-               for e in log), log
-    assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" not in log  # nothing to remove here
+    log, sidebar = _draw_seeing_sidebar(monkeypatch, **_KEY_MISSING, byok_form_provider='anthropic',
+                                        byok_form_model='claude-fable-5-1')
+    (needed,) = _labels(log, "Key needed on this computer")
+    # The caption and the lit row name the provider; the pill needs the room.
+    assert needed == "sheet_label:DANGER_TEXT:Key needed on this computer: Claude Fable 5.1. Enter it below."
+    assert not _labels(log, "Saving replaces")
+    assert sidebar is True
+    assert form.key_only(_wm(**_KEY_MISSING, byok_form_provider='anthropic'))
+    assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
     assert "prop:byok_form_api_key" in log
+    assert (form.remove_text('anthropic'), form.remove_text('codex')) == ("Remove key", "Disconnect")
+
+
+def test_another_provider_picked_while_the_key_is_missing_is_a_normal_setup(monkeypatch):
+    _with_catalog(monkeypatch)
+    wm_extra = dict(_KEY_MISSING, byok_form_provider='openai', byok_form_model='claude-fable-5-1')
+    log, sidebar = _draw_seeing_sidebar(monkeypatch, **wm_extra)
+    assert not form.key_only(_wm(**wm_extra))
+    assert sidebar is True
+    assert not _labels(log, "Key needed on this computer")
+    (note,) = _labels(log, "Saving replaces")
+    assert note == "sheet_label:NOTE:Saving replaces Anthropic · Claude Fable 5.1."
+    # The saved key can still be removed instead, and the new key typed.
+    assert f"op:{byok_dialog_ui.OP_REQUEST_REMOVE}" in log
+    assert "prop:byok_form_api_key" in log
+
+
+def test_a_dialog_from_the_chat_card_locks_only_the_card_s_provider(monkeypatch):
+    """`key_prompt` is open (the card's Sign in to Codex): the Codex form
+    asks only for the sign-in; a provider picked afterwards sticks unlocked."""
+    _with_catalog(monkeypatch)
+    key_prompt.request('codex', '', key_prompt.FOCUS_CODEX_PATH, on_saved=None)
+    key_prompt.take()
+    try:
+        assert key_prompt.provider() == 'codex'
+        mirror = dict(byok_is_active=True, byok_current_provider='codex', byok_current_model='gpt-5')
+        assert form.key_only(_wm(**mirror, byok_form_provider='codex'))
+        assert not form.key_only(_wm(**mirror, byok_form_provider='openai'))
+        log, sidebar = _draw_seeing_sidebar(monkeypatch, **mirror, byok_form_provider='openai',
+                                            byok_form_model='claude-fable-5-1')
+        assert sidebar is True and _labels(log, "Saving replaces")
+        assert "prop:byok_form_api_key" in log
+    finally:
+        key_prompt.reset()
+    assert key_prompt.provider() == ''
+
+
+def _draw_seeing_pills(monkeypatch, **wm_extra):
+    """Draw the IDLE sheet; also return the strip pills' (operator, text)."""
+    pills, real = [], form._pill
+    monkeypatch.setattr(form, "_pill",
+                        lambda line, op, text, *a: pills.append((op, text)) or real(line, op, text, *a))
+    return _draw('IDLE', card_api=True, **wm_extra), pills
+
+
+def test_a_card_opened_dialog_names_the_cards_provider_not_the_mirrors(monkeypatch):
+    """The card can open the dialog before the mirror has loaded, or while it
+    shows another provider: the strip and its pill follow the card's request."""
+    _with_catalog(monkeypatch)
+    key_prompt.request('codex', 'gpt-6-astra', key_prompt.FOCUS_CODEX_PATH, on_saved=None)
+    key_prompt.take()
+    try:
+        for mirror in (dict(byok_current_provider='', byok_current_model=''),
+                       dict(byok_current_provider='anthropic', byok_current_model='claude-fable-5-1')):
+            wm_extra = dict(mirror, byok_is_active=True, byok_form_provider='codex')
+            log, pills = _draw_seeing_pills(monkeypatch, **wm_extra)
+            assert _labels(log, "Key needed on this computer: gpt-6-astra. Enter it below.")
+            assert pills == [(byok_dialog_ui.OP_REQUEST_REMOVE, "Disconnect")]
+            log, pills = _draw_seeing_pills(monkeypatch, **dict(wm_extra, byok_form_provider='openai'))
+            (note,) = _labels(log, "Saving replaces")
+            assert note == "sheet_label:NOTE:Saving replaces Codex (ChatGPT sub) · gpt-6-astra."
+            assert pills == [(byok_dialog_ui.OP_REQUEST_REMOVE, "Disconnect")]
+    finally:
+        key_prompt.reset()
+
+
+def test_a_card_that_names_no_model_is_named_by_its_provider(monkeypatch):
+    _with_catalog(monkeypatch)
+    key_prompt.request('codex', '', key_prompt.FOCUS_CODEX_PATH, on_saved=None)
+    key_prompt.take()
+    try:
+        wm_extra = dict(byok_is_active=True, byok_current_provider='', byok_current_model='')
+        log, _ = _draw_seeing_pills(monkeypatch, **wm_extra, byok_form_provider='codex')
+        assert _labels(log, "Key needed on this computer: Codex (ChatGPT sub). Enter it below.")
+        log, _ = _draw_seeing_pills(monkeypatch, **wm_extra, byok_form_provider='openai')
+        assert _labels(log, "Saving replaces Codex (ChatGPT sub).")
+    finally:
+        key_prompt.reset()
 
 
 def test_a_paused_key_offers_use_and_forget(monkeypatch):

@@ -103,6 +103,41 @@ def test_staging_paths_are_versioned_and_purge_keeps_named_files(tmp_path):
     assert not (tmp_path / "mixar-update-3.3.9.cmd").exists()
 
 
+def test_purge_keeps_the_logs_with_no_result_to_report(tmp_path):
+    """The update check purges seconds after startup consumed the result."""
+    resolved = staging.StagingDir(str(tmp_path), True)
+    logs = ["msi-install.log", "msi-install.prev.log", "update.log"]
+    for name in [*logs, "Mixar-3.3.9.msi", "mixar-update-3.3.9.cmd"]:
+        (tmp_path / name).write_text(name)
+
+    staging.purge_stale(resolved)
+
+    assert sorted(os.listdir(tmp_path)) == logs
+
+
+def test_purge_trims_a_large_helper_log_to_its_tail(tmp_path):
+    from mixar.modules.common.updates.constants import (
+        HELPER_LOG_KEEP_BYTES,
+        HELPER_LOG_MAX_BYTES,
+    )
+
+    resolved = staging.StagingDir(str(tmp_path), True)
+    log = tmp_path / "update.log"
+    line = b"[Mon 10/19/2026 17:00:00.00] Mixar update helper started\r\n"
+    log.write_bytes(line * (HELPER_LOG_MAX_BYTES // len(line) + 10) + b"last attempt\r\n")
+
+    staging.purge_stale(resolved)
+
+    data = log.read_bytes()
+    assert len(data) <= HELPER_LOG_KEEP_BYTES
+    assert data.startswith(line) and data.endswith(b"last attempt\r\n")
+
+    small = b"one attempt\r\n"
+    log.write_bytes(small)
+    staging.purge_stale(resolved)
+    assert log.read_bytes() == small
+
+
 # ---------------------------------------------------------------------------
 # Download + verification
 # ---------------------------------------------------------------------------

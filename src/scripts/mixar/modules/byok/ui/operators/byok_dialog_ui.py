@@ -28,6 +28,7 @@ operators and async flow live in byok_ops.py. This module only draws.
 
 from mixar.modules.common.i18n import iface_, n_, rpt_
 
+from ...constants import LOCAL_PROVIDER_ID
 from ...core import catalog_labels, model_suggestions
 from . import byok_provider_settings_ui as form
 from mixar.modules.common.sheet import kit as S
@@ -73,8 +74,9 @@ def draw_dialog(layout, wm):
     plan = _plan(sheet, wm, state)
     geo = S.Geometry(form.sidebar_rows(), plan.need, plan.bottom)
     body = sheet.split(factor=S.SPLIT_FACTOR, align=True)
-    form.draw_sidebar(body.column(align=True), wm, geo,
-                      enabled=state in ('IDLE', 'ERROR') and not form.device_key_missing(wm))
+    # A missing key never locks the providers: picking another one is how the
+    # user replaces the saved key from here.
+    form.draw_sidebar(body.column(align=True), wm, geo, enabled=state in ('IDLE', 'ERROR'))
     plan.build(S.fixed(body.column(align=True), geo.right), geo)
 
 
@@ -134,6 +136,20 @@ def _config_lines(wm):
     if not wm.byok_current_supports_vision:
         lines.append(iface_("Text-only model - chat works; 3D tasks run without visual feedback."))
     return lines
+
+
+def _context_warning(wm):
+    """A custom local server whose window the agent cannot work in: its replies
+    are cut off before they answer (prod MIXAR-BACKEND-1XF, Ollama at 8,192)."""
+    from mixar.modules.local_models.core.context_probe import AGENT_MIN_CONTEXT
+    window = getattr(wm, 'byok_local_context_window', 0)
+    if wm.byok_current_provider != LOCAL_PROVIDER_ID or not 0 < window < AGENT_MIN_CONTEXT:
+        return []
+    text = iface_("Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its "
+                  "replies will be cut off. Raise it in your local server (Ollama: "
+                  "OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model.").format(
+        tokens=f"{window:,}", needed=f"{AGENT_MIN_CONTEXT // 1024}K")
+    return form.wrap(text, form.ERROR_WRAP_CHARS)
 
 
 def _hosted_ok(wm):
@@ -223,12 +239,13 @@ class _RemovingPlan:
 class _RecapPlan:
     """SAVED / REMOVED: the explicit "it landed" moment with one Done."""
 
-    need = 6 * BODY_ROW + S.GAP
     bottom = S.action_block_height()
 
     def __init__(self, wm, saved):
         self.wm = wm
         self.saved = saved
+        self.warning = _context_warning(wm) if saved else []
+        self.need = (6 + len(self.warning)) * BODY_ROW + S.GAP
 
     def build(self, col, geo):
         S.sep(col, S.CAPTION_TOP)
@@ -239,6 +256,7 @@ class _RecapPlan:
             _lines(area, [iface_("You are set. Agent chats now run on your own provider.")])
             S.sep(area, S.GAP)
             _lines(area, _config_lines(self.wm), S.NOTE)
+            _lines(area, self.warning, S.DANGER_TEXT)
         elif _hosted_ok(self.wm):
             _lines(area, [iface_("The agent uses Mixar's models again.")])
             _lines(area, [iface_("Agent chats use Mixar credits again.")], S.NOTE)

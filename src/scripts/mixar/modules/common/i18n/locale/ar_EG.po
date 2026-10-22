@@ -1907,7 +1907,10 @@ msgstr ".anthropic/claude-opus-4.8 ﻞﺜﻣ ،openrouter.ai/models ﻦﻣ ﻑ�
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "ﺝﺫﺎﻤﻨﻟﺍ ﻞﻴﻤﺤﺗ ﻢﺘﻳ ﻰﺘﺣ ﺭﺎﻈﺘ�
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ﺓﺩﺪﻌﺘﻣ ﺮﻇﺎﻨﻣ ﻭﺃ ،ﺓﺭﻮﺻ ﻭﺃ ،ﻪﺟّﻮﻣ :ﻲﻠﻳ ﺎﻤﻣ ﻞﻗﻷ﻿ﺍ ﻰﻠﻋ ﺪﺣﺍﻭ ﺮﻴﻓﻮﺗ ﻰﺟﺮﻳُ"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "ﺺﻘﻟﺍ ﺓﺍﺩﺃ"
@@ -20085,9 +20091,6 @@ msgstr "{turn} ﺭﻭﺪﻟﺍ ﻖﻴﺒﻄﺗ ﺪﻴﻋﺃُ"
 msgid "Reapplied turns {first}–{last}"
 msgstr "{first}–{last} ﺭﺍﻭﺩﻷ﻿ﺍ ﻖﻴﺒﻄﺗ ﺪﻴﻋﺃُ"
 
-msgid "queued"
-msgstr "ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﻲﻓ"
-
 msgid "Restoring a checkpoint…"
 msgstr "…ﺓﺩﺎﻌﺘﺳﺍ ﺔﻄﻘﻧ ﺓﺩﺎﻌﺘﺳﺍ ﺭٍﺎﺟ"
 
@@ -20226,6 +20229,9 @@ msgstr ".ﻞﺻﻷ﻿ﺍ ﻒﻠﻣ ﻲﻓ ﺍﺩًﻮﺟﻮﻣ '{name}' ﺪﻌ�
 msgid "Could not add the asset to the scene."
 msgstr ".ﺪﻬﺸﻤﻟﺍ ﻰﻟﺇ ﻞﺻﻷ﻿ﺍ ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr ".ءﺎﻨﺒﻟﺍ ﺔﻌﺑﺎﺘﻤﻟ ﺔﺛﺩﺎﺤﻤﻟﺍ ﻲﻓ
 msgid "The request could not be completed."
 msgstr ".ﺐﻠﻄﻟﺍ ﻝﺎﻤﻛﺇ ﺭﺬﻌﺗ"
 
-msgid "Message could not be delivered"
-msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﻞﻴﺻﻮﺗ ﺭﺬﻌﺗ"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr ".ﻯﺮﺧﺃ ﺓﺮﻣ ﺎﻬﻠﺳﺭﺃ ﻢﺛ ،ﻝﺎﺼﺗﻻ﻿ﺍ ﻦﻣ ﻖﻘﺤﺗ .Mixie ﻰﻟﺇ ﻚﺘﻟﺎﺳﺭ ﻞﺼﺗ ﻢﻟ"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr ".ﺍﺩًﺪﺠﻣ ﺔﻟﻭﺎﺤﻤﻟﺍﻭ ﻝﺎﺼﺗﻻ﻿ﺍ ﻦﻣ ﻖﻘﺤﺘﻟﺍ ﻰﺟﺮﻳُ .ﻡﺩﺎﺨﻟﺍ ﻰﻟﺇ ﻝﻮﺻﻮﻟﺍ ﺭﺬﻌﺗ"
@@ -20495,12 +20510,6 @@ msgstr "ﺔﻤﻬﻤﻟﺍ ﻒﻧﺄﺘﺳﺍ"
 
 msgid "Start fresh"
 msgstr "ﺪﻳﺪﺟ ﻦﻣ ﺃﺪﺑﺍ"
-
-msgid "delivery uncertain"
-msgstr "ﺪﻛﺆﻣ ﺮﻴﻏ ﻞﻴﺻﻮﺘﻟﺍ"
-
-msgid "could not be delivered"
-msgstr "ﻞﻴﺻﻮﺘﻟﺍ ﺭﺬﻌﺗ"
 
 msgid "Voice input unavailable."
 msgstr ".ﺡﺎﺘﻣ ﺮﻴﻏ ﻲﺗﻮﺼﻟﺍ ﻝﺎﺧﺩﻹ﻿ﺍ"

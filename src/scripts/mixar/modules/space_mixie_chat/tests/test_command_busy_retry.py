@@ -93,4 +93,5 @@ def test_resend_that_cannot_send_surfaces_the_error(sent, monkeypatch):
     monkeypatch.setattr(turn_transport, 'command', offline)
     sent.timers[0][0]()
     turn_events._drain()
-    assert sent.results and sent.results[0]['message'] == 'Agent is reconnecting'
+    # Surfaced as a refusal; the exception's own text is logged, never shown.
+    assert sent.results and sent.results[0]['unsent'] is True and 'message' not in sent.results[0]

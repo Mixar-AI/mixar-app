@@ -211,13 +211,14 @@ class _Messages(list):
 def test_notice_buttons_follow_the_cta(chat_core):
     login_notice = chat_core.login_notice
     assert login_notice.notice_buttons("login") == [("Sign in", login_notice.SIGN_IN_CHAT_ACTION)]
+    # Where a key is the alternative, Sign in says what it is for (QA 2026-10-20).
     assert login_notice.notice_buttons("login_or_byok") == [
-        ("Sign in", login_notice.SIGN_IN_CHAT_ACTION),
+        ("Sign in & use Mixar credits", login_notice.SIGN_IN_CHAT_ACTION),
         ("Add your own key", login_notice.BYOK_DIALOG_CHAT_ACTION),
     ]
     assert login_notice.notice_buttons("fix_byok") == [
         ("Fix key", login_notice.BYOK_DIALOG_CHAT_ACTION),
-        ("Sign in", login_notice.SIGN_IN_CHAT_ACTION),
+        ("Sign in & use Mixar credits", login_notice.SIGN_IN_CHAT_ACTION),
     ]
     assert login_notice.notice_buttons("something_new") == login_notice.notice_buttons("login")
 

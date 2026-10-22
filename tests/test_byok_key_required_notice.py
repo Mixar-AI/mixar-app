@@ -63,6 +63,9 @@ def _loaded(monkeypatch, provider="anthropic"):
 @pytest.fixture(autouse=True)
 def _quiet(monkeypatch):
     monkeypatch.setattr(byok_card, "redraw_chat_areas", lambda: None)
+    # Clicks here follow the card at once; the double-click guard is pinned
+    # in test_byok_key_card.py.
+    monkeypatch.setattr(byok_card, "CLICK_GUARD_S", 0.0)
     byok_card._cards.clear()
     byok_resend._records.clear()
     byok_resend._auto_ids.clear()
@@ -303,7 +306,7 @@ def test_the_transport_remembers_a_refused_command_for_the_card():
     assert "byok_error_code(result, result.get('data') or {})" in settled
     # The remembered payload keeps the images themselves (not upload refs).
     assert "byok_resend.remember(payload['session_id'], command_id, method, remembered, joining)" in settled
-    assert settled.index("byok_resend.remember(") < settled.index("processor.handle_command_error(result, target)")
+    assert settled.index("byok_resend.remember(") < settled.index("processor.handle_command_error(result, target, interjection=joining)")
 
 
 def test_nothing_on_this_path_logs_or_keeps_key_material():

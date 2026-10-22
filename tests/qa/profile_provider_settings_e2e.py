@@ -22,7 +22,7 @@ from lib import ScenarioFail, run_scenario
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/profile-provider-qa'))
 OUT.mkdir(parents=True, exist_ok=True)
-PROFILE = {'text': 'qa.provider@example.invalid', 'area_type': 'TOPBAR'}
+PROFILE = {'text': 'QA Provider', 'area_type': 'TOPBAR'}
 SETTINGS = {'op': 'MIXAR_BYOK_OT_open_dialog', 'popup': True}
 SAVE = {'op': 'MIXAR_BYOK_OT_save', 'popup': True}
 WM = 'bpy.context.window_manager'
@@ -41,7 +41,7 @@ saved = (B.get_agent_service, F.get_agent_service,
          list(M._provider_cache), copy.deepcopy(M._model_cache),
          copy.deepcopy(M._platform_records), M.is_loaded(),
          wm.mixie_chat_is_logged_in, bpy.context.scene.mixie_chat_user_id,
-         bpy.context.preferences.view.show_tooltips)
+         bpy.context.preferences.view.show_tooltips, wm.mixie_chat_is_guest, wm.mixar_account_name)
 fixture = SimpleNamespace(active=False, model='', saves=0, deletes=0, fetches=0)
 def response(data):
     return SimpleNamespace(success=True, status_code=200, data={'data': data})
@@ -73,6 +73,8 @@ C.clear()
 P.clear()
 wm.byok_form_provider = 'openai'
 wm.mixie_chat_is_logged_in = True
+wm.mixie_chat_is_guest = False
+wm.mixar_account_name = 'QA Provider'
 bpy.context.scene.mixie_chat_user_id = 'qa.provider@example.invalid'
 bpy.context.preferences.view.show_tooltips = False
 P._redraw()
@@ -103,6 +105,8 @@ M._populated_once = saved[8]
 bpy.context.window_manager.mixie_chat_is_logged_in = saved[9]
 bpy.context.scene.mixie_chat_user_id = saved[10]
 bpy.context.preferences.view.show_tooltips = saved[11]
+bpy.context.window_manager.mixie_chat_is_guest = saved[12]
+bpy.context.window_manager.mixar_account_name = saved[13]
 O._wipe_form_secrets(bpy.context.window_manager)
 del O._qa_profile_fixture
 from mixar.modules.byok.core import transport_seal as T

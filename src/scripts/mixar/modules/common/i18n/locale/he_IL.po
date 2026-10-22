@@ -1907,7 +1907,10 @@ msgstr ".anthropic/claude-opus-4.8 לשמל ,openrouter.ai/models-מ slug ההז
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "םילדומה תניעטל ןיתמהל אנ"
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "םיבורמ םיטבמ וא הנומת ,היחנה :הלאמ דחא תוחפל קפסל שי"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "ךותיח ילכ"
@@ -20085,9 +20091,6 @@ msgstr "שדחמ לחוה {turn} בבס"
 msgid "Reapplied turns {first}–{last}"
 msgstr "שדחמ ולחוה {first}–{last} םיבבסה"
 
-msgid "queued"
-msgstr "רותב"
-
 msgid "Restoring a checkpoint…"
 msgstr "…רוזחש תדוקנ רזחשמ"
 
@@ -20226,6 +20229,9 @@ msgstr "'{name}' סכנה ץבוקב וניא רבכ."
 msgid "Could not add the asset to the scene."
 msgstr ".הנצסל סכנה תא ףיסוהל ןתינ אל"
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr ".היינבה תא שדחל ידכ טא'צב \"continue\" לע Enter ץ�
 msgid "The request could not be completed."
 msgstr ".השקבה תא םילשהל היה ןתינ אל"
 
-msgid "Message could not be delivered"
-msgstr "העדוהה תא רוסמל היה ןתינ אל"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr ".בוש התוא חלשו רוביחה תא קודב .Mixie לא העיגה אל ךלש העדוהה"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr ".בוש תוסנלו רוביחה תא קודבל אנ .תרשל עיגהל היה ןתינ אל"
@@ -20495,12 +20510,6 @@ msgstr "המישמ שודיח"
 
 msgid "Start fresh"
 msgstr "שדחמ הלחתה"
-
-msgid "delivery uncertain"
-msgstr "תיאדו אל הריסמה"
-
-msgid "could not be delivered"
-msgstr "רוסמל היה ןתינ אל"
 
 msgid "Voice input unavailable."
 msgstr ".ןימז וניא לוק טלק"

@@ -58,8 +58,9 @@ def current():
 
 class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
     def __init__(self, rate: float = 1.0, silent: bool = False,
-                 tour=MIXAR_INTRO):
+                 tour=MIXAR_INTRO, start_source: str = "unknown"):
         self.tour = tour
+        self.start_source = start_source  # telemetry: what opened the tour
         self.tour_run_id = str(uuid.uuid4())
         self.rate = rate
         self.silent = silent

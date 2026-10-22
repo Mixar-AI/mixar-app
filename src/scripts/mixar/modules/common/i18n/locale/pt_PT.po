@@ -1907,7 +1907,10 @@ msgstr "Qualquer slug de openrouter.ai/models, por exemplo anthropic/claude-opus
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "Aguarde que os modelos sejam carregados"
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Indique pelo menos um de: prompt, imagem ou múltiplas vistas"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "Ferramenta Recortar"
@@ -20085,9 +20091,6 @@ msgstr "Turno {turn} reaplicado"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Turnos {first}–{last} reaplicados"
 
-msgid "queued"
-msgstr "em fila"
-
 msgid "Restoring a checkpoint…"
 msgstr "A restaurar um ponto de restauro…"
 
@@ -20226,6 +20229,9 @@ msgstr "'{name}' já não está no ficheiro do recurso."
 msgid "Could not add the asset to the scene."
 msgstr "Não foi possível adicionar o recurso à cena."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr "Não foi possível retomar automaticamente — prima Enter em \"continue
 msgid "The request could not be completed."
 msgstr "Não foi possível concluir o pedido."
 
-msgid "Message could not be delivered"
-msgstr "Não foi possível entregar a mensagem"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "A sua mensagem não chegou à Mixie. Verifique a sua ligação e envie-a novamente."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Não foi possível contactar o servidor. Verifique a sua ligação e tente novamente."
@@ -20495,12 +20510,6 @@ msgstr "Retomar tarefa"
 
 msgid "Start fresh"
 msgstr "Começar de novo"
-
-msgid "delivery uncertain"
-msgstr "entrega incerta"
-
-msgid "could not be delivered"
-msgstr "não foi possível entregar"
 
 msgid "Voice input unavailable."
 msgstr "Entrada de voz indisponível."

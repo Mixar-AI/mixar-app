@@ -11,8 +11,6 @@ from .attachment_validation import pending_video_attachments
 from .chat_payloads import image_block
 from .session import get_session_manager
 
-HINT_QUEUED = n_('queued')  # display: C++ translates the token
-
 
 @dataclass
 class OutgoingMessage:

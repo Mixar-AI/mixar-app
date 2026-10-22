@@ -1907,7 +1907,10 @@ msgstr "Libovolný identifikátor z openrouter.ai/models, např. anthropic/claud
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "Počkejte prosím, až se modely načtou"
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Zadejte alespoň jedno z: prompt, obrázek nebo více pohledů"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "Nástroj Oříznutí"
@@ -20085,9 +20091,6 @@ msgstr "Znovu použito kolo {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Znovu použita kola {first}–{last}"
 
-msgid "queued"
-msgstr "ve frontě"
-
 msgid "Restoring a checkpoint…"
 msgstr "Obnovuje se bod obnovení…"
 
@@ -20226,6 +20229,9 @@ msgstr "'{name}' již není v souboru assetů."
 msgid "Could not add the asset to the scene."
 msgstr "Asset se nepodařilo přidat do scény."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr "Automatické pokračování se nezdařilo — pro pokračování v sesta
 msgid "The request could not be completed."
 msgstr "Požadavek nelze dokončit."
 
-msgid "Message could not be delivered"
-msgstr "Zprávu nelze doručit"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaše zpráva se k Mixie nedostala. Zkontrolujte připojení a odešlete ji znovu."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Nelze se spojit se serverem. Zkontrolujte připojení a zkuste to znovu."
@@ -20495,12 +20510,6 @@ msgstr "Obnovit úlohu"
 
 msgid "Start fresh"
 msgstr "Začít znovu"
-
-msgid "delivery uncertain"
-msgstr "doručení nejisté"
-
-msgid "could not be delivered"
-msgstr "nelze doručit"
 
 msgid "Voice input unavailable."
 msgstr "Hlasový vstup není k dispozici."

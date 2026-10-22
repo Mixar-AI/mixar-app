@@ -14,15 +14,19 @@ stays fully usable underneath — the tour is a layer, not a trap.
 
 Props ``rate`` and ``silent`` exist for the QA harness (run the whole
 tour in seconds without audio); they default to a normal narrated run.
+``start_source`` says what opened the tour (the auto-start schedule, Help →
+Start tour; ``unknown`` when unset) and rides the tour telemetry, which is
+why the operator itself stays in analytics' ``IGNORED_OPERATORS``.
 """
 
 import bpy
-from bpy.props import BoolProperty, FloatProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.onboarding.core.tour import config, is_available
 from mixar.modules.onboarding.core.tour import session as tour_session
+from mixar.modules.onboarding.core.tour import session_lifecycle, telemetry
 
 logger = get_logger(__name__)
 
@@ -38,6 +42,12 @@ class MIXAR_OT_onboarding_tour(Operator):
     rate: FloatProperty(name="Playback rate", default=1.0, min=0.25, max=8.0,
                         options={"SKIP_SAVE"})
     silent: BoolProperty(name="Silent", default=False, options={"SKIP_SAVE"})
+    # No ``name``: a hidden telemetry tag, so no UI string to translate.
+    start_source: EnumProperty(
+        items=[(code, code, "") for code in telemetry.START_SOURCES],
+        default=telemetry.START_SOURCE_UNKNOWN,
+        options={"SKIP_SAVE", "HIDDEN"},
+    )
 
     _timer = None
     _session = None
@@ -56,7 +66,8 @@ class MIXAR_OT_onboarding_tour(Operator):
             self.report({"WARNING"}, "No 3D viewport to host the tour")
             return {"CANCELLED"}
 
-        session = tour_session.TourSession(rate=self.rate, silent=self.silent)
+        session = tour_session.TourSession(rate=self.rate, silent=self.silent,
+                                           start_source=self.start_source)
         if not session.start(window, area, region):
             self.report({"WARNING"}, "The tour could not start (see log)")
             return {"CANCELLED"}
@@ -107,8 +118,10 @@ class MIXAR_OT_onboarding_tour(Operator):
         return {result}
 
     def cancel(self, context):
+        # Blender cancels a modal when its window's handlers are removed:
+        # on quit (after ``exit_pre``) or when the host window closes.
         if self._session is not None and self._session.running:
-            self._session.stop("cancelled")
+            self._session.stop(session_lifecycle.cancel_reason())
         self._finish(context)
 
     def _finish(self, context):

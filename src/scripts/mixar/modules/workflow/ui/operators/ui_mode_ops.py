@@ -114,7 +114,10 @@ def _restart_onboarding_after_mode():
         return
     try:
         from mixar.modules.onboarding.core import maybe_show_tour
-        maybe_show_tour(email)
+        from mixar.modules.onboarding.core.tour.telemetry import (
+            START_SOURCE_AUTO_MODE,
+        )
+        maybe_show_tour(email, START_SOURCE_AUTO_MODE)
     except Exception as exc:  # noqa: BLE001 — onboarding is best-effort
         _logger.debug("mode onboarding trigger failed: %s", exc)
 

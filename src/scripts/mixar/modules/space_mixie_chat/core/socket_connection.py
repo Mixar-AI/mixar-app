@@ -40,7 +40,7 @@ class SocketConnection:
     def _run_loop(self) -> None:
         """Main loop running in background thread."""
         while self._running.is_set():
-            self._diag.begin()
+            self._diag.begin(attempt=self._failed_sockets, waited_s=self._last_wait_s)
             try:
                 if self._do_connect():
                     self._receive_loop()
@@ -50,6 +50,8 @@ class SocketConnection:
             # The receive loop left because someone else dropped the socket
             # (writer, backpressure, consent) — they recorded why; else say so.
             self._diag.end('receive_loop_exit')
+            if self._diag.current is not None and self._diag.current.phase != 'connected':
+                self._failed_sockets += 1  # never got as far as a working socket
 
             # A receive error leaves the socket open; close it so the server
             # ends this connection now, not at its own liveness timeout.
@@ -109,6 +111,7 @@ class SocketConnection:
                 self._server_retry_after = None
                 delay = reconnect_sleep(self._current_delay, retry_after)
                 logger.info(f"Reconnecting in {delay:.1f}s...")
+                self._last_wait_s = delay
                 time.sleep(delay)
                 self._current_delay = min(
                     self._current_delay * 2, self._max_reconnect_delay
@@ -211,6 +214,7 @@ class SocketConnection:
                 return False
 
             self._handshake_complete = True
+            self._failed_sockets = 0
             if self._archive_sync:
                 self._archive_sync.stop()
                 self._archive_sync = None
@@ -379,6 +383,9 @@ class SocketConnection:
         reports = self._diag.pending_reports()
         if self._diag.current is not None:
             params["socket_seq"] = self._diag.current.seq
+            # How this socket came to be: attempt, backoff, time since the
+            # previous one ended (client monotonic clock — no skew).
+            params["reconnect"] = self._diag.reconnect()
         if reports:
             params["connection_reports"] = reports
         # Anti-abuse device signal (one trial per machine); best-effort

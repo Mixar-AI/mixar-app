@@ -129,11 +129,15 @@ def generation_attempt(context, owner):
         return {}
 
 
-def generation_dispatch(context, attempt, outcome):
+def generation_dispatch(context, attempt, outcome, *, reason=None):
     try:
         if outcome not in {'unknown_owner', 'unavailable', 'poll_failed',
                            'error', 'cancelled', 'modal_started', 'dispatched'}:
             return
-        capture(EVENT_GENERATION_DISPATCH, {**attempt, 'outcome': outcome}, context=context)
+        from mixar.modules.common.utils.generation_dispatch import REASONS
+        properties = {**attempt, 'outcome': outcome}
+        if reason in REASONS:
+            properties['reason'] = reason
+        capture(EVENT_GENERATION_DISPATCH, properties, context=context)
     except Exception:
         pass

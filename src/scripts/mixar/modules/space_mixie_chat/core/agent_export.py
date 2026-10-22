@@ -26,6 +26,8 @@ from contextlib import nullcontext
 
 import bpy
 
+from .export_verification_status import verification_status, verification_warning
+
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
 from .export_materials import temporary_export_materials as _temporary_export_materials
@@ -229,8 +231,10 @@ def run_export(session_id: str, spec: dict) -> dict:
             # (FBX re-imports them as "<armature>|<stack>|<clip>").
             file_clips = file_clip_names(clips, verification["animations"])
             clips = file_clips if animations is None else [c for c in file_clips if c in clips] or clips
+        warning = " ".join(filter(None, (warning, verification_warning(verification))))
         result = {
             "success": True,
+            "delivery_status": verification_status(verification),
             "filepath_basename": os.path.basename(filepath),
             "format": fmt,
             "mesh_count": len(meshes),
@@ -250,6 +254,7 @@ def run_export(session_id: str, spec: dict) -> dict:
             result["scene_objects"] = scene_objects
         _telemetry(context, fmt, spec, success=True, extension=extension, started=started, extra={
             **counts, "clip_count": len(clips),
+            "delivery_status": verification_status(verification),
             "verification_checked": bool(verification.get("checked")),
             "verification_passed": bool(verification.get("passed")),
             "issue_count": len(verification.get("issues") or []),
