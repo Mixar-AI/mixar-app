@@ -14,3 +14,6 @@ RETRY_BACKOFF_S = 2.0
 RETRY_BACKOFF_FACTOR = 3.0
 PROGRESS_INTERVAL_S = 0.5
 PARTIAL_SUFFIX = ".part"
+# Sent as ``Mixar/<version>``. The CDN in front of cdn.mixar.app refuses
+# urllib's default ``Python-urllib/3.x`` with a 403 (Cloudflare error 1010).
+USER_AGENT_PRODUCT = "Mixar"

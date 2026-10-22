@@ -96,6 +96,12 @@ ScenesDrawerRuntime *view3d_scenes_drawer_runtime_ensure(wmWindowManager *wm, AR
  * \{ */
 
 ARegion *view3d_scenes_drawer_region_find(const ScrArea *area);
+/** The window whose active screen holds `region` (and its area in `r_area`),
+ * or null. Timers and GPU contexts for a region belong to THIS window, never
+ * to whichever window the context happens to name. */
+wmWindow *view3d_scenes_drawer_region_window(const wmWindowManager *wm,
+                                             const ARegion *region,
+                                             ScrArea **r_area = nullptr);
 
 /** The area of `screen` that hosts the drawer (`view3d_scenes_drawer_area_hosts`). */
 inline ScrArea *view3d_scenes_drawer_screen_host(const bScreen *screen)
@@ -175,6 +181,9 @@ bool view3d_scenes_drawer_snapshot_capture(const bContext *C, ARegion *host_regi
 bool view3d_scenes_drawer_snapshot_exists(const std::string &scene_name);
 /** Drop snapshots of scenes that no longer exist in `bmain`. */
 void view3d_scenes_drawer_snapshot_evict(const Main *bmain);
+/** Empty the store and bump its epoch so every region's copy is dropped too.
+ * Runs on file load only (`BKE_CB_EVT_LOAD_POST`); CPU only. */
+void view3d_scenes_drawer_snapshot_store_reset();
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
 /** Draw `scene_name`'s snapshot into `rect` (region pixels, inclusive), copying
  * it from the store and uploading it first if it changed. */

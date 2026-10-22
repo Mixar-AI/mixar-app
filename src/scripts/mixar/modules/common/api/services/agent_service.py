@@ -51,6 +51,17 @@ class AgentService(BaseService):
         """GET /agent/credentials — current BYOK state for the user."""
         return self.get("credentials")
 
+    def get_transport_key(self) -> APIResponse:
+        """GET /agent/byok/transport-key — the X25519 key every key field is
+        sealed to before it leaves this device (`byok/core/transport_seal.py`).
+
+        Authenticated like the other settings reads; ``Cache-Control:
+        private, max-age=3600``. ``data`` is ``{kid, public_key (base64url
+        raw 32 bytes), algorithm, envelope}``; a 503 ``byok_transport_unavailable``
+        means the server has no key configured.
+        """
+        return self.get("byok/transport-key")
+
     def save_credentials_all(
         self,
         provider: str,
@@ -58,19 +69,25 @@ class AgentService(BaseService):
         api_key: Optional[str],
         base_url: Optional[str] = None,
         supports_vision: Optional[bool] = None,
+        account_id: Optional[str] = None,
     ) -> APIResponse:
-        """PUT /agent/byok — upsert BYOK config across all agent roles.
+        """PUT /agent/byok — validate and register the BYOK config.
 
         Uses the backend's single-value wrapper, which fans one
-        provider/model/key out to the default + per-agent roles and returns the
+        provider/model out to the default + per-agent roles and returns the
         same {items, byok_active} shape as GET /agent/credentials.
 
-        The server validates the key with the provider (200ms-15s) before
-        storing. Atomic: on any failure the previous state is preserved.
+        The server validates the key with the provider (200ms-15s) and stores
+        METADATA ONLY (provider, model, masked preview) — the key itself stays
+        in this device's credential store and rides every agent turn
+        (`byok/core/turn_credentials.py`). Atomic: on any failure the previous
+        state is preserved.
 
         ``base_url`` / ``supports_vision`` are sent only when provided (the
-        "local" provider registering its relay target) — omitting them keeps the
-        payload byte-identical for older backends.
+        "local" provider registering its relay target); ``account_id`` only for
+        Codex, where ``api_key`` is the ChatGPT ACCESS TOKEN (never the
+        auth.json bundle) — omitting them keeps the payload byte-identical for
+        older backends.
         """
         payload = {"provider": provider, "model": model}
         if api_key is not None:
@@ -79,6 +96,8 @@ class AgentService(BaseService):
             payload["base_url"] = base_url
         if supports_vision is not None:
             payload["supports_vision"] = bool(supports_vision)
+        if account_id is not None:
+            payload["account_id"] = account_id
         return self.put("byok", json=payload)
 
     def delete_credentials_all(self) -> APIResponse:

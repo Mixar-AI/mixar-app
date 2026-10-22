@@ -26,6 +26,7 @@ from bpy.types import Operator
 from mixar.modules.common.analytics.journey_events import generation_attempt, generation_dispatch
 
 from mixar.modules.common.i18n import rpt_
+from mixar.modules.common.utils.generation_dispatch import dispatch_scope
 
 
 def _pane_message(text, level_name):
@@ -81,6 +82,7 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
+        feedback = {}
         try:
             if not op_callable.poll():
                 generation_dispatch(context, attempt, 'poll_failed')
@@ -91,9 +93,10 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
                 return {'CANCELLED'}
             # INVOKE so Enter behaves exactly like clicking the tab's own
             # Generate button (confirmation dialogs and reports included).
-            result = op_callable('INVOKE_DEFAULT', **(props or {}))
+            with dispatch_scope() as feedback:
+                result = op_callable('INVOKE_DEFAULT', **(props or {}))
         except RuntimeError as exc:
-            generation_dispatch(context, attempt, 'error')
+            generation_dispatch(context, attempt, 'error', reason=feedback.get('reason'))
             # bpy_operator.cc gives a nested call its OWN ReportList, so only
             # {'ERROR'} escapes — as a RuntimeError carrying Blender's own
             # "Error: " prefix. Re-report it at ERROR (the generation stopped;
@@ -106,7 +109,7 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             _pane_message(message, "LEVEL_ERROR")
             return {'CANCELLED'}
         if 'CANCELLED' in result:
-            generation_dispatch(context, attempt, 'cancelled')
+            generation_dispatch(context, attempt, 'cancelled', reason=feedback.get('reason'))
             # The inner operator refused without raising, so it reported at
             # INFO/WARNING into the OWN ReportList bpy_operator.cc gave the
             # nested call — nothing of it escaped to us or to the user. Say

@@ -21,6 +21,8 @@ bpy-free by design: this runs on the WebSocket receive thread.
 """
 
 import json
+import random
+import re
 import struct
 import time
 from dataclasses import dataclass
@@ -41,6 +43,13 @@ HANDSHAKE_OK = "ok"
 HANDSHAKE_AUTH_FAILED = "auth_failed"
 HANDSHAKE_TRANSIENT = "transient"
 
+# RFC 6455 1013 "Try Again Later": the backend's worker pool is full. Its
+# reason text says when ("capacity; retry in 15s").
+WS_CLOSE_TRY_AGAIN_LATER = 1013
+DEFAULT_SERVER_RETRY_AFTER_S = 15.0
+RECONNECT_JITTER = 0.2  # every reconnect sleeps x uniform(0.8, 1.2)
+_RETRY_IN = re.compile(r"retry in (\d+)s")
+
 # Server-side JSON-RPC error codes that mean "your credentials are wrong",
 # as opposed to "I could not serve you right now".
 _AUTH_ERROR_CODES = frozenset({JSONRPCErrorCode.NOT_AUTHENTICATED})
@@ -58,6 +67,7 @@ class Frame:
     kind: str
     text: str = ""
     close_code: Optional[int] = None
+    close_reason: str = ""
 
 
 def close_code_from_payload(data: Any) -> Optional[int]:
@@ -69,6 +79,35 @@ def close_code_from_payload(data: Any) -> Optional[int]:
     return struct.unpack("!H", bytes(data[:2]))[0]
 
 
+def close_reason_from_payload(data: Any) -> str:
+    """The UTF-8 reason text after a close frame's status code."""
+    if isinstance(data, str):
+        data = data.encode("utf-8", "replace")
+    if not isinstance(data, (bytes, bytearray)) or len(data) <= 2:
+        return ""
+    return bytes(data[2:]).decode("utf-8", "replace")
+
+
+def server_retry_after(close_code: Optional[int], reason: str = "") -> Optional[float]:
+    """Seconds a server close asks the client to wait, or None.
+
+    Only 1013 carries a wait: the value parsed from ``retry in Ns`` in the
+    reason, else ``DEFAULT_SERVER_RETRY_AFTER_S``.
+    """
+    if close_code != WS_CLOSE_TRY_AGAIN_LATER:
+        return None
+    match = _RETRY_IN.search(reason or "")
+    return float(match.group(1)) if match else DEFAULT_SERVER_RETRY_AFTER_S
+
+
+def reconnect_sleep(current_delay: float, retry_after: Optional[float] = None,
+                    uniform=random.uniform) -> float:
+    """The next reconnect wait: the larger of the backoff and the server's
+    retry-after, with +/-20% jitter so clients never reconnect in lockstep."""
+    base = max(float(current_delay), float(retry_after or 0.0))
+    return base * uniform(1.0 - RECONNECT_JITTER, 1.0 + RECONNECT_JITTER)
+
+
 def read_frame(ws: Any) -> Frame:
     """Receive one frame, preserving control frames and close codes.
 
@@ -77,7 +116,8 @@ def read_frame(ws: Any) -> Frame:
     """
     opcode, data = ws.recv_data(control_frame=True)
     if opcode == ABNF.OPCODE_CLOSE:
-        return Frame(KIND_CLOSED, close_code=close_code_from_payload(data))
+        return Frame(KIND_CLOSED, close_code=close_code_from_payload(data),
+                     close_reason=close_reason_from_payload(data))
     if opcode in (ABNF.OPCODE_PING, ABNF.OPCODE_PONG):
         return Frame(KIND_CONTROL)
     if isinstance(data, (bytes, bytearray)):
@@ -104,7 +144,8 @@ def classify_handshake_response(response: Any) -> str:
     return HANDSHAKE_TRANSIENT
 
 
-def wait_for_handshake(ws: Any, timeout: float = 10.0, result_sink=None) -> tuple[str, str]:
+def wait_for_handshake(ws: Any, timeout: float = 10.0, result_sink=None,
+                       close_sink=None) -> tuple[str, str]:
     """Read frames until the handshake is answered or ``timeout`` elapses.
 
     Returns ``(outcome, detail)`` where ``outcome`` is one of the
@@ -114,7 +155,8 @@ def wait_for_handshake(ws: Any, timeout: float = 10.0, result_sink=None) -> tupl
     (1011 registration failed, 1012 restarting, 1008 replaced, 1006 lost)
     is a backend that is not ready yet. Control frames are skipped but the
     overall deadline still applies, so a server that only pings cannot
-    hold the connect attempt open forever.
+    hold the connect attempt open forever. ``close_sink(code, reason)``
+    receives a server close so the caller can honour a 1013 retry-after.
     """
     deadline = time.monotonic() + timeout
     while True:
@@ -124,6 +166,8 @@ def wait_for_handshake(ws: Any, timeout: float = 10.0, result_sink=None) -> tupl
         ws.settimeout(remaining)
         frame = read_frame(ws)
         if frame.kind == KIND_CLOSED:
+            if close_sink is not None:
+                close_sink(frame.close_code, frame.close_reason)
             if frame.close_code == WS_CLOSE_AUTH_FAILED:
                 return (
                     HANDSHAKE_AUTH_FAILED,

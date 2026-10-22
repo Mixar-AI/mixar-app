@@ -41,14 +41,27 @@ classes = ()
 @persistent
 def _on_load_pre(*_args):
     """A file load frees every Image, the movie texture included: end a
-    running tour first so nothing draws from a freed datablock."""
+    running tour first so nothing draws from a freed datablock. Only the
+    non-operator teardown runs here; the UI restore waits for load_post
+    (``core/tour/deferred_restore.py``)."""
     try:
         from mixar.modules.onboarding.core.tour import session as tour_session
         live = tour_session.current()
         if live is not None and live.running:
-            live.stop("file-loaded")
+            live.stop("file-loaded", defer_ui=True)
     except Exception as exc:  # noqa: BLE001
         _logger.debug("tour: load_pre stop failed: %s", exc)
+
+
+@persistent
+def _on_exit_pre(*_args):
+    """The app is quitting: Blender cancels the tour's modal right after
+    this, and that cancel must read as a quit (telemetry ``stop_reason``)."""
+    try:
+        from mixar.modules.onboarding.core.tour import session_lifecycle
+        session_lifecycle.note_app_exiting()
+    except Exception as exc:  # noqa: BLE001
+        _logger.debug("tour: exit_pre note failed: %s", exc)
 
 
 def _prefetch(code: str) -> None:
@@ -72,6 +85,8 @@ def _prefetch_stored_later():
 def register():
     if _on_load_pre not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load_pre)
+    if _on_exit_pre not in bpy.app.handlers.exit_pre:
+        bpy.app.handlers.exit_pre.append(_on_exit_pre)
     language.add_listener(_prefetch)
     try:
         bpy.app.timers.register(_prefetch_stored_later, first_interval=5.0)
@@ -115,6 +130,13 @@ def unregister():
         pass
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
+    if _on_exit_pre in bpy.app.handlers.exit_pre:
+        bpy.app.handlers.exit_pre.remove(_on_exit_pre)
+    try:
+        from mixar.modules.onboarding.core.tour import deferred_restore
+        deferred_restore.cancel()
+    except Exception:  # noqa: BLE001
+        pass
     for attr in (WM_PROP_TOUR_STATE, WM_PROP_TOUR_QA_TARGETS):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)

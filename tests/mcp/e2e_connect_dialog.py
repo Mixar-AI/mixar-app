@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Replay the Connect AI Apps (MCP) dialog the way a user clicks it.
+"""Replay the Connect MCP sheet the way a user clicks it: Other app's
+JSON, the interface switch, Add to Claude Code / Codex landing on the sheet's
+recap (no toast while it is open), a toast once it is closed, Cursor's Copy
+setup and Open mcp.json.
 
 Event-simulate QA app (e2e_launch.py without --normal-input), launched with
 CLAUDE_CONFIG_DIR and CODEX_HOME pointing INSIDE the fixture: Add to Claude
@@ -72,56 +75,92 @@ def main():
     codex_config.write_text(EXISTING_CODEX)
 
     qa.dismiss_splash()
-    # The profile-menu entry itself is covered by e2e_profile.py (native card and
-    # Python fallback); this replay is about the dialog.
-    qa.eval("result = list(bpy.ops.mixar.connect_ai('INVOKE_DEFAULT'))")
-    time.sleep(1.0)
-    qa.snap(str(out / "dialog-mcp-off.png"))
-    checkbox = widgets(op="MIXAR_OT_set_mcp_ui_control")
-    check("interface_checkbox_needs_mcp", checkbox and checkbox[0].get("enabled") is False, checkbox)
+    state = "result=bpy.context.window_manager.mixar_mcp_dialog_state"
 
-    qa.click(text="Copy MCP Config", op="MIXAR_OT_copy_mcp_setup", popup=True)
+    def open_sheet():
+        qa.eval("result = list(bpy.ops.mixar.connect_ai('INVOKE_DEFAULT'))")
+        time.sleep(1.0)
+        check(f"sheet_opens_idle_{len(verdict['checks'])}", qa.eval(state) == "IDLE")
+
+    def pick(name):
+        qa.click(text=name, op="MIXAR_OT_mcp_pick_app", popup=True)
+        time.sleep(0.6)
+
+    def add_and_wait(name, expected):
+        """Add from the open sheet: the sheet flips to its recap by itself
+        (redraw pump) and no toast is pushed while it is open."""
+        qa.eval(STORE + "s.clear_all()\nresult=True")
+        qa.click(text=f"Add to {name}", op="MIXAR_OT_mcp_add_to_app", popup=True)
+        qa.wait("bpy.context.window_manager.mixar_mcp_dialog_state in {'ADDED', 'ERROR'}", timeout=60)
+        time.sleep(0.6)
+        recap = widgets(text=expected)
+        toasts = qa.eval(STORE + "result=[n.title for n in s.get_visible()]")
+        check(f"add_to_{name.lower().replace(' ', '_')}_recap_{expected!r}",
+              qa.eval(state) == "ADDED" and bool(recap) and not toasts,
+              {"state": qa.eval(state), "recap": recap, "toasts": toasts})
+
+    # The profile-menu entry itself is covered by e2e_profile.py (native card and
+    # Python fallback); this replay is about the sheet.
+    open_sheet()
+    qa.snap(str(out / "dialog-mcp-off.png"))
+    switch = widgets(op="MIXAR_OT_set_mcp_ui_control")
+    check("interface_switch_needs_mcp", switch and switch[0].get("enabled") is False, switch)
+    check("mcp_off_offers_turn_on", bool(widgets(text="Turn on", op="MIXAR_OT_set_mcp_enabled")))
+
+    pick("Other app")
+    qa.click(text="Copy setup", op="MIXAR_OT_copy_mcp_setup", popup=True)
     time.sleep(0.6)
     copied = qa.eval("import json\nfrom mixar.modules.mcp_bridge.core import runtime\n"
                      "m=json.loads(bpy.context.window_manager.clipboard)['mcpServers']['mixar']\n"
                      "result={'mcp':runtime.enabled(),'command':m['command'],'args':m['args']}")
-    check("copy_mcp_config_enables_and_copies_standard_json",
+    check("other_app_copy_enables_and_copies_standard_json",
           copied["mcp"] and copied["command"].endswith("connector/mixar-mcp") and copied["args"] == [], copied)
+    qa.snap(str(out / "dialog-other-app.png"))
 
     qa.click(op="MIXAR_OT_set_mcp_ui_control", popup=True)
     time.sleep(0.6)
     ui = qa.eval("from mixar.modules.mcp_bridge.core import runtime\nresult=runtime.ui_control_enabled()")
-    check("checkbox_turns_interface_control_on", ui is True)
-    qa.snap(str(out / "dialog-mcp-on.png"))
+    check("switch_turns_interface_control_on", ui is True)
+    check("mcp_on_offers_turn_off", bool(widgets(text="Turn off", op="MIXAR_OT_set_mcp_enabled")))
 
-    qa.eval(STORE + "s.clear_all()\nresult=True")
-    qa.click(op="MIXAR_OT_mcp_add_to_app", popup=True)
-    shown = toast("Claude Code")
+    pick("Claude Code")
+    check("claude_code_docks_copy_in_its_snippet",
+          len(widgets(op="MIXAR_OT_copy_mcp_setup")) == 1 and bool(widgets(text="Copy")))
+    qa.snap(str(out / "dialog-mcp-on.png"))
+    add_and_wait("Claude Code", "Mixar added to Claude Code")
     entry = subprocess.run(["claude", "mcp", "get", "mixar"], capture_output=True, text=True,
                            env={**__import__("os").environ, "CLAUDE_CONFIG_DIR": facts["claude"]}).stdout
-    check("add_to_claude_code", ("success", "Mixar added to Claude Code") in [tuple(t) for t in shown]
-          and copied["command"] in entry, {"toast": shown, "entry": entry[:300]})
+    check("add_to_claude_code", copied["command"] in entry, {"entry": entry[:300]})
     qa.snap(str(out / "added-claude-code.png"))
-
-    qa.cmd("choose", widget={"prop": "app", "popup": True}, item="Codex")
+    qa.click(text="Done", popup=True)
     time.sleep(0.6)
+    check("done_closes_the_sheet", not widgets(op="MIXAR_OT_mcp_pick_app"))
+
     for attempt, expected in ((1, "Mixar added to Codex"), (2, "Codex already has Mixar")):
-        qa.eval(STORE + "s.clear_all()\nresult=True")
-        qa.click(op="MIXAR_OT_mcp_add_to_app", popup=True)
-        shown = toast("Codex")
-        check(f"add_to_codex_click_{attempt}", any(title == expected for _, title in shown), shown)
+        open_sheet()
+        pick("Codex")
+        add_and_wait("Codex", expected)
+        qa.snap(str(out / f"added-codex-{attempt}.png"))
+        qa.click(text="Done", popup=True)
+        time.sleep(0.6)
     text = codex_config.read_text()
     check("codex_config_keeps_existing_settings_and_one_mixar_table",
           text.startswith(EXISTING_CODEX.rstrip("\n")) and text.count("[mcp_servers.mixar]") == 1
           and "tool_timeout_sec = 610" in text and codex_config.with_name("config.toml.mixar-backup").exists(), text)
 
-    qa.cmd("choose", widget={"prop": "app", "popup": True}, item="Cursor")
-    time.sleep(0.6)
-    qa.click(text="Copy", op="MIXAR_OT_copy_mcp_setup", popup=True)
+    # With the sheet closed the outcome still reaches the user, as a toast.
+    qa.eval(STORE + "s.clear_all()\nresult=True")
+    qa.eval("result = list(bpy.ops.mixar.mcp_add_to_app(app='CODEX'))")
+    shown = toast("Codex")
+    check("a_closed_sheet_gets_a_toast", ("info", "Codex already has Mixar") in [tuple(t) for t in shown], shown)
+
+    open_sheet()
+    pick("Cursor")
+    qa.click(text="Copy setup", op="MIXAR_OT_copy_mcp_setup", popup=True)
     time.sleep(0.6)
     cursor = qa.eval("import json\nresult=json.loads(bpy.context.window_manager.clipboard)['mcpServers']['mixar']")
     check("cursor_copy_is_stdio_json", cursor.get("type") == "stdio" and cursor["command"] == copied["command"])
-    check("cursor_offers_open_config_file", bool(widgets(op="MIXAR_OT_mcp_open_app_config")))
+    check("cursor_offers_open_config_file", bool(widgets(text="Open mcp.json", op="MIXAR_OT_mcp_open_app_config")))
     qa.snap(str(out / "dialog-cursor.png"))
     verdict["ok"] = True
     check("all", True)

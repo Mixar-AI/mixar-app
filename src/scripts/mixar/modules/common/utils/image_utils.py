@@ -19,6 +19,7 @@ import bpy
 import base64
 import os
 import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 from mixar.config.logging_config import get_logger
@@ -123,6 +124,54 @@ UPLOAD_MAX_DIMENSION = 2048
 UPLOAD_JPEG_QUALITY = 85
 
 
+@contextmanager
+def upload_export_scene(file_format: str = 'JPEG', quality: int = UPLOAD_JPEG_QUALITY):
+    """A throwaway scene whose render settings write an image AS IT IS.
+
+    ``Image.save_render`` ignores ``Image.file_format`` and encodes with the
+    SCENE's output settings — format, colour mode AND colour management. On
+    the user's scene that is PNG / RGBA through the AgX view transform, so
+    every reference the desktop uploaded was a tone-mapped PNG: white
+    (255,255,255) came out (197,197,197), red (255,0,0) as (219,57,33), and
+    the backend sniffed the "JPEG" and renamed it ``.png`` (prod Seedance
+    references, 2026-10-17 — the vendor never saw the user's colours).
+    Standard view, no look, and the requested format is the pass-through
+    every generation vendor expects. Removed on exit, even on error.
+    """
+    scene = bpy.data.scenes.new("_mixar_upload_export")
+    try:
+        settings = scene.render.image_settings
+        settings.file_format = file_format
+        settings.color_mode = 'RGB' if file_format == 'JPEG' else 'RGBA'
+        if file_format == 'JPEG':
+            settings.quality = quality
+        scene.display_settings.display_device = 'sRGB'
+        scene.view_settings.view_transform = 'Standard'
+        scene.view_settings.look = 'None'
+        scene.view_settings.exposure = 0.0
+        scene.view_settings.gamma = 1.0
+        scene.view_settings.use_curve_mapping = False
+        yield scene
+    finally:
+        bpy.data.scenes.remove(scene)
+
+
+def _has_transparency(image: bpy.types.Image) -> bool:
+    """True when any pixel is not fully opaque (a cut-out, a logo on alpha).
+
+    Only images that carry an alpha channel are scanned; an RGB source cannot
+    be transparent and the scan is a full-buffer read.
+    """
+    if image.channels < 4 or image.depth < 32:
+        return False
+    import numpy as np
+
+    width, height = image.size
+    flat = np.empty(width * height * 4, dtype=np.float32)
+    image.pixels.foreach_get(flat)
+    return bool((flat[3::4] < 0.999).any())
+
+
 def compress_image_for_upload(
     image: bpy.types.Image,
     max_dimension: int = UPLOAD_MAX_DIMENSION,
@@ -131,7 +180,10 @@ def compress_image_for_upload(
     """Compress a Blender Image for API upload.
 
     Resizes to max_dimension on the longest side (maintaining aspect ratio)
-    and converts to JPEG. Returns compressed JPEG bytes.
+    and converts to JPEG at *quality*, with the pixels' own colours — never
+    the scene's view transform (see :func:`upload_export_scene`). An image
+    with real transparency is written as RGBA PNG instead, since JPEG would
+    flatten it onto black.
     """
     width, height = image.size
     if width == 0 or height == 0:
@@ -181,18 +233,20 @@ def compress_image_for_upload(
                 image.name, width, height, new_width, new_height,
             )
 
-        fd, temp_path = tempfile.mkstemp(suffix=".jpg", prefix="_mixar_upload_")
+        file_format = 'PNG' if _has_transparency(tmp_image) else 'JPEG'
+        suffix = ".png" if file_format == 'PNG' else ".jpg"
+        fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix="_mixar_upload_")
         os.close(fd)
-        tmp_image.file_format = 'JPEG'
-        tmp_image.save_render(temp_path)
+        with upload_export_scene(file_format, quality) as export_scene:
+            tmp_image.save_render(temp_path, scene=export_scene)
 
         with open(temp_path, 'rb') as f:
             compressed_bytes = f.read()
 
         logger.info(
-            "[ImageUtils] Compressed %s (source=%s): %sx%s -> %sKB",
+            "[ImageUtils] Compressed %s (source=%s): %sx%s -> %sKB %s",
             image.name, image.source, new_width, new_height,
-            len(compressed_bytes) // 1024,
+            len(compressed_bytes) // 1024, file_format,
         )
 
         return compressed_bytes

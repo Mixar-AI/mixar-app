@@ -12,11 +12,18 @@ set -euo pipefail
 # identity is the binary's own hash, so every rebuild looks like a brand-new
 # app to the macOS Keychain. The login tokens Mixar stores under the
 # "MixarSafeStorage" Keychain service are ACL-bound to the app that wrote
-# them, so each rebuild triggers the "Mixar wants your confidential
-# information stored in keychain" SecurityAgent prompt and "Always Allow"
-# never persists. Signing every build with the SAME certificate makes the
-# Keychain match by certificate instead of per-build hash — one "Always
-# Allow" then holds forever.
+# them. The app never raises that dialog any more (it reads with
+# interaction disabled and treats a stale item as absent), but a stale
+# item still means signing in again and re-entering a BYOK key.
+#
+# LIMIT: the Keychain's partition check is per TEAM only for an
+# Apple-issued certificate (Developer ID / App Store: `teamid:…`); for a
+# self-signed certificate it stays per build hash (`cdhash:…`), so this
+# identity does NOT survive a rebuild — items are still dropped and the
+# app signs in again. It keeps the designated requirement stable (useful
+# for other tooling) and is harmless. To keep credentials across rebuilds,
+# set MIXAR_DEV_SIGN_ID to the real "Developer ID Application" identity if
+# it is installed on this Mac.
 #
 # Usage:
 #   ./scripts/unix/setup_dev_codesign.sh [cert-name]   # default: "Mixar Dev"

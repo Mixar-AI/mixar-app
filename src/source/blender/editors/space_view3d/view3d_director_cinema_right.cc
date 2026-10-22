@@ -45,9 +45,6 @@ namespace blender {
 
 namespace {
 
-/** Right column's left edge in the design's window space. */
-constexpr float COLUMN_X = 1486.0f;
-
 /* The column stacks from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP; the Export
  * button's design y is a header token (it feeds the fit gate), so the stack
  * is checked against it here rather than trusted. */

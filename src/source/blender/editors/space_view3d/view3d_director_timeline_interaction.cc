@@ -284,6 +284,12 @@ bool handle_pan_drag(ARegion *region,
     runtime->panning = false;
     return false;
   }
+  if (event->prev_type == MIDDLEMOUSE && event->prev_val == KM_RELEASE) {
+    /* Let go outside this region: its release never reached this handler,
+     * but the motion that brings the pointer back says so (as box-select). */
+    runtime->panning = false;
+    return false;
+  }
   const float width = std::max(BLI_rctf_size_x(&runtime->viewport_bounds), 1.0f);
   const float t = (float(event->mval[0]) - runtime->viewport_bounds.xmin) / width;
   runtime->view_start_frame = std::max(view_floor(state),
@@ -386,9 +392,11 @@ int timeline_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
    * The `mixar.director_block_input` guard (Object Mode / WINDOW keymap)
    * swallows X/Del while directing to protect scene objects, but it never
    * sees keys pressed over this CHANNELS region — so the timeline must
-   * handle its own deletion. Locked takes stay read-only. */
+   * handle its own deletion. Locked takes stay read-only. Only the bare key
+   * deletes, as in the Dope Sheet: Cmd/Ctrl+X, Cmd+Backspace, Shift+Del are
+   * other commands' habits and must not remove camera keys. */
   if (ELEM(event->type, EVT_XKEY, EVT_DELKEY, EVT_BACKSPACEKEY) && event->val == KM_PRESS &&
-      state.has_shot && !state.locked)
+      event->modifier == 0 && state.has_shot && !state.locked)
   {
     if (delete_keys(C, key)) {
       ED_region_tag_redraw(region);

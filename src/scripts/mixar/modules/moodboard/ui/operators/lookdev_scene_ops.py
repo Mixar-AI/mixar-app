@@ -52,11 +52,17 @@ def _get_lookdev_listener():
             pass
 
     def _on_finish(scene):
+        # Runs per scene as its flag clears; the progress bar is window-wide,
+        # so it completes only once no scene is still generating.
         try:
-            from mixar.modules.moodboard.core.generate_progress import (
-                complete_progress,
-            )
-            complete_progress("lookdev")
+            if not any(
+                getattr(s, "mixie_lookdev_is_generating", False)
+                for s in bpy.data.scenes
+            ):
+                from mixar.modules.moodboard.core.generate_progress import (
+                    complete_progress,
+                )
+                complete_progress("lookdev")
         except Exception:
             pass
         try:

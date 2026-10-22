@@ -23,13 +23,14 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 
 install_bpy_mock()
 
-from mixar.modules.byok.core import byok_client, local_provider, model_suggestions
+from mixar.modules.byok.core import byok_client, local_provider, model_suggestions, save_events
 from mixar.modules.byok.ui.operators import byok_local_ops, byok_ops
 from mixar.modules.common.api.response import APIResponse
 from mixar.modules.common.api.services.agent_service import AgentService
 from mixar.modules.local_models.core import (
     manifest,
     orchestrator,
+    runtime,
     server_supervisor,
 )
 
@@ -139,6 +140,14 @@ def test_byok_client_forwards_extended_fields(monkeypatch):
     service, captured = _capturing_service()
     monkeypatch.setattr(byok_client, "get_agent_service", lambda: service)
     monkeypatch.setattr(byok_client.threading, "Thread", InlineThread)
+    # No signed-in user here: the device-store write is stubbed so the 200
+    # is reported as a success (a failed store write is an error of its own,
+    # pinned in tests/test_byok_key_store.py).
+    monkeypatch.setattr(byok_client, "_store_local_key", lambda *a: True)
+    # The bearer goes out sealed (tests/test_byok_transport_seal.py); the
+    # extended fields are what this test reads.
+    from mixar.modules.byok.core import transport_seal
+    monkeypatch.setattr(transport_seal, "seal", lambda secret: secret)
     done = {}
     monkeypatch.setattr(
         byok_client, "_schedule_on_main",
@@ -160,13 +169,103 @@ def test_byok_client_forwards_extended_fields(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_save_managed_requires_healthy_matching_server(monkeypatch):
+def _no_server(monkeypatch, downloaded=True):
     monkeypatch.setattr(server_supervisor, "is_healthy", lambda: False)
     monkeypatch.setattr(server_supervisor, "current", lambda: None)
+    monkeypatch.setattr(runtime, "model_files_present", lambda _mid: downloaded)
+
+
+def test_save_managed_names_the_missing_step(monkeypatch):
+    """Prod 2026-10-19: "Start the local model first" was shown even with no
+    Start button (not downloaded) and under "Starting…"."""
+    refusals = local_provider.MANAGED_REFUSALS
     wm = SimpleNamespace(byok_form_local_model="qwen3.5-4b")
-    started, err = local_provider.save_managed(wm, on_done=lambda *_a: None)
-    assert started is False
-    assert "Start the local model" in err
+
+    _no_server(monkeypatch, downloaded=False)
+    assert local_provider.save_managed(wm, on_done=lambda *_a: None) == (
+        False, refusals["local_not_downloaded"])
+
+    _no_server(monkeypatch, downloaded=True)
+    assert local_provider.save_managed(wm, on_done=lambda *_a: None) == (
+        False, refusals["local_not_running"])
+
+    wm.mixar_local_server_model, wm.mixar_local_server_state = "qwen3.5-2b", "ready"
+    assert local_provider.save_managed(wm, on_done=lambda *_a: None) == (
+        False, refusals["local_other_model"])
+
+    wm.mixar_local_server_model, wm.mixar_local_server_state = "qwen3.5-4b", "crashed"
+    wm.mixar_local_last_error = "The local AI runtime could not start"
+    assert local_provider.save_managed(wm, on_done=lambda *_a: None) == (
+        False, "The local AI runtime could not start")
+    assert local_provider.refusal_reason(refusals["local_not_running"]) == "local_not_running"
+
+
+def _capture_timer(monkeypatch):
+    import bpy
+    timers = []
+    monkeypatch.setattr(bpy.app.timers, "register",
+                        lambda fn, first_interval=0.0, persistent=False: timers.append(fn))
+    return timers
+
+
+def _serving(monkeypatch, model_id):
+    monkeypatch.setattr(server_supervisor, "is_healthy", lambda: True)
+    monkeypatch.setattr(server_supervisor, "current", lambda: {
+        "model_id": model_id, "port": 11500, "pid": 1, "state": "ready",
+        "base_url": "http://127.0.0.1:11500",
+    })
+
+
+def test_save_pressed_while_starting_waits_and_saves_when_ready(monkeypatch):
+    _no_server(monkeypatch)
+    timers = _capture_timer(monkeypatch)
+    saved = {}
+    monkeypatch.setattr(local_provider, "_put_managed",
+                        lambda current, row, mid, on_done: saved.update(base=current["base_url"], mid=mid))
+    wm = SimpleNamespace(byok_form_local_model="qwen3.5-4b",
+                         mixar_local_server_model="qwen3.5-4b",
+                         mixar_local_server_state="waiting_health")
+
+    assert local_provider.save_managed(wm, on_done=lambda *_a: None) == (True, None)
+    assert local_provider.waiting_for_start() and not saved
+    assert timers[0]() == local_provider._START_POLL_S  # still starting: poll again
+
+    _serving(monkeypatch, "qwen3.5-4b")
+    wm.mixar_local_server_state = "ready"
+    assert timers[0]() is None
+    assert saved == {"base": "http://127.0.0.1:11500", "mid": "qwen3.5-4b"}
+    assert not local_provider.waiting_for_start()
+
+
+def test_save_waiting_for_start_fails_with_the_servers_reason(monkeypatch):
+    _no_server(monkeypatch)
+    timers = _capture_timer(monkeypatch)
+    done = {}
+    wm = SimpleNamespace(byok_form_local_model="qwen3.5-4b",
+                         mixar_local_server_model="qwen3.5-4b",
+                         mixar_local_server_state="spawning",
+                         mixar_local_last_error="")
+    local_provider.save_managed(wm, on_done=lambda ok, data, err: done.update(ok=ok, err=err))
+
+    wm.mixar_local_server_state = "failed"
+    wm.mixar_local_last_error = "The local AI runtime could not start"
+    assert timers[0]() is None
+    assert done == {"ok": False, "err": "The local AI runtime could not start"}
+    assert not local_provider.waiting_for_start()
+
+
+def test_save_waiting_for_start_gives_up_after_the_deadline(monkeypatch):
+    _no_server(monkeypatch)
+    timers = _capture_timer(monkeypatch)
+    done = {}
+    wm = SimpleNamespace(byok_form_local_model="qwen3.5-4b",
+                         mixar_local_server_model="qwen3.5-4b",
+                         mixar_local_server_state="waiting_health")
+    local_provider.save_managed(wm, on_done=lambda ok, data, err: done.update(ok=ok, err=err))
+    clock = local_provider.time.monotonic() + local_provider._START_WAIT_S + 1
+    monkeypatch.setattr(local_provider.time, "monotonic", lambda: clock)
+    assert timers[0]() is None
+    assert done == {"ok": False, "err": local_provider.MANAGED_REFUSALS["local_start_timeout"]}
 
 
 def test_save_managed_registers_token_base_and_vision(monkeypatch):
@@ -211,6 +310,38 @@ def test_save_managed_registers_token_base_and_vision(monkeypatch):
     assert finished["ok"] is True
 
 
+def test_a_custom_save_records_the_servers_context_window(monkeypatch):
+    """The window read during the save's ping feeds the SAVED recap."""
+    import bpy
+    from mixar.modules.local_models.core import context_probe
+    monkeypatch.setattr(local_provider, "_ping_models_endpoint", lambda _base: None)
+    monkeypatch.setattr(context_probe, "context_window", lambda base, model, key: 8192)
+    monkeypatch.setattr(byok_client, "_run_worker",
+                        lambda name, work, done, failure: done(*work()))
+    monkeypatch.setattr(byok_client, "hold", lambda: (lambda: None))
+    monkeypatch.setattr(byok_client, "save_credentials",
+                        lambda **kw: kw["on_done"](True, {"byok_active": True}, None))
+    wm = SimpleNamespace(byok_form_local_custom_base="http://127.0.0.1:11434",
+                         byok_form_local_custom_model="gemma4:e4b", byok_form_local_custom_key="")
+    finished = {}
+    assert local_provider.save_custom_async(
+        wm, on_done=lambda ok, data, err: finished.update(ok=ok)) == (True, None)
+    assert finished == {"ok": True}
+    assert bpy.context.window_manager.byok_local_context_window == 8192
+
+
+def test_the_saved_recap_warns_about_a_small_local_window():
+    from mixar.modules.byok.ui.operators import byok_dialog_ui
+    wm = SimpleNamespace(byok_current_provider="local", byok_local_context_window=8192)
+    warning = " ".join(byok_dialog_ui._context_warning(wm))
+    assert "8,192 tokens" in warning and "32K" in warning and "OLLAMA_CONTEXT_LENGTH" in warning
+    for window in (0, 32768, 131072):          # unknown, or big enough
+        wm.byok_local_context_window = window
+        assert byok_dialog_ui._context_warning(wm) == []
+    wm.byok_current_provider, wm.byok_local_context_window = "openai", 8192
+    assert byok_dialog_ui._context_warning(wm) == []
+
+
 def test_save_custom_rejects_non_local_base():
     wm = SimpleNamespace(
         byok_form_local_custom_base="https://api.evil.example",
@@ -248,17 +379,73 @@ def _local_context(**extra):
     return SimpleNamespace(window_manager=wm), wm
 
 
+def _events(monkeypatch):
+    events = []
+    monkeypatch.setattr(save_events, "report",
+                        lambda outcome, provider, reason="": events.append((outcome, provider, reason)))
+    return events
+
+
 def test_save_execute_managed_errors_until_server_healthy(monkeypatch):
     context, wm = _local_context()
-    monkeypatch.setattr(server_supervisor, "is_healthy", lambda: False)
-    monkeypatch.setattr(server_supervisor, "current", lambda: None)
+    _no_server(monkeypatch)
+    events = _events(monkeypatch)
 
     # Save is clickable (poll only guards in-flight requests) and the
-    # unhealthy server routes to ERROR with the actionable message.
+    # stopped server routes to ERROR with the step the user is missing.
     assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is True
     assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
     assert wm.byok_dialog_state == 'ERROR'
-    assert "Start the local model" in wm.byok_last_error
+    assert wm.byok_last_error == local_provider.MANAGED_REFUSALS["local_not_running"]
+    assert events == [("refused", "local", "local_not_running")]
+
+
+def test_save_execute_while_starting_shows_saving_not_an_error(monkeypatch):
+    context, wm = _local_context(mixar_local_server_model="qwen3.5-4b",
+                                 mixar_local_server_state="waiting_health")
+    _no_server(monkeypatch)
+    _capture_timer(monkeypatch)
+    events = _events(monkeypatch)
+    assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'FINISHED'}
+    assert wm.byok_dialog_state == 'SAVING' and wm.byok_last_error == ""
+    assert events == []  # the outcome is reported when the wait ends
+
+
+def test_save_events_report_refusal_reasons(monkeypatch):
+    events = _events(monkeypatch)
+    context, wm = _local_context(byok_form_provider="openai", byok_form_model="gpt-6-astra")
+    monkeypatch.setattr(byok_ops.model_suggestions, "is_valid_model", lambda *_a: True)
+    assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
+    assert events[-1] == ("refused", "openai", "key_missing")
+
+    wm.byok_dialog_state, wm.byok_form_provider = "IDLE", "NONE"
+    byok_ops.MIXAR_BYOK_OT_save().execute(context)
+    assert events[-1] == ("refused", "NONE", "provider_missing")
+
+
+def test_every_save_request_reports_how_it_ended(monkeypatch):
+    """byok_client.save_credentials wraps each request's callback (all paths)."""
+    events = _events(monkeypatch)
+    seen = []
+    done = save_events.reporting(lambda *args: seen.append(args), "openai")
+    done(True, {"byok_active": True}, None)
+    done(False, None, "API key rejected: OpenAI rejected the API key.")
+    done(False, {"byok_active": True}, "Saved, but this device could not store the key.")
+    assert [e[0::2] for e in events] == [("saved", ""), ("failed", "request_failed"),
+                                         ("failed", "device_store")]
+    assert len(seen) == 3                     # the caller's callback still runs every time
+
+
+def test_a_waited_local_save_that_fails_reports_it(monkeypatch):
+    events = _events(monkeypatch)
+    _no_server(monkeypatch)
+    timers = _capture_timer(monkeypatch)
+    wm = SimpleNamespace(byok_form_local_model="qwen3.5-4b", mixar_local_server_model="qwen3.5-4b",
+                         mixar_local_server_state="spawning", mixar_local_last_error="")
+    local_provider.save_managed(wm, on_done=lambda *_a: None)
+    wm.mixar_local_server_state = "stopped"
+    timers[0]()
+    assert events == [("failed", "local", "local_stopped")]
 
 
 def test_save_execute_custom_requires_base_and_model():

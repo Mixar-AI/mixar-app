@@ -158,8 +158,8 @@ void gen_format_age(const double epoch, char r_out[32])
 
 /** Modification time of an asset's .blend, memoised.
  *
- * An archived generation's file never changes, so one stat per path per
- * session is enough — and it has to be memoised, because the island repaints
+ * An archived generation's file never changes, so one successful stat per
+ * path per session is enough — and it has to be memoised, because the island repaints
  * on every mouse move and a library of a few hundred assets would otherwise
  * be a few hundred syscalls a frame. */
 double gen_blend_mtime(const char *path)
@@ -177,7 +177,13 @@ double gen_blend_mtime(const char *path)
     cache.clear();
   }
   BLI_stat_t st;
-  const double mtime = (BLI_stat(path, &st) == 0) ? double(st.st_mtime) : 0.0;
+  if (BLI_stat(path, &st) != 0) {
+    /* Not memoised: a generation's .blend is never rewritten, so a cached
+     * miss (the exporter still writing it, an AV scan holding it) would blank
+     * the tile's age and sort the newest generation last for the session. */
+    return 0.0;
+  }
+  const double mtime = double(st.st_mtime);
   cache.add_new(key, mtime);
   return mtime;
 }

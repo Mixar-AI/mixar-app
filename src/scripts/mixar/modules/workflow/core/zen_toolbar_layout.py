@@ -46,11 +46,11 @@ CENTER_PX = 165.0
 CENTER_MINIMAL_PX = 32.0
 
 RIGHT_FULL_PX = 584.0
-"""Cinema 180 + playback + Sky Light + Export, with the trailing inset."""
-RIGHT_NARROW_PX = 228.0
-"""Cinema + the overflow popover."""
-RIGHT_TIGHT_PX = 40.0
-"""The overflow popover alone."""
+"""Cinema + playback + Sky Light + Export, with trailing inset."""
+RIGHT_NARROW_PX = 312.0
+"""Compact playback, Cinema and the overflow popover."""
+RIGHT_TIGHT_PX = 124.0
+"""Compact playback and the overflow popover."""
 
 MIN_GAP_PX = 14.0
 """Smallest flexible gap kept on each side of the centred cluster."""

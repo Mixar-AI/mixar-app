@@ -83,7 +83,7 @@ def test_active_tool_property_carries_the_update_hook():
 
 
 def _textbox_ops_scope():
-    source = ast.parse((MOODBOARD / "ui/operators/textbox_ops.py").read_text(encoding="utf-8"))
+    source = ast.parse((MOODBOARD / "ui/operators/textbox_add_ops.py").read_text(encoding="utf-8"))
     source.body = [node for node in source.body
                    if not isinstance(node, (ast.Import, ast.ImportFrom))]
     exits = []
@@ -99,7 +99,7 @@ def _textbox_ops_scope():
         "release_moodboard_image_entry": Mock(),
         "exit_canvas_mark_mode": lambda context: exits.append(context) or True,
     }
-    exec(compile(source, "textbox_ops.py", "exec"), scope)
+    exec(compile(source, "textbox_add_ops.py", "exec"), scope)
     return scope, exits
 
 

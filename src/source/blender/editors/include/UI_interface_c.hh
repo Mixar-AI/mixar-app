@@ -339,6 +339,16 @@ enum {
    * blocks; honoured in `button_activate_init` (interface_handlers.cc).
    */
   BLOCK_MIXAR_POPUPS_REFRESH = 1 << 29,
+  /**
+   * Mixar: the block is an AI Provider settings sheet. Its backdrop is the
+   * designer's framed card (fill, hairline border, header and sidebar
+   * dividers) painted by `UI_mixar_sheet_draw_back` from the metrics the
+   * layout stored on the block, and the dialog creator gives it no padding
+   * so the layout's edges ARE the card's edges. Set by the dialog creator
+   * when `Mixar_operator_modal_dialog_popup` (wm_operators.cc) opens a sheet,
+   * and by `UI_layout_mixar_sheet_frame`.
+   */
+  BLOCK_MIXAR_SHEET = 1 << 30,
 };
 
 /** #PopupBlockHandle.menuretval */

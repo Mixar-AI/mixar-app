@@ -137,6 +137,10 @@ def pan(qa, dx, dy=0):
                      'steps': 14, 'button': 'MIDDLEMOUSE'})
 
 
+from catalog_fixture import with_catalog_fixture
+
+
+@with_catalog_fixture
 def run(qa: QA):
     OUT.mkdir(parents=True, exist_ok=True)
     qa.step('wait_idle', qa.wait,

@@ -21,15 +21,22 @@ import socket
 import ssl
 import threading
 import time
-from collections import deque
 from urllib.parse import parse_qs, urlparse
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.network import server_ssl_context
 
-from ..constants import DEFAULT_PORT, PORT_SCAN_RANGE, WS_PATH
+from ..constants import (
+    CLOSE_PAIRING_EXPIRED,
+    CLOSE_REPLACED,
+    CLOSE_SERVER_STOPPED,
+    DEFAULT_PORT,
+    PORT_SCAN_RANGE,
+    WS_PATH,
+)
 from . import pairing, tls_utils, ws_codec
+from .connection import Connection as _Connection
 from .session import Session
 
 logger = get_logger(__name__)
@@ -38,6 +45,9 @@ _WEBAPP_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "webapp")
 )
 _SOCKET_TIMEOUT = 20.0
+# How long a refused upgrade waits for the phone's close reply (the closing
+# handshake) before the socket goes; a bounded, per-handler-thread wait.
+_CLOSE_LINGER = 2.0
 
 
 def _under_webapp(candidate: str) -> bool:
@@ -93,94 +103,6 @@ class ServerState:
         return pairing.pairing_url(self.hosts[0], self.port, self.token, tls=self.tls)
 
 
-class _Connection:
-    """One WebSocket client with a dedicated writer thread.
-
-    JSON messages are never dropped; stream frames overwrite each other so a
-    slow phone shows a late picture instead of an ever-growing latency queue.
-    """
-
-    def __init__(self, sock) -> None:
-        self._sock = sock
-        self._json_queue: deque[bytes] = deque()
-        self._frame: bytes | None = None
-        self._cond = threading.Condition()
-        # `_cond` guards the QUEUE; this guards the SOCKET. `close()` writes
-        # its frame from the caller's thread while the writer thread may be
-        # mid-`sendall` on the same socket, and two interleaved frames are a
-        # protocol error the phone cannot resynchronise from.
-        self._send_lock = threading.Lock()
-        self._alive = True
-        self._writer = threading.Thread(
-            target=self._write_loop, name="mixar-vcam-writer", daemon=True
-        )
-        self._writer.start()
-
-    def send_json(self, payload: dict) -> None:
-        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        with self._cond:
-            if not self._alive:
-                return
-            self._json_queue.append(ws_codec.encode_frame(ws_codec.OP_TEXT, data))
-            self._cond.notify()
-
-    def send_stream_frame(self, image_bytes: bytes) -> None:
-        with self._cond:
-            if not self._alive:
-                return
-            self._frame = ws_codec.encode_frame(ws_codec.OP_BINARY, image_bytes)
-            self._cond.notify()
-
-    def send_pong(self, payload: bytes) -> None:
-        with self._cond:
-            if not self._alive:
-                return
-            self._json_queue.append(ws_codec.encode_frame(ws_codec.OP_PONG, payload))
-            self._cond.notify()
-
-    def close(self, code: int = 1000, reason: str = "") -> None:
-        with self._cond:
-            if not self._alive:
-                return
-            self._alive = False
-            self._cond.notify_all()
-        # Outside `_cond`: `sendall` blocks on a phone that has stopped
-        # reading, and holding the queue lock through it stalls the writer
-        # thread that is being told to stop.
-        try:
-            with self._send_lock:
-                self._sock.sendall(ws_codec.encode_close(code, reason))
-        except OSError:
-            pass
-        try:
-            self._sock.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-
-    @property
-    def alive(self) -> bool:
-        return self._alive
-
-    def _write_loop(self) -> None:
-        while True:
-            with self._cond:
-                while self._alive and not self._json_queue and self._frame is None:
-                    self._cond.wait(timeout=1.0)
-                if not self._alive:
-                    return
-                if self._json_queue:
-                    chunk = self._json_queue.popleft()
-                else:
-                    chunk, self._frame = self._frame, None
-            try:
-                with self._send_lock:
-                    self._sock.sendall(chunk)
-            except OSError:
-                with self._cond:
-                    self._alive = False
-                return
-
-
 class VirtualCameraServer:
     """Owns the HTTP server thread, the pairing token and the active phone."""
 
@@ -228,7 +150,15 @@ class VirtualCameraServer:
                 # server never starts. `server_ssl_context` hands back CPython's
                 # own class (`common/network`, which owns the injection).
                 ctx = server_ssl_context()
-                ctx.load_cert_chain(cert[0], cert[1])
+                try:
+                    ctx.load_cert_chain(cert[0], cert[1])
+                except (ssl.SSLError, OSError, ValueError):
+                    # A torn or mismatched cached pair: regenerate ONCE
+                    # rather than degrade to HTTP on every start forever.
+                    cert = tls_utils.regenerate(hosts)
+                    if cert is None:
+                        raise
+                    ctx.load_cert_chain(cert[0], cert[1])
                 # do_handshake_on_connect=False: accepted sockets inherit the
                 # flag, deferring the TLS handshake from the accept loop into
                 # the per-connection handler thread (Handler.setup) — a
@@ -265,7 +195,7 @@ class VirtualCameraServer:
         if not self.state.running:
             return
         self.state.running = False
-        self.drop_connection(reason="server stopped")
+        self.drop_connection(reason="server stopped", code=CLOSE_SERVER_STOPPED)
         httpd, self._httpd = self._httpd, None
         if httpd is not None:
             def _teardown() -> None:
@@ -281,17 +211,18 @@ class VirtualCameraServer:
         with self._conn_lock:
             old, self._connection = self._connection, conn
         if old is not None:
-            old.close(code=4000, reason="replaced by new pairing")
+            old.close(code=CLOSE_REPLACED, reason="replaced by new pairing")
         self.state.phone_connected = True
 
     def drop_connection(self, *, conn: _Connection | None = None,
-                        reason: str = "") -> None:
+                        reason: str = "", code: int = 1000) -> None:
+        """Close the live phone. A 4000-4003 ``code`` tells it not to reconnect."""
         with self._conn_lock:
             if conn is not None and self._connection is not conn:
                 return  # a newer pairing already took over
             old, self._connection = self._connection, None
         if old is not None:
-            old.close(reason=reason)
+            old.close(code=code, reason=reason)
         self.state.phone_connected = False
         self.session.mark_disconnected()
 
@@ -366,14 +297,18 @@ def _make_handler(server: VirtualCameraServer):
         def _handle_websocket(self, parsed) -> None:
             token = (parse_qs(parsed.query).get("t") or [""])[0]
             key = self.headers.get("Sec-WebSocket-Key", "")
-            if (
-                self.headers.get("Upgrade", "").lower() != "websocket"
-                or not key
-                or not server.state.running
-                or not _token_matches(token, server.state.token)
-            ):
-                self.send_error(403)
+            if self.headers.get("Upgrade", "").lower() != "websocket" or not key:
+                self.send_error(403)  # not a WebSocket upgrade at all
                 return
+            # A well-formed upgrade with a stale token (a new pairing code, a
+            # restart) is ACCEPTED and closed at once with a code the phone
+            # can read: a 403 reaches the browser as close 1006, which it
+            # cannot tell from a network drop, so it would retry forever.
+            refusal = None
+            if not server.state.running:
+                refusal = (CLOSE_SERVER_STOPPED, "server stopped")
+            elif not _token_matches(token, server.state.token):
+                refusal = (CLOSE_PAIRING_EXPIRED, "pairing expired")
 
             self.send_response_only(101)
             self.send_header("Upgrade", "websocket")
@@ -383,6 +318,9 @@ def _make_handler(server: VirtualCameraServer):
             self.close_connection = True
 
             sock = self.connection
+            if refusal is not None:
+                _refuse(sock, *refusal)
+                return
             sock.settimeout(_SOCKET_TIMEOUT)
             conn = _Connection(sock)
             server.adopt_connection(conn)
@@ -410,6 +348,24 @@ def _make_handler(server: VirtualCameraServer):
                 server.drop_connection(conn=conn, reason="socket closed")
 
     return Handler
+
+
+def _refuse(sock, code: int, reason: str) -> None:
+    """Send a close frame on an upgraded socket, then let the phone reply.
+
+    Half-closing and draining until the peer's close (bounded) keeps the
+    frame from being lost to a TCP reset while the browser's own close
+    reply is still unread.
+    """
+    try:
+        sock.settimeout(_CLOSE_LINGER)
+        sock.sendall(ws_codec.encode_close(code, reason))
+        sock.shutdown(socket.SHUT_WR)
+        deadline = time.monotonic() + _CLOSE_LINGER
+        while time.monotonic() < deadline and sock.recv(4096):
+            pass
+    except OSError:
+        pass
 
 
 # Module-level singleton, created lazily by the Blender layer.

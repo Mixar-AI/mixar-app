@@ -24,16 +24,19 @@ from __future__ import annotations
 import os
 import re
 import time
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 
 import bpy
+
+from .export_verification_status import verification_status, verification_warning
 
 from .export_clips import animation_kwargs, clip_selection
 from .export_destination import pop_destination
 from .export_extras_filter import strip_private_extras
+from .export_materials import temporary_export_materials as _temporary_export_materials
 from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
-    active_mixar_nodes,
+    active_mixar_nodes,  # noqa: F401 — kept importable from here
     clear_repair_cache,
     export_targets,
     material_images,
@@ -93,46 +96,6 @@ def _run_operator(fmt: str, filepath: str, use_case: str, animations,
         kwargs["export_format"] = 'GLB' if fmt == "glb" else 'GLTF_SEPARATE'
     status = _exporter(fmt)(filepath=filepath, **kwargs)
     return status, kwargs, mode, warning
-
-
-@contextmanager
-def _temporary_export_materials(meshes):
-    """Swap every Mixar slot to a Principled/image material for export."""
-    from mixar.modules.paint.core.asset_export.bake_and_assign import (
-        create_export_material,
-    )
-
-    assignments, created = [], []
-    try:
-        for obj in meshes:
-            original_index = obj.active_material_index
-            try:
-                for index, material in enumerate(list(obj.data.materials)):
-                    nodes = active_mixar_nodes(material)
-                    if not nodes:
-                        continue
-                    obj.active_material_index = index
-                    export_material = create_export_material(
-                        obj, nodes[0].node_tree.mp, nodes[0].node_tree,
-                    )
-                    if export_material:
-                        assignments.append((obj, index, material))
-                        created.append(export_material)
-            finally:
-                obj.active_material_index = original_index
-        yield
-    finally:
-        for obj, index, material in reversed(assignments):
-            try:
-                obj.data.materials[index] = material
-            except Exception:
-                pass
-        for material in created:
-            try:
-                if material.users == 0:
-                    bpy.data.materials.remove(material)
-            except Exception:
-                pass
 
 
 def scrub_error(exc: BaseException) -> str:
@@ -292,8 +255,10 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             # (FBX re-imports them as "<armature>|<stack>|<clip>").
             file_clips = file_clip_names(clips, verification["animations"])
             clips = file_clips if animations is None else [c for c in file_clips if c in clips] or clips
+        warning = " ".join(filter(None, (warning, verification_warning(verification))))
         result = {
             "success": True,
+            "delivery_status": verification_status(verification),
             "filepath_basename": os.path.basename(filepath),
             "format": fmt,
             "mesh_count": len(meshes),
@@ -315,6 +280,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
         _telemetry(context, fmt, spec, success=True, extension=extension, started=started,
                    via=via, tool=tool, extra={
             **counts, "clip_count": len(clips),
+            "delivery_status": verification_status(verification),
             "verification_checked": bool(verification.get("checked")),
             "verification_passed": bool(verification.get("passed")),
             "issue_count": len(verification.get("issues") or []),

@@ -209,7 +209,14 @@ def _get_scene_gen_listener():
             pass
 
     def _on_finish(scene):
+        # Runs per scene as its flag clears; the progress bar is window-wide,
+        # so it completes only once no scene is still generating.
         try:
+            if any(
+                getattr(s, "mixie_segment_to_3d_is_generating", False)
+                for s in bpy.data.scenes
+            ):
+                return
             from mixar.modules.moodboard.core.generate_progress import complete_progress
 
             complete_progress("segment_to_3d")

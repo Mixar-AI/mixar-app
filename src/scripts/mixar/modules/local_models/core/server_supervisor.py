@@ -87,11 +87,20 @@ def server_log_path() -> str:
 
 def build_server_argv(server_bin: str, gguf_path: str, port: int,
                       api_token: str, mmproj_path: Optional[str] = None,
-                      ctx_size: int = DEFAULT_CTX_SIZE) -> list:
-    """The exact llama-server argv we launch."""
+                      ctx_size: int = DEFAULT_CTX_SIZE,
+                      alias: Optional[str] = None) -> list:
+    """The exact llama-server argv we launch.
+
+    ``alias`` is the model id the server reports in ``/v1/models`` and every
+    completion. Without it llama-server reports ``gguf_path`` — an absolute
+    path naming the user's account — which the detected-apps probe would
+    offer as a model name and the backend would record. The path stays in
+    this argv only.
+    """
     argv = [
         server_bin,
         "-m", gguf_path,
+        "--alias", alias or os.path.basename(gguf_path),
         "--host", "127.0.0.1",
         "--port", str(port),
         "--no-webui",
@@ -309,6 +318,7 @@ def start_server(model_id: str, on_state: OnState, *,
         token = manifest.get_api_token()
         argv = build_server_argv(
             binary, files["gguf"], port, token, mmproj_path=files["mmproj"],
+            alias=model_id,
         )
         try:
             logf = open(server_log_path(), "w")

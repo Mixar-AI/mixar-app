@@ -109,3 +109,24 @@ def test_policy_error_classes_are_raised(monkeypatch, tmp_path):
     with pytest.raises(MyCancel):
         download.download_file("https://cdn/x", str(tmp_path / "f"), "ab" * 32,
                                policy=policy, should_cancel=lambda: True)
+
+
+def test_requests_name_the_app_not_urllib(monkeypatch, tmp_path):
+    """cdn.mixar.app refuses urllib's default user agent (Cloudflare 1010)."""
+    payload = b"tour part"
+    agents = []
+
+    def _open(request, timeout=None):
+        agents.append(request.get_header("User-agent"))
+        return _Resp(payload, 200, len(payload))
+
+    monkeypatch.setattr(download, "_client_version", lambda: "4.3.0")
+    monkeypatch.setattr(download.urllib.request, "urlopen", _open)
+    download.download_file("https://cdn/x", str(tmp_path / "p.mp4"),
+                           hashlib.sha256(payload).hexdigest(), policy=_fast())
+    assert agents == ["Mixar/4.3.0"]
+
+
+def test_user_agent_without_a_known_version_is_the_bare_product(monkeypatch):
+    monkeypatch.setattr(download, "_client_version", lambda: None)
+    assert download.user_agent() == "Mixar"

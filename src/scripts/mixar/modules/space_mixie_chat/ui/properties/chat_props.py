@@ -30,6 +30,7 @@ from .chat_slot_types import (
     MixieChatStepItem,
 )
 from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN, FEEDBACK_STATUS_SENDING
+from ...core import composer_limit
 
 logger = get_logger(__name__)
 
@@ -283,10 +284,11 @@ class MixieChatMessage(PropertyGroup):
     # #1251 import picker: comma-separated extensions offered by the native
     # open dialog. Picker configuration only — never a path.
     import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
-    # USER bubbles only: a short delivery note the renderer draws above the
-    # bubble ("queued"). Set when a message is sent as an
-    # interjection into a streaming turn, cleared by the backend's `joined`
-    # ack, replaced by "could not be delivered" when the ack never comes.
+    # Never set: bubbles carry no delivery label ("queued", "could not be
+    # delivered", ...). A refused or undelivered message is explained by one
+    # agent message (core/send_failure.py). Kept because the native renderer
+    # still looks the property up (mixie_chat_sender_label draws it when
+    # non-empty), so dropping it would need a rebuild for no behaviour change.
     delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})
 
     # Collection slots
@@ -425,6 +427,44 @@ classes = (
 )
 
 
+_draft_full_notified = False
+
+
+def _notify_when_draft_full(text: str) -> None:
+    """Say so once when the composer buffer is full.
+
+    The native text editor drops keystrokes past the RNA ``maxlen`` without
+    any feedback, which reads as the app eating input. One stable toast per
+    fill; it re-arms as soon as the draft has room again.
+    """
+    global _draft_full_notified
+    try:
+        full = composer_limit.is_full(text, CHAT_INPUT_MAXLEN)
+    except Exception:  # noqa: BLE001
+        return
+    if not full:
+        _draft_full_notified = False
+        return
+    if _draft_full_notified:
+        return
+    _draft_full_notified = True
+    try:
+        from mixar.modules.common.analytics.essential_events import capture_composer_cap_hit
+        capture_composer_cap_hit("typed", len(text.encode("utf-8")))
+    except Exception:  # noqa: BLE001 — telemetry is fail-open
+        pass
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().push(
+            "warning", n_("Message box is full"),
+            body=n_("The message box is full ({kb} KB). Shorten the draft, or send it "
+                    "and continue in the next message.").format(kb=CHAT_INPUT_MAXLEN // 1024),
+            ttl_ms=6000, id="mixie_chat_input_full",
+        )
+    except Exception:  # noqa: BLE001 — the cap itself is enforced by RNA
+        logger.debug("draft-full notice skipped", exc_info=True)
+
+
 def on_chat_input_changed(self, context):
     """Auto-submit when Enter is pressed (detected by \\x1F marker).
 
@@ -444,6 +484,8 @@ def on_chat_input_changed(self, context):
             first_interval=0.001
         )
         return
+
+    _notify_when_draft_full(self.mixie_chat_input)
 
     # An emptied composer can't have an active @-mention token. Interactive
     # edits are handled by the C++ detection hooks; this covers programmatic
@@ -490,8 +532,11 @@ def _execute_send_message():
     """
     try:
         from ...core.composer_send import can_send
+        from ..operators.auth_ops import guest_seat_pending
         allowed, reason = can_send(bpy.context.scene)
-        if not allowed:
+        # Signed out while a refused guest session is retried: the operator
+        # says why in the chat (its poll admits the same case).
+        if not allowed and not guest_seat_pending():
             _report_send_refused(reason)
             return
         if hasattr(bpy.ops.mixie_chat, 'send_message'):
@@ -766,6 +811,16 @@ def _on_chat_mode_changed(self, context):
             pass
 
 
+def _mirror_model_picker(self, _context):
+    """Signing in / out or becoming a guest changes what the island's model
+    card offers (Mixar's models need an account): re-mirror it."""
+    try:
+        from mixar.modules.byok.core import picker_mirror
+        picker_mirror.apply_to_wm(self)
+    except Exception:
+        pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -1011,10 +1066,12 @@ def register():
         default='SONNET',
     )
 
-    from ...core.account_identity import register as register_account_identity
+    from ...core.account_identity import register as register_account_identity, session_value
     register_account_identity()
 
-    # Security: password and login state on WindowManager (session-only, never saved to .blend)
+    # Security: password and login state on WindowManager. A WindowManager IS
+    # saved to (and adopted from) a file; the sign-in flags read through
+    # `session_value`, so a file never carries them into another session.
     bpy.types.WindowManager.mixie_chat_password = StringProperty(
         name="Password",
         description="Password for Mixie Chat login",
@@ -1027,6 +1084,18 @@ def register():
         name="Is Logged In",
         description="Whether user is currently logged in",
         default=False,
+        update=_mirror_model_picker,
+        **session_value("mixie_chat_is_logged_in"),
+    )
+
+    # Mirrors /auth/me's is_guest: logged in on a guest account (no sign-in
+    # yet). The top bar reads "Guest", paid features ask to sign in.
+    bpy.types.WindowManager.mixie_chat_is_guest = BoolProperty(
+        name="Is Guest",
+        description="Whether the current session is a guest account",
+        default=False,
+        update=_mirror_model_picker,
+        **session_value("mixie_chat_is_guest"),
     )
 
     bpy.types.WindowManager.mixie_chat_is_logging_in = BoolProperty(
@@ -1046,6 +1115,7 @@ def register():
         name="Session Expired",
         description="Session expired — re-login required",
         default=False,
+        **session_value("mixie_chat_session_expired"),
     )
 
     bpy.types.Scene.mixie_chat_credits = IntProperty(
@@ -1164,7 +1234,7 @@ def unregister():
         'mixie_chat_quick_prompt_mode', 'mixie_chat_quick_prompt_input',
         'mixie_chat_session_expired', 'mixie_chat_login_error',
         'mixie_chat_is_logging_in', 'mixie_chat_is_logged_in',
-        'mixie_chat_password',
+        'mixie_chat_is_guest', 'mixie_chat_password',
     ):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)

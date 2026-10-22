@@ -17,6 +17,8 @@ def test_argv_without_mmproj():
     assert argv == [
         "/opt/rt/llama-server",
         "-m", "/models/m.gguf",
+        # Never the path: llama-server reports -m as the model id otherwise.
+        "--alias", "m.gguf",
         "--host", "127.0.0.1",
         "--port", "11500",
         "--no-webui",

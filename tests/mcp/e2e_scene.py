@@ -76,7 +76,7 @@ def enable_in_ui(qa, output):
     ):
         raise RuntimeError("Run this credit-spending scenario only in an isolated loopback QA app")
     email = qa.eval("result = drv.main_window().scene.mixie_chat_user_id")
-    qa.click(text=email, area_type="TOPBAR")  # Connect AI Apps lives in the profile menu.
+    qa.click(text=email, area_type="TOPBAR")  # Connect MCP lives in the profile menu.
     qa.click(op="MIXAR_OT_connect_ai")
     qa.cmd("snap", path=str(output / "setup-before.png"))
     qa.click(op="MIXAR_OT_set_mcp_enabled")

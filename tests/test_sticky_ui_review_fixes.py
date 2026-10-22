@@ -53,12 +53,16 @@ def test_bubble_layouts_and_screens_are_left_out_of_every_write():
     unlink = unlink[:unlink.index("\n}\n")]
     assert "BLI_remlink(&workspace->layouts, layout)" in unlink
     assert "BLI_remlink(&bmain->screens, screen)" in unlink
+    # ...and out of the name map, or the writer's name check reports "Critical data
+    # corruption" on every checkpoint taken with the island open.
+    assert "BKE_main_namemap_remove_id(*bmain, screen->id)" in unlink
     assert "wm_layout_used_by_other_window(wm, layout)" in unlink     # a layout a written window shows stays
     relink = cc[cc.index("static void wm_agent_bubble_windows_relink_after_write("):]
     relink = relink[:relink.index("\n}\n")]
     assert "BLI_insertlinkafter(&bmain->screens, it->prev, it->screen)" in relink
     assert "BLI_insertlinkafter(&it->workspace->layouts, it->prev, it->layout)" in relink
     assert "rbegin()" in relink                                      # reverse order keeps each `prev` valid
+    assert "BKE_main_namemap_clear(*bmain)" in relink                # the names come back with the screens
     # Every writer that drops the bubble windows also drops their layouts.
     assert cc.count("wm_agent_bubble_windows_unlink_for_write(bmain,") == 3
     assert cc.count("wm_agent_bubble_windows_relink_after_write(bmain, wm, agent_bubble_stash)") == 3

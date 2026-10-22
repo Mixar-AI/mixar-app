@@ -51,14 +51,14 @@ def _http_get(port, path):
 
 
 class _WSClient:
-    def __init__(self, port, token):
+    def __init__(self, port, token, upgrade="websocket"):
         self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
         key = base64.b64encode(b"0123456789abcdef").decode()
         self.sock.sendall(
             (
                 f"GET /ws?t={token} HTTP/1.1\r\n"
                 "Host: x\r\n"
-                "Upgrade: websocket\r\n"
+                f"Upgrade: {upgrade}\r\n"
                 "Connection: Upgrade\r\n"
                 f"Sec-WebSocket-Key: {key}\r\n"
                 "Sec-WebSocket-Version: 13\r\n\r\n"
@@ -114,6 +114,25 @@ class _WSClient:
     def close(self):
         self.sock.close()
 
+    def close_code(self, timeout=5):
+        """The code of the next close frame; None when the socket just dies."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                opcode, payload = self.recv_frame()
+            except (ConnectionError, OSError):
+                return None
+            if opcode == 0x8:
+                return struct.unpack("!H", payload[:2])[0]
+        return None
+
+
+def _wait_connected(srv, timeout=5):
+    deadline = time.time() + timeout
+    while time.time() < deadline and srv.current_connection() is None:
+        time.sleep(0.02)
+    assert srv.current_connection() is not None
+
 
 class TestHTTP:
     def test_index_served_with_no_store(self, running_server):
@@ -138,9 +157,36 @@ class TestHTTP:
 
 
 class TestWebSocket:
-    def test_bad_token_rejected(self, running_server):
-        client = _WSClient(running_server.state.port, "wrong-token")
+    def test_a_malformed_upgrade_is_refused_with_403(self, running_server):
+        client = _WSClient(
+            running_server.state.port, running_server.state.token, upgrade="h2c"
+        )
         assert client.status == 403
+        client.close()
+
+    def test_a_stale_token_gets_close_4001(self, running_server):
+        # A 403 reaches the browser as 1006, indistinguishable from a network
+        # drop; the phone must be told the pairing is over.
+        client = _WSClient(running_server.state.port, "wrong-token")
+        assert client.status == 101
+        assert client.close_code() == 4001
+        assert not running_server.state.phone_connected
+        client.close()
+
+    def test_new_pairing_closes_the_phone_with_4002(self, running_server):
+        client = _WSClient(running_server.state.port, running_server.state.token)
+        assert client.status == 101
+        _wait_connected(running_server)
+        running_server.drop_connection(reason="re-pairing", code=4002)
+        assert client.close_code() == 4002
+        client.close()
+
+    def test_stop_closes_the_phone_with_4003(self, running_server):
+        client = _WSClient(running_server.state.port, running_server.state.token)
+        assert client.status == 101
+        _wait_connected(running_server)
+        running_server.stop()
+        assert client.close_code() == 4003
         client.close()
 
     def test_handshake_control_and_outbound_frames(self, running_server):

@@ -12,19 +12,14 @@ that the user satisfies in the floating island window are detected by the
 state predicates polled in ``session.tick`` instead, and the island's own
 Escape asks for the exit dialog through ``request_exit_confirm``.
 
-Keyboard: Escape → exit dialog, Space → pause/play, Right arrow → Next.
-All three are consumed only while the pointer is over the host viewport,
+Keyboard: Escape → exit dialog, Space → pause/play, Left arrow → Back,
+Right arrow → Next. All four are consumed only while the pointer is over the host viewport,
 so a text field elsewhere in the window keeps its keys.
 """
 
 import time
 
-from mixar.config.logging_config import get_logger
-
-from . import config
 from .overlays import card as card_ui
-
-logger = get_logger(__name__)
 
 # Input that moves the camera: the viewport gate counts these only.
 _NAVIGATE_EVENTS = frozenset((
@@ -57,12 +52,14 @@ class SessionInputMixin:
         if self.exit_confirm:
             return self._handle_exit_confirm(et, val, mx, my)
 
-        if val == "PRESS" and et in ("ESC", "SPACE", "RIGHT_ARROW") \
+        if val == "PRESS" and et in ("ESC", "SPACE", "LEFT_ARROW", "RIGHT_ARROW") \
                 and self._in_host(mx, my) and not self._host_lost:
             if et == "ESC":
                 self.set_exit_confirm(True)
             elif et == "SPACE":
                 self._control("pause")
+            elif et == "LEFT_ARROW":
+                self._control("back")
             else:
                 self._control("skip")
             return "RUNNING_MODAL"
@@ -131,24 +128,14 @@ class SessionInputMixin:
         if name in ("pause", "card"):
             # A click on the video itself toggles pause, like any player.
             self.runner.set_user_paused(not self.runner.user_paused)
-        elif name == "speed":
-            self._cycle_speed()
+        elif name == "back":
+            self.runner.back_beat()
+            # Restarting the same beat must replay its overlays too.
+            self._last_beat_id = None
         elif name == "skip":
             self.runner.skip_beat()
         elif name == "exit":
             self.set_exit_confirm(True)
-
-    def _cycle_speed(self) -> None:
-        options = config.SPEED_OPTIONS
-        try:
-            i = options.index(round(self.clock.rate, 2))
-        except ValueError:
-            i = -1
-        rate = options[(i + 1) % len(options)]
-        try:
-            self.clock.set_rate(rate)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Tour: set_rate failed: %s", exc)
 
     def set_exit_confirm(self, shown: bool) -> None:
         """Show/hide the exit dialog; the tour pauses underneath it and

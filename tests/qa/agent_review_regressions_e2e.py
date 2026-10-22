@@ -85,13 +85,13 @@ scene.mixie_chat_input = 'An interjection'
 with bpy.context.temp_override(window=drv.main_window()):
     assert bpy.ops.mixie_chat.send_message() == {'FINISHED'}
 last = [m for m in scene.mixie_chat_messages if m.sender == 'USER'][-1]
-assert last.delivery_hint == 'queued'
+assert last.delivery_hint == ''  # bubbles carry no delivery label, interjections included
 identity = last.bubble_id
 handler = turn_transport.create_turn_handler(scene.name)
 assert handler.start_input_stream(scene.mixie_session_id, 'submit', answers=[{'answer': 'blue'}])
-assert last.bubble_id == identity and last.delivery_hint == 'queued'
+assert last.bubble_id == identity
 turn_events._consume('agent.command.result', {'command_id': f.commands[-1][2], 'ok': True})
-assert last.bubble_id == identity and last.delivery_hint == 'queued'
+assert last.bubble_id == identity
 turn_events._consume('agent.command.result', {'command_id': identity, 'ok': True})
 assert last.delivery_hint == ''
 session.set_connected(scene)

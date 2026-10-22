@@ -7,8 +7,8 @@ Verified streaming download.
 
 Streams a URL into ``<final_path>.part`` and gives the file its final name
 only once its sha256 matches the digest the caller was promised. Imports no
-``bpy`` — every callback fires on the download thread and callers marshal
-to the main thread themselves. Grown out of the self-updater's installer
+``bpy`` at module level and changes no Blender data — every callback fires
+on the download thread and callers marshal to the main thread themselves. Grown out of the self-updater's installer
 download and shared with the onboarding tour's language packs.
 
 Three properties matter here and each is deliberate:
@@ -25,6 +25,11 @@ Three properties matter here and each is deliberate:
 - **The budget is bounded.** ``urlopen(timeout=...)`` is a per-read
   timeout that a trickling connection resets forever, so a total deadline
   is enforced between chunks.
+
+Every request names the app (``user_agent()``): the CDN blocks urllib's
+default user agent. The version comes from ``common.api.client_version``,
+whose first call reads the static ``bpy.app.version_string`` (the same read
+the API's worker threads already make) and is cached from then on.
 """
 
 import hashlib
@@ -91,6 +96,20 @@ def _sleep_within(seconds, deadline, should_cancel, policy):
     return time.monotonic() < deadline
 
 
+def _client_version():
+    try:
+        from ...api.client_version import get_client_version
+        return get_client_version()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def user_agent():
+    """``Mixar/<version>``, or ``Mixar`` when the version is unknown."""
+    version = _client_version()
+    return f"{C.USER_AGENT_PRODUCT}/{version}" if version else C.USER_AGENT_PRODUCT
+
+
 def classify(exc):
     """Map a transport error to (message, retryable)."""
     if isinstance(exc, urllib.error.HTTPError):
@@ -106,7 +125,7 @@ def _open(url, offset, deadline, policy):
     if remaining <= 0:
         raise policy.error_cls("Download deadline exceeded", retryable=False)
 
-    request = urllib.request.Request(url)
+    request = urllib.request.Request(url, headers={"User-Agent": user_agent()})
     if offset:
         request.add_header("Range", f"bytes={offset}-")
 

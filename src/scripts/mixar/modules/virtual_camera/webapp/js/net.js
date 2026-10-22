@@ -11,6 +11,30 @@ const Net = (() => {
   let handlers = { open: null, close: null, message: null, frame: null };
   let reconnectTimer = null;
   let closedByUs = false;
+  let attempts = 0;
+
+  /* Close codes the server sends when this pairing is over for good
+   * (core/server.py, constants.py): 4000 replaced by another phone,
+   * 4001 stale token, 4002 New Pairing Code, 4003 server stopped.
+   * Reconnecting cannot help — only a fresh QR scan can. */
+  const FINAL_CLOSE_MIN = 4000;
+  const FINAL_CLOSE_MAX = 4003;
+  const BACKOFF_BASE_MS = 1500;
+  const BACKOFF_MAX_MS = 15000;
+
+  function isFinalClose(code) {
+    return code >= FINAL_CLOSE_MIN && code <= FINAL_CLOSE_MAX;
+  }
+
+  function backoffDelay() {
+    /* Exponential backoff with jitter: 1.5 s doubling to 15 s, each delay
+     * drawn from its upper half so many phones never retry in lockstep.
+     * Everything that is not a final code (1006 from an iOS background
+     * suspend, a Wi-Fi drop) stays retryable. */
+    const ceiling = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** attempts);
+    attempts += 1;
+    return ceiling / 2 + Math.random() * (ceiling / 2);
+  }
 
   function token() {
     return new URLSearchParams(location.search).get("t") || "";
@@ -46,6 +70,7 @@ const Net = (() => {
      * scheduled while this one was opening makes this one history. */
     socket.onopen = () => {
       if (ws !== socket) return;
+      attempts = 0;
       send({ t: "hello", device: { ua: navigator.userAgent } });
       if (handlers.open) handlers.open();
     };
@@ -59,11 +84,13 @@ const Net = (() => {
       try { msg = JSON.parse(e.data); } catch { return; }
       if (handlers.message) handlers.message(msg);
     };
-    socket.onclose = () => {
+    socket.onclose = (e) => {
       if (ws !== socket) return;
       ws = null;
-      if (handlers.close) handlers.close();
-      if (!closedByUs) reconnectTimer = setTimeout(connect, 1500);
+      const code = e ? e.code : 0;
+      const final = isFinalClose(code);
+      if (handlers.close) handlers.close({ final, code });
+      if (!closedByUs && !final) reconnectTimer = setTimeout(connect, backoffDelay());
     };
     socket.onerror = () => { /* onclose follows */ };
   }

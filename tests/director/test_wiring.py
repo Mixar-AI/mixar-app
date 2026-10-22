@@ -241,7 +241,13 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert "draw_top_dock" not in overlay
     assert '"3D Editor"' not in overlay
     assert '"Canvas"' not in overlay
-    assert "region->winy - unit * 2 - gap * 2" in overlay
+    # Compact actions must clear Zen's overlapping scene toolbar. Native
+    # visible bounds also avoid compensating twice in a reserved header.
+    assert "ED_region_visible_rect(region)" in overlay
+    assert "BKE_area_find_region_type(area, RGN_TYPE_HEADER)" in overlay
+    assert "header->winrct.ymin - region->winrct.ymin" in overlay
+    assert "action_top - unit * 2 - gap * 2" in overlay
+    assert "region->winy - unit * 2 - gap * 2" not in overlay
     assert "region->winy - unit * 6" not in overlay
     surface_ops = _read("ui/operators/surface_ops.py")
     # The Cinema surface replaced the camera DROPDOWN with the "My Cameras"

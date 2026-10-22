@@ -30,6 +30,13 @@ Link rules, matching what a node editor does on duplicate:
     double-feed a downstream input socket that already has a source.
 """
 
+import json
+
+from mixar.modules.common.generation_params.core.multi_select import (
+    selected_values,
+    spec_choices,
+    sync_choice_rows,
+)
 from mixar.modules.moodboard.core.node_graph import (
     add_link,
     deselect_graph_nodes,
@@ -142,6 +149,9 @@ def _serialize_parameter(parameter) -> dict:
     data = {field: getattr(parameter, field) for field in _PARAMETER_FIELDS}
     # Read last for the same reason it is written last.
     data["value_enum"] = str(getattr(parameter, "value_enum", "") or "")
+    if data.get("parameter_type") == 'ARRAY':
+        # The rows are rebuilt from ``choices_json`` on paste; only the ticks travel.
+        data["values"] = selected_values(getattr(parameter, "choices", ()))
     return data
 
 
@@ -262,6 +272,13 @@ def _apply_parameter(parameter, data: dict) -> None:
             parameter.value_enum = value_enum
         except (TypeError, ValueError):
             pass
+    if data.get("parameter_type") == 'ARRAY':
+        try:
+            choices = json.loads(data.get("choices_json") or "[]")
+        except (TypeError, ValueError):
+            choices = []
+        sync_choice_rows(parameter.choices, spec_choices({"choices": choices}),
+                         data.get("values") or ())
 
 
 def default_image_resolver(name: str):

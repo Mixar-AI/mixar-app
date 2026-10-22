@@ -6,7 +6,12 @@
 /** \file
  * \ingroup spmixiechat
  *
- * Image loading, measurement and drawing for chat attachments.
+ * Message-bubble image attachments are drawn as View2D-space quads so the
+ * thumbnail shares the GPU matrix (and left inset) of the message text.
+ * Never blit those with PixelBitmapDrawer / immDrawPixelsTex — that path is
+ * pixel-space and clips a tall sheet to a sliver once View2D ortho is on.
+ * The fitted tiles and lightbox below are pixel-space by design (they are
+ * drawn in the window overlay pass) and keep the raw-pixel blit.
  */
 
 #include <cstring>
@@ -16,7 +21,6 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 
-#include "BKE_context.hh"
 #include "BKE_image.hh"
 #include "BKE_main.hh"
 
@@ -59,7 +63,7 @@ static Image *find_image_by_name(Main *bmain, const char *name)
  */
 static Image *load_or_find_image(Main *bmain, const char *path, int source)
 {
-  if (!bmain || !path || path[0] == '\0') {
+  if (!bmain || !path || !path[0]) {
     return nullptr;
   }
 
@@ -67,22 +71,62 @@ static Image *load_or_find_image(Main *bmain, const char *path, int source)
     /* BLEND_DATA - look up by name */
     return find_image_by_name(bmain, path);
   }
-  else {
-    /* FILE - load from disk */
-    /* First check if already loaded by basename */
-    const char *basename = BLI_path_basename(path);
-    Image *existing = find_image_by_name(bmain, basename);
-    if (existing) {
-      return existing;
-    }
 
-    /* Load from file. Tag as sRGB so raw-upload path displays correctly. */
-    Image *img = BKE_image_load_exists(bmain, path);
-    if (img) {
-      STRNCPY(img->colorspace_settings.name, "sRGB");
-    }
-    return img;
+  /* FILE - load from disk. First check if already loaded by basename. */
+  const char *basename = BLI_path_basename(path);
+  Image *existing = find_image_by_name(bmain, basename);
+  if (existing) {
+    return existing;
   }
+
+  /* Load from file. Tag as sRGB so raw-upload path displays correctly. */
+  Image *img = BKE_image_load_exists(bmain, path);
+  if (img) {
+    STRNCPY(img->colorspace_settings.name, "sRGB");
+  }
+  return img;
+}
+
+/** Cap the thumbnail to the bubble's text column when that is narrower. */
+static float attachment_max_width(const ChatImageStyle *style, float available_width)
+{
+  float max_w = style->max_width;
+  if (available_width > 0.0f && available_width < max_w) {
+    max_w = available_width;
+  }
+  return max_w;
+}
+
+static ImBuf *acquire_attachment_ibuf(Image *image, void **r_lock)
+{
+  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, r_lock);
+  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
+    BKE_image_release_ibuf(image, ibuf, *r_lock);
+    *r_lock = nullptr;
+    return nullptr;
+  }
+  if (ibuf->byte_buffer.data == nullptr && ibuf->float_buffer.data != nullptr) {
+    IMB_byte_from_float(ibuf);
+  }
+  return ibuf;
+}
+
+static gpu::Texture *upload_attachment_texture(const ImBuf *ibuf)
+{
+  if (!ibuf->byte_buffer.data) {
+    return nullptr;
+  }
+  gpu::Texture *tex = GPU_texture_create_2d("mixie_chat_attachment",
+                                            ibuf->x,
+                                            ibuf->y,
+                                            1,
+                                            gpu::TextureFormat::UNORM_8_8_8_8,
+                                            GPU_TEXTURE_USAGE_GENERAL,
+                                            nullptr);
+  if (tex) {
+    GPU_texture_update(tex, GPU_DATA_UBYTE, ibuf->byte_buffer.data);
+  }
+  return tex;
 }
 
 /** \} */
@@ -94,26 +138,27 @@ static Image *load_or_find_image(Main *bmain, const char *path, int source)
 float chat_ui_calc_image_attachment_height(Main *bmain,
                                            const char *image_path,
                                            int image_source,
-                                           const ChatImageStyle *style)
+                                           const ChatImageStyle *style,
+                                           float available_width)
 {
   Image *image = load_or_find_image(bmain, image_path, image_source);
   if (!image) {
     return 0.0f;
   }
 
-  /* Use ImBuf dimensions instead of GPU texture to stay consistent
-   * with the raw-upload draw path (avoids creating a GPU texture
-   * just to query width/height). */
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
-    BKE_image_release_ibuf(image, ibuf, lock);
+  void *lock = nullptr;
+  ImBuf *ibuf = acquire_attachment_ibuf(image, &lock);
+  if (!ibuf) {
     return 0.0f;
   }
 
   float display_width, display_height;
-  chat_ui_calc_image_bounds(
-      ibuf->x, ibuf->y, style->max_width, style->max_height, &display_width, &display_height);
+  chat_ui_calc_image_bounds(ibuf->x,
+                            ibuf->y,
+                            attachment_max_width(style, available_width),
+                            style->max_height,
+                            &display_width,
+                            &display_height);
 
   BKE_image_release_ibuf(image, ibuf, lock);
   return display_height + style->margin * 2.0f;
@@ -132,60 +177,42 @@ float chat_ui_draw_image_attachment(Main *bmain,
     return 0.0f;
   }
 
-  /* Acquire the raw image buffer directly instead of BKE_image_get_gpu_texture.
-   * BKE_image_get_gpu_texture applies colorspace conversion (sRGB → Linear)
-   * when creating the GPU texture.  GPU_SHADER_3D_IMAGE then outputs those
-   * linear values without an inverse transform, producing washed-out images.
-   * The ImBuf path uploads raw pixel data (already sRGB-encoded for
-   * photos/screenshots) straight to the GPU for correct display colors. */
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
-    BKE_image_release_ibuf(image, ibuf, lock);
+  /* Acquire the raw image buffer instead of BKE_image_get_gpu_texture.
+   * That helper applies colorspace conversion (sRGB → Linear) when creating
+   * the GPU texture; GPU_SHADER_3D_IMAGE then outputs those linear values
+   * without an inverse transform, producing washed-out images. The ImBuf
+   * path uploads raw sRGB bytes so display colors match the source. */
+  void *lock = nullptr;
+  ImBuf *ibuf = acquire_attachment_ibuf(image, &lock);
+  if (!ibuf) {
     return 0.0f;
   }
 
-  /* Clamp style max_width to available width */
-  float effective_max_width = (style->max_width < max_width) ? style->max_width : max_width;
-
   float display_width, display_height;
-  chat_ui_calc_image_bounds(
-      ibuf->x, ibuf->y, effective_max_width, style->max_height, &display_width, &display_height);
+  chat_ui_calc_image_bounds(ibuf->x,
+                            ibuf->y,
+                            attachment_max_width(style, max_width),
+                            style->max_height,
+                            &display_width,
+                            &display_height);
 
-  /* Draw position */
-  float draw_x = x + style->margin;
-  float draw_y = y - display_height - style->margin;
+  /* `x` is the left edge of the thumbnail — same inset as the bubble text.
+   * `y` is the top of the attachment slot; `style->margin` is vertical only. */
+  rctf rect;
+  rect.xmin = x;
+  rect.xmax = x + display_width;
+  rect.ymax = y - style->margin;
+  rect.ymin = rect.ymax - display_height;
 
-  /* Draw using raw pixel upload — bypasses colorspace conversion. */
-  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
-  GPU_blend(GPU_BLEND_ALPHA_PREMULT);
-
-  if (ibuf->float_buffer.data) {
-    drawer.draw(draw_x,
-                                   draw_y,
-                                   ibuf->x,
-                                   ibuf->y,
-                                   blender::gpu::TextureFormat::SFLOAT_16_16_16_16,
-                                   true,
-                                   ibuf->float_buffer.data,
-                                   display_width / float(ibuf->x),
-                                   display_height / float(ibuf->y), nullptr);
-  }
-  else if (ibuf->byte_buffer.data) {
-    drawer.draw(draw_x,
-                                   draw_y,
-                                   ibuf->x,
-                                   ibuf->y,
-                                   blender::gpu::TextureFormat::UNORM_8_8_8_8,
-                                   false,
-                                   ibuf->byte_buffer.data,
-                                   display_width / float(ibuf->x),
-                                   display_height / float(ibuf->y), nullptr);
+  gpu::Texture *tex = upload_attachment_texture(ibuf);
+  if (tex) {
+    GPU_blend(GPU_BLEND_ALPHA);
+    chat_ui_draw_image(tex, &rect, style->corner_radius);
+    GPU_blend(GPU_BLEND_NONE);
+    GPU_texture_free(tex);
   }
 
-  GPU_blend(GPU_BLEND_NONE);
   BKE_image_release_ibuf(image, ibuf, lock);
-
   return display_height + style->margin * 2.0f;
 }
 

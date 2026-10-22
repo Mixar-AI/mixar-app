@@ -1,27 +1,29 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""One-time external AI client setup; account tokens stay in the desktop."""
+"""One-time external AI client setup; account tokens stay in the desktop.
+
+`mixar.connect_ai` opens the Connect MCP sheet (drawn by
+`connect_sheet_ui` / `connect_sheet_plans`, state in `core/connect_state.py`);
+the other operators here are its actions and keep their bl_idnames and
+properties (agent, QA and profile-card contracts).
+"""
 
 import os
 import subprocess
 import sys
-import textwrap
 
 import bpy
 from bpy.props import BoolProperty, EnumProperty
 from bpy.types import Operator
 
 from mixar.config.config import add_config
-from mixar.modules.common.i18n import iface_, rpt_
-from ...constants import SETUP_GUIDE_URL
-from ...core import app_add, app_configs, runtime
-from ...core.setup import connection_config, launch, render, stable_launch
+from mixar.modules.common.i18n import rpt_
+from ...constants import OTHER_APP, PRODUCT_NAMES
+from ...core import app_add, app_configs, connect_state, runtime
+from ...core.setup import connection_config, launch
+from . import connect_sheet_ui
 
-#: App names are product names: a context with no catalog entries keeps
-#: "Cursor" from being shown as a translated word.
-PRODUCT_NAMES = "Mixar product name"
 APP_ITEMS = [(key, name, "") for key, name, _how in app_configs.APPS]
-SNIPPET_COLUMNS = 72
 
 
 def _signed_in(context):
@@ -51,89 +53,64 @@ def _enable(op):
     _save_tools_now()
 
 
-def _draw_switch(layout):
-    """The MCP switch drawn as the checkbox it is, with what AI apps see right now.
-
-    It used to be an "MCP enabled" tick beside a "Disable" button: a user who
-    opened this dialog to fix a connection pressed the only button in the row,
-    switched MCP off, and nothing on either side said so (their AI app kept
-    reporting Mixar as not connected while Mixar sat open).
-    """
-    on = runtime.enabled()
-    row = layout.row()
-    row.alignment = 'LEFT'
-    row.operator("mixar.set_mcp_enabled", text="Allow AI apps to use Mixar (MCP)",
-                 icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT', emboss=False).enabled = not on
-    if not on:
-        layout.label(text="MCP is off: AI apps report Mixar as not connected until you turn it on.",
-                     icon='ERROR')
-    elif runtime.is_running():
-        layout.label(text="MCP is on: AI apps can connect to this Mixar.", icon='CHECKMARK')
-    else:
-        layout.label(text="MCP is on, waiting for Mixar's server connection.", icon='TIME')
-
-
-def _snippet_lines(text):
-    for line in text.splitlines():
-        indent = len(line) - len(line.lstrip())
-        yield from textwrap.wrap(line, SNIPPET_COLUMNS, subsequent_indent=" " * (indent + 4),
-                                 break_long_words=True, break_on_hyphens=False) or [""]
+def _ready(context):
+    """AI apps can use Mixar only with a session (a guest's counts) and the agent
+    server connected; the local relay alone refuses every scene call."""
+    return _signed_in(context) and runtime.is_running() and bool(runtime.snapshot().get("connected"))
 
 
 class MIXAR_OT_mcp_setup(Operator):
     bl_idname = "mixar.connect_ai"
-    bl_label = "Connect AI Apps (MCP)"
+    bl_label = "Connect MCP"
     bl_description = "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
     app: EnumProperty(name="App", items=APP_ITEMS, default='CLAUDE_CODE', translation_context=PRODUCT_NAMES)
 
+    def invoke(self, context, event):
+        """Open the sheet (`connect_sheet_ui`): centred in the main window with
+        the island hidden, on the app passed in ``app`` (else the last one
+        shown), IDLE unless an add it started is still running. Single
+        instance: a second invoke while it is open does nothing."""
+        if connect_state.dialog_open():
+            return {'CANCELLED'}
+        wm = context.window_manager
+        if self.properties.is_property_set("app"):
+            _select(wm, self.app)
+        connect_state.reset(wm, adding=app_add.running())
+        connect_state.set_dialog_open(True)
+        try:
+            modal = getattr(wm, "mixar_invoke_modal_dialog", None)
+            if modal is None:
+                return wm.invoke_props_dialog(self, width=connect_sheet_ui.SHEET_WIDTH)
+            try:  # the sheet: no title row, framed card behind
+                return modal(self, width=connect_sheet_ui.SHEET_WIDTH, sheet=True)
+            except TypeError as exc:  # a binary predating `sheet`: plain dialog
+                if "sheet" not in str(exc):
+                    raise
+                return modal(self, width=connect_sheet_ui.SHEET_WIDTH)
+        except Exception:
+            connect_state.set_dialog_open(False)
+            raise
+
     def execute(self, context):
+        connect_state.set_dialog_open(False)
         return {'FINISHED'}
 
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=560)
+    def cancel(self, context):
+        connect_state.set_dialog_open(False)
 
     def draw(self, context):
-        layout = self.layout
-        layout.label(text="Let your AI assistant use Mixar scenes and controls.")
-        if not _signed_in(context):
-            layout.label(text="Sign in to Mixar to connect AI apps.", icon='INFO')
-            layout.operator("mixie_chat.login", text="Sign In")
-            if runtime.enabled():
-                # Turning MCP off never needs an account (the session may have expired).
-                _draw_switch(layout)
-            return
-        layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
-        layout.label(text="Your AI app can start Mixar when needed.")
-        _draw_switch(layout)
-        on = runtime.ui_control_enabled()
-        row = layout.row()
-        row.alignment = 'LEFT'
-        row.enabled = runtime.enabled()
-        row.operator("mixar.set_mcp_ui_control", text="Let AI apps control Mixar's interface",
-                     icon='CHECKBOX_HLT' if on else 'CHECKBOX_DEHLT', emboss=False).enabled = not on
-        layout.separator()
-        layout.prop(self, "app")
-        how = next(how for key, _name, how in app_configs.APPS if key == self.app)
-        layout.label(text=iface_(how), translate=False)
-        box = layout.box().column(align=True)
-        for line in _snippet_lines(render(self.app, *stable_launch())):
-            box.label(text=line, translate=False)
-        row = layout.row()
-        name = app_configs.label(self.app)
-        if self.app in app_configs.ADDABLE:
-            # Never drawn as busy: a popup redraws only on input, so a "busy"
-            # button outlived the add and swallowed the next click. The operator
-            # refuses a duplicate while one runs, and a toast reports the result.
-            row.operator("mixar.mcp_add_to_app", text=iface_("Add to {app}").format(app=name),
-                         translate=False, icon='ADD').app = self.app
-        row.operator("mixar.copy_mcp_setup", text="Copy", icon='COPYDOWN').client = self.app
-        if app_configs.config_path(self.app) is not None:
-            row.operator("mixar.mcp_open_app_config", text="Open Config File", icon='FILE_FOLDER').app = self.app
-        layout.label(text="Then restart the app's MCP connection.")
-        layout.separator()
-        row = layout.row()
-        row.operator("mixar.copy_mcp_setup", text="Copy MCP Config", icon='COPYDOWN').client = 'JSON'
-        row.operator("wm.url_open", text="Setup Guide", icon='HELP').url = SETUP_GUIDE_URL
+        # Rendering lives in connect_sheet_ui / connect_sheet_plans (500-line rule).
+        connect_sheet_ui.draw_dialog(self.layout, context.window_manager,
+                                     _signed_in(context), _ready(context))
+
+
+def _select(wm, app):
+    """Show ``app``: a sidebar app, or a generic format under "Other app"."""
+    if app in app_configs.FORMATS:
+        wm.mixar_mcp_dialog_app = OTHER_APP
+        wm.mixar_mcp_dialog_format = app
+    else:
+        wm.mixar_mcp_dialog_app = app
 
 
 class MIXAR_OT_set_mcp_enabled(Operator):
@@ -194,7 +171,7 @@ class MIXAR_OT_copy_mcp_setup(Operator):
         _enable(self)
         context.window_manager.clipboard = connection_config(
             self.client, bpy.utils.resource_path('LOCAL'), bpy.app.binary_path)
-        self.report({'INFO'}, "MCP setup copied. Paste it into your AI app; Setup Guide shows where")
+        self.report({'INFO'}, "MCP setup copied. Paste it into your AI app where the dialog says")
         return {'FINISHED'}
 
 
@@ -214,6 +191,9 @@ class MIXAR_OT_mcp_add_to_app(Operator):
         if not app_add.start(self.app, command, args):
             self.report({'INFO'}, "Already adding Mixar to this app")
             return {'CANCELLED'}
+        # The sheet shows the busy pill until `app_add._announce` lands the
+        # outcome (ADDED recap / ERROR); a closed sheet gets a toast instead.
+        connect_state.begin_add(context.window_manager, self.app)
         self.report({'INFO'}, rpt_("Adding Mixar to {app}…").format(app=app_configs.label(self.app)))
         return {'FINISHED'}
 

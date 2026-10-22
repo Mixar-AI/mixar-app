@@ -1,0 +1,10 @@
+{
+  "name": "left_ptr",
+  "width": 24,
+  "height": 24,
+  "hotspot": [
+    3,
+    1
+  ],
+  "pixels_sha256": "849af2466ad1de9b620436d70a30686967b46aeea7300a7abdbda9445573f14f"
+}

@@ -72,8 +72,7 @@ class EventProcessor:
 
         ``run_status`` (first payload of an orchestrated turn and again before
         its final ``complete``) is the run's authoritative open/closed signal;
-        ``cancelled`` closes the run; ``joined`` / ``interjection_failed``
-        settle the queued hint on the user bubble of an interjection.
+        ``cancelled`` closes the run.
         """
         kind = data.get("type")
         if kind == "run_status":
@@ -88,6 +87,14 @@ class EventProcessor:
             return True
         if kind == "cancelled":
             self._session.set_run(scene, "", False)
+            return True
+        if kind == "login_required":
+            # A paid tool refused the guest mid-turn: the button is this
+            # bubble, the explanation is the model's own prose.
+            from .login_notice import add_login_required_chat_message
+            add_login_required_chat_message(
+                scene, cta=data.get("cta") or "login", body=data.get("message") or "",
+            )
             return True
         if kind == "activity":
             # One per backend tool call: a step row (merged with the script
@@ -161,32 +168,65 @@ class EventProcessor:
         turn and return to IDLE.
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # The loader timer walks every scene and stops itself once none shows
         # a loader (parallel scenes: another tab may still be streaming).
         self._clear_loader_bubbles(scene)
 
         try:
-            add_agent_message(scene, message)
+            from .send_failure import plain_text
+            add_agent_message(scene, plain_text(message))
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error adding in-band error message to chat: {e}")
 
         self._session.set_state(scene, SessionState.IDLE)
 
-    def handle_command_error(self, result, scene):
-        """Display a confirmed command rejection, preserving typed credit actions."""
+    def handle_command_error(self, result, scene, interjection=False):
+        """Show a refused command as ONE agent message: the sign-in, BYOK or
+        credits notice, else a plain-language error (core/send_failure.py).
+        An interjection's turn is still running, so its refusal never ends
+        that turn, clears its loader or changes the state."""
         from .credits_notice import is_credits_exhausted_error, add_credit_upgrade_chat_message
-        message = result.get('message') or rpt_('Message could not be delivered')
+        from .send_failure import refusal_text
+        from mixar.modules.auth.core.guest import login_required_fields
+        message = result.get('message') or ''
         data = result.get('data') or {}
         status = result.get('status_code') or data.get('status_code')
-        if is_credits_exhausted_error(status, message):
+        from .byok_notice import present_refusal
+        refusal = login_required_fields(data)
+        if refusal:
+            # -32021: a guest without a working model key (or over the guest
+            # turn ceiling). The turn never started; the notice names the fix.
+            from .login_notice import add_login_required_chat_message
+            add_login_required_chat_message(
+                scene=scene, cta=refusal['cta'], body=refusal['message'] or message,
+            )
+            self._redraw_ui()
+        elif present_refusal(result, data, scene):
+            # The user's own key: the card (or the cold-start resend) takes over.
+            if interjection:
+                self._redraw_ui()
+            else:
+                self._end_refused_turn(scene)
+        elif is_credits_exhausted_error(status, message):
             actions = data.get('data') or data
             add_credit_upgrade_chat_message(scene=scene, body=message,
                                             action_url=actions.get('action_url'))
             self._redraw_ui()
+        elif interjection:
+            add_agent_message(scene, refusal_text(result))
+            self._redraw_ui()
         else:
-            self._handle_agent_error_internal(message, scene)
+            self._handle_agent_error_internal(refusal_text(result), scene)
+
+    def _end_refused_turn(self, scene) -> None:
+        """A command the backend never started: back to IDLE, no error bubble."""
+        from .executor import get_executor
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        self._clear_loader_bubbles(scene)
+        self._session.set_state(scene, SessionState.IDLE)
+        self._redraw_ui()
 
     def _handle_agent_error_internal(self, error_message: str, scene) -> None:
         """Handle agent stream-level error (called from main thread timer).
@@ -198,7 +238,8 @@ class EventProcessor:
         Abort button stays visible (the backend may still be processing).
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        from .send_failure import plain_text
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         logger.error(f"agent stream error: {error_message}")
 
@@ -222,7 +263,6 @@ class EventProcessor:
         # Read timeouts are transient and noisy — backend may still be working.
         # Swallow the chat bubble but keep state cleanup so Abort stays visible.
         is_read_timeout = "read operation timed out" in error_message_lower
-        user_message = self._extract_http_error_message(error_message) if is_http_error else error_message
         was_busy = self._session.get_state(scene) == SessionState.BUSY
 
         try:
@@ -236,15 +276,15 @@ class EventProcessor:
                 # a main-thread-native fallback if the push doesn't arrive.
                 details = self._parse_http_error(error_message)
                 from .credits_notice import is_credits_exhausted_error
-                if is_credits_exhausted_error(details.get("status"), user_message):
+                if is_credits_exhausted_error(details.get("status"), details.get("message")):
                     from .credits_notice import add_credit_upgrade_chat_message
                     add_credit_upgrade_chat_message(
                         scene=scene,
-                        body=details.get("message") or user_message,
+                        body=details.get("message"),
                         action_url=details.get("action_url"),
                     )
                 else:
-                    add_agent_message(scene, user_message)
+                    add_agent_message(scene, plain_text(error_message))
             elif is_pre_stream_error:
                 add_agent_message(
                     scene,
@@ -257,7 +297,8 @@ class EventProcessor:
                          "The agent may still be working — press Abort to cancel."),
                 )
             else:
-                add_agent_message(scene, error_message)
+                # Never the raw exception text (core/send_failure.py).
+                add_agent_message(scene, plain_text(error_message))
         except Exception as e:
             logger.error(f"Error adding error message to chat: {e}")
 
@@ -280,24 +321,6 @@ class EventProcessor:
             logger.info("agent error while BUSY - keeping BUSY (abort button stays)")
 
         self._redraw_ui()
-
-    @staticmethod
-    def _extract_http_error_message(error_message: str) -> str:
-        """Extract a user-friendly message from an HTTP error string.
-
-        Input format: "HTTP 400: {json_body}" or "HTTP 500: error text"
-        Tries to parse JSON and extract the "message" field.
-        """
-        try:
-            # Split off "HTTP NNN: " prefix
-            _, _, body = error_message.partition(": ")
-            if body:
-                data = json.loads(body)
-                if isinstance(data, dict) and "message" in data:
-                    return data["message"]
-        except (json.JSONDecodeError, ValueError):
-            pass
-        return error_message
 
     @staticmethod
     def _parse_http_error(error_message: str) -> dict:
@@ -364,7 +387,7 @@ class EventProcessor:
         # settles to IDLE or pauses for input (the user's answer starts a new
         # stream, and with it a new turn / fresh checkpoint budget).
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —

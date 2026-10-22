@@ -410,7 +410,7 @@ class LAYERS_PT_Preferences(LAYERS_PT_Main, Panel):
         layout.separator()
 
         # ========== ADD-ON PROJECTS ==========
-        draw_addon_project_options(layout, prefs)
+        draw_addon_project_options(layout, context.window_manager)
 
         layout.separator()
 

@@ -87,6 +87,8 @@ struct ScenesDrawerThumb {
   blender::gpu::Texture *texture = nullptr;
   /** Store generation these pixels were copied from; 0 = nothing copied yet. */
   uint64_t generation = 0;
+  /** Store epoch these pixels belong to; a newer epoch (file load) drops them. */
+  uint64_t epoch = 0;
 };
 
 /** Last painted slide and layout, stored on the drawer region's `regiondata`. */

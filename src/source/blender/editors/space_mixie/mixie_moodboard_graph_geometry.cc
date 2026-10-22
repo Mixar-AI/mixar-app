@@ -333,6 +333,17 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
   cache->outputs.clear();
   cache->action_nodes.clear();
   cache->occupied_inputs.clear();
+  cache->bodies.clear();
+  cache->body_index.clear();
+
+  /* Bodies are appended in the order the draw pass paints them, so "every
+   * body after mine" is exactly "every body painted over mine". */
+  const auto push_body = [cache](const char *node_id, const rctf &rect, const float rotation) {
+    if (node_id[0] != '\0') {
+      cache->body_index.add_overwrite(node_id, int(cache->bodies.size()));
+    }
+    cache->bodies.append({node_id, rect, rotation});
+  };
 
   PropertyRNA *links = RNA_struct_find_property(scene_ptr, "mixie_moodboard_links");
   if (links) {
@@ -358,8 +369,21 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
       char node_id[MIXIE_GRAPH_ID_BUF];
       mixie_rna_string_get_clamped(&iter.ptr, "node_id", node_id, sizeof(node_id));
       rctf rect{};
-      if (node_id[0] != '\0' && moodboard_graph_media_rect(&iter.ptr, &rect)) {
-        cache->outputs.add_overwrite(node_id, rect);
+      if (moodboard_graph_media_rect(&iter.ptr, &rect)) {
+        if (node_id[0] != '\0') {
+          cache->outputs.add_overwrite(node_id, rect);
+        }
+        /* A picture inside a card is painted as that card, which already
+         * covers; the image hit-test skips embedded media the same way. An
+         * id-less picture (a board saved before the graph migration) owns no
+         * handle but still hides whatever it lies over. */
+        PropertyRNA *embedded = RNA_struct_find_property(&iter.ptr, "embedded_node_id");
+        if (!embedded || RNA_property_string_length(&iter.ptr, embedded) == 0) {
+          PropertyRNA *rotation = RNA_struct_find_property(&iter.ptr, "rotation");
+          push_body(node_id,
+                    rect,
+                    rotation ? RNA_property_float_get(&iter.ptr, rotation) : 0.0f);
+        }
       }
       RNA_property_collection_next(&iter);
     }
@@ -379,17 +403,18 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
     while (iter.valid) {
       char node_id[MIXIE_GRAPH_ID_BUF];
       mixie_rna_string_get_clamped(&iter.ptr, "node_id", node_id, sizeof(node_id));
+      rctf rect{};
+      rect.xmin = RNA_float_get(&iter.ptr, "position_x");
+      rect.ymin = RNA_float_get(&iter.ptr, "position_y");
+      rect.xmax = rect.xmin + RNA_float_get(&iter.ptr, "width");
+      rect.ymax = rect.ymin + RNA_float_get(&iter.ptr, "height");
       if (node_id[0] != '\0') {
-        rctf rect{};
-        rect.xmin = RNA_float_get(&iter.ptr, "position_x");
-        rect.ymin = RNA_float_get(&iter.ptr, "position_y");
-        rect.xmax = rect.xmin + RNA_float_get(&iter.ptr, "width");
-        rect.ymax = rect.ymin + RNA_float_get(&iter.ptr, "height");
         cache->outputs.add_overwrite(node_id, rect);
         if (is_action) {
           cache->action_nodes.add_overwrite(node_id, iter.ptr);
         }
       }
+      push_body(node_id, rect, 0.0f);
       RNA_property_collection_next(&iter);
     }
     RNA_property_collection_end(&iter);

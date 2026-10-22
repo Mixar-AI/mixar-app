@@ -13,21 +13,24 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib import run_scenario
+import model_popup as mp
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/model-ordering'))
 OUT.mkdir(parents=True, exist_ok=True)
-PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE', 'region_type': 'TOOLS'}
 SETUP = """
 import bpy, threading
 from types import SimpleNamespace
 from mixar.modules.byok.core import preference_client as F, preference_state as P
-from mixar.modules.byok.core import model_suggestions as M
+from mixar.modules.byok.core import model_suggestions as M, credential_state as C
 from mixar.modules.space_mixie_chat.core.session import get_session_manager
 from mixar.modules.space_mixie_chat.constants import SessionState
 saved = (F.get_agent_service, M.get_platform_models, P.snapshot(),
          bpy.context.scene.mixie_chat_input,
-         get_session_manager().get_state(bpy.context.scene))
+         get_session_manager().get_state(bpy.context.scene), C.snapshot())
+# Mixie answers here: the account's own key (if any) is set aside in memory.
+C.apply_from_payload({'byok_active': False, 'items': []}, bpy.context.window_manager)
 get_session_manager().set_state(bpy.context.scene, SessionState.IDLE)
 f = SimpleNamespace(release=threading.Event(), read_release=threading.Event(),
                     read_started=False, puts=0, fail_next=False, gets=0, model='original')
@@ -66,8 +69,15 @@ result = True
 """
 CLEANUP = """
 from mixar.modules.byok.core import preference_client as F, preference_state as P
-from mixar.modules.byok.core import model_suggestions as M
+from mixar.modules.byok.core import model_suggestions as M, credential_state as C
 saved, f = P._qa_ordering
+cred = saved[5]
+# Round-trip the account's real credential mirror back through the parser.
+C.apply_from_payload({'byok_active': cred['byok_is_active'], 'items': [dict(
+    provider=cred['byok_current_provider'], model=cred['byok_current_model'],
+    supports_vision=cred['byok_current_supports_vision'],
+    key_preview=cred['byok_key_preview'])]}, bpy.context.window_manager)
+
 f.release.set()
 f.read_release.set()
 P.clear()
@@ -88,21 +98,23 @@ def run(qa):
         qa.step('old_read_started', qa.wait,
                 "__import__('mixar.modules.byok.core.preference_state', fromlist=[''])._qa_ordering[1].read_started",
                 timeout=10)
-        qa.step('choose_A', qa.cmd, 'choose', widget=PICKER, item='QA A', contains=True)
+        qa.step('open_popup', mp.open_popup, qa)
+        qa.step('choose_A', mp.pick, qa, 'QA A')
         qa.step('assert_send_and_second_write_blocked', qa.eval, """
 from mixar.modules.byok.core import preference_state as P
 assert P.mutation_pending()
 assert not bpy.ops.mixie_chat.send_message.poll()
-assert not bpy.ops.mixar.agent_model_set.poll()
-assert not bpy.ops.mixar.agent_model_reset.poll()
+assert not bpy.ops.mixar.agent_pick.poll()
 assert bpy.context.scene.mixie_chat_input == 'QA draft must remain unsent'
 assert P._qa_ordering[1].model == 'original'
 result = True
 """)
-        qa.step('pending_menu', qa.click, **PICKER)
+        qa.step('pending_popup', mp.open_popup, qa)
+        if any(enabled for _, enabled in mp.rows(qa)):
+            raise RuntimeError(f'A pick row is live while a save is pending: {mp.rows(qa)}')
         pending = str(OUT / 'pending.png')
-        qa.step('snap_pending', qa.cmd, 'snap', path=pending, area='AGENT_BUBBLE')
-        qa.press('ESC')
+        qa.step('snap_pending', qa.cmd, 'snap', path=pending, target=mp.CARD, margin=80)
+        mp.close_popup(qa)
         qa.step('acknowledge_save', qa.eval,
                 "from mixar.modules.byok.core import preference_state as P\n"
                 "P._qa_ordering[1].release.set()\nresult = True")
@@ -127,9 +139,9 @@ result = True
         qa.step('wait_independent_retry', qa.wait,
                 "not bpy.context.window_manager.mixar_agent_model_byok_active", timeout=25)
         recovered = str(OUT / 'recovered.png')
-        qa.step('open_recovered_menu', qa.click, **PICKER)
-        qa.step('snap_recovered', qa.cmd, 'snap', path=recovered, area='AGENT_BUBBLE')
-        qa.press('ESC')
+        qa.step('open_recovered_popup', mp.open_popup, qa)
+        qa.step('snap_recovered', qa.cmd, 'snap', path=recovered, target=mp.CARD, margin=80)
+        mp.close_popup(qa)
         return {'snaps': [pending, recovered], 'real_backend_mutations': 0}
     finally:
         qa.step('restore_fixture', qa.eval, CLEANUP)

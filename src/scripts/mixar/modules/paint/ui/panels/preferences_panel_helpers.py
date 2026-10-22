@@ -54,16 +54,19 @@ def draw_rendering_options(layout, prefs):
     col.prop(prefs, "default_render_device")
 
 
-def draw_addon_project_options(layout, prefs):
+def draw_addon_project_options(layout, wm):
     """Draw the add-on projects section (the native folder field/picker).
+
+    The folder is a per-user setting, not a per-Scene preference: the
+    WindowManager property reads and writes the user config overlay.
 
     Args:
         layout: Blender layout object
-        prefs: Mixar paint preferences
+        wm: the WindowManager carrying ``mixar_addon_projects_dir``
     """
     box = layout.box()
     box.label(text="Add-on Projects", icon="FILE_SCRIPT")
-    box.column(align=True).prop(prefs, "addon_projects_dir")
+    box.column(align=True).prop(wm, "mixar_addon_projects_dir")
 
 
 def draw_layer_node_options(layout, prefs):

@@ -80,6 +80,16 @@ def test_reason_equal_to_message_is_not_repeated():
     assert FI.failure_reason(job) == ""
 
 
+def test_reason_differing_only_in_case_or_full_stop_is_not_repeated():
+    """The guest sign-in refusal: "Sign in to Mixar to use this" as the message
+    and "Sign in to Mixar to use this." as the reason read as one sentence."""
+    job = Job(user_message="Sign in to Mixar to use this", error_reason="Sign in to Mixar to use this.")
+    assert FI.failure_reason(job) == ""
+    assert "Reason:" not in FI.failure_details(job, include_ids=False)
+    job = Job(user_message="Sign in to Mixar to use this", error_reason="sign in to mixar to use THIS")
+    assert FI.failure_reason(job) == ""
+
+
 def test_submit_validation_error_shows_backend_detail():
     job = Job()
     error = ValidationError(
@@ -122,5 +132,37 @@ def test_client_timeout_does_not_claim_a_refund():
     job = Job(state=JobState.FAILED, error_class="timeout",
               user_message="Generation timed out — please try again")
     assert "refunded" not in FI.failure_hint(job)
-    job.error_class = "vendor_down"
+    # A refund is claimed only when the backend stamped the class.
+    FI.apply_backend_failure(job, {"error_class": "vendor_down"})
+    assert job.error_class_source == "backend"
+    assert "refunded" in FI.failure_hint(job)
+
+
+def test_class_set_without_backend_source_claims_no_refund():
+    job = Job(state=JobState.FAILED, error_class="vendor_down")
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_client_poll_server_error_claims_no_refund():
+    """After N poll 5xx/429 the client stamps vendor_transient, but the
+    backend job may still run and charge: never say "refunded"."""
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ServerError("Bad gateway", status_code=502), stage="poll")
+    assert job.error_class == "vendor_transient"
+    assert job.error_class_source == "client"
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_client_submit_validation_error_claims_no_refund():
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ValidationError("Bad prompt", status_code=422), stage="submit")
+    assert job.error_class == "invalid_input"
+    assert "refunded" not in FI.failure_hint(job)
+
+
+def test_backend_class_overrides_a_client_poll_failure():
+    job = Job(state=JobState.FAILED)
+    FI.apply_client_failure(job, ServerError("Bad gateway", status_code=502), stage="poll")
+    FI.apply_backend_failure(job, {"error_class": "vendor_down"})
+    assert job.error_class_source == "backend"
     assert "refunded" in FI.failure_hint(job)

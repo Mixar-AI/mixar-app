@@ -722,6 +722,11 @@ struct Block {
   /** Painted canvas overlays may occlude controls without changing their layout.
    * Pure geometry in block coordinates; never retain scene/RNA pointers here. */
   std::function<bool(float, float)> mixar_point_is_occluded;
+  /** Mixar: AI Provider sheet chrome (`interface_mixar_sheet.cc`), block px.
+   * The header divider sits this far below the top edge; the sidebar (and
+   * its divider) is this wide. Zero until `UI_layout_mixar_sheet_frame`. */
+  float mixar_sheet_header = 0.0f;
+  float mixar_sheet_sidebar = 0.0f;
   float aspect = 0.0f;
 
   BlockAlertLevel alert_level = BlockAlertLevel::None;

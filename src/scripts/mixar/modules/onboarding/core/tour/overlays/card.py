@@ -8,10 +8,11 @@ Interactive tour — the video card.
 
 The card is the video and nothing else: a dark rounded background only
 ``config.CARD_PAD`` larger than the frame, a hairline progress bar along the
-frame's bottom edge and the caption pill. The controls (pause, speed, skip,
-exit) sit in a translucent strip INSIDE the bottom of the video and are
-drawn multiplied by ``controls_alpha`` — at 0 nothing of them is painted;
-the session eases that toward 1 on hover / pause / exit dialog. Hit testing
+frame's bottom edge and the caption pill. The player controls live in
+``card_controls``: Back / Play-Pause / Next as a cluster in the middle of
+the video, drawn multiplied by ``controls_alpha`` (the session eases that
+toward 1 on hover / pause / exit dialog), and a quiet
+Skip tour pill in the top-right corner that never fully hides. Hit testing
 and QA targets ignore visibility, so the harness can always click them.
 
 ``compute_card_layout`` turns a beat's card variant/placement into the
@@ -32,18 +33,22 @@ test mocks; only ``draw_card`` touches the GPU.
 from dataclasses import dataclass, field
 from typing import Optional
 
-import gpu
-from gpu_extras.batch import batch_for_shader
-
-from mixar.modules.common.i18n import iface_
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.notifications.toast_renderer_shapes import (
-    draw_circle,
     draw_rect,
     draw_rounded_rect,
 )
 
 from .. import beats, config
+from .card_controls import (
+    BUTTON_ORDER,
+    button_rects,
+    controls_rect,
+    draw_controls,
+    draw_gate_caption,
+    draw_skip_tour,
+    with_alpha as _with_alpha,
+)
 from .exit_dialog import (  # noqa: F401 — re-exported API
     ExitConfirmLayout,
     compute_exit_confirm_layout,
@@ -56,20 +61,15 @@ logger = get_logger(__name__)
 
 __all__ = (
     "CardLayout", "compute_card_layout", "layout_from_card_rect", "draw_card",
-    "draw_caption_under", "caption_under_rect",
-    "hit_test", "qa_targets", "format_rate",
+    "draw_caption_under", "caption_under_rect", "caption_rect", "fit_text",
+    "hit_test", "qa_targets",
     "ExitConfirmLayout", "compute_exit_confirm_layout", "draw_exit_confirm",
     "hit_test_exit_confirm",
 )
 
-BUTTON_ORDER = ("pause", "speed", "skip", "exit")
-BUTTON_PAD_X = 8.0            # logical px inside each text button
 ISLAND_GAP = 12.0             # logical px between the island and a lifted card
 MIN_VIDEO_W = 96.0
 VIDEO_PLACEHOLDER = (0.03, 0.03, 0.04, 1.0)
-CONTROL_TEXT_HOVER = (1.0, 1.0, 1.0, 1.0)
-GATE_CAPTION = "Your turn"
-GATE_CAPTION_INSET = 10.0     # logical px from the video's right edge
 GATE_FILM = (0.0, 0.0, 0.0, 1.0)
 CAPTION_PAD_X = 12.0          # logical px, the hint pill's padding
 CAPTION_PAD_Y = 7.0
@@ -79,22 +79,8 @@ CAPTION_PAD_Y = 7.0
 class CardLayout:
     card: tuple
     video: tuple
-    controls: tuple               # strip inside the bottom of ``video``
+    controls: tuple               # the transport cluster, centred on ``video``
     buttons: dict = field(default_factory=dict)
-
-
-def _with_alpha(color: tuple, alpha: float) -> tuple:
-    return (color[0], color[1], color[2], color[3] * max(0.0, min(1.0, alpha)))
-
-
-def format_rate(rate: float) -> str:
-    """``1.0`` → ``"1×"``, ``1.25`` → ``"1.25×"``."""
-    text = f"{rate:.2f}".rstrip("0").rstrip(".")
-    return f"{text}×"
-
-
-def _widest(labels, px: float) -> float:
-    return max((_text_width(label, px) for label in labels), default=0.0)
 
 
 def _place(placement: str, w: float, h: float, host: tuple, margin: float) -> tuple:
@@ -121,7 +107,7 @@ def _intersects(a: tuple, b: tuple) -> bool:
 
 
 def layout_from_card_rect(card_rect: tuple, ui_scale: float) -> CardLayout:
-    """Video, inner controls strip and buttons for a given card rect.
+    """Video, transport cluster and buttons for a given card rect.
 
     Pure: the session feeds it the animated rect every tick, and
     ``compute_card_layout`` builds its target through it, so both agree."""
@@ -129,32 +115,8 @@ def layout_from_card_rect(card_rect: tuple, ui_scale: float) -> CardLayout:
     xmin, ymin, xmax, ymax = (float(v) for v in card_rect)
     pad = config.CARD_PAD * s
     video = (xmin + pad, ymin + pad, xmax - pad, ymax - pad)
-    video_h = max(0.0, video[3] - video[1])
-    ctrl_h = min(config.CARD_CONTROLS_H * s, video_h)
-    controls = (video[0], video[1], video[2], video[1] + ctrl_h)
-
-    px = config.CONTROL_FONT_PX * s
-    gap = config.CONTROL_GAP * s
-    bpad = BUTTON_PAD_X * s
-    widths = {
-        "pause": _widest((iface_(config.CONTROL_PAUSE), iface_(config.CONTROL_RESUME)), px),
-        "speed": _widest([format_rate(r) for r in config.SPEED_OPTIONS], px),
-        "skip": _text_width(iface_(config.CONTROL_SKIP), px),
-        "exit": _text_width(iface_(config.CONTROL_EXIT), px),
-    }
-    buttons = {}
-    cursor_x = controls[0] + gap * 0.5
-    for name in ("pause", "speed"):
-        w = widths[name] + 2 * bpad
-        buttons[name] = (cursor_x, controls[1], cursor_x + w, controls[3])
-        cursor_x += w + gap
-    cursor_x = controls[2] - gap * 0.5
-    for name in ("exit", "skip"):
-        w = widths[name] + 2 * bpad
-        buttons[name] = (cursor_x - w, controls[1], cursor_x, controls[3])
-        cursor_x -= w + gap
     return CardLayout(card=(xmin, ymin, xmax, ymax), video=video,
-                      controls=controls, buttons=buttons)
+                      controls=controls_rect(video, s), buttons=button_rects(video, s))
 
 
 def compute_card_layout(variant: str, placement: str, host_rect: tuple,
@@ -213,27 +175,64 @@ def _draw_video(texture, rect: tuple, alpha: float) -> None:
                   _with_alpha(VIDEO_PLACEHOLDER, alpha))
 
 
-def _draw_caption(video_rect: tuple, caption: str, px: float, s: float, alpha: float) -> None:
-    """Small pill over the video's top-left naming the part of the tour."""
-    if not caption:
-        return
-    pad_x, pad_y, inset = 10 * s, 5 * s, 10 * s
-    tw = _text_width(caption, px)
-    w, h = tw + 2 * pad_x, px + 2 * pad_y
+CAPTION_PAD_X_OVER = 10.0     # logical px, the act caption pill over the video
+CAPTION_PAD_Y_OVER = 5.0
+CAPTION_INSET = 10.0
+CAPTION_SKIP_GAP = 8.0        # clear air between the caption and Skip tour
+_ELLIPSIS = "\u2026"
+
+
+def fit_text(text: str, px: float, max_w: float) -> str:
+    """``text`` shortened with an ellipsis so it measures at most ``max_w``
+    at ``px``. Pure; the whole text when it already fits."""
+    if not text or _text_width(text, px) <= max_w:
+        return text
+    if _text_width(_ELLIPSIS, px) > max_w:
+        return ""
+    lo, hi = 0, len(text)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if _text_width(text[:mid].rstrip() + _ELLIPSIS, px) <= max_w:
+            lo = mid
+        else:
+            hi = mid - 1
+    return text[:lo].rstrip() + _ELLIPSIS
+
+
+def caption_rect(video_rect: tuple, caption: str, px: float, s: float,
+                 clear_right: Optional[float] = None) -> tuple:
+    """The act caption pill over the video's top-left: ``(rect, text)``.
+    ``text`` is the caption shortened so the pill's right edge stays
+    ``CAPTION_SKIP_GAP`` left of ``clear_right`` (the Skip tour pill on a
+    narrow card or a long translation). Pure, for the tests."""
+    pad_x, pad_y, inset = CAPTION_PAD_X_OVER * s, CAPTION_PAD_Y_OVER * s, CAPTION_INSET * s
     xmin = video_rect[0] + inset
     ymax = video_rect[3] - inset
-    draw_rounded_rect(xmin, ymax - h, w, h, h * 0.5,
+    text = caption or ""
+    if text and clear_right is not None:
+        max_w = clear_right - CAPTION_SKIP_GAP * s - xmin - 2 * pad_x
+        text = fit_text(text, px, max_w) if max_w > 0 else ""
+    w, h = _text_width(text, px) + 2 * pad_x, px + 2 * pad_y
+    return (xmin, ymax - h, xmin + w, ymax), text
+
+
+def _draw_caption(video_rect: tuple, caption: str, px: float, s: float, alpha: float,
+                  clear_right: Optional[float] = None) -> None:
+    """Small pill over the video's top-left naming the part of the tour."""
+    rect, text = caption_rect(video_rect, caption, px, s, clear_right)
+    if not text:
+        return
+    xmin, ymin, xmax, ymax = rect
+    h = ymax - ymin
+    draw_rounded_rect(xmin, ymin, xmax - xmin, h, h * 0.5,
                       _with_alpha(config.HINT_BG, alpha * 0.9))
-    draw_text_centered((xmin, ymax - h, xmin + w, ymax), caption, px,
-                       _with_alpha(config.HINT_TEXT, alpha))
+    draw_text_centered(rect, text, px, _with_alpha(config.HINT_TEXT, alpha))
 
 
-def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: float,
-                   controls_alpha: float) -> None:
+def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: float) -> None:
     """Subtitle band inside the bottom of the video: centred lines on a
-    translucent film, wrapped to the video width. It sits above the
-    controls strip while that is revealed, otherwise on the video's
-    bottom edge, so the two never overlap."""
+    translucent film, wrapped to the video width, on the video's bottom
+    edge below the centred transport."""
     if not text:
         return
     from .. import srt
@@ -249,8 +248,7 @@ def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: fl
     line_h = px * 1.3
     w = max(_text_width(ln, px) for ln in lines) + 2 * pad_x
     h = line_h * len(lines) + 2 * pad_y
-    strip_h = (layout.controls[3] - layout.controls[1]) if controls_alpha > 0.02 else 0.0
-    ymin = vy0 + strip_h + gap
+    ymin = vy0 + gap
     xmin = (vx0 + vx1) * 0.5 - w * 0.5
     draw_rounded_rect(xmin, ymin, w, h, 4 * s, _with_alpha(config.SUBTITLE_BG, alpha))
     for i, ln in enumerate(lines):
@@ -274,84 +272,16 @@ def _draw_loading(video_rect: tuple, text: str, px: float, s: float, alpha: floa
                        _with_alpha(config.HINT_TEXT, alpha))
 
 
-def _draw_controls_film(controls: tuple, alpha: float) -> None:
-    """Bottom-up film under the labels: stacked bands fake a gradient."""
-    xmin, ymin, xmax, ymax = controls
-    w, h = xmax - xmin, ymax - ymin
-    bands = max(1, int(config.CONTROLS_FILM_BANDS))
-    band_h = h / bands
-    for i in range(bands):
-        # Densest band at the bottom; each band adds on top of the ones
-        # below it, so the visible alpha ramps toward the video's edge.
-        draw_rect(xmin, ymin + i * band_h, w, h - i * band_h,
-                  _with_alpha(config.CONTROLS_FILM, alpha / bands))
-
-
-def _draw_controls(layout: CardLayout, paused: bool, rate: float, px: float,
-                   hover: Optional[str], alpha: float) -> None:
-    if alpha <= 0.0:
-        return
-    _draw_controls_film(layout.controls, alpha)
-    labels = {
-        "pause": config.CONTROL_RESUME if paused else config.CONTROL_PAUSE,
-        "speed": format_rate(rate),
-        "skip": config.CONTROL_SKIP,
-        "exit": config.CONTROL_EXIT,
-    }
-    for name in BUTTON_ORDER:
-        rect = layout.buttons.get(name)
-        if rect is None:
-            continue
-        color = CONTROL_TEXT_HOVER if hover == name else config.CONTROL_TEXT
-        draw_text_centered(rect, iface_(labels[name]), px, _with_alpha(color, alpha))
-
-
-def _draw_gate_caption(layout: CardLayout, px: float, s: float,
-                       alpha: float, controls_alpha: float) -> None:
-    """Dim "Your turn" at the video's bottom-right; slides left of the
-    Next button as the controls reveal so the two never overlap."""
-    cw = _text_width(GATE_CAPTION, px)
-    hidden_right = layout.video[2] - GATE_CAPTION_INSET * s
-    skip = layout.buttons.get("skip")
-    shown_right = (skip[0] - config.CONTROL_GAP * s) if skip else hidden_right
-    # Snap, never interpolate: a half-revealed strip would put the caption
-    # halfway across the skip button.
-    right = shown_right if controls_alpha > 0.02 else hidden_right
-    speed = layout.buttons.get("speed")
-    left_limit = (speed[2] + config.CONTROL_GAP * s) if speed else layout.video[0]
-    if right - cw < left_limit:
-        return
-    a = alpha * max(config.GATE_CAPTION_ALPHA_FLOOR, controls_alpha)
-    draw_text_centered((right - cw, layout.controls[1], right, layout.controls[3]),
-                       GATE_CAPTION, px, _with_alpha(config.CONTROL_TEXT_DIM, a))
-
-
-def _draw_paused_glyph(video_rect: tuple, s: float, alpha: float) -> None:
-    """Translucent disc with a play triangle centred over the video."""
-    cx = (video_rect[0] + video_rect[2]) * 0.5
-    cy = (video_rect[1] + video_rect[3]) * 0.5
-    r = config.PAUSED_DISC_RADIUS * s
-    draw_circle(cx, cy, r, _with_alpha(config.PAUSED_DISC, alpha), segments=32)
-    t = r * 0.42
-    verts = ((cx - t * 0.8, cy - t), (cx - t * 0.8, cy + t), (cx + t, cy))
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-    batch = batch_for_shader(shader, 'TRIS', {"pos": verts}, indices=((0, 1, 2),))
-    gpu.state.blend_set('ALPHA')
-    shader.bind()
-    shader.uniform_float("color", _with_alpha(config.PAUSED_GLYPH, alpha))
-    batch.draw(shader)
-    gpu.state.blend_set('NONE')
-
-
-def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: float,
+def draw_card(layout: CardLayout, texture, progress: float, paused: bool,
               alpha: float = 1.0, ui_scale: float = 1.0,
               gate_seconds_left: Optional[float] = None,
               hover: Optional[str] = None, caption: str = "",
               controls_alpha: float = 0.0, gate_film: float = 0.0,
               subtitle: str = "", loading_text: str = "") -> None:
-    """Paint the card: background, video, gate film, caption, controls strip
-    (scaled by ``controls_alpha``), subtitle band, progress hairline, gate
-    caption, pause glyph. ``gate_film`` (0..1, eased by the session) darkens the held frame
+    """Paint the card: background, video, gate film, the centred controls
+    and their scrim (scaled by ``controls_alpha``; the centre button is the
+    only play/pause glyph), caption, Skip tour pill, subtitle band,
+    progress hairline, gate caption. ``gate_film`` (0..1, eased by the session) darkens the held frame
     by ``GATE_FILM_ALPHA`` while a gate waits, so the pause reads as a
     deliberate freeze-frame rather than a stall."""
     if alpha <= 0.0:
@@ -370,14 +300,18 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
             draw_rect(vx0, vy0, vx1 - vx0, vy1 - vy0,
                       _with_alpha(GATE_FILM, alpha * config.GATE_FILM_ALPHA * film))
         px = config.CONTROL_FONT_PX * s
-        _draw_caption(layout.video, caption, px, s, alpha)
-        _draw_controls(layout, paused, rate, px, hover, alpha * ca)
-        _draw_subtitle(layout, subtitle, config.SUBTITLE_FONT_PX * s, s, alpha, ca)
+        # The controls' scrim goes under the caption and Skip tour pills.
+        draw_controls(layout, paused, s, hover, alpha * ca)
+        _draw_caption(layout.video, caption, px, s, alpha,
+                      clear_right=layout.buttons["exit"][0])
+        draw_skip_tour(layout, s, hover, alpha, ca)
+        _draw_subtitle(layout, subtitle, config.SUBTITLE_FONT_PX * s, s, alpha)
         if loading_text:
             _draw_loading(layout.video, loading_text, config.SUBTITLE_FONT_PX * s, s, alpha)
 
         vxmin, vymin, vxmax, _vymax = layout.video
-        bar_h = config.CARD_PROGRESS_H * s
+        bar_h = (config.CARD_PROGRESS_H
+                 + (config.CARD_PROGRESS_H_REVEALED - config.CARD_PROGRESS_H) * ca) * s
         vw = vxmax - vxmin
         draw_rect(vxmin, vymin, vw, bar_h, _with_alpha(config.CARD_PROGRESS_BG, alpha))
         p = max(0.0, min(1.0, float(progress)))
@@ -385,9 +319,7 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
             draw_rect(vxmin, vymin, vw * p, bar_h, _with_alpha(config.CARD_PROGRESS_FG, alpha))
 
         if gate_seconds_left is not None:
-            _draw_gate_caption(layout, px, s, alpha, ca)
-        if paused:
-            _draw_paused_glyph(layout.video, s, alpha)
+            draw_gate_caption(layout, s, alpha, ca)
     except Exception as exc:
         logger.debug("Tour card draw failed: %s", exc)
 
@@ -431,7 +363,7 @@ def _inside(rect: tuple, x: float, y: float) -> bool:
 
 
 def hit_test(layout: CardLayout, x: float, y: float) -> Optional[str]:
-    """``"pause"``, ``"speed"``, ``"skip"``, ``"exit"``, ``"card"`` or None.
+    """``"back"``, ``"pause"``, ``"skip"``, ``"exit"``, ``"card"`` or None.
     Buttons hit whether or not the strip is currently visible."""
     for name in BUTTON_ORDER:
         rect = layout.buttons.get(name)

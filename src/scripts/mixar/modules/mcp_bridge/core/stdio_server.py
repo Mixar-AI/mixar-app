@@ -25,9 +25,9 @@ characters, environments, materials, delivery).
 
 Each connection works in one scene tab; every tool and generation result
 follows it. Start separate work in a new tab with
-mixar_scene_new (never bpy.data.scenes.new); mixar_scenes and
-mixar_scene_switch move between tabs; mixar_projects and mixar_project_open
-continue a saved project.
+mixar_scene_new (never bpy.data.scenes.new); mixar_scenes,
+mixar_scene_switch and mixar_scene_close manage tabs;
+mixar_projects and mixar_project_open continue a saved project.
 
 1. Inspect: scene_overview, then scene_hierarchy or get_object_details.
 2. Build in small steps with execute_bpy_script: one part per script, real

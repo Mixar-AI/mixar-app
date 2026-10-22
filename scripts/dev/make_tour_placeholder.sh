@@ -6,7 +6,7 @@
 #
 # Render the interactive tour's placeholder video:
 #
-#   onboarding/assets/tour/founder_placeholder.mp4   1280x720, 24 fps, H.264 + AAC
+#   onboarding/assets/tour/founder_placeholder.mp4   960x720 (4:3, like the take), 24 fps, H.264 + AAC
 #
 # The demo image the tour drops onto the moodboard
 # (``assets/tour/demo_concept.png``) is real artwork, committed as-is; this
@@ -36,7 +36,7 @@ FFPROBE="${FFPROBE:-/opt/homebrew/bin/ffprobe}"
 PYTHON="${PYTHON:-python3}"
 FONT="${FONT:-/System/Library/Fonts/Supplemental/Arial.ttf}"
 
-WIDTH=1280
+WIDTH=960
 HEIGHT=720
 FPS=24
 TONE_SECONDS=0.3

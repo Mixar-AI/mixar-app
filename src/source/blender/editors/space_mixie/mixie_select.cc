@@ -22,22 +22,28 @@
 #include "mixie_intern.hh"
 #include "mixie_moodboard_ops_common.hh"
 
+namespace blender::ed::mixie {
+
+/* -------------------------------------------------------------------- */
+/** \name Moodboard Selection Helpers
+ * \{ */
+
 /**
  * Inverse-rotate a point around a center.
  * Transforms a world-space point into the local (unrotated) space of an
  * element so that axis-aligned hit-testing works on rotated elements.
  */
-static void inverse_rotate_point(float mx,
-                                 float my,
-                                 float cx,
-                                 float cy,
-                                 float rotation_deg,
-                                 float *out_x,
-                                 float *out_y)
+void moodboard_inverse_rotate_point(const float mx,
+                                    const float my,
+                                    const float cx,
+                                    const float cy,
+                                    const float rotation_deg,
+                                    float *r_x,
+                                    float *r_y)
 {
   if (rotation_deg == 0.0f) {
-    *out_x = mx;
-    *out_y = my;
+    *r_x = mx;
+    *r_y = my;
     return;
   }
   const float rotation_rad = -rotation_deg * (M_PI / 180.0f);
@@ -45,15 +51,9 @@ static void inverse_rotate_point(float mx,
   const float sin_a = sinf(rotation_rad);
   const float dx = mx - cx;
   const float dy = my - cy;
-  *out_x = cx + dx * cos_a - dy * sin_a;
-  *out_y = cy + dx * sin_a + dy * cos_a;
+  *r_x = cx + dx * cos_a - dy * sin_a;
+  *r_y = cy + dx * sin_a + dy * cos_a;
 }
-
-namespace blender::ed::mixie {
-
-/* -------------------------------------------------------------------- */
-/** \name Moodboard Selection Helpers
- * \{ */
 
 int moodboard_find_image_under_mouse(PointerRNA *scene_ptr,
                                      float mouse_x,
@@ -114,7 +114,7 @@ int moodboard_find_image_under_mouse(PointerRNA *scene_ptr,
     /* Inverse-rotate mouse into the image's local space so that the
      * axis-aligned bounds check works correctly for rotated images. */
     float local_mx, local_my;
-    inverse_rotate_point(mouse_x,
+    moodboard_inverse_rotate_point(mouse_x,
                          mouse_y,
                          pos_x + img_width / 2.0f,
                          pos_y + img_height / 2.0f,
@@ -183,7 +183,7 @@ int moodboard_find_textbox_under_mouse(PointerRNA *scene_ptr,
 
     /* Inverse-rotate mouse into textbox local space */
     float local_mx, local_my;
-    inverse_rotate_point(mouse_x,
+    moodboard_inverse_rotate_point(mouse_x,
                          mouse_y,
                          pos_x + width / 2.0f,
                          pos_y + height / 2.0f,
@@ -274,7 +274,7 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
 
       /* Inverse-rotate mouse into the image's local space */
       float local_mx, local_my;
-      inverse_rotate_point(mouse_x,
+      moodboard_inverse_rotate_point(mouse_x,
                            mouse_y,
                            pos_x + img_width / 2.0f,
                            pos_y + img_height / 2.0f,
@@ -341,7 +341,7 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
 
       /* Inverse-rotate mouse into textbox local space */
       float local_mx, local_my;
-      inverse_rotate_point(mouse_x,
+      moodboard_inverse_rotate_point(mouse_x,
                            mouse_y,
                            pos_x + width / 2.0f,
                            pos_y + height / 2.0f,

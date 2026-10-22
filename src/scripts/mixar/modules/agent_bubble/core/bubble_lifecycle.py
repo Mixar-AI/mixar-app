@@ -18,6 +18,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.sign_in import sign_in_holds_autoshow
 from mixar.modules.agent_bubble.core import pill_icons
 from mixar.modules.agent_bubble.core.bubble_state import (
     LOAD_AUTOSHOW_RETRY_LIMIT,
@@ -46,7 +47,10 @@ def _is_app_exiting() -> bool:
 def is_agent_bubble_window(window) -> bool:
     """Return True when a Blender window contains the runtime bubble UI."""
     try:
-        return any(area.type == 'AGENT_BUBBLE' for area in window.screen.areas)
+        screen = window.screen
+        return screen is not None and any(
+            area.type == 'AGENT_BUBBLE' for area in screen.areas
+        )
     except ReferenceError:
         return False
 
@@ -89,8 +93,10 @@ def close_restored_agent_bubble_windows() -> int:
             continue
 
         try:
+            # Non-None: is_agent_bubble_window() just found a bubble area on it.
+            screen = window.screen
             area = next(
-                (area for area in window.screen.areas if area.type == 'AGENT_BUBBLE'),
+                (area for area in screen.areas if area.type == 'AGENT_BUBBLE'),
                 None,
             )
             region = None
@@ -99,7 +105,7 @@ def close_restored_agent_bubble_windows() -> int:
                 if region is None and area.regions:
                     region = area.regions[0]
 
-            override = {"window": window, "screen": window.screen}
+            override = {"window": window, "screen": screen}
             if area is not None:
                 override["area"] = area
             if region is not None:
@@ -154,6 +160,11 @@ def _load_autoshow_tick_inner():
     if _is_app_exiting():
         _st.load_autoshow_attempts = 0
         return None
+
+    if sign_in_holds_autoshow():
+        # The user is in the browser for a sign-in: the bubble window must
+        # not come up over it. Not an attempt — poll until Mixar is active.
+        return 0.3
 
     from mixar.modules.agent_bubble.core.bubble_autoshow import try_invoke_bubble as _try_invoke_bubble
 

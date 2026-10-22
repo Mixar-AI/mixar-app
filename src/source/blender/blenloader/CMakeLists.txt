@@ -54,6 +54,7 @@ set(SRC
   versioning_common.hh
   versioning_mixar_200.hh
   intern/readfile.hh
+  intern/readfile_image_undo.hh
   intern/writefile.hh
 )
 

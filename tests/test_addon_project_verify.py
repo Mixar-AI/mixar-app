@@ -252,3 +252,58 @@ def test_usage_locations_read_like_the_ui():
                          bl_parent_id="RIG_PT_main", bl_context="objectmode"), {"RIG_PT_main": "Rig"})
     assert child["location"].endswith("Rig tab > Rig panel > Rig Controls panel")
     assert child["mode"] == "objectmode" and child["parent"] == "Rig"
+
+
+def _passing_addon(name):
+    return [
+        _write(f"{name}/__init__.py", _addon(name)),
+        _write(f"{name}/tests/__init__.py", ""),
+        _write(f"{name}/tests/test_value.py", _test(name, "self.assertEqual(VALUE, 1)")),
+    ]
+
+
+def test_a_go_live_failure_after_the_commit_landed_is_reported_not_raised(workspace, monkeypatch):
+    """The files are committed and the proposal spent before go_live: an
+    install/enable failure must not read as a failed commit (a retry would get
+    proposal_not_found), and a created package is still activated."""
+    from mixar.modules.addon_project import verify as V
+
+    def _boom(*_a, **_k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(V, "go_live", _boom)
+    result = workspace.commit(_passing_addon("late_tool"))
+    assert result["success"] is True, result
+    (live,) = result["live"]
+    assert live["success"] is False and "disk full" in live["message"]
+    assert result["live_error"] is True
+    assert result["activated_entrypoint"] == "late_tool"
+    assert (workspace.root / "late_tool" / "__init__.py").exists()
+
+
+def test_a_journal_failure_after_the_proof_restores_what_blender_had(workspace, monkeypatch):
+    """The proof dry-run reloaded the new version; the journal write then
+    failed, so the files were reverted — Blender must be restored too."""
+    from mixar.modules.addon_project import transactions as T
+    from mixar.modules.addon_project import verify as V
+
+    real_write = T.write_json_atomic
+
+    def _write_json(path, data):
+        if isinstance(data, dict) and data.get("status") == "committed":
+            raise OSError("journal write failed")
+        return real_write(path, data)
+
+    restored = []
+    real_restore = V.restore_live
+
+    def _restore(root, entrypoint, **kwargs):
+        restored.append(entrypoint)
+        return real_restore(root, entrypoint, **kwargs)
+
+    monkeypatch.setattr(T, "write_json_atomic", _write_json)
+    monkeypatch.setattr(V, "restore_live", _restore)
+    result = workspace.commit(_passing_addon("journal_tool"))
+    assert result["success"] is False
+    assert restored == ["journal_tool"]
+    assert not (workspace.addons_dir / "journal_tool").exists()

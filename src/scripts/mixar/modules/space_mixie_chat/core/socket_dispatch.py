@@ -12,6 +12,8 @@ Handles bidirectional RPC:
 - Tool lifecycle notifications (agent.tool_start, agent.tool_end)
 """
 
+import time
+
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
@@ -33,12 +35,22 @@ class SocketDispatch:
         if "result" in msg or "error" in msg:
             msg_id = msg.get("id")
             if msg_id:
+                # The server read something we sent: the only proof the
+                # upstream works (its own pings and events prove downstream).
+                self._last_reply_time = time.time()
                 with self._pending_lock:
                     cb = self._pending_callbacks.pop(msg_id, None)
                     self._pending_deadlines.pop(msg_id, None)
                 if cb is not None:
                     try:
-                        payload = msg.get("result") if "result" in msg else msg.get("error")
+                        # An error response also carries ``"result": null``
+                        # (the server serialises every field), so test the
+                        # error first: JSON-RPC never sets both, and a
+                        # refused turn command (the guest door: rate limit,
+                        # kill switch) delivered as ``None`` here was never
+                        # settled — the chat sat BUSY until a relaunch.
+                        error = msg.get("error")
+                        payload = error if isinstance(error, dict) else msg.get("result")
                         cb(payload)
                     except Exception as e:
                         logger.error(f"Error in response callback for {msg_id}: {e}")

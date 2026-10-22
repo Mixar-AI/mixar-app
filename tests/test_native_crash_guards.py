@@ -8,11 +8,15 @@ The C++ overlay cannot be compiled or driven from the standalone suite, so
 these tests read the sources and pin the shape of each guard: the bubble
 never resizes its window from inside a draw pass, every fixed-buffer slot
 string read is bounded, both chat spaces null their runtime pointer on
-file read, and the Director timeline's static timer has an exit hook.
+file read, the Director timeline's static timer has an exit hook, and the
+crash handler covers SIGBUS as well as SIGSEGV so a macOS protection fault
+still produces a crash log instead of a bare abort().
 """
 
 import re
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BUBBLE = ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
@@ -21,6 +25,9 @@ UI_TYPES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_ui_typ
 SLOT_PROPS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/properties/chat_slot_types.py"
 TIMELINE = ROOT / "src/source/blender/editors/space_view3d/view3d_director_timeline.cc"
 MESSAGES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_messages.cc"
+SIGNALS = ROOT / "src/source/creator/creator_signals.cc"
+CREATOR = ROOT / "src/source/creator/creator.cc"
+UPSTREAM_SIGNALS = ROOT / "upstream/source/creator/creator_signals.cc"
 
 
 def _fn(src: str, name: str) -> str:
@@ -138,3 +145,68 @@ def test_code_copy_collector_forgets_a_freed_runtime():
     src = MESSAGES.read_text(encoding="utf-8")
     free_fn = _fn(src, "void mixie_chat_free_runtime")
     assert free_fn.index("mixie_chat_code_hits_forget(rt);") < free_fn.index("MEM_delete(rt);")
+
+
+def test_crash_handler_covers_sigbus_as_well_as_sigsegv():
+    """A protection fault must reach Blender's crash handler.
+
+    Upstream registers ``sig_handle_crash_fn`` for SIGSEGV only. A wild
+    pointer that lands on a *protected* rather than an unmapped page raises
+    SIGBUS instead, which on Apple Silicon is the common case: the kernel
+    reserves a 384 GB PROT_NONE range that garbage pointers routinely fall
+    into. Without this registration the fault reached BLI_mmap's SIGBUS
+    handler, which had no previous handler to chain to and called abort(),
+    so the session died with no .crash.txt, no native backtrace and no
+    Python backtrace.
+    """
+    src = SIGNALS.read_text()
+    setup = _fn(src, "void main_signal_setup")
+
+    # Both live in the POSIX branch, inside the --disable-crash-handler gate.
+    guard = setup.index("if (app_state.signal.use_crash_handler)")
+    win = setup.index("#  ifdef WIN32", guard)
+    posix = setup.index("#  else", win)
+    endif = setup.index("#  endif", posix)
+    posix_branch = setup[posix:endif]
+    assert "signal(SIGSEGV, sig_handle_crash_fn);" in posix_branch
+    assert "signal(SIGBUS, sig_handle_crash_fn);" in posix_branch
+
+
+def test_crash_handler_is_registered_before_any_file_is_read():
+    """BLI_mmap chains to whoever held SIGBUS first.
+
+    BLI_mmap installs its own SIGBUS handler on the first memory-mapped
+    .blend read and falls back to the handler it displaced. Registering from
+    main_signal_setup(), which runs before WM_init and so before any file is
+    read, keeps mapped-file fault recovery in charge of its own faults and
+    hands us only the ones it does not own. Reversing that order would
+    clobber it.
+    """
+    creator = CREATOR.read_text()
+    assert "main_signal_setup();" in creator
+    assert creator.index("main_signal_setup();") < creator.index("WM_init(")
+
+
+def test_signals_overlay_tracks_the_pinned_upstream():
+    """The overlay is upstream's file plus one registration, nothing else.
+
+    A stale copy of this file (an older Blender's version laid over a newer
+    pin) silently drops upstream fixes to the crash handler, so the overlay
+    must differ from the pinned upstream only by its SPDX line and the
+    SIGBUS block.
+    """
+    if not UPSTREAM_SIGNALS.exists():
+        pytest.skip("upstream submodule not checked out")
+    overlay = SIGNALS.read_text()
+    upstream = UPSTREAM_SIGNALS.read_text()
+    overlay = overlay.replace(
+        " * SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited\n", "", 1
+    )
+    overlay = re.sub(
+        r"    /\* MIXAR:.*?\*/\n    signal\(SIGBUS, sig_handle_crash_fn\);\n",
+        "",
+        overlay,
+        count=1,
+        flags=re.DOTALL,
+    )
+    assert overlay == upstream

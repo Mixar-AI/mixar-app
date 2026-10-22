@@ -48,9 +48,73 @@ def _redraw_mixie_chat_areas():
         logger.debug("BYOK area redraw failed: %s", e)
 
 
-def _clear_cached_state(wm=None):
+# ---------------------------------------------------------------------------
+# Transient-state redraw pump
+# ---------------------------------------------------------------------------
+#
+# The save / remove runs on a worker thread and flips `byok_dialog_state` to
+# SAVED / ERROR from a zero-delay timer. The dialog is a pop-up, and pop-up
+# regions sit outside every area, so `area.tag_redraw()` never reaches them: the
+# flip stayed invisible until the pointer moved over the dialog — a ~1 s save
+# sat on "Validating with your provider…" for as long as the user waited. Each
+# time the pump sees the state change it rebuilds the open dialog
+# (`refresh_popup_dialogs`, native `Window.mixar_refresh_popups`); between
+# changes it only repaints. It stops itself the tick the state settles.
+# Registered idempotently so repeated saves do not stack timers.
+
+_PUMP_INTERVAL_S = 0.12
+_TRANSIENT_STATES = ('SAVING', 'REMOVING')
+
+# The state the pump last rebuilt the dialog for (None: no pump running).
+_pump_last_state = None
+
+
+def _refresh_open_dialogs():
+    try:
+        from mixar.modules.common.utils.platform_utils import refresh_popup_dialogs
+
+        refresh_popup_dialogs()
+    except Exception as e:  # noqa: BLE001 — never break the pump
+        logger.debug("BYOK dialog refresh failed: %s", e)
+
+
+def _pump_tick(state):
+    """One pump step: repaint, rebuilding the dialog when the state changed;
+    the next interval while a save/remove is in flight, else None (unregister).
+    Pure of `bpy` for tests."""
+    global _pump_last_state
+    _redraw_mixie_chat_areas()
+    if state != _pump_last_state:
+        _refresh_open_dialogs()
+    if state in _TRANSIENT_STATES:
+        _pump_last_state = state
+        return _PUMP_INTERVAL_S
+    _pump_last_state = None
+    return None
+
+
+def _dialog_redraw_pump():
+    try:
+        state = getattr(bpy.context.window_manager, 'byok_dialog_state', '')
+    except Exception:  # noqa: BLE001 — no window manager (shutdown): stop
+        return None
+    return _pump_tick(state)
+
+
+def ensure_dialog_redraw_pump():
+    """Start the redraw pump if it is not already running. Call right after
+    setting `byok_dialog_state` to SAVING / REMOVING so the SAVED / ERROR flip
+    shows without the user touching the dialog."""
+    try:
+        if not bpy.app.timers.is_registered(_dialog_redraw_pump):
+            bpy.app.timers.register(_dialog_redraw_pump, first_interval=0.0)
+    except Exception as e:  # noqa: BLE001 — timers unavailable in a headless test
+        logger.debug("BYOK redraw pump not started: %s", e)
+
+
+def _clear_cached_state(wm=None, *, loaded=False):
     """Reset the cached BYOK display state to defaults."""
-    credential_state.clear(wm)
+    credential_state.clear(wm, loaded=loaded)
 
 
 def _apply_cached_state(wm, data, epoch=None):

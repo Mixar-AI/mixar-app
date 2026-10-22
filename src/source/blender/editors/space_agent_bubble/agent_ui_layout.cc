@@ -28,6 +28,7 @@
 #include "UI_mixar.hh"
 
 #include "agent_ui_layout.hh"
+#include "agent_ui_provider.hh"
 #include "agent_ui_draw.hh"
 #include "BLI_string.h"
 #include "agent_ui_text.hh"
@@ -386,7 +387,8 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   in.voice_capturing = state.voice_capturing;
   in.voice_status = state.voice_status;
   in.model_available = state.model_available;
-  in.model_label = state.model_label;
+  in.chip_badge = state.model_source_label;
+  in.chip_name = state.model_chip_name;
   in.translate = [](const char *msgid) -> const char * { return IFACE_(msgid); };
   const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
                                  AGENT_CHIP_ICON_GAP * u,
@@ -394,10 +396,16 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
                                  AGENT_SWITCH_W * u,
                                  AGENT_CHIP_CLEAR_W * u,
                                  AGENT_CHIP_WAVE_W * u,
-                                 size};
+                                 size,
+                                 u};
+  /* The provider controls set their words semibold (agent_ui_provider.cc),
+   * the badge a size down: measured at the size it is drawn. */
+  const auto measure = [&](const char *label) { return ui::mixar_text_width(label, size); };
+  const auto measure_strong = [&](const char *label, const float ratio) {
+    return agent_ui_provider_text_width(label, size * ratio, AGENT_PROVIDER_WEIGHT_STRONG);
+  };
   AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
-  agent_chip_forms(
-      in, metrics, [&](const char *label) { return ui::mixar_text_width(label, size); }, chips);
+  agent_chip_forms(in, metrics, measure, measure_strong, chips);
 
   /* Refine, then Revert while a refinement can be undone, step leftwards off
    * Send at the row's own gap — the moodboard node's arrangement. Square at
@@ -423,8 +431,12 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   const AgentChipFit fit = agent_chip_fit(chips, span, gap);
   layout.compact_reference = fit.compact_reference;
   std::copy_n(fit.form, int(AGENT_CHIP_SLOT_COUNT), layout.chip_form);
+  /* Model forms: Full, Full with the name elided, Label, Icon (the painter
+   * elides the name into the width); past them the chip is dropped. */
   const int model_form = fit.form[AGENT_CHIP_SLOT_MODEL];
-  layout.model_form = model_form < 3 ? AgentModelChipForm(model_form) : AgentModelChipForm::Icon;
+  layout.model_form = model_form <= 1 ? AgentModelChipForm::Full :
+                      model_form == 2 ? AgentModelChipForm::Label :
+                                        AgentModelChipForm::Icon;
 
   float x = layout.chip_upload.xmin;
   auto place = [&](rctf &rect, const float w) {
