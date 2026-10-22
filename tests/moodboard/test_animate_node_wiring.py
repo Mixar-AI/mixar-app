@@ -481,5 +481,5 @@ def test_the_settings_popup_narrows_presets_before_it_draws():
 def test_the_output_kind_table_names_animate_as_a_mesh():
     socket_cc = (ROOT / "src/source/blender/editors/space_mixie/"
                  "mixie_draw_moodboard_graph_sockets.cc").read_text(encoding="utf-8")
-    assert "ASSEMBLE, ANIMATE)" in socket_cc
+    assert "ASSEMBLE, ANIMATE, UV_UNWRAP)" in socket_cc
 

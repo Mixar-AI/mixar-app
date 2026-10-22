@@ -23,6 +23,7 @@ MESH_CONTINUATIONS = (
     ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', "pbr_generation"),
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', "retopology"),
     ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', "mesh_segmentation"),
+    ('UV_UNWRAP', n_("Smart UV"), 'UV', "uv_unwrapping"),
     ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', "animate"),
 )
 # Local, so it has no capability. Offered only from a body it can rig parts

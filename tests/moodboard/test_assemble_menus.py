@@ -42,7 +42,8 @@ def test_a_rig_result_continues_into_assemble(catalog):
     entries = actions.mesh_continuations_for(scene, "rig")
     # Assemble and Animate are the two continuations only a rig offers.
     assert _ids(entries) == [
-        'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE', 'ANIMATE',
+        'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'UV_UNWRAP', 'AUTO_RIG', 'ASSEMBLE',
+        'ANIMATE',
     ]
     assert entries[-2] == actions.ASSEMBLE_CONTINUATION
     assert entries[-1] == actions.ANIMATE_CONTINUATION
