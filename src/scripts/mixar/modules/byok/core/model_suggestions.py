@@ -214,11 +214,12 @@ def get_platform_models() -> list[dict]:
 
 def thinking_levels(provider: str, model: str) -> list[str]:
     """The catalog's thinking levels for one model of a user's key, in server
-    order; [] when the model is not in the catalog or offers none. Codex reads
-    the "openai" group (see _MODEL_SOURCE_PROVIDER)."""
-    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    order; [] when the model is not in the catalog or offers none. Matched on
+    the key's OWN provider, as the backend validates a level: Codex (whose
+    model list borrows the "openai" group), OpenRouter and Local have no
+    catalog rows of their own, so they offer no levels."""
     for record in _platform_records:
-        if record["provider_id"] == source and record["model_id"] == model:
+        if record["provider_id"] == provider and record["model_id"] == model:
             return list(record["thinking_levels"])
     return []
 

@@ -95,8 +95,14 @@ def test_catalog_levels_match_provider_and_model():
     model_suggestions.populate_from_payload(CATALOG)
     try:
         assert model_suggestions.thinking_levels("anthropic", "claude-opus-5-5") == ["low", "high"]
-        # A BYOK-only record counts; Codex reads the openai group, as its model list does.
-        assert model_suggestions.thinking_levels("codex", "gpt-6-sol") == ["minimal", "medium_high"]
+        # A BYOK-only record counts.
+        assert model_suggestions.thinking_levels("openai", "gpt-6-sol") == ["minimal", "medium_high"]
+        # Matched on the key's own provider, as the backend validates a level:
+        # Codex borrows the openai model LIST, never its levels (the server
+        # refuses every level for codex); OpenRouter / Local have no rows.
+        assert model_suggestions.thinking_levels("codex", "gpt-6-sol") == []
+        assert model_suggestions.thinking_levels("openrouter", "anthropic/claude-opus-5-5") == []
+        assert model_suggestions.thinking_levels("local", "claude-opus-5-5") == []
         assert model_suggestions.thinking_levels("anthropic", "claude-sonnet-5-5") == []
         assert model_suggestions.thinking_levels("kimi", "k2") == []
     finally:
@@ -136,6 +142,8 @@ def test_the_default_level_names_no_level(catalog):
     (_key(model="claude-sonnet-5-5", thinking_level=None), {}),  # the model offers no levels
     (_key(model="k2", provider="kimi", thinking_level=None), {}),  # not in the catalog
     (_key(thinking_level="high"), {"switching": "claude-sonnet-5-5"}),  # a switch saving
+    (_key(provider="codex", model="gpt-6-sol", thinking_level=None), {}),  # no codex catalog rows
+    (_key(provider="openrouter", model="openai/gpt-6-sol", thinking_level=None), {}),
 ])
 def test_no_level_rows_when_there_is_nothing_to_pick(catalog, credential, kw):
     s = _state(credential, **kw)
@@ -303,6 +311,28 @@ def test_the_patch_answers_in_the_tri_tuple(client):
     assert _answer(client, _raise(404)) == (False, None, None)
     assert _answer(client, _raise(405)) == (False, None, None)
     assert _answer(client, _raise(500)) == (False, None, byok_client._GENERIC_SERVER_ERROR_MSG)
+
+
+def test_the_servers_422_and_404_bodies_reach_the_tuple(client):
+    """The backend's refusals carry `message` at the TOP level of the body (no
+    `detail`): mapped through the real HTTP client, the 422 reads verbatim."""
+    from mixar.modules.common.api.client import HTTPClient
+
+    def body(status, payload):
+        response = SimpleNamespace(status_code=status, json=lambda: payload, text="", headers={})
+        return HTTPClient._map_exception(SimpleNamespace(), response)
+
+    refused = ("'anthropic/claude-opus-5-5' does not take thinking level 'x'; "
+               "choose one of: low, medium, high, max")
+
+    def raise_(exc):
+        def patch(level):
+            raise exc
+        return patch
+
+    assert _answer(client, raise_(body(422, {"status": "failure", "message": refused}))) == (False, None, refused)
+    assert _answer(client, raise_(body(404, {"status": "failure",
+                                             "message": "No BYOK credential is configured."}))) == (False, None, None)
 
 
 def test_a_level_sent_after_logout_is_never_patched(client):
