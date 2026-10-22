@@ -106,8 +106,9 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
     state.set_status("EXPORTING", n_("Exporting scene…"), 0.01)
     _telemetry("capture_publish_started", via, bool(update_existing), bool(include_animation))
 
-    folder, glb_path = workspace.make_export_workspace()
+    folder = ""
     try:
+        folder, glb_path = workspace.make_export_workspace()
         result = glb_export.export_glb(glb_path, meshes, include_animation, scene)
         state.set_warning(result.get("warning") or "")
         sha256, size = compute_sha256(glb_path)
