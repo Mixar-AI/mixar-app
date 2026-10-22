@@ -65,10 +65,10 @@ with bpy.context.temp_override(window=win):
     bpy.context.object.hide_render = True
     bpy.context.object.hide_set(True)
     bpy.ops.object.light_add(type='SUN', location=(4, -4, 6))
-    bpy.ops.object.camera_add(location=(6, -6, 4), rotation=(1.1, 0, 0.8))
+    bpy.ops.object.camera_add(location=(9, -9, 6), rotation=(1.1, 0, 0.8))
 scene.camera = next(o for o in scene.objects if o.type == 'CAMERA')
 from mathutils import Vector
-scene.camera.rotation_euler = (Vector((0, 0, 1)) - scene.camera.location).to_track_quat('-Z', 'Y').to_euler()
+scene.camera.rotation_euler = (Vector((0, 0, 1.5)) - scene.camera.location).to_track_quat('-Z', 'Y').to_euler()
 scene['mixar_qa_private_marker'] = 'must-not-publish'
 for area in win.screen.areas:
     if area.type == 'VIEW_3D':
