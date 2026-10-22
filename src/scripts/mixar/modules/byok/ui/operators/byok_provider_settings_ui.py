@@ -14,8 +14,11 @@ sign-in file path, Local draws `byok_local_ops.draw_local_fields`.
 
 Status lines over the prompt, one per fact about the saved key:
 - **key needed** — active for the account but not on this computer (or the
-  dialog came from the chat's key-missing card): provider and model stay as
-  saved (sidebar and chips locked), only the key is asked for;
+  dialog came from the chat's key-missing card): on the saved provider its
+  model chips are locked and only the key is asked for (`key_only`); the
+  sidebar stays live, and another provider picked is a normal setup form
+  whose line says saving replaces the saved one. Remove key / Disconnect
+  as in use;
 - **in use** — with Remove key / Disconnect (Raj's two-step: CONFIRM_REMOVE);
 - **paused** — the island picked Mixie; this computer still holds the key:
   Use my key / Forget;
@@ -70,6 +73,25 @@ def device_key_missing(wm) -> bool:
     if key_prompt.is_open():
         return True
     return bool(wm.byok_is_active and getattr(wm, 'byok_device_key_missing', False))
+
+
+def key_only(wm) -> bool:
+    """Key needed, and the form shows the provider it is needed for (the
+    card's, else the account's): provider and model stay as saved, only the
+    key is asked for. Another provider picked is a normal setup form — its
+    save replaces the account's key (`PUT /agent/byok`)."""
+    if not device_key_missing(wm):
+        return False
+    return wm.byok_form_provider == missing_target(wm)[0]
+
+
+def missing_target(wm):
+    """(provider, model) whose key is missing: the chat card's request
+    (`core/key_prompt`; the card may name a provider the mirror does not
+    show yet), else the account's saved key. The model is "" when unknown."""
+    provider = key_prompt.provider() or wm.byok_current_provider or ""
+    saved_model = wm.byok_current_model if provider == wm.byok_current_provider else ""
+    return provider, key_prompt.model() or saved_model or ""
 
 
 def key_paused(wm) -> bool:
@@ -180,7 +202,7 @@ class FormPlan:
         self.wm = wm
         self.state = state
         self.provider = wm.byok_form_provider
-        self.key_only = device_key_missing(wm)
+        self.key_only = key_only(wm)
         self.chips = []
         self.strips = self._plan_strips()
         strips_h = len(self.strips) * S.STRIP_H
@@ -211,7 +233,7 @@ class FormPlan:
         wm, state = self.wm, self.state
         strips = []
         if state in ('IDLE', 'ERROR', 'SAVING'):
-            if self.key_only:
+            if device_key_missing(wm):
                 strips.append(('missing', None))
             elif wm.byok_is_active:
                 strips.append(('in_use', None))
@@ -318,17 +340,26 @@ class FormPlan:
                 from ...core import credential_state
                 provider, model = credential_state.resume_target()
                 key = ""
+            elif kind == 'missing':
+                provider, model = missing_target(wm)
+                key = ""
             else:
                 provider, model = wm.byok_current_provider, wm.byok_current_model
                 key = _key_text(provider, wm.byok_key_preview)
-            values = dict(provider=provider_label(provider), model=model_label(provider, model),
-                          key=key)
-            if kind == 'missing':
-                S.label(strip, iface_("Key needed on this computer: {provider} · {model}. "
-                                      "Enter it below.").format(**values),
-                        S.DANGER_TEXT, translate=False)
-                continue
-            if kind == 'in_use':
+            values = dict(provider=provider_label(provider),
+                          model=model_label(provider, model) if model else "", key=key)
+            text_kind = S.NOTE
+            if kind == 'missing' and self.key_only:
+                # The caption and the lit row name the provider; the remove
+                # pill needs the room. No model known: the provider names it.
+                text = iface_("Key needed on this computer: {model}. Enter it below.").format(
+                    model=values['model'] or values['provider'])
+                text_kind = S.DANGER_TEXT
+            elif kind == 'missing':
+                # Another provider picked: its save replaces the saved one.
+                text = iface_("Saving replaces {details}.").format(
+                    details=" · ".join(part for part in (values['provider'], values['model']) if part))
+            elif kind == 'in_use':
                 # The caption and the lit sidebar row already name the shown provider.
                 parts = [values['model'], key] if provider == self.provider else \
                     [values['provider'], values['model'], key]
@@ -336,17 +367,22 @@ class FormPlan:
                     details=" · ".join(part for part in parts if part))
             else:
                 text = iface_("Paused, Mixie is answering: {provider} · {model}").format(**values)
-            S.label(strip, text, S.NOTE, translate=False)
+            S.label(strip, text, text_kind, translate=False)
             if self.state != 'IDLE':
                 continue
             if kind == 'paused':
                 _pill(strip, OP_USE_KEY, iface_("Use my key"))
                 _pill(strip, OP_FORGET_KEY, iface_("Forget"), S.DANGER_BUTTON)
-            else:
+            elif wm.byok_is_active:
+                # In use, or saved but not on this computer: either way the
+                # account's key can go (two steps: CONFIRM_REMOVE).
                 _pill(strip, OP_REQUEST_REMOVE, remove_text(provider), S.DANGER_BUTTON)
 
     def _save_text(self):
         if self.state == 'SAVING':
+            from ...core import local_provider
+            if self.kind == 'local' and local_provider.waiting_for_start():
+                return iface_("Waiting for the local model to start…")
             return iface_("Validating with your provider…")
         if self.state == 'ERROR':
             return iface_("Try Again")

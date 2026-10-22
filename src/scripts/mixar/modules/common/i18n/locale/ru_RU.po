@@ -1907,7 +1907,10 @@ msgstr "Любой идентификатор с openrouter.ai/models, напр�
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "Дождитесь загрузки моделей"
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Укажите хотя бы что-то одно: промпт, изображение или несколько видов"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "Инструмент обрезки"
@@ -20085,9 +20091,6 @@ msgstr "Ход {turn} применён повторно"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Ходы {first}–{last} применены повторно"
 
-msgid "queued"
-msgstr "в очереди"
-
 msgid "Restoring a checkpoint…"
 msgstr "Восстановление контрольной точки…"
 
@@ -20226,6 +20229,9 @@ msgstr "«{name}» больше нет в файле ассета."
 msgid "Could not add the asset to the scene."
 msgstr "Не удалось добавить ассет в сцену."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr "Не удалось продолжить автоматически — 
 msgid "The request could not be completed."
 msgstr "Не удалось выполнить запрос."
 
-msgid "Message could not be delivered"
-msgstr "Не удалось доставить сообщение"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Ваше сообщение не дошло до Mixie. Проверьте подключение и отправьте его ещё раз."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Не удалось связаться с сервером. Проверьте подключение и повторите попытку."
@@ -20495,12 +20510,6 @@ msgstr "Возобновить задачу"
 
 msgid "Start fresh"
 msgstr "Начать заново"
-
-msgid "delivery uncertain"
-msgstr "доставка не подтверждена"
-
-msgid "could not be delivered"
-msgstr "не удалось доставить"
 
 msgid "Voice input unavailable."
 msgstr "Голосовой ввод недоступен."

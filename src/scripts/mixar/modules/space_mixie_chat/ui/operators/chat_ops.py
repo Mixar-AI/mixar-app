@@ -30,7 +30,6 @@ from ...core.attachment_encoding import encode_outgoing_attachments
 from ...core.attachment_names import resolve_attachment_names
 from ...core.attachment_pairing import legacy_attachment_names, pair_names_with_images
 from ...core.composer_send import (
-    HINT_QUEUED,
     OutgoingMessage,
     can_send,
     model_change_pending,
@@ -300,9 +299,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
         user_index = len(scene.mixie_chat_messages) - 1
         user_msg.sender = 'USER'
         user_msg.text = message_text
-        if interjecting:
-            # Settled by the backend's `joined` ack (composer_send).
-            user_msg.delivery_hint = HINT_QUEUED
 
         if not is_modify and not is_awaiting_input:
             # Copy attachments to message history (not for modify/input responses)

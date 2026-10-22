@@ -318,7 +318,8 @@ def save_credentials(
         from mixar.modules.local_models.core.model_name import safe_model_name
         model = safe_model_name(model)
 
-    on_done = _track(on_done)
+    from . import save_events
+    on_done = _track(save_events.reporting(on_done, provider))
 
     def _work():
         from . import key_store

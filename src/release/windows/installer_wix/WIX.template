@@ -68,6 +68,11 @@
         <Property Id="LAUNCHAPP" Value="1" />
         <Property Id="JOINDISCORD" Value="1" />
         <SetProperty Id="REINSTALLMODE" Value="amus" Before="FindRelatedProducts" Sequence="first">NOT REINSTALLMODE</SetProperty>
+        <!-- InstallLocation in the Uninstall key (read by the in-app updater to
+             tell the registered install from a portable copy) comes from
+             CPack's generated properties.wxi, which already sets
+             ARPINSTALLLOCATION=[INSTALL_ROOT]; defining it here too makes
+             light.exe fail with LGHT0091 (duplicate SetARPINSTALLLOCATION). -->
 
         <UIRef Id="WixUI_ErrorProgressText" />
         <CustomAction Id="LaunchMixar"

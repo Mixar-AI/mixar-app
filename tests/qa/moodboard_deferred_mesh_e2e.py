@@ -100,9 +100,8 @@ def topbar(qa, region='TOOL_PROPS', wide=False):
     assert mesh[0]['mixar_theme']=='ZEN' and mesh[0]['mixar_component']=='action'
     assert mesh[0]['block'].startswith('MIXIE_PT_canvas_templates')
     if wide:
-        assert [w['text'] for w in items]==[
-            'Add Mesh','Generate Image','Image to 3D','Video Generation'],items
-        assert all(not w['enabled'] for w in items[1:]),items
+        # An empty authoritative catalog hides unavailable generation templates.
+        assert [w['text'] for w in items]==['Add Mesh'],items
     for a,b in zip(items,items[1:]):
         assert a['rect'][2]<=b['rect'][0],items
     return mesh[0]

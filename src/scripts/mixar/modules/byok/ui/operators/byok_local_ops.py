@@ -186,6 +186,7 @@ def execute_local(op, wm, on_done):
     not be overwritten by a SAVING with nothing in flight."""
     wm.byok_dialog_state = 'SAVING'
     wm.byok_last_error = ''
+    wm.byok_local_context_window = 0   # measured again by a custom save
     ensure_dialog_redraw_pump()
     if getattr(wm, 'byok_form_local_mode', 'MANAGED') == 'CUSTOM':
         started, err = local_provider.save_custom_async(wm, on_done)

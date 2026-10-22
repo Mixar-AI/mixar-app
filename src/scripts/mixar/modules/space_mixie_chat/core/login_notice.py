@@ -10,8 +10,12 @@ a ``cta`` naming what fixes it, and this module turns it into one notice
 bubble with the matching buttons:
 
 - ``login`` — Sign in.
-- ``login_or_byok`` — Sign in, or Add your own key (the BYOK dialog).
-- ``fix_byok`` — Fix key (the BYOK dialog), or Sign in.
+- ``login_or_byok`` — Sign in & use Mixar credits, or Add your own key (the
+  BYOK dialog).
+- ``fix_byok`` — Fix key (the BYOK dialog), or Sign in & use Mixar credits.
+
+The two Sign in labels say what signing in is FOR when the alternative is a
+key: the plain "Sign in" read as a step toward the key (QA 2026-10-20).
 
 The buttons are client-local actions: the slot-action operator recognises the
 sentinels below and runs ``mixie_chat.login`` / ``mixar_byok.open_dialog``
@@ -26,6 +30,15 @@ long after it had worked. A settled notice resends the refused message
 (`byok_resend`, remembered by the transport) once the socket is back for the
 new identity, and goes away; with nothing to resend, or no socket in time,
 it asks for the send instead.
+
+"Sign in & use Mixar credits" means it: once the account's credential state
+has loaded, an account whose own key is active has that key PAUSED for this
+computer first (`byok_toggle_ops.pause`, the island's Mixie pick — the
+saved key stays and "Use my key" resumes it), so the resend runs on Mixar
+credits instead of the account's key; the settled notice says so and stays.
+An account without an active key just resends. Without this, signing in to
+an account whose key lives on another computer answered the resend with the
+"Link your sign-in" card (QA 2026-10-20).
 """
 
 import time
@@ -57,6 +70,8 @@ _SIGNED_IN = (n_("You're signed in"), _SEND_AGAIN)
 _GUEST_READY = (n_("Guest session started"), _SEND_AGAIN)
 _KEY_SAVED = (n_("Your key is saved"), _SEND_AGAIN)
 _SENDING = n_("Sending your message…")
+_SWITCHING = n_("Switching to Mixar credits…")
+_KEY_PAUSED = n_("Switched to Mixar credits — your {provider} key is paused.")
 _PENDING_SIGN_IN = n_("Finish signing in in your browser. This message updates when you're back.")
 _SIGN_IN_FAILED = n_("Sign-in didn't finish. Try again.")
 
@@ -86,16 +101,21 @@ _COPY = {
     ),
 }
 
+#: ctas whose Sign in is the way to Mixar's models instead of a key: the
+#: sign-in pauses the account's own key before the resend.
+_CREDITS_CTAS = (CTA_LOGIN_OR_BYOK, CTA_FIX_BYOK)
+_SIGN_IN_CREDITS = n_("Sign in & use Mixar credits")
+
 #: cta -> ((label, action, style), ...) in display order; the first is primary.
 _BUTTONS = {
     CTA_LOGIN: ((n_("Sign in"), SIGN_IN_CHAT_ACTION),),
     CTA_LOGIN_OR_BYOK: (
-        (n_("Sign in"), SIGN_IN_CHAT_ACTION),
+        (_SIGN_IN_CREDITS, SIGN_IN_CHAT_ACTION),
         (n_("Add your own key"), BYOK_DIALOG_CHAT_ACTION),
     ),
     CTA_FIX_BYOK: (
         (n_("Fix key"), BYOK_DIALOG_CHAT_ACTION),
-        (n_("Sign in"), SIGN_IN_CHAT_ACTION),
+        (_SIGN_IN_CREDITS, SIGN_IN_CHAT_ACTION),
     ),
 }
 
@@ -147,14 +167,18 @@ def add_login_required_chat_message(scene=None, cta: str = CTA_LOGIN, body: str 
 
 def sign_in_clicked(scene):
     """The notice's Sign in button: an account already signed in settles the
-    notice at once; otherwise the notice waits on the browser sign-in."""
+    notice at once; otherwise the notice waits on the browser sign-in. A
+    notice that offered a key as the alternative remembers that this sign-in
+    asked for Mixar credits (`_switch_to_credits`)."""
     from mixar.modules.common.utils import topbar_layout
 
+    msg = _find(scene) if scene is not None else None
+    notice = _notices.get(getattr(msg, "bubble_id", ""))
+    if notice is not None:
+        notice["credits"] = notice["cta"] in _CREDITS_CTAS
     if topbar_layout.account_signed_in(bpy.context.window_manager):
         session_ready(is_guest=False)
         return {'FINISHED'}
-    msg = _find(scene) if scene is not None else None
-    notice = _notices.get(getattr(msg, "bubble_id", ""))
     if notice is not None:
         notice["pending"] = True
         _fill_bubble(msg, _content(msg, rpt_(_PENDING_SIGN_IN)), notice["cta"])
@@ -190,32 +214,81 @@ def _settle_all(answers, state) -> None:
     for scene, msg, notice in list(_live()):
         if answers(notice):
             _notices.pop(msg.bubble_id, None)
-            _settle(scene, msg, title, body)
+            if notice.get("credits") and state is _SIGNED_IN:
+                _switch_to_credits(msg, title, body)
+            else:
+                _settle(scene, msg, title, body)
     redraw_chat_areas()
 
 
-def _settle(scene, msg, title: str, body: str) -> None:
-    """Resend the message the refusal stopped, or ask for the send."""
+def _switch_to_credits(msg, title: str, body: str) -> None:
+    """"Sign in & use Mixar credits" landed: once the account's credential
+    state is known, pause its own key (if one is active), then resend. A
+    pause that cannot start or fails (it toasts why) still resends: the
+    server decides, and its key card offers credits again."""
+    from mixar.modules.byok.core import credential_state
+
+    _fill_bubble(msg, f"**{rpt_(title)}**\n\n{rpt_(_SWITCHING)}", None)
+    bubble_id = msg.bubble_id
+
+    def _resend_after(lead: str = "") -> None:
+        scene, bubble = _bubble(bubble_id)  # the transcript can change underneath
+        if bubble is not None:
+            _settle(scene, bubble, title, body, lead)
+            redraw_chat_areas()
+
+    def _decide(_loaded: bool = True) -> None:
+        state = credential_state.snapshot()
+        if not state.get("byok_is_active"):
+            _resend_after()
+            return
+        from mixar.modules.byok.ui.operators import byok_toggle_ops
+
+        from .byok_notice import provider_display_name
+        lead = rpt_(_KEY_PAUSED).format(
+            provider=provider_display_name(state.get("byok_current_provider") or ""))
+        if not byok_toggle_ops.pause(bpy.context.window_manager,
+                                     then=lambda: _resend_after(lead), otherwise=_resend_after):
+            _resend_after()
+
+    # A sign-in just cleared the mirror; its own credential fetch answers.
+    if credential_state.snapshot().get("byok_state_loaded") and not credential_state.pending():
+        _decide()
+    else:
+        credential_state.on_next_fetch(_decide)
+
+
+def _settle(scene, msg, title: str, body: str, lead: str = "") -> None:
+    """Resend the message the refusal stopped, or ask for the send. A
+    ``lead`` line (the key was paused) keeps the notice after the resend."""
     from . import byok_resend
 
+    head = f"**{rpt_(title)}**\n\n" + (f"{lead}\n\n" if lead else "")
     session_id = getattr(scene, "mixie_session_id", "") or ""
     if not session_id or byok_resend.pending(session_id) is None:
-        _fill_bubble(msg, f"**{rpt_(title)}**\n\n{rpt_(body)}", None)
+        _fill_bubble(msg, head + rpt_(body), None)
         return
-    _fill_bubble(msg, f"**{rpt_(title)}**\n\n{rpt_(_SENDING)}", None)
+    _fill_bubble(msg, head + rpt_(_SENDING), None)
     bubble_id, deadline = msg.bubble_id, time.monotonic() + _RESEND_WAIT_S
 
     def _try():
         # Session id and bubble id only: the transcript can change underneath.
         if _connected() and byok_resend.resend(session_id):
-            _remove(byok_resend._scene_for(session_id), bubble_id)
+            target = byok_resend._scene_for(session_id)
+            if not lead:
+                _remove(target, bubble_id)
+                return None
+            bubble = _find(target) if target is not None else None
+            if bubble is not None and bubble.bubble_id == bubble_id:
+                _fill_bubble(bubble, head.rstrip(), None)
+                redraw_chat_areas()
             return None
         if time.monotonic() < deadline:
             return _RESEND_POLL_S
         target = byok_resend._scene_for(session_id)
         bubble = _find(target) if target is not None else None
         if bubble is not None and bubble.bubble_id == bubble_id:
-            _fill_bubble(bubble, f"**{rpt_(title)}**\n\n{rpt_(body)}", None)
+            _fill_bubble(bubble, head + rpt_(body), None)
             redraw_chat_areas()
         return None
 
@@ -254,6 +327,15 @@ def _live():
         notice = _notices.get(getattr(msg, "bubble_id", ""))
         if notice is not None:
             yield scene, msg, notice
+
+
+def _bubble(bubble_id: str):
+    """``(scene, notice)`` for the notice with ``bubble_id``, else (None, None)."""
+    for scene in getattr(bpy.data, "scenes", ()):
+        msg = _find(scene)
+        if msg is not None and msg.bubble_id == bubble_id:
+            return scene, msg
+    return None, None
 
 
 def _find(scene):

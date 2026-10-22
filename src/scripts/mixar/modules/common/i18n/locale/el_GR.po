@@ -1907,7 +1907,10 @@ msgstr "Οποιοδήποτε slug από το openrouter.ai/models, π.χ. ant
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "Περιμένετε να φορτωθούν τα μοντέλα"
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "Δώστε τουλάχιστον ένα από: προτροπή, εικόνα ή πολλαπλές όψεις"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "Εργαλείο περικοπής"
@@ -20085,9 +20091,6 @@ msgstr "Εφαρμόστηκε ξανά η σειρά {turn}"
 msgid "Reapplied turns {first}–{last}"
 msgstr "Εφαρμόστηκαν ξανά οι σειρές {first}–{last}"
 
-msgid "queued"
-msgstr "στην ουρά"
-
 msgid "Restoring a checkpoint…"
 msgstr "Επαναφορά σημείου επαναφοράς…"
 
@@ -20226,6 +20229,9 @@ msgstr "Το '{name}' δεν υπάρχει πλέον στο αρχείο πό�
 msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr "Δεν ήταν δυνατή η αυτόματη συνέχεια — π
 msgid "The request could not be completed."
 msgstr "Το αίτημα δεν ήταν δυνατό να ολοκληρωθεί."
 
-msgid "Message could not be delivered"
-msgstr "Το μήνυμα δεν ήταν δυνατό να παραδοθεί."
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Το μήνυμά σας δεν έφτασε στη Mixie. Ελέγξτε τη σύνδεσή σας και στείλτε το ξανά."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Δεν ήταν δυνατή η επικοινωνία με τον διακομιστή. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά."
@@ -20495,12 +20510,6 @@ msgstr "Συνέχεια εργασίας"
 
 msgid "Start fresh"
 msgstr "Έναρξη από την αρχή"
-
-msgid "delivery uncertain"
-msgstr "αβέβαιη παράδοση"
-
-msgid "could not be delivered"
-msgstr "δεν ήταν δυνατή η παράδοση"
 
 msgid "Voice input unavailable."
 msgstr "Η φωνητική εισαγωγή δεν είναι διαθέσιμη."

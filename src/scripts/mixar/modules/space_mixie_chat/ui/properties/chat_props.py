@@ -284,10 +284,11 @@ class MixieChatMessage(PropertyGroup):
     # #1251 import picker: comma-separated extensions offered by the native
     # open dialog. Picker configuration only — never a path.
     import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
-    # USER bubbles only: a short delivery note the renderer draws above the
-    # bubble ("queued"). Set when a message is sent as an
-    # interjection into a streaming turn, cleared by the backend's `joined`
-    # ack, replaced by "could not be delivered" when the ack never comes.
+    # Never set: bubbles carry no delivery label ("queued", "could not be
+    # delivered", ...). A refused or undelivered message is explained by one
+    # agent message (core/send_failure.py). Kept because the native renderer
+    # still looks the property up (mixie_chat_sender_label draws it when
+    # non-empty), so dropping it would need a rebuild for no behaviour change.
     delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})
 
     # Collection slots

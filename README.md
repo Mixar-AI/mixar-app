@@ -52,10 +52,8 @@ Mixar additionally needs **Python 3.11+** and **rsync** on the build host (macOS
 The native Windows build (`scripts/windows/build.bat`) requires **Visual Studio
 2022 17.14.14 or newer** with the C++ workload. Blender 5.2 embeds **Python 3.13**
 from the pinned `upstream/lib/windows_x64` libraries; installing a newer host
-Python does not replace those libraries. The build checks both dependency
-revisions and Python payloads before overlaying, and reports the exact repair
-command if a checkout or Git LFS download is incomplete. Old Python cache
-entries are cleared automatically while compiled objects are kept.
+Python does not replace those libraries. Old Python cache entries are cleared
+automatically while compiled objects are kept.
 Ninja builds select the Visual Studio installation's default toolset explicitly.
 When that compiler changes, old CMake configuration is backed up under the build
 directory's `.mixar-toolchain-backups/` before configuring again. Target objects
@@ -118,6 +116,19 @@ environment.
 make clean_build    # wipe the generated source/ tree and rebuild from scratch
 make install        # install embedded Python packages into the built app
 ```
+
+On Windows, run `scripts\windows\package.bat Dev` after a successful Dev build
+to create `dist/Mixar-<version>-Dev-x64.msi` (use `Prod` for production).
+Packaging requires WiX **3.x** because the installer templates use its schema.
+Install WiX 3.14.1, or extract the official
+[`wix314-binaries.zip`](https://github.com/wixtoolset/wix3/releases/tag/wix3141rtm)
+into `build/tools/wix-3.14.1/`, with `candle.exe` and `light.exe` directly inside
+that directory. The packaging script also accepts tools on `PATH`, or an
+installation/extraction directory supplied through `WIX` or `WIX_ROOT`.
+It packages the existing `bin/` payload, including the embedded Python
+dependencies, without reinstalling packages or replacing signed binaries.
+Dev installers use faster MSZIP compression; production keeps high compression
+for smaller downloads.
 
 On Linux, create the portable distribution after a successful production
 build with `scripts/unix/package_linux.sh --env Prod`. The archive is written

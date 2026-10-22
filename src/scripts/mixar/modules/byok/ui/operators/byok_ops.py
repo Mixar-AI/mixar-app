@@ -29,13 +29,14 @@ from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 from mixar.modules.common.i18n import n_
 
 from ...core import byok_client, credential_state, model_suggestions, models_cache
-from ...core import key_prompt, preference_state
+from ...core import key_prompt, preference_state, save_events
 from ...core.local_switch import (
     deregister_local_if_switched_away as _deregister_local_if_switched_away,
 )
 from . import byok_codex_ops, byok_dialog_support, byok_dialog_ui
 from .byok_dialog_support import (
     account_busy as _account_busy,
+    saving as _saving,
     prefill_from_prompt as _prefill_from_prompt,
     saved_provider_model as _saved_provider_model,
     toast_if_closed,
@@ -246,6 +247,7 @@ class MIXAR_BYOK_OT_save(Operator):
         return (context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
                 and not _account_busy())
 
+    @save_events.reporting_refusals
     def execute(self, context):
         wm = context.window_manager
         if wm.byok_dialog_state in ('SAVING', 'REMOVING') or _account_busy():
@@ -323,10 +325,6 @@ class MIXAR_BYOK_OT_save(Operator):
         result = byok_codex_ops.execute_codex(self, wm, on_done=_save_callback())
         _redraw_mixie_chat_areas()
         return result
-
-
-def _saving(wm) -> bool:
-    return getattr(wm, 'byok_dialog_state', '') == 'SAVING'
 
 
 def _save_callback():
@@ -472,6 +470,8 @@ def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)
             _deregister_local_if_switched_away(None)
+            # Opened from the chat's key card: resend on Mixar credits (once).
+            key_prompt.notify_removed()
         else:
             # Back on the confirm step, error shown: Remove retries, Keep backs
             # out (the form's Try Again would re-run Save with no key).

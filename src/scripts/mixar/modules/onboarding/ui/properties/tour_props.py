@@ -53,6 +53,17 @@ def _on_load_pre(*_args):
         _logger.debug("tour: load_pre stop failed: %s", exc)
 
 
+@persistent
+def _on_exit_pre(*_args):
+    """The app is quitting: Blender cancels the tour's modal right after
+    this, and that cancel must read as a quit (telemetry ``stop_reason``)."""
+    try:
+        from mixar.modules.onboarding.core.tour import session_lifecycle
+        session_lifecycle.note_app_exiting()
+    except Exception as exc:  # noqa: BLE001
+        _logger.debug("tour: exit_pre note failed: %s", exc)
+
+
 def _prefetch(code: str) -> None:
     """Start the language pack download; runs on the main thread (the
     property setter / a startup timer) and returns at once."""
@@ -74,6 +85,8 @@ def _prefetch_stored_later():
 def register():
     if _on_load_pre not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load_pre)
+    if _on_exit_pre not in bpy.app.handlers.exit_pre:
+        bpy.app.handlers.exit_pre.append(_on_exit_pre)
     language.add_listener(_prefetch)
     try:
         bpy.app.timers.register(_prefetch_stored_later, first_interval=5.0)
@@ -117,6 +130,8 @@ def unregister():
         pass
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
+    if _on_exit_pre in bpy.app.handlers.exit_pre:
+        bpy.app.handlers.exit_pre.remove(_on_exit_pre)
     try:
         from mixar.modules.onboarding.core.tour import deferred_restore
         deferred_restore.cancel()

@@ -1907,7 +1907,10 @@ msgstr "openrouter.ai/models ﻼً﻿ﺜﻣ ،ﮓﻠﺳ ﯽﮭﺑ ﯽﺋﻮﮐ �
 msgid "Pick a model that can use tools - the agent needs it. Most current models can."
 msgstr ""
 
-msgid "Key needed on this computer: {provider} · {model}. Enter it below."
+msgid "Key needed on this computer: {model}. Enter it below."
+msgstr ""
+
+msgid "Saving replaces {details}."
 msgstr ""
 
 msgid "In use: {details}"
@@ -10128,6 +10131,9 @@ msgstr "ﮟﯾﺮﮐ ﺭﺎﻈﺘﻧﺍ ﺎﮐ ﮯﻧﻮﮨ ﮈﻮﻟ ﮯﮐ ﺰ
 
 msgid "Provide at least one of: prompt, image, or multiple views"
 msgstr "ﻮﯾﻭ ﯽﭩﻠﻣ ﺎﯾ ،ﺮﯾﻮﺼﺗ ،ﭧﭙﻣﺍﺮﭘ :ﮟﯾﺩ ﮏﯾﺍ ﻢﮐ ﺯﺍ ﻢﮐ ﮯﺳ ﮟﯿﻣ ﻥﺍ"
+
+msgid "The input image has no readable pixels. Reload it and try again."
+msgstr ""
 
 msgid "Crop Tool"
 msgstr "ﻝﻮﭨ ﺵﺍﺮﺗ"
@@ -20085,9 +20091,6 @@ msgstr "ﯽﺌﮔ ﯽﺋﺎﮕﻟ ﮦﺭﺎﺑﻭﺩ {turn} ﯼﺭﺎﺑ"
 msgid "Reapplied turns {first}–{last}"
 msgstr "ﮟﯿﺌﮔ ﯽﺋﺎﮕﻟ ﮦﺭﺎﺑﻭﺩ {first}–{last} ﮞﺎﯾﺭﺎﺑ"
 
-msgid "queued"
-msgstr "ﮟﯿﻣ ﺭﺎﻄﻗ"
-
 msgid "Restoring a checkpoint…"
 msgstr "…ﮯﮨ ﺎﮨﺭ ﻮﮨ ﻝﺎﺤﺑ ﭧﻨﺋﺍﻮﭘ ﮏﯿﭼ"
 
@@ -20226,6 +20229,9 @@ msgstr "'{name}' ۔ﮟﯿﮩﻧ ﮟﯿﻣ ﻞﺋﺎﻓ ﮧﺛﺎﺛﺍ ﺏﺍ"
 msgid "Could not add the asset to the scene."
 msgstr "۔ﺎﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻞﻣﺎﺷ ﮟﯿﻣ ﺮﻈﻨﻣ ﮧﺛﺎﺛﺍ"
 
+msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
 msgid "Sign in to continue"
 msgstr ""
 
@@ -20239,6 +20245,9 @@ msgid "Your model key isn't working"
 msgstr ""
 
 msgid "Fix the key in AI Provider Settings, or sign in to use Mixar models."
+msgstr ""
+
+msgid "Sign in & use Mixar credits"
 msgstr ""
 
 msgid "Add your own key"
@@ -20274,8 +20283,14 @@ msgstr "۔ﮟﯿﺋﺎﺑﺩ Enter ﺮﭘ \"continue\" ﮟﯿﻣ ﭧﯿﭼ ﮯ�
 msgid "The request could not be completed."
 msgstr "۔ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻞﻤﮑﻣ ﺖﺳﺍﻮﺧﺭﺩ"
 
-msgid "Message could not be delivered"
-msgstr "ﺎﮑﺳ ﺎﺟ ﮟﯿﮩﻧ ﺎﯾﺎﭽﻨﮩﭘ ﻡﺎﻐﯿﭘ"
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "۔ﮟﯿﺠﯿﮭﺑ ﮦﺭﺎﺑﻭﺩ ﮯﺳﺍ ﺮﮭﭘ ،ﮟﯾﺮﮐ ﮏﯿﭼ ﻦﺸﮑﻨﮐ ﺎﻨﭘﺍ ۔ﺎﭽﻨﮩﭘ ﮟﯿﮩﻧ ﮏﺗ Mixie ﻡﺎﻐﯿﭘ ﺎﮐ ﭖﺁ"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "۔ﮟﯾﺮﮐ ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ ﺭﻭﺍ ﮟﯾﺮﮐ ﮏﯿﭼ ﻦﺸﮑﻨﮐ ﺎﻨﭘﺍ ﻡﺮﮐ ﮦﺍﺮﺑ ۔ﮯﮑﺳ ﭻﻨﮩﭘ ﮟﯿﮩﻧ ﮏﺗ ﺭﻭﺮﺳ"
@@ -20495,12 +20510,6 @@ msgstr "ﮟﯾﺮﮐ ﯼﺭﺎﺟ ﻡﺎﮐ"
 
 msgid "Start fresh"
 msgstr "ﮟﯾﺮﮐ ﻉﻭﺮﺷ ﺎﯿﻧ"
-
-msgid "delivery uncertain"
-msgstr "ﯽﻨﯿﻘﯾ ﺮﯿﻏ ﭻﻨﮩﭘ"
-
-msgid "could not be delivered"
-msgstr "ﺎﮑﺳ ﺎﺟ ﮟﯿﮩﻧ ﺎﯾﺎﭽﻨﮩﭘ"
 
 msgid "Voice input unavailable."
 msgstr "۔ﮟﯿﮩﻧ ﺏﺎﯿﺘﺳﺩ ﭧﭘ ﻥﺍ ﺎﮐ ﺯﺍﻭﺁ"

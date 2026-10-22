@@ -45,6 +45,21 @@ def _get_default_image_model():
         return None
 
 
+def _catalog_params(raw: str) -> dict:
+    """The ``params`` property as a dict of plain values; anything else is ignored
+    (the job queue re-validates every value against the model's schema)."""
+    import json
+    try:
+        parsed = json.loads(raw) if raw and raw.strip() else {}
+    except ValueError:
+        logger.warning("Ignoring malformed image generation params")
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    return {str(key): value for key, value in parsed.items()
+            if isinstance(value, (str, int, float, bool)) and not str(key).startswith("_")}
+
+
 class MIXIE_OT_imagegen_generate(Operator):
     """Generate images using AI and add them to the moodboard"""
 
@@ -72,6 +87,10 @@ class MIXIE_OT_imagegen_generate(Operator):
     # Agent-chosen base name for the generated moodboard image(s). Empty =
     # auto name (imagegen_<timestamp>_N). Blender dedups collisions.
     name: bpy.props.StringProperty(default="")
+    # The chosen model's OWN catalog params beyond the ones above (gpt-image's
+    # quality / background) as one JSON object; a dict cannot be an operator
+    # property. The backend validated them against the model's live schema.
+    params: bpy.props.StringProperty(default="")
 
     def execute(self, context):
         # Direct invocation with explicit params (agent scripts)
@@ -387,6 +406,7 @@ class MIXIE_OT_imagegen_generate(Operator):
         }
         if self.negative_prompt and self.negative_prompt.strip():
             payload["params"]["negative_prompt"] = self.negative_prompt.strip()
+        payload["params"].update(_catalog_params(self.params))
         if ref_b64:
             payload["reference_images_b64"] = ref_b64
         if self.name.strip():

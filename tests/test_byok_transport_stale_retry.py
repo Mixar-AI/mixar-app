@@ -107,7 +107,7 @@ def transport(monkeypatch, tmp_path):
                         lambda method, payload, ack, command_id=None: calls.append((method, dict(payload), command_id)))
     monkeypatch.setattr(queue_processor, "get_event_processor", lambda: SimpleNamespace(
         _clear_loader_bubbles=lambda target: None,
-        handle_command_error=lambda result, target: errors.append(result)))
+        handle_command_error=lambda result, target, interjection=False: errors.append(result)))
     monkeypatch.setattr(transport_seal, "invalidate", lambda: invalidations.append(True))
     seals = []
 
@@ -146,7 +146,8 @@ def test_a_stale_server_key_resends_the_command_once_under_a_new_id(transport):
     t.expects[1][1](t.scene, dict(STALE, command_id=second))
     assert len(t.calls) == 2 and t.invalidations == [True]
     assert [e["code"] for e in t.errors] == [BYOK_TRANSPORT_KEY_STALE_CODE]
-    assert t.bubble.delivery_hint == "could not be delivered"
+    # The card explains the refusal: bubbles carry no delivery label.
+    assert t.bubble.delivery_hint == ""
 
 
 def test_the_json_rpc_error_shape_is_retried_too_and_input_commands_alike(transport):
@@ -170,7 +171,7 @@ def test_other_byok_refusals_are_never_resent(transport):
 def test_the_resend_lives_in_the_transport_not_the_error_handler():
     src = (SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "core" / "turn_transport.py").read_text(encoding="utf-8")
     body = src[src.index("def settled(target, result):"):src.index("turn_events.expect(scene, command_id, settled)")]
-    assert body.index("retry_of is None and _stale_transport_key(result)") < body.index("processor.handle_command_error(result, target)")
+    assert body.index("retry_of is None and _stale_transport_key(result)") < body.index("processor.handle_command_error(result, target, interjection=joining)")
     stale = body[body.index("retry_of is None and _stale_transport_key(result)"):]
     assert "self._send(method, payload, None, interjecting, retry_of=command_id," in stale
     assert "transport_seal.invalidate()" in body
