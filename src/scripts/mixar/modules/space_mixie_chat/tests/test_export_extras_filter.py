@@ -7,6 +7,8 @@
 import json
 import struct
 
+import pytest
+
 from test_agent_export_workflow import (  # noqa: F401 — fake_scene is a fixture
     agent_export,
     export_destination,
@@ -98,6 +100,36 @@ def test_prefix_rule_holds_without_rna(tmp_path):
     assert doc["nodes"][1]["extras"] == {"mixar_active_camera": True}
     assert doc["scenes"][0]["extras"]["td"] == {"density": 1}  # only RNA knows `td`
     assert stripped == 7
+
+
+def test_animation_extras_get_the_prefix_rule_only():
+    doc = {"animations": [{"name": "Walk", "extras": {
+        "mixar_agent_clip": "x", "mixie_session_id": "s", "_RNA_UI": {},
+        "td": 1, "name": "keep", "loop": True}}],
+        "skins": [{"extras": {"mixar_rig_skeleton": "biped", "rig": "keep"}}],
+        "images": [{"extras": {"_mixar_bake": 1}}]}
+    # ``td`` / ``name`` are registered Scene/Object properties: the RNA rule
+    # must not reach sections it was never built for.
+    assert ef.strip_document(doc, REGISTERED) == 5
+    assert doc["animations"][0]["extras"] == {"td": 1, "name": "keep", "loop": True}
+    assert doc["skins"][0]["extras"] == {"rig": "keep"}
+    assert "extras" not in doc["images"][0]
+
+
+@pytest.mark.parametrize("fmt", ["glb", "gltf"])
+def test_failed_rewrite_leaves_the_original_and_no_temp(tmp_path, monkeypatch, fmt):
+    path = tmp_path / f"scene.{fmt}"
+    original = _glb(_doc()) if fmt == "glb" else json.dumps(_doc()).encode("utf-8")
+    path.write_bytes(original)
+
+    def replace_fails(src, dst):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(ef.os, "replace", replace_fails)
+    with pytest.raises(OSError):
+        ef.strip_private_extras(str(path), fmt, REGISTERED)
+    assert path.read_bytes() == original
+    assert sorted(p.name for p in tmp_path.iterdir()) == [path.name]
 
 
 def _secret_exporter(fake_scene, monkeypatch):

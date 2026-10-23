@@ -10,14 +10,20 @@ session id, moodboard and Director state. After the write, every ``extras``
 key that is a REGISTERED RNA property of the matching Blender type is
 dropped; user custom properties (never in ``bl_rna.properties``) survive.
 Belt and braces: ``mixie_*`` / ``mixar_*`` (and ``_``-prefixed) (except ``mixar_active_camera``,
-the viewer's home-camera tag) and ``_RNA_UI`` keys go too. A GLB is
-rewritten in place with its BIN chunk untouched; a ``.gltf`` JSON likewise.
+the viewer's home-camera tag) and ``_RNA_UI`` keys go too. Sections with no
+single matching RNA type (``animations`` carry Action extras, plus
+``skins``/``textures``/``images``) get the prefix rule only. A GLB is
+rewritten with its BIN chunk untouched, a ``.gltf`` JSON likewise; both go
+through a sibling temp file and ``os.replace``, so a failed write never
+leaves a truncated export.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import struct
+import uuid
 
 JSON_CHUNK = 0x4E4F534A
 KEEP = frozenset({"mixar_active_camera"})
@@ -26,6 +32,9 @@ PREFIXES = ("mixie_", "mixar_", "_mixie_", "_mixar_", "_RNA_UI")
 SECTIONS = {"scenes": "Scene", "nodes": "Object", "meshes": "Mesh",
             "materials": "Material", "cameras": "Camera"}
 LIGHT_TYPE = "Light"
+# glTF collections that may carry extras but map to no registered-property
+# set here: only the mixar_/mixie_/_RNA_UI prefix rule applies.
+PREFIX_ONLY_SECTIONS = ("animations", "skins", "textures", "images")
 
 
 def registered_properties() -> dict:
@@ -71,7 +80,25 @@ def strip_document(doc: dict, registered: dict | None = None) -> int:
         stripped += _clean(doc.get(section), registered.get(rna, set()))
     lights = ((doc.get("extensions") or {}).get("KHR_lights_punctual") or {}).get("lights")
     stripped += _clean(lights, registered.get(LIGHT_TYPE, set()))
+    for section in PREFIX_ONLY_SECTIONS:
+        stripped += _clean(doc.get(section), set())
     return stripped
+
+
+def _replace_atomically(path: str, data: bytes) -> None:
+    """Write a sibling temp file (exclusive create, no ``mkstemp``) and
+    ``os.replace`` it over ``path``; the temp is removed on any failure."""
+    temp = f"{path}.tmp-{uuid.uuid4().hex}"
+    try:
+        with open(temp, "xb") as handle:
+            handle.write(data)
+        os.replace(temp, path)
+    except BaseException:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+        raise
 
 
 def _rewrite_glb(path: str, registered) -> int:
@@ -91,8 +118,7 @@ def _rewrite_glb(path: str, registered) -> int:
     payload += b" " * (-len(payload) % 4)  # spec: JSON chunk padded with spaces
     rest = data[20 + chunk_length:]  # BIN chunk (and any others), byte-identical
     body = struct.pack("<II", len(payload), JSON_CHUNK) + payload + rest
-    with open(path, "wb") as handle:
-        handle.write(struct.pack("<4sII", b"glTF", version, 12 + len(body)) + body)
+    _replace_atomically(path, struct.pack("<4sII", b"glTF", version, 12 + len(body)) + body)
     return stripped
 
 
@@ -101,8 +127,7 @@ def _rewrite_gltf(path: str, registered) -> int:
         doc = json.load(handle)
     stripped = strip_document(doc, registered)
     if stripped:
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(doc, handle, ensure_ascii=False, indent=2)
+        _replace_atomically(path, json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"))
     return stripped
 
 
