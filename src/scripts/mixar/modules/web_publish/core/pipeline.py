@@ -214,6 +214,11 @@ def _redraw(wm) -> None:
             for area in window.screen.areas:
                 if area.type == 'VIEW_3D':
                     area.tag_redraw()
+            # Popovers live outside areas. Refresh this panel's layout so
+            # async progress and completion appear without pointer movement.
+            refresh = getattr(window, "mixar_refresh_popover", None)
+            if refresh is not None:
+                refresh("MIXAR_PT_web_publish")
     except Exception:  # noqa: BLE001 - redraw is cosmetic
         pass
 
