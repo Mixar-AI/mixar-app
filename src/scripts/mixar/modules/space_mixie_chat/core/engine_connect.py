@@ -1,0 +1,321 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Connecting Mixar to a game engine: the logic behind the composer's engine
+chip (UI in ``ui/engine_chip.py``; the link itself is ``engine_link``).
+
+- ``state()``: what the chip shows. Live editors come from ``engine_link``
+  (their discovery files), the picked one is remembered across launches, and
+  the read runs off the main thread (``refresh_async``), because a stale
+  discovery file costs a socket timeout.
+- ``find_godot()`` / ``download_godot()``: a Godot 4.5+ on this machine, or
+  the official build downloaded into ~/Applications (macOS) or
+  ~/.mixar/engines (elsewhere).
+- ``install_addon(project)``: the latest Mixar Link release
+  (``ADDON_URL``) unpacked into ``<project>/addons/mixar_link`` and enabled
+  in ``project.godot``; ``create_project`` makes a new one first.
+- ``connect(project)``: install, open Godot on the project, wait for its
+  discovery file.
+
+Nothing here leaves the machine except the two downloads; no path is ever
+sent to the backend (``engine_context`` carries names only).
+"""
+
+from __future__ import annotations
+
+import glob
+import io
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.request
+import zipfile
+
+from . import engine_link
+
+ADDON_REPO = "satyam-fp/mixar-engine-godot"
+ADDON_URL = f"https://github.com/{ADDON_REPO}/releases/latest/download/mixar_link.zip"
+GODOT_VERSION = "4.7.2"
+GODOT_MIN = (4, 5)
+GODOT_RELEASES = "https://github.com/godotengine/godot/releases/download"
+PLUGIN_CFG = "res://addons/mixar_link/plugin.cfg"
+CONNECT_TIMEOUT_S = 120.0
+# The engines the chip's dropdown lists; only Godot connects today.
+ENGINES = (
+    {"key": "godot", "label": "Godot", "available": True},
+    {"key": "unreal", "label": "Unreal Engine", "available": False},
+    {"key": "uefn", "label": "UEFN", "available": False},
+)
+
+_state: dict = {"connected": False, "editors": [], "selected": "", "busy": "", "error": "", "at": 0.0}
+_lock = threading.Lock()
+_refreshing = False
+
+
+# ---------------------------------------------------------------------------
+# What the chip shows
+# ---------------------------------------------------------------------------
+
+def state() -> dict:
+    with _lock:
+        return dict(_state)
+
+
+def _set(**changes) -> None:
+    with _lock:
+        _state.update(changes)
+
+
+def refresh() -> dict:
+    """Read the live editors now (blocking: call from a thread)."""
+    found = engine_link.adapters()
+    editors = [engine_link.public(i) for i in found]
+    chosen = engine_link.public(engine_link.choose(found))["id"] if found else ""
+    _set(connected=bool(found), editors=editors, selected=chosen, at=time.time())
+    return state()
+
+
+def refresh_async() -> None:
+    """Refresh in a daemon thread; a refresh already running is not doubled."""
+    global _refreshing
+    if _refreshing:
+        return
+    _refreshing = True
+
+    def run():
+        global _refreshing
+        try:
+            refresh()
+        except Exception:  # noqa: BLE001 - the chip must never break the composer
+            pass
+        finally:
+            _refreshing = False
+
+    threading.Thread(target=run, name="mixar-engine-refresh", daemon=True).start()
+
+
+def select(editor_id: str) -> None:
+    engine_link.select(editor_id)
+    _set(selected=editor_id)
+
+
+def chip_label(st: dict | None = None) -> str:
+    st = st or state()
+    if st.get("busy"):
+        return st["busy"]
+    chosen = next((e for e in st.get("editors") or [] if e["id"] == st.get("selected")), None)
+    if chosen:
+        return f"{chosen.get('engine', '').title()} · {chosen.get('project_name') or 'project'}"
+    return "Connect engine"
+
+
+def engine_context() -> dict | None:
+    """Names only, for the agent: which engine and project are connected."""
+    st = state()
+    chosen = next((e for e in st.get("editors") or [] if e["id"] == st.get("selected")), None)
+    if not chosen:
+        return None
+    return {"engine": chosen.get("engine"), "version": chosen.get("version"),
+            "project_name": chosen.get("project_name"), "adapter_version": chosen.get("adapter_version")}
+
+
+# ---------------------------------------------------------------------------
+# Godot on this machine
+# ---------------------------------------------------------------------------
+
+def _version_of(binary: str) -> tuple[int, ...] | None:
+    try:
+        out = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=15).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = re.match(r"\s*(\d+)\.(\d+)(?:\.(\d+))?", out or "")
+    return tuple(int(g or 0) for g in match.groups()) if match else None
+
+
+def godot_candidates() -> list[str]:
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        apps = glob.glob("/Applications/Godot*.app") + glob.glob(os.path.join(home, "Applications", "Godot*.app"))
+        found = [os.path.join(a, "Contents", "MacOS", "Godot") for a in apps]
+    elif sys.platform == "win32":
+        found = glob.glob(os.path.join(home, ".mixar", "engines", "godot*", "Godot*.exe")) + \
+            glob.glob(os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Godot*", "Godot*.exe"))
+    else:
+        found = glob.glob(os.path.join(home, ".mixar", "engines", "godot*", "Godot*"))
+    for name in ("godot4", "godot"):
+        path = shutil.which(name)
+        if path:
+            found.append(path)
+    return [p for p in dict.fromkeys(found) if os.path.isfile(p)]
+
+
+def find_godot() -> dict | None:
+    """The newest Godot 4.5+ here: {"binary", "version"} or None."""
+    best = None
+    for binary in godot_candidates():
+        version = _version_of(binary)
+        if version and version[:2] >= GODOT_MIN and (best is None or version > best["version"]):
+            best = {"binary": binary, "version": version}
+    return best
+
+
+def _godot_asset() -> tuple[str, str]:
+    """(release asset name, install folder) for this platform."""
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        return f"Godot_v{GODOT_VERSION}-stable_macos.universal.zip", os.path.join(home, "Applications")
+    if sys.platform == "win32":
+        return (f"Godot_v{GODOT_VERSION}-stable_win64.exe.zip",
+                os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
+    return (f"Godot_v{GODOT_VERSION}-stable_linux.x86_64.zip",
+            os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
+
+
+def download_godot(progress=None) -> dict:
+    """The official Godot build for this platform, unpacked; returns find_godot()."""
+    asset, dest = _godot_asset()
+    os.makedirs(dest, exist_ok=True)
+    archive = os.path.join(tempfile.mkdtemp(prefix="mixar-godot-"), asset)
+    _download(f"{GODOT_RELEASES}/{GODOT_VERSION}-stable/{asset}", archive, progress, "Downloading Godot")
+    if sys.platform == "darwin":
+        # ditto keeps the bundle's symlinks and permissions; zipfile does not.
+        subprocess.run(["ditto", "-x", "-k", archive, dest], check=True)
+    else:
+        with zipfile.ZipFile(archive) as z:
+            z.extractall(dest)
+        for path in glob.glob(os.path.join(dest, "Godot*")):
+            os.chmod(path, 0o755)
+    shutil.rmtree(os.path.dirname(archive), ignore_errors=True)
+    found = find_godot()
+    if not found:
+        raise RuntimeError("Godot was downloaded but does not start.")
+    return found
+
+
+def _download(url: str, path: str, progress, label: str) -> None:
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mixar"}), timeout=60) as resp:
+        total = int(resp.headers.get("Content-Length") or 0)
+        done = 0
+        with open(path + ".part", "wb") as out:
+            while chunk := resp.read(1 << 20):
+                out.write(chunk)
+                done += len(chunk)
+                if progress and total:
+                    progress(f"{label} {int(100 * done / total)}%")
+    os.replace(path + ".part", path)
+
+
+# ---------------------------------------------------------------------------
+# The add-on in a project
+# ---------------------------------------------------------------------------
+
+def create_project(folder: str, name: str) -> str:
+    """A new, empty Godot 4 project in ``folder`` (created)."""
+    os.makedirs(folder, exist_ok=True)
+    cfg = os.path.join(folder, "project.godot")
+    if not os.path.exists(cfg):
+        with open(cfg, "w", encoding="utf-8") as fh:
+            fh.write('config_version=5\n\n[application]\n\nconfig/name="%s"\n' % name.replace('"', "'"))
+    return folder
+
+
+def enable_plugin(project: str) -> None:
+    """Add Mixar Link to ``[editor_plugins] enabled`` in project.godot."""
+    cfg = os.path.join(project, "project.godot")
+    text = open(cfg, encoding="utf-8").read()
+    if PLUGIN_CFG in text:
+        return
+    line = re.search(r'^enabled=PackedStringArray\((.*)\)\s*$', text, re.M)
+    if line:
+        items = [i for i in (line.group(1).strip(),) if i]
+        new = f'enabled=PackedStringArray({", ".join(items + [json.dumps(PLUGIN_CFG)])})'
+        text = text[:line.start()] + new + text[line.end():]
+    elif re.search(r"^\[editor_plugins\]\s*$", text, re.M):
+        text = re.sub(r"^\[editor_plugins\]\s*$", f'[editor_plugins]\n\nenabled=PackedStringArray("{PLUGIN_CFG}")',
+                      text, count=1, flags=re.M)
+    else:
+        text = text.rstrip("\n") + f'\n\n[editor_plugins]\n\nenabled=PackedStringArray("{PLUGIN_CFG}")\n'
+    with open(cfg, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def install_addon(project: str, progress=None, archive: bytes | None = None) -> str:
+    """The latest Mixar Link release (or ``archive``) into the project, enabled;
+    returns its version. A previous copy is replaced."""
+    if not os.path.isfile(os.path.join(project, "project.godot")):
+        raise ValueError("That folder is not a Godot project (no project.godot).")
+    if archive is None:
+        if progress:
+            progress("Downloading Mixar Link")
+        with urllib.request.urlopen(urllib.request.Request(ADDON_URL, headers={"User-Agent": "Mixar"}),
+                                    timeout=60) as resp:
+            archive = resp.read()
+    addons = os.path.join(project, "addons")
+    target = os.path.join(addons, "mixar_link")
+    staging = tempfile.mkdtemp(prefix="mixar-link-", dir=project)
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as z:
+            for member in z.namelist():  # only mixar_link/…, never an absolute or .. path
+                if not member.startswith("mixar_link/") or ".." in member.split("/"):
+                    raise ValueError(f"unexpected file in the add-on archive: {member}")
+            z.extractall(staging)
+        if not os.path.isfile(os.path.join(staging, "mixar_link", "plugin.cfg")):
+            raise ValueError("the add-on archive has no plugin.cfg")
+        os.makedirs(addons, exist_ok=True)
+        if os.path.isdir(target):
+            shutil.rmtree(target)
+        shutil.move(os.path.join(staging, "mixar_link"), target)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    enable_plugin(project)
+    version = re.search(r'^version="([^"]+)"', open(os.path.join(target, "plugin.cfg"), encoding="utf-8").read(), re.M)
+    return version.group(1) if version else "?"
+
+
+def open_godot(binary: str, project: str) -> subprocess.Popen:
+    return subprocess.Popen([binary, "--editor", "--path", project], stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def connect(project: str, *, new_name: str | None = None, progress=None) -> dict:
+    """The whole one-click flow (blocking; run in a thread): Godot found or
+    downloaded, the project made if asked, the add-on installed and enabled,
+    Godot opened on it, its link awaited and selected."""
+    say = progress or (lambda text: None)
+    godot = find_godot() or download_godot(say)
+    if new_name:
+        create_project(project, new_name)
+    version = install_addon(project, say)
+    say("Opening Godot")
+    proc = open_godot(godot["binary"], project)
+    deadline = time.time() + CONNECT_TIMEOUT_S
+    while time.time() < deadline:
+        mine = [i for i in engine_link.adapters("godot") if int(i.get("pid") or 0) == proc.pid]
+        if mine:
+            editor = engine_link.public(mine[0])
+            select(editor["id"])
+            refresh()
+            return {"editor": editor, "addon_version": version}
+        if proc.poll() is not None:
+            raise RuntimeError("Godot closed before it connected.")
+        time.sleep(0.5)
+    raise RuntimeError("Godot opened but Mixar Link did not connect (is the plugin enabled?).")
+
+
+def connect_async(project: str, *, new_name: str | None = None) -> None:
+    """``connect`` in a thread; progress and errors land in ``state()``."""
+    def run():
+        try:
+            _set(busy="Connecting…", error="")
+            connect(project, new_name=new_name, progress=lambda text: _set(busy=text))
+            _set(busy="")
+        except Exception as exc:  # noqa: BLE001 - shown on the chip
+            _set(busy="", error=str(exc)[:200])
+
+    threading.Thread(target=run, name="mixar-engine-connect", daemon=True).start()

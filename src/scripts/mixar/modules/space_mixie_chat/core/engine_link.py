@@ -71,6 +71,8 @@ def adapters(engine: str | None = None) -> list:
     editor that crashed without cleaning up) is skipped, never deleted."""
     found = []
     for path in glob.glob(os.path.join(LINK_DIR, "*.json")):
+        if os.path.basename(path) == SELECTION_FILE:
+            continue
         try:
             with open(path, encoding="utf-8") as fh:
                 info = json.load(fh)
@@ -161,11 +163,36 @@ def _decode(raw: bytes, content_type: str):
         return None
 
 
+SELECTION_FILE = "selected.json"
+
+
+def selected_id() -> str:
+    """The editor the user picked in the composer's engine chip ("godot-<pid>"),
+    or "" for the newest live one."""
+    try:
+        with open(os.path.join(LINK_DIR, SELECTION_FILE), encoding="utf-8") as fh:
+            return str(json.load(fh).get("id") or "")
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+def select(adapter_id: str) -> None:
+    os.makedirs(LINK_DIR, exist_ok=True)
+    with open(os.path.join(LINK_DIR, SELECTION_FILE), "w", encoding="utf-8") as fh:
+        json.dump({"id": adapter_id}, fh)
+
+
+def choose(found: list) -> dict:
+    """The picked editor when it is still live, else the newest."""
+    picked = selected_id()
+    return next((i for i in found if public(i)["id"] == picked), found[0])
+
+
 def _connect(engine: str | None):
     found = adapters(engine)
     if not found:
         raise LinkError(NO_ENGINE)
-    info = found[0]
+    info = choose(found)
     key = (info["_path"], info["token"], int(info["port"]))
     client = _clients.get(key)
     if client is None:
