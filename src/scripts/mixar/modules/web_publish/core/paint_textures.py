@@ -29,6 +29,14 @@ def _missing_images(node, channels):
 
 @contextmanager
 def prepared_paint_textures(meshes):
+    from .direct_paint_images import staged_direct_paint_images
+
+    with staged_direct_paint_images(meshes), _prepared_paint_bakes(meshes):
+        yield
+
+
+@contextmanager
+def _prepared_paint_bakes(meshes):
     from mixar.modules.space_mixie_chat.core.export_preflight import active_mixar_nodes
 
     jobs = []

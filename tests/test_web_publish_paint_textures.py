@@ -18,7 +18,7 @@ def paint(monkeypatch):
         active = None
 
     root_nodes = Nodes()
-    tree = NS(nodes=root_nodes, mp=NS(use_baked=False))
+    tree = NS(nodes=root_nodes, mp=NS(use_baked=False), as_pointer=lambda: 23)
     node = NS(node_tree=tree)
     original_node = object()
     material_nodes = Nodes()
