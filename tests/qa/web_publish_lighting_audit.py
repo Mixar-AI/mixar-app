@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 """Compare the desktop QA source lights with its actual downloaded GLB.
 
 Usage: python3 web_publish_lighting_audit.py source.json published.glb

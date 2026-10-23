@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 """Real desktop Export -> UAT5 publication plus a rendered lighting reference.
 
 Requires the existing signed-in Dev QA harness. Uses a dedicated disposable
