@@ -231,6 +231,7 @@ class PublishState:
         self._publish_id = ""
         self._scene_name = ""
         self._via = ""
+        self._token: Optional[int] = None
         self._cancel_requested = False
         self._applied = False
         self._finished_monotonic = 0.0
@@ -238,12 +239,14 @@ class PublishState:
 
     # -- lifecycle ------------------------------------------------------------
 
-    def begin(self, publish_id: str = "", scene_name: str = "", via: str = "") -> bool:
+    def begin(self, publish_id: str = "", scene_name: str = "", via: str = "", *,
+              token: Optional[int] = None) -> bool:
         """Claim the single publish slot; False while another publish runs.
 
         Taken BEFORE the export and reused by the worker hand-off: a second
         busy check after the export aborted every #1360 publish, and
-        re-claiming would wipe a cancel requested during the export."""
+        re-claiming would wipe a cancel requested during the export.
+        ``token`` is the file-load generation the outcome belongs to."""
         with self._lock:
             if self._progress.status in BUSY_STATUSES:
                 return False
@@ -252,6 +255,7 @@ class PublishState:
             self._publish_id = publish_id
             self._scene_name = scene_name
             self._via = via
+            self._token = token
             self._cancel_requested = False
             self._applied = False
             self._finished_monotonic = 0.0
@@ -351,6 +355,11 @@ class PublishState:
     def via(self) -> str:
         with self._lock:
             return self._via
+
+    @property
+    def token(self) -> Optional[int]:
+        with self._lock:
+            return self._token
 
     @property
     def busy(self) -> bool:

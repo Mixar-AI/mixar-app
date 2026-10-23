@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import os
 import re
+import uuid
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 import requests
 
@@ -63,6 +65,28 @@ def _redacted(exc: BaseException) -> BaseException:
         return type(exc)(text)
     except Exception:  # noqa: BLE001 — exotic constructor
         return RuntimeError(f"{exc.__class__.__name__}: {text}")
+
+
+def valid_scene_id(scene_id: Any) -> str:
+    """The canonical UUID string of ``scene_id``, or "" when it is not one.
+
+    Scene ids come back from the ``.blend`` (untrusted input) and become a
+    URL path segment: ``scenes/../../<other endpoint>`` would reach another
+    API route with the user's token. Only a parseable UUID is ever sent."""
+    if not isinstance(scene_id, str) or not scene_id.strip():
+        return ""
+    try:
+        return str(uuid.UUID(scene_id.strip()))
+    except (ValueError, TypeError, AttributeError):
+        return ""
+
+
+class UploadCancelled(Exception):
+    """Raised from inside a presigned PUT's body read when the user cancels.
+
+    Deliberately NOT an ``OSError``: urllib3 would wrap that into a
+    connection error (classified ``NET-*`` and retried per part); a plain
+    exception propagates through ``requests`` unchanged."""
 
 
 class PublishApiError(Exception):
@@ -145,6 +169,15 @@ class ScenePublishService(BaseService):
     def base_url(self) -> str:
         return str(getattr(self._client, "_base_url", "") or "")
 
+    @staticmethod
+    def _scene_path(scene_id: str, *rest: str) -> str:
+        """``scenes/<uuid>[/<rest>]``; a non-UUID id raises before any request."""
+        canonical = valid_scene_id(scene_id)
+        if not canonical:
+            raise PublishApiError(n_("This scene has not been published yet"),
+                                  code="invalid_scene_id")
+        return "/".join(quote(segment, safe="") for segment in ("scenes", canonical, *rest))
+
     def _call(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
         try:
             response = getattr(self, method)(path, **kwargs)
@@ -172,7 +205,8 @@ class ScenePublishService(BaseService):
             body["upload_id"] = upload_id
         if parts:
             body["parts"] = parts
-        return self._call("post", f"scenes/{scene_id}/complete", json=body).get("scene") or {}
+        return self._call("post", self._scene_path(scene_id, "complete"),
+                          json=body).get("scene") or {}
 
     def upload_thumbnail(self, scene_id: str, filepath: str) -> None:
         """Raw bytes; the type rides in ``?ext=`` (the shared client drops
@@ -182,20 +216,20 @@ class ScenePublishService(BaseService):
             raise PublishApiError(n_("Unsupported thumbnail type"), code="bad_thumbnail")
         with open(filepath, "rb") as handle:
             payload = handle.read()
-        self._call("post", f"scenes/{scene_id}/thumbnail", params={"ext": ext},
+        self._call("post", self._scene_path(scene_id, "thumbnail"), params={"ext": ext},
                    data=payload, timeout=UPLOAD_TIMEOUT_SECONDS)
 
     def list_scenes(self) -> List[Dict[str, Any]]:
         return list(self._call("get", "scenes").get("scenes") or [])
 
     def get_scene(self, scene_id: str) -> Dict[str, Any]:
-        return self._call("get", f"scenes/{scene_id}").get("scene") or {}
+        return self._call("get", self._scene_path(scene_id)).get("scene") or {}
 
     def update_scene(self, scene_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
-        return self._call("patch", f"scenes/{scene_id}", json=fields).get("scene") or {}
+        return self._call("patch", self._scene_path(scene_id), json=fields).get("scene") or {}
 
     def delete_scene(self, scene_id: str) -> None:
-        self._call("delete", f"scenes/{scene_id}")
+        self._call("delete", self._scene_path(scene_id))
 
     def get_quota(self) -> Dict[str, Any]:
         return self._call("get", "quota")
@@ -205,10 +239,13 @@ class ScenePublishService(BaseService):
 
 
 def put_object(url: str, filepath: str, size_bytes: int, content_type: str,
-               on_progress: Optional[Callable[[int, int], None]] = None) -> None:
-    """Single presigned PUT (scenes up to the backend's simple-PUT size)."""
+               on_progress: Optional[Callable[[int, int], None]] = None,
+               should_cancel: Optional[Callable[[], bool]] = None) -> None:
+    """Single presigned PUT (scenes up to the backend's simple-PUT size).
+    ``should_cancel`` is polled on every body read; True raises
+    ``UploadCancelled`` mid-stream."""
     with open(filepath, "rb") as handle:
-        response = _put(url, _ProgressReader(handle, size_bytes, on_progress),
+        response = _put(url, _ProgressReader(handle, size_bytes, on_progress, should_cancel),
                         {"Content-Type": content_type, "Content-Length": str(size_bytes)})
     if response.status_code >= 300:
         raise PublishApiError(n_("Upload failed (HTTP {status})"), code="upload_failed",
@@ -245,18 +282,22 @@ def _put(url: str, body, headers: Dict[str, str]):
 
 
 class _ProgressReader:
-    """File-like wrapper reporting read progress to a callback."""
+    """File-like wrapper reporting read progress to a callback (and
+    aborting the stream when ``should_cancel`` says so)."""
 
-    def __init__(self, handle, total: int, on_progress=None):
+    def __init__(self, handle, total: int, on_progress=None, should_cancel=None):
         self._handle = handle
         self._remaining = total
         self._total = total
         self._on_progress = on_progress
+        self._should_cancel = should_cancel
 
     def __len__(self) -> int:
         return self._total
 
     def read(self, amount: int = -1) -> bytes:
+        if self._should_cancel is not None and self._should_cancel():
+            raise UploadCancelled()
         if self._remaining <= 0:
             return b""
         if amount is None or amount < 0 or amount > self._remaining:

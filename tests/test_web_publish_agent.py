@@ -154,7 +154,7 @@ def test_start_publish_shapes(monkeypatch):
                                    "update_existing": "true", "include_animation": False})
     assert out == {"publish_id": "abc123", "status": "started"}
     assert seen == {"title": "Loft", "description": "d", "update_existing": True,
-                    "include_animation": False, "via": "agent"}
+                    "include_animation": False, "visibility": None, "via": "agent"}
     # Omitted options defer to the panel settings (None), never invented.
     agent_api.start_publish({})
     assert seen["title"] is None and seen["include_animation"] is None

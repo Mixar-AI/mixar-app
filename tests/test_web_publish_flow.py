@@ -205,7 +205,7 @@ def test_upload_thumbnail_body_is_reusable_bytes(tmp_path):
     thumb.write_bytes(b"png-bytes")
     client = MagicMock()
     client.post.return_value = SimpleNamespace(data={"status": "success", "data": {}})
-    ScenePublishService(client).upload_thumbnail("scene-1", str(thumb))
+    ScenePublishService(client).upload_thumbnail("8f14e45f-ceea-467a-9575-1a2b3c4d5e6f", str(thumb))
     assert client.post.call_args.kwargs["data"] == b"png-bytes"
 
 

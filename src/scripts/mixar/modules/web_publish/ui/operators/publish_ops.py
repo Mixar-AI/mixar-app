@@ -16,7 +16,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
-from mixar.modules.web_publish.core.links import is_safe_share_link
+from mixar.modules.web_publish.core.links import safe_share_link
 from mixar.modules.web_publish.core.publish_state import (
     TERMINAL_STATUSES,
     format_message,
@@ -32,11 +32,11 @@ def _props(context):
 
 
 def _safe_link(context) -> str:
-    """The scene's link when it is https on a trusted host (a .blend is
-    untrusted input), else ""."""
+    """The scene's link, re-serialized, when it is https on a trusted host
+    (a .blend is untrusted input), else ""."""
     props = _props(context)
     link = props.link if props is not None and props.is_published else ""
-    return link if link and is_safe_share_link(link) else ""
+    return safe_share_link(link) if link else ""
 
 
 class MIXAR_OT_web_publish(bpy.types.Operator):
@@ -144,24 +144,12 @@ class MIXAR_OT_web_publish_unpublish(bpy.types.Operator):
         return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
-        from mixar.modules.web_publish.core.publish_api import (
-            PublishApiError,
-            ScenePublishService,
-        )
+        from mixar.modules.web_publish.core.pipeline import unpublish
 
-        props = _props(context)
-        try:
-            ScenePublishService().delete_scene(props.published_scene_id)
-        except PublishApiError as exc:
-            if exc.status_code != 404:  # already gone server-side: clear locally
-                self.report({"ERROR"}, format_message(rpt_(exc.message), exc.params))
-                return {"CANCELLED"}
-        props.published_scene_id = ""
-        props.slug = ""
-        props.share_url = ""
-        props.viewer_url = ""
-        props.revision = 0
-        props.last_published = ""
+        error = unpublish(_props(context))
+        if error is not None:
+            self.report({"ERROR"}, format_message(rpt_(error.message), error.params))
+            return {"CANCELLED"}
         self.report({"INFO"}, "Scene unpublished")
         return {"FINISHED"}
 

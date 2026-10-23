@@ -63,7 +63,10 @@ def start_publish(params: Dict[str, Any] | None = None) -> Dict[str, Any]:
     params: ``title`` (str, optional — the panel title, else derived from the
     scene name), ``description`` (str, optional), ``update_existing`` (bool,
     default False — publish a new revision at the scene's existing link),
-    ``include_animation`` (bool, optional — the panel setting, default True).
+    ``include_animation`` (bool, optional — the panel setting, default True),
+    ``visibility`` (``"public"``/``"unlisted"``, optional — a new publish
+    defaults to the panel setting; a new version without it keeps the
+    site's current access).
 
     Returns ``{"publish_id": str, "status": "started"}``; a refusal (signed
     out, already publishing, nothing visible, export failure) returns
@@ -81,6 +84,7 @@ def start_publish(params: Dict[str, Any] | None = None) -> Dict[str, Any]:
             description=_text(params, "description"),
             update_existing=bool(_flag(params, "update_existing", False)),
             include_animation=_flag(params, "include_animation", None),
+            visibility=_text(params, "visibility"),
             via="agent",
         )
     except Exception as exc:  # noqa: BLE001 - the agent always gets a dict
@@ -111,10 +115,10 @@ def publish_status(publish_id: str) -> Dict[str, Any]:
                               else "failed")
     ready = status == "ready"
     failed = status in ("failed", "cancelled")
-    from mixar.modules.web_publish.core.links import is_safe_share_link
+    from mixar.modules.web_publish.core.links import safe_share_link
 
-    link = next((url for url in (result.share_url, result.viewer_url)
-                 if url and is_safe_share_link(url)), None)
+    safe_links = [safe_share_link(url) for url in (result.share_url, result.viewer_url) if url]
+    link = next((url for url in safe_links if url), None)
     return {
         "status": status,
         "progress": 1.0 if ready else round(float(progress.progress), 3),

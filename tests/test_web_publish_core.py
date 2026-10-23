@@ -291,9 +291,10 @@ class TestApiClient:
         thumb = tmp_path / "thumb.png"
         thumb.write_bytes(b"png-bytes")
         client = _fake_client({"status": "success", "message": "ok", "data": {}})
-        ScenePublishService(client).upload_thumbnail("scene-123", str(thumb))
+        scene_id = "8f14e45f-ceea-467a-9575-1a2b3c4d5e6f"
+        ScenePublishService(client).upload_thumbnail(scene_id, str(thumb))
         args, kwargs = client.post.call_args
-        assert args[0] == "api/v1/scene-publish/scenes/scene-123/thumbnail"
+        assert args[0] == f"api/v1/scene-publish/scenes/{scene_id}/thumbnail"
         assert kwargs["params"] == {"ext": ".png"} and kwargs["data"] == b"png-bytes"
 
 

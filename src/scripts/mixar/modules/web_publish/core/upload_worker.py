@@ -41,8 +41,8 @@ from mixar.modules.web_publish.core.workspace import cleanup_workspace
 _logger = get_logger(__name__)
 
 
-class _Cancelled(Exception):
-    pass
+# A cancel seen by the worker and one raised mid-PUT are the same outcome.
+_Cancelled = publish_api.UploadCancelled
 
 
 def spawn(job: PublishJob, workspace: str, service) -> bool:
@@ -72,6 +72,7 @@ def _run(job: PublishJob, workspace: str, service) -> None:
             _discard_draft(service, job, created)
             state.set_cancelled()
         except PublishApiError as exc:
+            _discard_draft(service, job, created)
             state.set_error(exc.message, **exc.params)
     except BaseException as exc:  # noqa: BLE001 - incl. a failing handler above
         _logger.error("web_publish worker failed: %s", exc, exc_info=True)
@@ -88,8 +89,9 @@ def _check_cancel(state) -> None:
 
 
 def _discard_draft(service, job: PublishJob, created: dict) -> None:
-    """A cancelled FIRST publish leaves a draft row; a cancelled revision must
-    not be deleted (that would unpublish the live site)."""
+    """A cancelled or failed FIRST publish leaves a draft row (the backend's
+    DELETE also aborts its pending multipart upload); a revision must never
+    be deleted (that would unpublish the live site)."""
     scene_id = created.get("scene_id")
     if not scene_id or job.existing_scene_id:
         return
@@ -106,12 +108,14 @@ def _publish(job: PublishJob, service, state, created: dict) -> None:
     init_body = {
         "title": job.title,
         "description": job.description or None,
-        "visibility": job.visibility,
         "size_bytes": size_bytes,
         "content_sha256": job.content_sha256,
         "scene_meta": job.scene_meta,
         "viewer_config": job.viewer_config,
     }
+    if job.visibility:
+        # Absent on an agent's new version: the backend keeps the site's access.
+        init_body["visibility"] = job.visibility
     if job.existing_scene_id:
         # Revision of an existing scene: the id selects it (a foreign or
         # deleted id is a 404); the slug keeps older backends on the link.
@@ -136,7 +140,8 @@ def _publish(job: PublishJob, service, state, created: dict) -> None:
     parts = upload_id = None
     if mode == "put":
         publish_api.put_object(upload["url"], job.glb_path, size_bytes, GLB_CONTENT_TYPE,
-                               on_progress=_reporter(state, 0.05, 0.85))
+                               on_progress=_reporter(state, 0.05, 0.85),
+                               should_cancel=lambda: state.cancel_requested)
     elif mode == "multipart":
         parts, upload_id = _upload_multipart(upload, job.glb_path, size_bytes, state)
     else:
