@@ -26,8 +26,8 @@ with bpy.context.temp_override(window=win):
     win.view_layer.objects.active = cube
     cube.data.materials.clear()
     assert bpy.ops.layers.create_material(
-        tree_name='QA_Unbaked_Paint', ao=False, normal=False,
-        metallic=False, roughness=False, create_default_layer=False,
+        tree_name='QA_Unbaked_Paint', ao=False, normal=True,
+        metallic=True, roughness=True, create_default_layer=False,
         switch_to_material_view=False,
     ) == {'FINISHED'}
     assert bpy.ops.wm.m_new_layer(
@@ -37,6 +37,8 @@ with bpy.context.temp_override(window=win):
 from mixar.modules.paint.core.node.node_utils import get_active_mpaint_node
 from mixar.modules.paint.core.node.get_nodes import get_layer_source
 node = get_active_mpaint_node(cube)
+from mixar.modules.space_mixie_chat.core.export_preflight import active_mixar_nodes
+assert len(active_mixar_nodes(cube.active_material)) == 1, 'One paint stack has four shader links'
 tree = node.node_tree
 source = get_layer_source(tree.mp.layers[0])
 source.inputs['Color1'].default_value = (0.85, 0.03, 0.02, 1)

@@ -140,11 +140,17 @@ def _is_identity(values, identity) -> bool:
                for value, expected in zip(values, identity))
 
 
+def _rna_identity(value):
+    """RNA links can return distinct Python wrappers for the same Blender node."""
+    pointer = getattr(value, "as_pointer", None)
+    return pointer() if pointer is not None else id(value)
+
+
 def _walk_nodes(tree, visited=None):
     if tree is None:
         return
     visited = visited if visited is not None else set()
-    marker = id(tree)
+    marker = _rna_identity(tree)
     if marker in visited:
         return
     visited.add(marker)
@@ -162,8 +168,8 @@ def material_images(material):
         return images
     for node in _walk_nodes(getattr(material, "node_tree", None)):
         image = getattr(node, "image", None)
-        if image is not None and id(image) not in seen:
-            seen.add(id(image))
+        if image is not None and _rna_identity(image) not in seen:
+            seen.add(_rna_identity(image))
             images.append(image)
     return images
 
@@ -182,11 +188,12 @@ def active_mixar_nodes(material):
         pending.extend(link.from_node for link in getattr(surface, "links", ()))
     while pending:
         node = pending.pop()
-        if id(node) in visited:
+        marker = _rna_identity(node)
+        if marker in visited:
             continue
-        visited.add(id(node))
+        visited.add(marker)
         node_tree = getattr(node, "node_tree", None)
-        if node_tree is not None and hasattr(node_tree, "mp"):
+        if node_tree is not None and getattr(getattr(node_tree, "mp", None), "is_mpaint_node", False):
             found.append(node)
             continue
         for socket in getattr(node, "inputs", ()):
