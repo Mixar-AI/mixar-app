@@ -13,7 +13,10 @@ materials (``export_materials``) for the whole package; an unbaked stack
 still ships untextured.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
-never an absolute local path. The written main file is verified with
+never an absolute local path. ``engine`` (``godot`` | ``unreal`` | ``uefn``,
+``engine_targets``) adds collision hulls named for that engine's importer,
+validates the objects' ``mixar_*`` game-semantics tags into the manifest's
+``engine`` section and reports what would degrade on import. The written main file is verified with
 ``export_verify`` (``verification``; ``glb_check`` keeps the same dict for
 GLB). ``animations`` follows ``export_clips`` — the copies are static
 meshes, so clips only apply to armatures the named objects include or are
@@ -34,6 +37,7 @@ from .export_verification_status import verification_status, verification_warnin
 from .export_clips import animation_kwargs, clip_selection, select_clips
 from .export_materials import temporary_export_materials
 from .export_verify import file_clip_names, verify_export
+from . import engine_targets
 
 FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
 DESTINATIONS = ("mixar_exports", "downloads", "documents", "desktop", "project")
@@ -46,8 +50,9 @@ def _safe(name, fallback="asset"):
     return (s or fallback)[:96]
 
 
-def destination(where, subfolder=None):
-    """Absolute folder for a named destination (created)."""
+def destination(where, subfolder=None, create=True):
+    """Absolute folder for a named destination (created unless ``create`` is
+    False — a lookup of an existing package)."""
     where = (where or "mixar_exports").lower()
     if where not in DESTINATIONS:
         raise ValueError(f"destination must be one of {DESTINATIONS}")
@@ -63,7 +68,8 @@ def destination(where, subfolder=None):
     else:
         base = os.path.join(home, "Documents", "Mixar Exports")
     path = os.path.join(base, _safe(subfolder)) if subfolder else base
-    os.makedirs(path, exist_ok=True)
+    if create:
+        os.makedirs(path, exist_ok=True)
     return path
 
 
@@ -180,6 +186,38 @@ def _armatures(objs):
     return found
 
 
+def _skinned(obj):
+    return (obj.parent is not None and obj.parent.type == "ARMATURE") or any(
+        m.type == "ARMATURE" and m.object is not None for m in getattr(obj, "modifiers", ()))
+
+
+def _engine_prepare(engine, copies, renamed, col, joined):
+    """Game-semantics tags read off the ORIGINAL objects onto their copies, a
+    collision mesh set per copy -> (manifest objects, issues, hull objects)."""
+    originals = {orig: o for o, orig in renamed}
+    objects, issues, hulls = [], [], []
+    for c in copies:
+        src = originals.get(c.name)
+        tags, tag_issues = engine_targets.read_tags(src, c.name) if src is not None else ({}, [])
+        issues += tag_issues
+        if joined:
+            for o, orig in renamed:
+                if orig == c.name:
+                    continue
+                other, _ = engine_targets.read_tags(o, orig)
+                if other and other != tags:
+                    issues.append(f"{orig}: its mixar_* tags differ from {c.name}'s; "
+                                  f"the joined mesh keeps {c.name}'s.")
+        for key, value in tags.items():
+            c[engine_targets.TAG_PREFIX + key] = value
+        shape = engine_targets.collision_shape(tags, src is not None and _skinned(src))
+        names = engine_targets.collision_names(engine, c.name, shape)
+        hulls += engine_targets.build_collision(engine, c, shape, names, col)
+        objects.append({"name": c.name, **tags,
+                        "collision": engine_targets.collision_entry(engine, c.name, shape, names)})
+    return objects, issues, hulls
+
+
 def _select_only(objs):
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
@@ -188,8 +226,10 @@ def _select_only(objs):
     bpy.context.view_layer.objects.active = objs[0]
 
 
-def exporter_kwargs(fmt, animations=None):
-    """The package exporter's fixed settings plus the clip request."""
+def exporter_kwargs(fmt, animations=None, engine=None):
+    """The package exporter's fixed settings plus the clip request; an
+    ``engine`` package keeps custom properties (glTF node extras) and an
+    Unreal-family FBX takes the ``unreal`` export preset."""
     if fmt in ("glb", "gltf"):
         kw = dict(export_format="GLB" if fmt == "glb" else "GLTF_SEPARATE",
                   use_selection=True, use_active_scene=True, export_yup=True, export_apply=True,
@@ -208,14 +248,19 @@ def exporter_kwargs(fmt, animations=None):
                   export_global_up_selection="Y", export_textures_mode="NEW",
                   overwrite_textures=True, relative_paths=True,
                   export_cameras=False, export_lights=False)
+    if engine and fmt in ("glb", "gltf"):
+        kw["export_extras"] = True
+    elif engine in ("unreal", "uefn") and fmt == "fbx":
+        from .export_presets import PRESETS
+        kw.update(PRESETS["unreal"]["fbx"])
     anim, mode, warning = animation_kwargs(fmt, animations)
     kw.update(anim)
     return kw, mode, warning
 
 
-def _export(fmt, path, objs, animations=None):
+def _export(fmt, path, objs, animations=None, engine=None):
     _select_only(objs)
-    kw, mode, warning = exporter_kwargs(fmt, animations)
+    kw, mode, warning = exporter_kwargs(fmt, animations, engine)
     if fmt in ("glb", "gltf"):
         r = bpy.ops.export_scene.gltf(filepath=path, **kw)
     elif fmt == "fbx":
@@ -352,14 +397,21 @@ def _write_source(root, stem, include_source, col, copies, mats, images):
 
 def export_package(names, fmt="glb", filename=None, where="mixar_exports", folder=None, join=False,
                    texture_tiers=(), include_source=False, manifest=True, readme=None,
-                   extra_files=(), animations=None):
+                   extra_files=(), animations=None, engine=None):
     """``include_source`` may be True or a file name for the .blend; ``readme``
     text is written as README.md; ``extra_files`` are (name, text) pairs;
-    ``animations`` is None (all) / [] (none) / [clip names]."""
+    ``animations`` is None (all) / [] (none) / [clip names]; ``engine`` is
+    None or one of ``engine_targets.ENGINES``."""
     t0 = time.perf_counter()
     fmt = fmt.lower()
     if fmt not in FORMATS:
         raise ValueError(f"format must be one of {FORMATS}")
+    if engine is not None:
+        engine = engine_targets.normalise_engine(engine)
+        if engine is None:
+            raise ValueError(f"engine must be one of {engine_targets.ENGINES}")
+        if fmt not in engine_targets.ENGINE_FORMATS[engine]:
+            raise ValueError(f"a {engine} package is {' or '.join(engine_targets.ENGINE_FORMATS[engine])}")
     scene = bpy.context.scene
     objs = [scene.objects[n] for n in names]
     stem = _safe(os.path.splitext(filename or objs[0].name)[0])
@@ -380,6 +432,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     prev_active = bpy.context.view_layer.objects.active
     success = False
     verification = None
+    engine_section = None
+    hulls = []
     clips, clips_missing = select_clips(armatures, animations)
     col, copies, renamed = _copies(meshes, join)
     swap = ExitStack()
@@ -395,9 +449,13 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                     mats.append(s.material)
         images = _material_images(mats)
         main = os.path.join(root, stem + ext)
-        exported = list(copies) + armatures
+        engine_objects, engine_issues = [], []
+        if engine:
+            engine_objects, engine_issues, hulls = _engine_prepare(
+                engine, copies, renamed, col, bool(join and len(meshes) > 1))
+        exported = list(copies) + hulls + armatures
         with clip_selection(armatures, animations, scene) as (clips, clips_missing):
-            anim_mode, warning = _export(fmt, main, exported, animations)
+            anim_mode, warning = _export(fmt, main, exported, animations, engine)
         files.append(stem + ext)
         tex = _save_textures(images, os.path.join(root, "textures"))
         files += [f"textures/{f}" for _, f in tex.values()]
@@ -411,7 +469,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             try:
                 tier_name = f"{stem}_{size}{ext}"
                 with clip_selection(armatures, animations, scene):
-                    _export(fmt, os.path.join(root, tier_name), exported, animations)
+                    _export(fmt, os.path.join(root, tier_name), exported, animations, engine)
             finally:
                 for node, img in undo:
                     node.image = img
@@ -427,8 +485,17 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                 with open(os.path.join(root, _safe(name)), "w", encoding="utf-8") as fh:
                     fh.write(str(text))
                 files.append(_safe(name))
+        if engine:
+            engine_issues += engine_targets.readiness_issues(
+                engine,
+                textures=[(f"textures/{f}", tuple(img.size)) for img, (_, f) in tex.items()],
+                meshes=[(c.name, bool(c.data.uv_layers),
+                         bool(_material_images([s.material for s in c.material_slots])))
+                        for c in copies],
+                objects=engine_objects)
+            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues)
         verification = verify_export(main, fmt, {
-            "mesh_count": len(copies), "armature_count": len(armatures),
+            "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
             "clips": clips if animations is not None else None,
             "joined": bool(join and len(meshes) > 1), "images_expected": len(images),
             "compression": "none",
@@ -447,6 +514,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             "textures": [{"file": f"textures/{f}", "size": list(img.size)} for img, (_, f) in tex.items()],
             "animations": clips, "tiers": tiers, "files": [], "generator": GENERATOR,
         }
+        if engine_section is not None:
+            info["engine"] = engine_section
         for f in files:
             p = os.path.join(root, f)
             info["files"].append({"file": f, "bytes": os.path.getsize(p), "sha256_16": _sha(p)})
@@ -467,7 +536,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             bpy.context.view_layer.objects.active = prev_active
         duration_ms = int((time.perf_counter() - t0) * 1000)
         _telemetry("completed", fmt, success=success, extension=ext, scope="named",
-                   use_case="package", destination_kind=where,
+                   use_case="package", destination_kind=where, engine=engine or "",
                    mesh_count=len(copies), armature_count=len(armatures),
                    clip_count=len(clips), duration_ms=duration_ms,
                    delivery_status=verification_status(verification),
@@ -478,7 +547,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     return {"delivery_status": verification_status(verification),
             "warning": verification_warning(verification), "destination": where,
             "folder": os.path.basename(root), "files": files,
-            "replaced_previous_files": replaced,
+            "replaced_previous_files": replaced, "engine": engine_section,
             "main_file": stem + ext, "glb_check": check, "verification": verification,
             "triangles": tris, "dimensions_m": dims, "textures": len(tex), "tiers": tiers,
             "animations": {"clips": clips, "clips_requested": animations,

@@ -322,6 +322,9 @@ def _compare(result: dict, expected: dict, fmt: str) -> None:
     want_meshes = expected.get("mesh_count")
     if expected.get("joined"):
         want_meshes = 1
+    # Collision meshes an engine package adds beside the deliverables.
+    if want_meshes is not None and expected.get("extra_meshes"):
+        want_meshes = int(want_meshes) + int(expected["extra_meshes"])
     actual_meshes = result.get("mesh_instances", result.get("meshes"))
     if want_meshes is not None and actual_meshes is not None:
         if int(actual_meshes) != int(want_meshes):

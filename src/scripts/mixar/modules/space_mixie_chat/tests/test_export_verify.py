@@ -182,7 +182,9 @@ def test_usdz_listing_flags_missing_layer(tmp_path):
 def test_export_package_signature_and_isolation():
     params = inspect.signature(export_package.export_package).parameters
     assert list(params) == ["names", "fmt", "filename", "where", "folder", "join", "texture_tiers",
-                            "include_source", "manifest", "readme", "extra_files", "animations"]
+                            "include_source", "manifest", "readme", "extra_files", "animations",
+                            "engine"]
+    assert params["engine"].default is None
     assert params["animations"].default is None
     src = open(os.path.join(_CORE, "export_package.py"), encoding="utf-8").read()
     assert "uv_bake" not in src.replace("uv_bake.export_package", "")  # legacy manifest tag only
