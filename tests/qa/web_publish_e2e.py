@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Publish to Web from the N-panel: Mixar tab › Publish to Web.
+"""Publish to Web from the viewport Export button.
 
 Steps marked [BACKEND] need a signed-in Dev app and
 a backend with the scene_publish module (mixar-backend PR #1208) plus
@@ -10,7 +10,7 @@ presigned storage. Uses only a small QA scene; no generation jobs.
     QA_HARNESS=/path/to/mixar-qa-harness QA_PORT=4777 \
         QA_SCENARIO_OUT=/tmp/web-publish-qa python3 tests/qa/web_publish_e2e.py
 
-Proves: the panel draws in the VIEW_3D sidebar; Publish runs the shared
+Proves: Export opens a persistent Publish to Web popup; Publish runs the shared
 export lane (Draco/WebP) and progresses EXPORTING → UPLOADING → DONE in the
 WindowManager mirror; the result is filed on the published scene; Copy
 Link puts the share URL on the clipboard. Vision: snaps of the form,
@@ -27,14 +27,6 @@ from lib import QA  # noqa: E402
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/web-publish-qa'))
 WM = "bpy.context.window_manager"
 PROPS = "drv.main_window().scene.mixar_web_publish"
-
-OPEN_PANEL = """
-win = drv.main_window()
-area = next(a for a in win.screen.areas if a.type == 'VIEW_3D')
-area.spaces.active.show_region_ui = True
-area.tag_redraw()
-result = True
-"""
 
 FIXTURE = """
 import bpy
@@ -82,7 +74,7 @@ result = scene.name
 
 
 def snap(qa, name):
-    qa.cmd('snap', path=str(OUT / f'{name}.png'), area='VIEW_3D')
+    qa.cmd('snap', path=str(OUT / f'{name}.png'))
 
 
 def main():
@@ -94,16 +86,17 @@ def main():
         qa.cmd('reset_state')
         qa.cmd('wait_login', timeout=60)
         scene_name = qa.eval(FIXTURE)
-        qa.eval(OPEN_PANEL)
-        # Category is read-only RNA; use the real tab click and verify its body.
-        ready = "any(w.get('panel') == 'MIXAR_PT_web_publish' for w in drv.find(region_type='UI'))"
-        if not qa.eval("result = " + ready):
-            qa.click(surface='panel_tab', text='Mixar')
-        qa.wait(ready, timeout=10)
+        qa.click(text='Export', region_type='HEADER')
+        qa.wait("bool(drv.find(text='Publish to Web…'))", timeout=10)
+        snap(qa, '00-export-menu')
+        # Existing file exports remain alongside publishing.
+        assert qa.eval("result = bool(drv.find(text='Blend (.blend)'))")
+        qa.click(op='WM_OT_call_panel', text='Publish to Web…')
+        qa.wait("bool(drv.find(op='MIXAR_OT_web_publish'))", timeout=10)
         assert qa.eval(f"result = {PROPS}.is_published") is False
         assert qa.eval("result = hasattr(bpy.types, 'MIXAR_PT_web_publish')")
         snap(qa, '01-form')
-        verdict['steps'].append('panel form drawn')
+        verdict['steps'].append('Export menu opens publish popup with file exports preserved')
 
         # [BACKEND] sign-in: the operator refuses while signed out.
         qa.cmd('wait_login', timeout=60)
@@ -131,6 +124,7 @@ result = {{'slug': p.slug, 'revision': p.revision, 'link': p.link,
 """)
         assert published['is_published'] and published['revision'] >= 1, published
         assert published['link'].startswith('http'), published
+        qa.wait("bool(drv.find(op='MIXAR_OT_web_publish_copy_link'))", timeout=10)
         snap(qa, '03-published')
 
         # Copy Link → clipboard holds the share link.
@@ -148,17 +142,20 @@ result = agent_api.publish_status(get_publish_state().publish_id)
         assert agent['status'] == 'ready' and agent['slug'] == published['slug'], agent
         # A changed scene publishes a new revision while keeping its identity/link.
         qa.eval("bpy.data.objects['QA_Publish_Cube'].scale.z = 1.5\nbpy.data.objects['QA_Publish_Cube'].location.z = 1.5\nresult = True")
-        # The published card is taller; scroll the sidebar with real wheel input.
-        for _ in range(12):
-            if qa.eval("result = bool(drv.find(op='MIXAR_OT_web_publish'))"):
-                break
-            qa.cmd('press', key='WHEELDOWNMOUSE')
         qa.click(op='MIXAR_OT_web_publish')
         qa.wait(f"{PROPS}.revision > {published['revision']}", timeout=300)
         updated = qa.eval(f"result = {{'slug': {PROPS}.slug, 'revision': {PROPS}.revision, 'link': {PROPS}.link}}")
         assert updated['slug'] == published['slug'] and updated['link'] == published['link'], updated
         snap(qa, '04-new-version')
         verdict['steps'].append('new version keeps share link')
+        # Closing the popup never loses publication state; Export reopens it.
+        qa.cmd('press', key='ESC')
+        qa.click(text='Export', region_type='HEADER')
+        qa.click(op='WM_OT_call_panel', text='Publish to Web…')
+        qa.wait("bool(drv.find(op='MIXAR_OT_web_publish_copy_link'))", timeout=10)
+        assert qa.eval(f"result = {PROPS}.link") == updated['link']
+        snap(qa, '05-reopened')
+        verdict['steps'].append('Export reopens the published scene controls')
         verdict.update(passed=True, published=updated, agent=agent)
     except Exception as exc:
         verdict['error'] = str(exc)

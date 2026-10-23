@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""VIEW_3D N-panel, Mixar tab › Publish to Web.
+"""Export menu › Publish to Web popup.
 
 Draw only: reads the scene's publish properties and a ``PublishState``
 snapshot (a lock-guarded copy, no RNA writes). Runtime text arrives as
@@ -45,10 +45,9 @@ def _wrap(text: str, width: int = _WRAP, limit: int = 6):
 class MIXAR_PT_web_publish(bpy.types.Panel):
     bl_label = "Publish to Web"
     bl_idname = "MIXAR_PT_web_publish"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "Mixar"
-    bl_order = 55
+    bl_space_type = "TOPBAR"
+    bl_region_type = "HEADER"
+    bl_ui_units_x = 20
 
     def draw(self, context):
         layout = self.layout
