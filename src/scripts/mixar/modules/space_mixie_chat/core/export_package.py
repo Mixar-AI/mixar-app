@@ -124,10 +124,13 @@ def _material_images(mats):
     return out
 
 
-def _copies(objs, join):
+def _copies(objs, join, keep_origins=False):
     """World-baked, parent-free, modifier-applied mesh copies. Self-cleaning:
     a failure part-way undoes the renames and drops the temp collection, so
-    the user's objects never keep the ``.mixar_export_src`` name."""
+    the user's objects never keep the ``.mixar_export_src`` name.
+    ``keep_origins`` (engine packages) bakes rotation and scale but leaves each
+    copy at its original's world origin, so a door turns about its hinge and a
+    pickup spins about its own centre; the world placement is unchanged."""
     deps = bpy.context.evaluated_depsgraph_get()
     col = bpy.data.collections.new("mixar_export_tmp")
     bpy.context.scene.collection.children.link(col)
@@ -144,7 +147,14 @@ def _copies(objs, join):
             me.transform(o.matrix_world)
             if o.matrix_world.is_negative:
                 me.flip_normals()
+            origin = None
+            if keep_origins:
+                from mathutils import Matrix
+                origin = o.matrix_world.translation.copy()
+                me.transform(Matrix.Translation(-origin))
             c = bpy.data.objects.new(orig, me)
+            if origin is not None:
+                c.location = origin
             for idx, slot in enumerate(o.material_slots):
                 if slot.link == "OBJECT" and slot.material is not None and idx < len(me.materials):
                     me.materials[idx] = slot.material
@@ -213,7 +223,7 @@ def _engine_prepare(engine, copies, renamed, col, joined):
         shape = engine_targets.collision_shape(tags, src is not None and _skinned(src))
         names = engine_targets.collision_names(engine, c.name, shape)
         hulls += engine_targets.build_collision(engine, c, shape, names, col)
-        objects.append({"name": c.name, **tags,
+        objects.append({"name": c.name, **tags, "origin": [round(float(v), 4) for v in c.location],
                         "collision": engine_targets.collision_entry(engine, c.name, shape, names)})
     return objects, issues, hulls
 
@@ -435,7 +445,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     engine_section = None
     hulls = []
     clips, clips_missing = select_clips(armatures, animations)
-    col, copies, renamed = _copies(meshes, join)
+    col, copies, renamed = _copies(meshes, join, keep_origins=bool(engine))
     swap = ExitStack()
     try:
         # Mixar paint slots on the COPIES become their baked Principled/image

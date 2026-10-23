@@ -161,8 +161,12 @@ def build_collision(engine: str, copy, shape: str, names: list, col) -> list:
             me = _hull_mesh(copy, name, box=shape == "box")
         obj = bpy.data.objects.new(name, me)
         col.objects.link(obj)
+        # The hull is built in the copy's own space: a Godot hull is its child,
+        # an Unreal UCX sibling stands where the copy stands.
         if engine == "godot":
             obj.parent = copy
+        else:
+            obj.matrix_world = copy.matrix_world.copy()
         out.append(obj)
     return out
 

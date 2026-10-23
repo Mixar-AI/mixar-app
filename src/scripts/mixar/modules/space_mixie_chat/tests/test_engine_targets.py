@@ -132,3 +132,14 @@ def test_verification_counts_collision_meshes():
     assert issues(2, mesh_count=2, extra_meshes=1)
     assert issues(2, mesh_count=3, joined=True, extra_meshes=1) == []
     assert issues(2, mesh_count=2) == []
+
+
+def test_engine_packages_keep_each_objects_origin():
+    src = open(export_package.__file__, encoding="utf-8").read()
+    body = src[src.index("def export_package("):]
+    assert "_copies(meshes, join, keep_origins=bool(engine))" in body
+    copies = src[src.index("def _copies("):src.index("def _cleanup(")]
+    assert "me.transform(Matrix.Translation(-origin))" in copies and "c.location = origin" in copies
+    # Hulls stand in their copy's space either way.
+    hull = open(et.__file__, encoding="utf-8").read()
+    assert "obj.parent = copy" in hull and "obj.matrix_world = copy.matrix_world.copy()" in hull
