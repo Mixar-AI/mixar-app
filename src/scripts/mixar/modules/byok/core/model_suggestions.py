@@ -212,10 +212,11 @@ def get_platform_models() -> list[dict]:
     return [dict(record) for record in _platform_records if record["platform_available"]]
 
 
-def _record(provider: str, model: str) -> dict | None:
-    """The catalog record of one model, matched on its OWN provider (as the
-    backend validates a level): Codex (whose model list borrows the "openai"
-    group), OpenRouter and Local have no catalog rows of their own."""
+def catalog_record(provider: str, model: str) -> dict | None:
+    """The catalog record of one model (the cache's own dict: read, never
+    mutate), matched on its OWN provider (as the backend validates a level):
+    Codex (whose model list borrows the "openai" group), OpenRouter and Local
+    have no catalog rows of their own. None when uncataloged."""
     return next((r for r in _platform_records
                  if r["provider_id"] == provider and r["model_id"] == model), None)
 
@@ -223,7 +224,7 @@ def _record(provider: str, model: str) -> dict | None:
 def thinking_levels(provider: str, model: str) -> list[str]:
     """The catalog's thinking levels for one model, in server order; [] when
     the model is not in the catalog or offers none."""
-    record = _record(provider, model)
+    record = catalog_record(provider, model)
     return list(record["thinking_levels"]) if record else []
 
 
@@ -231,7 +232,7 @@ def default_thinking_level(provider: str, model: str) -> str:
     """The level a model runs at with nothing saved (its Model Library
     default), or "" when the catalog names none (an older backend, a model
     without levels, an uncataloged model)."""
-    record = _record(provider, model)
+    record = catalog_record(provider, model)
     return record["default_thinking_level"] if record else ""
 
 

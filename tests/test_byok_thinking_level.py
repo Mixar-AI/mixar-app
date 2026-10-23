@@ -449,3 +449,17 @@ def test_picking_the_default_level_with_nothing_saved_sends_nothing(pick, defaul
     _apply(wm, thinking_level=None)
     assert run("anthropic", "claude-opus-5-5", "medium") == {'FINISHED'} and calls.level == []
     assert run("anthropic", "claude-opus-5-5", "low") == {'FINISHED'} and calls.level == ["low"]
+
+
+def test_a_saved_level_the_catalog_no_longer_offers_falls_back_to_the_default(defaulted):
+    """The hosted preference echoes a removed level as stored; the backend
+    runs the default, so the chip and the card say the default."""
+    from mixar.modules.byok.core import model_menu
+    assert model_menu.effective_thinking("anthropic", "claude-opus-5-5", "max") == "medium"
+    # A model with no default: nothing is named rather than the stale level.
+    assert model_menu.effective_thinking("anthropic", "claude-sonnet-5-5", "high") == ""
+    # Uncataloged (or the catalog not loaded yet): what was saved stands.
+    assert model_menu.effective_thinking("kimi", "k2", "high") == "high"
+    s = picker.picker_state(dict(credential_state._DEFAULTS), _hosted("max"))
+    assert picker.chip(s)["name"] == "Claude Opus 5.5 · Medium"
+    assert ("level", "Medium", True) in _levels(picker.build_rows(s, defaulted), TAB_MIXIE)

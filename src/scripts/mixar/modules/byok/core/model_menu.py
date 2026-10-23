@@ -34,14 +34,21 @@ def display_model_label(provider: str, model: str, label: str = "") -> str:
 
 
 def effective_thinking(provider: str, model: str, saved: str) -> str:
-    """The level a turn on this model actually runs at: the saved one, else
-    the model's catalog default (`default_thinking_level`); "" when neither
-    is known (an older backend: nothing is spelled out or ticked)."""
-    if saved or not model:
-        return saved or ""
+    """The level a turn on this model actually runs at: the saved one while
+    the catalog still offers it, else the model's catalog default
+    (`default_thinking_level`); "" when neither is known (an older backend:
+    nothing is spelled out or ticked). A saved level an admin has since
+    removed counts as unsaved (the hosted preference echoes it stale; the
+    backend runs the default). An uncataloged model keeps what was saved."""
+    saved = saved or ""
+    if not model:
+        return saved
     from . import model_suggestions
 
-    return model_suggestions.default_thinking_level(provider, model)
+    record = model_suggestions.catalog_record(provider, model)
+    if record is None or saved in record["thinking_levels"]:
+        return saved
+    return record["default_thinking_level"]
 
 
 def format_thinking_level(level: str) -> str:
