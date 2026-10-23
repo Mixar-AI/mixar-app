@@ -109,9 +109,10 @@ def export_glb(filepath: str, meshes, include_animation: bool = True,
     if not meshes:
         raise ExportError("No visible mesh objects to publish")
     from mixar.modules.space_mixie_chat.core.agent_export import export_to_path
+    from mixar.modules.web_publish.core.paint_textures import prepared_paint_textures
 
     spec = build_export_spec([obj.name for obj in meshes], include_animation)
-    with _active_camera_tag(scene if scene is not None else bpy.context.scene):
+    with prepared_paint_textures(meshes), _active_camera_tag(scene if scene is not None else bpy.context.scene):
         result = export_to_path(filepath, spec, via=EXPORT_TELEMETRY_VIA,
                                 tool=EXPORT_TELEMETRY_TOOL)
     if not result.get("success"):

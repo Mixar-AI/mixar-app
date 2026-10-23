@@ -83,7 +83,7 @@ def test_export_glb_delegates_to_export_to_path(monkeypatch):
         return {"success": True, "warning": "World not carried"}
 
     monkeypatch.setattr(agent_export, "export_to_path", fake_export)
-    meshes = [SimpleNamespace(name="Chair")]
+    meshes = [SimpleNamespace(name="Chair", data=SimpleNamespace(materials=[]))]
     no_camera = SimpleNamespace(camera=None)
     result = glb_export.export_glb("/tmp/x/scene.glb", meshes, include_animation=False,
                                    scene=no_camera)
@@ -123,7 +123,7 @@ def test_active_camera_is_tagged_for_the_export_only(monkeypatch):
     seen = []
     monkeypatch.setattr(agent_export, "export_to_path", lambda *a, **k: seen.append(
         dict(camera)) or {"success": True})
-    glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair")],
+    glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair", data=SimpleNamespace(materials=[]))],
                           scene=SimpleNamespace(camera=camera))
     assert seen == [{"mixar_active_camera": True}]  # the viewer's home camera
     assert camera == {}  # removed afterwards: the .blend is left as found
@@ -132,7 +132,7 @@ def test_active_camera_is_tagged_for_the_export_only(monkeypatch):
     monkeypatch.setattr(agent_export, "export_to_path",
                         lambda *a, **k: {"success": False, "error": "boom"})
     with pytest.raises(glb_export.ExportError):
-        glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair")],
+        glb_export.export_glb("/tmp/x/scene.glb", [SimpleNamespace(name="Chair", data=SimpleNamespace(materials=[]))],
                               scene=SimpleNamespace(camera=camera))
     assert camera == {"mixar_active_camera": "user value"}
 
