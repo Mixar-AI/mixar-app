@@ -216,6 +216,15 @@ def test_worker_omits_an_empty_visibility(tmp_path, monkeypatch):
     assert "visibility" not in service.init_publish.call_args[0][0]
 
 
+def test_worker_omits_an_empty_description_on_a_new_version(tmp_path, monkeypatch):
+    monkeypatch.setattr(publish_api, "put_object", lambda *a, **k: None)
+    job, ws = _job(tmp_path, existing=SCENE_ID, visibility="")
+    service = _service()
+    get_publish_state().begin("v1")
+    upload_worker._run(job, str(ws), service)
+    assert "description" not in service.init_publish.call_args[0][0]
+
+
 # -- 7. cancel mid-PUT; a failed first publish deletes its draft ------------------------
 
 

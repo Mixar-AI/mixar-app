@@ -107,12 +107,15 @@ def _publish(job: PublishJob, service, state, created: dict) -> None:
     state.set_status(STATUS_UPLOADING, n_("Reserving your scene link…"), 0.02)
     init_body = {
         "title": job.title,
-        "description": job.description or None,
         "size_bytes": size_bytes,
         "content_sha256": job.content_sha256,
         "scene_meta": job.scene_meta,
         "viewer_config": job.viewer_config,
     }
+    if job.description or not job.existing_scene_id:
+        # An empty description on a new version is left out: the backend keeps
+        # the site's description rather than clearing it.
+        init_body["description"] = job.description or None
     if job.visibility:
         # Absent on an agent's new version: the backend keeps the site's access.
         init_body["visibility"] = job.visibility
