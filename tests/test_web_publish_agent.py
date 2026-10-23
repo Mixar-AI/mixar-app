@@ -100,6 +100,18 @@ def test_export_glb_delegates_to_export_to_path(monkeypatch):
         glb_export.export_glb("/tmp/x/scene.glb", [], scene=no_camera)
 
 
+def test_visible_meshes_skip_render_disabled_collections():
+    def mesh(name, hidden_collection=False, hide_render=False):
+        return SimpleNamespace(name=name, type="MESH", hide_render=hide_render,
+                               visible_get=lambda: True,
+                               users_collection=[SimpleNamespace(hide_render=False),
+                                                 SimpleNamespace(hide_render=hidden_collection)])
+
+    scene = SimpleNamespace(objects=[mesh("Shown"), mesh("InHiddenCol", hidden_collection=True),
+                                     mesh("HiddenObj", hide_render=True)])
+    assert [m.name for m in glb_export.visible_meshes(scene)] == ["Shown"]
+
+
 class _Camera(dict):
     """An ID-property bag like ``bpy.types.Object``."""
 

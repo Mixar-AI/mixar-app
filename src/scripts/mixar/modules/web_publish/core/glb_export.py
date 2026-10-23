@@ -69,13 +69,17 @@ def _active_camera_tag(scene):
 
 
 def visible_meshes(scene) -> List[Any]:
-    """The scene meshes a visitor would see (hidden objects stay private)."""
+    """The scene meshes a visitor would see (hidden objects stay private).
+
+    A collection disabled for renders hides its direct members too (nested
+    parents are not walked)."""
     meshes = []
     for obj in scene.objects:
         if obj.type != 'MESH':
             continue
         try:
-            if obj.visible_get() and not obj.hide_render:
+            if (obj.visible_get() and not obj.hide_render
+                    and not any(c.hide_render for c in obj.users_collection)):
                 meshes.append(obj)
         except RuntimeError:  # not in the active view layer
             continue
