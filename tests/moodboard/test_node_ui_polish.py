@@ -314,9 +314,11 @@ def test_a_result_can_be_opened_in_its_own_preview_window():
     # Nothing looks for an existing preview to reuse -- that is the feature.
     assert "WM_window_find" not in preview
 
-    # A movie needs its range and auto-refresh, or it sits on frame one.
-    assert "IMA_ANIM_ALWAYS" in preview
+    # A movie gets the video player (own clock, sound and controls) instead of
+    # the Image Editor's scene-frame playback.
     assert "IMA_SRC_MOVIE" in preview
+    assert '"MIXIE_OT_moodboard_video_player"' in preview
+    assert "IMA_ANIM_ALWAYS" not in preview
 
     # REGISTER operator: a remembered id would preview the wrong card.
     assert "PROP_SKIP_SAVE" in preview.split("RNA_def_string(")[1]

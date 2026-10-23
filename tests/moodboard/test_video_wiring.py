@@ -38,16 +38,20 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     cmake = _read(SPACE_MIXIE / "CMakeLists.txt")
     select = _read(SPACE_MIXIE / "mixie_moodboard_ops_select.cc")
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+    session = _read(SPACE_MIXIE / "mixie_moodboard_video_session.cc")
 
-    assert "mixie_moodboard_ops_preview.cc" in cmake
-    assert "moodboard_toggle_video_playback" in select
-    assert "play_button_hit" in select
+    for unit in ("mixie_moodboard_ops_preview.cc", "mixie_moodboard_video_session.cc",
+                 "mixie_moodboard_video_card.cc", "mixie_moodboard_video_player.cc"):
+        assert unit in cmake
+    # Sound comes from the audaspace device Blender already opened.
+    assert "bf::dependencies::optional::audaspace" in cmake
+    # The click resolves which hover control was hit through the shared layout.
+    assert "moodboard_video_card_button_at(v2d, media_rect, mouse_x, mouse_y)" in select
     assert "KM_DBL_CLICK" in select
-    assert "moodboard_video_play_radius(v2d, media_rect)" in select
-    assert "g_video_playback" in preview
-    assert "BKE_image_acquire_ibuf" in preview
-    assert "MOV_get_duration_frames" in preview
-    assert "MOV_get_fps" in preview
+    assert "moodboard_video_card_press(" in select
+    assert "BKE_image_acquire_ibuf" in session
+    assert "MOV_get_duration_frames" in session
+    assert "MOV_get_fps" in session
     assert "BLI_timer_register" in preview
     assert "moodboard_video_playback_frame" in preview
 
@@ -77,25 +81,32 @@ def test_inline_playback_runs_to_the_end_wherever_the_pointer_goes():
 
 def test_inline_playback_plays_once_and_rests_on_the_first_frame():
     """No hover stop means nothing else would ever end a looping clip, so a
-    movie plays through ONCE and returns to its poster frame."""
+    board movie plays through ONCE and returns to its poster frame."""
+    session = _read(SPACE_MIXIE / "mixie_moodboard_video_session.cc")
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 
-    frame_at = _function(preview, "static int playback_frame_at(")
-    assert "%" not in frame_at, "playback must not wrap around and loop"
-    assert "if (frame > playback.frame_count)" in frame_at
-    finished = frame_at.split("if (frame > playback.frame_count)", 1)[1]
-    assert "playback.playing = false;" in finished
-    assert "playback.current_frame = 1;" in finished
+    position = _function(session, "double video_session_position(")
+    assert "%" not in position and "fmod" not in position, "playback must not loop"
+    assert "if (position >= video_session_duration(session))" in position
+    assert "session_settle_end(session);" in position
+    settle = _function(session, "static void session_settle_end(")
+    assert "session.playing = false;" in settle
+    assert "audio_stop(session);" in settle
+    assert "VideoEndRest::FirstFrame ?" in settle
+    # Board sessions rest on the poster; preview players on the last frame.
+    ensure = _function(session, "MoodboardVideoSession *video_session_ensure(")
+    assert "owner ? VideoEndRest::LastFrame : VideoEndRest::FirstFrame" in ensure
 
     # The frame that ends playback must already report "not playing", or the
     # last redraw paints a pause glyph over the poster frame.
     frame = _function(preview, "int moodboard_video_playback_frame(")
-    assert frame.index("playback_frame_at(") < frame.index("*r_is_playing = playback.playing")
+    assert frame.index("video_session_frame(*session)") < frame.index(
+        "*r_is_playing = session->playing")
 
     # A press after the clip ran out restarts it instead of "pausing" it.
-    toggle = _function(preview, "bool moodboard_toggle_video_playback(")
-    settle = toggle.index("playback_frame_at(playback, now);")
-    assert settle < toggle.index("if (playback.playing)")
+    toggle = _function(session, "void video_session_toggle(")
+    assert toggle.index("video_session_position(session);") < toggle.index(
+        "if (session.playing)")
 
 
 def test_playback_redraw_tick_retires_itself_when_the_last_movie_ends():
@@ -106,8 +117,8 @@ def test_playback_redraw_tick_retires_itself_when_the_last_movie_ends():
 
     assert "WM_event_timer_add_notifier" not in preview
     tick = _function(preview, "static double video_redraw_tick(")
-    assert "prune_dead_playback_entries(G_MAIN);" in tick
-    assert "playback_frame_at(entry.second, now);" in tick
+    assert "video_sessions_prune(G_MAIN);" in tick
+    assert "video_sessions_advance(BOARD_OWNER);" in tick
     # The final tick still redraws, to put the poster and play glyph back.
     assert "WM_main_add_notifier(NC_SPACE | ND_SPACE_MIXIE, nullptr);" in tick
     assert "return any_playing ? MOODBOARD_VIDEO_REDRAW_SECONDS : -1.0;" in tick
@@ -120,16 +131,19 @@ def test_playback_redraw_tick_retires_itself_when_the_last_movie_ends():
 
 def test_qa_exports_movie_playback_state():
     """The harness can only assert playback through a QA target: the state is
-    C++ runtime-only. The disc must come from the shared play radius and the
+    C++ runtime-only. The controls come from the shared card layout and the
     node preview bounds, like the draw pass and both click hit-tests."""
     qa = _read(SPACE_MIXIE / "mixie_moodboard_qa_targets.cc")
 
-    assert '"moodboard_video"' in qa
-    assert "moodboard_video_play_radius(v2d, tile)" in qa
+    for surface in ('"moodboard_video"', '"moodboard_video_preview"',
+                    '"moodboard_video_sound"'):
+        assert surface in qa
+    assert "moodboard_video_card_button_rects(v2d, tile, controls)" in qa
     assert "moodboard_graph_node_preview_bounds(*card, &tile)" in qa
     assert "moodboard_video_playback_frame(image, &playing)" in qa
     assert "t.sel = playing;" in qa
     assert "t.value = std::to_string(frame);" in qa
+    assert "t.sel = ed::mixie::moodboard_video_is_muted(image);" in qa
     # A node offers playback for its first embedded movie only, like the click.
     assert "moodboard_find_embedded_media_index(&scene_ptr, owner) != i" in qa
     graph_video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
@@ -159,24 +173,35 @@ def test_template_hover_uses_destination_bounds_instead_of_event_routing():
 
 def test_inline_playback_is_runtime_only_and_cleans_up_on_shutdown():
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+    session = _read(SPACE_MIXIE / "mixie_moodboard_video_session.cc")
+    player = _read(SPACE_MIXIE / "mixie_moodboard_video_player.cc")
 
-    assert "static std::unordered_map<Image *, MoodboardVideoPlayback>" in preview
-    assert "playback_frame_at" in preview
-    assert "mixie_moodboard_video_playback_shutdown" in preview
-    assert "BLI_timer_unregister" in preview
-    assert "g_video_playback.clear()" in preview
-    assert "BKE_scene_add" not in preview
-    assert "ED_screen_animation_play" not in preview
+    assert "static std::map<SessionKey, MoodboardVideoSession> g_sessions;" in session
+    shutdown = _function(preview, "void mixie_moodboard_video_playback_shutdown(")
+    assert "BLI_timer_unregister" in shutdown
+    # Board playback only: an open preview player keeps its own session.
+    assert "video_sessions_release_owner(BOARD_OWNER);" in shutdown
+    for source in (preview, session, player):
+        assert "BKE_scene_add" not in source
+        assert "ED_screen_animation_play" not in source
 
 
-def test_movie_thumbnail_has_a_play_affordance():
+def test_movie_thumbnail_has_hover_controls():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_images.cc")
+    card = _read(SPACE_MIXIE / "mixie_moodboard_video_card.cc")
 
     assert "image->source == IMA_SRC_MOVIE" in draw
     # Shared with the inference-node preview, hence the exported name.
-    assert "mixie_draw_moodboard_video_overlay" in draw
-    assert "moodboard_video_play_radius(v2d, media_rect)" in draw
-    assert "if (is_playing)" in draw
+    assert "mixie_draw_moodboard_video_overlay(" in draw
+    assert "moodboard_video_card_register(" in draw
+    overlay = _function(card, "void mixie_draw_moodboard_video_overlay(")
+    # Clean at rest; dimmed with Preview / Play-Pause / Sound while hovered.
+    assert overlay.index("if (!hovered)") < overlay.index("CARD_DIM_ALPHA")
+    for glyph in ("VideoGlyph::OpenPreview", "VideoGlyph::Pause", "VideoGlyph::Play",
+                  "VideoGlyph::SoundOff", "VideoGlyph::SoundOn"):
+        assert glyph in overlay
+    # The controls size from the shared play radius, like the hit-tests.
+    assert "moodboard_video_play_radius(v2d, media_rect)" in card
 
 
 def test_the_play_button_never_outgrows_the_video_it_sits_on():

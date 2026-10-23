@@ -27,8 +27,6 @@
 
 #include "BKE_image.hh"
 
-#include "MOV_read.hh"
-
 #include "DNA_space_types.h"
 
 #include "ED_image.hh"
@@ -47,6 +45,10 @@ static const int PREVIEW_MAX_H = 1200;
 /* Room for the Image Editor's own header and footer, so the media itself gets
  * the space the numbers above describe. */
 static const int PREVIEW_CHROME_H = 60;
+/* A movie is watched, not inspected: a small clip is scaled up to at least
+ * this width (UI-scaled), keeping its aspect, within 80% of the parent. */
+static const int VIDEO_PREVIEW_MIN_W = 960;
+static const float VIDEO_PREVIEW_MAX_SCREEN = 0.8f;
 
 static Image *preview_image_for_node(PointerRNA *scene_ptr, const char *node_id)
 {
@@ -81,22 +83,25 @@ static Image *preview_image_for_media(PointerRNA *scene_ptr, const char *media_i
   return nullptr;
 }
 
-/* A movie opens on its first frame and stays there unless the image user knows
- * how long it is: with the range set and auto-refresh on, the space follows the
- * scene frame, so Blender's own playback drives it. */
-static void configure_movie_user(SpaceImage *sima, Image *image)
+/* A movie gets the video player (mixie_moodboard_video_player.cc) running modal
+ * in its new window: its own clock and sound, and real controls instead of the
+ * Image Editor's scene-frame playback. */
+static bool start_video_player(bContext *C, Image *image, ReportList *reports)
 {
-  if (!image || image->source != IMA_SRC_MOVIE) {
-    return;
+  wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_video_player", false);
+  if (!ot) {
+    return false;
   }
-  ImageUser *iuser = &sima->iuser;
-  ImageAnim *anim = static_cast<ImageAnim *>(image->anims.first);
-  const int frames = (anim && anim->anim) ? MOV_get_duration_frames(anim->anim) :
-                                            0;
-  iuser->frames = std::max(frames, 1);
-  iuser->sfra = 1;
-  iuser->offset = 0;
-  iuser->flag |= IMA_ANIM_ALWAYS;
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
+  RNA_string_set(&props, "image", image->id.name + 2);
+  const wmOperatorStatus status = WM_operator_name_call_ptr(
+      C, ot, wm::OpCallContext::InvokeDefault, &props, nullptr);
+  WM_operator_properties_free(&props);
+  if (!(status & OPERATOR_RUNNING_MODAL)) {
+    BKE_report(reports, RPT_WARNING, "Could not start the video player");
+    return false;
+  }
+  return true;
 }
 
 static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op)
@@ -148,8 +153,23 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
   }
   BKE_image_release_ibuf(image, ibuf, lock);
 
-  width = std::clamp(width, PREVIEW_MIN_W, PREVIEW_MAX_W);
-  height = std::clamp(height, PREVIEW_MIN_H, PREVIEW_MAX_H) + PREVIEW_CHROME_H;
+  const bool is_movie = image->source == IMA_SRC_MOVIE;
+  if (is_movie && width > 0 && height > 0) {
+    /* The player hides the Image Editor's header and footer, so the window
+     * is the movie's own aspect. */
+    const float max_w = WM_window_native_pixel_x(parent) * VIDEO_PREVIEW_MAX_SCREEN;
+    const float max_h = WM_window_native_pixel_y(parent) * VIDEO_PREVIEW_MAX_SCREEN;
+    const float fit = std::min(max_w / width, max_h / height);
+    const float grow = std::max(VIDEO_PREVIEW_MIN_W * UI_SCALE_FAC / width, 1.0f);
+    const float scale = std::min(grow, fit);
+    width = int(width * scale);
+    height = int(height * scale);
+  }
+  else {
+    width = std::clamp(width, PREVIEW_MIN_W, PREVIEW_MAX_W);
+    height = std::clamp(height, PREVIEW_MIN_H, PREVIEW_MAX_H) +
+             (is_movie ? 0 : PREVIEW_CHROME_H);
+  }
 
   WM_window_dpi_set_userdef(parent);
   const rcti window_rect = {0, width, 0, height};
@@ -158,7 +178,7 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
    * window rather than becoming part of the saved workspace layout -- a preview
    * is something the user opens and closes, not a screen they arrange. */
   if (WM_window_open(C,
-                     IFACE_("Image Preview"),
+                     is_movie ? IFACE_("Video Preview") : IFACE_("Image Preview"),
                      &window_rect,
                      SPACE_IMAGE,
                      false,
@@ -182,9 +202,55 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
   }
 
   ED_space_image_set(bmain, sima, image, false);
-  configure_movie_user(sima, image);
+  if (is_movie) {
+    start_video_player(C, image, op->reports);
+  }
   ED_area_tag_redraw(area);
   return OPERATOR_FINISHED;
+}
+
+wmOperatorStatus moodboard_video_card_press(bContext *C,
+                                            PointerRNA *scene_ptr,
+                                            const int media_index,
+                                            const int button,
+                                            const char *media_id,
+                                            const char *node_id,
+                                            ReportList *reports)
+{
+  switch (button) {
+    case MOODBOARD_VIDEO_CARD_PLAY:
+      return moodboard_toggle_video_playback(C, scene_ptr, media_index, reports) ?
+                 OPERATOR_FINISHED :
+                 OPERATOR_CANCELLED;
+    case MOODBOARD_VIDEO_CARD_SOUND:
+      return moodboard_toggle_video_mute(C, scene_ptr, media_index, reports) ?
+                 OPERATOR_FINISHED :
+                 OPERATOR_CANCELLED;
+    case MOODBOARD_VIDEO_CARD_PREVIEW:
+      break;
+    default:
+      return OPERATOR_CANCELLED;
+  }
+
+  wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_preview_media", false);
+  if (!ot) {
+    return OPERATOR_CANCELLED;
+  }
+  /* Opening a window moves the context into it; the click that asked for it
+   * still has to finish in the canvas it came from. */
+  wmWindow *win = CTX_wm_window(C);
+  ScrArea *area = CTX_wm_area(C);
+  ARegion *region = CTX_wm_region(C);
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
+  RNA_string_set(&props, "media_id", media_id ? media_id : "");
+  RNA_string_set(&props, "node_id", node_id ? node_id : "");
+  const wmOperatorStatus status = WM_operator_name_call_ptr(
+      C, ot, wm::OpCallContext::ExecDefault, &props, nullptr);
+  WM_operator_properties_free(&props);
+  CTX_wm_window_set(C, win);
+  CTX_wm_area_set(C, area);
+  CTX_wm_region_set(C, region);
+  return (status & OPERATOR_FINISHED) ? OPERATOR_FINISHED : OPERATOR_CANCELLED;
 }
 
 }  // namespace blender::ed::mixie
