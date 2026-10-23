@@ -342,3 +342,110 @@ def test_a_level_sent_after_logout_is_never_patched(client):
     answers = []
     byok_client.set_thinking_level("high", on_done=lambda *a: answers.append(a))
     assert called == [] and answers == [(False, None, byok_client._SIGNED_OUT_MSG)]
+
+
+# ---------------------------------------------------------------------------
+# The level a turn actually runs at: saved, else the catalog default
+# ---------------------------------------------------------------------------
+
+DEFAULTED = {'providers': [
+    {'id': 'anthropic', 'label': 'Anthropic', 'short_label': 'Claude API', 'models': [
+        {'id': 'claude-opus-5-5', 'label': 'Claude Opus 5.5', 'short_label': 'Opus 5.5',
+         'platform_available': True, 'thinking_levels': ['low', 'medium', 'high'],
+         'default_thinking_level': 'medium'},
+        # A default the user is not offered is never shown.
+        {'id': 'claude-sonnet-5-5', 'label': 'Claude Sonnet 5.5', 'short_label': 'Sonnet 5.5',
+         'platform_available': True, 'thinking_levels': ['low'], 'default_thinking_level': 'max'},
+    ]},
+]}
+
+
+@pytest.fixture
+def defaulted(catalog):
+    model_suggestions.populate_from_payload(DEFAULTED)
+    return model_suggestions.get_platform_models()
+
+
+def _hosted(thinking=""):
+    return dict(preference_state._DEFAULTS, mixar_agent_model_provider="anthropic",
+                mixar_agent_model_id="claude-opus-5-5", mixar_agent_model_label="Claude Opus 5.5",
+                mixar_agent_model_thinking=thinking)
+
+
+def _levels(rows, tab):
+    return [(r.kind, r.label, r.current) for r in rows
+            if r.tab == tab and r.kind in (picker.ROW_THINKING, picker.ROW_LEVEL)]
+
+
+def test_the_catalog_default_is_kept_only_when_offered(defaulted):
+    assert model_suggestions.default_thinking_level("anthropic", "claude-opus-5-5") == "medium"
+    assert model_suggestions.default_thinking_level("anthropic", "claude-sonnet-5-5") == ""
+    assert model_suggestions.default_thinking_level("codex", "claude-opus-5-5") == ""
+    model_suggestions.populate_from_payload(CATALOG)  # an older backend: no field
+    assert model_suggestions.default_thinking_level("anthropic", "claude-opus-5-5") == ""
+
+
+def test_effective_thinking_is_the_saved_level_else_the_default(defaulted):
+    from mixar.modules.byok.core import model_menu
+    assert model_menu.effective_thinking("anthropic", "claude-opus-5-5", "high") == "high"
+    assert model_menu.effective_thinking("anthropic", "claude-opus-5-5", "") == "medium"
+    assert model_menu.effective_thinking("anthropic", "", "") == ""
+
+
+def test_the_mixie_tab_names_and_ticks_the_default_when_nothing_is_saved(defaulted):
+    s = picker.picker_state(dict(credential_state._DEFAULTS), _hosted())
+    assert picker.chip(s)["name"] == "Claude Opus 5.5 · Medium"
+    rows = picker.build_rows(s, defaulted)
+    assert _levels(rows, TAB_MIXIE) == [("thinking", "Thinking: Medium", False), ("level", "Low", False),
+                                        ("level", "Medium", True), ("level", "High", False)]
+    current = next(r for r in rows if r.tab == TAB_MIXIE and r.kind == picker.ROW_MODEL and r.current)
+    assert current.thinking == "medium"  # re-picking the row sends nothing
+    # A saved level wins over the default.
+    s = picker.picker_state(dict(credential_state._DEFAULTS), _hosted("high"))
+    assert picker.chip(s)["name"] == "Claude Opus 5.5 · High"
+    assert ("level", "High", True) in _levels(picker.build_rows(s, defaulted), TAB_MIXIE)
+
+
+def test_the_key_tab_names_and_ticks_the_default_when_nothing_is_saved(defaulted):
+    s = _state(_key(thinking_level=None))
+    assert picker.chip(s)["name"] == "Opus 5.5 · Medium"
+    assert _levels(picker.build_rows(s, defaulted), TAB_KEY) == [
+        ("thinking", "Thinking: Medium", False), ("level", "Low", False),
+        ("level", "Medium", True), ("level", "High", False)]
+    # A backend that does not report the key's level: still no level rows, no level named.
+    s = _state(_key())
+    assert picker.chip(s)["name"] == "Opus 5.5"
+    assert _levels(picker.build_rows(s, defaulted), TAB_KEY) == []
+
+
+def test_without_a_catalog_default_nothing_is_spelled_out(catalog):
+    s = picker.picker_state(dict(credential_state._DEFAULTS), _hosted())
+    assert picker.chip(s)["name"] == "Claude Opus 5.5"
+    assert ("thinking", "Thinking", False) in _levels(picker.build_rows(s, catalog), TAB_MIXIE)
+    assert not [r for r in _levels(picker.build_rows(s, catalog), TAB_MIXIE) if r[2]]
+    assert picker.chip(_state(_key(thinking_level=None)))["name"] == "Opus 5.5"
+
+
+def test_the_legacy_label_mirror_names_the_default_too(defaulted, monkeypatch):
+    monkeypatch.setattr(preference_state, "snapshot", lambda: _hosted())
+    assert preference_state.chip_text() == "Claude Opus 5.5 · Medium"
+
+
+def test_picking_the_default_level_with_nothing_saved_sends_nothing(pick, defaulted, monkeypatch):
+    from mixar.modules.byok.ui.operators import agent_pick_ops as ops
+    run, calls, wm = pick
+    hosted = []
+    monkeypatch.setattr(ops.agent_model_ops, "set_hosted",
+                        lambda wm, p, m, t="", label="": hosted.append((p, m, t)) or True)
+    monkeypatch.setattr(preference_state, "snapshot", lambda: _hosted())
+    # Mixie: the default level, and the current row (it carries the default), are no-ops.
+    op = ops.MIXAR_OT_agent_pick()
+    ctx = SimpleNamespace(window_manager=wm, scene=SimpleNamespace())
+    for thinking in ("medium", "high"):
+        op.source, op.provider, op.model, op.thinking = TAB_MIXIE, "anthropic", "claude-opus-5-5", thinking
+        assert op.execute(ctx) == {'FINISHED'}
+    assert hosted == [("anthropic", "claude-opus-5-5", "high")]
+    # Key tab: the same rule.
+    _apply(wm, thinking_level=None)
+    assert run("anthropic", "claude-opus-5-5", "medium") == {'FINISHED'} and calls.level == []
+    assert run("anthropic", "claude-opus-5-5", "low") == {'FINISHED'} and calls.level == ["low"]

@@ -130,10 +130,14 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
         "key_provider": "" if local_active else provider,
         "key_model": ((switching or credential.get("byok_current_model") or "")
                       if active and not local_active else ""),
+        # The level the key's turns run at (saved, else the catalog default).
         # None = no level rows: no key in use, a switch saving (the new model
         # starts on its default) or a backend that does not report levels.
-        "key_thinking": (credential.get("byok_current_thinking")
-                         if active and not local_active and not switching else None),
+        "key_thinking": (model_menu.effective_thinking(
+                             provider, credential.get("byok_current_model") or "",
+                             credential.get("byok_current_thinking") or "")
+                         if active and not local_active and not switching
+                         and credential.get("byok_current_thinking") is not None else None),
         "key_missing": active and bool(credential.get("byok_device_key_missing")),
         "local_model": (credential.get("byok_current_model") or "") if local_active else "",
         "resumable": resumable and not model_suggestions.is_local(resume_provider),
@@ -143,7 +147,12 @@ def picker_state(credential: Dict[str, Any], preference: Dict[str, Any], *,
         "hosted_provider": preference.get("mixar_agent_model_provider") or "",
         "hosted_model": preference.get("mixar_agent_model_id") or "",
         "hosted_label": preference.get("mixar_agent_model_label") or "",
-        "hosted_thinking": preference.get("mixar_agent_model_thinking") or "",
+        # The level hosted turns run at (saved, else the catalog default):
+        # what the chip names and the card ticks; re-picking it sends nothing.
+        "hosted_thinking": model_menu.effective_thinking(
+            preference.get("mixar_agent_model_provider") or "",
+            preference.get("mixar_agent_model_id") or "",
+            preference.get("mixar_agent_model_thinking") or ""),
         "hosted_eligible": bool(preference.get("mixar_agent_model_eligible", True)),
         "guest": bool(guest),
         "hosted_ok": bool(signed_in) and not guest,

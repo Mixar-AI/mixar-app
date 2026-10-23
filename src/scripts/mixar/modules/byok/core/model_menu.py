@@ -7,9 +7,10 @@
 The island's model card decides its rows in `core/picker.py`; what is left
 here is the wording both it and the preference mirror share:
 `chip_label()` (what the WM `mixar_agent_model_label` mirror holds),
-`format_thinking_label()` / `format_thinking_level()` (the "Thinking: High"
-disclosure and its levels) and `display_model_label()` (model-only copy,
-including older provider-prefixed server echoes).
+`effective_thinking()` (the level a turn runs at: saved, else the catalog
+default), `format_thinking_label()` / `format_thinking_level()` (the
+"Thinking: High" disclosure and its levels) and `display_model_label()`
+(model-only copy, including older provider-prefixed server echoes).
 """
 
 from mixar.modules.common.i18n import iface_, n_
@@ -32,6 +33,17 @@ def display_model_label(provider: str, model: str, label: str = "") -> str:
     return (label or model).rsplit(" · ", 1)[-1].strip()
 
 
+def effective_thinking(provider: str, model: str, saved: str) -> str:
+    """The level a turn on this model actually runs at: the saved one, else
+    the model's catalog default (`default_thinking_level`); "" when neither
+    is known (an older backend: nothing is spelled out or ticked)."""
+    if saved or not model:
+        return saved or ""
+    from . import model_suggestions
+
+    return model_suggestions.default_thinking_level(provider, model)
+
+
 def format_thinking_level(level: str) -> str:
     """Title-cased wording for one thinking level (`medium_high` -> `Medium High`)."""
     return (level or "").strip().replace("_", " ").title()
@@ -51,8 +63,9 @@ def chip_label(model_label: str, thinking_level: str = "", byok_active: bool = F
 
     Empty means "no pick" and C++ falls back to "Mixie". A user key overrides
     every hosted pick, so the chip says so instead of naming a model the agent
-    is not running on; the level rides along only when one is saved (empty is
-    the model's own default, which the chip does not spell out).
+    is not running on. ``thinking_level`` is the level the turn runs at
+    (`effective_thinking`: the saved one, else the catalog default, so the
+    default is spelled out too); empty only when neither is known.
     """
     if byok_active:
         return iface_(BYOK_CHIP_TEXT)
