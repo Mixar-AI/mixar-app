@@ -164,3 +164,59 @@ def test_destination_lookup_never_creates_a_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(os.path, "expanduser", lambda p: str(tmp_path))
     path = export_package.destination("downloads", "Nope", create=False)
     assert path.endswith(os.path.join("Downloads", "Nope")) and not os.path.exists(path)
+
+
+class _Store(http.server.BaseHTTPRequestHandler):
+    got: dict = {}
+
+    def log_message(self, *a):
+        pass
+
+    def do_PUT(self):
+        type(self).got[self.path] = (self.headers.get("Content-Type"),
+                                     self.rfile.read(int(self.headers["Content-Length"])))
+        self.send_response(200)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+
+def test_a_web_build_uploads_from_the_engine_folder(link, tmp_path, monkeypatch):
+    web = tmp_path / "proj" / "mixar_build" / "web"
+    web.mkdir(parents=True)
+    (web / "index.html").write_bytes(b"<html></html>")
+    (web / "index.wasm").write_bytes(b"\0asm1234")
+
+    def build_info(self, name, args):
+        if name != "build_info":
+            return None
+        return {"content": [{"type": "text", "text": "{}"}], "isError": False, "structuredContent": {
+            "dir": str(web), "files": [{"name": "index.html", "bytes": 13}, {"name": "index.wasm", "bytes": 8}]}}
+
+    monkeypatch.setattr(_Fake, "build_info", build_info, raising=False)
+    original = _Fake.do_POST
+
+    def do_post(self):
+        length = int(self.headers["Content-Length"])
+        raw = self.rfile.read(length)
+        msg = json.loads(raw)
+        if msg.get("method") == "tools/call" and msg["params"]["name"] == "build_info":
+            return self._send(200, {"jsonrpc": "2.0", "id": msg["id"], "result": self.build_info("build_info", {})})
+        self.rfile = __import__("io").BytesIO(raw)
+        return original(self)
+
+    monkeypatch.setattr(_Fake, "do_POST", do_post)
+    assert engine_link.link_build_manifest() == {"success": True, "files": [
+        {"name": "index.html", "bytes": 13}, {"name": "index.wasm", "bytes": 8}]}
+    store = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Store)
+    threading.Thread(target=store.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{store.server_address[1]}"
+    try:
+        out = engine_link.link_upload_build([
+            {"name": "index.html", "url": f"{base}/k/index.html", "headers": {"Content-Type": "text/html"}},
+            {"name": "index.wasm", "url": f"{base}/k/index.wasm", "headers": {"Content-Type": "application/wasm"}}])
+        refused = engine_link.link_upload_build([{"name": "../../etc/passwd", "url": f"{base}/x", "headers": {}}])
+    finally:
+        store.shutdown()
+    assert out == {"success": True, "uploaded": 2, "bytes": 21}
+    assert _Store.got["/k/index.wasm"] == ("application/wasm", b"\0asm1234")
+    assert not refused["success"] and "/etc" not in json.dumps(refused)

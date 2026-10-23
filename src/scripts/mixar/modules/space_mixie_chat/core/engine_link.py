@@ -249,3 +249,62 @@ def link_import(folder: str, destination: str = "mixar_exports", engine: str | N
                                    float(timeout)))
     except LinkError as err:
         return _fail(err)
+
+
+# ---------------------------------------------------------------------------
+# Sharing a web build (the backend's engine_share)
+# ---------------------------------------------------------------------------
+
+UPLOAD_TIMEOUT_S = 300.0
+
+
+def _build(engine: str | None):
+    """(absolute build folder, files) — the folder stays on this machine."""
+    _, client = _connect(engine)
+    raw = client.call("build_info", {}, 10.0)
+    if raw.get("isError"):
+        raise LinkError(_result(raw).get("error") or "There is no web build.")
+    data = raw.get("structuredContent") or {}
+    return str(data.get("dir") or ""), [f for f in data.get("files") or [] if isinstance(f, dict)]
+
+
+def link_build_manifest(engine: str | None = None) -> dict:
+    """The last web build's files (name + bytes), no folder."""
+    try:
+        _, files = _build(engine)
+    except LinkError as err:
+        return _fail(err)
+    return {"success": True, "files": [{"name": str(f.get("name")), "bytes": int(f.get("bytes") or 0)}
+                                       for f in files]}
+
+
+def link_upload_build(uploads: list, engine: str | None = None) -> dict:
+    """PUT each build file to its presigned URL (``[{name, url, headers}]``
+    from the backend). The build folder is read here, on this machine."""
+    try:
+        folder, files = _build(engine)
+    except LinkError as err:
+        return _fail(err)
+    present = {str(f.get("name")) for f in files}
+    total = 0
+    for up in uploads or []:
+        name = os.path.basename(str(up.get("name") or ""))
+        if name not in present:
+            return {"success": False, "error": f"{name} is not in the web build; build it again."}
+        path = os.path.join(folder, name)
+        size = os.path.getsize(path)
+        with open(path, "rb") as fh:
+            req = urllib.request.Request(str(up.get("url")), data=fh, method="PUT")
+            for k, v in (up.get("headers") or {}).items():
+                req.add_header(k, v)
+            req.add_header("Content-Length", str(size))
+            try:
+                with urllib.request.urlopen(req, timeout=UPLOAD_TIMEOUT_S) as resp:
+                    if resp.status not in (200, 201, 204):
+                        return {"success": False, "error": f"Uploading {name} failed (HTTP {resp.status})."}
+            except urllib.error.HTTPError as err:
+                return {"success": False, "error": f"Uploading {name} failed (HTTP {err.code})."}
+            except (urllib.error.URLError, OSError) as err:
+                return {"success": False, "error": f"Uploading {name} failed ({type(err).__name__})."}
+        total += size
+    return {"success": True, "uploaded": len(uploads or []), "bytes": total}
