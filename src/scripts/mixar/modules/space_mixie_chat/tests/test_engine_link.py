@@ -135,6 +135,13 @@ def test_results_map_errors_images_and_scrub_paths(link):
     assert "/Users" not in json.dumps(tree) and "<local path>" in tree["data"]["note"]
 
 
+def test_the_callable_tools_are_the_adapters_minus_import():
+    assert set(engine_link.CALLABLE_TOOLS) == {
+        "status", "new_scene", "open_scene", "place", "scene_tree", "save_scene", "play", "stop",
+        "capture", "log", "playtest", "write_script", "add_node", "set_property", "build_web"}
+    assert "import_package" not in engine_link.CALLABLE_TOOLS
+
+
 def test_import_package_is_only_reachable_by_folder_name(link, tmp_path, monkeypatch):
     assert "not an engine tool" in engine_link.link_call("import_package", {"source_dir": "/etc"})["error"]
     exports = tmp_path / "Mixar Exports"
