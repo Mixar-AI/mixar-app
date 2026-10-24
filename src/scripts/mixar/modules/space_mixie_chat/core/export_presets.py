@@ -92,6 +92,22 @@ PRESETS = {
     },
 }
 
+# Named overrides applied on top of a use-case preset (``spec["profile"]``).
+# ``web_publish`` is Publish to Web: the ``web`` scene preset plus delivery
+# compression for a hosted three.js viewer — Draco geometry, WebP textures,
+# modifiers applied. Draco is silently skipped when the build lacks it.
+DRACO_PUBLISH_LEVEL = 6
+PROFILES = {
+    "web_publish": {
+        "gltf": {
+            "export_apply": True,
+            "export_draco_mesh_compression_enable": True,
+            "export_draco_mesh_compression_level": DRACO_PUBLISH_LEVEL,
+            "export_image_format": "WEBP",
+        },
+    },
+}
+
 _FAMILY = {"fbx": "fbx", "glb": "gltf", "gltf": "gltf", "obj": "obj",
            "usd": "usd", "usdc": "usd", "usda": "usd", "usdz": "usd", "stl": "stl"}
 STL_SCALE_RANGE = (1.0e-6, 1.0e6)  # wm.stl_export ``global_scale`` hard range
@@ -101,14 +117,16 @@ def exporter_family(fmt: str) -> str:
     return _FAMILY.get(str(fmt or "").lower().lstrip("."), "gltf")
 
 
-def preset_kwargs(use_case: str, fmt: str) -> dict:
-    """Merged exporter kwargs for ``use_case`` (unknown → ``other``)."""
+def preset_kwargs(use_case: str, fmt: str, profile: str = "") -> dict:
+    """Merged exporter kwargs for ``use_case`` (unknown → ``other``), then
+    the ``profile`` overrides (unknown profile → none)."""
     family = exporter_family(fmt)
     use_case = str(use_case or "other").lower()
     if use_case not in PRESETS:
         use_case = "other"
     kwargs = dict(COMMON[family])
     kwargs.update(PRESETS[use_case].get(family, {}))
+    kwargs.update(PROFILES.get(str(profile or "").lower(), {}).get(family, {}))
     if fmt == "usdz":
         kwargs.setdefault("export_textures_mode", "NEW")
     return kwargs
