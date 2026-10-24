@@ -136,9 +136,14 @@ def test_results_map_errors_images_and_scrub_paths(link):
 
 
 def test_the_callable_tools_are_the_adapters_minus_import():
+    # Every adapter tool the backend's engine_* tools call by name. A name
+    # missing here fails the agent's call in the client, before Godot sees it
+    # (engine_file could write no script on 2026-10-23).
     assert set(engine_link.CALLABLE_TOOLS) == {
         "status", "new_scene", "open_scene", "place", "scene_tree", "save_scene", "play", "stop",
-        "capture", "log", "playtest", "write_script", "add_node", "set_property", "build_web"}
+        "capture", "log", "playtest", "write_script", "add_node", "set_property", "remove_node",
+        "read_file", "list_files", "write_file", "delete_file", "project_setting", "build_web",
+        "build_info"}
     assert "import_package" not in engine_link.CALLABLE_TOOLS
 
 

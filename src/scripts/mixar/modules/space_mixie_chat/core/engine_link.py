@@ -35,7 +35,8 @@ CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
 # so it is reached only through ``link_import``.
 CALLABLE_TOOLS = ("status", "new_scene", "open_scene", "place", "scene_tree", "save_scene",
                   "play", "stop", "capture", "log", "playtest", "write_script", "add_node",
-                  "set_property", "build_web")
+                  "set_property", "remove_node", "read_file", "list_files", "write_file",
+                  "delete_file", "project_setting", "build_web", "build_info")
 NO_ENGINE = ("No game engine is connected. Open the project in Godot 4.5+ with the Mixar Link "
              "add-on enabled (Project Settings > Plugins), then try again.")
 
