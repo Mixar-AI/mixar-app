@@ -129,6 +129,15 @@ int main()
   key_free_form.chip_badge = "OpenRouter";
   key_free_form.chip_name = "anthropic/claude-opus-4.8";
 
+  /* A Godot editor connected through the engine chip. */
+  AgentChipRowInputs engine = idle;
+  engine.engine_available = true;
+  engine.engine_name = "Godot \xc2\xb7 Ruins Runner";
+
+  AgentChipRowInputs engine_long = key_free_form;
+  engine_long.engine_available = true;
+  engine_long.engine_name = "Connect engine";
+
   const Scenario scenarios[] = {
       {"idle", idle},
       {"capturing", capturing},
@@ -138,6 +147,8 @@ int main()
       {"no_voice", no_voice},
       {"key", key},
       {"key_free_form", key_free_form},
+      {"engine", engine},
+      {"engine_long", engine_long},
   };
   /* Native widget text at 100% / 125% / 15-point / 15-point at 125%. */
   const float sizes[] = {11.0f, 13.75f, 15.0f, 18.75f};

@@ -358,6 +358,8 @@ void agent_ui_layout_build(const int window_w,
   r_layout->chip_auto = f.box(scribble_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
   r_layout->chip_model = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
   r_layout->model_form = AgentModelChipForm::Full;
+  r_layout->chip_engine = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
+  r_layout->engine_icon_only = false;
   r_layout->chip_reading = f.box(scribble_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(scribble_x, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   /* Generate keeps the artboard's right inset against whatever card width
@@ -389,6 +391,8 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   in.model_available = state.model_available;
   in.chip_badge = state.model_source_label;
   in.chip_name = state.model_chip_name;
+  in.engine_available = state.engine_available;
+  in.engine_name = state.engine_chip_name;
   in.translate = [](const char *msgid) -> const char * { return IFACE_(msgid); };
   const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
                                  AGENT_CHIP_ICON_GAP * u,
@@ -437,6 +441,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   layout.model_form = model_form <= 1 ? AgentModelChipForm::Full :
                       model_form == 2 ? AgentModelChipForm::Label :
                                         AgentModelChipForm::Icon;
+  layout.engine_icon_only = fit.form[AGENT_CHIP_SLOT_ENGINE] >= 1;
 
   float x = layout.chip_upload.xmin;
   auto place = [&](rctf &rect, const float w) {
@@ -450,6 +455,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   place(layout.chip_voice, fit.width[AGENT_CHIP_SLOT_VOICE]);
   place(layout.chip_auto, fit.width[AGENT_CHIP_SLOT_AUTO]);
   place(layout.chip_model, fit.width[AGENT_CHIP_SLOT_MODEL]);
+  place(layout.chip_engine, fit.width[AGENT_CHIP_SLOT_ENGINE]);
   place(layout.chip_reading, fit.width[AGENT_CHIP_SLOT_READING]);
   place(layout.chip_clear, fit.width[AGENT_CHIP_SLOT_CLEAR]);
 }

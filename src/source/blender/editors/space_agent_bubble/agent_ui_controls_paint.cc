@@ -15,6 +15,7 @@
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_motion.hh"
+#include "agent_ui_engine.hh"
 #include "agent_ui_provider.hh"
 #include "agent_ui_theme.hh"
 #include "agent_ui_voice_paint.hh"
@@ -415,6 +416,8 @@ void agent_ui_draw_chip_row(ARegion *region,
   /* The model chip — who answers the agent and which model
    * (agent_ui_provider.cc). */
   agent_ui_draw_provider(region, layout, state);
+  /* The engine chip — the connected game engine (agent_ui_engine.cc). */
+  agent_ui_draw_engine(region, layout, state);
 
   agent_ui_draw_refine_controls(region, layout, state);
 

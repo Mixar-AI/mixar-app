@@ -140,7 +140,10 @@ def test_the_island_chip_opens_the_hand_drawn_model_card():
 def test_every_pick_runs_the_one_pick_operator():
     data = (ISLAND / "agent_ui_model_card_data.cc").read_text(encoding="utf-8")
     card = (ISLAND / "agent_ui_model_card.cc").read_text(encoding="utf-8")
-    assert f'PICK_OP = "{PICK_OP}"' in card and f'PICK_OP = "{PICK_OP}"' in data
+    # The card is source-aware (model chip / engine chip): the model card's
+    # pick operator is its Source's, and every pick runs src.pick_op.
+    model_source = data[data.index("static const Source model{"):data.index("static const Source engine{")]
+    assert f'"{PICK_OP}"' in model_source and "src.pick_op" in card
     ops = PICK_OPS_SOURCE.read_text(encoding="utf-8")
     assert 'bl_idname = "mixar.agent_pick"' in ops
     for prop in ("source", "provider", "model", "thinking"):
@@ -201,7 +204,9 @@ def test_the_footer_invokes_the_dialog_not_executes_it():
     deliberate no-op ("clicking does nothing" was a real report). The card's
     footer calls it with InvokeDefault, after closing itself."""
     card = (ISLAND / "agent_ui_model_card.cc").read_text(encoding="utf-8")
-    assert 'SETTINGS_OP = "MIXAR_BYOK_OT_open_dialog"' in card
+    data = (ISLAND / "agent_ui_model_card_data.cc").read_text(encoding="utf-8")
+    model_source = data[data.index("static const Source model{"):data.index("static const Source engine{")]
+    assert '"MIXAR_BYOK_OT_open_dialog"' in model_source
     footer = card[card.index("wmOperatorStatus run_footer("):]
     footer = footer[:footer.index("\n}\n")]
     assert footer.index("teardown(C, op)") < footer.index("WM_operator_name_call(")

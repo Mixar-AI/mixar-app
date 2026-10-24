@@ -17,6 +17,9 @@
  *     the name alone, the badge) to keep the short "Attach" label readable;
  *     its badge alone may then push Upload toward its icon floor, and
  *     finally it drops.
+ *  1b. The engine chip (the connected game engine, agent_ui_engine.hh) is
+ *     bought after the model chip and given up before it: its name, then its
+ *     status dot, then the chip.
  *  2. Only when the core chips alone would push Upload below its icon floor
  *     do they shed labels, in #AGENT_CHIP_SHED_ORDER: the live Voice trace
  *     (or the idle "Voice" word), "Auto", "Sketch"/"Done", the reading label,
@@ -35,6 +38,7 @@ enum AgentChipSlot {
   AGENT_CHIP_SLOT_VOICE,
   AGENT_CHIP_SLOT_AUTO,
   AGENT_CHIP_SLOT_MODEL,
+  AGENT_CHIP_SLOT_ENGINE,
   AGENT_CHIP_SLOT_READING,
   AGENT_CHIP_SLOT_CLEAR,
 
@@ -77,6 +81,11 @@ struct AgentChipRowInputs {
    * wm.mixar_agent_chip_name, core/picker.py). */
   const char *chip_badge = "";
   const char *chip_name = "";
+  /* The engine chip: shown while the Python half mirrors it
+   * (wm.mixar_engine_chip_name, space_mixie_chat/core/engine_connect.py);
+   * its label as drawn ("Godot · Ruins", "Connect engine"). */
+  bool engine_available = false;
+  const char *engine_name = "";
   /** Fixed chip words and the voice status are measured as drawn: the island
    *  passes its UI translation; null (the harness) measures the English.
    *  The model label and the reading's intent arrive already as drawn. */
@@ -164,6 +173,36 @@ inline AgentProviderSizes agent_provider_sizes(const AgentChipRowInputs &in,
 
 /** \} */
 
+/* -------------------------------------------------------------------- */
+/** \name The engine chip
+ *
+ * Right of the model chip: a status dot (green connected, grey none, amber
+ * connecting, red failed), the engine and project, and the chevron that opens
+ * the engine card. Two forms: Full (dot + name + chevron) and Icon (the dot).
+ * \{ */
+
+inline constexpr float AGENT_ENGINE_DOT = 15.0f;     /* status dot diameter */
+inline constexpr float AGENT_ENGINE_DOT_PAD = 14.0f; /* chip edge -> dot */
+inline constexpr float AGENT_ENGINE_DOT_GAP = 11.0f; /* dot -> name */
+
+/** {Full, Icon} widths, device pixels. */
+template<typename StrongWidthFn>
+inline void agent_engine_sizes(const AgentChipRowInputs &in,
+                               const AgentChipMetrics &m,
+                               const StrongWidthFn &strong_width,
+                               float *r_full,
+                               float *r_icon)
+{
+  const float u = m.unit;
+  const float chevron = AGENT_CHIP_CHEVRON_GAP * u + AGENT_PROVIDER_CHEVRON_W * u +
+                        AGENT_CHIP_CHEVRON_PAD * u;
+  *r_icon = AGENT_ENGINE_DOT_PAD * u + AGENT_ENGINE_DOT * u + AGENT_ENGINE_DOT_PAD * u;
+  *r_full = AGENT_ENGINE_DOT_PAD * u + AGENT_ENGINE_DOT * u + AGENT_ENGINE_DOT_GAP * u +
+            strong_width(in.engine_name, 1.0f) + chevron;
+}
+
+/** \} */
+
 /**
  * Measure every form of every shown chip with \a text_width (label -> px).
  * Voice keeps ONE width for idle and capturing, so Stop and its trace never
@@ -217,6 +256,11 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
     r_chips[AGENT_CHIP_SLOT_MODEL] = {
         {p.full_w, p.elided_w, p.label_w, std::max(p.icon_w, icon_only)}, 4};
   }
+  if (in.engine_available) {
+    float full = 0.0f, icon = 0.0f;
+    agent_engine_sizes(in, m, strong_width, &full, &icon);
+    r_chips[AGENT_CHIP_SLOT_ENGINE] = {{full, std::max(icon, icon_only)}, 2};
+  }
   if (in.scribble_armed || in.mark_count) {
     /* The reading label elides down to about two glyphs beside its chevron. */
     const float reading = in.mark_intent[0] ? as_drawn(in.mark_intent, m.icon) :
@@ -268,7 +312,7 @@ inline AgentChipFit agent_chip_fit(const AgentChipForms (&chips)[AGENT_CHIP_SLOT
     float used = 0.0f;
     for (int slot = 0; slot < AGENT_CHIP_SLOT_COUNT; slot++) {
       if (slot == AGENT_CHIP_SLOT_UPLOAD || slot == AGENT_CHIP_SLOT_MODEL ||
-          chips[slot].count == 0)
+          slot == AGENT_CHIP_SLOT_ENGINE || chips[slot].count == 0)
       {
         continue;
       }
@@ -315,7 +359,34 @@ inline AgentChipFit agent_chip_fit(const AgentChipForms (&chips)[AGENT_CHIP_SLOT
     }
   }
 
-  const float rest = rest_fixed + (model_w > 0.0f ? model_w + gap : 0.0f);
+  /* Engine: bought after the model chip on what is left, by the same rule
+   * (its name, then its dot), and never when a core chip had to shed. */
+  const AgentChipForms &engine = chips[AGENT_CHIP_SLOT_ENGINE];
+  float engine_w = 0.0f;
+  fit.form[AGENT_CHIP_SLOT_ENGINE] = engine.count;
+  const float with_model = rest_fixed + (model_w > 0.0f ? model_w + gap : 0.0f);
+  auto engine_affordable = [&](const float w, const float upload_min) {
+    return span - (with_model + w + gap) - gap >= upload_min;
+  };
+  /* Only beside the model chip: the engine dot must not outlive the badge of
+   * who answers (a row too narrow for the model chip shows neither). */
+  const bool model_dropped = model.count > 0 && model_w <= 0.0f;
+  if (!shed && !model_dropped) {
+    for (int i = 0; i < engine.count; i++) {
+      if (engine_affordable(engine.width[i], upload_reference)) {
+        engine_w = engine.width[i];
+        fit.form[AGENT_CHIP_SLOT_ENGINE] = i;
+        break;
+      }
+    }
+    const int icon = engine.count - 1;
+    if (engine_w <= 0.0f && icon >= 0 && engine_affordable(engine.width[icon], upload_floor)) {
+      engine_w = engine.width[icon];
+      fit.form[AGENT_CHIP_SLOT_ENGINE] = icon;
+    }
+  }
+
+  const float rest = with_model + (engine_w > 0.0f ? engine_w + gap : 0.0f);
   const float budget = span - rest - gap;
   fit.compact_reference = upload_full > budget;
   const float upload_w = std::max(upload_floor,
@@ -330,6 +401,7 @@ inline AgentChipFit agent_chip_fit(const AgentChipForms (&chips)[AGENT_CHIP_SLOT
     }
     fit.width[slot] = slot == AGENT_CHIP_SLOT_UPLOAD ? upload_w :
                       slot == AGENT_CHIP_SLOT_MODEL  ? model_w :
+                      slot == AGENT_CHIP_SLOT_ENGINE ? engine_w :
                                                        chips[slot].width[fit.form[slot]];
   }
   fit.fits = rest + upload_w + gap <= span + 0.5f;

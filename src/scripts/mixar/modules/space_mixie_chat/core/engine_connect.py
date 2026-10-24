@@ -140,6 +140,10 @@ def _version_of(binary: str) -> tuple[int, ...] | None:
 
 def godot_candidates() -> list[str]:
     home = os.path.expanduser("~")
+    # A developer's or a QA rig's Godot, ahead of the installed ones.
+    override = os.environ.get("MIXAR_GODOT", "")
+    if override and os.path.isfile(override):
+        return [override]
     if sys.platform == "darwin":
         apps = glob.glob("/Applications/Godot*.app") + glob.glob(os.path.join(home, "Applications", "Godot*.app"))
         found = [os.path.join(a, "Contents", "MacOS", "Godot") for a in apps]

@@ -59,6 +59,7 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_cat_activity.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_engine.hh"
 #include "agent_ui_provider.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -417,6 +418,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   /* The model chip: the Python half's WindowManager mirror; absent
    * properties read as "no picker" (agent_ui_provider.cc). */
   agent_ui_provider_gather(wm, r_state);
+  /* The engine chip: likewise (agent_ui_engine.cc). */
+  agent_ui_engine_gather(wm, r_state);
 
   cat.listening = r_state->voice_listening;
   if (scene) {

@@ -60,10 +60,13 @@ struct Anchor {
   float text_size = 0.0f;
   bool valid = false;
 };
-Anchor g_anchor;
+/* One anchor per chip that opens a card (the model chip, the engine chip). */
+Anchor g_anchor[CARD_KIND_COUNT];
 
-constexpr const char *PICK_OP = "MIXAR_OT_agent_pick";
-constexpr const char *SETTINGS_OP = "MIXAR_BYOK_OT_open_dialog";
+const Anchor &anchor_of(const State &state)
+{
+  return g_anchor[int(state.src->kind)];
+}
 
 void request_redraw(wmWindow *win)
 {
@@ -168,14 +171,22 @@ void teardown(bContext *C, wmOperator *op)
 /** Run a pick (close first: the operator may open a dialog). */
 wmOperatorStatus run_pick(bContext *C, wmOperator *op, const Row row)
 {
+  const Source &src = *static_cast<State *>(op->customdata)->src;
   teardown(C, op);
-  wmOperatorType *ot = WM_operatortype_find(PICK_OP, true);
+  wmOperatorType *ot = WM_operatortype_find(src.pick_op, true);
   if (ot) {
     PointerRNA props = WM_operator_properties_create_ptr(ot);
-    RNA_enum_set_identifier(C, &props, "source", row.tab.c_str());
-    RNA_string_set(&props, "provider", row.provider.c_str());
-    RNA_string_set(&props, "model", row.model.c_str());
-    RNA_string_set(&props, "thinking", row.thinking.c_str());
+    if (src.kind == CardKind::Engine) {
+      /* The engine pick: which engine (the tab) and which editor (the row). */
+      RNA_string_set(&props, "engine", row.tab.c_str());
+      RNA_string_set(&props, "editor", row.model.c_str());
+    }
+    else {
+      RNA_enum_set_identifier(C, &props, "source", row.tab.c_str());
+      RNA_string_set(&props, "provider", row.provider.c_str());
+      RNA_string_set(&props, "model", row.model.c_str());
+      RNA_string_set(&props, "thinking", row.thinking.c_str());
+    }
     WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault, &props, nullptr);
     WM_operator_properties_free(&props);
   }
@@ -184,23 +195,26 @@ wmOperatorStatus run_pick(bContext *C, wmOperator *op, const Row row)
 
 wmOperatorStatus run_footer(bContext *C, wmOperator *op)
 {
+  const char *footer_op = static_cast<State *>(op->customdata)->src->footer_op;
   teardown(C, op);
-  WM_operator_name_call(C, SETTINGS_OP, wm::OpCallContext::InvokeDefault, nullptr, nullptr);
+  WM_operator_name_call(C, footer_op, wm::OpCallContext::InvokeDefault, nullptr, nullptr);
   return OPERATOR_FINISHED;
 }
 
-wmOperatorStatus card_invoke(bContext *C, wmOperator *op, const wmEvent * /*event*/)
+wmOperatorStatus card_invoke(bContext *C, wmOperator *op, const CardKind kind)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (g_state || !win || !g_anchor.valid || g_anchor.win != win) {
+  const Anchor &anchor = g_anchor[int(kind)];
+  if (g_state || !win || !anchor.valid || anchor.win != win) {
     return OPERATOR_CANCELLED;
   }
   State *state = MEM_new<State>("agent_model_card");
+  state->src = &card_source(kind);
   state->win = win;
   state->opened_at = BLI_time_now_seconds();
-  state->anchor = g_anchor.chip;
+  state->anchor = anchor.chip;
   state->anchor_valid = true;
-  state->text_size = g_anchor.text_size;
+  state->text_size = anchor.text_size;
   refresh(C, *state, true);
   reveal_current(*state);
   state->pill = float(std::max(0, tab_index(*state, state->tab)));
@@ -234,17 +248,18 @@ wmOperatorStatus card_modal(bContext *C, wmOperator *op, const wmEvent *event)
       return OPERATOR_PASS_THROUGH;
     }
     /* The chip went away (the island folded, the row dropped it): close. */
-    if (!g_anchor.valid || g_anchor.win != state->win) {
+    const Anchor &anchor = anchor_of(*state);
+    if (!anchor.valid || anchor.win != state->win) {
       teardown(C, op);
       return OPERATOR_FINISHED;
     }
     /* Redraw only while something moves or changed: settled, a tick is two
      * string reads (and the pick poll at 10 Hz). */
-    bool redraw = !state->risen || !BLI_rctf_compare(&state->anchor, &g_anchor.chip, 0.0f) ||
-                  state->text_size != g_anchor.text_size;
+    bool redraw = !state->risen || !BLI_rctf_compare(&state->anchor, &anchor.chip, 0.0f) ||
+                  state->text_size != anchor.text_size;
     state->risen = appear_factor(*state) >= 1.0f;
-    state->anchor = g_anchor.chip;
-    state->text_size = g_anchor.text_size;
+    state->anchor = anchor.chip;
+    state->text_size = anchor.text_size;
     redraw |= refresh(C, *state, false);
     redraw |= step_motion(*state);
     if (redraw) {
@@ -437,17 +452,39 @@ void card_cancel(bContext *C, wmOperator *op)
   teardown(C, op);
 }
 
+wmOperatorStatus model_card_invoke(bContext *C, wmOperator *op, const wmEvent * /*event*/)
+{
+  return card_invoke(C, op, CardKind::Model);
+}
+
+wmOperatorStatus engine_card_invoke(bContext *C, wmOperator *op, const wmEvent * /*event*/)
+{
+  return card_invoke(C, op, CardKind::Engine);
+}
+
 void MIXAR_OT_agent_model_card(wmOperatorType *ot)
 {
   ot->name = "Agent Model";
   ot->idname = "MIXAR_OT_agent_model_card";
   ot->description = "Who answers the agent and which model";
-  ot->invoke = card_invoke;
+  ot->invoke = model_card_invoke;
   ot->modal = card_modal;
   ot->cancel = card_cancel;
   /* Not OPTYPE_BLOCKING: that grabs the cursor, which on Windows captures
    * every mouse event (other windows included) to the island while the card
    * is open. Focus moving elsewhere closes it (WINDEACTIVATE). */
+  ot->flag = OPTYPE_INTERNAL;
+}
+
+/** The same card on the engine chip: editors to switch to, the connect footer. */
+void MIXAR_OT_agent_engine_card(wmOperatorType *ot)
+{
+  ot->name = "Game Engine";
+  ot->idname = "MIXAR_OT_agent_engine_card";
+  ot->description = "The game engine the agent builds in";
+  ot->invoke = engine_card_invoke;
+  ot->modal = card_modal;
+  ot->cancel = card_cancel;
   ot->flag = OPTYPE_INTERNAL;
 }
 
@@ -457,26 +494,52 @@ void qa_register();
 
 }  // namespace agent_model_card
 
+static void set_anchor(const agent_model_card::CardKind kind,
+                       const wmWindow *win,
+                       const rctf &chip,
+                       const float text_size,
+                       const bool available)
+{
+  using namespace agent_model_card;
+  Anchor &anchor = g_anchor[int(kind)];
+  anchor.win = win;
+  anchor.chip = chip;
+  anchor.text_size = text_size;
+  anchor.valid = available && BLI_rctf_size_x(&chip) > 0.0f;
+}
+
 void agent_model_card_anchor(const wmWindow *win,
                              const rctf &chip,
                              const float text_size,
                              const bool available)
 {
-  using namespace agent_model_card;
-  g_anchor.win = win;
-  g_anchor.chip = chip;
-  g_anchor.text_size = text_size;
-  g_anchor.valid = available && BLI_rctf_size_x(&chip) > 0.0f;
+  set_anchor(agent_model_card::CardKind::Model, win, chip, text_size, available);
+}
+
+void agent_engine_card_anchor(const wmWindow *win,
+                              const rctf &chip,
+                              const float text_size,
+                              const bool available)
+{
+  set_anchor(agent_model_card::CardKind::Engine, win, chip, text_size, available);
 }
 
 bool agent_model_card_is_open()
 {
-  return agent_model_card::g_state != nullptr;
+  using namespace agent_model_card;
+  return g_state != nullptr && g_state->src->kind == CardKind::Model;
+}
+
+bool agent_engine_card_is_open()
+{
+  using namespace agent_model_card;
+  return g_state != nullptr && g_state->src->kind == CardKind::Engine;
 }
 
 void agent_model_card_register()
 {
   WM_operatortype_append(agent_model_card::MIXAR_OT_agent_model_card);
+  WM_operatortype_append(agent_model_card::MIXAR_OT_agent_engine_card);
   agent_model_card::qa_register();
 }
 
