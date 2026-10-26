@@ -75,8 +75,9 @@ def enable_in_ui(qa, output):
         ("http://127.0.0.1:", "http://localhost:")
     ):
         raise RuntimeError("Run this credit-spending scenario only in an isolated loopback QA app")
-    email = qa.eval("result = drv.main_window().scene.mixie_chat_user_id")
-    qa.click(text=email, area_type="TOPBAR")  # Connect MCP lives in the profile menu.
+    # Connect MCP lives in the profile menu; the profile popover shows the
+    # account's display name, not its email.
+    qa.click(but_type="Popover", area_type="TOPBAR")
     qa.click(op="MIXAR_OT_connect_ai")
     qa.cmd("snap", path=str(output / "setup-before.png"))
     qa.click(op="MIXAR_OT_set_mcp_enabled")
@@ -141,8 +142,12 @@ async def run(options, qa, verdict):
                 name, arguments or {}, meta={"mixar/request-id": call_id or str(uuid4())}
             )
             payload = result.structured_content
-            assert isinstance(payload, dict) and "usage" in payload, result
-            verdict["calls"].append({"tool": name, "usage": payload["usage"], "is_error": result.is_error})
+            # Response minimization: the full receipt is in _meta only; the model
+            # sees usage only when credits moved or recovery needs the call UUID.
+            receipt = (result.meta or {}).get("mixar/usage")
+            assert isinstance(payload, dict) and "result" in payload and isinstance(receipt, dict), result
+            assert not {"request_id", "note"} & set(payload.get("usage") or {}), payload
+            verdict["calls"].append({"tool": name, "usage": receipt, "is_error": result.is_error})
             assert result.is_error is expect_error, result.model_dump(by_alias=True)
             return result
 
@@ -154,7 +159,9 @@ async def run(options, qa, verdict):
         create_id = str(uuid4())
         arguments = {"code": cube_script(name)}
         created = await call("execute_bpy_script", arguments, create_id)
-        assert created.structured_content["usage"]["credits_charged"] == 0  # Scene tools are free.
+        assert created.meta["mixar/usage"]["credits_charged"] == 0  # Scene tools are free.
+        # No credits moved: nothing to show (usage stays {} for cached outputSchemas).
+        assert created.structured_content.get("usage") == {}, created.structured_content
         state = await asyncio.to_thread(assert_scene, qa, name)
         assert state["names"] == [name] and state["type"] == "MESH" and state["vertices"] == 8, state
         assert not state["busy"], state
@@ -162,20 +169,24 @@ async def run(options, qa, verdict):
         verdict["created_state"] = state
 
         replay = await call("execute_bpy_script", arguments, create_id)
-        assert replay.structured_content["usage"]["replayed"] is True
-        assert replay.structured_content["usage"]["additional_credits_charged"] == 0
+        assert replay.meta["mixar/usage"]["replayed"] is True
+        assert replay.meta["mixar/usage"]["additional_credits_charged"] == 0
+        assert replay.structured_content.get("usage") == {}, replay.structured_content  # Settled.
         assert (await asyncio.to_thread(assert_scene, qa, name))["names"] == [name]
 
         failed = await call("execute_bpy_script", {"code": "print(undefined_mcp_qa_variable)"}, expect_error=True)
-        usage = failed.structured_content["usage"]
+        usage = failed.meta["mixar/usage"]
         assert usage["credits_refunded"] == 0 and usage["credits_charged"] == 0, usage
+        # A dispatched mutation that failed: the model may recover it by call UUID.
+        assert failed.structured_content["usage"]["call_id"] == usage["call_id"], failed.structured_content
 
         await call("execute_bpy_script", {"code": f"import bpy\nbpy.data.objects[{name!r}].rotation_euler.z = 0.35"})
         unchanged = await call("mixar_credit_balance")
         assert unchanged.structured_content["result"]["available_credits"] == start  # Nothing spent.
 
         invalid = await call("execute_bpy_script", {"code": 123}, expect_error=True)
-        assert invalid.structured_content["usage"]["credits_charged"] == 0
+        assert invalid.meta["mixar/usage"]["credits_charged"] == 0
+        assert invalid.structured_content.get("usage") == {}, invalid.structured_content  # Refused.
         state = await asyncio.to_thread(assert_scene, qa, name)
         assert state["names"] == [name] and state["scale"] == [1.0, 1.0, 1.0], state
         assert abs(state["rotation_z"] - 0.35) < 0.001 and not state["busy"], state

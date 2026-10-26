@@ -92,7 +92,9 @@ def validate(name, args):
 
 def tools():
     return [{"name": name, "description": DESCRIPTIONS[name], "inputSchema": schema,
-             "annotations": {"readOnlyHint": name in READ_ONLY, "destructiveHint": name in DESTRUCTIVE},
+             "annotations": {"readOnlyHint": name in READ_ONLY,
+                             "destructiveHint": name in DESTRUCTIVE,
+                             "openWorldHint": name == "mixar_ui_act"},
              "_meta": {"mixar/billing": {"invocation_credits": 0, "surface": "local_ui"},
                        "mixar/domain": DOMAINS[name]}}
             for name, schema in SCHEMAS.items()]

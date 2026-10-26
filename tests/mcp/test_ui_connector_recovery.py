@@ -31,9 +31,10 @@ def test_lost_action_response_is_not_retried(monkeypatch):
         raise OSError("response lost after dispatch")
 
     monkeypatch.setattr(connector, "request", lost)
-    with pytest.raises(OSError):
+    with pytest.raises(connector.Unconfirmed) as lost_call:
         client.call("mixar_ui_act", {"action": "click"}, "identity")
     assert len(calls) == 1
+    assert isinstance(lost_call.value.__cause__, OSError)  # The model is told to recover by call ID.
 
 
 def test_scene_change_does_not_silently_retarget_calls(monkeypatch):
