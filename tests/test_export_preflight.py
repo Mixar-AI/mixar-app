@@ -24,6 +24,32 @@ class Nodes(list):
         return next((node for node in self if getattr(node, "name", None) == name), None)
 
 
+def test_one_paint_stack_connected_to_four_shader_inputs_is_counted_once():
+    module = _load()
+    tree = SimpleNamespace(mp=SimpleNamespace(is_mpaint_node=True))
+    # Each socket link returns a new Python wrapper, but the RNA node is one.
+    wrappers = [SimpleNamespace(node_tree=tree, inputs=[], as_pointer=lambda: 55)
+                for _ in range(4)]
+    shader = SimpleNamespace(inputs=[SimpleNamespace(links=[SimpleNamespace(from_node=n)])
+                                     for n in wrappers])
+    output = SimpleNamespace(type='OUTPUT_MATERIAL', is_active_output=True,
+                             inputs={'Surface': SimpleNamespace(links=[SimpleNamespace(from_node=shader)])})
+    material = SimpleNamespace(node_tree=SimpleNamespace(nodes=[output]))
+    found = module.active_mixar_nodes(material)
+    assert len(found) == 1 and found[0].as_pointer() == 55
+
+
+def test_ordinary_shader_group_with_registered_paint_properties_is_not_a_stack():
+    module = _load()
+    paint = SimpleNamespace(node_tree=SimpleNamespace(mp=SimpleNamespace(is_mpaint_node=True)), inputs=[])
+    ordinary = SimpleNamespace(node_tree=SimpleNamespace(mp=SimpleNamespace(is_mpaint_node=False)),
+                               inputs=[SimpleNamespace(links=[SimpleNamespace(from_node=paint)])])
+    output = SimpleNamespace(type='OUTPUT_MATERIAL', is_active_output=True,
+                             inputs={'Surface': SimpleNamespace(links=[SimpleNamespace(from_node=ordinary)])})
+    material = SimpleNamespace(node_tree=SimpleNamespace(nodes=[output]))
+    assert module.active_mixar_nodes(material) == [paint]
+
+
 def test_transform_tolerance_ignores_location_and_preserves_armatures():
     module = _load()
     obj = SimpleNamespace(
