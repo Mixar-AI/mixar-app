@@ -99,10 +99,11 @@ def test_package_swaps_the_copies_before_reading_their_materials():
     fn = next(n for n in ast.parse(source).body
               if isinstance(n, ast.FunctionDef) and n.name == "export_package")
     body = ast.get_source_segment(source, fn)
-    copies = body.index("_copies(meshes, join)")
+    copies = body.index("_copies(meshes, join")
     swap = body.index("swap.enter_context(temporary_export_materials(copies))")
+    bake = body.index("swap.enter_context(baked_procedural_materials(copies))")
     mats = body.index("images = _material_images(mats)")
-    assert copies < swap < mats, "materials/textures must be read after the swap"
+    assert copies < swap < bake < mats, "materials/textures must be read after the swap and the bake"
     # Unwound before the copies are deleted, on success and on failure.
     final = body[body.index("    finally:\n        swap.close()"):]
     assert final.index("swap.close()") < final.index("_cleanup(col, renamed)")

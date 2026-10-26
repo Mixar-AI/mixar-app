@@ -9,8 +9,10 @@ lower-resolution texture tiers, a ``.blend`` source and a README.
 Exports run on temporary copies (transforms and modifiers applied, parents
 flattened, optionally joined), so the user's objects are never changed.
 Mixar paint slots on the copies are swapped to their baked Principled/image
-materials (``export_materials``) for the whole package; an unbaked stack
-still ships untextured.
+materials (``export_materials``) for the whole package; every material an
+exporter cannot read (procedural nodes, an unbaked stack) is then baked to
+images on the copies (``export_bake``, ``bake_materials``), reported as
+``baked_materials``.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
 never an absolute local path. ``engine`` (``godot`` | ``unreal`` | ``uefn``,
@@ -34,6 +36,7 @@ import bpy
 
 from .export_verification_status import verification_status, verification_warning
 
+from .export_bake import baked_procedural_materials
 from .export_clips import animation_kwargs, clip_selection, select_clips
 from .export_materials import temporary_export_materials
 from .export_verify import file_clip_names, verify_export
@@ -407,11 +410,12 @@ def _write_source(root, stem, include_source, col, copies, mats, images):
 
 def export_package(names, fmt="glb", filename=None, where="mixar_exports", folder=None, join=False,
                    texture_tiers=(), include_source=False, manifest=True, readme=None,
-                   extra_files=(), animations=None, engine=None):
+                   extra_files=(), animations=None, engine=None, bake_materials=True):
     """``include_source`` may be True or a file name for the .blend; ``readme``
     text is written as README.md; ``extra_files`` are (name, text) pairs;
     ``animations`` is None (all) / [] (none) / [clip names]; ``engine`` is
-    None or one of ``engine_targets.ENGINES``."""
+    None or one of ``engine_targets.ENGINES``; ``bake_materials`` bakes
+    procedural materials to images on the copies."""
     t0 = time.perf_counter()
     fmt = fmt.lower()
     if fmt not in FORMATS:
@@ -452,6 +456,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         # materials first, so the file, textures/, tiers, the .blend source
         # and the manifest all describe what an exporter can read.
         swap.enter_context(temporary_export_materials(copies))
+        baked = (swap.enter_context(baked_procedural_materials(copies))
+                 if bake_materials and fmt in ("glb", "gltf", "fbx", "usdz", "usd") else None)
         mats = []
         for c in copies:
             for s in c.material_slots:
@@ -526,6 +532,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         }
         if engine_section is not None:
             info["engine"] = engine_section
+        if baked and (baked["baked"] or baked["skipped"]):
+            info["baked_materials"] = baked
         for f in files:
             p = os.path.join(root, f)
             info["files"].append({"file": f, "bytes": os.path.getsize(p), "sha256_16": _sha(p)})
@@ -560,6 +568,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             "replaced_previous_files": replaced, "engine": engine_section,
             "main_file": stem + ext, "glb_check": check, "verification": verification,
             "triangles": tris, "dimensions_m": dims, "textures": len(tex), "tiers": tiers,
+            "baked_materials": baked,
             "animations": {"clips": clips, "clips_requested": animations,
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},
