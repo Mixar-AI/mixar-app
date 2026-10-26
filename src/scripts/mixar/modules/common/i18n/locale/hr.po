@@ -24558,6 +24558,264 @@ msgstr "Veličina QR-a"
 msgid "Modules per side of the QR matrix; 0 while there is nothing to scan"
 msgstr "Modula po strani QR matrice; 0 dok nema što skenirati"
 
+msgid "Publish to Web is not available"
+msgstr ""
+
+msgid "Sign in to Mixar to publish scenes"
+msgstr ""
+
+msgid "Titles are limited to {limit} characters"
+msgstr ""
+
+msgid "This scene has not been published yet"
+msgstr ""
+
+msgid "No visible mesh objects to publish"
+msgstr ""
+
+msgid "A publish is already running"
+msgstr ""
+
+msgid "Exporting scene…"
+msgstr ""
+
+msgid "The scene is {size} MB; the publish limit is {limit} MB. Hide heavy objects or reduce texture resolution."
+msgstr ""
+
+msgid "Publish failed ({kind})"
+msgstr ""
+
+msgid "The publish lost its claim before upload"
+msgstr ""
+
+msgid "Sign-in expired. Sign in again and publish."
+msgstr ""
+
+msgid "Request failed (HTTP {status})"
+msgstr ""
+
+msgid "Malformed server response"
+msgstr ""
+
+msgid "Unsupported thumbnail type"
+msgstr ""
+
+msgid "Upload failed (HTTP {status})"
+msgstr ""
+
+msgid "Part upload failed (HTTP {status})"
+msgstr ""
+
+msgid "Storage did not return an ETag"
+msgstr ""
+
+msgid "Reserving your scene link…"
+msgstr ""
+
+msgid "Published (content unchanged)"
+msgstr ""
+
+msgid "Uploading scene…"
+msgstr ""
+
+msgid "The server returned an unsupported upload mode"
+msgstr ""
+
+msgid "Finishing upload…"
+msgstr ""
+
+msgid "Published at /s/{slug}"
+msgstr ""
+
+msgid "Uploading thumbnail…"
+msgstr ""
+
+msgid "The server returned an incomplete upload plan"
+msgstr ""
+
+msgid "The upload plan does not match the scene size"
+msgstr ""
+
+msgid "The upload plan is missing a part"
+msgstr ""
+
+msgid "Uploading part {index} of {count}…"
+msgstr ""
+
+msgid "Upload failed after {attempts} attempts"
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "Publish this scene as an explorable 3D website with a shareable link"
+msgstr ""
+
+msgid "Update Existing"
+msgstr ""
+
+msgid "Publish a new version at this scene's existing link"
+msgstr ""
+
+msgid "Cancel Publish"
+msgstr ""
+
+msgid "Cancel the running publish"
+msgstr ""
+
+msgid "Cancelling publish…"
+msgstr ""
+
+msgid "Copy Link"
+msgstr "Kopiraj poveznicu"
+
+msgid "Copy the public link to this scene's 3D website"
+msgstr ""
+
+msgid "Invalid link"
+msgstr ""
+
+msgid "Link copied to clipboard"
+msgstr ""
+
+msgid "Open in Browser"
+msgstr ""
+
+msgid "Open this scene's 3D website in your browser"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Remove the published website and its stored files"
+msgstr ""
+
+msgid "Scene unpublished"
+msgstr ""
+
+msgid "Dismiss the publish outcome"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finalizing…"
+msgstr ""
+
+msgid "Publish unavailable"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Will publish as “{title}”"
+msgstr ""
+
+msgid "Access"
+msgstr ""
+
+msgid "Creates a shareable link to an"
+msgstr ""
+
+msgid "explorable 3D website of this scene."
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
+msgid "Publish failed"
+msgstr ""
+
+msgid "Live · v{revision}"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Publish New Version"
+msgstr ""
+
+msgid "Not publishing"
+msgstr ""
+
+msgid "Exporting"
+msgstr ""
+
+msgid "Preparing the scene for the web"
+msgstr ""
+
+msgid "Uploading"
+msgstr ""
+
+msgid "Uploading the scene"
+msgstr ""
+
+msgid "Finalizing"
+msgstr ""
+
+msgid "Completing the publish"
+msgstr ""
+
+msgid "Published"
+msgstr ""
+
+msgid "Public title of your 3D website"
+msgstr ""
+
+msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Anyone with the link; listed in your gallery"
+msgstr ""
+
+msgid "Unlisted"
+msgstr ""
+
+msgid "Anyone with the link; never listed"
+msgstr ""
+
+msgid "Include Animation"
+msgstr ""
+
+msgid "Publish the scene's animation as a looping timeline"
+msgstr ""
+
+msgid "Published Scene ID"
+msgstr ""
+
+msgid "URL Slug"
+msgstr ""
+
+msgid "Share URL"
+msgstr ""
+
+msgid "Viewer URL"
+msgstr ""
+
+msgid "Revision"
+msgstr ""
+
+msgid "Last Published"
+msgstr ""
+
+msgid "Publish Status"
+msgstr ""
+
+msgid "Publish Progress"
+msgstr ""
+
+msgid "Publishing Scene"
+msgstr ""
+
 msgid "Round the mesh's edges"
 msgstr ""
 
@@ -26990,9 +27248,6 @@ msgstr "Traženje ovog računala na mreži…"
 
 msgid "No secure link: joysticks only, no phone motion"
 msgstr "Nema sigurne veze: samo palice, bez gibanja telefona"
-
-msgid "Copy Link"
-msgstr "Kopiraj poveznicu"
 
 msgid "Copy the pairing link to the clipboard"
 msgstr "Kopira poveznicu za uparivanje u međuspremnik"

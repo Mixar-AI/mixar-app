@@ -99,7 +99,8 @@ class Replay:
 async def call(mcp, name, args=None):
     result = await mcp.call_tool(name, args or {}, meta={"mixar/request-id": str(uuid4())})
     payload = result.structured_content or {}
-    return result, payload.get("result"), payload.get("usage") or {}
+    # The full receipt rides in _meta only (response minimization).
+    return result, payload.get("result"), (result.meta or {}).get("mixar/usage") or {}
 
 
 async def run(options):

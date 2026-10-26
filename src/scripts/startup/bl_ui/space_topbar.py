@@ -390,7 +390,14 @@ class TOPBAR_MT_file_export(Menu):
     bl_owner_use_filter = False
 
     def draw(self, _context):
-        # Add Blend file export at the top of the menu
+        if hasattr(bpy.types, "MIXAR_PT_web_publish"):
+            props = self.layout.operator(
+                "wm.call_panel", text="Publish to Web…", icon='WORLD')
+            props.name = "MIXAR_PT_web_publish"
+            props.keep_open = True
+            self.layout.separator()
+
+        # Add Blend file export at the top of the file formats
         props = self.layout.operator("wm.save_as_mainfile", text="Blend (.blend)", icon='FILE_BLEND')
         props.file_extension = 'BLEND'
         if bpy.app.build_options.alembic:
