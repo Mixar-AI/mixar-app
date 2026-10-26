@@ -50,6 +50,10 @@ _DEFAULTS: Dict[str, Any] = {
     # false "text-only" note.
     "byok_current_supports_vision": True,
     "byok_key_preview": "",
+    # The key's thinking level ("" = the model's default). None: the server
+    # does not report one (a backend from before levels), so the island card
+    # offers no level rows. Not mirrored (the picker reads the dict).
+    "byok_current_thinking": None,
     # Server says active but THIS device holds no usable key (an upgrade from
     # a client that stored keys server-side, a second machine, or an expired
     # Codex sign-in). Derived from `key_store` after every successful apply;
@@ -326,7 +330,7 @@ def resume_target() -> tuple:
 
 
 def pending() -> str:
-    """The island mutation in flight: "switch", "pause", "resume" or ""."""
+    """The island mutation in flight: "switch", "level", "pause", "resume" or ""."""
     with _lock:
         return _pending["kind"] if _pending else ""
 
@@ -337,14 +341,15 @@ def switching() -> str:
         return _pending["model"] if _pending and _pending["kind"] == "switch" else ""
 
 
-def begin_switch(model: str, wm=None) -> bool:
+def begin_switch(model: str, wm=None, *, kind: str = "switch") -> bool:
     """Mark a model switch in flight (the chip names ``model`` until it
-    lands); False when another mutation is already in flight."""
+    lands) or, ``kind="level"``, a thinking-level change of the key's
+    model; False when another mutation is already in flight."""
     global _pending, _request_serial
     with _lock:
         if _pending is not None:
             return False
-        _pending = {"kind": "switch", "model": model}
+        _pending = {"kind": kind, "model": model}
         _request_serial += 1
     apply_to_wm(wm)
     return True
@@ -384,7 +389,9 @@ def end_pending(wm=None) -> None:
 # ---------------------------------------------------------------------------
 
 def _parse(data) -> Dict[str, Any]:
-    """Translate the server's `{byok_active, items}` into mirror fields.
+    """Translate the server's `{byok_active, items}` (GET /agent/credentials,
+    the PUT echo) or `{byok_active, default}` (the level PATCH echo) into
+    mirror fields.
 
     All items are identical per the backend contract (one value fanned out
     across roles), so index 0 is the whole story.
@@ -394,13 +401,16 @@ def _parse(data) -> Dict[str, Any]:
         return parsed
     parsed["byok_state_loaded"] = True
     parsed["byok_is_active"] = bool(data.get("byok_active", False))
-    items = data.get("items") or []
+    items = data.get("items") or ([data["default"]] if isinstance(data.get("default"), dict) else [])
     if items and isinstance(items[0], dict):
         first = items[0]
         parsed["byok_current_provider"] = first.get("provider", "") or ""
         parsed["byok_current_model"] = first.get("model", "") or ""
         parsed["byok_current_supports_vision"] = bool(first.get("supports_vision", True))
         parsed["byok_key_preview"] = first.get("key_preview", "") or ""
+        if "thinking_level" in first:  # null = the model's default
+            level = first["thinking_level"]
+            parsed["byok_current_thinking"] = level if isinstance(level, str) else ""
     return parsed
 
 
