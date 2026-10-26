@@ -97,10 +97,9 @@ def test_catalog_levels_match_provider_and_model():
         assert model_suggestions.thinking_levels("anthropic", "claude-opus-5-5") == ["low", "high"]
         # A BYOK-only record counts.
         assert model_suggestions.thinking_levels("openai", "gpt-6-sol") == ["minimal", "medium_high"]
-        # Matched on the key's own provider, as the backend validates a level:
-        # Codex borrows the openai model LIST, never its levels (the server
-        # refuses every level for codex); OpenRouter / Local have no rows.
-        assert model_suggestions.thinking_levels("codex", "gpt-6-sol") == []
+        # Codex reads the openai record, as for its model list (and as the
+        # backend validates its level); OpenRouter / Local have no rows.
+        assert model_suggestions.thinking_levels("codex", "gpt-6-sol") == ["minimal", "medium_high"]
         assert model_suggestions.thinking_levels("openrouter", "anthropic/claude-opus-5-5") == []
         assert model_suggestions.thinking_levels("local", "claude-opus-5-5") == []
         assert model_suggestions.thinking_levels("anthropic", "claude-sonnet-5-5") == []
@@ -142,13 +141,23 @@ def test_the_default_level_names_no_level(catalog):
     (_key(model="claude-sonnet-5-5", thinking_level=None), {}),  # the model offers no levels
     (_key(model="k2", provider="kimi", thinking_level=None), {}),  # not in the catalog
     (_key(thinking_level="high"), {"switching": "claude-sonnet-5-5"}),  # a switch saving
-    (_key(provider="codex", model="gpt-6-sol", thinking_level=None), {}),  # no codex catalog rows
     (_key(provider="openrouter", model="openai/gpt-6-sol", thinking_level=None), {}),
 ])
 def test_no_level_rows_when_there_is_nothing_to_pick(catalog, credential, kw):
     s = _state(credential, **kw)
     kinds = [r[0] for r in _key_rows(s, catalog)]
     assert "thinking" not in kinds and "level" not in kinds
+
+
+def test_a_codex_key_offers_the_openai_models_levels(catalog):
+    s = _state(_key(provider="codex", model="gpt-6-sol", thinking_level="minimal"))
+    assert picker.chip(s)["name"] == "GPT 6 Sol · Minimal"
+    rows = _key_rows(s, catalog)
+    assert [r for r in rows if r[0] in ("thinking", "level")] == [
+        ("thinking", "Thinking: Minimal", False, ""),
+        ("level", "Minimal", True, "minimal"),
+        ("level", "Medium High", False, "medium_high"),
+    ]
 
 
 def test_a_paused_key_offers_no_levels(catalog):

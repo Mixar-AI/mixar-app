@@ -214,11 +214,12 @@ def get_platform_models() -> list[dict]:
 
 def catalog_record(provider: str, model: str) -> dict | None:
     """The catalog record of one model (the cache's own dict: read, never
-    mutate), matched on its OWN provider (as the backend validates a level):
-    Codex (whose model list borrows the "openai" group), OpenRouter and Local
-    have no catalog rows of their own. None when uncataloged."""
+    mutate). Codex reads the "openai" record (see _MODEL_SOURCE_PROVIDER), as
+    the backend validates its level; OpenRouter and Local have no catalog
+    rows. None when uncataloged."""
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
     return next((r for r in _platform_records
-                 if r["provider_id"] == provider and r["model_id"] == model), None)
+                 if r["provider_id"] == source and r["model_id"] == model), None)
 
 
 def thinking_levels(provider: str, model: str) -> list[str]:
