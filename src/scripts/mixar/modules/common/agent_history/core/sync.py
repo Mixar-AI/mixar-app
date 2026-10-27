@@ -245,7 +245,10 @@ class ArchiveSync:
                 else:
                     result = store.read(self.owner, params['session_id'],
                         message_id=params.get('message_id'), task_id=params.get('task_id'),
-                        image_id=params.get('image_id'), limit=params.get('limit', 10))
+                        image_id=params.get('image_id'), limit=params.get('limit', 10),
+                        roles=params.get('roles'), tools=params.get('tools'),
+                        oldest_first=bool(params.get('oldest_first')),
+                        offset=params.get('offset') or 0, max_chars=params.get('max_chars'))
             except Exception:
                 result = {'status': 'unavailable'}
             if request_id and self.client.is_connected:

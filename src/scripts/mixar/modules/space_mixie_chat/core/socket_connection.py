@@ -333,6 +333,9 @@ class SocketConnection:
                 "agent_history_v1",
                 # Image bytes by HTTP reference; sync frames stay small.
                 "agent_history_v2",
+                # agent.history_read filters (roles/tools/order/offset): the
+                # backend lists the user's own messages from the first one on.
+                "agent_history_query_v1",
                 "script_execution",
                 # Prepared terrain imports plus mesh_bounds/linked_scatter.
                 # The backend gates these APIs on the connected instance.
