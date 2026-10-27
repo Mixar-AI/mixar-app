@@ -436,3 +436,15 @@ def test_a_named_empty_stands_for_its_meshes_and_armatures():
     scene = NS(objects={o.name: o for o in (root, body, rig, light, gun)})
     out = export_package._expand_empties([root, gun, body], scene)
     assert [o.name for o in out] == ["Soldier", "Rig", "Body", "Gun"]
+
+
+def test_a_skinned_mesh_is_measured_in_its_bind_pose(tmp_path):
+    """The armature node's scale is already in a skinned mesh's positions."""
+    doc = export_verify.read_glb_json(write_glb(tmp_path / "s.glb", skin="weighted", size=(0.4, 1.8, 0.3)))
+    doc["nodes"].append({"name": "Armature", "scale": [1.8, 1.8, 1.8], "children": [0]})
+    doc["scenes"] = [{"nodes": [len(doc["nodes"]) - 1]}]
+    lo, hi = export_gltf_bounds.gltf_world_bounds(doc)
+    assert round(hi[1] - lo[1], 3) == 1.8
+    del doc["nodes"][0]["skin"]  # a plain child mesh still follows its parent
+    lo, hi = export_gltf_bounds.gltf_world_bounds(doc)
+    assert round(hi[1] - lo[1], 3) == 3.24
