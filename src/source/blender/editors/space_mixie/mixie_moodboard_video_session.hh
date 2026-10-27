@@ -35,6 +35,13 @@ enum class VideoEndRest {
 
 struct MoodboardVideoSession {
   Image *image = nullptr;
+  /**
+   * `ID::session_uid` of #image when the session began. Sessions are keyed on
+   * the Image ADDRESS, and a later datablock can be allocated there (after a
+   * file load, or once a node frees its movie): it has another uid, so a
+   * mismatch marks the session stale.
+   */
+  unsigned int image_session_uid = 0;
   const void *owner = nullptr;
   VideoEndRest end_rest = VideoEndRest::FirstFrame;
 
@@ -64,7 +71,11 @@ struct MoodboardVideoSession {
  * Returns nullptr when the movie cannot be decoded.
  */
 MoodboardVideoSession *video_session_ensure(Main *bmain, Image *image, const void *owner);
-/** The existing session, or nullptr. Never decodes. */
+/**
+ * The existing session, or nullptr. Never decodes. A session whose address now
+ * holds another datablock (#MoodboardVideoSession::image_session_uid mismatch)
+ * is stale: its sound stops and it is dropped. \a image must be live.
+ */
 MoodboardVideoSession *video_session_find(const Image *image, const void *owner);
 
 /** Seconds in the movie now; settles a session that has played through. */
@@ -93,7 +104,10 @@ bool video_sessions_any_playing(const void *owner);
 void video_sessions_advance(const void *owner);
 /** Stop audio and forget every session of \a owner. */
 void video_sessions_release_owner(const void *owner);
-/** Forget sessions whose image is no longer in \a bmain (or all when null). */
+/**
+ * Forget sessions whose image is no longer in \a bmain, or whose address now
+ * holds another datablock (all of them when \a bmain is null).
+ */
 void video_sessions_prune(Main *bmain);
 void video_sessions_clear();
 

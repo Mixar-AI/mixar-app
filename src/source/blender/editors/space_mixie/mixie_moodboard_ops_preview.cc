@@ -15,6 +15,7 @@
 
 #include "mixie_moodboard_ops_common.hh"
 
+#include "BKE_callbacks.hh"
 #include "BKE_global.hh"
 
 #include "BLI_timer.h"
@@ -74,8 +75,8 @@ static void video_redraw_tick_ensure()
 {
   const uintptr_t tick_id = uintptr_t(&g_video_tick_identity);
   if (!BLI_timer_is_registered(tick_id)) {
-    /* Persistent: across a file load the tick prunes the old file's sessions
-     * against the new Main and then retires itself. */
+    /* Persistent (BLI timers otherwise end on a file load); a load retires it
+     * explicitly, with the old file's sessions (board_sessions_load_pre). */
     BLI_timer_register(
         tick_id, video_redraw_tick, nullptr, nullptr, MOODBOARD_VIDEO_REDRAW_SECONDS, true);
   }
@@ -85,6 +86,31 @@ bool moodboard_item_is_video(PointerRNA *scene_ptr, const int index)
 {
   const Image *image = moodboard_item_image(scene_ptr, index);
   return image && image->source == IMA_SRC_MOVIE;
+}
+
+/* A file load (Open, Revert, File > New) frees every Image, and the next file
+ * may allocate one at a freed address. Board sessions belong to the file, so
+ * their sound stops and they are forgotten before its data goes. Zen hosts the
+ * board in a View3D drawer, so the Mixie region's exit (which also releases
+ * them) never runs there. Preview players need nothing: the load cancels every
+ * modal handler, and the player's cancel releases its own sessions. */
+static void board_sessions_load_pre(Main * /*bmain*/,
+                                    PointerRNA ** /*pointers*/,
+                                    int /*pointers_num*/,
+                                    void * /*arg*/)
+{
+  mixie_moodboard_video_playback_shutdown();
+}
+
+static void board_sessions_load_pre_register()
+{
+  static bCallbackFuncStore store = {};
+  if (store.func != nullptr) {
+    return;
+  }
+  store.func = board_sessions_load_pre;
+  store.alloc = false;
+  BKE_callback_add(&store, BKE_CB_EVT_LOAD_PRE);
 }
 
 static MoodboardVideoSession *board_session(bContext *C,
@@ -98,6 +124,7 @@ static MoodboardVideoSession *board_session(bContext *C,
     return nullptr;
   }
   Main *bmain = CTX_data_main(C);
+  board_sessions_load_pre_register();
   video_sessions_prune(bmain);
   MoodboardVideoSession *session = video_session_ensure(bmain, image, BOARD_OWNER);
   if (!session) {

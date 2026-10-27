@@ -4,7 +4,7 @@
 
 /** \file
  * \ingroup spmixie
- * \brief Video preview player: control layout, hit-test and painter.
+ * \brief Video preview player: control layout, hit-test, painter and QA targets.
  *
  * Layout is in window pixels from the player area, so the controls keep their
  * size whatever the window: over a bottom shade, the play/pause button, then
@@ -15,6 +15,7 @@
 #include "mixie_moodboard_ops_common.hh"
 
 #include <algorithm>
+#include <string>
 
 #include "BLI_math_vector.h"
 #include "BLI_rect.h"
@@ -23,6 +24,8 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
+
+#include "../interface/interface_qa_inspect.hh"
 
 #include "mixie_moodboard_video_glyphs.hh"
 #include "mixie_moodboard_video_player.hh"
@@ -137,7 +140,7 @@ static void draw_bar(const rctf &bar, const float fraction, const float fill_alp
 void video_player_draw(const wmWindow * /*win*/, void *customdata)
 {
   VideoPlayer &player = *static_cast<VideoPlayer *>(customdata);
-  MoodboardVideoSession *session = video_session_find(player.image, &player);
+  MoodboardVideoSession *session = video_player_session_find(player);
   if (!session || !player.area) {
     return;
   }
@@ -169,6 +172,49 @@ void video_player_draw(const wmWindow * /*win*/, void *customdata)
   };
   glyph(session->playing ? VideoGlyph::Pause : VideoGlyph::Play, l.play, PLAYER_PLAY);
   glyph(session->muted ? VideoGlyph::SoundOff : VideoGlyph::SoundOn, l.sound, PLAYER_SOUND);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name QA targets
+ * \{ */
+
+void video_player_qa_targets(const wmWindow * /*win*/,
+                             const ScrArea *area,
+                             const ARegion *region,
+                             std::vector<MixarQATarget> &r_targets)
+{
+  if (region->regiontype != RGN_TYPE_WINDOW) {
+    return;
+  }
+  const VideoPlayer *player = video_player_find(area);
+  MoodboardVideoSession *session = player ? video_player_session_find(*player) : nullptr;
+  if (!session) {
+    return;
+  }
+  const std::string movie = player->image->id.name + 2;
+  auto add = [&](const char *surface, const rctf &rect) -> MixarQATarget & {
+    MixarQATarget t;
+    t.surface = surface;
+    t.text = movie;
+    BLI_rcti_rctf_copy_round(&t.rect_win, &rect);
+    r_targets.push_back(std::move(t));
+    return r_targets.back();
+  };
+  const PlayerLayout l = video_player_layout(area);
+  rctf whole;
+  BLI_rctf_rcti_copy(&whole, &area->totrct);
+  MixarQATarget &picture = add("video_player", whole);
+  picture.value = std::to_string(video_session_frame(*session));
+  picture.sel = session->playing;
+  picture.detail = video_session_audio_state(*session);
+  picture.index = session->frame_count;
+  add("video_player_play", l.play).sel = session->playing;
+  add("video_player_timeline", l.timeline);
+  add("video_player_sound", l.sound).sel = session->muted;
+  add("video_player_volume", l.volume).value = std::to_string(
+      int(session->volume * 100.0f + 0.5f));
 }
 
 /** \} */

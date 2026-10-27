@@ -7,11 +7,16 @@
  * \brief Playback sessions: wall-clock movie position plus its audio track.
  *
  * A session is runtime-only state keyed on (owner, Image). The picture is
- * derived from the wall clock; the audio track (audaspace, the device Blender
- * device, see below) is started at the same position on play, stopped on pause
- * and moved on seek. Audio is best-effort: no device, no audio stream or a
- * decode error leaves the movie playing silently, and `has_audio` turns false
- * so the UI can say so. Never touches the scene or its sound.
+ * derived from the wall clock; the audio track (audaspace, on the device in
+ * mixie_moodboard_video_audio_device.cc) is started at the same position on
+ * play, stopped on pause and moved on seek. Audio is best-effort: no device,
+ * no audio stream or a decode error leaves the movie playing silently, and
+ * `has_audio` turns false so the UI can say so. Never touches the scene or its
+ * sound.
+ *
+ * Keys are addresses, so every lookup and prune also compares the image's
+ * `ID::session_uid`: a datablock allocated where a freed one lived (a file
+ * load, a deleted node) never inherits its session.
  */
 
 #include "mixie_moodboard_video_session.hh"
@@ -22,17 +27,14 @@
 
 #include "BKE_image.hh"
 #include "BKE_main.hh"
-#include "BKE_sound.hh"
 
 #include "BLI_listbase.h"
 #include "BLI_path_utils.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
-#include "BLI_timer.h"
 #include "BLI_utildefines.h"
 
 #include "DNA_image_types.h"
-#include "DNA_userdef_types.h"
 
 #include "IMB_imbuf_types.hh"
 
@@ -40,12 +42,13 @@
 
 #ifdef WITH_AUDASPACE
 #  include <Exception.h>
-#  include <devices/DeviceManager.h>
+#  include <IReader.h>
 #  include <devices/IDevice.h>
-#  include <devices/IDeviceFactory.h>
 #  include <devices/IHandle.h>
 #  include <file/File.h>
 #endif
+
+#include "mixie_moodboard_video_audio_device.hh"
 
 namespace blender::ed::mixie {
 
@@ -55,7 +58,7 @@ using SessionKey = std::pair<const void *, const Image *>;
 static std::map<SessionKey, MoodboardVideoSession> g_sessions;
 
 #ifdef WITH_AUDASPACE
-static bool audio_any_handle()
+bool video_sessions_any_audio_handle()
 {
   for (const auto &entry : g_sessions) {
     if (entry.second.audio_handle) {
@@ -65,101 +68,6 @@ static bool audio_any_handle()
   return false;
 }
 #endif
-
-/* -------------------------------------------------------------------- */
-/** \name Audio device
- *
- * Blender opens its own device only while the scene plays (and closes it 30 s
- * after), so the device manager usually has none while the board is idle.
- * Movies therefore play on a device of their own, opened from the same
- * user-preference device and specs on the first play and closed once nothing
- * has sounded for a while. JACK / PulseAudio / PipeWire keep Blender's device
- * open for good and are shared instead of opening a second client.
- * \{ */
-
-#ifdef WITH_AUDASPACE
-static std::shared_ptr<aud::IDevice> g_audio_device;
-static constexpr double AUDIO_DEVICE_IDLE_CLOSE_SECONDS = 30.0;
-static char g_audio_close_identity;
-
-static const char *audio_device_name()
-{
-  char **names = BKE_sound_get_device_names();
-  const char *name = names ? names[0] : nullptr;
-  for (int i = 0; names && names[i]; i++) {
-    if (i == U.audiodevice) {
-      name = names[i];
-    }
-  }
-  return name;
-}
-
-static std::shared_ptr<aud::IDevice> audio_device_ensure()
-{
-  if (g_audio_device) {
-    return g_audio_device;
-  }
-  const char *name = audio_device_name();
-  if (name && STR_ELEM(name, "JACK", "PulseAudio", "PipeWire")) {
-    return aud::DeviceManager::getDevice();
-  }
-  try {
-    std::shared_ptr<aud::IDeviceFactory> factory =
-        name ? aud::DeviceManager::getDeviceFactory(name) : nullptr;
-    if (!factory) {
-      factory = aud::DeviceManager::getDefaultDeviceFactory();
-    }
-    if (!factory) {
-      return nullptr;
-    }
-    aud::DeviceSpecs specs;
-    specs.channels = aud::Channels(U.audiochannels);
-    specs.format = aud::SampleFormat(U.audioformat);
-    specs.rate = U.audiorate;
-    if (specs.rate < double(aud::RATE_8000)) {
-      specs.rate = aud::RATE_48000;
-    }
-    if (specs.format <= aud::FORMAT_INVALID) {
-      specs.format = aud::FORMAT_S16;
-    }
-    if (specs.channels <= aud::CHANNELS_INVALID) {
-      specs.channels = aud::CHANNELS_STEREO;
-    }
-    factory->setName("Mixar Moodboard");
-    factory->setBufferSize(U.mixbufsize < 128 ? 1024 : U.mixbufsize);
-    factory->setSpecs(specs);
-    /* Never DeviceManager::setDevice(): that slot belongs to Blender. */
-    g_audio_device = factory->openDevice();
-  }
-  catch (aud::Exception &) {
-    g_audio_device.reset();
-  }
-  return g_audio_device;
-}
-
-static bool audio_any_handle();
-
-static double audio_device_close_tick(uintptr_t /*uuid*/, void * /*user_data*/)
-{
-  if (!audio_any_handle()) {
-    g_audio_device.reset();
-  }
-  return -1.0;
-}
-
-/** Close the device once nothing has sounded for a while (re-armed per stop). */
-static void audio_device_schedule_close()
-{
-  const uintptr_t id = uintptr_t(&g_audio_close_identity);
-  BLI_timer_unregister(id);
-  if (g_audio_device) {
-    BLI_timer_register(
-        id, audio_device_close_tick, nullptr, nullptr, AUDIO_DEVICE_IDLE_CLOSE_SECONDS, true);
-  }
-}
-#endif
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Audio track
@@ -203,11 +111,11 @@ static void audio_start(Main *bmain, MoodboardVideoSession &session, const doubl
   if (!session.has_audio || !session.image) {
     return;
   }
-  std::shared_ptr<aud::IDevice> device = audio_device_ensure();
-  if (!device) {
-    return;
-  }
-  bool locked = false;
+  /* Read the file BEFORE touching the device: a movie without an audio stream
+   * throws here, and must never open a device it will not play on (an open
+   * device keeps the machine from idle-sleeping). This is the reader the track
+   * plays from, so the probe costs no extra file open. */
+  std::shared_ptr<aud::IReader> reader;
   try {
     if (!session.audio_sound) {
       char path[FILE_MAX];
@@ -217,11 +125,24 @@ static void audio_start(Main *bmain, MoodboardVideoSession &session, const doubl
       }
       session.audio_sound = AUD_Sound(new aud::File(path));
     }
+    reader = session.audio_sound->createReader();
+  }
+  catch (aud::Exception &) {
+    session.audio_sound.reset();
+    session.has_audio = false;
+    return;
+  }
+  std::shared_ptr<aud::IDevice> device = audio_device_ensure();
+  if (!device) {
+    return;
+  }
+  bool locked = false;
+  try {
     device->lock();
     locked = true;
     /* keep=true: the handle outlives the end of the track, so stop() above is
      * always the one place it is released. */
-    session.audio_handle = device->play(session.audio_sound, true);
+    session.audio_handle = device->play(reader, true);
     if (session.audio_handle) {
       session.audio_handle->seek(seconds);
       session.audio_handle->setVolume(session.muted ? 0.0f : session.volume);
@@ -230,13 +151,18 @@ static void audio_start(Main *bmain, MoodboardVideoSession &session, const doubl
     locked = false;
   }
   catch (aud::Exception &) {
-    /* A movie without an audio stream throws here when its reader opens. */
+    /* The device refused the track: the movie plays on silently. */
     if (locked) {
       device->unlock();
     }
     session.audio_handle.reset();
     session.audio_sound.reset();
     session.has_audio = false;
+  }
+  if (!session.audio_handle) {
+    /* The device is open but this track is not sounding: arm the idle close,
+     * which audio_stop() would otherwise only arm for a handle. */
+    audio_device_schedule_close();
   }
 #else
   UNUSED_VARS(bmain, seconds);
@@ -367,7 +293,17 @@ const char *video_session_audio_state(const MoodboardVideoSession &session)
 MoodboardVideoSession *video_session_find(const Image *image, const void *owner)
 {
   const auto it = g_sessions.find(SessionKey(owner, image));
-  return it == g_sessions.end() ? nullptr : &it->second;
+  if (it == g_sessions.end()) {
+    return nullptr;
+  }
+  if (it->second.image_session_uid != image->id.session_uid) {
+    /* Another datablock now lives at the address this session was keyed on:
+     * its frame, mute state and sound belong to a movie that is gone. */
+    audio_stop(it->second);
+    g_sessions.erase(it);
+    return nullptr;
+  }
+  return &it->second;
 }
 
 MoodboardVideoSession *video_session_ensure(Main *bmain, Image *image, const void *owner)
@@ -397,6 +333,7 @@ MoodboardVideoSession *video_session_ensure(Main *bmain, Image *image, const voi
   BKE_image_release_ibuf(image, ibuf, lock);
 
   session.image = image;
+  session.image_session_uid = image->id.session_uid;
   session.owner = owner;
   session.end_rest = owner ? VideoEndRest::LastFrame : VideoEndRest::FirstFrame;
   session.fps = VIDEO_FALLBACK_FPS;
@@ -449,10 +386,15 @@ void video_sessions_release_owner(const void *owner)
 void video_sessions_prune(Main *bmain)
 {
   /* Sessions are keyed on `Image *`. A generated movie is freed with its node,
-   * so a stale key would be inherited by a later datablock allocated at the
-   * same address -- appearing to start mid-playback. Validate against Main. */
+   * and a file load frees them all, so a stale key would be inherited by a
+   * later datablock allocated at the same address -- appearing to start
+   * mid-playback, muted, with the old movie's sound. Validate against Main
+   * first (only a live image may be read), then against its session uid. */
   for (auto it = g_sessions.begin(); it != g_sessions.end();) {
-    if (!bmain || BLI_findindex(&bmain->images, it->second.image) == -1) {
+    const MoodboardVideoSession &session = it->second;
+    const bool live = bmain && BLI_findindex(&bmain->images, session.image) != -1 &&
+                      session.image->id.session_uid == session.image_session_uid;
+    if (!live) {
       audio_stop(it->second);
       it = g_sessions.erase(it);
     }
@@ -469,8 +411,7 @@ void video_sessions_clear()
   }
   g_sessions.clear();
 #ifdef WITH_AUDASPACE
-  BLI_timer_unregister(uintptr_t(&g_audio_close_identity));
-  g_audio_device.reset();
+  audio_device_close();
 #endif
 }
 

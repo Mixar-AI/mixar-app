@@ -23,14 +23,18 @@
  * handler, so the player finishes and a context-free timer closes the window
  * at the top of the event loop. The OS close button goes through
  * wm_window_close() and cancels the player, which releases the session.
+ *
+ * #WM_window_open reuses an open preview window for the next preview, so the
+ * preview operator first ends the player already running there
+ * (#video_player_stop_in_window): a window has at most one player.
  */
 
 #include "mixie_moodboard_ops_common.hh"
 
 #include <algorithm>
-#include <string>
 #include <vector>
 
+#include "BKE_global.hh"
 #include "BKE_image.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_screen.hh"
@@ -44,8 +48,6 @@
 #include "DNA_space_types.h"
 
 #include "ED_mixar_area_chrome.hh"
-
-#include "../interface/interface_qa_inspect.hh"
 
 #include "mixie_moodboard_video_player.hh"
 #include "mixie_moodboard_video_session.hh"
@@ -103,15 +105,27 @@ static void request_window_close(wmWindow *win)
 /** \name Session and frame
  * \{ */
 
+static bool player_image_live(const Main *bmain, const VideoPlayer &player)
+{
+  /* Membership first: only an image still in Main may be read for its uid. */
+  return bmain && BLI_findindex(&bmain->images, player.image) != -1 &&
+         player.image->id.session_uid == player.image_session_uid;
+}
+
 static MoodboardVideoSession *player_session(bContext *C, VideoPlayer &player)
 {
   /* Re-resolved every time: a file load or a cleared board can drop sessions,
    * and the movie itself may be gone. */
   Main *bmain = CTX_data_main(C);
-  if (!bmain || BLI_findindex(&bmain->images, player.image) == -1) {
+  if (!player_image_live(bmain, player)) {
     return nullptr;
   }
   return video_session_ensure(bmain, player.image, &player);
+}
+
+MoodboardVideoSession *video_player_session_find(const VideoPlayer &player)
+{
+  return player_image_live(G_MAIN, player) ? video_session_find(player.image, &player) : nullptr;
 }
 
 static void player_sync_frame(const Scene *scene,
@@ -172,28 +186,78 @@ static void player_release(bContext *C, wmOperator *op)
   op->customdata = nullptr;
 }
 
-static bool area_is_player(const ScrArea *area)
+VideoPlayer *video_player_find(const ScrArea *area)
 {
-  return std::any_of(
+  const auto it = std::find_if(
       g_players.begin(), g_players.end(), [&](const VideoPlayer *p) { return p->area == area; });
+  return it == g_players.end() ? nullptr : *it;
 }
 
-static void hide_editor_chrome(ScrArea *area)
+static bool area_is_player(const ScrArea *area)
+{
+  return video_player_find(area) != nullptr;
+}
+
+static_assert(RGN_TYPE_NUM <= 32, "VideoPlayer::hidden_regions is one bit per region type");
+
+static void hide_editor_chrome(VideoPlayer &player, ScrArea *area)
 {
   /* No edge arrows or reveal tabs for the hidden regions, no navigation
    * gizmos over the picture: the window shows the movie and our controls. */
   ED_area_mixar_chromeless_set(area_is_player);
   if (SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first)) {
+    player.gizmos_were_hidden = (sima->gizmo_flag & SI_GIZMO_HIDE) != 0;
     sima->gizmo_flag |= SI_GIZMO_HIDE;
   }
   area->flag |= AREA_FLAG_ACTIONZONES_UPDATE;
   for (ARegion &region : area->regionbase) {
-    if (region.regiontype != RGN_TYPE_WINDOW) {
+    if (region.regiontype != RGN_TYPE_WINDOW && !(region.flag & RGN_FLAG_HIDDEN)) {
+      player.hidden_regions |= 1u << region.regiontype;
       region.flag |= RGN_FLAG_HIDDEN;
     }
   }
   if (ARegion *main_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW)) {
     ED_area_tag_region_size_update(area, main_region);
+  }
+}
+
+/** Undo #hide_editor_chrome, for a reused window that shows something else next. */
+static void restore_editor_chrome(const VideoPlayer &player)
+{
+  ScrArea *area = player.area;
+  if (SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first)) {
+    if (!player.gizmos_were_hidden) {
+      sima->gizmo_flag &= ~SI_GIZMO_HIDE;
+    }
+  }
+  area->flag |= AREA_FLAG_ACTIONZONES_UPDATE;
+  for (ARegion &region : area->regionbase) {
+    if (player.hidden_regions & (1u << region.regiontype)) {
+      region.flag &= ~RGN_FLAG_HIDDEN;
+    }
+  }
+  if (ARegion *main_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW)) {
+    ED_area_tag_region_size_update(area, main_region);
+  }
+  ED_area_tag_redraw(area);
+}
+
+void video_player_stop_in_window(bContext *C, wmWindow *win)
+{
+  wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_video_player", false);
+  if (!ot || !win) {
+    return;
+  }
+  /* The preview operator runs from the board's window, never from inside this
+   * window's handler loop, so the handler is removed now rather than
+   * postponed -- what WM_event_remove_handlers() does for a closing window. */
+  while (wmOperator *op = WM_operator_find_modal_by_type(win, ot)) {
+    if (const VideoPlayer *player = static_cast<const VideoPlayer *>(op->customdata)) {
+      restore_editor_chrome(*player);
+    }
+    player_release(C, op);
+    WM_event_remove_modal_handler(&win->runtime->modalhandlers, op, false);
+    WM_operator_free(op);
   }
 }
 
@@ -217,6 +281,7 @@ static wmOperatorStatus video_player_invoke(bContext *C, wmOperator *op, const w
   player->win = win;
   player->area = area;
   player->image = image;
+  player->image_session_uid = image->id.session_uid;
   op->customdata = player;
   MoodboardVideoSession *session = player_session(C, *player);
   if (!session) {
@@ -227,7 +292,7 @@ static wmOperatorStatus video_player_invoke(bContext *C, wmOperator *op, const w
 
   g_player_context = C;
   g_players.push_back(player);
-  hide_editor_chrome(area);
+  hide_editor_chrome(*player, area);
   player->draw_handle = WM_draw_cb_activate(win, video_player_draw, player);
   player->timer = WM_event_timer_add(CTX_wm_manager(C), win, TIMER, PLAYER_TICK_SECONDS);
   /* A preview is opened to be watched: it starts at once, with sound. */
@@ -371,55 +436,6 @@ static void video_player_cancel(bContext *C, wmOperator *op)
 {
   /* The window is closing (OS close button, file load, quit). */
   player_release(C, op);
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name QA targets
- * \{ */
-
-void video_player_qa_targets(const wmWindow * /*win*/,
-                             const ScrArea *area,
-                             const ARegion *region,
-                             std::vector<MixarQATarget> &r_targets)
-{
-  if (region->regiontype != RGN_TYPE_WINDOW) {
-    return;
-  }
-  const auto it = std::find_if(g_players.begin(), g_players.end(), [&](VideoPlayer *p) {
-    return p->area == area;
-  });
-  if (it == g_players.end()) {
-    return;
-  }
-  VideoPlayer &player = **it;
-  MoodboardVideoSession *session = video_session_find(player.image, &player);
-  if (!session) {
-    return;
-  }
-  const std::string movie = player.image->id.name + 2;
-  auto add = [&](const char *surface, const rctf &rect) -> MixarQATarget & {
-    MixarQATarget t;
-    t.surface = surface;
-    t.text = movie;
-    BLI_rcti_rctf_copy_round(&t.rect_win, &rect);
-    r_targets.push_back(std::move(t));
-    return r_targets.back();
-  };
-  const PlayerLayout l = video_player_layout(area);
-  rctf whole;
-  BLI_rctf_rcti_copy(&whole, &area->totrct);
-  MixarQATarget &picture = add("video_player", whole);
-  picture.value = std::to_string(video_session_frame(*session));
-  picture.sel = session->playing;
-  picture.detail = video_session_audio_state(*session);
-  picture.index = session->frame_count;
-  add("video_player_play", l.play).sel = session->playing;
-  add("video_player_timeline", l.timeline);
-  add("video_player_sound", l.sound).sel = session->muted;
-  add("video_player_volume", l.volume).value = std::to_string(
-      int(session->volume * 100.0f + 0.5f));
 }
 
 /** \} */

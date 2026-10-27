@@ -64,6 +64,7 @@ set(SRC
   mixie_moodboard_ops_preview_window.cc
   mixie_moodboard_video_card.cc
   mixie_moodboard_video_glyphs.cc
+  mixie_moodboard_video_audio_device.cc
   mixie_moodboard_video_player.cc
   mixie_moodboard_video_player_draw.cc
   mixie_moodboard_video_session.cc
@@ -89,6 +90,7 @@ set(SRC
   mixie_moodboard_ops_common.hh
   mixie_moodboard_video_card.hh
   mixie_moodboard_video_glyphs.hh
+  mixie_moodboard_video_audio_device.hh
   mixie_moodboard_video_player.hh
   mixie_moodboard_video_session.hh
 )

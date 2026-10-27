@@ -8,15 +8,17 @@
  *
  * A card on the canvas is a thumbnail: it is sized for the graph, not for
  * judging a result. This opens the node's own image or movie in a separate
- * window, at a size derived from the media itself, so several results can be
- * compared side by side without disturbing the board.
+ * window, at a size derived from the media itself, without disturbing the
+ * board.
  *
  * Built on #WM_window_open, the same primitive Blender's own "Blender Render"
  * window uses (editors/render/render_view.cc): it creates the window, puts an
  * Image Editor in it, and moves the context there -- so the space to fill in is
- * simply `CTX_wm_area(C)` afterwards. Each call opens a NEW window, which is
- * what makes several previews at once work; nothing here reuses or reclaims an
- * existing one.
+ * simply `CTX_wm_area(C)` afterwards. A `temp` window is REUSED by upstream
+ * when one is already open (any temporary single-Image-Editor window), so
+ * there is one preview window at a time and the next preview replaces what it
+ * shows: the video player running there is stopped first, so the window never
+ * holds two players (or a player under a still).
  */
 
 #include "mixie_moodboard_ops_common.hh"
@@ -32,6 +34,8 @@
 #include "ED_image.hh"
 
 #include "UI_interface_c.hh"
+
+#include "mixie_moodboard_video_player.hh"
 
 namespace blender::ed::mixie {
 
@@ -84,7 +88,7 @@ static Image *preview_image_for_media(PointerRNA *scene_ptr, const char *media_i
 }
 
 /* A movie gets the video player (mixie_moodboard_video_player.cc) running modal
- * in its new window: its own clock and sound, and real controls instead of the
+ * in its window: its own clock and sound, and real controls instead of the
  * Image Editor's scene-frame playback. */
 static bool start_video_player(bContext *C, Image *image, ReportList *reports)
 {
@@ -201,6 +205,10 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
     return OPERATOR_CANCELLED;
   }
 
+  /* A reused window may still be playing the previous preview: end that
+   * player (and its sound) before this media replaces it, so the window's
+   * controls, QA target and audio always belong to what it shows. */
+  video_player_stop_in_window(C, CTX_wm_window(C));
   ED_space_image_set(bmain, sima, image, false);
   if (is_movie) {
     start_video_player(C, image, op->reports);
@@ -262,8 +270,8 @@ void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot)
   ot->name = "Preview Media";
   ot->idname = "MIXIE_OT_moodboard_preview_media";
   ot->description =
-      "Open this image or video in its own preview window. "
-      "Several can be open at once";
+      "Open this image or video in the preview window. "
+      "An open preview window is reused and shows this instead";
 
   ot->exec = blender::ed::mixie::moodboard_preview_media_exec;
   ot->poll = blender::ed::mixie::moodboard_poll;

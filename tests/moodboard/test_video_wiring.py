@@ -41,7 +41,8 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     session = _read(SPACE_MIXIE / "mixie_moodboard_video_session.cc")
 
     for unit in ("mixie_moodboard_ops_preview.cc", "mixie_moodboard_video_session.cc",
-                 "mixie_moodboard_video_card.cc", "mixie_moodboard_video_player.cc"):
+                 "mixie_moodboard_video_audio_device.cc", "mixie_moodboard_video_card.cc",
+                 "mixie_moodboard_video_player.cc"):
         assert unit in cmake
     # Sound comes from the audaspace device Blender already opened.
     assert "bf::dependencies::optional::audaspace" in cmake
