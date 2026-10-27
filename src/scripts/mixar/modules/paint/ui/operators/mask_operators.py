@@ -146,6 +146,9 @@ class MASKS_MT_ImageMasksMenu(Menu):
         op = layout.operator("wm.m_open_available_data_as_mask", text="Open Available Image", icon='IMAGE_DATA')
         op.type = 'IMAGE'
 
+        layout.separator()
+        layout.operator("wm.m_generate_layer_mask", text="Generate Mask with AI...", icon='SHADERFX')
+
 
 # Submenu: Vertex Color Masks
 class MASKS_MT_VertexColorMasksMenu(Menu):
