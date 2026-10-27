@@ -322,3 +322,28 @@ def known_sessions(owner):
         except (ValueError, OSError):
             continue
     return result
+
+
+def reassign_owner(old_owner, new_owner):
+    """A claimed guest's chats become the account's: every session archive
+    the guest owns is re-filed under ``new_owner`` (manifest only, under the
+    session lock, atomically). Without it the account's reads and writes hit
+    ``archive_owner_or_version_mismatch`` — the Oct 26 run signed in mid-chat
+    and its ``read_agent_history`` answered ``unavailable``. Returns the
+    number of sessions moved."""
+    old_owner, new_owner = valid_id(old_owner), valid_id(new_owner)
+    moved = 0
+    for path in root().glob('*/manifest.json'):
+        try:
+            session = valid_id(path.parent.name)
+            with _locked(session):
+                manifest = json.loads(path.read_text())
+                if manifest.get('owner_id') != old_owner:
+                    continue
+                manifest['owner_id'] = new_owner
+                _atomic(path, canonical(manifest))
+                idle_cache.discard(path.parent)
+                moved += 1
+        except (ValueError, OSError):
+            continue
+    return moved

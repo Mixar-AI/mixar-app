@@ -379,3 +379,21 @@ def test_archive_root_supports_explicit_qa_isolation(client_store, monkeypatch, 
     isolated = tmp_path / 'isolated-history'
     monkeypatch.setenv('MIXAR_AGENT_HISTORY_DIR', str(isolated))
     assert client_store._configured_root() == isolated
+
+
+def test_a_claimed_guests_archives_are_refiled_under_the_account(client_store):
+    """Oct 26: a chat begun as a guest, signed in mid-run, could no longer be
+    read (owner mismatch) — the agent lost its own earlier turns."""
+    client_store.write_batch('guest', packet(), 'scene')
+    other = packet(seq=1)
+    other['session_id'] = 'theirs'
+    client_store.write_batch('someone_else', other, 'scene')
+    assert client_store.reassign_owner('guest', 'account') == 1
+    read = client_store.read('account', 'session', message_id='message1')
+    assert read['status'] == 'available'
+    with pytest.raises(ValueError, match='owner'):
+        client_store.read('guest', 'session')
+    assert client_store.known_sessions('account') == ['session']
+    assert client_store.known_sessions('someone_else') == ['theirs']
+    # the account keeps writing to the same archive
+    assert client_store.write_batch('account', packet(seq=2, text='after sign-in'), 'scene')['seq'] == 2
