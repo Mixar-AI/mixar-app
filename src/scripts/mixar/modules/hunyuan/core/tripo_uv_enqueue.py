@@ -6,12 +6,15 @@
 
 Smart UV (``tripo_uv``, backend ``/v3/mesh/uv``) re-unwraps a mesh and, with
 ``bake``, remaps its textures onto the new layout. The result is a NEW object
-named ``<source>_uv`` that keeps the source's pose and placement (the GLB is
-exported in world space and comes back that way); the source is left untouched.
+named ``<source>_uv``; the source is left untouched. Tripo returns the mesh
+centred on the origin and normalised to 1 m, so the source's world box is
+recorded at submit and the result is fitted back onto it after import
+(:mod:`.tripo_uv_placement`).
 
 Tripo refuses meshes above 80,000 equivalent triangles (a quad counts as two)
 only after the task starts, so :func:`check_triangle_limit` refuses them before
-the export and upload. The backend also returns a UV atlas preview
+the export and upload. It counts the base mesh, which is what the export
+sends. The backend also returns a UV atlas preview
 (``result_data["uv_render_url"]``), which :func:`add_uv_atlas_to_board` drops
 on the Moodboard beside the producing node.
 """
@@ -30,6 +33,7 @@ from ..constants import (
     TRIPO_UV_SERVICE,
 )
 from .retopology_enqueue import _export_single_object
+from .tripo_uv_placement import place_over_source, source_world_bounds
 
 logger = get_logger(__name__)
 
@@ -42,20 +46,19 @@ _ATLAS_GAP = 40.0
 # ---------------------------------------------------------------------------
 
 
-def equivalent_triangles(context, objects) -> int:
+def equivalent_triangles(objects) -> int:
     """Triangles Tripo counts for *objects*: an n-gon is n - 2 triangles.
 
-    Reads the evaluated meshes (modifiers applied), which is what the GLB
-    export sends.
+    Reads each object's base mesh (``obj.data``, modifiers NOT applied), which
+    is what the GLB export sends: ``model_io`` exports without ``export_apply``.
     """
     import numpy as np
 
-    depsgraph = context.evaluated_depsgraph_get()
     total = 0
     for obj in objects:
         if getattr(obj, "type", None) != 'MESH':
             continue
-        mesh = obj.evaluated_get(depsgraph).data
+        mesh = obj.data
         count = len(mesh.polygons)
         if not count:
             continue
@@ -65,9 +68,9 @@ def equivalent_triangles(context, objects) -> int:
     return total
 
 
-def check_triangle_limit(context, objects) -> None:
+def check_triangle_limit(objects) -> None:
     """Raise ``ValueError`` when *objects* exceed Tripo's Smart UV limit."""
-    triangles = equivalent_triangles(context, objects)
+    triangles = equivalent_triangles(objects)
     if triangles > TRIPO_UV_MAX_TRIANGLES:
         raise ValueError(rpt_(
             "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. "
@@ -89,15 +92,21 @@ def check_export_size(file_bytes: bytes) -> None:
 # ---------------------------------------------------------------------------
 
 
-def finalize_uv_import(object_names: str, source_name: str, bake: bool) -> str:
-    """Rename the imported mesh to ``<source>_uv`` and return the result names.
+def finalize_uv_import(object_names: str, source_name: str, bake: bool,
+                       source_bounds=None) -> str:
+    """Fit the import over its source, rename it ``<source>_uv``, return its names.
 
-    Placement is kept as imported (it already overlays the source). A baked
-    result carries a textured material, rebuilt as a paint fill layer like the
-    other textured Tripo imports.
+    Tripo returns the mesh centred on the origin and normalised to 1 m, so the
+    import is scaled and moved onto *source_bounds*, the source's world box
+    recorded at submit (:func:`~.tripo_uv_placement.place_over_source`; ``None``
+    leaves it where it landed). Placement runs first, while *object_names*
+    still name the import. A baked result carries a textured material, rebuilt
+    as a paint fill layer like the other textured Tripo imports.
     """
     from mixar.modules.common.job_queue.core.model_io import rename_imported_object
 
+    if source_bounds is not None:
+        place_over_source(object_names, source_bounds)
     final = None
     try:
         final = rename_imported_object(
@@ -172,7 +181,9 @@ def enqueue_tripo_uv_job(*, context, obj, bake: bool = True, model: str = ""):
         assemble_payload, resolve_model_slug,
     )
 
-    check_triangle_limit(context, [obj])
+    check_triangle_limit([obj])
+    # Recorded now: the result comes back normalised and is fitted onto it.
+    source_bounds = source_world_bounds([obj])
     file_bytes, filename = _export_single_object(context, obj)
     check_export_size(file_bytes)
 
@@ -191,7 +202,8 @@ def enqueue_tripo_uv_job(*, context, obj, bake: bool = True, model: str = ""):
     scene_name = context.scene.name
 
     def _on_imported(job, object_names: str):
-        result = finalize_uv_import(object_names, source_name, bake)
+        result = finalize_uv_import(
+            object_names, source_name, bake, source_bounds=source_bounds)
         add_uv_atlas_to_board(job, scene_name, source_name)
         return result  # see AsyncGLBJob.on_imported
 

@@ -61,7 +61,8 @@ _MESH_FEATURE_ROUTING = {
 
 def _mesh_result_hook(scene_name: str, node_id: str,
                       texture_finalize: bool = False, base_name: str = "",
-                      armature_in_front: bool = False, uv_bake=None):
+                      armature_in_front: bool = False, uv_bake=None,
+                      uv_source_bounds=None):
     """Embed the imported result mesh INTO the producing node.
 
     Like Generate 3D, the feature node's generate UI is replaced by the result
@@ -77,9 +78,11 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     every other Auto Rig import: stamped with the rig job id and skeleton
     (the Animate card and the agent read them back) and shown In Front.
 
-    When *uv_bake* is not None (Smart UV), the import is renamed
-    ``<source>_uv`` (baked textures become a paint layer) and the UV atlas
-    preview lands on the board beside the node.
+    When *uv_bake* is not None (Smart UV), the import is fitted onto
+    *uv_source_bounds* (the source's world box recorded at submit; Tripo
+    returns the mesh centred and normalised to 1 m), renamed ``<source>_uv``
+    (baked textures become a paint layer) and the UV atlas preview lands on
+    the board beside the node.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -119,7 +122,8 @@ def _mesh_result_hook(scene_name: str, node_id: str,
                 add_uv_atlas_to_board, finalize_uv_import,
             )
 
-            result = finalize_uv_import(object_names, base_name, uv_bake)
+            result = finalize_uv_import(
+                object_names, base_name, uv_bake, source_bounds=uv_source_bounds)
             add_uv_atlas_to_board(job, scene_name, base_name, node=node)
 
         create_asset_result(scene, node, result)
@@ -222,10 +226,14 @@ def _run_mesh_feature(context, node, operator):
     service_key = resolve_service_key(capability, selected_service)
     if not service_key or (is_uv and service_key not in UV_UNWRAP_SERVICE_KEYS):
         raise ValueError(rpt_("This 3D feature is unavailable in the generation catalog"))
+    uv_source_bounds = None
     if is_uv:
         from mixar.modules.hunyuan.core.tripo_uv_enqueue import check_triangle_limit
+        from mixar.modules.hunyuan.core.tripo_uv_placement import source_world_bounds
 
-        check_triangle_limit(context, meshes)
+        check_triangle_limit(meshes)
+        # The exported meshes' world box: the normalised result is fitted onto it.
+        uv_source_bounds = source_world_bounds(meshes)
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
         raise ValueError(rpt_("No enabled model is available for this feature"))
@@ -278,6 +286,7 @@ def _run_mesh_feature(context, node, operator):
         base_name=meshes[0].name,
         armature_in_front=routing.get('armature_in_front', False),
         uv_bake=bool(params.get("bake", True)) if is_uv else None,
+        uv_source_bounds=uv_source_bounds,
     )
     extra = {}
     if routing.get('import_options'):

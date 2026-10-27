@@ -310,7 +310,8 @@ def test_a_rig_without_its_skeleton_stamp_is_refused_everywhere():
 def test_the_continuation_menu_offers_animate_only_for_a_skeleton_stamped_rig(monkeypatch):
     from mixar.modules.moodboard.ui import moodboard_menu_actions as actions
 
-    monkeypatch.setattr(actions, "capability_available", lambda capability: True)
+    monkeypatch.setattr(actions, "capability_available",
+                        lambda capability, action_type=None: True)
     monkeypatch.setattr(actions, "template_available", lambda template: True)
     armature = _Object("Rig", 'ARMATURE', **_rig_stamps())
     body = _Object("Body", parent=armature)
