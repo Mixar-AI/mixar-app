@@ -103,6 +103,21 @@ bool moodboard_graph_select_link(PointerRNA *scene_ptr, int index);
  * preview window resolves media exactly the way playback does. */
 Image *moodboard_item_image(PointerRNA *scene_ptr, int index);
 
+/* mixie_moodboard_ops_preview_window.cc */
+/**
+ * Act on a movie card control (MOODBOARD_VIDEO_CARD_*) of the board item at
+ *  media_index: open the preview player (for a board tile by its own
+ *  media_id, for a node result by  node_id), toggle playback, or toggle
+ * sound. The caller's window/area/region context is kept.
+ */
+wmOperatorStatus moodboard_video_card_press(bContext *C,
+                                            PointerRNA *scene_ptr,
+                                            int media_index,
+                                            int button,
+                                            const char *media_id,
+                                            const char *node_id,
+                                            ReportList *reports);
+
 /* mixie_moodboard_ops_graph_video.cc */
 /**
  * Handle a press on a node-owned movie's play affordance (or a double-click on

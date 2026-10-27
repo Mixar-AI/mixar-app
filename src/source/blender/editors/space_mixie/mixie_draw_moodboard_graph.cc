@@ -378,10 +378,17 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
             if (tile_image->source == IMA_SRC_MOVIE) {
               /* A generated movie is owned by its node, so it never draws as a
                * standalone tile and would otherwise sit frozen on frame 1 with
-               * no way to start it. Same affordance as an uploaded movie. */
+               * no way to start it. Same hover controls as an uploaded movie,
+               * keyed by the owning node. */
               bool is_playing = false;
               moodboard_video_playback_frame(tile_image, &is_playing);
-              mixie_draw_moodboard_video_overlay(v2d, preview_bounds, is_playing);
+              const bool hovered = moodboard_video_card_register(
+                  CTX_wm_region(C), node_id, preview_bounds);
+              mixie_draw_moodboard_video_overlay(v2d,
+                                                 preview_bounds,
+                                                 hovered,
+                                                 is_playing,
+                                                 moodboard_video_is_muted(tile_image));
             }
           }
         }
