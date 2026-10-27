@@ -40,7 +40,7 @@ SRC = os.path.join(ROOT, "src", "scripts")
 CORE = "mixar.modules.space_mixie_chat.core"
 SRC_MODULES = tuple(f"{CORE}.{m}" for m in (
     "export_verification_status", "export_gltf_bounds", "export_verify", "export_clips",
-    "export_materials", "export_bake", "engine_targets", "export_package",
+    "export_materials", "export_bake_cache", "export_bake", "engine_targets", "export_package",
 ))
 SCALE = 1.8
 

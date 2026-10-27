@@ -439,6 +439,16 @@ def _swap_images(mats, mapping):
     return undo
 
 
+def _bake_warning(baked):
+    """One line when procedural materials went out unbaked (they arrive flat)."""
+    skipped = (baked or {}).get("skipped") or []
+    if not skipped:
+        return ""
+    names = ", ".join(s["material"] for s in skipped[:8])
+    return (f"{len(skipped)} procedural material(s) were not baked and will look flat in the file: "
+            f"{names}. {skipped[0]['reason']}.")
+
+
 def _bounds(objs):
     """World extents of the copies; a skinned copy keeps its own transform
     (its rest pose under the armature), so every copy is read in world space."""
@@ -640,7 +650,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    issue_count=len((verification or {}).get("issues") or []),
                    file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024))
     return {"delivery_status": verification_status(verification),
-            "warning": verification_warning(verification), "destination": where,
+            "warning": " ".join(filter(None, (verification_warning(verification), _bake_warning(baked)))),
+            "destination": where,
             "folder": os.path.basename(root), "files": files,
             "replaced_previous_files": replaced, "engine": engine_section,
             "main_file": stem + ext, "glb_check": check, "verification": verification,

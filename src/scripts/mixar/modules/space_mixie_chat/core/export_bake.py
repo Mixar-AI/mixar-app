@@ -12,7 +12,9 @@ fresh UV layout (one texture set per material, shared by every copy that uses
 it), bakes each linked channel with Cycles and points the copies at a plain
 Principled/image material for the export. The user's objects, materials and
 render settings are left as they were; the baked images and temporary
-materials are freed on exit.
+materials are freed on exit. Baked textures are kept between exports
+(``export_bake_cache``): an unchanged material is reused before anything is
+baked, so an export the time budget cut short continues on the next one.
 
 Runs after ``export_materials`` swapped baked Mixar stacks, so a baked stack
 is already image-based here and is not baked again.
@@ -23,6 +25,8 @@ import time
 from contextlib import contextmanager
 
 import bpy
+
+from . import export_bake_cache as bake_cache
 
 BAKE_UV = "MixarBake"
 MAX_UV_LAYERS = 8
@@ -265,7 +269,6 @@ def _bake_channels(job, size, margin, created_images):
             finally:
                 tree.links.new(source.outputs[0], out.inputs["Surface"])
                 tree.nodes.remove(emission)
-        image.pack()
         images[name] = image
     return images
 
@@ -423,6 +426,18 @@ def baked_procedural_materials(copies, *, density=128, max_px=2048, margin=8, bu
                 pass
 
 
+def _use_baked(job, images, current, report, created_mats, export_mats, *, reused):
+    mat = _export_material(job, images)
+    created_mats.append(mat)
+    export_mats[mat] = images
+    for o, idx in job["slots"].items():
+        for i in idx:
+            current[(o, i)] = mat
+    report["baked"].append({"material": job["material"].name, "objects": len(job["slots"]),
+                            "channels": [_SUFFIX[c] for c in images], "px": job["size"],
+                            "reused": reused})
+
+
 def _bake_all(jobs, objs, scene, state, current, report, created_mats, created_images,
               export_mats, t0, density, max_px, margin, budget_s):
     base = _add_bake_layers(objs)
@@ -434,13 +449,26 @@ def _bake_all(jobs, objs, scene, state, current, report, created_mats, created_i
     sink, sink_image = _sink()
     created_mats.append(sink)
     created_images.append(sink_image)
-    for key, job in jobs.items():
+    # Textures an earlier export already baked are reused first and cost no
+    # budget, so an export cut short continues where it stopped.
+    pending = []
+    for job in jobs.values():
+        area = sum(_face_area(o, idx) for o, idx in job["slots"].items())
+        job["size"] = texture_size(area, density, hi=max_px)
+        job["cache_key"] = bake_cache.key(job, job["size"], margin)
+        images = bake_cache.load(job["cache_key"], job["material"].name, job["plan"]["channels"],
+                                 _SUFFIX, _SRGB, created_images)
+        if images is None:
+            pending.append(job)
+            continue
+        _use_baked(job, images, current, report, created_mats, export_mats, reused=True)
+    for job in pending:
         name = job["material"].name
         if time.perf_counter() - t0 > budget_s:
-            report["skipped"].append({"material": name, "reason": f"over the {int(budget_s)} s bake budget"})
+            report["skipped"].append({"material": name, "reason": (
+                f"over the {int(budget_s)} s bake budget; export again: baked materials are "
+                "reused, so the next export bakes the rest")})
             continue
-        area = sum(_face_area(o, idx) for o, idx in job["slots"].items())
-        size = texture_size(area, density, hi=max_px)
         bake_mat = job["material"].copy()
         bake_mat.name = f"{name}_mixar_bake"
         created_mats.append(bake_mat)
@@ -449,21 +477,20 @@ def _bake_all(jobs, objs, scene, state, current, report, created_mats, created_i
             for i in range(len(o.data.materials)):
                 o.data.materials[i] = bake_mat if i in job["slots"][o] else sink
         try:
-            images = _bake_channels(job, size, margin, created_images)
-            mat = _export_material(job, images)
-            created_mats.append(mat)
-            export_mats[mat] = images
-            for o, idx in job["slots"].items():
-                for i in idx:
-                    current[(o, i)] = mat
-            report["baked"].append({"material": name, "objects": len(job["slots"]),
-                                    "channels": [_SUFFIX[c] for c in images], "px": size})
+            images = _bake_channels(job, job["size"], margin, created_images)
+            for image in images.values():
+                image.pack()
+            bake_cache.store(job["cache_key"], images, _SUFFIX)
+            _use_baked(job, images, current, report, created_mats, export_mats, reused=False)
         except Exception as exc:  # noqa: BLE001 - one material's failure skips it
             report["skipped"].append({"material": name, "reason": f"{type(exc).__name__}: {exc}"[:200]})
         finally:
             for o in job["slots"]:
                 for i in range(len(o.data.materials)):
                     o.data.materials[i] = current[(o, i)]
+    # A copy whose every material came from the cache was never touched above.
+    for (o, i), mat in current.items():
+        o.data.materials[i] = mat
     _restore_render(scene, state)
     _finish_uvs(objs, base)
     names = {n for n in base.values() if n}
