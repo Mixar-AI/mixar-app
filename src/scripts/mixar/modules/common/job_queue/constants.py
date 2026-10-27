@@ -44,6 +44,8 @@ FEATURE_MESH_SEGMENT = "mesh_segment"
 # which keys on the job label.
 FEATURE_TRIPO_SEGMENT = "tripo_segment"
 FEATURE_SMART_SEGMENT = "smart_segment"
+# Tripo Smart UV (/v3/mesh/uv) — re-unwrap a mesh's UVs.
+FEATURE_TRIPO_UV = "tripo_uv"
 FEATURE_SCENE_RECON = "scene_recon"
 FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"
@@ -151,6 +153,7 @@ __all__ = (
     "FEATURE_HUNYUAN_RAPID",
     "FEATURE_HUNYUAN_PART",
     "FEATURE_HUNYUAN_UV",
+    "FEATURE_TRIPO_UV",
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
     "FEATURE_VIDEO_GEN",

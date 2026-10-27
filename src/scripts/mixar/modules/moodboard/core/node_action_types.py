@@ -20,4 +20,5 @@ ACTION_TYPES = (
     ('CHARACTER_PARTS', "Character Parts", "Generate 3D parts from the connected image masks"),
     ('ASSEMBLE', "Assemble Character", "Attach generated parts to a rigged or plain body, locally"),
     ('ANIMATE', "Animate", "Apply preset animations to the connected rigged character"),
+    ('UV_UNWRAP', "Smart UV", "Re-unwrap the connected 3D mesh's UVs"),
 )
