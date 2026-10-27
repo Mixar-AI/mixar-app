@@ -41,6 +41,7 @@
 #include "ED_buttons.hh"
 #include "ED_moodboard_drawer.hh"
 #include "ED_scenes_drawer.hh"
+#include "ED_mixar_area_chrome.hh"
 #include "ED_screen.hh"
 #include "ED_screen_types.hh"
 #include "ED_space_api.hh"
@@ -1286,11 +1287,24 @@ static void region_azone_tab_plus(ScrArea *area, AZone *az, ARegion *region)
   BLI_rcti_init(&az->rect, az->x1, az->x2, az->y1, az->y2);
 }
 
+static MixarAreaChromelessFn g_mixar_area_chromeless = nullptr;
+
+void ED_area_mixar_chromeless_set(const MixarAreaChromelessFn fn)
+{
+  g_mixar_area_chromeless = fn;
+}
+
 static bool region_azone_edge_poll(const ScrArea *area,
                                    const ARegion *region,
                                    const bool is_fullscreen)
 {
   if (region->flag & RGN_FLAG_POLL_FAILED) {
+    return false;
+  }
+
+  /* Mixar: an editor reused as a bare surface (the moodboard video player)
+   * offers no edge arrows or reveal tabs for its hidden regions. */
+  if (g_mixar_area_chromeless && g_mixar_area_chromeless(area)) {
     return false;
   }
 

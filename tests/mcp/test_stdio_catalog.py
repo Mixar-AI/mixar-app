@@ -33,9 +33,11 @@ class FakeConnector:
         self.calls.append((name, arguments))
         payload = {"result": {"domains": {"build": 1}, "tools": [
             {"name": "execute_bpy_script", "domain": "build", "summary": "Run bpy.",
-             "read_only": False, "credits": "free."}]}, "usage": {"request_id": call_id}}
-        return {"content": [{"type": "text", "text": json.dumps(payload)}],
-                "structuredContent": payload, "isError": False}
+             "read_only": False, "credits": "free."}]}}
+        # The backend's minimized envelope: a free call's receipt is in _meta only.
+        return {"content": [{"type": "text", "text": json.dumps(payload["result"])}],
+                "structuredContent": payload, "isError": False,
+                "_meta": {"mixar/usage": {"call_id": call_id, "credits_charged": 0}}}
 
     def cancel(self, call_id=None):
         pass
