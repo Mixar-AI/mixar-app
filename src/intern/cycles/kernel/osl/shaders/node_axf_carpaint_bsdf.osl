@@ -1,0 +1,18 @@
+/* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#include "stdcycles.h"
+
+/* OSL cannot express the measured AxF CarPaint2 closure (it needs the light
+ * direction at evaluation time); SVM evaluates it exactly. This is a neutral
+ * stand-in so OSL renders do not fail. */
+shader node_axf_carpaint_bsdf(color Color = 1.0,
+                              normal Normal = N,
+                              point FlakeUV = P,
+                              string TableFilename = "",
+                              string FlakesFilename = "",
+                              output closure color BSDF = 0)
+{
+  BSDF = Color * 0.5 * diffuse(Normal);
+}

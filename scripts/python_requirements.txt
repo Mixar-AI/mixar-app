@@ -14,3 +14,5 @@ mistune>=3.0.0
 Pillow>=10.0.0
 cryptography>=42.0.0
 pywin32==311; sys_platform == "win32"
+# X-Rite AxF (HDF5) material import: the AxF CarPaint importer reads it with h5py.
+h5py>=3.12
