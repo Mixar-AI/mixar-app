@@ -75,8 +75,15 @@ ccl_device_inline float4 axf_texel(KernelGlobals kg,
                                    const int w,
                                    const int h)
 {
+#if defined(__KERNEL_OPTIX__) && !defined(__SVM__)
+  /* OptiX OSL kernels are built without SVM and without the image lookup. Only SVM creates
+   * this closure (OSL compiles a stand-in), so it never runs there. */
+  (void)kg, (void)sd, (void)id, (void)x, (void)y, (void)w, (void)h;
+  return zero_float4();
+#else
   const float2 co = make_float2((float(x) + 0.5f) / float(w), (float(y) + 0.5f) / float(h));
   return kernel_image_interp(kg, sd, id, dual2(co));
+#endif
 }
 
 ccl_device_inline float4 axf_param(KernelGlobals kg,
