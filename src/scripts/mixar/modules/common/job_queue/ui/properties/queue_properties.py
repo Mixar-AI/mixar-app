@@ -262,6 +262,7 @@ def _attach_listeners() -> None:
         FEATURE_SCENE_RECON,
         FEATURE_SMART_SEGMENT,
         FEATURE_TRIPO_SEGMENT,
+        FEATURE_TRIPO_UV,
         FEATURE_WORLD_LABS,
     )
 
@@ -278,6 +279,7 @@ def _attach_listeners() -> None:
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
         FEATURE_ANIMATE, FEATURE_PBR_GEN, FEATURE_TRIPO_SEGMENT,
         FEATURE_SMART_SEGMENT, FEATURE_WORLD_LABS, FEATURE_VIDEO_UPSCALE,
+        FEATURE_TRIPO_UV,
     )
     for feat in _FEATURES:
         try:
