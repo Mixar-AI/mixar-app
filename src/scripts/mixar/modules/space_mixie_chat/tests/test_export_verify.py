@@ -38,7 +38,7 @@ VERIFICATION_KEYS = {
 def test_glb_parse_reads_counts_names_bounds_and_clips(tmp_path):
     path = write_glb(tmp_path / "hero.glb", meshes=2, animations=["Walk", "Run"])
     result = export_verify.verify_export(path, "glb", {
-        "mesh_count": 2, "armature_count": 1, "clips": ["walk"], "joined": False,
+        "mesh_count": 2, "armature_count": 1, "clips": ["walk", "run"], "joined": False,
         "images_expected": 1,
     })
     assert VERIFICATION_KEYS <= set(result)
@@ -382,3 +382,57 @@ def test_glb_dimensions_are_world_space(tmp_path):
     assert [round(v, 4) for v in lo] == [8.0, 0.0, 0.0]
     assert [round(v, 4) for v in hi] == [14.0, 4.0, 12.0]
     assert export_gltf_bounds.gltf_world_bounds({"nodes": [{"name": "empty"}], "scenes": [{"nodes": [0]}]}) is None
+
+
+def test_a_rigged_mesh_without_joint_weights_fails_verification(tmp_path):
+    """The Oct 26 CS:GO run: the package held the skeleton and both clips, the
+    mesh had no JOINTS_0 / WEIGHTS_0, Godot bound no skin and the soldier slid
+    around frozen while every export reported ``verified``."""
+    weighted = write_glb(tmp_path / "ok.glb", skin="weighted", animations=["walk", "run"])
+    ok = export_verify.verify_export(weighted, "glb", {
+        "mesh_count": 1, "armature_count": 1, "skinned_meshes": 1, "clips": ["walk", "run"],
+        "images_expected": 1})
+    assert ok["passed"] is True, ok["issues"]
+    assert ok["skins"] == 1 and ok["skinned_meshes"] == 1
+    for kind in ("unweighted", None):
+        path = write_glb(tmp_path / f"{kind}.glb", skin=kind, animations=["walk", "run"])
+        bad = export_verify.verify_export(path, "glb", {
+            "mesh_count": 1, "armature_count": 1, "skinned_meshes": 1, "clips": ["walk", "run"],
+            "images_expected": 1})
+        assert bad["passed"] is False and bad["skinned_meshes"] == 0
+        assert any("lost their skin" in issue for issue in bad["issues"])
+    # a static mesh beside nothing expects no skin
+    plain = export_verify.verify_export(write_glb(tmp_path / "p.glb"), "glb", {"mesh_count": 1})
+    assert plain["passed"] is True and plain["skinned_meshes"] == 0
+
+
+def test_clips_nobody_requested_are_flagged(tmp_path):
+    path = write_glb(tmp_path / "c.glb", animations=["walk", "run", "soldier_motion_reference_walk"])
+    result = export_verify.verify_export(path, "glb", {"mesh_count": 1, "clips": ["walk", "run"]})
+    assert result["passed"] is False
+    assert any("not requested: soldier_motion_reference_walk" in issue for issue in result["issues"])
+
+
+def test_copies_keep_a_skinned_mesh_skinned():
+    """Static copies are baked, a skinned copy keeps its armature (source)."""
+    source = inspect.getsource(export_package._copies) + inspect.getsource(export_package._skinned_copy)
+    assert "_skinned_copy(o, orig, me)" in source
+    assert 'modifiers.new("Armature", "ARMATURE")' in source
+    assert "matrix_parent_inverse" in source
+    assert "skinned_meshes" in inspect.getsource(export_package.export_package)
+
+
+def test_a_named_empty_stands_for_its_meshes_and_armatures():
+    """Oct 26: ``export_asset`` on a generated asset's root empty failed with
+    "names must include at least one mesh object"."""
+    from types import SimpleNamespace as NS
+
+    def obj(name, kind, children=()):
+        return NS(name=name, type=kind, children_recursive=list(children))
+
+    body, rig, light = obj("Body", "MESH"), obj("Rig", "ARMATURE"), obj("Lamp", "LIGHT")
+    gun = obj("Gun", "MESH")
+    root = obj("Soldier", "EMPTY", [rig, body, light])
+    scene = NS(objects={o.name: o for o in (root, body, rig, light, gun)})
+    out = export_package._expand_empties([root, gun, body], scene)
+    assert [o.name for o in out] == ["Soldier", "Rig", "Body", "Gun"]

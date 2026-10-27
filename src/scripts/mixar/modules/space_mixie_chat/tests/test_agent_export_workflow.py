@@ -237,10 +237,14 @@ def test_clip_selection_restores_on_exporter_failure():
 
 
 def test_animation_kwargs_per_format():
-    assert export_clips.animation_kwargs("glb", None) == ({"export_animations": True}, "all", "")
+    # export_anim_single_armature off: only the armature's active action and
+    # NLA strips, never every bone action in the file (Oct 26 stray clips).
+    assert export_clips.animation_kwargs("glb", None) == (
+        {"export_animations": True, "export_anim_single_armature": False}, "all", "")
     assert export_clips.animation_kwargs("glb", []) == ({"export_animations": False}, "none", "")
     assert export_clips.animation_kwargs("gltf", ["Walk"])[0] == {
-        "export_animations": True, "export_animation_mode": "ACTIONS"}
+        "export_animations": True, "export_animation_mode": "ACTIONS",
+        "export_anim_single_armature": False}
     assert export_clips.animation_kwargs("fbx", ["Walk"])[0] == {
         "bake_anim": True, "bake_anim_use_nla_strips": True, "bake_anim_use_all_actions": False}
     assert export_clips.animation_kwargs("fbx", [])[0] == {"bake_anim": False}

@@ -239,6 +239,9 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             pass
         verification = verify_export(filepath, fmt, {
             "mesh_count": len(meshes), "armature_count": len(armatures),
+            "skinned_meshes": 0 if stl else sum(
+                1 for m in meshes if (m.parent is not None and m.parent.type == "ARMATURE")
+                or any(md.type == "ARMATURE" and md.object is not None for md in m.modifiers)),
             "clips": clips if animations is not None and not stl else None,
             # STL has no objects: every mesh lands in the file as one solid.
             "joined": stl,

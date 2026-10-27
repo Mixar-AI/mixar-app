@@ -7,7 +7,10 @@ GLB / glTF / FBX / USD(Z) + ``textures/`` + ``manifest.json`` + optional
 lower-resolution texture tiers, a ``.blend`` source and a README.
 
 Exports run on temporary copies (transforms and modifiers applied, parents
-flattened, optionally joined), so the user's objects are never changed.
+flattened, optionally joined), so the user's objects are never changed. A
+skinned mesh's copy keeps its armature (parent, Armature modifier, vertex
+groups) so the file still carries a skin; a named empty stands for the
+meshes and armatures under it.
 Mixar paint slots on the copies are swapped to their baked Principled/image
 materials (``export_materials``) for the whole package; every material an
 exporter cannot read (procedural nodes, an unbaked stack) is then baked to
@@ -133,13 +136,29 @@ def _copies(objs, join, keep_origins=False):
     the user's objects never keep the ``.mixar_export_src`` name.
     ``keep_origins`` (engine packages) bakes rotation and scale but leaves each
     copy at its original's world origin, so a door turns about its hinge and a
-    pickup spins about its own centre; the world placement is unchanged."""
-    deps = bpy.context.evaluated_depsgraph_get()
+    pickup spins about its own centre; the world placement is unchanged.
+
+    A SKINNED mesh (parented to an armature or deformed by one) stays skinned:
+    its copy applies every modifier but the Armature ones, keeps its vertex
+    groups, its transform and its armature parent, and gets the same Armature
+    modifiers — baking the deform would freeze it in the current pose and the
+    file would carry a skeleton the mesh no longer follows. Skinned copies are
+    never joined."""
+    skinned = {o for o in objs if _skinned(o)}
+    held = []
+    for o in skinned:
+        for m in o.modifiers:
+            if m.type == "ARMATURE" and m.show_viewport:
+                m.show_viewport = False
+                held.append(m)
     col = bpy.data.collections.new("mixar_export_tmp")
     bpy.context.scene.collection.children.link(col)
     out = []
     renamed = []
     try:
+        if held:
+            bpy.context.view_layer.update()
+        deps = bpy.context.evaluated_depsgraph_get()
         for o in objs:
             # the copy takes the original's name so exported node names are clean
             orig = o.name
@@ -147,31 +166,69 @@ def _copies(objs, join, keep_origins=False):
             renamed.append((o, orig))
             ev = o.evaluated_get(deps)
             me = bpy.data.meshes.new_from_object(ev, preserve_all_data_layers=True, depsgraph=deps)
-            me.transform(o.matrix_world)
-            if o.matrix_world.is_negative:
-                me.flip_normals()
-            origin = None
-            if keep_origins:
-                from mathutils import Matrix
-                origin = o.matrix_world.translation.copy()
-                me.transform(Matrix.Translation(-origin))
-            c = bpy.data.objects.new(orig, me)
-            if origin is not None:
-                c.location = origin
+            if o in skinned:
+                c = _skinned_copy(o, orig, me)
+            else:
+                me.transform(o.matrix_world)
+                if o.matrix_world.is_negative:
+                    me.flip_normals()
+                origin = None
+                if keep_origins:
+                    from mathutils import Matrix
+                    origin = o.matrix_world.translation.copy()
+                    me.transform(Matrix.Translation(-origin))
+                c = bpy.data.objects.new(orig, me)
+                if origin is not None:
+                    c.location = origin
             for idx, slot in enumerate(o.material_slots):
                 if slot.link == "OBJECT" and slot.material is not None and idx < len(me.materials):
                     me.materials[idx] = slot.material
             col.objects.link(c)
             out.append(c)
-        if join and len(out) > 1:
-            ctx = {"active_object": out[0], "selected_editable_objects": out, "selected_objects": out}
+        static = [c for c, o in zip(out, objs) if o not in skinned]
+        if join and len(static) > 1:
+            ctx = {"active_object": static[0], "selected_editable_objects": static, "selected_objects": static}
             with bpy.context.temp_override(**ctx):
                 bpy.ops.object.join()
-            out = [out[0]]
+            out = [c for c, o in zip(out, objs) if o in skinned or c is static[0]]
     except Exception:
         _cleanup(col, renamed)
         raise
+    finally:
+        for m in held:
+            m.show_viewport = True
+        # parented (skinned) copies get their world matrix here
+        bpy.context.view_layer.update()
     return col, out, renamed
+
+
+def _skinned_copy(o, name, me):
+    """A copy of skinned ``o`` that the exporters still write as a skin:
+    the un-deformed mesh with its vertex groups, ``o``'s transform and armature
+    parent, and ``o``'s Armature modifiers pointing at the same armatures."""
+    c = bpy.data.objects.new(name, me)
+    for vg in o.vertex_groups:
+        if c.vertex_groups.get(vg.name) is None:
+            c.vertex_groups.new(name=vg.name)
+    if o.parent is not None:
+        c.parent = o.parent
+        c.parent_type = o.parent_type
+        c.parent_bone = o.parent_bone
+        c.matrix_parent_inverse = o.matrix_parent_inverse.copy()
+        c.matrix_basis = o.matrix_basis.copy()
+    else:
+        c.matrix_world = o.matrix_world.copy()
+    mods = [m for m in o.modifiers if m.type == "ARMATURE" and m.object is not None]
+    if not mods and o.parent is not None and o.parent.type == "ARMATURE" and o.parent_type == "ARMATURE":
+        mods = [None]  # parented with automatic weights: deform by the parent
+    for m in mods:
+        cm = c.modifiers.new("Armature", "ARMATURE")
+        cm.object = o.parent if m is None else m.object
+        if m is not None:
+            cm.use_vertex_groups = m.use_vertex_groups
+            cm.use_bone_envelopes = m.use_bone_envelopes
+            cm.use_deform_preserve_volume = m.use_deform_preserve_volume
+    return c
 
 
 def _cleanup(col, renamed):
@@ -183,6 +240,19 @@ def _cleanup(col, renamed):
     bpy.data.collections.remove(col)
     for o, orig in renamed:
         o.name = orig
+
+
+def _expand_empties(objs, scene):
+    """A named empty stands for the hierarchy under it (a generated asset's
+    root, a level's group): its mesh and armature descendants in this scene
+    join the export, in order, each once."""
+    out = []
+    for o in objs:
+        group = [o] + (list(o.children_recursive) if o.type == "EMPTY" else [])
+        for c in group:
+            if c not in out and (c is o or (c.type in ("MESH", "ARMATURE") and c.name in scene.objects)):
+                out.append(c)
+    return out
 
 
 def _armatures(objs):
@@ -200,7 +270,8 @@ def _armatures(objs):
 
 
 def _skinned(obj):
-    return (obj.parent is not None and obj.parent.type == "ARMATURE") or any(
+    parent = getattr(obj, "parent", None)
+    return (parent is not None and parent.type == "ARMATURE") or any(
         m.type == "ARMATURE" and m.object is not None for m in getattr(obj, "modifiers", ()))
 
 
@@ -226,7 +297,7 @@ def _engine_prepare(engine, copies, renamed, col, joined):
         shape = engine_targets.collision_shape(tags, src is not None and _skinned(src))
         names = engine_targets.collision_names(engine, c.name, shape)
         hulls += engine_targets.build_collision(engine, c, shape, names, col)
-        objects.append({"name": c.name, **tags, "origin": [round(float(v), 4) for v in c.location],
+        objects.append({"name": c.name, **tags, "origin": [round(float(v), 4) for v in c.matrix_world.translation],
                         "collision": engine_targets.collision_entry(engine, c.name, shape, names)})
     return objects, issues, hulls
 
@@ -369,12 +440,15 @@ def _swap_images(mats, mapping):
 
 
 def _bounds(objs):
+    """World extents of the copies; a skinned copy keeps its own transform
+    (its rest pose under the armature), so every copy is read in world space."""
     import numpy as np
     pts = []
     for o in objs:
         co = np.empty(len(o.data.vertices) * 3)
         o.data.vertices.foreach_get("co", co)
-        pts.append(co.reshape(-1, 3))
+        m = np.array(o.matrix_world)
+        pts.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
     p = np.concatenate(pts) if pts else np.zeros((1, 3))
     return (p.max(0) - p.min(0)).tolist()
 
@@ -427,8 +501,9 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         if fmt not in engine_targets.ENGINE_FORMATS[engine]:
             raise ValueError(f"a {engine} package is {' or '.join(engine_targets.ENGINE_FORMATS[engine])}")
     scene = bpy.context.scene
-    objs = [scene.objects[n] for n in names]
-    stem = _safe(os.path.splitext(filename or objs[0].name)[0])
+    named = [scene.objects[n] for n in names]
+    objs = _expand_empties(named, scene)
+    stem = _safe(os.path.splitext(filename or named[0].name)[0])
     root = destination(where, folder or stem)
     replaced = 0
     ext = {"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz", "usd": ".usdc"}[fmt]
@@ -512,11 +587,13 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues)
         verification = verify_export(main, fmt, {
             "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
+            "skinned_meshes": sum(1 for c in copies if _skinned(c)),
             "clips": clips if animations is not None else None,
             "joined": bool(join and len(meshes) > 1), "images_expected": len(images),
             "compression": "none",
         })
-        if verification.get("checked") and verification.get("animations") and animations is None:
+        # The clips reported are the ones the FILE holds, requested or not.
+        if verification.get("checked") and (verification.get("animations") or animations):
             clips = file_clip_names(clips, verification["animations"])
         warning = " ".join(filter(None, (warning, verification_warning(verification))))
         check = verification if fmt == "glb" else None

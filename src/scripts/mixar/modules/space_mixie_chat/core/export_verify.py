@@ -128,6 +128,8 @@ def summarize_gltf(doc: dict, result: dict) -> None:
             for img in images) if images else None
     )
     result["animations"] = [str(a.get("name", "")) for a in doc.get("animations") or []]
+    result["skins"] = len(doc.get("skins") or [])
+    result["skinned_meshes"] = gltf_skinned_meshes(doc)
     extensions = doc.get("extensionsUsed") or []
     result["draco"] = "KHR_draco_mesh_compression" in extensions
     punctual = ((doc.get("extensions") or {}).get("KHR_lights_punctual") or {}).get("lights") or []
@@ -161,6 +163,22 @@ def summarize_gltf(doc: dict, result: dict) -> None:
     if bounds is not None:
         result["dimensions_m"] = [round(float(bounds[1][i] - bounds[0][i]), 4) for i in range(3)]
     result["checked"] = True
+
+
+def gltf_skinned_meshes(doc: dict) -> int:
+    """Mesh nodes a skeleton actually moves: the node names a skin AND every
+    primitive of its mesh carries ``JOINTS_0`` + ``WEIGHTS_0``. A skeleton
+    beside a mesh without them plays its clips while the mesh stays still."""
+    meshes = doc.get("meshes") or []
+    count = 0
+    for node in doc.get("nodes") or []:
+        index = node.get("mesh")
+        if node.get("skin") is None or index is None or index >= len(meshes):
+            continue
+        prims = meshes[index].get("primitives") or []
+        if prims and all({"JOINTS_0", "WEIGHTS_0"} <= set(p.get("attributes") or {}) for p in prims):
+            count += 1
+    return count
 
 
 def _verify_glb(path: str, result: dict) -> None:
@@ -339,6 +357,18 @@ def _compare(result: dict, expected: dict, fmt: str) -> None:
         if missing and len(result.get("animations") or []) < len(clips):
             issues.append(
                 f"{len(missing)} requested clip(s) are not in the file.")
+        extra = [name for name in result.get("animations") or []
+                 if not any(clip_in_file(c, [name]) for c in clips)]
+        if extra and len(result.get("animations") or []) > len(clips):
+            issues.append(
+                f"The file holds clip(s) that were not requested: {', '.join(extra[:6])}.")
+    want_skinned = int(expected.get("skinned_meshes") or 0)
+    if want_skinned and result.get("skinned_meshes") is not None:
+        if int(result["skinned_meshes"]) < want_skinned:
+            lost = want_skinned - int(result["skinned_meshes"])
+            issues.append(
+                f"{lost} rigged mesh(es) lost their skin: the file has the skeleton but the mesh "
+                f"carries no joint weights, so it will not move with its animations.")
     images_expected = int(expected.get("images_expected") or 0)
     if images_expected and result.get("images") is not None:
         if result["images"] == 0:
