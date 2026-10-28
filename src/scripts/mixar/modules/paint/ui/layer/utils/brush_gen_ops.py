@@ -19,6 +19,7 @@ from mixar.modules.common.i18n import n_, rpt_
 logger = get_logger(__name__)
 
 from ...utils import get_mixar_ui
+from ...ui_state import NO_BRUSH_MODEL
 from ...vcol.brush_utils import activate_local_brush
 from .brush_texture_ops import get_or_create_local_brush
 
@@ -98,6 +99,15 @@ def _apply_image_as_mask(image):
     except Exception as e:
         logger.error("[BrushGen] Failed to apply mask texture: %s", e)
         return False
+
+
+def _apply_result_to_brush(_job, image_names):
+    """on_imported hook: set the first delivered image as the brush mask."""
+    image = bpy.data.images.get((image_names or "").split(", ")[0])
+    if image is None or not _apply_image_as_mask(image):
+        logger.warning("[BrushGen] could not apply '%s' to the brush", image_names)
+        return
+    _redraw_ui()
 
 
 def _redraw_ui(_context=None):
@@ -222,6 +232,12 @@ class MGenerateBrushTexture(Operator):
         description="Called from chat/agent context",
         default=False,
     )
+    apply_to_brush: bpy.props.BoolProperty(
+        name="Apply to Brush",
+        description="Set the generated texture as the active brush's mask when it arrives",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
 
     @classmethod
     def poll(cls, context):
@@ -258,6 +274,10 @@ class MGenerateBrushTexture(Operator):
             set_agent_gen_reason(context, "No prompt provided for the brush texture")
             self.report({'WARNING'}, "Please enter a prompt for the brush texture")
             return {'CANCELLED'}
+        if not model_name or model_name == NO_BRUSH_MODEL:
+            set_agent_gen_reason(context, "No brush generation model is available")
+            self.report({'ERROR'}, "No brush generation model is available")
+            return {'CANCELLED'}
 
         import base64 as _b64
         from mixar.modules.common.job_queue import enqueue_generation
@@ -279,6 +299,7 @@ class MGenerateBrushTexture(Operator):
             name_prefix="brush_gen",
             prompt_text=prompt,
             listener=_get_brush_gen_listener(),
+            on_imported=_apply_result_to_brush if self.apply_to_brush else None,
         )
 
         if not job:
