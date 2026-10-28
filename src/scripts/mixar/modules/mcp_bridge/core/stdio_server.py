@@ -12,7 +12,7 @@ from mcp.server.stdio import stdio_server
 
 from mixar.modules.common.ui_control.core import schema
 from . import availability, presentation
-from .connector import Connector, instances, signed_in, usable
+from .connector import Connector, Unconfirmed, instances, signed_in, usable
 
 # Clients put server instructions in the model's system prompt, and Claude Code
 # keeps only their first 2,048 characters: core rules first, the full playbook
@@ -80,12 +80,34 @@ def with_ui_domain(tools):
     return tools
 
 
+def local_result(result, call_id):
+    """A free answer the launcher gives itself, shaped like the backend's: the result
+    for the model, the call UUID and zero-credit receipt in ``_meta`` alone."""
+    usage = {"call_id": call_id, "status": "succeeded", "surface": "local_ui",
+             "invocation_credits": 0, "credits_charged": 0}
+    # ``usage`` stays as {}: sessions that listed backend tools before it became
+    # optional hold an outputSchema that requires it.
+    return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(result))],
+                                structured_content={"result": result, "usage": {}},
+                                meta={"mixar/request-id": call_id, "mixar/usage": usage})
+
+
 def failure(exc, call_id):
-    payload = {"error": str(exc), "call_id": call_id,
-               "note": "No automatic mutation retry occurred. Inspect status before further edits."}
-    return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
+    """A refusal, or (``Unconfirmed``) a call that reached Mixar and whose answer
+    was lost: only then does the model need the call UUID, to recover it with
+    mixar_call_status / mixar_ui_call_status instead of repeating it."""
+    payload = {"result": {"error": str(exc)}}
+    usage = {"call_id": call_id, "status": "failed", "credits_charged": 0}
+    if isinstance(exc, Unconfirmed):
+        payload["result"]["note"] = ("No automatic retry occurred. Inspect the current state and check this "
+                                     "call's status before repeating any change.")
+        payload["usage"] = {"call_id": call_id, "status": "unknown"}
+        usage = {"call_id": call_id, "status": "unknown"}
+    text = json.dumps(payload)
+    payload.setdefault("usage", {})  # required by pre-minimization outputSchemas
+    return types.CallToolResult(content=[types.TextContent(type="text", text=text)],
                                 structured_content=payload, is_error=True,
-                                meta={"mixar/request-id": call_id})
+                                meta={"mixar/request-id": call_id, "mixar/usage": usage})
 
 
 def create_server(connector):
@@ -121,11 +143,8 @@ def create_server(connector):
             if params.name == "mixar_tool_quote" and args.get("tool") in schema.SCHEMAS:
                 if set(args) != {"tool"}:
                     raise ValueError("Specify only the tool to quote")
-                payload = {"result": {"tool": args["tool"], "invocation_credits": 0,
-                    "generation_credits": None, "generation_billing": "existing_job_queue",
-                    "surface": "local_ui"}, "usage": {"request_id": call_id, "credits_charged": 0}}
-                return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
-                                            structured_content=payload, meta={"mixar/request-id": call_id})
+                return local_result({"tool": args["tool"], "invocation_credits": 0, "generation_credits": 0,
+                                     "total_credits": 0, "generation_billing": "included"}, call_id)
             if params.name == "mixar_ui_context":
                 if args.get("instance"):
                     available = await asyncio.to_thread(instances)
@@ -154,10 +173,7 @@ def create_server(connector):
                     args = {k: v for k, v in args.items() if k != "session"}
             if params.name == "mixar_tool_catalog" and args.get("domain") in LOCAL_DOMAINS:
                 entries = ui_index(args.get("query", ""), args["domain"])
-                payload = {"result": {"domains": {args["domain"]: len(entries)}, "tools": entries},
-                           "usage": {"request_id": call_id, "credits_charged": 0}}
-                return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
-                                            structured_content=payload, meta={"mixar/request-id": call_id})
+                return local_result({"domains": {args["domain"]: len(entries)}, "tools": entries}, call_id)
             connector.client = presentation.client_info(ctx)
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
             payload = result.get("structuredContent") or {}

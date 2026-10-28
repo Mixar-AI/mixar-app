@@ -16,7 +16,8 @@ are a cross-language contract.
 
 **The dict's `mixar_agent_model_label` is the MODEL-ONLY label; the WM property
 of the same name receives the COMPOSED chip text** (`chip_text()`, built by
-`model_menu.chip_label` from the label, the saved thinking level and the BYOK
+`model_menu.chip_label` from the label, the level the turn runs at (saved,
+else the catalog default) and the BYOK
 flag: "GPT 5.6 Sol · High", or the BYOK indicator while a user key overrides
 the pick). Composing at the mirror boundary keeps the C++ side a plain string
 reader and the dict a faithful copy of the server payload.
@@ -220,7 +221,9 @@ def chip_text() -> str:
     current = snapshot()
     return model_menu.chip_label(
         current["mixar_agent_model_label"],
-        current["mixar_agent_model_thinking"],
+        model_menu.effective_thinking(current["mixar_agent_model_provider"],
+                                      current["mixar_agent_model_id"],
+                                      current["mixar_agent_model_thinking"]),
         bool(current["mixar_agent_model_byok_active"]),
     )
 
