@@ -210,3 +210,32 @@ def test_signals_overlay_tracks_the_pinned_upstream():
         flags=re.DOTALL,
     )
     assert overlay == upstream
+
+
+ACTION_ITERATORS = ROOT / "src/source/blender/animrig/intern/action_iterators.cc"
+WM_FILES = ROOT / "src/source/blender/windowmanager/intern/wm_files.cc"
+MODULES = ROOT / "src/scripts/mixar/modules"
+
+
+def test_action_slot_iterators_skip_an_armature_with_no_pose():
+    """``NlaStrip.action_slot`` on a fresh ``bpy.data.objects.new()`` armature
+    walked ``object.pose->chanbase`` with no pose and segfaulted (cs-go-3 run,
+    28 Oct). Both iterators must check the pose first."""
+    src = ACTION_ITERATORS.read_text()
+    assert src.count("object.pose->chanbase") == 2
+    assert src.count("object.type == OB_ARMATURE && object.pose") == 2
+
+
+def test_autosave_runs_under_the_passive_agent_modals():
+    """The agent viewport lock and undo shield are modal for a whole turn; an
+    autosave that waits on every modal operator never ran during a turn."""
+    body = _fn(WM_FILES.read_text(), "void wm_autosave_timer")
+    assert "!wm_autosave_modal_op_is_passive(handler->op)" in body
+    passive = re.search(r"passive_idnames\[\] = \{(.*?)\};", WM_FILES.read_text(), re.S).group(1)
+    idnames = re.findall(r'"([A-Z_]+)_OT_(\w+)"', passive)
+    assert len(idnames) == 3
+    py = "\n".join(p.read_text() for p in MODULES.rglob("*.py"))
+    for prefix, name in idnames:
+        # A Python operator `mixar.agent_viewport_block` is `MIXAR_OT_agent_viewport_block`
+        # in C++; a rename on either side would silently starve autosave again.
+        assert f'bl_idname = "{prefix.lower()}.{name}"' in py, (prefix, name)

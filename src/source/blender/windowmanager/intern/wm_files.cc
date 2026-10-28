@@ -2649,6 +2649,30 @@ void WM_file_autosave_init(wmWindowManager *wm)
   wm_autosave_timer_begin(wm);
 }
 
+/**
+ * Mixar: modal operators that only watch input for a whole agent turn (or a
+ * background job) and never hold half-applied edits. The agent viewport lock
+ * and the undo shield run from the first script of a turn to its end, so
+ * treating them like a mid-drag transform starved autosave for the whole turn:
+ * the cs-go-3 run (28 Oct) crashed after 1 h 50 min with its last autosave from
+ * the turn's first minute. Agent scripts run on the main thread between
+ * events, so an autosave here never sees one half done.
+ */
+static bool wm_autosave_modal_op_is_passive(const wmOperator *op)
+{
+  static const char *passive_idnames[] = {
+      "MIXAR_OT_agent_viewport_block",
+      "MIXIE_CHAT_OT_undo_shield",
+      "MIXIE_OT_train_asset_model",
+  };
+  for (const char *idname : passive_idnames) {
+    if (STREQ(op->idname, idname)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void wm_autosave_timer(Main *bmain, wmWindowManager *wm, wmTimer * /*wt*/)
 {
   Mixar_StallScope stall_scope("autosave", "wm_autosave_timer");
@@ -2660,7 +2684,7 @@ void wm_autosave_timer(Main *bmain, wmWindowManager *wm, wmTimer * /*wt*/)
     for (wmEventHandler &handler_base : win.runtime->modalhandlers) {
       if (handler_base.type == WM_HANDLER_TYPE_OP) {
         wmEventHandler_Op *handler = reinterpret_cast<wmEventHandler_Op *>(&handler_base);
-        if (handler->op) {
+        if (handler->op && !wm_autosave_modal_op_is_passive(handler->op)) {
           wm_autosave_timer_begin_ex(wm, 0.01);
           return;
         }
