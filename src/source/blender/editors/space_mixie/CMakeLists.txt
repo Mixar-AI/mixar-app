@@ -62,6 +62,12 @@ set(SRC
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_preview_window.cc
+  mixie_moodboard_video_card.cc
+  mixie_moodboard_video_glyphs.cc
+  mixie_moodboard_video_audio_device.cc
+  mixie_moodboard_video_player.cc
+  mixie_moodboard_video_player_draw.cc
+  mixie_moodboard_video_session.cc
   mixie_moodboard_ops_frame_select.cc
   mixie_moodboard_ops_rename_frame.cc
   mixie_moodboard_ops_rename_media.cc
@@ -82,6 +88,11 @@ set(SRC
   mixie_moodboard_node_layout.hh
   mixie_moodboard_socket_style.hh
   mixie_moodboard_ops_common.hh
+  mixie_moodboard_video_card.hh
+  mixie_moodboard_video_glyphs.hh
+  mixie_moodboard_video_audio_device.hh
+  mixie_moodboard_video_player.hh
+  mixie_moodboard_video_session.hh
 )
 
 set(LIB
@@ -98,6 +109,7 @@ set(LIB
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::dependencies::fmt
   PRIVATE bf::windowmanager
+  PRIVATE bf::dependencies::optional::audaspace
   bf_editor_interface
 )
 
