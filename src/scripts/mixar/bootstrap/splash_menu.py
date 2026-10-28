@@ -188,6 +188,17 @@ class WM_MT_splash(Menu):
         layout.emboss = 'PULLDOWN_MENU'
         layout.scale_y = 1.3
 
+        from . import crash_recovery
+        crashed = crash_recovery.latest_crashed_autosave()
+        if crashed:
+            layout.label(text="Mixar closed unexpectedly last time")
+            layout.operator(
+                "mixar.recover_crashed_session",
+                text=f"Recover {crash_recovery.label(crashed)}",
+                icon='RECOVER_LAST',
+            ).filepath = crashed["path"]
+            layout.separator()
+
         split = layout.split()
 
         col1 = split.column()
@@ -221,6 +232,9 @@ def register():
     """Replace native WM_MT_splash with custom one."""
     global _splash_mode_chosen
     _splash_mode_chosen = False
+    from . import crash_recovery
+    for cls in crash_recovery.classes:
+        bpy.utils.register_class(cls)
     bpy.utils.register_class(WM_MT_splash)
 
 
@@ -237,3 +251,9 @@ def unregister():
 
     # Unregister our custom menu
     bpy.utils.unregister_class(WM_MT_splash)
+    from . import crash_recovery
+    for cls in reversed(crash_recovery.classes):
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            pass
