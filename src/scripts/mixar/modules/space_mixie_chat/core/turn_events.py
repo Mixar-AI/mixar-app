@@ -287,6 +287,16 @@ def _consume(method, params):
             completed = local[-1].complete if local else saved.get('complete', False)
             if completed and not pending and not any(not t.complete for t in local):
                 return  # Between wake-ups or after the run; nothing is missing locally.
+            live = [t for t in local if not t.complete and t.turn_id]
+            if live:
+                # No turn id means the session's pointer is gone, not that this
+                # turn is: only the attach by its own id is a verdict. uat4,
+                # 28 Oct: the pointer expired an hour into a running turn and
+                # this reply settled it as lost while the server kept working.
+                for turn in live:
+                    if not turn.recovering:
+                        _request_replay(turn)
+                return
         if not tid or not info.get('replay_available'):
             _replay_unavailable(scene, _unrecoverable(scene, sid, tid))
             return
