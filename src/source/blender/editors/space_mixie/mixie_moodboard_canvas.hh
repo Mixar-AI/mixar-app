@@ -49,4 +49,8 @@ bool moodboard_canvas_handler_poll(const wmWindow *win,
                                   const ARegion *region,
                                   const wmEvent *event);
 
+/** Host region cursor callback hook (needs `event_cursor`): track the movie card
+ * under the pointer so it dims and shows its controls. */
+void moodboard_video_card_hover_update(wmWindow *win, ScrArea *area, ARegion *region);
+
 }  // namespace blender::ed::mixie

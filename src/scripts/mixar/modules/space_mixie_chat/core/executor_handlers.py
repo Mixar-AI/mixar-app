@@ -62,10 +62,11 @@ class HandlerCleanupMixin:
         via addon operators and that must OUTLIVE the script.
 
         ``mixie_chat.agent_preview_render`` starts a native render job during
-        a sandboxed ``render_viewport`` (``quality="final"``) script; its render_complete /
+        a sandboxed ``render_viewport`` script; its render_complete /
         render_cancel / depsgraph / load_pre callbacks deliver the pixels and
         restore the settings AFTER the script is long gone — stripping them
-        orphans the render. Matching is by object IDENTITY, not name/module
+        orphans the render — and its undo / load callbacks settle the job and
+        sweep the private render scene. Matching is by object IDENTITY, not name/module
         (a script can forge ``__module__`` via ``__name__`` in its globals,
         but it cannot forge ``id()``). Each identity is trusted only on its
         intended handler list; load cleanup must never become a frame hook.
@@ -76,9 +77,18 @@ class HandlerCleanupMixin:
             "scene_render.core.jobs": {
                 "render_complete": "_complete", "render_cancel": "_cancel",
                 "render_write": "_write", "load_pre": "_before_load"},
+            # Every callback ``preview_render._install`` registers: undo settles a
+            # live job in ``_before_undo`` before its data is freed, and the
+            # sweeps drop a private render scene a file, checkpoint or undo
+            # step carried in. The first agent render installs them from inside
+            # a sandboxed script, so a missing entry here strips them for the
+            # rest of the session.
             "space_mixie_chat.core.preview_render": {
                 "render_complete": "_complete", "render_cancel": "_cancelled",
-                "depsgraph_update_post": "_changed", "load_pre": "_before_load"},
+                "depsgraph_update_post": "_changed", "load_pre": "_before_load",
+                "undo_pre": "_before_undo", "redo_pre": "_before_undo",
+                "load_post": "_sweep_render_scenes", "undo_post": "_sweep_render_scenes",
+                "redo_post": "_sweep_render_scenes"},
             "common.render_coordinator.core": {"load_pre": "_before_load"},
             "director.core.render_outputs": {
                 "load_pre": "_before_load", "render_complete": "_on_render_complete",

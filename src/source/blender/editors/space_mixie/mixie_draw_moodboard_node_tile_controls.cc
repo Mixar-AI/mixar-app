@@ -112,8 +112,8 @@ void moodboard_add_node_card_actions(ui::Block *block,
     RNA_string_set(ui::button_operator_ptr_ensure(preview), "node_id", node_id);
     moodboard_set_node_tooltip(
         preview,
-        TIP_("Preview\n\nOpen this result in its own window. Several previews can "
-             "be open at once."));
+        TIP_("Preview\n\nOpen this result in the preview window. An open preview "
+             "window is reused and shows this instead."));
     x -= width + gap;
   }
 

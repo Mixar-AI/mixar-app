@@ -241,9 +241,18 @@ static void mixie_main_region_draw(const bContext *C, ARegion *region)
   mixie_draw_moodboard_mode(C, region);
 }
 
+/* Runs on every mouse move over the canvas (`event_cursor`): keeps the default
+ * cursor and lets a movie card dim and show its controls while hovered. */
+static void mixie_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
+{
+  WM_cursor_set(win, WM_CURSOR_DEFAULT);
+  moodboard_video_card_hover_update(win, area, region);
+}
+
 static void mixie_main_region_exit(wmWindowManager * /*wm*/, ARegion * /*region*/)
 {
   mixie_moodboard_video_playback_shutdown();
+  mixie_moodboard_video_cards_shutdown();
   /* The link-drag preview lives in a file-static. Closing the region (area
    * close, workspace switch, file load) can end a drag without the modal ever
    * seeing a release, so clear it here rather than leaving a stale curve to be
@@ -321,6 +330,7 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_frame);
   WM_operatortype_append(MIXIE_OT_moodboard_drop_template);
   WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
+  WM_operatortype_append(MIXIE_OT_moodboard_video_player);
   WM_operatortype_append(MIXIE_OT_moodboard_rename_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_box_mask);
@@ -721,6 +731,8 @@ void ED_spacetype_mixie()
   art->exit = mixie_main_region_exit;
   art->draw = mixie_main_region_draw;
   art->listener = mixie_main_region_listener;
+  art->cursor = mixie_main_region_cursor;
+  art->event_cursor = true;
 
   BLI_addhead(&st->regiontypes, art);
 

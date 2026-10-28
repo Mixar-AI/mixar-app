@@ -16,6 +16,11 @@ mutation at a time, shared with pause and resume). Success adopts
 the server's echo exactly like a dialog save; a failure keeps the stored
 model and says why in a toast. Nothing here opens the dialog.
 
+`set_level` changes only the key's thinking level, from the same card's
+level rows: `byok_client.set_thinking_level` (`PATCH /agent/byok`) sends no
+key and re-validates nothing; the same in-flight mark, echo and toast apply.
+Switching the model sends no level, so the new model starts on its default.
+
 While a turn is in flight the switch is refused (`mixar.agent_pick`'s
 `turn_in_flight` gate): the backend bound that turn's model when it started,
 so the change would apply only to the next message while the chip named the
@@ -30,6 +35,9 @@ from ...core import byok_client, credential_state, preference_state
 logger = get_logger(__name__)
 
 SWITCH_TOAST_ID = "byok_switch_model"
+SWITCH_TITLE = n_("Couldn't switch model")
+#: The hosted level picker's wording for the same failure (agent_model_ops).
+LEVEL_TITLE = n_("Could not change model")
 
 
 def switch(wm, model: str) -> bool:
@@ -50,7 +58,25 @@ def switch(wm, model: str) -> bool:
     return True
 
 
-def _on_switch_done(success, data, err, epoch):
+def set_level(wm, level: str) -> bool:
+    """Save ``level`` as the thinking level of the key in use; False when
+    nothing started (as `switch`). Run by the island popup's `mixar.agent_pick`."""
+    if byok_client.mutation_in_flight() or preference_state.mutation_pending():
+        return False
+    epoch = credential_state.current_epoch()
+    model = credential_state.snapshot()["byok_current_model"]
+    if not credential_state.begin_switch(model, wm, kind="level"):
+        return False
+    _redraw()
+
+    def _done(success, data, err):
+        _on_switch_done(success, data, err, epoch, title=LEVEL_TITLE)
+
+    byok_client.set_thinking_level(level, on_done=_done)
+    return True
+
+
+def _on_switch_done(success, data, err, epoch, *, title=SWITCH_TITLE):
     """Main-thread callback: adopt the echo, or re-read and explain."""
     try:
         if credential_state.current_epoch() != epoch:
@@ -64,7 +90,8 @@ def _on_switch_done(success, data, err, epoch):
                             snap["byok_current_provider"], snap["byok_current_model"])
         else:
             logger.warning("BYOK model switch failed: %s", err)
-            _toast(err)
+            if err is not None:  # None: nothing the user can act on (set_thinking_level)
+                _toast(err, title)
             # The refusal may mean the key changed elsewhere (removed from
             # another device, a Codex sign-in gone): re-read so the island
             # follows.
@@ -75,13 +102,13 @@ def _on_switch_done(success, data, err, epoch):
     _redraw()
 
 
-def _toast(err) -> None:
+def _toast(err, title=SWITCH_TITLE) -> None:
     try:
         from mixar.modules.common.notifications import get_notification_store
 
         # One stable id: a second failed pick replaces the toast.
         get_notification_store().push(
-            "error", n_("Couldn't switch model"), body=err or n_("Please try again."),
+            "error", title, body=err or n_("Please try again."),
             ttl_ms=8000, id=SWITCH_TOAST_ID,
         )
     except Exception:  # noqa: BLE001 — the log line already records it
