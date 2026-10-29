@@ -6,12 +6,13 @@ with the engine Source).
 
 - ``MIXAR_OT_engine_pick``: a row, i.e. one of the live editors, becomes the
   one the agent drives (remembered across launches while that editor lives).
-- ``MIXAR_OT_engine_connect``: the card's footer, the one-click connect. A
-  small dialog picks a new game project (a name, under ~/Documents/Mixar Games)
-  or a Godot project the user already has. Then ``engine_connect`` finds or
-  downloads Godot, installs Mixar Link into the project, enables it, opens
-  Godot and waits for its link, in the background: the chip shows the
-  progress and turns green.
+- ``MIXAR_OT_engine_connect``: a tab's footer, the one-click connect for that
+  ``engine`` (GODOT or UNREAL). A small dialog picks a new game project (a
+  name, under ~/Documents/Mixar Games) or a project the user already has.
+  Then ``engine_connect`` finds the engine (downloads Godot; Unreal 5.8+ must
+  be installed from the Epic Games Launcher), installs Mixar Link into the
+  project, enables it, opens the editor and waits for its link, in the
+  background: the chip shows the progress and turns green.
 """
 
 import os
@@ -58,34 +59,55 @@ class MIXAR_OT_engine_pick(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# What the dialog says per engine: (title, project file, the new-project line).
+ENGINE_TEXT = {
+    "GODOT": ("Godot", "project.godot", "Mixar Link (open source) is installed into the project's addons folder."),
+    "UNREAL": ("Unreal", ".uproject", "Mixar Link (open source) is installed into the project's Plugins folder, "
+                                      "with Unreal's MCP server turned on. Close the project in Unreal first."),
+}
+
+
 class MIXAR_OT_engine_connect(bpy.types.Operator):
     bl_idname = "mixar.engine_connect"
-    bl_label = "Connect Godot"
-    bl_description = ("Install Mixar Link into a Godot project and open it, so the agent can build "
-                      "your game in Godot (Godot is downloaded if it is not installed)")
+    bl_label = "Connect Engine"
+    bl_description = ("Install Mixar Link into a game project and open it in the engine, so the agent can "
+                      "build your game there")
     bl_options = {'INTERNAL'}
 
+    engine: StringProperty(default="GODOT", options={'SKIP_SAVE'})
     mode: EnumProperty(
         name="Project",
-        items=[('NEW', "New game project", "Make a new Godot project for this game"),
-               ('EXISTING', "A project I already have", "Use a Godot project folder you already have")],
+        items=[('NEW', "New game project", "Make a new project for this game"),
+               ('EXISTING', "A project I already have", "Use a project folder you already have")],
         default='NEW', options={'SKIP_SAVE'})
     name: StringProperty(name="Name", default="My Game", options={'SKIP_SAVE'})
     directory: StringProperty(name="Project folder", subtype='DIR_PATH', default="", options={'SKIP_SAVE'})
 
-    _godot_line = ""
+    _engine_line = ""
+    _installed = True
 
     @classmethod
     def poll(cls, context):
         from ...core import engine_connect
         return not engine_connect.state().get("busy")
 
+    def _key(self) -> str:
+        return self.engine.upper() if self.engine.upper() in ENGINE_TEXT else "GODOT"
+
     def invoke(self, context, event):
-        from ...core import engine_connect
-        found = engine_connect.find_godot()
-        type(self)._godot_line = (
-            f"Godot {'.'.join(str(v) for v in found['version'])} is installed." if found else
-            f"Godot is not installed: Mixar downloads Godot {engine_connect.GODOT_VERSION} (about 150 MB).")
+        from ...core import engine_connect, unreal_setup
+        if self._key() == "UNREAL":
+            found = unreal_setup.find_unreal()
+            type(self)._installed = bool(found)
+            type(self)._engine_line = (
+                f"Unreal Engine {'.'.join(str(v) for v in found['version'])} is installed." if found else
+                "Install Unreal Engine 5.8+ from the Epic Games Launcher first.")
+        else:
+            found = engine_connect.find_godot()
+            type(self)._installed = True
+            type(self)._engine_line = (
+                f"Godot {'.'.join(str(v) for v in found['version'])} is installed." if found else
+                f"Godot is not installed: Mixar downloads Godot {engine_connect.GODOT_VERSION} (about 150 MB).")
         wm = context.window_manager
         modal = getattr(wm, "mixar_invoke_modal_dialog", None)
         if modal is not None:
@@ -94,22 +116,29 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
+        title, project_file, install_line = ENGINE_TEXT[self._key()]
         col = layout.column(align=False)
-        col.label(text="Connect a Godot project")
-        col.label(text=self._godot_line, icon='INFO')
+        col.label(text=f"Connect a {title} project")
+        col.label(text=self._engine_line, icon='INFO' if self._installed else 'ERROR')
+        if not self._installed:
+            return
         col.separator()
         col.prop(self, "mode", expand=True)
         if self.mode == 'NEW':
             col.prop(self, "name")
             col.label(text=f"In Documents/Mixar Games/{_safe_folder_name(self.name)}")
+            if self._key() == "UNREAL":
+                col.label(text="A third-person game from Unreal's own template.")
         else:
             col.prop(self, "directory")
-            col.label(text="The folder that holds project.godot.")
+            col.label(text=f"The folder that holds {project_file}.")
         col.separator()
-        col.label(text="Mixar Link (open source) is installed into the project's addons folder.")
+        col.label(text=install_line)
 
     def execute(self, context):
         from ...core import engine_connect
+        if self._key() == "UNREAL":
+            return self._connect_unreal(context)
         if self.mode == 'NEW':
             name = _safe_folder_name(self.name)
             project = os.path.join(GAMES_DIR, name)
@@ -123,6 +152,27 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
                 self.report({'ERROR'}, "That folder is not a Godot project (it has no project.godot).")
                 return {'CANCELLED'}
             engine_connect.connect_async(folder)
+        _refresh_chip(context)
+        return {'FINISHED'}
+
+    def _connect_unreal(self, context):
+        from ...core import engine_connect, unreal_setup
+        if not unreal_setup.find_unreal():
+            self.report({'ERROR'}, unreal_setup.NOT_INSTALLED)
+            return {'CANCELLED'}
+        if self.mode == 'NEW':
+            name = _safe_folder_name(self.name)
+            project = os.path.join(GAMES_DIR, name)
+            if unreal_setup.find_uproject(project):
+                engine_connect.connect_async(project, engine="unreal")  # the same game again: reconnect
+            else:
+                engine_connect.connect_async(project, engine="unreal", new_name=name)
+        else:
+            folder = bpy.path.abspath(self.directory).rstrip("/\\")
+            if not unreal_setup.find_uproject(folder):
+                self.report({'ERROR'}, "That folder is not an Unreal project (it has no .uproject).")
+                return {'CANCELLED'}
+            engine_connect.connect_async(folder, engine="unreal")
         _refresh_chip(context)
         return {'FINISHED'}
 

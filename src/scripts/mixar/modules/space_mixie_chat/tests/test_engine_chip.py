@@ -51,7 +51,35 @@ def test_nothing_connected_explains_the_connect():
     assert m["mixar_engine_chip_name"] == "Connect engine" and m["mixar_engine_state"] == "OFF"
     godot = _tabs(m)[0]
     assert godot[0] == "GODOT" and godot[2] == "1" and "Connect Godot installs Mixar Link" in godot[4]
-    assert [t[0] for t in _tabs(m)[1:]] == ["UNREAL", "UEFN"] and all(t[2] == "0" for t in _tabs(m)[1:])
+    unreal, uefn = _tabs(m)[1:]
+    assert unreal[0] == "UNREAL" and unreal[2] == "1" and "Unreal Engine 5.8+" in unreal[4]
+    assert uefn[0] == "UEFN" and uefn[2] == "0"
+    footers = [(r[0], r[2]) for r in _rows(m) if r[1] == "footer"]
+    assert footers == [("GODOT", "Connect Godot…"), ("UNREAL", "Connect Unreal…")]
+    assert m["mixar_engine_tab"] == "GODOT"
+
+
+def test_each_engine_lists_its_own_editors_and_opens_on_the_chosen_one():
+    unreal = {"id": "unreal-9", "engine": "unreal", "project_name": "Arena3D",
+              "version": "5.8.4-58902052+++UE5+Release-5.8", "adapter_version": "0.1.0"}
+    m = em.build({"connected": True, "editors": EDITORS + [unreal], "selected": "unreal-9", "busy": "", "error": ""})
+    assert m["mixar_engine_chip_name"] == "Unreal · Arena3D" and m["mixar_engine_tab"] == "UNREAL"
+    picks = {r[7]: (r[0], r[3], r[4]) for r in _rows(m) if r[1] == "model"}
+    assert picks["unreal-9"] == ("UNREAL", "Unreal 5.8.4 · Link 0.1.0", "1")
+    assert picks["godot-1"][0] == "GODOT" and picks["godot-1"][2] == "0"
+    # A connected engine's tab has no hint; the other still explains the connect.
+    assert _tabs(m)[1][4] == "" and _tabs(m)[0][4] == ""
+
+
+def test_an_unreal_connect_shows_on_the_unreal_tab_only():
+    busy = em.build({"connected": False, "editors": [], "selected": "", "busy": "Opening Unreal", "error": "",
+                     "engine": "unreal"})
+    assert busy["mixar_engine_tab"] == "UNREAL"
+    godot, unreal = _tabs(busy)[:2]
+    assert unreal[4] == "Opening Unreal" and "Connect Godot installs" in godot[4]
+    failed = em.build({"connected": False, "editors": [], "selected": "", "busy": "",
+                       "error": "Unreal closed before it connected.", "engine": "unreal"})
+    assert "Could not connect: Unreal closed" in _tabs(failed)[1][4] and "Could not" not in _tabs(failed)[0][4]
 
 
 def test_progress_and_failure_show_on_chip_and_card():
@@ -74,6 +102,9 @@ def test_the_cpp_card_reads_these_props_and_runs_these_operators():
     assert '"MIXAR_OT_agent_engine_card"' in chip
     card = open(os.path.join(ISLAND, "agent_ui_model_card.cc"), encoding="utf-8").read()
     assert 'RNA_string_set(&props, "editor", row.model.c_str())' in card
+    # The footer connects the engine of the open tab.
+    footer = card[card.index("wmOperatorStatus run_footer("):]
+    assert 'RNA_string_set(&props, "engine", engine.c_str())' in footer[:footer.index("\n}\n")]
     ops = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
                             "engine_ops.py"), encoding="utf-8").read()
     assert 'bl_idname = "mixar.engine_pick"' in ops and 'bl_idname = "mixar.engine_connect"' in ops

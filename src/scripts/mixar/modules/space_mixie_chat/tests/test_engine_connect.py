@@ -110,6 +110,6 @@ def test_the_pick_survives_only_while_its_editor_lives(monkeypatch, tmp_path):
     assert json.load(open(tmp_path / "selected.json")) == {"id": "godot-2"}
 
 
-def test_only_godot_connects_today():
-    assert [e["key"] for e in ec.ENGINES if e["available"]] == ["godot"]
+def test_godot_and_unreal_connect_uefn_does_not_yet():
+    assert [e["key"] for e in ec.ENGINES if e["available"]] == ["godot", "unreal"]
     assert {e["key"] for e in ec.ENGINES} >= {"godot", "unreal", "uefn"}

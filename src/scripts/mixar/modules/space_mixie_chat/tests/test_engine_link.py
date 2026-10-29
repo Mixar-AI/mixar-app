@@ -225,3 +225,88 @@ def test_a_web_build_uploads_from_the_engine_folder(link, tmp_path, monkeypatch)
     assert out == {"success": True, "uploaded": 2, "bytes": 21}
     assert _Store.got["/k/index.wasm"] == ("application/wasm", b"\0asm1234")
     assert not refused["success"] and "/etc" not in json.dumps(refused)
+
+
+# ---------------------------------------------------------------------------
+# Unreal: Mixar Link's toolset inside Unreal's own MCP server
+# ---------------------------------------------------------------------------
+
+TOOLSET = "mixar_link.toolsets.MixarLinkTools"
+
+
+class _FakeUnreal(_Fake):
+    """Unreal's server: no token, tools only through ``call_tool``, each
+    answering a JSON string under ``returnValue``."""
+
+    def do_POST(self):
+        msg = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.headers.get("Authorization"):
+            return self._send(400)  # Mixar sends no token to Unreal
+        if "id" not in msg:
+            return self._send(202)
+        if msg["method"] == "initialize":
+            return self._send(200, {"jsonrpc": "2.0", "id": msg["id"], "result": {}}, {"Mcp-Session-Id": "u1"})
+        name, args = msg["params"]["name"], msg["params"]["arguments"]
+        self.calls.append((name, args))
+        if name != "call_tool" or args.get("toolset_name") != TOOLSET:
+            result = {"content": [{"type": "text", "text": f"Toolset '{args.get('toolset_name')}' not found"}],
+                      "isError": True}
+        elif args["tool_name"] == "status":
+            reply = {"ok": True, "data": {"engine": "unreal", "project_name": "Arena3D",
+                                          "edited_scene": "/Game/Maps/Arena"}}
+            result = {"content": [{"type": "text", "text": json.dumps({"returnValue": json.dumps(reply)})}]}
+        elif args["tool_name"] == "scene_tree":
+            reply = {"ok": False, "error": "No level is open.", "data": {"hint": "open one"}}
+            result = {"content": [{"type": "text", "text": json.dumps({"returnValue": json.dumps(reply)})}]}
+        elif args["tool_name"] == "capture":
+            reply = {"ok": True, "data": {"source": "game", "image_base64": "iVBO", "image_mime": "image/png"}}
+            result = {"content": [{"type": "text", "text": json.dumps({"returnValue": json.dumps(reply)})}]}
+        else:
+            result = {"content": [{"type": "text", "text": f"Unknown tool {args['tool_name']}"}], "isError": True}
+        self._send(200, {"jsonrpc": "2.0", "id": msg["id"], "result": result})
+
+
+@pytest.fixture
+def unreal(tmp_path, monkeypatch):
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _FakeUnreal)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    _FakeUnreal.calls = []
+    link_dir = tmp_path / "engine-link"
+    link_dir.mkdir()
+    monkeypatch.setattr(engine_link, "LINK_DIR", str(link_dir))
+    engine_link._clients.clear()
+    (link_dir / f"unreal-{os.getpid()}.json").write_text(json.dumps({
+        "engine": "unreal", "version": "5.8.4-58902052+++UE5+Release-5.8", "adapter_version": "0.1.0",
+        "project_name": "Arena3D", "pid": os.getpid(), "port": server.server_address[1], "path": "/mcp",
+        "token": "", "transport": "unreal_mcp", "toolset": TOOLSET, "started_at": time.time()}))
+    yield link_dir
+    server.shutdown()
+
+
+def test_unreal_is_discovered_without_a_token_but_a_tokenless_godot_is_not(unreal):
+    (unreal / "godot-3.json").write_text(json.dumps({"engine": "godot", "pid": os.getpid(), "token": "",
+                                                    "port": 1, "started_at": time.time()}))
+    assert [a["engine"] for a in engine_link.adapters()] == ["unreal"]
+
+
+def test_a_dead_editors_file_is_skipped_even_when_its_port_answers(unreal, monkeypatch):
+    if sys.platform == "win32":
+        pytest.skip("Windows never probes pids")
+    info = json.loads((unreal / f"unreal-{os.getpid()}.json").read_text())
+    (unreal / "unreal-999999.json").write_text(json.dumps({**info, "pid": 999999, "started_at": time.time() + 5}))
+    assert [a["pid"] for a in engine_link.adapters("unreal")] == [os.getpid()]
+
+
+def test_unreal_tools_go_through_call_tool_and_come_back_in_godots_shape(unreal):
+    out = engine_link.link_status()
+    assert out["success"] and out["data"]["project_name"] == "Arena3D"
+    assert out["connected"]["id"] == f"unreal-{os.getpid()}"
+    assert _FakeUnreal.calls[0] == ("call_tool", {"toolset_name": TOOLSET, "tool_name": "status", "arguments": {}})
+    tree = engine_link.link_call("scene_tree", {"max_nodes": 5})
+    assert tree == {"success": False, "data": {"hint": "open one", "error": "No level is open."},
+                    "error": "No level is open."}
+    shot = engine_link.link_call("capture", {"source": "game"})
+    assert shot["success"] and shot["image_base64"] == "iVBO" and shot["image_mime"] == "image/png"
+    assert "image_base64" not in shot["data"]
+    missing = engine_link.link_call("place", {"scene": "/Game/Mixar/Crate"})
+    assert missing == {"success": False, "data": {}, "error": "Unknown tool place"}

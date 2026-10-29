@@ -3,13 +3,20 @@
 
 """The desktop end of the game-engine link (the agent's ``engine_*`` tools).
 
-A game engine on this machine runs a Mixar Link add-on (``mixar-engine-godot``
-for Godot 4.5+): a small MCP server on 127.0.0.1 that writes a discovery file,
-``~/.mixar/engine-link/<engine>-<pid>.json`` (``port``, ``token``,
-``started_at``, …), and removes it when the editor closes. This module finds
-the newest live one, speaks MCP to it (Streamable HTTP, ``initialize`` →
-``Mcp-Session-Id``, one re-initialize on a 404 session), and returns JSON-safe
-dicts for the backend.
+A game engine on this machine runs a Mixar Link add-on that writes a discovery
+file, ``~/.mixar/engine-link/<engine>-<pid>.json`` (``port``, ``token``,
+``started_at``, …), and removes it when the editor closes:
+
+- Godot 4.5+ (``mixar-engine-godot``): the add-on is its own MCP server on
+  127.0.0.1, bearer ``token``, tools by name.
+- Unreal 5.8+ (``mixar-engine-unreal``): the editor's own MCP server
+  (``transport: "unreal_mcp"``, no token, loopback only) holds Mixar Link's
+  ``toolset``; a tool is reached through Unreal's ``call_tool`` and answers a
+  JSON string (``UnrealMcpClient`` turns it into Godot's result shape).
+
+This module finds the newest live one, speaks MCP to it (Streamable HTTP,
+``initialize`` → ``Mcp-Session-Id``, one re-initialize on a 404 session), and
+returns JSON-safe dicts for the backend.
 
 Privacy: the backend never sends or receives a local path. ``link_import``
 resolves a package from a destination KIND and a folder NAME (the
@@ -25,6 +32,7 @@ import json
 import os
 import re
 import socket
+import sys
 import urllib.error
 import urllib.request
 
@@ -37,8 +45,9 @@ CALLABLE_TOOLS = ("status", "new_scene", "open_scene", "place", "scene_tree", "s
                   "play", "stop", "capture", "log", "playtest", "write_script", "add_node",
                   "set_property", "remove_node", "read_file", "list_files", "write_file",
                   "delete_file", "project_setting", "build_web", "build_info")
-NO_ENGINE = ("No game engine is connected. Open the project in Godot 4.5+ with the Mixar Link "
-             "add-on enabled (Project Settings > Plugins), then try again.")
+NO_ENGINE = ("No game engine is connected. Connect one from the engine chip in the chat composer "
+             "(Godot 4.5+ or Unreal Engine 5.8+ with Mixar Link), then try again.")
+UNREAL_TRANSPORT = "unreal_mcp"
 
 _ABS_PATH = re.compile(r"(?:[A-Za-z]:\\|/(?:Users|home|private|var|tmp|Volumes|mnt)/)[^\s\"'<>|]*")
 _clients: dict = {}
@@ -57,6 +66,23 @@ def scrub(value):
     if isinstance(value, dict):
         return {k: scrub(v) for k, v in value.items()}
     return value
+
+
+def _alive(pid) -> bool:
+    """False only when ``pid`` is known to be gone (a killed editor's file)."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return True
+    if pid <= 0 or sys.platform == "win32":  # Windows' os.kill(pid, 0) TERMINATES the process
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:  # no permission, or a platform without signal 0: assume alive
+        return True
+    return True
 
 
 def _listening(port) -> bool:
@@ -79,11 +105,14 @@ def adapters(engine: str | None = None) -> list:
                 info = json.load(fh)
         except (OSError, ValueError):
             continue
-        if not isinstance(info, dict) or not info.get("token") or not info.get("port"):
+        if not isinstance(info, dict) or not info.get("port"):
+            continue
+        # Godot's own server needs its token; Unreal's server has none.
+        if not info.get("token") and info.get("transport") != UNREAL_TRANSPORT:
             continue
         if engine and info.get("engine") != engine:
             continue
-        if not _listening(info["port"]):
+        if not _alive(info.get("pid")) or not _listening(info["port"]):
             continue
         info["_path"] = path
         found.append(info)
@@ -98,8 +127,8 @@ def public(info: dict) -> dict:
 
 
 class McpClient:
-    def __init__(self, port: int, token: str):
-        self.url = f"http://127.0.0.1:{int(port)}/mcp"
+    def __init__(self, port: int, token: str, path: str = "/mcp"):
+        self.url = f"http://127.0.0.1:{int(port)}/{str(path or '/mcp').lstrip('/')}"
         self.token = token
         self.session = ""
         self._id = 0
@@ -108,7 +137,8 @@ class McpClient:
         req = urllib.request.Request(self.url, data=json.dumps(payload).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
         req.add_header("Accept", "application/json, text/event-stream")
-        req.add_header("Authorization", f"Bearer {self.token}")
+        if self.token:
+            req.add_header("Authorization", f"Bearer {self.token}")
         req.add_header("MCP-Protocol-Version", PROTOCOL_VERSION)
         if self.session:
             req.add_header("Mcp-Session-Id", self.session)
@@ -149,6 +179,44 @@ class McpClient:
         if "error" in body:
             raise LinkError(f"The engine refused the call: {body['error'].get('message', 'unknown error')}")
         return body.get("result") or {}
+
+
+class UnrealMcpClient(McpClient):
+    """Mixar Link's tools inside Unreal's MCP server: every call goes through
+    the server's ``call_tool`` with the plugin's ``toolset``, and the tool's
+    JSON-string answer (``{"ok", "data"|"error"}`` under ``returnValue``)
+    comes back as Godot's CallToolResult shape."""
+
+    def __init__(self, port: int, path: str, toolset: str):
+        super().__init__(port, "", path)
+        self.toolset = toolset
+
+    def call(self, name: str, arguments: dict, timeout: float) -> dict:
+        raw = super().call("call_tool", {"toolset_name": self.toolset, "tool_name": name,
+                                         "arguments": arguments}, timeout)
+        return unreal_result(raw)
+
+
+def unreal_result(raw: dict) -> dict:
+    content = raw.get("content") if isinstance(raw.get("content"), list) else []
+    text = next((c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"), "")
+    if raw.get("isError"):  # the server's own refusal (unknown tool, bad arguments, an exception)
+        return {"isError": True, "content": [{"type": "text", "text": text or "the engine reported an error"}]}
+    try:
+        value = json.loads(text).get("returnValue")
+        reply = json.loads(value) if isinstance(value, str) else value
+    except (ValueError, AttributeError):
+        reply = None
+    if not isinstance(reply, dict) or "ok" not in reply:
+        return {"isError": True, "content": [{"type": "text", "text": "Mixar Link sent an unreadable reply."}]}
+    data = reply.get("data") if isinstance(reply.get("data"), dict) else {}
+    if not reply["ok"]:
+        data = {**data, "error": str(reply.get("error") or "the engine reported an error")}
+    out = {"structuredContent": data, "isError": not reply["ok"]}
+    image = data.pop("image_base64", None) if reply["ok"] else None
+    if image:
+        out["content"] = [{"type": "image", "data": image, "mimeType": data.pop("image_mime", "image/png")}]
+    return out
 
 
 def _decode(raw: bytes, content_type: str):
@@ -194,11 +262,15 @@ def _connect(engine: str | None):
     if not found:
         raise LinkError(NO_ENGINE)
     info = choose(found)
-    key = (info["_path"], info["token"], int(info["port"]))
+    key = (info["_path"], info.get("token"), int(info["port"]), info.get("started_at"))
     client = _clients.get(key)
     if client is None:
         _clients.clear()
-        client = _clients[key] = McpClient(info["port"], info["token"])
+        if info.get("transport") == UNREAL_TRANSPORT:
+            client = UnrealMcpClient(info["port"], info.get("path") or "/mcp", str(info.get("toolset") or ""))
+        else:
+            client = McpClient(info["port"], info["token"])
+        _clients[key] = client
     return info, client
 
 

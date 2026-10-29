@@ -195,9 +195,21 @@ wmOperatorStatus run_pick(bContext *C, wmOperator *op, const Row row)
 
 wmOperatorStatus run_footer(bContext *C, wmOperator *op)
 {
-  const char *footer_op = static_cast<State *>(op->customdata)->src->footer_op;
+  const State &state = *static_cast<State *>(op->customdata);
+  const Source &src = *state.src;
+  /* The engine card's footer connects the engine of the open tab. */
+  const std::string engine = src.kind == CardKind::Engine ? state.tab : std::string();
   teardown(C, op);
-  WM_operator_name_call(C, footer_op, wm::OpCallContext::InvokeDefault, nullptr, nullptr);
+  wmOperatorType *ot = WM_operatortype_find(src.footer_op, true);
+  if (!ot) {
+    return OPERATOR_FINISHED;
+  }
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
+  if (!engine.empty()) {
+    RNA_string_set(&props, "engine", engine.c_str());
+  }
+  WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault, &props, nullptr);
+  WM_operator_properties_free(&props);
   return OPERATOR_FINISHED;
 }
 

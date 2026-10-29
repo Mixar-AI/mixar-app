@@ -15,7 +15,9 @@ chip (UI in ``ui/engine_chip.py``; the link itself is ``engine_link``).
   (``ADDON_URL``) unpacked into ``<project>/addons/mixar_link`` and enabled
   in ``project.godot``; ``create_project`` makes a new one first.
 - ``connect(project)``: install, open Godot on the project, wait for its
-  discovery file.
+  discovery file. ``connect(project, engine="unreal")`` does the same for
+  Unreal Engine 5.8+ through ``unreal_setup`` (found, never downloaded; a new
+  game is the engine's third-person template).
 
 Nothing here leaves the machine except the two downloads; no path is ever
 sent to the backend (``engine_context`` carries names only).
@@ -37,7 +39,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import engine_link
+from . import engine_link, unreal_setup
 
 ADDON_REPO = "satyam-fp/mixar-engine-godot"
 ADDON_URL = f"https://github.com/{ADDON_REPO}/releases/latest/download/mixar_link.zip"
@@ -46,14 +48,18 @@ GODOT_MIN = (4, 5)
 GODOT_RELEASES = "https://github.com/godotengine/godot/releases/download"
 PLUGIN_CFG = "res://addons/mixar_link/plugin.cfg"
 CONNECT_TIMEOUT_S = 120.0
-# The engines the chip's dropdown lists; only Godot connects today.
+# Unreal's first open of a project compiles its shaders: minutes, not seconds.
+UNREAL_CONNECT_TIMEOUT_S = 1800.0
+# The engines the chip's dropdown lists.
 ENGINES = (
     {"key": "godot", "label": "Godot", "available": True},
-    {"key": "unreal", "label": "Unreal Engine", "available": False},
+    {"key": "unreal", "label": "Unreal Engine", "available": True},
     {"key": "uefn", "label": "UEFN", "available": False},
 )
 
-_state: dict = {"connected": False, "editors": [], "selected": "", "busy": "", "error": "", "at": 0.0}
+# ``engine``: which engine ``busy`` / ``error`` belong to (the connect running or failed).
+_state: dict = {"connected": False, "editors": [], "selected": "", "busy": "", "error": "", "engine": "",
+                "at": 0.0}
 _lock = threading.Lock()
 _refreshing = False
 
@@ -287,37 +293,62 @@ def open_godot(binary: str, project: str) -> subprocess.Popen:
                             stderr=subprocess.DEVNULL, start_new_session=True)
 
 
-def connect(project: str, *, new_name: str | None = None, progress=None) -> dict:
-    """The whole one-click flow (blocking; run in a thread): Godot found or
-    downloaded, the project made if asked, the add-on installed and enabled,
-    Godot opened on it, its link awaited and selected."""
+def connect(project: str, *, engine: str = "godot", new_name: str | None = None, progress=None) -> dict:
+    """The whole one-click flow (blocking; run in a thread): the engine found
+    (Godot downloaded when missing), the project made if asked, Mixar Link
+    installed and enabled, the editor opened on it, its link awaited and
+    selected."""
     say = progress or (lambda text: None)
+    if engine == "unreal":
+        return _connect_unreal(project, new_name, say)
     godot = find_godot() or download_godot(say)
     if new_name:
         create_project(project, new_name)
     version = install_addon(project, say)
     say("Opening Godot")
     proc = open_godot(godot["binary"], project)
-    deadline = time.time() + CONNECT_TIMEOUT_S
+    return _await_link(proc, "godot", CONNECT_TIMEOUT_S, version)
+
+
+def _connect_unreal(folder: str, new_name: str | None, say) -> dict:
+    unreal = unreal_setup.find_unreal()
+    if not unreal:
+        raise RuntimeError(unreal_setup.NOT_INSTALLED)
+    if new_name:
+        say("Making the game project")
+        uproject = unreal_setup.create_project(folder, new_name, unreal)
+    else:
+        uproject = unreal_setup.find_uproject(folder)
+    if not uproject:
+        raise ValueError("That folder is not an Unreal project (it has no .uproject).")
+    version = unreal_setup.install_plugin(uproject, say)
+    say("Opening Unreal (the first open compiles shaders)")
+    proc = unreal_setup.open_unreal(unreal, uproject)
+    return _await_link(proc, "unreal", UNREAL_CONNECT_TIMEOUT_S, version)
+
+
+def _await_link(proc, engine: str, timeout: float, version: str) -> dict:
+    label = "Unreal" if engine == "unreal" else "Godot"
+    deadline = time.time() + timeout
     while time.time() < deadline:
-        mine = [i for i in engine_link.adapters("godot") if int(i.get("pid") or 0) == proc.pid]
+        mine = [i for i in engine_link.adapters(engine) if int(i.get("pid") or 0) == proc.pid]
         if mine:
             editor = engine_link.public(mine[0])
             select(editor["id"])
             refresh()
             return {"editor": editor, "addon_version": version}
         if proc.poll() is not None:
-            raise RuntimeError("Godot closed before it connected.")
+            raise RuntimeError(f"{label} closed before it connected.")
         time.sleep(0.5)
-    raise RuntimeError("Godot opened but Mixar Link did not connect (is the plugin enabled?).")
+    raise RuntimeError(f"{label} opened but Mixar Link did not connect (is the plugin enabled?).")
 
 
-def connect_async(project: str, *, new_name: str | None = None) -> None:
+def connect_async(project: str, *, engine: str = "godot", new_name: str | None = None) -> None:
     """``connect`` in a thread; progress and errors land in ``state()``."""
     def run():
         try:
-            _set(busy="Connecting…", error="")
-            connect(project, new_name=new_name, progress=lambda text: _set(busy=text))
+            _set(busy="Connecting…", error="", engine=engine)
+            connect(project, engine=engine, new_name=new_name, progress=lambda text: _set(busy=text))
             _set(busy="")
         except Exception as exc:  # noqa: BLE001 - shown on the chip
             _set(busy="", error=str(exc)[:200])
