@@ -792,8 +792,9 @@ static ShaderNode *add_node(Scene *scene,
   }
   else if (b_node.is_type("ShaderNodeBsdfAxFCarPaint"_ustr)) {
     AxfCarPaintBsdfNode *axf = graph->create_node<AxfCarPaintBsdfNode>();
-    /* ID properties "axf_table" (colour table + parameters) and "axf_flakes" (flake BTF
-     * atlas) reference the data images; node->id is accepted for the atlas as well. */
+    /* ID properties "axf_table" (colour table + parameters), "axf_flakes" (flake BTF
+     * atlas) and "axf_coat_normal" (clear coat normal map) reference the data images;
+     * node->id is accepted for the atlas as well. */
     auto image_prop = [&](const char *name) -> blender::Image * {
       if (!b_node.prop) {
         return nullptr;
@@ -813,13 +814,17 @@ static ShaderNode *add_node(Scene *scene,
     if (b_flakes == nullptr && b_node.id) {
       b_flakes = blender::id_cast<blender::Image *>(b_node.id);
     }
-    ustring table_filename, flakes_filename;
+    blender::Image *b_coat = image_prop("axf_coat_normal");
+    ustring table_filename, flakes_filename, coat_filename;
     axf_carpaint_sync_image(
         scene, b_engine, b_data, b_scene, b_table, axf->table_handle, table_filename);
     axf_carpaint_sync_image(
         scene, b_engine, b_data, b_scene, b_flakes, axf->flakes_handle, flakes_filename);
+    axf_carpaint_sync_image(
+        scene, b_engine, b_data, b_scene, b_coat, axf->coat_handle, coat_filename);
     axf->set_table_filename(table_filename);
     axf->set_flakes_filename(flakes_filename);
+    axf->set_coat_filename(coat_filename);
     node = axf;
   }
   else if (b_node.is_type("ShaderNodeBsdfSheen"_ustr)) {

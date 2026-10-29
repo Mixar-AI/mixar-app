@@ -6,9 +6,15 @@
 
 Pure numpy + h5py (no bpy), so the scoring harness can import it too.
 
+Two generations of CarPaint2 files are read:
+- spectral (Pantora 2026+): colour table in 31 spectral bands, flake colour through the
+  file's ToSpectralMatrix;
+- RGB (2016-era X-Rite library): colour table in linear sRGB primaries (E white), a
+  clear coat normal map, and sometimes an older representation listed first.
+
 Semantics that the raw file does not spell out were decided against X-Rite's own
-data (the 38 spectral measurements and the CPUDecoder preview in the file); see
-docs/axf-carpaint.md:
+data (the measurements and the CPUDecoder preview in the file); see
+docs/modules/axf.md:
 - the colour table is stored [thetaD][thetaH] (its Layout label reads H, D);
 - each CT lobe is stored (coefficient, spread m, F0);
 - ToSpectralMatrix maps XYZ (not RGB) to spectral bands.
@@ -21,6 +27,10 @@ import hashlib
 import numpy as np
 
 CARPAINT2 = "CarPaint2"
+SPECTRAL = "spectral"
+SRGB_E = "srgb_e"
+# Cook-Torrance variants that are the CarPaint2 lobe (the 2016 files name it).
+_CT_VARIANTS = ("", "GeislerMoroder2010")
 
 
 class AxfFormatError(ValueError):
@@ -71,6 +81,29 @@ def _resource(material, lookup_group):
     return out
 
 
+def _colorspec(f, ref: str):
+    """'$(COLORSPECS)/name' -> (name, group or None)."""
+    name = ref.rsplit("/", 1)[-1] if ref else ""
+    specs = f["com.xrite.ColorSpecs"] if "com.xrite.ColorSpecs" in f else None
+    return name, (specs[name] if specs is not None and name in specs else None)
+
+
+def _pick_representation(material):
+    """The CarPaint2 representation (2016 files may list an older one first)."""
+    reps = material["com.xrite.Representations"]
+    found = []
+    for key in sorted(reps.keys(), key=lambda s: (len(s), s)):
+        rep = reps[key]
+        rep_class = _text(rep["RepresentationClass"]) if "RepresentationClass" in rep else ""
+        if rep_class == CARPAINT2:
+            return rep
+        found.append(rep_class or _type(rep))
+    raise AxfFormatError(
+        f"AxF representation '{', '.join(found)}' is not supported "
+        f"(this importer reads {CARPAINT2} car paints)"
+    )
+
+
 def sha256_file(path: str) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -97,14 +130,7 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         name = names[0]
         extra_materials = names[1:]
         material = f[f"com.xrite.Materials/{name}"]
-        reps = material["com.xrite.Representations"]
-        root = reps[sorted(reps.keys())[0]]
-        rep_class = _text(root["RepresentationClass"]) if "RepresentationClass" in root else ""
-        if rep_class != CARPAINT2:
-            raise AxfFormatError(
-                f"AxF representation '{rep_class or _type(root)}' is not supported "
-                f"(this importer reads {CARPAINT2} car paints)"
-            )
+        root = _pick_representation(material)
 
         lambert = _find_rep(root, "com.xrite.LambertDiffuseModel")
         ct = _find_rep(root, "com.xrite.CookTorranceSpecularModel")
@@ -124,27 +150,60 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         fresnel_variant = _text(ct["FresnelVariant"]) if "FresnelVariant" in ct else ""
         if fresnel_variant not in ("", "Schlick1994"):
             raise AxfFormatError(f"Unsupported Fresnel variant '{fresnel_variant}'")
+        ct_variant = _text(ct["Variant"]) if "Variant" in ct else ""
+        if ct_variant not in _CT_VARIANTS:
+            raise AxfFormatError(f"Unsupported Cook-Torrance variant '{ct_variant}'")
+        if "Anisotropic" in ct and bool(ct["Anisotropic"][()]):
+            raise AxfFormatError("Anisotropic Cook-Torrance lobes are not supported")
 
         table_res = _resource(material, tab["com.xrite.Resources/Data"])[0]
-        table_spectral = np.asarray(table_res["Data"][()], np.float64)  # [thetaD, thetaH, band]
+        table = np.asarray(table_res["Data"][()], np.float64)  # [thetaD, thetaH, band or rgb]
         table_colorspec = _text(table_res["ColorSpec"]) if "ColorSpec" in table_res else ""
+        if not table_colorspec and table.shape[-1] > 3:
+            table_colorspec = "$(COLORSPECS)/spectral"  # untagged multi-band table
+        spec_name, spec_group = _colorspec(f, table_colorspec)
+        if spec_group is not None and "Wavelengths" in spec_group and table.shape[-1] > 3:
+            table_space = SPECTRAL
+            wavelengths = np.asarray(spec_group["Wavelengths"][()], np.float64)
+            if len(wavelengths) != table.shape[-1]:
+                raise AxfFormatError("Spectral colour table does not match its wavelengths")
+        elif spec_name == "sRGB,E" and table.shape[-1] == 3:
+            table_space = SRGB_E
+            wavelengths = None
+        else:
+            raise AxfFormatError(f"Unsupported colour table colour space '{spec_name or '?'}'")
+
+        # The flake RGB reaches a spectral table through the file's XYZ->spectral basis.
+        to_spectral = to_spectral_wl = rgb_e_to_xyz = None
+        _, rgb_e = _colorspec(f, "$(COLORSPECS)/sRGB,E")
+        if table_space == SPECTRAL:
+            if rgb_e is None or "ToSpectralMatrix" not in rgb_e:
+                raise AxfFormatError("Spectral AxF without an sRGB,E to spectral matrix")
+            to_spectral = np.asarray(rgb_e["ToSpectralMatrix/Data"][()], np.float64)
+            to_spectral_wl = np.asarray(rgb_e["ToSpectralMatrix/Wavelengths"][()], np.float64)
+            rgb_e_to_xyz = np.asarray(rgb_e["com.xrite.ColorMatrices/XYZ"][()], np.float64)
 
         ior, refractive = 1.0, False
+        coat_normal, coat_normal_mm = None, (0.0, 0.0)
         coat_res = root["com.xrite.Resources"] if "com.xrite.Resources" in root else None
-        if coat_res is not None and any(k != "IOR" for k in coat_res.keys()):
-            # A clear coat normal map (or any other coat resource) would be dropped.
-            raise AxfFormatError("Clear coat textures (e.g. a coat normal map) are not supported yet")
+        if coat_res is not None and any(k not in ("IOR", "Normal") for k in coat_res.keys()):
+            extra = sorted(k for k in coat_res.keys() if k not in ("IOR", "Normal"))
+            raise AxfFormatError(f"Clear coat resources {extra} are not supported yet")
         if _type(root) == "com.xrite.ClearCoatFilter":
             ior_res = _resource(material, root["com.xrite.Resources/IOR"])[0]
             ior = float(np.asarray(ior_res["Data"][()]).ravel()[0])
             refractive = not bool(root["NoRefraction"][()]) if "NoRefraction" in root else True
             if "UseSolidAngleCompression" in root and bool(root["UseSolidAngleCompression"][()]):
                 raise AxfFormatError("Clear coat with solid angle compression is not supported")
-
-        wavelengths = np.asarray(f["com.xrite.ColorSpecs/spectral/Wavelengths"][()], np.float64)
-        to_spectral = np.asarray(f["com.xrite.ColorSpecs/sRGB,E/ToSpectralMatrix/Data"][()], np.float64)
-        to_spectral_wl = np.asarray(f["com.xrite.ColorSpecs/sRGB,E/ToSpectralMatrix/Wavelengths"][()], np.float64)
-        rgb_e_to_xyz = np.asarray(f["com.xrite.ColorSpecs/sRGB,E/com.xrite.ColorMatrices/XYZ"][()], np.float64)
+            if coat_res is not None and "Normal" in coat_res:
+                normal_res = _resource(material, root["com.xrite.Resources/Normal"])[0]
+                layout = _text(normal_res["Layout"]) if "Layout" in normal_res else "V U X,Y,Z"
+                if layout.replace(",", " ").split() != ["V", "U", "X", "Y", "Z"]:
+                    raise AxfFormatError(f"Unsupported clear coat normal layout '{layout}'")
+                coat_normal = np.asarray(normal_res["Data"][()], np.float32)  # [V, U, xyz]
+                if coat_normal.ndim != 3 or coat_normal.shape[-1] != 3:
+                    raise AxfFormatError("Unexpected clear coat normal map shape")
+                coat_normal_mm = (float(normal_res["WidthMM"][()]), float(normal_res["HeightMM"][()]))
 
         out = {
             "name": name,
@@ -152,12 +211,16 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
             "lobes": lobes,  # rows: (coefficient, spread m, F0)
             "ior": ior,
             "refractive": refractive,
-            "table_spectral": table_spectral,
+            "table": table,  # [thetaD, thetaH, band or rgb], as stored
+            "table_space": table_space,
             "table_colorspec": table_colorspec,
             "wavelengths": wavelengths,
             "to_spectral": to_spectral,
             "to_spectral_wl": to_spectral_wl,
             "rgb_e_to_xyz": rgb_e_to_xyz,
+            "coat_normal": coat_normal,  # [V, U, xyz] in (U, V, normal), or None
+            "coat_normal_mm": coat_normal_mm,
+            "ct_variant": ct_variant,
             "num_theta_f": 0,
             "num_theta_i": 0,
             "lut": np.zeros((0, 0), np.int64),

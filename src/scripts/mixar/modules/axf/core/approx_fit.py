@@ -16,7 +16,8 @@ make so they reproduce the exact BRDF where it matters:
   divided by the view-side coat transmission the Mix node applies;
 - Cs, a_s: the exact outer Cook-Torrance lobe's albedo and peak;
 - flakes: the exact flake BTF slice at the mirror configuration (thetaH = 0),
-  bilinear across thetaI bins, as a sparkle lobe whose mean is removed from Cs.
+  bilinear across thetaI bins, as a sparkle lobe whose mean is removed from Cs; the
+  BTF is radiance per unit normal irradiance (no coat transmission, no cosine).
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ import math
 
 import numpy as np
 
-from .payload import flake_rgb_matrix, spectral_to_rec709_matrix
+from .payload import flake_rgb_matrix, table_rgb709
 
 N_VIEW = 64
 
@@ -48,8 +49,8 @@ def _refract(w, eta):
 
 def _table_lookup(table, thD, thH):
     nd, nh = table.shape[:2]
-    y = thD * (2 / math.pi) * (nd - 1)
-    x = thH * (2 / math.pi) * (nh - 1)
+    y = np.minimum(thD * (2 / math.pi) * nd, nd - 1)   # texel i at i / n (X-Rite's addressing)
+    x = np.minimum(thH * (2 / math.pi) * nh, nh - 1)
     y0 = np.clip(np.floor(y), 0, nd - 1).astype(int); x0 = np.clip(np.floor(x), 0, nh - 1).astype(int)
     y1 = np.minimum(y0 + 1, nd - 1); x1 = np.minimum(x0 + 1, nh - 1)
     fy = np.where(y >= nd - 1, 0, np.clip(y - np.floor(y), 0, 1))[..., None]
@@ -105,8 +106,7 @@ def _unit_albedo(alpha, wo, wi, cos_i, dw):
 def fit(m: dict) -> dict:
     ior = m["ior"] if m["refractive"] else 1.0
     eta = 1.0 / ior
-    s2rgb = spectral_to_rec709_matrix(m["wavelengths"])
-    table = np.asarray(m["table_spectral"]) @ s2rgb             # [thetaD, thetaH, rgb]
+    table = table_rgb709(m)                                    # [thetaD, thetaH, rgb]
     wi, dw = _hemisphere()
     wi_r = _refract(wi, eta) if m["refractive"] else wi
     t_i = 1 - _fresnel(wi[..., 2], m["ior"])
@@ -161,9 +161,10 @@ def fit(m: dict) -> dict:
         g_f = np.zeros(N_VIEW)
         for k, th in enumerate(views):
             t_o = 1 - _fresnel(math.cos(th), m["ior"])
-            # Blender glossy peak (G ~ 1) = colour / (pi a^2 4 cos^2); match the BTF value at
-            # thetaH = 0 times the light-side coat transmission (= t_o at the mirror).
-            g_f[k] = math.pi * a_s[k] ** 2 * 4 * math.cos(th) ** 2 * t_o
+            # Blender glossy peak (G ~ 1) = colour / (pi a^2 4 cos^2), seen as radiance through
+            # the Mix's view-side coat transmission t_o and the light cosine. Match the flake
+            # radiance at the mirror, which is the BTF value itself (no transmission, no cosine).
+            g_f[k] = math.pi * a_s[k] ** 2 * 4 * math.cos(th) / t_o
             bd = m["num_theta_f"] * th_d_mirror[k] * (2 / math.pi)
             d0 = int(math.floor(bd)); wd = bd - d0
             mp = (1 - wd) * mean_pos[min(d0, rows)] + wd * mean_pos[min(d0 + 1, rows)]

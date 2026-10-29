@@ -628,11 +628,15 @@ class AxfCarPaintBsdfNode : public BsdfNode {
   static ImageParams image_params();
 
   NODE_SOCKET_API(float3, flake_uv)
+  NODE_SOCKET_API(float3, coat_uv)
+  NODE_SOCKET_API(float3, tangent)
   NODE_SOCKET_API(ustring, table_filename)
   NODE_SOCKET_API(ustring, flakes_filename)
+  NODE_SOCKET_API(ustring, coat_filename)
 
   ImageHandle table_handle;
   ImageHandle flakes_handle;
+  ImageHandle coat_handle;
 };
 
 class RayPortalBsdfNode : public BsdfNode {

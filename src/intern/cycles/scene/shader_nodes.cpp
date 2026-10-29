@@ -2557,8 +2557,11 @@ NODE_DEFINE(AxfCarPaintBsdfNode)
   SOCKET_IN_NORMAL(normal, "Normal", zero_float3(), SocketType::LINK_NORMAL);
   SOCKET_IN_FLOAT(surface_mix_weight, "SurfaceMixWeight", 0.0f, SocketType::SVM_INTERNAL);
   SOCKET_IN_POINT(flake_uv, "Flake UV", zero_float3(), SocketType::LINK_TEXTURE_UV);
+  SOCKET_IN_POINT(coat_uv, "Coat UV", zero_float3(), SocketType::LINK_TEXTURE_UV);
+  SOCKET_IN_VECTOR(tangent, "Tangent", zero_float3());
   SOCKET_STRING(table_filename, "Table Filename", ustring());
   SOCKET_STRING(flakes_filename, "Flakes Filename", ustring());
+  SOCKET_STRING(coat_filename, "Coat Filename", ustring());
 
   SOCKET_OUT_CLOSURE(BSDF, "BSDF");
 
@@ -2575,6 +2578,7 @@ ShaderNode *AxfCarPaintBsdfNode::clone(ShaderGraph *graph) const
   AxfCarPaintBsdfNode *node = graph->create_node<AxfCarPaintBsdfNode>(*this);
   node->table_handle = table_handle;
   node->flakes_handle = flakes_handle;
+  node->coat_handle = coat_handle;
   return node;
 }
 
@@ -2582,7 +2586,7 @@ bool AxfCarPaintBsdfNode::equals(const ShaderNode &other)
 {
   const AxfCarPaintBsdfNode &other_node = (const AxfCarPaintBsdfNode &)other;
   return BsdfNode::equals(other) && table_handle == other_node.table_handle &&
-         flakes_handle == other_node.flakes_handle;
+         flakes_handle == other_node.flakes_handle && coat_handle == other_node.coat_handle;
 }
 
 ImageParams AxfCarPaintBsdfNode::image_params()
@@ -2604,9 +2608,12 @@ void AxfCarPaintBsdfNode::compile(SVMCompiler &compiler)
   if (flakes_handle.empty() && !flakes_filename.empty()) {
     flakes_handle = image_manager->add_image(flakes_filename.string(), image_params());
   }
+  if (coat_handle.empty() && !coat_filename.empty()) {
+    coat_handle = image_manager->add_image(coat_filename.string(), image_params());
+  }
 
-  int table_id = KERNEL_IMAGE_NONE, flakes_id = KERNEL_IMAGE_NONE;
-  int table_w = 0, table_h = 0, atlas_w = 0, atlas_h = 0;
+  int table_id = KERNEL_IMAGE_NONE, flakes_id = KERNEL_IMAGE_NONE, coat_id = KERNEL_IMAGE_NONE;
+  int table_w = 0, table_h = 0, coat_w = 0, coat_h = 0;
   if (!table_handle.empty()) {
     const ImageMetaData metadata = table_handle.metadata(compiler.progress);
     table_id = table_handle.kernel_id();
@@ -2614,22 +2621,28 @@ void AxfCarPaintBsdfNode::compile(SVMCompiler &compiler)
     table_h = int(metadata.height);
   }
   if (!flakes_handle.empty()) {
-    const ImageMetaData metadata = flakes_handle.metadata(compiler.progress);
     flakes_id = flakes_handle.kernel_id();
-    atlas_w = int(metadata.width);
-    atlas_h = int(metadata.height);
+  }
+  if (!coat_handle.empty()) {
+    const ImageMetaData metadata = coat_handle.metadata(compiler.progress);
+    coat_id = coat_handle.kernel_id();
+    coat_w = int(metadata.width);
+    coat_h = int(metadata.height);
   }
 
   BsdfNode::compile(compiler,
                     SVMNodeAxfCarPaintBsdfData{
                         .flake_uv = compiler.input_float3("Flake UV"),
+                        .coat_uv = compiler.input_float3("Coat UV"),
                         .table_id = table_id,
                         .flakes_id = flakes_id,
+                        .coat_id = coat_id,
                         .table_w = table_w,
                         .table_h = table_h,
-                        .atlas_w = atlas_w,
-                        .atlas_h = atlas_h,
+                        .coat_w = coat_w,
+                        .coat_h = coat_h,
                         .normal_offset = compiler.input_link("Normal"),
+                        .tangent_offset = compiler.input_link("Tangent"),
                     });
 }
 

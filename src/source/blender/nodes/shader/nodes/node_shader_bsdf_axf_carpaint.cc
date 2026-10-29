@@ -8,11 +8,11 @@
  * Mixar: X-Rite AxF CarPaint2 BSDF.
  *
  * Cycles evaluates the measured material exactly (intern/cycles/kernel/closure/
- * bsdf_axf_carpaint.h) from two images the Mixar AxF importer attaches to the node
- * as ID properties: "axf_table" (colour table + parameter stream) and "axf_flakes"
- * (flake BTF atlas). EEVEE cannot evaluate a per-light measured BRDF, so it renders
- * a preview from the "Preview *" inputs, which the importer derives from the same
- * data. */
+ * bsdf_axf_carpaint.h) from images the Mixar AxF importer attaches to the node as ID
+ * properties: "axf_table" (colour table + parameter stream), "axf_flakes" (flake BTF
+ * atlas) and "axf_coat_normal" (clear coat normal map, when the file has one). EEVEE
+ * cannot evaluate a per-light measured BRDF, so it renders a preview from the
+ * "Preview *" inputs, which the importer derives from the same data. */
 
 #include "node_shader_util.hh"
 
@@ -28,7 +28,13 @@ static void node_declare(NodeDeclarationBuilder &b)
   b.add_input<decl::Vector>("Flake UV"_ustr)
       .hide_value()
       .description("Flake texture coordinates in AxF flake patch units");
+  b.add_input<decl::Vector>("Coat UV"_ustr)
+      .hide_value()
+      .description("Clear coat normal map coordinates in map tile units");
   b.add_input<decl::Vector>("Normal"_ustr).hide_value();
+  b.add_input<decl::Vector>("Tangent"_ustr)
+      .hide_value()
+      .description("Direction of increasing Coat UV x, for the clear coat normal map");
   b.add_input<decl::Color>("Preview Diffuse"_ustr)
       .default_value({0.5f, 0.05f, 0.05f, 1.0f})
       .description("EEVEE preview only: diffuse albedo");
@@ -56,8 +62,8 @@ static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
                                              GPUNodeStack *in,
                                              GPUNodeStack *out)
 {
-  if (!in[1].link) {
-    GPU_link(mat, "world_normals_get", &in[1].link);
+  if (!in[2].link) {
+    GPU_link(mat, "world_normals_get", &in[2].link);
   }
   GPU_material_flag_set(mat,
                         GPU_MATFLAG_DIFFUSE | GPU_MATFLAG_GLOSSY | GPU_MATFLAG_COAT |

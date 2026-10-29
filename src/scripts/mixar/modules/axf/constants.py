@@ -9,7 +9,8 @@
 NODE_IDNAME = "ShaderNodeBsdfAxFCarPaint"
 PROP_TABLE = "axf_table"
 PROP_FLAKES = "axf_flakes"
-PARAM_VERSION = 1.0
+PROP_COAT_NORMAL = "axf_coat_normal"
+PARAM_VERSION = 2.0
 PARAM_HEADER_TEXELS = 7
 
 # Custom properties on the material that record where the data came from.

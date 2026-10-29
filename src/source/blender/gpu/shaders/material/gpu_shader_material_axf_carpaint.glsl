@@ -9,7 +9,9 @@
  * intern/cycles/kernel/closure/bsdf_axf_carpaint.h. */
 [[node]]
 void node_bsdf_axf_carpaint(float3 flake_uv,
+                            float3 coat_uv,
                             float3 N,
+                            float3 tangent,
                             float4 diffuse_color,
                             float4 specular_color,
                             float roughness,

@@ -78,11 +78,17 @@ def _link(nt, a, out, b, inp):
     nt.links.new(a.outputs[out], b.inputs[inp])
 
 
-def _flake_coordinates(nt, patch_m: float, x: float, y: float):
-    """Object-space coordinates projected on the dominant normal axis, in patch units.
+def _surface_mapping(nt, x: float, y: float):
+    """Object-space coordinates projected on the dominant normal axis (metres), and the
+    world-space direction of increasing u (the tangent).
 
     One projection per point (no blending), so flake statistics stay exactly the
-    measured ones. Object scale is assumed to be 1 (metres)."""
+    measured ones. u is mirrored where needed so (tangent, normal x tangent, normal) is
+    right handed on every face, which keeps the clear coat normal map a true surface.
+    Object scale is assumed to be 1 (metres).
+
+    z-dominant: (u, v) = (s Px, Py); x-dominant: (s Py, Pz); y-dominant: (s Px, Pz),
+    with s = sign(nz), sign(nx), -sign(ny)."""
     nodes = nt.nodes
     tc = nodes.new("ShaderNodeTexCoord"); tc.location = (x - 900, y)
     sp = nodes.new("ShaderNodeSeparateXYZ"); sp.location = (x - 700, y + 120)
@@ -110,21 +116,44 @@ def _flake_coordinates(nt, patch_m: float, x: float, y: float):
     x_ge_y = math('GREATER_THAN', ax, ay, loc=(x - 330, y - 180))
     not_z = math('SUBTRACT', 1.0, z_dom, loc=(x - 180, y - 150))
     x_dom = math('MULTIPLY', not_z, x_ge_y, loc=(x - 60, y - 150))
-    # u = Px unless x-dominant (then Py); v = Py if z-dominant else Pz
-    u = math('ADD', math('MULTIPLY', math('SUBTRACT', 1.0, x_dom, loc=(x + 60, y + 60)),
-                         sp.outputs[0], loc=(x + 180, y + 60)),
-             math('MULTIPLY', x_dom, sp.outputs[1], loc=(x + 180, y)), loc=(x + 300, y + 30))
+    y_dom = math('SUBTRACT', not_z, x_dom, loc=(x - 60, y - 210))
+    # s = sign of the dominant component (negated for y) -> right-handed frames.
+    sx = math('SIGN', sn.outputs[0], loc=(x - 330, y - 260))
+    sy = math('SIGN', sn.outputs[1], loc=(x - 330, y - 300))
+    sz = math('SIGN', sn.outputs[2], loc=(x - 330, y - 340))
+    s = math('ADD', math('MULTIPLY', z_dom, sz, loc=(x - 180, y - 260)),
+             math('SUBTRACT', math('MULTIPLY', x_dom, sx, loc=(x - 180, y - 300)),
+                  math('MULTIPLY', y_dom, sy, loc=(x - 180, y - 340)), loc=(x - 60, y - 320)),
+             loc=(x + 60, y - 290))
+    # u = s * (Py if x-dominant else Px); v = Py if z-dominant else Pz
+    one_minus_x = math('SUBTRACT', 1.0, x_dom, loc=(x + 60, y + 60))
+    u_base = math('ADD', math('MULTIPLY', one_minus_x, sp.outputs[0], loc=(x + 180, y + 60)),
+                  math('MULTIPLY', x_dom, sp.outputs[1], loc=(x + 180, y)), loc=(x + 300, y + 30))
+    u = math('MULTIPLY', s, u_base, loc=(x + 420, y + 30))
     v = math('ADD', math('MULTIPLY', z_dom, sp.outputs[1], loc=(x + 180, y - 60)),
              math('MULTIPLY', not_z, sp.outputs[2], loc=(x + 180, y - 120)), loc=(x + 300, y - 90))
-    comb = nodes.new("ShaderNodeCombineXYZ"); comb.location = (x + 420, y)
+    comb = nodes.new("ShaderNodeCombineXYZ"); comb.location = (x + 540, y)
     nt.links.new(u, comb.inputs[0]); nt.links.new(v, comb.inputs[1])
-    scale = nodes.new("ShaderNodeVectorMath"); scale.operation = 'SCALE'; scale.location = (x + 560, y)
-    scale.inputs["Scale"].default_value = 1.0 / patch_m
-    _link(nt, comb, 0, scale, 0)
+
+    # Tangent (object space) = s * (Y if x-dominant else X), then to world space.
+    tan = nodes.new("ShaderNodeCombineXYZ"); tan.location = (x + 540, y - 260)
+    nt.links.new(math('MULTIPLY', s, one_minus_x, loc=(x + 420, y - 230)), tan.inputs[0])
+    nt.links.new(math('MULTIPLY', s, x_dom, loc=(x + 420, y - 290)), tan.inputs[1])
+    vt = nodes.new("ShaderNodeVectorTransform"); vt.location = (x + 700, y - 260)
+    vt.vector_type = 'VECTOR'; vt.convert_from = 'OBJECT'; vt.convert_to = 'WORLD'
+    _link(nt, tan, 0, vt, 0)
+    return comb.outputs[0], vt.outputs[0]
+
+
+def _tile_coordinates(nt, uv_m, size_mm, x: float, y: float):
+    """Metres -> tile units of a map that is size_mm = (width, height) millimetres."""
+    scale = nt.nodes.new("ShaderNodeVectorMath"); scale.operation = 'MULTIPLY'; scale.location = (x, y)
+    nt.links.new(uv_m, scale.inputs[0])
+    scale.inputs[1].default_value = (1000.0 / size_mm[0], 1000.0 / size_mm[1], 0.0)
     return scale.outputs[0]
 
 
-def build_material(m: dict, table_img, flakes_img, *, name: str):
+def build_material(m: dict, table_img, flakes_img, *, name: str, coat_img=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -141,10 +170,17 @@ def build_material(m: dict, table_img, flakes_img, *, name: str):
     axf.inputs["Coat IOR"].default_value = prev["coat_ior"]
 
     axf[C.PROP_TABLE] = table_img
+    if flakes_img is None and coat_img is None:
+        return mat
+    uv_m, tangent = _surface_mapping(nt, -1000, 0)
     if flakes_img is not None:
         axf[C.PROP_FLAKES] = flakes_img
-        patch_m = (m["patch_mm"][0] or 25.6) / 1000.0
-        nt.links.new(_flake_coordinates(nt, patch_m, -200, 0), axf.inputs["Flake UV"])
+        patch_mm = (m["patch_mm"][0] or 25.6, m["patch_mm"][1] or m["patch_mm"][0] or 25.6)
+        nt.links.new(_tile_coordinates(nt, uv_m, patch_mm, -100, 120), axf.inputs["Flake UV"])
+    if coat_img is not None:
+        axf[C.PROP_COAT_NORMAL] = coat_img
+        nt.links.new(_tile_coordinates(nt, uv_m, m["coat_normal_mm"], -100, -120), axf.inputs["Coat UV"])
+        nt.links.new(tangent, axf.inputs["Tangent"])
     return mat
 
 
@@ -154,17 +190,20 @@ def import_axf(path: str, *, archive_source: bool = True) -> bpy.types.Material:
     base = m["name"] or os.path.splitext(os.path.basename(path))[0]
     with tempfile.TemporaryDirectory(prefix="mixar_axf_") as tmp:
         table_img = _packed_data_image(f"AxF {base} Table", payload["table_image"], tmp)
-        flakes_img = None
+        flakes_img = coat_img = None
         if payload["flake_atlas"] is not None:
             flakes_img = _packed_data_image(f"AxF {base} Flakes", payload["flake_atlas"], tmp)
+        if payload["coat_normal_image"] is not None:
+            coat_img = _packed_data_image(f"AxF {base} Coat Normal", payload["coat_normal_image"], tmp)
 
-    mat = build_material(m, table_img, flakes_img, name=f"AxF {base}")
+    mat = build_material(m, table_img, flakes_img, name=f"AxF {base}", coat_img=coat_img)
     mat[C.PROP_SOURCE_NAME] = os.path.basename(path)
     mat[C.PROP_SOURCE_SHA256] = sha256_file(path)
     mat["axf_model"] = json.dumps({
         "representation": "CarPaint2", "kd": m["kd"], "lobes": m["lobes"].tolist(),
         "ior": m["ior"], "refractive": m["refractive"], "num_theta_f": m["num_theta_f"],
         "num_theta_i": m["num_theta_i"], "lut": m["lut"].tolist(), "patch_mm": list(m["patch_mm"]),
+        "table_space": m["table_space"], "coat_normal_mm": list(m["coat_normal_mm"]),
     })
     if archive_source:
         mat[C.PROP_ARCHIVE] = _archive_source(path, os.path.basename(path))

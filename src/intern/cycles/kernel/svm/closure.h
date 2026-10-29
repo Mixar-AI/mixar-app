@@ -668,6 +668,20 @@ ccl_device
       float3 N = stack_load_float3_default(stack, bsdf_data.normal_offset, sd->N);
       N = safe_normalize_fallback(N, sd->N);
       const float3 uv = stack_load(stack, bsdf_data.flake_uv);
+      float3 Nc = N;
+      if (bsdf_data.coat_id != KERNEL_IMAGE_NONE && bsdf_data.coat_w > 0 && bsdf_data.coat_h > 0)
+      {
+        const float3 tangent = stack_load_float3_default(
+            stack, bsdf_data.tangent_offset, zero_float3());
+        Nc = axf_coat_normal(kg,
+                             sd,
+                             bsdf_data.coat_id,
+                             bsdf_data.coat_w,
+                             bsdf_data.coat_h,
+                             stack_load(stack, bsdf_data.coat_uv),
+                             N,
+                             tangent);
+      }
       const Spectrum weight = closure_weight * mix_weight;
       ccl_private AxfCarPaintBsdf *bsdf = (ccl_private AxfCarPaintBsdf *)bsdf_alloc(
           sd, sizeof(AxfCarPaintBsdf), weight);
@@ -679,8 +693,9 @@ ccl_device
         bsdf->flakes_id = bsdf_data.flakes_id;
         bsdf->table_w = bsdf_data.table_w;
         bsdf->image_h = bsdf_data.table_h;
-        bsdf->atlas_w = bsdf_data.atlas_w;
-        bsdf->atlas_h = bsdf_data.atlas_h;
+        bsdf->nc_x = Nc.x;
+        bsdf->nc_y = Nc.y;
+        bsdf->nc_z = Nc.z;
         sd->flag |= bsdf_axf_carpaint_setup(kg, sd, bsdf);
       }
       /* The clear coat's own mirror reflection: a sharp dielectric interface. */
@@ -697,7 +712,7 @@ ccl_device
         ccl_private MicrofacetBsdf *coat = (ccl_private MicrofacetBsdf *)bsdf_alloc(
             sd, sizeof(MicrofacetBsdf), weight);
         if (coat) {
-          coat->N = maybe_ensure_valid_specular_reflection(sd, N);
+          coat->N = maybe_ensure_valid_specular_reflection(sd, Nc);
           coat->T = zero_float3();
           coat->ior = coat_ior;
           coat->alpha_x = coat->alpha_y = 0.0f;

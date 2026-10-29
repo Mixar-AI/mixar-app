@@ -4,20 +4,27 @@
 
 /* X-Rite AxF CarPaint2 (CPA2) BSDF, evaluated exactly as X-Rite's decoder does.
  *
- *   f(wi, wo) = (1 - F(cos_i)) (1 - F(cos_o)) *
- *               [ T(thetaD, thetaH) * (kd / pi + CT) + Flakes(thetaH, thetaD, uv) ]
+ *   f(wi, wo) = (1 - F(nc.wi)) (1 - F(nc.wo)) * T(thetaD, thetaH) * (kd / pi + CT)
+ *               + BTF(thetaH, thetaD, uv) / cos(theta_light)
  *
- * at the clear-coat-refracted directions, plus (in a separate closure) the coat's
- * mirror reflection. CT = sum_k c_k exp(-tan^2 / m_k^2) / (m_k^2 cos^4) Schlick(F0_k)
- * G_ct / (pi nv nl). thetaH = angle(n, h'), thetaD = angle(h', w').
+ * at the directions refracted by the clear coat about its normal nc, plus (in a
+ * separate closure) the coat's mirror reflection about nc. CT = sum_k c_k exp(-tan^2 /
+ * m_k^2) / (m_k^2 cos^4) Schlick(F0_k) G_ct / (pi nv nl). thetaH = angle(n, h'),
+ * thetaD = angle(h', w'), against the base normal n. The coat normal nc comes from the
+ * AxF clear coat normal map (orange peel) when the file has one, else nc = n.
+ * The flake BTF is radiance per unit normal irradiance, measured through the coat: it
+ * takes no coat transmission and no cosine (X-Rite's own previews reproduce per pixel
+ * only this way).
  *
- * All material data lives in two images written by the Mixar AxF importer:
+ * All material data lives in images written by the Mixar AxF importer:
  * - table image (float RGBA): starts with a texel stream of parameters at row 0
  *   (see AXF_PARAM_* below), then the BRDF colour table in linear Rec.709 from row
  *   table_row0 (row = thetaD bin, column = thetaH bin; image width = thetaH bins);
  * - flakes image (float RGBA): the flake BTF patches tiled in an atlas, stored
  *   exactly as in the AxF (sRGB primaries, E white); the parameters carry the 3x3
- *   matrix to Rec.709.
+ *   matrix to Rec.709;
+ * - coat normal image (float RGBA, optional): the clear coat normal map, xyz in the
+ *   (tangent, bitangent, normal) frame of its texture coordinates.
  * Lookups use exact texel addressing and float math on every device, so the result
  * does not depend on hardware texture filtering.
  *
@@ -41,8 +48,9 @@ struct AxfCarPaintBsdf {
   SHADER_CLOSURE_BASE;
   float u, v;              /* Flake coordinates, in flake patch units. */
   int table_id, flakes_id; /* Kernel image ids. */
-  int table_w, image_h, atlas_w, atlas_h; /* Image sizes in texels. */
-  float sample_alpha; /* Beckmann alpha used to importance sample the lobe. */
+  int table_w, image_h;    /* Table image size in texels. */
+  float sample_alpha;      /* Beckmann alpha used to importance sample the lobe. */
+  float nc_x, nc_y, nc_z;  /* Clear coat normal (world space; = N without a coat map). */
 };
 
 static_assert(sizeof(ShaderClosure) >= sizeof(AxfCarPaintBsdf), "AxfCarPaintBsdf is too large!");
@@ -53,7 +61,7 @@ struct AxfCarPaintParams {
   int n_lobes;
   float c[AXF_MAX_LOBES], m[AXF_MAX_LOBES], f0[AXF_MAX_LOBES];
   int num_theta_f, lut_rows, lut_cols;
-  int atlas_cols, patch_w, patch_h, table_h, table_row0;
+  int atlas_cols, patch_w, patch_h, table_h, table_row0, atlas_w, atlas_h;
   float3 flake_m0, flake_m1, flake_m2; /* Rows of the flake colour matrix. */
 };
 
@@ -61,7 +69,7 @@ struct AxfCarPaintParams {
  * 0: (version, kd, ior, refractive)
  * 1: (n_lobes, num_theta_f, lut_rows, lut_cols)
  * 2: (atlas_cols, patch_w, patch_h, table_h)
- * 3: (table_row0, 0, 0, 0)
+ * 3: (table_row0, atlas_w, atlas_h, 0)
  * 4..6: flake colour matrix rows (stored RGB -> linear Rec.709)
  * 7..7+n_lobes-1: (c, m, F0, 0)
  * then ceil(lut_rows * lut_cols / 4) texels of LUT entries (patch index, or -1). */
@@ -114,7 +122,10 @@ ccl_device void axf_load_params(KernelGlobals kg,
   p->patch_w = int(h2.y);
   p->patch_h = int(h2.z);
   p->table_h = int(h2.w);
-  p->table_row0 = int(axf_param(kg, sd, bsdf, 3).x);
+  const float4 h3 = axf_param(kg, sd, bsdf, 3);
+  p->table_row0 = int(h3.x);
+  p->atlas_w = int(h3.y);
+  p->atlas_h = int(h3.z);
   p->flake_m0 = make_float3(axf_param(kg, sd, bsdf, 4));
   p->flake_m1 = make_float3(axf_param(kg, sd, bsdf, 5));
   p->flake_m2 = make_float3(axf_param(kg, sd, bsdf, 6));
@@ -160,7 +171,48 @@ ccl_device_inline float3 axf_refract(const float3 w, const float3 N, const float
   return normalize(t + ct * N);
 }
 
-/* Bilinear lookup of the colour table, texel i at i / (n - 1) of [0, pi/2]. */
+/* Clear coat normal from the coat normal map at coat coordinates uv (map tile units,
+ * u along columns, v along rows): bilinear between texel centres in float math, wrapping;
+ * the map's xyz is in the frame (T, N x T, N) of the coordinates. */
+ccl_device float3 axf_coat_normal(KernelGlobals kg,
+                                  ccl_private ShaderData *sd,
+                                  const int id,
+                                  const int w,
+                                  const int h,
+                                  const float3 uv,
+                                  const float3 N,
+                                  const float3 tangent)
+{
+  const float x = (uv.x - floorf(uv.x)) * float(w) - 0.5f;
+  const float y = (uv.y - floorf(uv.y)) * float(h) - 0.5f;
+  const float fx = x - floorf(x);
+  const float fy = y - floorf(y);
+  int x0 = int(floorf(x)) % w;
+  int y0 = int(floorf(y)) % h;
+  x0 = (x0 < 0) ? x0 + w : x0;
+  y0 = (y0 < 0) ? y0 + h : y0;
+  const int x1 = (x0 + 1) % w;
+  const int y1 = (y0 + 1) % h;
+  const float3 v00 = make_float3(axf_texel(kg, sd, id, x0, y0, w, h));
+  const float3 v01 = make_float3(axf_texel(kg, sd, id, x1, y0, w, h));
+  const float3 v10 = make_float3(axf_texel(kg, sd, id, x0, y1, w, h));
+  const float3 v11 = make_float3(axf_texel(kg, sd, id, x1, y1, w, h));
+  const float3 t = (1.0f - fy) * ((1.0f - fx) * v00 + fx * v01) +
+                   fy * ((1.0f - fx) * v10 + fx * v11);
+
+  float3 T = tangent - dot(tangent, N) * N;
+  if (len_squared(T) < 1e-12f) {
+    float3 B;
+    make_orthonormals(N, &T, &B);
+  }
+  T = normalize(T);
+  const float3 B = cross(N, T);
+  return safe_normalize_fallback(t.x * T + t.y * B + t.z * N, N);
+}
+
+/* Bilinear lookup of the colour table, texel i at i / n of [0, pi/2] (as the flake bins),
+ * clamped at the last texel. This addressing reproduces X-Rite's own preview render to
+ * float precision; i / (n - 1) (Unity HDRP) is off by up to 1 %. */
 ccl_device float3 axf_table(KernelGlobals kg,
                             ccl_private ShaderData *sd,
                             const ccl_private AxfCarPaintBsdf *bsdf,
@@ -170,8 +222,8 @@ ccl_device float3 axf_table(KernelGlobals kg,
 {
   const int nw = bsdf->table_w;
   const int nh = p->table_h;
-  const float x = thH * M_2_PI_F * float(nw - 1); /* column = thetaH */
-  const float y = thD * M_2_PI_F * float(nh - 1); /* row = thetaD */
+  const float x = fminf(thH * M_2_PI_F * float(nw), float(nw - 1)); /* column = thetaH */
+  const float y = fminf(thD * M_2_PI_F * float(nh), float(nh - 1)); /* row = thetaD */
   const int x0 = clamp(int(floorf(x)), 0, nw - 1);
   const int y0 = clamp(int(floorf(y)), 0, nh - 1);
   const int x1 = min(x0 + 1, nw - 1);
@@ -201,8 +253,7 @@ ccl_device float3 axf_flake_texel(KernelGlobals kg,
   const int yi = min(int(floorf(fv * float(p->patch_h))), p->patch_h - 1);
   const int ax = (patch % p->atlas_cols) * p->patch_w + xi;
   const int ay = (patch / p->atlas_cols) * p->patch_h + yi;
-  return make_float3(
-      axf_texel(kg, sd, bsdf->flakes_id, ax, ay, bsdf->atlas_w, bsdf->atlas_h));
+  return make_float3(axf_texel(kg, sd, bsdf->flakes_id, ax, ay, p->atlas_w, p->atlas_h));
 }
 
 ccl_device float3 axf_flake_corner(KernelGlobals kg,
@@ -231,7 +282,11 @@ ccl_device float3 axf_flakes(KernelGlobals kg,
                              const float thH,
                              const float thD)
 {
-  if (bsdf->flakes_id == KERNEL_IMAGE_NONE || p->num_theta_f <= 0) {
+  /* Version 1 parameter streams (imported before the atlas size moved into the stream)
+   * carry no atlas size: render without flakes rather than read out of range. */
+  if (bsdf->flakes_id == KERNEL_IMAGE_NONE || p->num_theta_f <= 0 || p->atlas_w <= 0 ||
+      p->atlas_h <= 0)
+  {
     return zero_float3();
   }
   const float n = float(p->num_theta_f);
@@ -250,8 +305,8 @@ ccl_device float3 axf_flakes(KernelGlobals kg,
   return make_float3(dot(p->flake_m0, rgb_e), dot(p->flake_m1, rgb_e), dot(p->flake_m2, rgb_e));
 }
 
-/* The full CPA2 BRDF (without the cosine), wi = view, wo = light. */
-ccl_device float3 axf_carpaint_brdf(KernelGlobals kg,
+/* The full CPA2 BSDF times the light cosine (what eval returns), wi = view, wo = light. */
+ccl_device float3 axf_carpaint_eval_cos(KernelGlobals kg,
                                     ccl_private ShaderData *sd,
                                     const ccl_private AxfCarPaintBsdf *bsdf,
                                     const ccl_private AxfCarPaintParams *p,
@@ -259,18 +314,19 @@ ccl_device float3 axf_carpaint_brdf(KernelGlobals kg,
                                     const float3 wo)
 {
   const float3 N = bsdf->N;
-  const float cos_v = dot(N, wi);
-  const float cos_l = dot(N, wo);
-  if (cos_v <= 0.0f || cos_l <= 0.0f) {
+  const float3 Nc = make_float3(bsdf->nc_x, bsdf->nc_y, bsdf->nc_z);
+  if (dot(N, wi) <= 0.0f || dot(N, wo) <= 0.0f) {
     return zero_float3();
   }
 
+  /* The coat refracts (and transmits) about its own normal; the base is evaluated
+   * against the base normal. */
   float3 l = wo;
   float3 v = wi;
   if (p->refractive) {
     const float eta = 1.0f / p->ior;
-    l = axf_refract(wo, N, eta);
-    v = axf_refract(wi, N, eta);
+    l = axf_refract(wo, Nc, eta);
+    v = axf_refract(wi, Nc, eta);
   }
   const float3 h = normalize(l + v);
   const float nh = dot(N, h);
@@ -301,14 +357,17 @@ ccl_device float3 axf_carpaint_brdf(KernelGlobals kg,
   ct *= G / (M_PI_F * fmaxf(nv * nl, 1e-12f));
 
   const float3 T = axf_table(kg, sd, bsdf, p, thD, thH);
-  float3 f = T * (p->kd * M_1_PI_F + ct) + axf_flakes(kg, sd, bsdf, p, thH, thD);
-
   /* Clear coat transmission in and out (no solid angle compression). */
-  f *= (1.0f - axf_fresnel(cos_l, p->ior)) * (1.0f - axf_fresnel(cos_v, p->ior));
-  return f;
+  const float t = (1.0f - axf_fresnel(dot(Nc, wo), p->ior)) *
+                  (1.0f - axf_fresnel(dot(Nc, wi), p->ior));
+  return T * (p->kd * M_1_PI_F + ct) * (t * dot(N, wo)) + axf_flakes(kg, sd, bsdf, p, thH, thD);
 }
 
-/* Sampling: one-sample mixture of a cosine lobe and a Beckmann half-vector lobe. */
+/* Sampling: one-sample mixture of a cosine lobe, a uniform hemisphere (the flake BTF
+ * has no cosine, so cosine sampling alone is noisy at grazing light) and a Beckmann
+ * half-vector lobe. */
+#define AXF_P_COS 0.45f
+#define AXF_P_UNIFORM 0.1f
 ccl_device_inline float axf_beckmann_D(const float alpha, const float cos_h)
 {
   if (cos_h <= 0.0f) {
@@ -329,6 +388,7 @@ ccl_device float axf_carpaint_pdf(const ccl_private AxfCarPaintBsdf *bsdf,
     return 0.0f;
   }
   const float pdf_cos = cos_l * M_1_PI_F;
+  const float pdf_uniform = M_1_2PI_F;
   const float3 h = normalize(wi + wo);
   const float oh = dot(wo, h);
   float pdf_spec = 0.0f;
@@ -336,12 +396,13 @@ ccl_device float axf_carpaint_pdf(const ccl_private AxfCarPaintBsdf *bsdf,
     const float nh = dot(N, h);
     pdf_spec = axf_beckmann_D(bsdf->sample_alpha, nh) * nh / (4.0f * oh);
   }
-  return 0.5f * pdf_cos + 0.5f * pdf_spec;
+  return AXF_P_COS * pdf_cos + AXF_P_UNIFORM * pdf_uniform +
+         (1.0f - AXF_P_COS - AXF_P_UNIFORM) * pdf_spec;
 }
 
 /* Best-effort albedo for passes and closure selection (not used for shading):
  * coat transmission x colour table at the mirror configuration x (kd + 4 sum c F),
- * since X-Rite's CT lobe integrates to about 4 c F; the flake BTF averages to zero. */
+ * since X-Rite's CT lobe integrates to about 4 c F (the flake BTF is left out). */
 ccl_device Spectrum axf_carpaint_albedo(KernelGlobals kg,
                                         ccl_private ShaderData *sd,
                                         const ccl_private AxfCarPaintBsdf *bsdf,
@@ -406,7 +467,7 @@ ccl_device Spectrum bsdf_axf_carpaint_eval(KernelGlobals kg,
   *pdf = axf_carpaint_pdf(bsdf, wi, wo);
   AxfCarPaintParams p;
   axf_load_params(kg, sd, bsdf, &p);
-  return rgb_to_spectrum(axf_carpaint_brdf(kg, sd, bsdf, &p, wi, wo) * cos_l);
+  return rgb_to_spectrum(axf_carpaint_eval_cos(kg, sd, bsdf, &p, wi, wo));
 }
 
 ccl_device int bsdf_axf_carpaint_sample(KernelGlobals kg,
@@ -425,13 +486,18 @@ ccl_device int bsdf_axf_carpaint_sample(KernelGlobals kg,
   *sampled_roughness = make_float2(bsdf->sample_alpha, bsdf->sample_alpha);
 
   float2 r = rand;
-  if (r.x < 0.5f) {
-    r.x *= 2.0f;
+  if (r.x < AXF_P_COS) {
+    r.x /= AXF_P_COS;
     float pdf_unused;
     sample_cos_hemisphere(N, r, wo, &pdf_unused);
   }
+  else if (r.x < AXF_P_COS + AXF_P_UNIFORM) {
+    r.x = (r.x - AXF_P_COS) / AXF_P_UNIFORM;
+    float pdf_unused;
+    sample_uniform_hemisphere(N, r, wo, &pdf_unused);
+  }
   else {
-    r.x = (r.x - 0.5f) * 2.0f;
+    r.x = (r.x - AXF_P_COS - AXF_P_UNIFORM) / (1.0f - AXF_P_COS - AXF_P_UNIFORM);
     const float a = bsdf->sample_alpha;
     const float tan2 = -a * a * logf(fmaxf(1.0f - r.x, 1e-12f));
     const float cos_t = 1.0f / sqrtf(1.0f + tan2);

@@ -19,7 +19,7 @@ import bpy
 import numpy as np
 
 from .approx_fit import N_VIEW, fit
-from .blender_import import _flake_coordinates, _packed_data_image
+from .blender_import import _packed_data_image, _surface_mapping, _tile_coordinates
 from .cpa2_reader import read_cpa2
 
 
@@ -105,8 +105,9 @@ def build_approx_material(path: str, *, name: str | None = None) -> bpy.types.Ma
 
     if flake_img is not None:
         rows = f["flake_rows"]
-        patch_m = (m["patch_mm"][0] or 25.6) / 1000.0
-        flake_uv = _flake_coordinates(nt, patch_m, -1100, -600)
+        patch_mm = (m["patch_mm"][0] or 25.6, m["patch_mm"][1] or m["patch_mm"][0] or 25.6)
+        uv_m, _tangent = _surface_mapping(nt, -1900, -600)
+        flake_uv = _tile_coordinates(nt, uv_m, patch_mm, -1000, -600)
         sep_uv = node("ShaderNodeSeparateXYZ", -400, -600)
         L(flake_uv, sep_uv.inputs[0])
         fu = math_node('FRACT', sep_uv.outputs[0], None, -250, -560)

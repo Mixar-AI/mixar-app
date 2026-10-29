@@ -10,8 +10,11 @@
 shader node_axf_carpaint_bsdf(color Color = 1.0,
                               normal Normal = N,
                               point FlakeUV = P,
+                              point CoatUV = P,
+                              vector Tangent = vector(0.0, 0.0, 0.0),
                               string TableFilename = "",
                               string FlakesFilename = "",
+                              string CoatFilename = "",
                               output closure color BSDF = 0)
 {
   BSDF = Color * 0.5 * diffuse(Normal);

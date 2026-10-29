@@ -21,8 +21,10 @@ from mixar.modules.axf import constants as C  # noqa: E402
 from mixar.modules.axf.core.cpa2_reader import AxfFormatError, read_cpa2  # noqa: E402
 from mixar.modules.axf.core.payload import (  # noqa: E402
     build_payload,
+    complete_table,
     flake_rgb_matrix,
     spectral_to_rec709_matrix,
+    table_rgb709,
 )
 
 WL = np.arange(400, 701, 10, dtype=np.float32)
@@ -50,6 +52,7 @@ def _write_mini_axf(path, *, rep_class="CarPaint2"):
         table = np.zeros((8, 6, 31), np.float32)          # [thetaD, thetaH, band]
         table[...] = (np.arange(8)[:, None, None] * 10 + np.arange(6)[None, :, None]).astype(np.float32)
         res.create_dataset("TabulatedBrdf/Color/Data", data=table)
+        res.create_dataset("TabulatedBrdf/Color/ColorSpec", data=np.bytes_("$(COLORSPECS)/spectral"))
         res.create_dataset("ClearCoatFilter/IOR/Data", data=np.array([1.5], np.float32))
         flakes = res.create_group("CarPaint2/Flakes")
         flakes.create_dataset("WidthMM", data=np.float32(25.6))
@@ -100,7 +103,8 @@ def test_reader_keeps_values_exact(mini_axf):
     assert m["kd"] == pytest.approx(np.float32(0.02))
     np.testing.assert_array_equal(m["lobes"][0], np.array((0.004, 0.14, 0.5), np.float32))
     assert m["ior"] == 1.5 and m["refractive"]
-    assert m["table_spectral"].shape == (8, 6, 31)
+    assert m["table"].shape == (8, 6, 31) and m["table_space"] == "spectral"
+    assert m["coat_normal"] is None
     assert m["flakes"].shape == (3, 4, 4, 3)
     assert m["flakes"].dtype == np.float32
     np.testing.assert_array_equal(m["lut"], [[0, 1], [2, -1]])
@@ -122,14 +126,14 @@ def test_param_stream_matches_kernel_contract(mini_axf):
     assert tuple(stream[0]) == (C.PARAM_VERSION, np.float32(0.02), 1.5, 1.0)
     assert tuple(stream[1]) == (2, 14, 2, 2)                     # lobes, numThetaF, lut rows/cols
     assert tuple(stream[2]) == (C.ATLAS_COLUMNS, 4, 4, 8)        # atlas cols, patch w/h, table h
-    assert stream[3][0] == p["table_row0"]
+    assert tuple(stream[3][:3]) == (p["table_row0"], C.ATLAS_COLUMNS * 4, 4)  # + atlas w, h
     np.testing.assert_array_equal(stream[4:7, :3], p["flake_matrix"].astype(np.float32))
     np.testing.assert_array_equal(stream[C.PARAM_HEADER_TEXELS, :3], np.float32([0.004, 0.14, 0.5]))
     lut_texel = stream[C.PARAM_HEADER_TEXELS + 2]
     np.testing.assert_array_equal(lut_texel, [0, 1, 2, -1])
     # Colour table rows follow: row = thetaD, column = thetaH.
     table_rgb = img[p["table_row0"]:, :, :3]
-    expect = m["table_spectral"] @ spectral_to_rec709_matrix(m["wavelengths"])
+    expect = m["table"] @ spectral_to_rec709_matrix(m["wavelengths"])
     np.testing.assert_array_equal(table_rgb, expect.astype(np.float32))
 
 
@@ -165,10 +169,86 @@ def test_reader_refuses_virtual_theta_i_slices(tmp_path):
         read_cpa2(path)
 
 
-def test_reader_refuses_coat_textures(tmp_path):
-    path = _write_mini_axf(str(tmp_path / "coatnormal.axf"))
+def test_reader_refuses_unknown_coat_resources(tmp_path):
+    path = _write_mini_axf(str(tmp_path / "coatcolor.axf"))
     with h5py.File(path, "a") as f:
         rep = f["com.xrite.Materials/mini/com.xrite.Representations/0"]
-        _lookup(rep, "com.xrite.Resources/Normal", ["ClearCoatFilter/IOR"])
+        _lookup(rep, "com.xrite.Resources/Color", ["ClearCoatFilter/IOR"])
     with pytest.raises(AxfFormatError):
         read_cpa2(path)
+
+
+def _make_2016_style(path):
+    """The 2016 X-Rite library layout: an older representation listed first, an RGB
+    (sRGB,E) colour table with no spectral colour spec, a clear coat normal map, and no
+    NoRefraction flag."""
+    rng = np.random.default_rng(3)
+    with h5py.File(path, "a") as f:
+        del f["com.xrite.ColorSpecs/spectral"]
+        del f["com.xrite.ColorSpecs/sRGB,E/ToSpectralMatrix"]
+        mat = f["com.xrite.Materials/mini"]
+        res = mat["com.xrite.Resources"]
+        del res["TabulatedBrdf/Color/Data"]
+        del res["TabulatedBrdf/Color/ColorSpec"]
+        table = np.zeros((8, 8, 3), np.float32)
+        d, h = np.meshgrid(np.arange(8), np.arange(8), indexing="ij")
+        inside = d + h <= 5
+        table[inside] = rng.random((int(inside.sum()), 3)).astype(np.float32) + 0.1
+        res.create_dataset("TabulatedBrdf/Color/Data", data=table)
+        res["TabulatedBrdf/Color"].create_dataset("ColorSpec", data=np.bytes_("$(COLORSPECS)/sRGB,E"))
+        normal = rng.normal(0, 0.01, (6, 5, 3)).astype(np.float32)
+        normal[..., 2] = 1.0
+        normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
+        res.create_dataset("ClearCoat/Normal/Data", data=normal)
+        res.create_dataset("ClearCoat/Normal/WidthMM", data=np.float32(35.0))
+        res.create_dataset("ClearCoat/Normal/HeightMM", data=np.float32(34.0))
+        res.create_dataset("ClearCoat/Normal/Layout", data=np.array(["V", "U", "X,Y,Z"], dtype=h5py.string_dtype()))
+        reps = mat["com.xrite.Representations"]
+        reps.move("0", "1")
+        rep = reps["1"]
+        del rep["NoRefraction"]
+        _lookup(rep, "com.xrite.Resources/Normal", ["ClearCoat/Normal"])
+        old = reps.create_group("0")
+        old.attrs["axf.type"] = "com.xrite.Carpaint"
+    return path, table, normal
+
+
+def test_reader_2016_layout(tmp_path):
+    path, table, normal = _make_2016_style(_write_mini_axf(str(tmp_path / "old.axf")))
+    m = read_cpa2(path)
+    assert m["table_space"] == "srgb_e" and m["wavelengths"] is None
+    np.testing.assert_array_equal(m["table"], table)
+    np.testing.assert_array_equal(m["coat_normal"], normal)
+    assert m["coat_normal_mm"] == (35.0, 34.0)
+    assert m["refractive"]  # no NoRefraction flag = refractive (X-Rite's previews agree)
+    np.testing.assert_array_equal(flake_rgb_matrix(m), np.eye(3))
+    p = build_payload(m)
+    coat = p["coat_normal_image"]
+    np.testing.assert_array_equal(coat[..., :3], normal)
+    assert np.all(coat[..., 3] == 1.0)
+
+
+def test_complete_table_follows_xrite_fill():
+    rng = np.random.default_rng(5)
+    n, e = 8, 5
+    d, h = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    table = np.where((d + h <= e)[..., None], rng.random((n, n, 3)) + 0.1, 0.0)
+    full = complete_table(table)
+    inside = d + h <= e
+    np.testing.assert_array_equal(full[inside], table[inside])
+    for di, hi in zip(*np.nonzero(~inside)):
+        hc = min(hi, e)
+        np.testing.assert_array_equal(full[di, hi], table[min(di, e - hc), hc])
+    # A complete table, or zeros that are not that triangle, is left alone.
+    np.testing.assert_array_equal(complete_table(full), full)
+    odd = table.copy(); odd[0, 0] = 0.0
+    np.testing.assert_array_equal(complete_table(odd), odd)
+
+
+def test_rgb_table_reaches_the_kernel_completed(tmp_path):
+    path, table, _ = _make_2016_style(_write_mini_axf(str(tmp_path / "old.axf")))
+    m = read_cpa2(path)
+    p = build_payload(m)
+    np.testing.assert_array_equal(p["table_image"][p["table_row0"]:, :, :3],
+                                  complete_table(table.astype(np.float64)).astype(np.float32))
+    np.testing.assert_array_equal(table_rgb709(m), complete_table(table.astype(np.float64)))

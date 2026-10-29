@@ -1053,14 +1053,17 @@ static_assert(sizeof(SVMNodeRayPortalBsdfData) % sizeof(uint) == 0);
 /* Mixar: X-Rite AxF CarPaint2 BSDF (see kernel/closure/bsdf_axf_carpaint.h). */
 struct SVMNodeAxfCarPaintBsdfData {
   SVMInputFloat3 flake_uv;
+  SVMInputFloat3 coat_uv;
   int table_id;
   int flakes_id;
+  int coat_id;
   int table_w;
   int table_h;
-  int atlas_w;
-  int atlas_h;
+  int coat_w;
+  int coat_h;
   SVMStackOffset normal_offset;
-  uint8_t _pad[3];
+  SVMStackOffset tangent_offset;
+  uint8_t _pad[2];
 };
 static_assert(alignof(SVMNodeAxfCarPaintBsdfData) <= alignof(uint));
 static_assert(sizeof(SVMNodeAxfCarPaintBsdfData) % sizeof(uint) == 0);
