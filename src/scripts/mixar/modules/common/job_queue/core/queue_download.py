@@ -259,6 +259,8 @@ class DownloadMixin:
             job.state = JobState.SUCCESS
             _record_output_landed(job, file_type, obj_names, resolve_uids=True)
         except Exception as e:
+            # The full traceback goes to the log; the reason keeps its last line.
+            logger.exception("[JobQueue] import of %s result failed", file_type)
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
             job.user_message = n_("Failed to import the generated model")
