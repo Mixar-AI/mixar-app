@@ -117,6 +117,9 @@ def test_the_plugin_installs_enables_and_turns_the_server_on(tmp_path):
     section = ini[ini.index(us.MCP_SECTION):ini.index("[Other]")]
     assert "bAutoStartServer=True" in section and f"ServerPortNumber={us.MCP_PORT}" in section
     assert "bEnableToolSearch=True" in section and "Key=1" in ini and "ContentBrowserTab1" in ini
+    assert f"{us.PERFORMANCE_SECTION}\nbThrottleCPUWhenNotForeground=False" in ini
+    # The user's own project: Mixar edits only its own levels.
+    assert (project / "Config" / "DefaultMixarLink.ini").read_text() == "[MixarLink]\nProjectMode=plugin\n"
     # Again: replaced in place, nothing doubled.
     assert us.install_plugin(str(uproject), archive=_plugin_zip("0.2.0")) == "0.2.0"
     ini = (project / "Config" / "DefaultEditorPerProjectUserSettings.ini").read_text()
@@ -155,7 +158,8 @@ def test_connect_unreal_installs_opens_and_selects_the_new_editor(monkeypatch, t
     proc.poll.return_value = None
     opened = {}
     monkeypatch.setattr(us, "open_unreal", lambda unreal, uproject: opened.setdefault("uproject", uproject) and proc)
-    monkeypatch.setattr(us, "install_plugin", lambda uproject, say: "0.1.0")
+    modes = []
+    monkeypatch.setattr(us, "install_plugin", lambda uproject, say, mode: modes.append(mode) or "0.1.0")
     live = [{"engine": "unreal", "pid": 4242, "project_name": "Arena", "version": "5.8.4", "adapter_version": "0.1.0"}]
     monkeypatch.setattr(engine_connect.engine_link, "adapters", lambda engine=None: live)
     picked = []
@@ -163,3 +167,4 @@ def test_connect_unreal_installs_opens_and_selects_the_new_editor(monkeypatch, t
     out = engine_connect.connect(str(tmp_path / "games" / "Arena"), engine="unreal", new_name="Arena")
     assert opened["uproject"].endswith("Arena.uproject")
     assert out["editor"]["id"] == "unreal-4242" and picked == ["unreal-4242"]
+    assert modes == ["owned"]  # a game Mixar made

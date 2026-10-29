@@ -187,11 +187,16 @@ class UnrealMcpClient(McpClient):
     JSON-string answer (``{"ok", "data"|"error"}`` under ``returnValue``)
     comes back as Godot's CallToolResult shape."""
 
-    def __init__(self, port: int, path: str, toolset: str):
+    def __init__(self, port: int, path: str, toolset: str, defaults: dict | None = None):
         super().__init__(port, "", path)
         self.toolset = toolset
+        # Defaults Unreal's schema cannot carry (strings, lists), published by
+        # the plugin in its discovery file; a call's own arguments win.
+        self.defaults = defaults if isinstance(defaults, dict) else {}
 
     def call(self, name: str, arguments: dict, timeout: float) -> dict:
+        filled = self.defaults.get(name)
+        arguments = {**(filled if isinstance(filled, dict) else {}), **arguments}
         raw = super().call("call_tool", {"toolset_name": self.toolset, "tool_name": name,
                                          "arguments": arguments}, timeout)
         return unreal_result(raw)
@@ -267,7 +272,8 @@ def _connect(engine: str | None):
     if client is None:
         _clients.clear()
         if info.get("transport") == UNREAL_TRANSPORT:
-            client = UnrealMcpClient(info["port"], info.get("path") or "/mcp", str(info.get("toolset") or ""))
+            client = UnrealMcpClient(info["port"], info.get("path") or "/mcp", str(info.get("toolset") or ""),
+                                     info.get("defaults"))
         else:
             client = McpClient(info["port"], info["token"])
         _clients[key] = client

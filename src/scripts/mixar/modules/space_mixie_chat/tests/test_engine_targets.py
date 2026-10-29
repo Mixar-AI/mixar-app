@@ -98,6 +98,11 @@ def test_engine_packages_keep_extras_and_unreal_fbx_takes_the_unreal_preset():
     assert "export_extras" not in kw
     kw, _, _ = export_package.exporter_kwargs("fbx", [], "uefn")
     assert kw["apply_scale_options"] == "FBX_SCALE_NONE" and kw["primary_bone_axis"] == "Y"
+    # Packages keep Blender's axes with the transform baked into the vertices
+    # (Unreal imports each object locally); a plain Unreal scene export does not.
+    assert (kw["axis_up"], kw["axis_forward"], kw["bake_space_transform"]) == ("Z", "Y", True)
+    from mixar.modules.space_mixie_chat.core.export_presets import PRESETS
+    assert "bake_space_transform" not in PRESETS["unreal"]["fbx"]
     kw, _, _ = export_package.exporter_kwargs("fbx", [])
     assert kw["apply_scale_options"] == "FBX_SCALE_ALL"
 
@@ -170,6 +175,7 @@ def test_a_tripo_rig_maps_onto_the_godot_humanoid_and_the_ue_mannequin():
     ue = et.skeleton_map("unreal", "SK_Attacker", TRIPO_V3)
     assert ue["profile"] == "ue5_mannequin"
     assert ue["bones"]["pelvis"] == "Hip" and ue["bones"]["ball_l"] == "L_ToeBase"
+    assert (ue["bones"]["neck_01"], ue["bones"]["neck_02"]) == ("NeckTwist01", "NeckTwist02")
     assert ue["bones"]["middle_02_r"] == "R_Mid2" and ue["bones"]["upperarm_twist_01_l"] == "L_UpperarmTwist01"
     assert set(ue["bones"].values()) <= set(TRIPO_V3)
     assert et.skeleton_map("uefn", "SK", TRIPO_V3)["profile"] == "ue5_mannequin"

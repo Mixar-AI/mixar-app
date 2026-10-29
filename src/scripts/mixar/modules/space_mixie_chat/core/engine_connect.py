@@ -321,7 +321,7 @@ def _connect_unreal(folder: str, new_name: str | None, say) -> dict:
         uproject = unreal_setup.find_uproject(folder)
     if not uproject:
         raise ValueError("That folder is not an Unreal project (it has no .uproject).")
-    version = unreal_setup.install_plugin(uproject, say)
+    version = unreal_setup.install_plugin(uproject, say, mode="owned" if new_name else "plugin")
     say("Opening Unreal (the first open compiles shaders)")
     proc = unreal_setup.open_unreal(unreal, uproject)
     return _await_link(proc, "unreal", UNREAL_CONNECT_TIMEOUT_S, version)

@@ -46,6 +46,14 @@ TAGS = {
     "light": ("baked", "dynamic"),
     "collision": ("box", "convex", "mesh", "none"),
 }
+# An Unreal package's FBX keeps Blender's axes (Z up, Y forward) with the
+# axis and unit conversion baked into the vertices (Apply Transform): the
+# engine adapter imports each object in its own local space, so its pivot stays
+# at its origin, and that import keeps only vertex data. Measured on UE 5.8:
+# a 1 x 0.1 x 2 m door is 100 x 10 x 200 cm in local and world-space imports,
+# where the plain Unreal preset gives 1 x 0.1 x 2 cm locally. Packages only:
+# a scene export for Unreal keeps the plain preset (``export_presets``).
+PACKAGE_FBX = {"axis_up": "Z", "axis_forward": "Y", "bake_space_transform": True}
 # Convex hulls are built from at most this many source vertices (strided), so
 # a dense scan never stalls the export; the hull of a subset stays inside the
 # true hull.
@@ -154,6 +162,7 @@ _BODY = [
     ("Chest", "spine_03", "Spine01", "Spine1"),
     ("UpperChest", "spine_05", "Spine02", "Spine2"),
     ("Neck", "neck_01", "NeckTwist01", "Neck"),
+    (None, "neck_02", "NeckTwist02", None),  # closes the Mannequin's Neck chain
     ("Head", "head", "Head", "Head"),
     ("LeftEye", None, "L_Eye", "LeftEye"),  # the Mannequin has no eye bones
     ("RightEye", None, "R_Eye", "RightEye"),

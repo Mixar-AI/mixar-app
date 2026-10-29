@@ -337,6 +337,7 @@ def exporter_kwargs(fmt, animations=None, engine=None):
     elif engine in ("unreal", "uefn") and fmt == "fbx":
         from .export_presets import PRESETS
         kw.update(PRESETS["unreal"]["fbx"])
+        kw.update(engine_targets.PACKAGE_FBX)
     anim, mode, warning = animation_kwargs(fmt, animations)
     kw.update(anim)
     return kw, mode, warning

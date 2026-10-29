@@ -10,10 +10,15 @@
 - ``create_project(folder, name, unreal)``: a new third-person game from the
   engine's own template (``TP_ThirdPersonBP`` plus its shared Characters,
   LevelPrototyping and Input content).
-- ``install_plugin(uproject)``: the latest Mixar Link for Unreal release
+- ``install_plugin(uproject, mode)``: the latest Mixar Link for Unreal release
   (``PLUGIN_URL``) unpacked into ``<project>/Plugins/MixarLink``, the plugins
-  it needs enabled in the ``.uproject`` and Unreal's MCP server turned on
-  (``MCP_PORT``) in ``Config/DefaultEditorPerProjectUserSettings.ini``.
+  it needs enabled in the ``.uproject``, Unreal's MCP server turned on
+  (``MCP_PORT``) and the editor's background throttle off (Mixar drives the
+  editor while Mixar has the focus; a throttled editor takes seconds per
+  frame) in ``Config/DefaultEditorPerProjectUserSettings.ini``, and the
+  project mode in ``Config/DefaultMixarLink.ini``: ``owned`` for a game Mixar
+  made (Mixar edits any level and sets the main level), ``plugin`` for the
+  user's own project (Mixar edits only levels under ``/Game/Mixar``).
 - ``open_unreal(unreal, uproject)``: the editor on the project.
 
 The editor then writes its discovery file (``engine_link``). Nothing here
@@ -40,6 +45,9 @@ PLUGIN_URL = f"https://github.com/{PLUGIN_REPO}/releases/latest/download/MixarLi
 UNREAL_MIN = (5, 8)
 MCP_PORT = 9880
 MCP_SECTION = "[/Script/ModelContextProtocolEngine.ModelContextProtocolSettings]"
+PERFORMANCE_SECTION = "[/Script/UnrealEd.EditorPerformanceSettings]"
+MODE_SECTION = "[MixarLink]"
+MODES = ("owned", "plugin")
 # Unreal's MCP server and the toolsets Mixar Link sits beside; Python runs the
 # plugin; Editor Scripting is what its tools call.
 REQUIRED_PLUGINS = ("ModelContextProtocol", "AllToolsets", "PythonScriptPlugin", "EditorScriptingUtilities",
@@ -219,12 +227,20 @@ def enable_plugins(uproject: str) -> None:
 
 
 def enable_server(project: str) -> None:
-    """Unreal's MCP server on at editor start, on Mixar's port."""
-    _set_ini(os.path.join(project, "Config", "DefaultEditorPerProjectUserSettings.ini"), MCP_SECTION,
-             {"bAutoStartServer": "True", "ServerPortNumber": str(MCP_PORT)})
+    """Unreal's MCP server on at editor start, on Mixar's port, and the editor
+    not throttled while it is in the background."""
+    settings = os.path.join(project, "Config", "DefaultEditorPerProjectUserSettings.ini")
+    _set_ini(settings, MCP_SECTION, {"bAutoStartServer": "True", "ServerPortNumber": str(MCP_PORT)})
+    _set_ini(settings, PERFORMANCE_SECTION, {"bThrottleCPUWhenNotForeground": "False"})
 
 
-def install_plugin(uproject: str, progress=None, archive: bytes | None = None) -> str:
+def set_mode(project: str, mode: str) -> None:
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}")
+    _set_ini(os.path.join(project, "Config", "DefaultMixarLink.ini"), MODE_SECTION, {"ProjectMode": mode})
+
+
+def install_plugin(uproject: str, progress=None, archive: bytes | None = None, mode: str = "plugin") -> str:
     """The latest Mixar Link for Unreal (or ``archive``) into the project's
     Plugins/, everything it needs enabled; returns its version. A previous copy
     is replaced."""
@@ -259,6 +275,7 @@ def install_plugin(uproject: str, progress=None, archive: bytes | None = None) -
         shutil.rmtree(staging, ignore_errors=True)
     enable_plugins(uproject)
     enable_server(project)
+    set_mode(project, mode)
     return version
 
 

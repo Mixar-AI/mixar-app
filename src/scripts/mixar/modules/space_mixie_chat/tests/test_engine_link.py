@@ -278,7 +278,8 @@ def unreal(tmp_path, monkeypatch):
     (link_dir / f"unreal-{os.getpid()}.json").write_text(json.dumps({
         "engine": "unreal", "version": "5.8.4-58902052+++UE5+Release-5.8", "adapter_version": "0.1.0",
         "project_name": "Arena3D", "pid": os.getpid(), "port": server.server_address[1], "path": "/mcp",
-        "token": "", "transport": "unreal_mcp", "toolset": TOOLSET, "started_at": time.time()}))
+        "token": "", "transport": "unreal_mcp", "toolset": TOOLSET, "started_at": time.time(),
+        "defaults": {"place": {"name": "", "position": [0.0, 0.0, 0.0], "animation": ""}}}))
     yield link_dir
     server.shutdown()
 
@@ -310,3 +311,12 @@ def test_unreal_tools_go_through_call_tool_and_come_back_in_godots_shape(unreal)
     assert "image_base64" not in shot["data"]
     missing = engine_link.link_call("place", {"scene": "/Game/Mixar/Crate"})
     assert missing == {"success": False, "data": {}, "error": "Unknown tool place"}
+
+
+def test_unreal_fills_the_defaults_its_schema_cannot_carry(unreal):
+    engine_link.link_call("place", {"scene": "/Game/Mixar/Crate", "position": [1.0, 2.0, 0.0]})
+    sent = _FakeUnreal.calls[-1][1]["arguments"]
+    # The plugin's published defaults fill what the call left out; the call's own values win.
+    assert sent == {"name": "", "position": [1.0, 2.0, 0.0], "animation": "", "scene": "/Game/Mixar/Crate"}
+    engine_link.link_call("status", {})
+    assert _FakeUnreal.calls[-1][1]["arguments"] == {}
