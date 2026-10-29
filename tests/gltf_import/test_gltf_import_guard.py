@@ -323,3 +323,45 @@ def test_clean_import_logs_nothing(guard, tmp_path):
     guard.bpy.ops.import_scene.gltf.return_value = {"FINISHED"}
     assert guard.m.import_gltf(str(path)) == {"FINISHED"}
     guard.slog.assert_not_called()
+
+
+def _window(name, temporary=False, size=(1600, 1000)):
+    return SimpleNamespace(name=name, screen=SimpleNamespace(is_temporary=temporary),
+                           width=size[0], height=size[1])
+
+
+def _context_spy(bpy, current, windows):
+    """bpy.context with a window and windows; temp_override records the window it set."""
+    seen = []
+
+    class Override:
+        def __init__(self, **kw):
+            self.kw = kw
+
+        def __enter__(self):
+            seen.append(self.kw["window"].name)
+
+        def __exit__(self, *exc):
+            return False
+
+    bpy.context = SimpleNamespace(window=current, window_manager=SimpleNamespace(windows=windows),
+                                  temp_override=lambda **kw: Override(**kw))
+    return seen
+
+
+@pytest.mark.parametrize("current", [None, "island"])
+def test_an_import_from_a_timer_or_the_island_runs_in_the_document_window(guard, current):
+    """uat4, 28 Oct: rigs imported from a timer tick failed with "Error: Python:"
+    mid-armature (context.window.scene / Edit Mode) and left an orphan Armature."""
+    document = _window("document")
+    island = _window("island", temporary=True, size=(400, 300))
+    seen = _context_spy(guard.bpy, {"island": island}.get(current), [island, document])
+    assert guard.m._with_document_window(guard.bpy, lambda: "FINISHED") == "FINISHED"
+    assert seen == ["document"]
+
+
+def test_an_import_already_in_the_document_window_is_not_overridden(guard):
+    document = _window("document")
+    seen = _context_spy(guard.bpy, document, [document])
+    assert guard.m._with_document_window(guard.bpy, lambda: "FINISHED") == "FINISHED"
+    assert seen == []

@@ -367,12 +367,27 @@ def _scene_session(scene) -> str:
         return ""
 
 
+def _document_window():
+    """The document's main window: never the chat island or pill, which live
+    in temporary companion windows, and never None from a timer tick."""
+    windows = [w for w in bpy.context.window_manager.windows
+               if getattr(w, "screen", None) is not None and not w.screen.is_temporary]
+    return max(windows, key=lambda w: w.width * w.height) if windows else None
+
+
 class _pinned_scene:
     """Import into the job's originating scene, whatever tab the window shows.
 
     Importers link into ``context.scene``; the window's scene is flipped for
     the import and restored afterwards (the same pin the agent script path
     uses). A job whose scene is gone imports nowhere: it fails.
+
+    The import runs with the DOCUMENT window as context. A download lands on a
+    timer tick, whose context window can be the chat island's temporary
+    companion window (or none); the glTF importer builds an armature with
+    ``context.window.scene = ...`` and ``object.mode_set(mode="EDIT")``, so
+    Tripo rig imports failed mid-armature with "Error: Python:" while plain
+    meshes imported (uat4, 28 Oct: two rigs, an orphan "Armature" left each time).
     """
 
     def __init__(self, scene_name, session_id: str = ""):
@@ -380,15 +395,22 @@ class _pinned_scene:
         self.session_id = session_id or ""
         self.window = None
         self.shown = None
+        self._override = None
 
     def __enter__(self):
+        document = _document_window()
+        current = getattr(bpy.context, "window", None)
+        if document is not None and current is not document:
+            self._override = bpy.context.temp_override(window=document, screen=document.screen)
+            self._override.__enter__()
         if not self.scene_name and not self.session_id:
             return self
         target = resolve_job_scene(self.scene_name, self.session_id)
         if target is None:
+            self._leave()
             raise RuntimeError(f"originating scene {self.scene_name!r} no longer exists")
         wm = bpy.context.window_manager
-        self.window = getattr(bpy.context, "window", None) or next(iter(wm.windows), None)
+        self.window = document or getattr(bpy.context, "window", None) or next(iter(wm.windows), None)
         if self.window is not None and self.window.scene is not target:
             self.shown = self.window.scene
             self.window.scene = target
@@ -405,7 +427,16 @@ class _pinned_scene:
                 self.window.scene = self.shown
             except Exception:  # noqa: BLE001
                 pass
+        self._leave()
         return False
+
+    def _leave(self):
+        if self._override is not None:
+            override, self._override = self._override, None
+            try:
+                override.__exit__(None, None, None)
+            except Exception:  # noqa: BLE001 — never mask the import's own outcome
+                pass
 
 
 def job_scene(job):
