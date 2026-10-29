@@ -2559,6 +2559,11 @@ NODE_DEFINE(AxfCarPaintBsdfNode)
   SOCKET_IN_POINT(flake_uv, "Flake UV", zero_float3(), SocketType::LINK_TEXTURE_UV);
   SOCKET_IN_POINT(coat_uv, "Coat UV", zero_float3(), SocketType::LINK_TEXTURE_UV);
   SOCKET_IN_VECTOR(tangent, "Tangent", zero_float3());
+  SOCKET_IN_COLOR(tint, "Tint", one_float3());
+  SOCKET_IN_FLOAT(flake_strength, "Flake Strength", 1.0f);
+  SOCKET_IN_FLOAT(orange_peel, "Orange Peel", 1.0f);
+  SOCKET_IN_FLOAT(coat_reflection, "Coat Reflection", 1.0f);
+  SOCKET_IN_FLOAT(coat_roughness, "Coat Roughness", 0.0f);
   SOCKET_STRING(table_filename, "Table Filename", ustring());
   SOCKET_STRING(flakes_filename, "Flakes Filename", ustring());
   SOCKET_STRING(coat_filename, "Coat Filename", ustring());
@@ -2634,6 +2639,11 @@ void AxfCarPaintBsdfNode::compile(SVMCompiler &compiler)
                     SVMNodeAxfCarPaintBsdfData{
                         .flake_uv = compiler.input_float3("Flake UV"),
                         .coat_uv = compiler.input_float3("Coat UV"),
+                        .tint = compiler.input_float3("Tint"),
+                        .flake_strength = compiler.input_float("Flake Strength"),
+                        .orange_peel = compiler.input_float("Orange Peel"),
+                        .coat_reflection = compiler.input_float("Coat Reflection"),
+                        .coat_roughness = compiler.input_float("Coat Roughness"),
                         .table_id = table_id,
                         .flakes_id = flakes_id,
                         .coat_id = coat_id,

@@ -1054,6 +1054,12 @@ static_assert(sizeof(SVMNodeRayPortalBsdfData) % sizeof(uint) == 0);
 struct SVMNodeAxfCarPaintBsdfData {
   SVMInputFloat3 flake_uv;
   SVMInputFloat3 coat_uv;
+  /* Artist controls; their defaults (white, 1, 1, 1, 0) render the measurement exactly. */
+  SVMInputFloat3 tint;
+  SVMInputFloat flake_strength;
+  SVMInputFloat orange_peel;
+  SVMInputFloat coat_reflection;
+  SVMInputFloat coat_roughness;
   int table_id;
   int flakes_id;
   int coat_id;

@@ -680,11 +680,13 @@ ccl_device
                              bsdf_data.coat_h,
                              stack_load(stack, bsdf_data.coat_uv),
                              N,
-                             tangent);
+                             tangent,
+                             fmaxf(stack_load(stack, bsdf_data.orange_peel), 0.0f));
       }
       const Spectrum weight = closure_weight * mix_weight;
+      const Spectrum tint = rgb_to_spectrum(max(stack_load(stack, bsdf_data.tint), zero_float3()));
       ccl_private AxfCarPaintBsdf *bsdf = (ccl_private AxfCarPaintBsdf *)bsdf_alloc(
-          sd, sizeof(AxfCarPaintBsdf), weight);
+          sd, sizeof(AxfCarPaintBsdf), weight * tint);
       if (bsdf) {
         bsdf->N = N;
         bsdf->u = uv.x;
@@ -696,11 +698,17 @@ ccl_device
         bsdf->nc_x = Nc.x;
         bsdf->nc_y = Nc.y;
         bsdf->nc_z = Nc.z;
+        bsdf->flake_strength = fmaxf(stack_load(stack, bsdf_data.flake_strength), 0.0f);
         sd->flag |= bsdf_axf_carpaint_setup(kg, sd, bsdf);
       }
-      /* The clear coat's own mirror reflection: a sharp dielectric interface. */
-      const float coat_ior = (bsdf && bsdf->type == CLOSURE_BSDF_AXF_CARPAINT_ID) ?
-                                 axf_param(kg, sd, bsdf, 0).z :
+      /* The clear coat's own mirror reflection: a sharp dielectric interface. Its IOR is
+       * read through a local view so a black Tint (no base closure) keeps the coat. */
+      AxfCarPaintBsdf params_view;
+      params_view.table_id = bsdf_data.table_id;
+      params_view.table_w = bsdf_data.table_w;
+      params_view.image_h = bsdf_data.table_h;
+      const float coat_ior = (bsdf_data.table_id != KERNEL_IMAGE_NONE && bsdf_data.table_w > 0) ?
+                                 axf_param(kg, sd, &params_view, 0).z :
                                  1.0f;
 #ifdef __CAUSTICS_TRICKS__
       const bool coat_reflective = kernel_data.integrator.caustics_reflective ||
@@ -708,14 +716,16 @@ ccl_device
 #else
       const bool coat_reflective = true;
 #endif
-      if (coat_ior > 1.0f + 1e-4f && coat_reflective) {
+      const float coat_reflection = fmaxf(stack_load(stack, bsdf_data.coat_reflection), 0.0f);
+      const float coat_roughness = saturatef(stack_load(stack, bsdf_data.coat_roughness));
+      if (coat_ior > 1.0f + 1e-4f && coat_reflective && coat_reflection > 0.0f) {
         ccl_private MicrofacetBsdf *coat = (ccl_private MicrofacetBsdf *)bsdf_alloc(
-            sd, sizeof(MicrofacetBsdf), weight);
+            sd, sizeof(MicrofacetBsdf), weight * coat_reflection);
         if (coat) {
           coat->N = maybe_ensure_valid_specular_reflection(sd, Nc);
           coat->T = zero_float3();
           coat->ior = coat_ior;
-          coat->alpha_x = coat->alpha_y = 0.0f;
+          coat->alpha_x = coat->alpha_y = sqr(coat_roughness);
           sd->flag |= bsdf_microfacet_ggx_setup(coat);
           bsdf_microfacet_setup_fresnel_dielectric(kg, coat, sd->wi);
         }

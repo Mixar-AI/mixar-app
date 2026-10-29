@@ -12,7 +12,11 @@
  * properties: "axf_table" (colour table + parameter stream), "axf_flakes" (flake BTF
  * atlas) and "axf_coat_normal" (clear coat normal map, when the file has one). EEVEE
  * cannot evaluate a per-light measured BRDF, so it renders a preview from the
- * "Preview *" inputs, which the importer derives from the same data. */
+ * "Preview *" inputs, which the importer derives from the same data.
+ *
+ * Artist controls (Tint, Flake Strength, Orange Peel, Coat Reflection, Coat Roughness)
+ * default to the measurement exactly; moving one is a deliberate edit of the look. The
+ * measured data itself is never changed, so export still writes the original file. */
 
 #include "node_shader_util.hh"
 
@@ -35,6 +39,31 @@ static void node_declare(NodeDeclarationBuilder &b)
   b.add_input<decl::Vector>("Tangent"_ustr)
       .hide_value()
       .description("Direction of increasing Coat UV x, for the clear coat normal map");
+  b.add_input<decl::Color>("Tint"_ustr)
+      .default_value({1.0f, 1.0f, 1.0f, 1.0f})
+      .description("Multiplies the paint under the clear coat (white = as measured)");
+  b.add_input<decl::Float>("Flake Strength"_ustr)
+      .default_value(1.0f)
+      .min(0.0f)
+      .max(10.0f)
+      .description("Scales the measured flake sparkle (1 = as measured)");
+  b.add_input<decl::Float>("Orange Peel"_ustr)
+      .default_value(1.0f)
+      .min(0.0f)
+      .max(10.0f)
+      .description("Scales the clear coat normal map's waviness (1 = as measured, 0 = flat)");
+  b.add_input<decl::Float>("Coat Reflection"_ustr)
+      .default_value(1.0f)
+      .min(0.0f)
+      .max(2.0f)
+      .subtype(PROP_FACTOR)
+      .description("Scales the clear coat's mirror reflection (1 = as measured)");
+  b.add_input<decl::Float>("Coat Roughness"_ustr)
+      .default_value(0.0f)
+      .min(0.0f)
+      .max(1.0f)
+      .subtype(PROP_FACTOR)
+      .description("Blurs the clear coat reflection (0 = the measured mirror)");
   b.add_input<decl::Color>("Preview Diffuse"_ustr)
       .default_value({0.5f, 0.05f, 0.05f, 1.0f})
       .description("EEVEE preview only: diffuse albedo");

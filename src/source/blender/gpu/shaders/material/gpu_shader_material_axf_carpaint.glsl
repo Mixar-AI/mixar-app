@@ -12,6 +12,11 @@ void node_bsdf_axf_carpaint(float3 flake_uv,
                             float3 coat_uv,
                             float3 N,
                             float3 tangent,
+                            float4 tint,
+                            float flake_strength,
+                            float orange_peel,
+                            float coat_reflection,
+                            float coat_roughness,
                             float4 diffuse_color,
                             float4 specular_color,
                             float roughness,
@@ -26,9 +31,9 @@ void node_bsdf_axf_carpaint(float3 flake_uv,
   float coat_reflectance = bsdf_lut(NV, 0.0f, max(coat_ior, 1.0f), false).x;
   ClosureReflection coat_data;
   coat_data.N = N;
-  coat_data.roughness = 0.0f;
+  coat_data.roughness = saturate(coat_roughness);
   coat_data.color = float3(1.0f);
-  coat_data.weight = weight * coat_reflectance;
+  coat_data.weight = weight * coat_reflectance * max(coat_reflection, 0.0f);
   closure_eval(coat_data);
 
   float base_weight = weight * max(1.0f - coat_reflectance, 0.0f);
@@ -36,13 +41,13 @@ void node_bsdf_axf_carpaint(float3 flake_uv,
   ClosureReflection reflection_data;
   reflection_data.N = N;
   reflection_data.roughness = saturate(roughness);
-  reflection_data.color = max(specular_color.rgb, float3(0.0f)) * base_weight;
+  reflection_data.color = max(specular_color.rgb * tint.rgb, float3(0.0f)) * base_weight;
   reflection_data.weight = 1.0f;
   closure_eval(reflection_data);
 
   ClosureDiffuse diffuse_data;
   diffuse_data.N = N;
-  diffuse_data.color = max(diffuse_color.rgb, float3(0.0f)) * base_weight;
+  diffuse_data.color = max(diffuse_color.rgb * tint.rgb, float3(0.0f)) * base_weight;
   diffuse_data.weight = 1.0f;
   closure_eval(diffuse_data);
 

@@ -51,6 +51,7 @@ struct AxfCarPaintBsdf {
   int table_w, image_h;    /* Table image size in texels. */
   float sample_alpha;      /* Beckmann alpha used to importance sample the lobe. */
   float nc_x, nc_y, nc_z;  /* Clear coat normal (world space; = N without a coat map). */
+  float flake_strength;    /* Artist control, 1 = as measured. */
 };
 
 static_assert(sizeof(ShaderClosure) >= sizeof(AxfCarPaintBsdf), "AxfCarPaintBsdf is too large!");
@@ -183,7 +184,8 @@ ccl_device float3 axf_coat_normal(KernelGlobals kg,
                                   const int h,
                                   const float3 uv,
                                   const float3 N,
-                                  const float3 tangent)
+                                  const float3 tangent,
+                                  const float strength)
 {
   const float x = (uv.x - floorf(uv.x)) * float(w) - 0.5f;
   const float y = (uv.y - floorf(uv.y)) * float(h) - 0.5f;
@@ -209,7 +211,8 @@ ccl_device float3 axf_coat_normal(KernelGlobals kg,
   }
   T = normalize(T);
   const float3 B = cross(N, T);
-  return safe_normalize_fallback(t.x * T + t.y * B + t.z * N, N);
+  /* strength scales the tilt (1 = as measured, 0 = flat coat). */
+  return safe_normalize_fallback(strength * (t.x * T + t.y * B) + t.z * N, N);
 }
 
 /* Bilinear lookup of the colour table, texel i at (i + offset) / n of [0, pi/2], clamped
@@ -363,7 +366,8 @@ ccl_device float3 axf_carpaint_eval_cos(KernelGlobals kg,
   /* Clear coat transmission in and out (no solid angle compression). */
   const float t = (1.0f - axf_fresnel(dot(Nc, wo), p->ior)) *
                   (1.0f - axf_fresnel(dot(Nc, wi), p->ior));
-  return T * (p->kd * M_1_PI_F + ct) * (t * dot(N, wo)) + axf_flakes(kg, sd, bsdf, p, thH, thD);
+  return T * (p->kd * M_1_PI_F + ct) * (t * dot(N, wo)) +
+         bsdf->flake_strength * axf_flakes(kg, sd, bsdf, p, thH, thD);
 }
 
 /* Sampling: one-sample mixture of a cosine lobe, a uniform hemisphere (the flake BTF
