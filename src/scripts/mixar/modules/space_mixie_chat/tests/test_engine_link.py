@@ -143,7 +143,7 @@ def test_the_callable_tools_are_the_adapters_minus_import():
         "status", "new_scene", "open_scene", "place", "scene_tree", "save_scene", "play", "stop",
         "capture", "log", "playtest", "write_script", "add_node", "set_property", "remove_node",
         "read_file", "list_files", "write_file", "delete_file", "project_setting", "build_web",
-        "build_info"}
+        "build_info", "blueprint"}
     assert "import_package" not in engine_link.CALLABLE_TOOLS
 
 
@@ -279,7 +279,8 @@ def unreal(tmp_path, monkeypatch):
         "engine": "unreal", "version": "5.8.4-58902052+++UE5+Release-5.8", "adapter_version": "0.1.0",
         "project_name": "Arena3D", "pid": os.getpid(), "port": server.server_address[1], "path": "/mcp",
         "token": "", "transport": "unreal_mcp", "toolset": TOOLSET, "started_at": time.time(),
-        "defaults": {"place": {"name": "", "position": [0.0, 0.0, 0.0], "animation": ""}}}))
+        "defaults": {"place": {"name": "", "position": [0.0, 0.0, 0.0], "animation": ""}},
+        "json_args": {"playtest": ["steps"], "set_property": ["value"]}}))
     yield link_dir
     server.shutdown()
 
@@ -320,3 +321,14 @@ def test_unreal_fills_the_defaults_its_schema_cannot_carry(unreal):
     assert sent == {"name": "", "position": [1.0, 2.0, 0.0], "animation": "", "scene": "/Game/Mixar/Crate"}
     engine_link.link_call("status", {})
     assert _FakeUnreal.calls[-1][1]["arguments"] == {}
+
+
+def test_unreal_sends_free_shaped_arguments_as_one_json_string(unreal):
+    # Unreal's tool schema cannot type "any JSON"; the plugin lists those arguments.
+    steps = [{"wait": 1}, {"walk_to": [1.0, 2.0, 0.0]}]
+    engine_link.link_call("playtest", {"steps": steps})
+    sent = _FakeUnreal.calls[-1][1]["arguments"]
+    assert sent == {"steps": json.dumps(steps)}
+    engine_link.link_call("set_property", {"node": "Door", "property": "label", "value": "Gate"})
+    sent = _FakeUnreal.calls[-1][1]["arguments"]
+    assert sent == {"node": "Door", "property": "label", "value": json.dumps("Gate")}

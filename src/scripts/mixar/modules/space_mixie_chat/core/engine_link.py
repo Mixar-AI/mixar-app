@@ -44,7 +44,7 @@ CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
 CALLABLE_TOOLS = ("status", "new_scene", "open_scene", "place", "scene_tree", "save_scene",
                   "play", "stop", "capture", "log", "playtest", "write_script", "add_node",
                   "set_property", "remove_node", "read_file", "list_files", "write_file",
-                  "delete_file", "project_setting", "build_web", "build_info")
+                  "delete_file", "project_setting", "build_web", "build_info", "blueprint")
 NO_ENGINE = ("No game engine is connected. Connect one from the engine chip in the chat composer "
              "(Godot 4.5+ or Unreal Engine 5.8+ with Mixar Link), then try again.")
 UNREAL_TRANSPORT = "unreal_mcp"
@@ -187,16 +187,23 @@ class UnrealMcpClient(McpClient):
     JSON-string answer (``{"ok", "data"|"error"}`` under ``returnValue``)
     comes back as Godot's CallToolResult shape."""
 
-    def __init__(self, port: int, path: str, toolset: str, defaults: dict | None = None):
+    def __init__(self, port: int, path: str, toolset: str, defaults: dict | None = None,
+                 json_args: dict | None = None):
         super().__init__(port, "", path)
         self.toolset = toolset
         # Defaults Unreal's schema cannot carry (strings, lists), published by
         # the plugin in its discovery file; a call's own arguments win.
         self.defaults = defaults if isinstance(defaults, dict) else {}
+        # Arguments of any JSON shape (playtest steps, a property value), which
+        # the plugin takes as one JSON-encoded string.
+        self.json_args = json_args if isinstance(json_args, dict) else {}
 
     def call(self, name: str, arguments: dict, timeout: float) -> dict:
         filled = self.defaults.get(name)
         arguments = {**(filled if isinstance(filled, dict) else {}), **arguments}
+        for key in self.json_args.get(name) or ():
+            if key in arguments:
+                arguments[key] = json.dumps(arguments[key])
         raw = super().call("call_tool", {"toolset_name": self.toolset, "tool_name": name,
                                          "arguments": arguments}, timeout)
         return unreal_result(raw)
@@ -273,7 +280,7 @@ def _connect(engine: str | None):
         _clients.clear()
         if info.get("transport") == UNREAL_TRANSPORT:
             client = UnrealMcpClient(info["port"], info.get("path") or "/mcp", str(info.get("toolset") or ""),
-                                     info.get("defaults"))
+                                     info.get("defaults"), info.get("json_args"))
         else:
             client = McpClient(info["port"], info["token"])
         _clients[key] = client
