@@ -62,6 +62,7 @@ struct AxfCarPaintParams {
   float c[AXF_MAX_LOBES], m[AXF_MAX_LOBES], f0[AXF_MAX_LOBES];
   int num_theta_f, lut_rows, lut_cols;
   int atlas_cols, patch_w, patch_h, table_h, table_row0, atlas_w, atlas_h;
+  float table_offset; /* Colour table texel centre offset: 0 (2016 files) or 0.5 (2026). */
   float3 flake_m0, flake_m1, flake_m2; /* Rows of the flake colour matrix. */
 };
 
@@ -69,7 +70,7 @@ struct AxfCarPaintParams {
  * 0: (version, kd, ior, refractive)
  * 1: (n_lobes, num_theta_f, lut_rows, lut_cols)
  * 2: (atlas_cols, patch_w, patch_h, table_h)
- * 3: (table_row0, atlas_w, atlas_h, 0)
+ * 3: (table_row0, atlas_w, atlas_h, table texel offset)
  * 4..6: flake colour matrix rows (stored RGB -> linear Rec.709)
  * 7..7+n_lobes-1: (c, m, F0, 0)
  * then ceil(lut_rows * lut_cols / 4) texels of LUT entries (patch index, or -1). */
@@ -126,6 +127,7 @@ ccl_device void axf_load_params(KernelGlobals kg,
   p->table_row0 = int(h3.x);
   p->atlas_w = int(h3.y);
   p->atlas_h = int(h3.z);
+  p->table_offset = h3.w;
   p->flake_m0 = make_float3(axf_param(kg, sd, bsdf, 4));
   p->flake_m1 = make_float3(axf_param(kg, sd, bsdf, 5));
   p->flake_m2 = make_float3(axf_param(kg, sd, bsdf, 6));
@@ -210,9 +212,10 @@ ccl_device float3 axf_coat_normal(KernelGlobals kg,
   return safe_normalize_fallback(t.x * T + t.y * B + t.z * N, N);
 }
 
-/* Bilinear lookup of the colour table, texel i at i / n of [0, pi/2] (as the flake bins),
- * clamped at the last texel. This addressing reproduces X-Rite's own preview render to
- * float precision; i / (n - 1) (Unity HDRP) is off by up to 1 %. */
+/* Bilinear lookup of the colour table, texel i at (i + offset) / n of [0, pi/2], clamped
+ * at both ends. offset is 0 for X-Rite's 2016 files and 0.5 for Pantora 2026 files: each
+ * reproduces its own files' embedded preview render to float precision (i / (n - 1),
+ * Unity HDRP's addressing, is off by up to 1 %). */
 ccl_device float3 axf_table(KernelGlobals kg,
                             ccl_private ShaderData *sd,
                             const ccl_private AxfCarPaintBsdf *bsdf,
@@ -222,8 +225,8 @@ ccl_device float3 axf_table(KernelGlobals kg,
 {
   const int nw = bsdf->table_w;
   const int nh = p->table_h;
-  const float x = fminf(thH * M_2_PI_F * float(nw), float(nw - 1)); /* column = thetaH */
-  const float y = fminf(thD * M_2_PI_F * float(nh), float(nh - 1)); /* row = thetaD */
+  const float x = clamp(thH * M_2_PI_F * float(nw) - p->table_offset, 0.0f, float(nw - 1));
+  const float y = clamp(thD * M_2_PI_F * float(nh) - p->table_offset, 0.0f, float(nh - 1));
   const int x0 = clamp(int(floorf(x)), 0, nw - 1);
   const int y0 = clamp(int(floorf(y)), 0, nh - 1);
   const int x1 = min(x0 + 1, nw - 1);

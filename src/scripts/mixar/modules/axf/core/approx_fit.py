@@ -47,10 +47,11 @@ def _refract(w, eta):
     return out / np.linalg.norm(out, axis=-1, keepdims=True)
 
 
-def _table_lookup(table, thD, thH):
+def _table_lookup(table, thD, thH, offset=0.0):
     nd, nh = table.shape[:2]
-    y = np.minimum(thD * (2 / math.pi) * nd, nd - 1)   # texel i at i / n (X-Rite's addressing)
-    x = np.minimum(thH * (2 / math.pi) * nh, nh - 1)
+    # texel i at (i + offset) / n, as the native closure (offset 0: 2016 files, 0.5: 2026)
+    y = np.clip(thD * (2 / math.pi) * nd - offset, 0, nd - 1)
+    x = np.clip(thH * (2 / math.pi) * nh - offset, 0, nh - 1)
     y0 = np.clip(np.floor(y), 0, nd - 1).astype(int); x0 = np.clip(np.floor(x), 0, nh - 1).astype(int)
     y1 = np.minimum(y0 + 1, nd - 1); x1 = np.minimum(x0 + 1, nh - 1)
     fy = np.where(y >= nd - 1, 0, np.clip(y - np.floor(y), 0, 1))[..., None]
@@ -126,7 +127,7 @@ def fit(m: dict) -> dict:
         vh = np.clip(np.sum(h * wo_r, -1), 1e-6, 1)
         thH = np.arccos(np.clip(nh, 0, 1))
         thD = np.arccos(vh)
-        T = _table_lookup(table, thD, thH)
+        T = _table_lookup(table, thD, thH, m.get("table_texel_offset", 0.0))
         w = (t_i * t_o * cos_i * dw)[..., None]
         Cd[k] = np.sum(T * (m["kd"] / math.pi) * w, axis=(0, 1)) / t_o
         spec_f = T * _ct(m, nh, nv, nl, vh)[..., None] * (t_i * t_o)[..., None]   # exact outer lobe

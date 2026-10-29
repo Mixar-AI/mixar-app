@@ -85,8 +85,8 @@ def flake_rgb_matrix(m: dict) -> np.ndarray:
     matrix, XYZ -> spectrum with the file's ToSpectralMatrix (an XYZ->spectral basis),
     then the same spectral -> Rec.709 projection as the colour table. RGB files: the
     identity, as for their colour table."""
-    if m["table_space"] != "spectral":
-        return np.eye(3)
+    if m["table_space"] != "spectral" or m.get("to_spectral") is None:
+        return np.eye(3)  # RGB file, or a spectral one without flakes (matrix unused)
     to_spec = np.stack([np.interp(m["wavelengths"], m["to_spectral_wl"], m["to_spectral"][k])
                         for k in range(3)])                        # (3, bands): xyz -> spectrum
     s2rgb = spectral_to_rec709_matrix(m["wavelengths"])           # (bands, 3)
@@ -108,7 +108,7 @@ def build_table_image(m: dict, atlas_columns: int, patch_shape, atlas_shape=(0, 
         (C.PARAM_VERSION, m["kd"], m["ior"], 1.0 if m["refractive"] else 0.0),
         (len(lobes), m["num_theta_f"], lut_rows, lut_cols),
         (atlas_columns, patch_w, patch_h, nd),
-        (0.0, 0.0, 0.0, 0.0),  # (table_row0, atlas_w, atlas_h), filled below
+        (0.0, 0.0, 0.0, 0.0),  # (table_row0, atlas_w, atlas_h, table texel offset), below
         (fm[0, 0], fm[0, 1], fm[0, 2], 0.0),
         (fm[1, 0], fm[1, 1], fm[1, 2], 0.0),
         (fm[2, 0], fm[2, 1], fm[2, 2], 0.0),
@@ -118,7 +118,8 @@ def build_table_image(m: dict, atlas_columns: int, patch_shape, atlas_shape=(0, 
     flat += [-1] * ((-len(flat)) % 4)
     stream += [tuple(flat[i:i + 4]) for i in range(0, len(flat), 4)]
     table_row0 = math.ceil(len(stream) / nh)
-    stream[3] = (float(table_row0), float(atlas_shape[1]), float(atlas_shape[0]), 0.0)
+    stream[3] = (float(table_row0), float(atlas_shape[1]), float(atlas_shape[0]),
+                 float(m.get("table_texel_offset", 0.0)))
 
     image = np.zeros((table_row0 + nd, nh, 4), np.float32)
     params = np.zeros((table_row0 * nh, 4), np.float32)

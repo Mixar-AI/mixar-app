@@ -126,7 +126,7 @@ def test_param_stream_matches_kernel_contract(mini_axf):
     assert tuple(stream[0]) == (C.PARAM_VERSION, np.float32(0.02), 1.5, 1.0)
     assert tuple(stream[1]) == (2, 14, 2, 2)                     # lobes, numThetaF, lut rows/cols
     assert tuple(stream[2]) == (C.ATLAS_COLUMNS, 4, 4, 8)        # atlas cols, patch w/h, table h
-    assert tuple(stream[3][:3]) == (p["table_row0"], C.ATLAS_COLUMNS * 4, 4)  # + atlas w, h
+    assert tuple(stream[3]) == (p["table_row0"], C.ATLAS_COLUMNS * 4, 4, 0.0)  # atlas w, h, offset
     np.testing.assert_array_equal(stream[4:7, :3], p["flake_matrix"].astype(np.float32))
     np.testing.assert_array_equal(stream[C.PARAM_HEADER_TEXELS, :3], np.float32([0.004, 0.14, 0.5]))
     lut_texel = stream[C.PARAM_HEADER_TEXELS + 2]
@@ -252,3 +252,31 @@ def test_rgb_table_reaches_the_kernel_completed(tmp_path):
     np.testing.assert_array_equal(p["table_image"][p["table_row0"]:, :, :3],
                                   complete_table(table.astype(np.float64)).astype(np.float32))
     np.testing.assert_array_equal(table_rgb709(m), complete_table(table.astype(np.float64)))
+
+
+def test_spectral_without_flakes_needs_no_flake_matrix(tmp_path):
+    path = _write_mini_axf(str(tmp_path / "solid.axf"))
+    with h5py.File(path, "a") as f:
+        del f["com.xrite.ColorSpecs/sRGB,E"]
+        ops = f["com.xrite.Materials/mini/com.xrite.Representations/0/com.xrite.Input/com.xrite.Operands"]
+        del ops["0"]
+    m = read_cpa2(path)
+    assert m["table_space"] == "spectral" and m["flakes"] is None and m["to_spectral"] is None
+    p = build_payload(m)
+    assert p["flake_atlas"] is None
+    np.testing.assert_array_equal(p["flake_matrix"], np.eye(3))
+
+
+def test_table_texel_offset_follows_the_decoder_generation(tmp_path):
+    path = _write_mini_axf(str(tmp_path / "v18.axf"))
+    with h5py.File(path, "a") as f:
+        tb = f["com.xrite.Materials/mini/com.xrite.Representations/0/com.xrite.Input/com.xrite.Operands/1/com.xrite.Operands/0"]
+        tb.create_dataset("Version", data=np.array([1, 8, 0], np.int32))
+    m = read_cpa2(path)
+    assert m["table_texel_offset"] == 0.5
+    p = build_payload(m)
+    assert p["table_image"][:p["table_row0"]].reshape(-1, 4)[3][3] == 0.5
+    with h5py.File(path, "a") as f:
+        tb = f["com.xrite.Materials/mini/com.xrite.Representations/0/com.xrite.Input/com.xrite.Operands/1/com.xrite.Operands/0"]
+        tb["Version"][...] = np.array([1, 2, 0], np.int32)
+    assert read_cpa2(path)["table_texel_offset"] == 0.0

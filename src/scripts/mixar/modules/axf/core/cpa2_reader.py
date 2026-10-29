@@ -156,6 +156,11 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         if "Anisotropic" in ct and bool(ct["Anisotropic"][()]):
             raise AxfFormatError("Anisotropic Cook-Torrance lobes are not supported")
 
+        # X-Rite's two decoder generations read the colour table half a texel apart:
+        # TabulatedBrdf 1.2 (2016 SDK): texel i at i/N of 90 deg; 1.8 (Pantora 2026): at
+        # (i + 0.5)/N. Each reproduces its own files' embedded previews to float precision.
+        tab_version = tuple(int(v) for v in np.asarray(tab["Version"][()]).ravel()[:2]) if "Version" in tab else (1, 2)
+        table_texel_offset = 0.5 if tab_version >= (1, 8) else 0.0
         table_res = _resource(material, tab["com.xrite.Resources/Data"])[0]
         table = np.asarray(table_res["Data"][()], np.float64)  # [thetaD, thetaH, band or rgb]
         table_colorspec = _text(table_res["ColorSpec"]) if "ColorSpec" in table_res else ""
@@ -176,7 +181,7 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         # The flake RGB reaches a spectral table through the file's XYZ->spectral basis.
         to_spectral = to_spectral_wl = rgb_e_to_xyz = None
         _, rgb_e = _colorspec(f, "$(COLORSPECS)/sRGB,E")
-        if table_space == SPECTRAL:
+        if table_space == SPECTRAL and flakes is not None:
             if rgb_e is None or "ToSpectralMatrix" not in rgb_e:
                 raise AxfFormatError("Spectral AxF without an sRGB,E to spectral matrix")
             to_spectral = np.asarray(rgb_e["ToSpectralMatrix/Data"][()], np.float64)
@@ -213,6 +218,8 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
             "refractive": refractive,
             "table": table,  # [thetaD, thetaH, band or rgb], as stored
             "table_space": table_space,
+            "table_texel_offset": table_texel_offset,
+            "table_version": tab_version,
             "table_colorspec": table_colorspec,
             "wavelengths": wavelengths,
             "to_spectral": to_spectral,
