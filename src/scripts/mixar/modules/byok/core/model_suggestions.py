@@ -17,7 +17,7 @@ logout hook). Three reader functions are the public API:
 
 A fourth reader, `get_platform_models()`, serves the HOSTED agent model picker
 (the footer / island dropdown) rather than the BYOK dialog. It returns full
-records — the six per-model flags the catalog carries — in SERVER ORDER, and is
+records — the per-model flags the catalog carries — in SERVER ORDER, and is
 kept in a store parallel to the enum tuples on purpose (see `_platform_records`).
 
 Both dropdowns use EnumProperty, so items are 3-tuples of
@@ -212,6 +212,31 @@ def get_platform_models() -> list[dict]:
     return [dict(record) for record in _platform_records if record["platform_available"]]
 
 
+def catalog_record(provider: str, model: str) -> dict | None:
+    """The catalog record of one model (the cache's own dict: read, never
+    mutate). Codex reads the "openai" record (see _MODEL_SOURCE_PROVIDER), as
+    the backend validates its level; OpenRouter and Local have no catalog
+    rows. None when uncataloged."""
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    return next((r for r in _platform_records
+                 if r["provider_id"] == source and r["model_id"] == model), None)
+
+
+def thinking_levels(provider: str, model: str) -> list[str]:
+    """The catalog's thinking levels for one model, in server order; [] when
+    the model is not in the catalog or offers none."""
+    record = catalog_record(provider, model)
+    return list(record["thinking_levels"]) if record else []
+
+
+def default_thinking_level(provider: str, model: str) -> str:
+    """The level a model runs at with nothing saved (its Model Library
+    default), or "" when the catalog names none (an older backend, a model
+    without levels, an uncataloged model)."""
+    record = catalog_record(provider, model)
+    return record["default_thinking_level"] if record else ""
+
+
 def is_loaded() -> bool:
     """True iff populate() has been called at least once, regardless of
     whether it populated any real providers.
@@ -369,6 +394,7 @@ def _build_record(provider_id, provider_label, model_id, model_label, raw) -> di
         else []
     )
     min_tier = raw.get("min_tier")
+    default = raw.get("default_thinking_level")
     return {
         "provider_id": provider_id,
         "provider_label": provider_label,
@@ -386,4 +412,7 @@ def _build_record(provider_id, provider_label, model_id, model_label, raw) -> di
         "min_tier": min_tier if isinstance(min_tier, str) else "",
         "eligible": bool(raw.get("eligible", _RECORD_DEFAULTS["eligible"])),
         "thinking_levels": thinking_levels,
+        # Only a default the user is offered (the backend sends it only then).
+        "default_thinking_level": (default if isinstance(default, str)
+                                   and default in thinking_levels else ""),
     }

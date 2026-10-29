@@ -36,6 +36,7 @@
 
 #include "mixie_intern.hh"
 #include "mixie_moodboard_node_layout.hh"
+#include "mixie_moodboard_video_player.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -345,20 +346,33 @@ void moodboard_qa_targets(const wmWindow *win,
       if (in_node) {
         ed::mixie::moodboard_graph_node_preview_bounds(*card, &tile);
       }
-      const float radius = ed::mixie::moodboard_video_play_radius(v2d, tile);
-      const rctf disc = {BLI_rctf_cent_x(&tile) - radius,
-                         BLI_rctf_cent_x(&tile) + radius,
-                         BLI_rctf_cent_y(&tile) - radius,
-                         BLI_rctf_cent_y(&tile) + radius};
-      MixarQATarget t;
-      if (canvas_rect_to_window(region, disc, &t.rect_win)) {
-        bool playing = false;
-        const int frame = ed::mixie::moodboard_video_playback_frame(image, &playing);
-        t.surface = "moodboard_video";
+      /* One target per hover control, off the same geometry the draw pass and
+       * the hit-tests use: `moodboard_video` is Play/Pause (sel = playing,
+       * value = frame), `moodboard_video_preview` opens the player and
+       * `moodboard_video_sound` toggles sound (sel = muted, value = the
+       * audio track: playing / stopped / none). */
+      rctf controls[3];
+      ed::mixie::moodboard_video_card_button_rects(v2d, tile, controls);
+      bool playing = false;
+      const int frame = ed::mixie::moodboard_video_playback_frame(image, &playing);
+      const char *surfaces[3] = {
+          "moodboard_video_preview", "moodboard_video", "moodboard_video_sound"};
+      for (int control = 0; control < 3; control++) {
+        MixarQATarget t;
+        if (!canvas_rect_to_window(region, controls[control], &t.rect_win)) {
+          continue;
+        }
+        t.surface = surfaces[control];
         t.text = owner;
-        t.value = std::to_string(frame);
         t.index = i;
-        t.sel = playing;
+        if (control == ed::mixie::MOODBOARD_VIDEO_CARD_PLAY) {
+          t.value = std::to_string(frame);
+          t.sel = playing;
+        }
+        else if (control == ed::mixie::MOODBOARD_VIDEO_CARD_SOUND) {
+          t.sel = ed::mixie::moodboard_video_is_muted(image);
+          t.value = ed::mixie::moodboard_video_audio_state(image);
+        }
         r_targets.push_back(std::move(t));
       }
     }
@@ -390,6 +404,7 @@ void mixie_moodboard_qa_targets_register()
 {
   Mixar_qa_register_target_provider(SPACE_MIXIE, moodboard_qa_targets);
   Mixar_qa_register_target_provider(SPACE_VIEW3D, moodboard_qa_targets);
+  Mixar_qa_register_target_provider(SPACE_IMAGE, ed::mixie::video_player_qa_targets);
 }
 
 }  // namespace blender

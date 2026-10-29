@@ -183,14 +183,12 @@ void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
 /** Draw image/movie content fitted inside an inference-node result area. */
 void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);
 
-/** Draw the play/pause affordance centred on a movie frame.
- *
- * Takes the tile's rect rather than a centre so it can size itself through
- * #moodboard_video_play_radius -- screen-size-stable, but never bigger than a
- * fraction of the tile it sits on. */
-void mixie_draw_moodboard_video_overlay(View2D *v2d,
-                                        const rctf &media_rect,
-                                        bool is_playing);
+/** Draw a movie card's hover overlay (mixie_moodboard_video_card.cc): dims the
+ * frame and shows Preview / Play-Pause / Sound over it while  hovered, and
+ * nothing otherwise. Takes the tile's rect so the controls size themselves
+ * through #moodboard_video_play_radius, like the hit-tests. */
+void mixie_draw_moodboard_video_overlay(
+    View2D *v2d, const rctf &media_rect, bool hovered, bool is_playing, bool muted);
 
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);

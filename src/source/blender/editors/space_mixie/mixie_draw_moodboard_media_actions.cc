@@ -115,8 +115,8 @@ void moodboard_add_media_card_actions(ui::Block *block,
       preview, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(
       preview,
-      TIP_("Preview\n\nOpen this image or video in its own window. Several previews "
-           "can be open at once."));
+      TIP_("Preview\n\nOpen this image or video in the preview window. An open "
+           "preview window is reused and shows this instead."));
   x -= width + gap;
 
   /* The pencil sits where a card's Edit sits. A reference has no settings, so
