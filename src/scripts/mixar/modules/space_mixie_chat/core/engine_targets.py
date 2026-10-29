@@ -17,12 +17,16 @@ what each object is for:
   manifest's ``engine`` section, the record an engine adapter reads. glTF
   packages also carry them as node extras (Godot reads those as metadata).
   Axes in ``mixar_pivot`` are Blender's (Z up); the adapter converts them.
+- **Skeletons** — a rig whose bones follow a known convention (Tripo's
+  auto-rig, Mixamo) gets a bone map onto the engine's humanoid: Godot's
+  ``SkeletonProfileHumanoid`` names, Unreal's UE5 Mannequin names. The
+  adapter retargets with it, so a clip made on one humanoid plays on another.
 - **Readiness** — what would break or degrade on import (an unknown tag value,
   a textured mesh with no UVs, a non-power-of-two texture in Unreal, a physics
   body with no collision), reported as ``issues`` and never fixed silently.
 
-The naming, tag and readiness rules are pure functions (pinned outside
-Blender); ``build_collision`` alone touches ``bpy``.
+The naming, tag, skeleton and readiness rules are pure functions (pinned
+outside Blender); ``build_collision`` alone touches ``bpy``.
 """
 
 from __future__ import annotations
@@ -127,13 +131,105 @@ def readiness_issues(engine: str, *, textures=(), meshes=(), objects=()) -> list
     return issues
 
 
-def manifest_section(engine: str, objects: list, issues: list) -> dict:
-    return {
+def manifest_section(engine: str, objects: list, issues: list, skeletons: list | None = None) -> dict:
+    section = {
         "target": engine, "version": MANIFEST_VERSION, "axes": "blender_z_up",
         "objects": objects, "collision_nodes": sum(len((o.get("collision") or {}).get("nodes") or [])
                                                     for o in objects),
         "issues": list(issues),
     }
+    if skeletons:
+        section["skeletons"] = list(skeletons)
+    return section
+
+
+# ── Skeleton bone maps (P0.4) ──────────────────────────────────────────────
+# Source bones in a neutral form: (Godot humanoid bone, UE5 Mannequin bone,
+# Tripo auto-rig v3.0 bone, Mixamo bone without its "mixamorig:" prefix).
+# Tripo names are the real 78-bone rig's (uat4, 28 Oct). None = no such bone.
+_BODY = [
+    ("Root", "root", "BoneRoot", None),
+    ("Hips", "pelvis", "Hip", "Hips"),
+    ("Spine", "spine_01", "Waist", "Spine"),
+    ("Chest", "spine_03", "Spine01", "Spine1"),
+    ("UpperChest", "spine_05", "Spine02", "Spine2"),
+    ("Neck", "neck_01", "NeckTwist01", "Neck"),
+    ("Head", "head", "Head", "Head"),
+    ("LeftEye", None, "L_Eye", "LeftEye"),  # the Mannequin has no eye bones
+    ("RightEye", None, "R_Eye", "RightEye"),
+]
+_SIDED = [  # {side} is L/R (Tripo), Left/Right (Godot, Mixamo), l/r (UE)
+    ("{Side}Shoulder", "clavicle_{s}", "{L}_Clavicle", "{Side}Shoulder"),
+    ("{Side}UpperArm", "upperarm_{s}", "{L}_Upperarm", "{Side}Arm"),
+    ("{Side}LowerArm", "lowerarm_{s}", "{L}_Forearm", "{Side}ForeArm"),
+    ("{Side}Hand", "hand_{s}", "{L}_Hand", "{Side}Hand"),
+    ("{Side}UpperLeg", "thigh_{s}", "{L}_Thigh", "{Side}UpLeg"),
+    ("{Side}LowerLeg", "calf_{s}", "{L}_Calf", "{Side}Leg"),
+    ("{Side}Foot", "foot_{s}", "{L}_Foot", "{Side}Foot"),
+    ("{Side}Toes", "ball_{s}", "{L}_ToeBase", "{Side}ToeBase"),
+]
+_FINGERS = [  # Godot finger, its three joints, UE finger, Tripo finger, Mixamo finger
+    ("Thumb", ("Metacarpal", "Proximal", "Distal"), "thumb", "Thumb", "Thumb"),
+    ("Index", ("Proximal", "Intermediate", "Distal"), "index", "Index", "Index"),
+    ("Middle", ("Proximal", "Intermediate", "Distal"), "middle", "Mid", "Middle"),
+    ("Ring", ("Proximal", "Intermediate", "Distal"), "ring", "Ring", "Ring"),
+    ("Little", ("Proximal", "Intermediate", "Distal"), "pinky", "Pinky", "Pinky"),
+]
+_TRIPO_ONLY = [  # twist helpers the Mannequin also has
+    ("upperarm_twist_01_{s}", "{L}_UpperarmTwist01"), ("upperarm_twist_02_{s}", "{L}_UpperarmTwist02"),
+    ("lowerarm_twist_01_{s}", "{L}_ForearmTwist01"), ("lowerarm_twist_02_{s}", "{L}_ForearmTwist02"),
+    ("thigh_twist_01_{s}", "{L}_ThighTwist01"), ("thigh_twist_02_{s}", "{L}_ThighTwist02"),
+    ("calf_twist_01_{s}", "{L}_CalfTwist01"), ("calf_twist_02_{s}", "{L}_CalfTwist02"),
+]
+PROFILES = {"godot": "godot_humanoid", "unreal": "ue5_mannequin", "uefn": "ue5_mannequin"}
+_MIXAMO_PREFIX = ("mixamorig:", "mixamorig_")
+
+
+def _rows():
+    """(godot, ue, tripo, mixamo) for every mapped bone."""
+    rows = list(_BODY)
+    for side, s, l in (("Left", "l", "L"), ("Right", "r", "R")):
+        for row in _SIDED:
+            rows.append(tuple(None if v is None else v.format(Side=side, s=s, L=l) for v in row))
+        for finger, joints, ue, tripo, mixamo in _FINGERS:
+            for n, joint in enumerate(joints, 1):
+                rows.append((f"{side}{finger}{joint}", f"{ue}_0{n}_{s}", f"{l}_{tripo}{n}",
+                             f"{side}Hand{mixamo}{n}"))
+        for ue, tripo in _TRIPO_ONLY:
+            rows.append((None, ue.format(s=s), tripo.format(L=l), None))
+    return rows
+
+
+def skeleton_naming(bone_names) -> tuple[str, str] | None:
+    """``(naming, prefix)`` when the bones follow a known convention."""
+    names = set(bone_names)
+    if {"BoneRoot", "Hip", "L_Upperarm", "R_Forearm", "L_Thigh"} <= names:
+        return "tripo", ""
+    for prefix in _MIXAMO_PREFIX:
+        if {prefix + "Hips", prefix + "LeftArm", prefix + "RightUpLeg"} <= names:
+            return "mixamo", prefix
+    return None
+
+
+def skeleton_map(engine: str, armature_name: str, bone_names) -> dict | None:
+    """The manifest entry mapping one armature's bones onto the engine's
+    humanoid (target bone -> this rig's bone), or None for an unknown rig."""
+    hit = skeleton_naming(bone_names)
+    profile = PROFILES.get(engine)
+    if hit is None or profile is None:
+        return None
+    naming, prefix = hit
+    names = set(bone_names)
+    target = 0 if profile == "godot_humanoid" else 1
+    source = 2 if naming == "tripo" else 3
+    bones = {}
+    for row in _rows():
+        if row[target] is None or row[source] is None:
+            continue
+        bone = prefix + row[source]
+        if bone in names:
+            bones[row[target]] = bone
+    return {"armature": armature_name, "naming": naming, "profile": profile, "bones": bones}
 
 
 def _pow2(n: int) -> bool:

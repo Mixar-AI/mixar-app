@@ -143,3 +143,45 @@ def test_engine_packages_keep_each_objects_origin():
     # Hulls stand in their copy's space either way.
     hull = open(et.__file__, encoding="utf-8").read()
     assert "obj.parent = copy" in hull and "obj.matrix_world = copy.matrix_world.copy()" in hull
+
+
+# The real Tripo auto-rig v3.0 bone list (78 bones, uat4 rig job, 28 Oct).
+TRIPO_V3 = (
+    "BoneRoot Hip Pelvis L_Thigh L_Calf L_Foot L_ToeBase L_CalfTwist01 L_CalfTwist02 L_KneeShareBone "
+    "L_ThighTwist01 L_ThighTwist02 R_Thigh R_Calf R_KneeShareBone R_Foot R_ToeBase R_CalfTwist01 "
+    "R_CalfTwist02 R_ThighTwist01 R_ThighTwist02 Waist Spine01 Spine02 NeckTwist01 NeckTwist02 Head "
+    "FacialBone R_Eye L_Eye L_Clavicle L_Upperarm L_Forearm L_ForearmTwist01 L_ForearmTwist02 "
+    "L_ElbowShareBone L_Hand L_Pinky1 L_Pinky2 L_Pinky3 L_Ring1 L_Ring2 L_Ring3 L_Mid1 L_Mid2 L_Mid3 "
+    "L_Index1 L_Index2 L_Index3 L_Thumb1 L_Thumb2 L_Thumb3 L_UpperarmTwist01 L_UpperarmTwist02 "
+    "R_Clavicle R_Upperarm R_Forearm R_ElbowShareBone R_ForearmTwist01 R_ForearmTwist02 R_Hand R_Ring1 "
+    "R_Ring2 R_Ring3 R_Mid1 R_Mid2 R_Mid3 R_Thumb1 R_Thumb2 R_Thumb3 R_Index1 R_Index2 R_Index3 R_Pinky1 "
+    "R_Pinky2 R_Pinky3 R_UpperarmTwist01 R_UpperarmTwist02").split()
+
+
+def test_a_tripo_rig_maps_onto_the_godot_humanoid_and_the_ue_mannequin():
+    from mixar.modules.space_mixie_chat.core import engine_targets as et
+    assert len(TRIPO_V3) == 78
+    godot = et.skeleton_map("godot", "SK_Attacker", TRIPO_V3)
+    assert godot["naming"] == "tripo" and godot["profile"] == "godot_humanoid"
+    assert len(godot["bones"]) == 55  # the body, eyes and every finger joint
+    assert godot["bones"]["Hips"] == "Hip" and godot["bones"]["LeftUpperArm"] == "L_Upperarm"
+    assert godot["bones"]["LeftThumbMetacarpal"] == "L_Thumb1"
+    assert godot["bones"]["RightLittleDistal"] == "R_Pinky3"
+    ue = et.skeleton_map("unreal", "SK_Attacker", TRIPO_V3)
+    assert ue["profile"] == "ue5_mannequin"
+    assert ue["bones"]["pelvis"] == "Hip" and ue["bones"]["ball_l"] == "L_ToeBase"
+    assert ue["bones"]["middle_02_r"] == "R_Mid2" and ue["bones"]["upperarm_twist_01_l"] == "L_UpperarmTwist01"
+    assert set(ue["bones"].values()) <= set(TRIPO_V3)
+    assert et.skeleton_map("uefn", "SK", TRIPO_V3)["profile"] == "ue5_mannequin"
+
+
+def test_a_mixamo_rig_maps_with_either_prefix_and_an_unknown_rig_does_not():
+    from mixar.modules.space_mixie_chat.core import engine_targets as et
+    for prefix in ("mixamorig:", "mixamorig_"):
+        names = [prefix + n for n in ("Hips", "Spine", "LeftArm", "LeftForeArm", "RightUpLeg", "LeftHandIndex1")]
+        m = et.skeleton_map("godot", "Rig", names)
+        assert m["naming"] == "mixamo"
+        assert m["bones"]["LeftUpperArm"] == prefix + "LeftArm"
+        assert m["bones"]["LeftIndexProximal"] == prefix + "LeftHandIndex1"
+    assert et.skeleton_map("godot", "Rig", ["Bone", "Bone.001"]) is None
+    assert et.manifest_section("godot", [], [])  .get("skeletons") is None

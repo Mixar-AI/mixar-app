@@ -594,7 +594,9 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                          bool(_material_images([s.material for s in c.material_slots])))
                         for c in copies],
                 objects=engine_objects)
-            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues)
+            skeletons = [m for m in (engine_targets.skeleton_map(engine, a.name, [b.name for b in a.data.bones])
+                                     for a in armatures) if m]
+            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues, skeletons)
         verification = verify_export(main, fmt, {
             "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
             "skinned_meshes": sum(1 for c in copies if _skinned(c)),
