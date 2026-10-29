@@ -644,6 +644,26 @@ class AxfCarPaintBsdfNode : public BsdfNode {
   ImageHandle coat_handle;
 };
 
+/* Mixar: X-Rite AxF SVBRDF (Lambert + Ward or GGX per texel), evaluated exactly as
+ * X-Rite's decoder (kernel/closure/bsdf_axf_svbrdf.h). All material data comes from one
+ * atlas image written by the Mixar AxF importer. */
+class AxfSvbrdfBsdfNode : public BsdfNode {
+ public:
+  SHADER_NODE_NO_CLONE_CLASS(AxfSvbrdfBsdfNode)
+  ShaderNode *clone(ShaderGraph *graph) const override;
+  bool equals(const ShaderNode &other) override;
+
+  NODE_SOCKET_API(float3, uv)
+  NODE_SOCKET_API(float3, tangent)
+  NODE_SOCKET_API(float3, diffuse_tint)
+  NODE_SOCKET_API(float3, specular_tint)
+  NODE_SOCKET_API(float, roughness)
+  NODE_SOCKET_API(float, normal_strength)
+  NODE_SOCKET_API(ustring, atlas_filename)
+
+  ImageHandle atlas_handle;
+};
+
 class RayPortalBsdfNode : public BsdfNode {
  public:
   SHADER_NODE_CLASS(RayPortalBsdfNode)

@@ -30,6 +30,7 @@ void register_shader_nodes()
   register_node_type_sh_bsdf_principled();
   register_node_type_sh_bsdf_ray_portal();
   register_node_type_sh_bsdf_axf_carpaint();
+  register_node_type_sh_bsdf_axf_svbrdf();
   register_node_type_sh_bsdf_refraction();
   register_node_type_sh_bsdf_toon();
   register_node_type_sh_bsdf_translucent();

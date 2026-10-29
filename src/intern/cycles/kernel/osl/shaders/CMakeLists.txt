@@ -73,6 +73,7 @@ set(SRC_OSL
   node_particle_info.osl
   node_ray_portal_bsdf.osl
   node_axf_carpaint_bsdf.osl
+  node_axf_svbrdf_bsdf.osl
   node_raycast.osl
   node_raycast_attr_float.osl
   node_raycast_attr_vector.osl

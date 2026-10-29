@@ -1,0 +1,22 @@
+/* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#include "stdcycles.h"
+
+/* OSL cannot read the packed AxF SVBRDF atlas the way SVM does (exact texels); SVM
+ * evaluates the material exactly. This is a neutral stand-in so OSL renders do not
+ * fail. */
+shader node_axf_svbrdf_bsdf(color Color = 1.0,
+                            normal Normal = N,
+                            point UV = P,
+                            vector Tangent = vector(0.0, 0.0, 0.0),
+                            color DiffuseTint = 1.0,
+                            color SpecularTint = 1.0,
+                            float Roughness = 1.0,
+                            float NormalStrength = 1.0,
+                            string AtlasFilename = "",
+                            output closure color BSDF = 0)
+{
+  BSDF = Color * DiffuseTint * 0.5 * diffuse(Normal);
+}

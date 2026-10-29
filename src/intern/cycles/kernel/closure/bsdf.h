@@ -21,6 +21,7 @@
 #include "kernel/closure/bsdf_principled_hair_chiang.h"
 #include "kernel/closure/bsdf_principled_hair_huang.h"
 #include "kernel/closure/bsdf_axf_carpaint.h"
+#include "kernel/closure/bsdf_axf_svbrdf.h"
 // clang-format on
 
 CCL_NAMESPACE_BEGIN
@@ -293,6 +294,10 @@ ccl_device_inline int bsdf_sample(KernelGlobals kg,
           kg, sd, sc, Ng, sd->wi, rand_xy, eval, wo, pdf, sampled_roughness);
       *eta = 1.0f;
       break;
+    case CLOSURE_BSDF_AXF_SVBRDF_ID:
+      label = bsdf_axf_svbrdf_sample(sc, Ng, sd->wi, rand_xy, eval, wo, pdf, sampled_roughness);
+      *eta = 1.0f;
+      break;
 #endif
     default:
       label = LABEL_NONE;
@@ -434,6 +439,11 @@ ccl_device_inline void bsdf_roughness_eta(const ccl_private ShaderClosure *sc,
       *roughness = make_float2(alpha, alpha);
       *eta = 1.0f;
       break;
+    case CLOSURE_BSDF_AXF_SVBRDF_ID:
+      alpha = ((ccl_private AxfSvbrdfBsdf *)sc)->p0;
+      *roughness = make_float2(alpha, alpha);
+      *eta = 1.0f;
+      break;
 #endif
     default:
       *roughness = one_float2();
@@ -531,6 +541,7 @@ ccl_device_inline int bsdf_label(const KernelGlobals kg,
       label = LABEL_REFLECT | LABEL_DIFFUSE;
       break;
     case CLOSURE_BSDF_AXF_CARPAINT_ID:
+    case CLOSURE_BSDF_AXF_SVBRDF_ID:
       label = LABEL_REFLECT | LABEL_GLOSSY;
       break;
 #endif
@@ -648,6 +659,9 @@ ccl_device_inline
     case CLOSURE_BSDF_AXF_CARPAINT_ID:
       eval = bsdf_axf_carpaint_eval(kg, sd, sc, sd->wi, wo, pdf);
       break;
+    case CLOSURE_BSDF_AXF_SVBRDF_ID:
+      eval = bsdf_axf_svbrdf_eval(sc, sd->wi, wo, pdf);
+      break;
 #endif
     default:
       break;
@@ -730,6 +744,10 @@ ccl_device_inline Spectrum bsdf_albedo(KernelGlobals kg,
     AxfCarPaintParams p;
     axf_load_params(kg, const_cast<ccl_private ShaderData *>(sd), axf, &p);
     albedo *= reflection ? axf_carpaint_albedo(kg, const_cast<ccl_private ShaderData *>(sd), axf, &p) :
+                           zero_spectrum();
+  }
+  else if (sc->type == CLOSURE_BSDF_AXF_SVBRDF_ID) {
+    albedo *= reflection ? axf_svbrdf_albedo((const ccl_private AxfSvbrdfBsdf *)sc) :
                            zero_spectrum();
   }
 #  ifdef __PRINCIPLED_HAIR__

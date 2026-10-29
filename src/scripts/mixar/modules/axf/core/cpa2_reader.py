@@ -100,7 +100,7 @@ def _pick_representation(material):
         found.append(rep_class or _type(rep))
     raise AxfFormatError(
         f"AxF representation '{', '.join(found)}' is not supported "
-        f"(this importer reads {CARPAINT2} car paints)"
+        f"(this importer reads {CARPAINT2} car paints and SVBRDF materials)"
     )
 
 

@@ -57,6 +57,9 @@ ccl_device_inline int svm_node_closure_bsdf_skip(int offset, const uint type)
     case CLOSURE_BSDF_AXF_CARPAINT_ID:
       offset += sizeof(SVMNodeAxfCarPaintBsdfData) / sizeof(uint);
       break;
+    case CLOSURE_BSDF_AXF_SVBRDF_ID:
+      offset += sizeof(SVMNodeAxfSvbrdfBsdfData) / sizeof(uint);
+      break;
     case CLOSURE_BSDF_MICROFACET_GGX_ID:
     case CLOSURE_BSDF_MICROFACET_BECKMANN_ID:
     case CLOSURE_BSDF_ASHIKHMIN_SHIRLEY_ID:
@@ -729,6 +732,78 @@ ccl_device
           sd->flag |= bsdf_microfacet_ggx_setup(coat);
           bsdf_microfacet_setup_fresnel_dielectric(kg, coat, sd->wi);
         }
+      }
+      break;
+    }
+    case CLOSURE_BSDF_AXF_SVBRDF_ID: {
+      const ccl_global SVMNodeAxfSvbrdfBsdfData &bsdf_data =
+          svm_node_get<SVMNodeAxfSvbrdfBsdfData>(kg, &offset);
+      /* Atlas (written by the Mixar AxF importer): four W x H tiles side by side, rows
+       * bottom-up along +V, plus one parameter row on top:
+       *   tile 0 (diffuse rgb, anisotropy angle), tile 1 (specular rgb, -),
+       *   tile 2 (lobe p0, p1, p2, -), tile 3 (normal-map xyz, -);
+       *   parameter row: (version, model, F0, -). */
+      const int id = bsdf_data.atlas_id;
+      const int aw = bsdf_data.atlas_w;
+      const int ah = bsdf_data.atlas_h;
+      const int w = aw / 4;
+      const int h = ah - 1;
+      if (id == KERNEL_IMAGE_NONE || w <= 0 || h <= 0) {
+        break;
+      }
+      float3 N = stack_load_float3_default(stack, bsdf_data.normal_offset, sd->N);
+      N = safe_normalize_fallback(N, sd->N);
+      const float3 uv = stack_load(stack, bsdf_data.uv);
+      /* Nearest texel, wrapping: X-Rite's decoder point-samples its maps. */
+      const int ix = clamp(int((uv.x - floorf(uv.x)) * float(w)), 0, w - 1);
+      const int iy = clamp(int((uv.y - floorf(uv.y)) * float(h)), 0, h - 1);
+      const float4 t0 = axf_texel(kg, sd, id, ix, iy, aw, ah);
+      const float4 t1 = axf_texel(kg, sd, id, ix + w, iy, aw, ah);
+      const float4 t2 = axf_texel(kg, sd, id, ix + 2 * w, iy, aw, ah);
+      const float4 t3 = axf_texel(kg, sd, id, ix + 3 * w, iy, aw, ah);
+      const float4 prm = axf_texel(kg, sd, id, 0, h, aw, ah);
+
+      /* Surface frame: T along +U, B = N x T along +V (right handed). */
+      const float3 tangent = stack_load_float3_default(stack, bsdf_data.tangent_offset, zero_float3());
+      float3 T = tangent - dot(tangent, N) * N;
+      if (len_squared(T) < 1e-12f) {
+        float3 B_unused;
+        make_orthonormals(N, &T, &B_unused);
+      }
+      T = normalize(T);
+      const float3 B = cross(N, T);
+      /* Normal map (x along +U, y along +V); strength scales the tilt (1 = as measured). */
+      const float strength = fmaxf(stack_load(stack, bsdf_data.normal_strength), 0.0f);
+      const float3 n = safe_normalize_fallback(
+          strength * (t3.x * T + t3.y * B) + t3.z * N, N);
+      /* Lobe frame: bitangent = +V made orthogonal to n, tangent = b x n, then the
+       * anisotropy angle turns it clockwise (from +U toward -V). */
+      const float3 b2 = safe_normalize_fallback(B - dot(n, B) * n, cross(n, T));
+      const float3 b1 = cross(b2, n);
+      const float3 lobe_t = cosf(t0.w) * b1 - sinf(t0.w) * b2;
+
+      const Spectrum weight = closure_weight * mix_weight;
+      ccl_private AxfSvbrdfBsdf *bsdf = (ccl_private AxfSvbrdfBsdf *)bsdf_alloc(
+          sd, sizeof(AxfSvbrdfBsdf), weight);
+      if (bsdf) {
+        const float3 dt = stack_load(stack, bsdf_data.diffuse_tint);
+        const float3 st = stack_load(stack, bsdf_data.specular_tint);
+        const float rough = fmaxf(stack_load(stack, bsdf_data.roughness), 1e-4f);
+        bsdf->N = n;
+        bsdf->kd_r = t0.x * dt.x;
+        bsdf->kd_g = t0.y * dt.y;
+        bsdf->kd_b = t0.z * dt.z;
+        bsdf->ks_r = t1.x * st.x;
+        bsdf->ks_g = t1.y * st.y;
+        bsdf->ks_b = t1.z * st.z;
+        bsdf->frame_angle = axf_svbrdf_frame_angle(n, lobe_t);
+        bsdf->model = int(prm.y);
+        bsdf->f0 = prm.z;
+        /* Roughness scales every lobe width (1 = as measured). */
+        bsdf->p0 = t2.x * rough;
+        bsdf->p1 = (bsdf->model == AXF_SVBRDF_WARD_COV) ? t2.y * rough * rough : t2.y * rough;
+        bsdf->p2 = t2.z * rough;
+        sd->flag |= bsdf_axf_svbrdf_setup(bsdf);
       }
       break;
     }

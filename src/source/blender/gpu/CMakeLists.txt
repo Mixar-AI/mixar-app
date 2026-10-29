@@ -686,6 +686,7 @@ set(GLSL_SRC
   shaders/material/gpu_shader_material_raycast.glsl
   shaders/material/gpu_shader_material_ray_portal.glsl
   shaders/material/gpu_shader_material_axf_carpaint.glsl
+  shaders/material/gpu_shader_material_axf_svbrdf.glsl
   shaders/material/gpu_shader_material_refraction.glsl
   shaders/material/gpu_shader_material_repeat_zone.glsl
   shaders/material/gpu_shader_material_rgb_to_bw.glsl

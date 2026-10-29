@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""File > Import / Export for X-Rite AxF car paint materials.
+"""File > Import / Export for X-Rite AxF materials (car paints and SVBRDFs).
 
 Agent-drivable: ``bpy.ops.mixie.import_axf(filepath=...)`` imports without a
 file browser and assigns the material to the selected meshes.
@@ -24,7 +24,7 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
     bl_idname = "mixie.import_axf"
     bl_label = "Import AxF Material"
     bl_description = (
-        "Import an X-Rite AxF car paint as a material that renders the measured "
+        "Import an X-Rite AxF material (car paint or SVBRDF) that renders the measured "
         "data exactly in Cycles"
     )
     bl_options = {'REGISTER', 'UNDO'}

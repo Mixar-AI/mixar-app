@@ -34,6 +34,7 @@ set(SRC
   nodes/node_shader_bsdf_principled.cc
   nodes/node_shader_bsdf_ray_portal.cc
   nodes/node_shader_bsdf_axf_carpaint.cc
+  nodes/node_shader_bsdf_axf_svbrdf.cc
   nodes/node_shader_bsdf_refraction.cc
   nodes/node_shader_bsdf_sheen.cc
   nodes/node_shader_bsdf_toon.cc

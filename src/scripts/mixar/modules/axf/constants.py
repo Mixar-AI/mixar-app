@@ -13,6 +13,11 @@ PROP_COAT_NORMAL = "axf_coat_normal"
 PARAM_VERSION = 2.0
 PARAM_HEADER_TEXELS = 7
 
+# Node + ID-property contract with the native AxF SVBRDF BSDF
+# (intern/cycles/kernel/closure/bsdf_axf_svbrdf.h).
+SVBRDF_NODE_IDNAME = "ShaderNodeBsdfAxFSvbrdf"
+PROP_ATLAS = "axf_atlas"
+
 # Custom properties on the material that record where the data came from.
 PROP_SOURCE_NAME = "axf_source_name"
 PROP_SOURCE_SHA256 = "axf_source_sha256"

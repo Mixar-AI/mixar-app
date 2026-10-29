@@ -138,6 +138,7 @@
 #define SH_NODE_SCENE_TIME 719
 /* Mixar: kept well clear of upstream's next ids. */
 #define SH_NODE_BSDF_AXF_CARPAINT 790
+#define SH_NODE_BSDF_AXF_SVBRDF 791
 
 /** \} */
 

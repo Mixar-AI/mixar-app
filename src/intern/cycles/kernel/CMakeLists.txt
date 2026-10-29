@@ -32,6 +32,7 @@ set(SRC_KERNEL_CLOSURE_HEADERS
   closure/bsdf_phong_ramp.h
   closure/bsdf_ray_portal.h
   closure/bsdf_axf_carpaint.h
+  closure/bsdf_axf_svbrdf.h
   closure/bsdf_sheen.h
   closure/bsdf_toon.h
   closure/bsdf_transparent.h

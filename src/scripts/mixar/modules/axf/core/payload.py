@@ -173,3 +173,40 @@ def preview_inputs(m: dict) -> dict:
     roughness = float(np.clip(math.sqrt(max(spread, 0.0)), 0.0, 1.0))
     return {"diffuse": tuple(diffuse), "specular": tuple(specular), "roughness": roughness,
             "coat_ior": float(m["ior"])}
+
+
+SVBRDF_ATLAS_VERSION = 1.0
+
+
+def build_svbrdf_atlas(m: dict) -> np.ndarray:
+    """float32 RGBA atlas for the AxF SVBRDF BSDF (kernel/svm/closure.h): four W x H tiles
+    side by side (diffuse + anisotropy angle, specular, lobe parameters, normal map), rows
+    bottom-up along +V (row 0 is the map's V = 0 edge), then one parameter row on top:
+    texel 0 = (version, model, F0, 0)."""
+    kd, ks, lob, nrm, ang = m["diffuse"], m["specular"], m["lobes"], m["normal"], m["angle"]
+    h, w = kd.shape[:2]
+    atlas = np.zeros((h + 1, 4 * w, 4), np.float32)
+    atlas[:h, 0:w, :3] = kd
+    atlas[:h, 0:w, 3] = ang
+    atlas[:h, w:2 * w, :3] = ks
+    atlas[:h, 2 * w:3 * w, :3] = lob
+    atlas[:h, 3 * w:4 * w, :3] = nrm
+    if m["origin"] == "TOP_LEFT":  # file row 0 is the top edge
+        atlas[:h] = atlas[:h][::-1]
+    atlas[h, 0] = (SVBRDF_ATLAS_VERSION, float(m["model"]), float(m["fresnel_f0"]), 0.0)
+    return atlas
+
+
+def svbrdf_preview_inputs(m: dict) -> dict:
+    """Constant EEVEE preview values (the diffuse map itself drives the preview colour)."""
+    ks = np.mean(np.maximum(m["specular"], 0.0), axis=(0, 1))
+    if m["model"] == 2:  # GGX: what reaches the eye is about F0 + a little at grazing
+        f0 = m["fresnel_f0"] if m["fresnel_f0"] >= 0 else 1.0
+        ks = ks * (f0 + (1 - f0) * 0.1)
+        alpha = float(np.mean(m["lobes"][..., 0]))
+    elif m["model"] == 1:
+        alpha = float(np.mean(np.sqrt(m["lobes"][..., 0] * m["lobes"][..., 2])))
+    else:
+        alpha = float(np.mean(np.sqrt(m["lobes"][..., 0] * m["lobes"][..., 1])))
+    return {"specular": tuple(float(v) for v in np.clip(ks, 0, 1)),
+            "roughness": float(np.clip(np.sqrt(max(alpha, 0.0)), 0.0, 1.0))}

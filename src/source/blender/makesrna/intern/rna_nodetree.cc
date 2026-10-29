@@ -10363,6 +10363,7 @@ static void rna_def_nodes(BlenderRNA *brna)
   define("ShaderNode", "ShaderNodeBsdfPrincipled", def_principled);
   define("ShaderNode", "ShaderNodeBsdfRayPortal");
   define("ShaderNode", "ShaderNodeBsdfAxFCarPaint"); /* Mixar */
+  define("ShaderNode", "ShaderNodeBsdfAxFSvbrdf");   /* Mixar */
   define("ShaderNode", "ShaderNodeBsdfRefraction", def_refraction);
   define("ShaderNode", "ShaderNodeBsdfSheen", def_sheen);
   define("ShaderNode", "ShaderNodeBsdfToon", def_toon);

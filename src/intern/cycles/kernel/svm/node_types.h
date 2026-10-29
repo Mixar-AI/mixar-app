@@ -1074,6 +1074,24 @@ struct SVMNodeAxfCarPaintBsdfData {
 static_assert(alignof(SVMNodeAxfCarPaintBsdfData) <= alignof(uint));
 static_assert(sizeof(SVMNodeAxfCarPaintBsdfData) % sizeof(uint) == 0);
 
+/* Mixar: X-Rite AxF SVBRDF (see kernel/closure/bsdf_axf_svbrdf.h). */
+struct SVMNodeAxfSvbrdfBsdfData {
+  SVMInputFloat3 uv;
+  /* Artist controls; their defaults (white, white, 1, 1) render the measurement exactly. */
+  SVMInputFloat3 diffuse_tint;
+  SVMInputFloat3 specular_tint;
+  SVMInputFloat roughness;
+  SVMInputFloat normal_strength;
+  int atlas_id;
+  int atlas_w;
+  int atlas_h;
+  SVMStackOffset normal_offset;
+  SVMStackOffset tangent_offset;
+  uint8_t _pad[2];
+};
+static_assert(alignof(SVMNodeAxfSvbrdfBsdfData) <= alignof(uint));
+static_assert(sizeof(SVMNodeAxfSvbrdfBsdfData) % sizeof(uint) == 0);
+
 /* Glossy BSDF. */
 struct SVMNodeGlossyBsdfData {
   SVMInputFloat3 color;

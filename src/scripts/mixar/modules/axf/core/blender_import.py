@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Turn an AxF CarPaint2 file into a Blender material that renders it exactly.
+"""Turn an AxF CarPaint2 or SVBRDF file into a Blender material that renders it exactly.
 
 Lossless by construction:
-- the native AxF Car Paint BSDF evaluates X-Rite's CarPaint2 model in Cycles;
+- the native AxF Car Paint / AxF SVBRDF BSDFs evaluate X-Rite's models in Cycles;
 - its data images are float32 EXRs packed into the .blend (bit-exact);
 - the original .axf bytes are packed too, so export_axf() writes back the
   identical file (same SHA-256).
@@ -24,7 +24,8 @@ from mixar.config.logging_config import get_logger
 
 from .. import constants as C
 from .cpa2_reader import read_cpa2, sha256_file
-from .payload import build_payload, preview_inputs
+from .payload import build_payload, build_svbrdf_atlas, preview_inputs, svbrdf_preview_inputs
+from .svbrdf_reader import SVBRDF, read_svbrdf, representation_class
 
 logger = get_logger(__name__)
 
@@ -184,7 +185,78 @@ def build_material(m: dict, table_img, flakes_img, *, name: str, coat_img=None):
     return mat
 
 
+def _preview_image(name: str, rgb_rows: np.ndarray, tmpdir: str):
+    """Half-float preview texture for EEVEE (never read by Cycles' exact path)."""
+    path = os.path.join(tmpdir, bpy.path.clean_name(name) + ".exr")
+    _write_exr(path, np.concatenate([rgb_rows, np.ones_like(rgb_rows[..., :1])], -1), half=True)
+    image = bpy.data.images.load(path, check_existing=False)
+    image.name = name
+    image.colorspace_settings.name = "Non-Color"
+    image.pack()
+    return image
+
+
+def build_svbrdf_material(m: dict, atlas_img, preview_img, *, name: str):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial"); out.location = (500, 0)
+    axf = nt.nodes.new(C.SVBRDF_NODE_IDNAME); axf.location = (200, 0)
+    axf.name = axf.label = "AxF SVBRDF"
+    _link(nt, axf, 0, out, "Surface")
+    axf[C.PROP_ATLAS] = atlas_img
+
+    prev = svbrdf_preview_inputs(m)
+    axf.inputs["Preview Specular"].default_value = (*prev["specular"], 1.0)
+    axf.inputs["Preview Roughness"].default_value = prev["roughness"]
+
+    uv_m, tangent = _surface_mapping(nt, -1000, 0)
+    uv = _tile_coordinates(nt, uv_m, m["size_mm"], -100, 120)
+    nt.links.new(uv, axf.inputs["UV"])
+    nt.links.new(tangent, axf.inputs["Tangent"])
+    if preview_img is not None:
+        tex = nt.nodes.new("ShaderNodeTexImage"); tex.location = (-100, -260)
+        tex.label = "EEVEE preview (diffuse)"
+        tex.image = preview_img
+        tex.interpolation = 'Closest'
+        tex.extension = 'REPEAT'
+        nt.links.new(uv, tex.inputs["Vector"])
+        nt.links.new(tex.outputs["Color"], axf.inputs["Preview Diffuse"])
+    return mat
+
+
+def import_svbrdf(path: str, *, archive_source: bool = True) -> bpy.types.Material:
+    m = read_svbrdf(path)
+    atlas = build_svbrdf_atlas(m)
+    base = m["name"] or os.path.splitext(os.path.basename(path))[0]
+    h = atlas.shape[0] - 1
+    w = atlas.shape[1] // 4
+    with tempfile.TemporaryDirectory(prefix="mixar_axf_") as tmp:
+        atlas_img = _packed_data_image(f"AxF {base} Atlas", atlas, tmp)
+        preview_img = _preview_image(f"AxF {base} Preview", atlas[:h, :w, :3], tmp)
+
+    mat = build_svbrdf_material(m, atlas_img, preview_img, name=f"AxF {base}")
+    mat[C.PROP_SOURCE_NAME] = os.path.basename(path)
+    mat[C.PROP_SOURCE_SHA256] = sha256_file(path)
+    mat["axf_model"] = json.dumps({
+        "representation": SVBRDF, "model": m["model"], "spec_type": m["spec_type"],
+        "fresnel_f0": m["fresnel_f0"], "size_mm": list(m["size_mm"]), "origin": m["origin"],
+        "map_size": [int(w), int(h)], "color_space": m["color_space"],
+    })
+    if archive_source:
+        mat[C.PROP_ARCHIVE] = _archive_source(path, os.path.basename(path))
+    if m["extra_materials"]:
+        logger.warning("[AxF] %s holds %d more materials; imported the first (%s)",
+                       os.path.basename(path), len(m["extra_materials"]), m["name"])
+    logger.info("[AxF] imported %s as %s (SVBRDF)", os.path.basename(path), mat.name)
+    return mat
+
+
 def import_axf(path: str, *, archive_source: bool = True) -> bpy.types.Material:
+    """Import an AxF car paint (CarPaint2) or SVBRDF material; other kinds are refused."""
+    if representation_class(path) == SVBRDF:
+        return import_svbrdf(path, archive_source=archive_source)
     m = read_cpa2(path, load_flakes=True)
     payload = build_payload(m)
     base = m["name"] or os.path.splitext(os.path.basename(path))[0]

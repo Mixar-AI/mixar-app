@@ -2662,6 +2662,82 @@ void AxfCarPaintBsdfNode::compile(OSLCompiler &compiler)
   compiler.add(this, "node_axf_carpaint_bsdf");
 }
 
+/* Mixar: AxF SVBRDF Closure */
+
+NODE_DEFINE(AxfSvbrdfBsdfNode)
+{
+  NodeType *type = NodeType::add("axf_svbrdf_bsdf", create, NodeType::SHADER);
+
+  SOCKET_IN_COLOR(color, "Color", one_float3());
+  SOCKET_IN_NORMAL(normal, "Normal", zero_float3(), SocketType::LINK_NORMAL);
+  SOCKET_IN_FLOAT(surface_mix_weight, "SurfaceMixWeight", 0.0f, SocketType::SVM_INTERNAL);
+  SOCKET_IN_POINT(uv, "UV", zero_float3(), SocketType::LINK_TEXTURE_UV);
+  SOCKET_IN_VECTOR(tangent, "Tangent", zero_float3());
+  SOCKET_IN_COLOR(diffuse_tint, "Diffuse Tint", one_float3());
+  SOCKET_IN_COLOR(specular_tint, "Specular Tint", one_float3());
+  SOCKET_IN_FLOAT(roughness, "Roughness", 1.0f);
+  SOCKET_IN_FLOAT(normal_strength, "Normal Strength", 1.0f);
+  SOCKET_STRING(atlas_filename, "Atlas Filename", ustring());
+
+  SOCKET_OUT_CLOSURE(BSDF, "BSDF");
+
+  return type;
+}
+
+AxfSvbrdfBsdfNode::AxfSvbrdfBsdfNode() : BsdfNode(get_node_type())
+{
+  closure = CLOSURE_BSDF_AXF_SVBRDF_ID;
+}
+
+ShaderNode *AxfSvbrdfBsdfNode::clone(ShaderGraph *graph) const
+{
+  AxfSvbrdfBsdfNode *node = graph->create_node<AxfSvbrdfBsdfNode>(*this);
+  node->atlas_handle = atlas_handle;
+  return node;
+}
+
+bool AxfSvbrdfBsdfNode::equals(const ShaderNode &other)
+{
+  const AxfSvbrdfBsdfNode &other_node = (const AxfSvbrdfBsdfNode &)other;
+  return BsdfNode::equals(other) && atlas_handle == other_node.atlas_handle;
+}
+
+void AxfSvbrdfBsdfNode::compile(SVMCompiler &compiler)
+{
+  ImageManager *image_manager = compiler.scene->image_manager.get();
+  if (atlas_handle.empty() && !atlas_filename.empty()) {
+    atlas_handle = image_manager->add_image(atlas_filename.string(),
+                                            AxfCarPaintBsdfNode::image_params());
+  }
+  int atlas_id = KERNEL_IMAGE_NONE, atlas_w = 0, atlas_h = 0;
+  if (!atlas_handle.empty()) {
+    const ImageMetaData metadata = atlas_handle.metadata(compiler.progress);
+    atlas_id = atlas_handle.kernel_id();
+    atlas_w = int(metadata.width);
+    atlas_h = int(metadata.height);
+  }
+
+  BsdfNode::compile(compiler,
+                    SVMNodeAxfSvbrdfBsdfData{
+                        .uv = compiler.input_float3("UV"),
+                        .diffuse_tint = compiler.input_float3("Diffuse Tint"),
+                        .specular_tint = compiler.input_float3("Specular Tint"),
+                        .roughness = compiler.input_float("Roughness"),
+                        .normal_strength = compiler.input_float("Normal Strength"),
+                        .atlas_id = atlas_id,
+                        .atlas_w = atlas_w,
+                        .atlas_h = atlas_h,
+                        .normal_offset = compiler.input_link("Normal"),
+                        .tangent_offset = compiler.input_link("Tangent"),
+                    });
+}
+
+void AxfSvbrdfBsdfNode::compile(OSLCompiler &compiler)
+{
+  /* OSL cannot express this closure: a neutral stand-in so OSL renders still work. */
+  compiler.add(this, "node_axf_svbrdf_bsdf");
+}
+
 /* Sheen BSDF Closure */
 
 NODE_DEFINE(SheenBsdfNode)

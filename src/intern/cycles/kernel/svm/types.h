@@ -488,6 +488,7 @@ enum ClosureType : uint {
   CLOSURE_BSDF_PHONG_RAMP_ID,
   CLOSURE_BSDF_GLOSSY_TOON_ID,
   CLOSURE_BSDF_AXF_CARPAINT_ID, /* Mixar: X-Rite AxF CarPaint2. */
+  CLOSURE_BSDF_AXF_SVBRDF_ID,   /* Mixar: X-Rite AxF SVBRDF (Ward / GGX). */
   CLOSURE_BSDF_HAIR_REFLECTION_ID,
 
   /* Transmission */

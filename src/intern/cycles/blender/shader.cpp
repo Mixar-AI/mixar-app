@@ -827,6 +827,25 @@ static ShaderNode *add_node(Scene *scene,
     axf->set_coat_filename(coat_filename);
     node = axf;
   }
+  else if (b_node.is_type("ShaderNodeBsdfAxFSvbrdf"_ustr)) {
+    AxfSvbrdfBsdfNode *axf = graph->create_node<AxfSvbrdfBsdfNode>();
+    /* ID property "axf_atlas" references the data atlas (see AxfSvbrdfBsdfNode). */
+    blender::Image *b_atlas = nullptr;
+    if (b_node.prop) {
+      blender::IDProperty *prop = IDP_GetPropertyFromGroup(b_node.prop, "axf_atlas");
+      if (prop && prop->type == blender::IDP_ID) {
+        blender::ID *id = static_cast<blender::ID *>(prop->data.pointer);
+        if (id && blender::ID_Type(*reinterpret_cast<const short *>(id->name)) == blender::ID_IM) {
+          b_atlas = blender::id_cast<blender::Image *>(id);
+        }
+      }
+    }
+    ustring atlas_filename;
+    axf_carpaint_sync_image(
+        scene, b_engine, b_data, b_scene, b_atlas, axf->atlas_handle, atlas_filename);
+    axf->set_atlas_filename(atlas_filename);
+    node = axf;
+  }
   else if (b_node.is_type("ShaderNodeBsdfSheen"_ustr)) {
     SheenBsdfNode *sheen = graph->create_node<SheenBsdfNode>();
     switch (b_node.custom1) {
