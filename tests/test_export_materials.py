@@ -34,7 +34,7 @@ class _Obj:
 
 
 class _Mat:
-    def __init__(self, name, mixar=False):
+    def __init__(self, name, mixar=False):  # mixar: False | "baked" | "unbaked"
         self.name = name
         self.mixar = mixar
         self.users = 0
@@ -55,9 +55,13 @@ def swap_env(monkeypatch):
     module.create_export_material = create_export_material
     monkeypatch.setitem(
         sys.modules, "mixar.modules.paint.core.asset_export.bake_and_assign", module)
-    group = types.SimpleNamespace(node_tree=types.SimpleNamespace(mp=object()))
+    def stack(baked):
+        channel = types.SimpleNamespace(baked="Baked_Color")
+        nodes = {"Baked_Color": types.SimpleNamespace(image=object() if baked else None)}
+        return types.SimpleNamespace(node_tree=types.SimpleNamespace(
+            mp=types.SimpleNamespace(channels=[channel]), nodes=nodes))
     monkeypatch.setattr(export_materials, "active_mixar_nodes",
-                        lambda m: [group] if getattr(m, "mixar", False) else [])
+                        lambda m: [stack(m.mixar == "baked")] if getattr(m, "mixar", False) else [])
     fake_bpy = types.SimpleNamespace(
         data=types.SimpleNamespace(materials=types.SimpleNamespace(remove=removed.append)))
     monkeypatch.setattr(export_materials, "bpy", fake_bpy)
@@ -66,7 +70,7 @@ def swap_env(monkeypatch):
 
 def test_swaps_only_mixar_slots_then_restores_and_frees(swap_env):
     created, removed = swap_env
-    painted, plain = _Mat("Painted", mixar=True), _Mat("Plain")
+    painted, plain = _Mat("Painted", mixar="baked"), _Mat("Plain")
     obj = _Obj("Copy", [plain, painted])
     obj.active_material_index = 0
     with export_materials.temporary_export_materials([obj]):
@@ -78,7 +82,7 @@ def test_swaps_only_mixar_slots_then_restores_and_frees(swap_env):
 
 
 def test_restores_even_when_the_export_fails(swap_env):
-    painted = _Mat("Painted", mixar=True)
+    painted = _Mat("Painted", mixar="baked")
     obj = _Obj("Copy", [painted])
     with pytest.raises(RuntimeError):
         with export_materials.temporary_export_materials([obj]):
@@ -107,3 +111,15 @@ def test_package_swaps_the_copies_before_reading_their_materials():
     # Unwound before the copies are deleted, on success and on failure.
     final = body[body.index("    finally:\n        swap.close()"):]
     assert final.index("swap.close()") < final.index("_cleanup(col, renamed)")
+
+
+def test_an_unbaked_stack_is_left_for_the_package_bake(swap_env):
+    """cs-go iter 4: the swap turned unbaked layered materials into flat
+    Principled copies, the package bake saw nothing procedural, and the map
+    package wrote 0 images. Unbaked, the stack stays and gets baked."""
+    created, removed = swap_env
+    fresh = _Mat("Plaster", mixar="unbaked")
+    obj = _Obj("Copy", [fresh])
+    with export_materials.temporary_export_materials([obj]):
+        assert obj.data.materials[0] is fresh
+    assert created == [] and removed == []
