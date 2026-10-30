@@ -45,7 +45,7 @@ def start_rendering(op, context, state, filter_assets):
     items, discovery_failures = build_render_plan(context, get_render_filter())
     if not items and op._train_mode == "full":
         op._finish(context, success=False,
-                   message="No objects or collections found in asset libraries")
+                   message="No objects, collections or materials found in asset libraries")
         return {"CANCELLED"}
 
     state.assets_total = len(items)

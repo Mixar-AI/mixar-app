@@ -348,20 +348,27 @@ def results_to_infos(results, used_names):
     for r in results:
         if not r.get("ok"):
             continue
-        path = os.path.join(r.get("_dir", ""), r.get("file", ""))
-        info = r.get("info") or {}
-        if not info or not os.path.isfile(path):
-            continue
-        img_name = f"asset_preview_{info.get('name', '')}"
-        if img_name in used_names:
-            suffix = 1
-            while f"{img_name}.{suffix:03d}" in used_names:
-                suffix += 1
-            img_name = f"{img_name}.{suffix:03d}"
-        used_names.add(img_name)
-        info["image_name"] = img_name
-        info["image_path"] = path
-        collected.append(info)
+        # A material line carries one image per view: the first in file/info,
+        # the rest in ``extra``.
+        images = [(r.get("file", ""), r.get("info") or {})]
+        images += [(e.get("file", ""), e.get("info") or {}) for e in r.get("extra") or []]
+        for file_name, info in images:
+            path = os.path.join(r.get("_dir", ""), file_name)
+            if not info or not os.path.isfile(path):
+                continue
+            view = info.get("view")
+            img_name = f"asset_preview_{info.get('name', '')}"
+            if view:
+                img_name = f"{img_name}__{view}"
+            if img_name in used_names:
+                suffix = 1
+                while f"{img_name}.{suffix:03d}" in used_names:
+                    suffix += 1
+                img_name = f"{img_name}.{suffix:03d}"
+            used_names.add(img_name)
+            info["image_name"] = img_name
+            info["image_path"] = path
+            collected.append(info)
     return collected
 
 
@@ -409,9 +416,12 @@ def start_backfill(entries):
     ``entries``: [{"blend_str", "name", "jpg"}] — jpg paths must live inside
     the plan's out_dir (the caller writes them there) so cleanup_self removes
     everything.
+
+    Returns the process (for a caller that wants to know when the thumbnails
+    are on disk), or None when nothing was launched.
     """
     if not entries:
-        return
+        return None
     try:
         from mixar.modules.asset_search.core import preview_worker_script
         script_path = os.path.abspath(preview_worker_script.__file__)
@@ -427,7 +437,7 @@ def start_backfill(entries):
         creationflags = 0
         if sys.platform == "win32":
             creationflags = subprocess.CREATE_NO_WINDOW
-        subprocess.Popen(
+        proc = subprocess.Popen(
             [bpy.app.binary_path, "-b", "--factory-startup",
              "--python", script_path, "--", plan_path],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -435,8 +445,10 @@ def start_backfill(entries):
         )
         logger.info("[PreviewWorker] Backfill launched for %d thumbnails",
                     len(entries))
+        return proc
     except Exception as e:  # noqa: BLE001 — backfill is best-effort
         logger.warning("[PreviewWorker] Could not start backfill: %s", e)
+        return None
 
 
 def worker_exit_summary(handle):

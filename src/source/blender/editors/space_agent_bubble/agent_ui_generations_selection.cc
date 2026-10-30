@@ -217,4 +217,17 @@ void agent_ui_generations_detail_multi(ui::Block *block,
                 "Deselect every tile");
 }
 
+int agent_ui_generations_selected_index(const GenPaneData &data)
+{
+  if (!data.selected[0]) {
+    return -1;
+  }
+  for (int i = 0; i < data.count; i++) {
+    if (STREQ(data.items[i].key, data.selected)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 }  // namespace blender

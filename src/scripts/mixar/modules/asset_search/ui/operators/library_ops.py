@@ -23,14 +23,15 @@ logger = get_logger(__name__)
 
 
 def _count_assets(library_path: Path) -> int:
-    """Count asset-marked objects + collections across a library's .blends."""
+    """Count asset-marked objects, collections and materials across a library's .blends."""
     total = 0
     for blend_file in library_path.glob("**/*.blend"):
         try:
             with bpy.data.libraries.load(
                 str(blend_file), assets_only=True
             ) as (data_from, _):
-                total += len(data_from.objects) + len(data_from.collections)
+                total += (len(data_from.objects) + len(data_from.collections)
+                          + len(data_from.materials))
         except Exception:
             continue
     return total

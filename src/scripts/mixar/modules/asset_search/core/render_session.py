@@ -24,6 +24,19 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.render_coordinator import core as render_slot
+from mixar.modules.asset_search.constants import ASSET_KIND_MATERIAL
+from mixar.modules.asset_search.core.asset_kinds import identity_key
+from mixar.modules.asset_search.core.material_preview import (
+    AppendedData,
+    AppendedMaterial,
+    has_embedded_preview,
+    render_views,
+    thumbnail_entry,
+)
+from mixar.modules.asset_search.core.material_summary import (
+    material_summary,
+    missing_texture_count,
+)
 from mixar.modules.asset_search.utils.preview_render import (
     LinkedBlend,
     PreviewRenderRig,
@@ -52,6 +65,8 @@ def convert_idprop_to_py(value):
 def collect_asset_metadata(asset_id, library_name, blend_rel_path):
     """Metadata dict for an asset datablock (name/type/library/tags/...)."""
     asset_type = asset_id.type if hasattr(asset_id, 'type') else type(asset_id).__name__
+    if getattr(asset_id, 'id_type', '') == 'MATERIAL':
+        asset_type = 'Material'
     meta = asset_id.asset_data
 
     info = {
@@ -97,7 +112,7 @@ def build_render_plan(context, identity_filter=None):
 
     Returns:
         (items, discovery_failures) — items are dicts
-        {kind: 'OBJECT'|'COLLECTION', blend_str, name, library, rel_path};
+        {kind: 'OBJECT'|'COLLECTION'|'MATERIAL', blend_str, name, library, rel_path};
         discovery_failures are (label, reason) for unreadable .blend files.
     """
     from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
@@ -116,15 +131,17 @@ def build_render_plan(context, identity_filter=None):
                 ) as (data_from, _):
                     object_names = list(data_from.objects)
                     collection_names = list(data_from.collections)
+                    material_names = list(data_from.materials)
             except Exception as e:
                 failures.append((f"{lib.name}/{rel_path}", f"unreadable: {e}"))
                 continue
             for kind, names in (
-                ('OBJECT', object_names), ('COLLECTION', collection_names)
+                ('OBJECT', object_names), ('COLLECTION', collection_names),
+                (ASSET_KIND_MATERIAL, material_names),
             ):
                 for name in names:
                     if (identity_filter is not None
-                            and f"{name}|{lib.name}|{rel_path}" not in identity_filter):
+                            and identity_key(name, lib.name, rel_path, kind) not in identity_filter):
                         continue
                     items.append({
                         'kind': kind,
@@ -251,6 +268,9 @@ class RenderSession:
         The expensive append happens only when no usable thumbnail exists and a
         real render is required.
         """
+        if item['kind'] == ASSET_KIND_MATERIAL:
+            self._render_material(item)
+            return
         img_name = self._image_name(item['name'])
         # Own counter, not self.index: the caller advances that before calling
         # here, so deriving the filename from it would silently break if the
@@ -285,7 +305,59 @@ class RenderSession:
             finally:
                 self._rig = None
 
+    def _render_material(self, item):
+        """Swatch + sphere renders of a material asset, one metadata row per view.
+
+        Never embeds from the asset's own thumbnail: the two views must look
+        the same for every material in every library. A material whose .blend
+        has NO thumbnail gets the sphere render written back as one, exactly
+        like an object (``rendered_items`` feeds the backfill); one that has a
+        thumbnail is never overwritten.
+        """
+        seq = self._file_seq
+        self._file_seq += 1
+        paths = {view: os.path.join(self.out_dir, f"{seq:05d}_{view}.jpg")
+                 for view in ("swatch", "sphere")}
+        with PreviewRenderRig(self.context.scene, size=512) as rig:
+            self._rig = rig
+            try:
+                with AppendedMaterial(item['blend_str'], item['name']) as mat:
+                    if mat is None:
+                        self.failures.append((self.current_label, "not found in .blend"))
+                        return
+                    info = collect_asset_metadata(mat, item['library'], item['rel_path'])
+                    info.update(name=item['name'], kind=ASSET_KIND_MATERIAL, type='Material',
+                                material_summary=material_summary(mat))
+                    # Linked, so this is the library's own embedded preview.
+                    has_preview = has_embedded_preview(mat)
+                    views = render_views(
+                        self.context.scene, rig.camera, mat, paths,
+                        lambda scene, path: render_to_jpeg(scene, path, render_token=rig.token),
+                    )
+                    missing = missing_texture_count(mat)
+            finally:
+                self._rig = None
+        if missing:
+            info['missing_textures'] = missing
+        if not views:
+            self.failures.append((self.current_label, "render produced no image"))
+            return
+        thumb = thumbnail_entry(item, paths, views, has_preview)
+        if thumb:
+            self.rendered_items.append(thumb)
+        for view in views:
+            self.collected.append(dict(
+                info, view=view, image_path=paths[view],
+                image_name=self._image_name(f"{item['name']}__{view}"),
+            ))
+
     def _render_appended(self, item, info, img_name, out_path):
+        # The object's materials, images and meshes go too, even a material
+        # marked as an asset (its fake user would keep it in the user's file).
+        with AppendedData():
+            self._render_appended_asset(item, info, img_name, out_path)
+
+    def _render_appended_asset(self, item, info, img_name, out_path):
         """Append the asset, render it, and clean the local copy up.
 
         Cleanup runs in ``finally`` (mirroring the headless worker's

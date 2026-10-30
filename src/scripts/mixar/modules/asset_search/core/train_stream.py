@@ -27,6 +27,7 @@ import time
 from collections import deque
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.core.asset_kinds import kinds_form_value
 from mixar.modules.asset_search.constants import ASSET_TRAIN_ENDPOINT
 from mixar.modules.asset_search.core.train_api import (
     UPLOAD_BATCH_MAX_BYTES,
@@ -196,6 +197,7 @@ def post_stream(stream, mode, removed_assets, operator):
                 "mode": mode if sent == 0 else "incremental",
                 "removed_assets": json.dumps(removed_assets if sent == 0 else []),
                 "metadata": json.dumps(batch["metadata"]),
+                "kinds": kinds_form_value(),
             }
             if batch.get("checksum"):
                 form_data["metadata_checksum"] = batch["checksum"]
@@ -253,6 +255,7 @@ def post_stream(stream, mode, removed_assets, operator):
                         "mode": "incremental",
                         "removed_assets": json.dumps(removed_assets),
                         "metadata": "[]",
+                        "kinds": kinds_form_value(),
                         **({"metadata_checksum": operator._metadata_checksum}
                            if operator._metadata_checksum else {}),
                     },

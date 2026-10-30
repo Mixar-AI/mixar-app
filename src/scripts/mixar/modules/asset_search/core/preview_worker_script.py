@@ -21,7 +21,12 @@ below) — writing thumbnails back must never delay done.marker.
 DELIBERATELY self-contained: no mixar imports (runs under --factory-startup
 where the addon is not loaded), only bpy + stdlib + numpy. The small rig /
 framing / preview helpers are duplicated from
-asset_search/utils/preview_render.py — keep the two in sync.
+asset_search/utils/preview_render.py — keep the two in sync. Material assets
+use the sibling ``material_preview`` / ``material_summary`` modules, which are
+self-contained for exactly this reason and imported from this directory.
+
+A MATERIAL item yields one image per view (swatch, sphere): its result line
+carries the first view in ``file``/``info`` and the rest in ``extra``.
 """
 
 import json
@@ -282,6 +287,44 @@ def _process_item(scene, cam, item, out_path, linked):
     return _render_item(scene, cam, item, info, out_path)
 
 
+def _sibling(name):
+    """Import a self-contained module from this directory (no mixar package
+    exists under --factory-startup)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    return __import__(name)
+
+
+def _material_modules():
+    return _sibling("material_preview"), _sibling("material_summary")
+
+
+def _process_material(scene, cam, item, out_dir, idx):
+    """Swatch + sphere renders of a material.
+
+    Returns ``([(file, info), ...] per view, thumbnail backfill entry or None)``.
+    """
+    preview, summary = _material_modules()
+    files = {view: f"{idx:05d}_{view}.jpg" for view in preview.VIEWS}
+    paths = {view: os.path.join(out_dir, name) for view, name in files.items()}
+    with preview.AppendedMaterial(item['blend_str'], item['name']) as mat:
+        if mat is None:
+            raise RuntimeError("not found in .blend")
+        info = _collect_metadata(mat, item['library'], item['rel_path'])
+        info.update(name=item['name'], kind='MATERIAL', type='Material',
+                    material_summary=summary.material_summary(mat))
+        has_preview = preview.has_embedded_preview(mat)
+        views = preview.render_views(scene, cam, mat, paths, _render_jpg)
+        missing = summary.missing_texture_count(mat)
+    if missing:
+        info['missing_textures'] = missing
+    if not views:
+        raise RuntimeError("render produced no image")
+    thumb = preview.thumbnail_entry(item, paths, views, has_preview)
+    return [(files[view], dict(info, view=view)) for view in views], thumb
+
+
 def _render_item(scene, cam, item, info, out_path):
     """Append the asset, render it to ``out_path``, and clean the copy up."""
     with bpy.data.libraries.load(item['blend_str'], link=False) as (_, data_to):
@@ -329,70 +372,9 @@ def _render_item(scene, cam, item, info, out_path):
                 _remove_appended(collections=[coll])
 
 
-# ----------------------------------------------------------------------- #
-# Thumbnail backfill — write renders back as the assets' previews
-# ----------------------------------------------------------------------- #
-
 def _touch(path):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(str(time.time()))
-
-
-def _apply_preview_from_jpg(datablock, jpg_path):
-    """Load a JPEG and set it as ``datablock``'s embedded preview."""
-    import numpy as np
-    img = bpy.data.images.load(jpg_path)
-    try:
-        w, h = img.size
-        if not (w and h):
-            return False
-        buf = np.empty(w * h * 4, dtype=np.float32)
-        img.pixels.foreach_get(buf)
-        preview = datablock.preview_ensure()
-        preview.image_size = (w, h)
-        preview.image_pixels_float.foreach_set(buf)
-        return True
-    finally:
-        bpy.data.images.remove(img)
-
-
-def _backfill_previews(entries, heartbeat_path):
-    """Write rendered thumbnails back into their source .blend files.
-
-    Assets that had NO usable embedded preview were rendered this run — save
-    that render as their preview so they show a real thumbnail in the asset
-    browser and the NEXT training run takes the fast reuse path. Groups by
-    .blend (one open + save per file); Blender's save writes via a temp file,
-    so a killed worker can't corrupt a library.
-    """
-    by_blend = {}
-    for e in entries:
-        by_blend.setdefault(e["blend_str"], []).append(e)
-
-    for blend_path, blend_entries in by_blend.items():
-        _touch(heartbeat_path)  # keep the parent's stall watchdog fed
-        try:
-            bpy.ops.wm.open_mainfile(filepath=blend_path, load_ui=False)
-        except Exception as exc:  # noqa: BLE001 — skip unopenable files
-            print(f"[backfill] cannot open {blend_path}: {exc}")
-            continue
-        changed = False
-        for e in blend_entries:
-            datablock = (bpy.data.objects.get(e["name"])
-                         or bpy.data.collections.get(e["name"]))
-            if datablock is None or not os.path.isfile(e["jpg"]):
-                continue
-            try:
-                if _apply_preview_from_jpg(datablock, e["jpg"]):
-                    changed = True
-            except Exception as exc:  # noqa: BLE001
-                print(f"[backfill] preview failed for {e['name']}: {exc}")
-        if changed:
-            try:
-                bpy.ops.wm.save_mainfile(filepath=blend_path)
-                print(f"[backfill] saved previews into {blend_path}")
-            except Exception as exc:  # noqa: BLE001
-                print(f"[backfill] cannot save {blend_path}: {exc}")
 
 
 def main():
@@ -407,7 +389,8 @@ def main():
     # Backfill-only mode: the in-process (small-plan) session rendered in the
     # app and hands us jpgs to write back — no render pass, no parent polling.
     if plan.get("backfill") is not None and "items" not in plan:
-        _backfill_previews(plan["backfill"], heartbeat_path)
+        _sibling("preview_backfill").backfill_previews(
+            plan["backfill"], lambda: _touch(heartbeat_path))
         if plan.get("cleanup_self"):
             import shutil
             shutil.rmtree(out_dir, ignore_errors=True)
@@ -426,14 +409,22 @@ def main():
             entry = {"idx": i, "ok": False, "label": label}
             started = time.time()
             try:
-                info = _process_item(scene, cam, item, out_path, linked)
-                entry.update(ok=True, file=f"{i:05d}.jpg", info=info)
-                if not info.get("reused_preview"):
-                    backfill_entries.append({
-                        "blend_str": item["blend_str"],
-                        "name": item["name"],
-                        "jpg": out_path,
-                    })
+                if item.get("kind") == "MATERIAL":
+                    linked.release()
+                    views, thumb = _process_material(scene, cam, item, out_dir, i)
+                    if thumb:
+                        backfill_entries.append(thumb)
+                    entry.update(ok=True, file=views[0][0], info=views[0][1],
+                                 extra=[{"file": f, "info": inf} for f, inf in views[1:]])
+                else:
+                    info = _process_item(scene, cam, item, out_path, linked)
+                    entry.update(ok=True, file=f"{i:05d}.jpg", info=info)
+                    if not info.get("reused_preview"):
+                        backfill_entries.append({
+                            "blend_str": item["blend_str"],
+                            "name": item["name"],
+                            "jpg": out_path,
+                        })
             except Exception as e:  # noqa: BLE001 — record and continue
                 entry["reason"] = str(e)[:150]
                 # Never carry a half-used linked library into the next item.

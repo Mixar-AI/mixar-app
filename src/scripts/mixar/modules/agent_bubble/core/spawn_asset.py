@@ -41,9 +41,14 @@ def spawn_library_asset(context, blend_path, id_dir, asset_name):
         return False, n_("That asset has no file on disk")
     if not _is_file(blend):
         return False, n_("The asset's .blend is missing")
+    if kind.lower() == "material":
+        # A material goes onto the selection, not into the scene.
+        from mixar.modules.agent_bubble.core.apply_material import apply_library_material
+
+        return apply_library_material(context, blend, name)
     slot = _SLOTS.get(kind.lower())
     if slot is None:
-        return False, n_("Only objects and collections can be added to the scene")
+        return False, n_("Only objects, collections and materials can be used from here")
 
     try:
         with bpy.data.libraries.load(blend, link=False) as (data_from, data_to):

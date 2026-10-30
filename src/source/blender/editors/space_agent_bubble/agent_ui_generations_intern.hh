@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -172,6 +173,7 @@ enum GenItemKind {
 enum GenFilter {
   GEN_FILTER_ALL = 0,
   GEN_FILTER_3D,
+  GEN_FILTER_MATERIAL,
   GEN_FILTER_IMAGE,
   GEN_FILTER_VIDEO,
   GEN_FILTER_SPLAT,
@@ -210,9 +212,18 @@ struct GenItem {
   int icon_id;
   char path[1024]; /* Containing .blend (asset) or media file (image/video). */
   /** For an asset: the ID-type folder inside that .blend ("Object",
-   * "Collection", …), which is what `wm.append` addresses a datablock by. */
+   * "Collection", "Material", …), which is what `wm.append` addresses a
+   * datablock by. */
   char id_dir[32];
+  /** Search similarity (0-1) while a search result list is shown, else < 0. */
+  float score;
 };
+
+/** A material asset: applied to the selection rather than added to the scene. */
+inline bool gen_item_is_material(const GenItem &item)
+{
+  return item.kind == GEN_ITEM_ASSET && std::strcmp(item.id_dir, "Material") == 0;
+}
 
 /** The auto-archive library's name — must match
  * `asset_search/constants.py:GENERATION_LIBRARY_NAME`. */
@@ -242,6 +253,16 @@ struct GenPaneData {
   /** Connected asset libraries for the rail, "Mixar Generations" excluded:
    * the AI generations source already shows it. */
   std::vector<std::string> lib_names;
+
+  /** Search row (`agent_bubble/core/library_search.py` owns the request).
+   * `search_state` is the IDLE/RUNNING/DONE/ERROR identifier; while DONE the
+   * grid holds only the hits, best first. */
+  char search_ref[1024];
+  char search_state[16];
+  char search_message[256];
+  bool search_active;
+  /** Raw hit lines, read only while DONE. */
+  std::string search_hits;
 };
 
 /** \} */
@@ -368,8 +389,20 @@ void agent_ui_generations_gather_files(const bContext *C,
 
 /** Read the WM state and fill \a r_data with the filtered, sorted items. */
 void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data);
+/** Clear every connected library's cached asset list once
+ * `wm.mixar_generations_library_revision` moves: a thumbnail backfill
+ * rewrote .blend files underneath them (`agent_ui_generations_libraries.cc`). */
+void agent_ui_generations_reload_user_libraries(const bContext *C, PointerRNA *wm_ptr);
 
-/** Index of #GenPaneData::selected within the gathered items, or -1. */
+/** Read the search row's state off the WindowManager
+ * (`agent_ui_generations_search.cc`). */
+void agent_ui_generations_read_search(PointerRNA *wm_ptr, GenPaneData *data);
+
+/** Narrow the gathered items to the search hits, best first, scored. */
+void agent_ui_generations_apply_search(GenPaneData *data);
+
+/** Index of #GenPaneData::selected within the gathered items, or -1
+ * (`agent_ui_generations_selection.cc`). */
 int agent_ui_generations_selected_index(const GenPaneData &data);
 
 /** Split `mixar_generations_multi` into #GenPaneData::multi

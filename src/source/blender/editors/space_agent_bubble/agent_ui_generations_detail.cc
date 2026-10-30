@@ -170,11 +170,19 @@ void build_actions(const GenItem &item, ActionSpec r_actions[2])
 
   switch (item.kind) {
     case GEN_ITEM_ASSET:
-      r_actions[0] = {IFACE_("Add to Scene"),
-                      "mixar.generations_add_asset",
-                      {"blend_path", "id_dir", "asset_name"},
-                      {item.path, item.id_dir, item.name},
-                      TIP_("Append this asset into the current scene")};
+      /* A material has no place in the scene of its own: it goes onto the
+       * selected objects (same operator, which branches on the ID folder). */
+      r_actions[0] = gen_item_is_material(item) ?
+                         ActionSpec{IFACE_("Apply to Selected"),
+                                    "mixar.generations_add_asset",
+                                    {"blend_path", "id_dir", "asset_name"},
+                                    {item.path, item.id_dir, item.name},
+                                    TIP_("Apply this material to the selected objects")} :
+                         ActionSpec{IFACE_("Add to Scene"),
+                                    "mixar.generations_add_asset",
+                                    {"blend_path", "id_dir", "asset_name"},
+                                    {item.path, item.id_dir, item.name},
+                                    TIP_("Append this asset into the current scene")};
       r_actions[1] = {IFACE_("Open Folder"),
                       item.path[0] ? "mixar.generations_open_folder" : "",
                       {"path", nullptr, nullptr},

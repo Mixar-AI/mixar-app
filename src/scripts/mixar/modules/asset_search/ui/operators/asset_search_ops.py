@@ -24,10 +24,7 @@ from mixar.modules.common.api.client import HTTPClient
 from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
-from mixar.modules.asset_search.constants import (
-    ASSET_SEARCH_ENDPOINT,
-    ASSET_STATUS_ENDPOINT,
-)
+from mixar.modules.asset_search.constants import ASSET_STATUS_ENDPOINT
 
 
 # ======================================================================
@@ -297,69 +294,15 @@ def _extract_search_image_bytes(img):
 
 
 def _search_api(prompt, image_bytes, operator):
-    """POST a search query to the backend proxy in a background thread."""
-    try:
-        # Credit-metered per call — never auto-retried (see core/api_client).
-        client = metered_client()
-        form_data = {"prompt": prompt or ""}
-        files = None
-        if image_bytes:
-            files = {"image": ("search_query.jpg", image_bytes, "image/jpeg")}
+    """POST a search query to the backend proxy in a background thread.
 
-        resp = client.post(
-            ASSET_SEARCH_ENDPOINT,
-            data=form_data,
-            files=files,
-            timeout=30,
-            raise_for_status=False,
-        )
+    Searches every indexed kind, materials included: the panel's Locate
+    button works for any asset in the browser.
+    """
+    from mixar.modules.asset_search.constants import SEARCH_TYPE_ALL
+    from mixar.modules.asset_search.core.search_api import search
 
-        if resp.status_code == 404:
-            operator._result = {
-                "success": False,
-                "message": n_("No trained model found. Please train first."),
-            }
-            return
-
-        if not resp.success:
-            msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
-            operator._result = {"success": False, "message": msg}
-            return
-
-        data = resp.data or {}
-        # Backend wraps: {status, message, data: {results: [...]}}
-        inner = data.get("data", data)
-        results = inner.get("results", [])
-        if not results:
-            operator._result = {
-                "success": True,
-                "message": n_("No matching assets found"),
-                "results": [],
-            }
-            return
-
-        # Structured rows: the panel renders these with score bars and a
-        # "locate in browser" action, not raw text.
-        rows = []
-        for r in results:
-            meta = r.get("metadata", {}) or {}
-            rows.append({
-                "name": meta.get("name") or r.get("model_name", "?"),
-                "score": float(r.get("similarity_score", 0) or 0),
-                "library": meta.get("library", ""),
-                "blend_file": meta.get("blend_file", ""),
-                "type": meta.get("type", ""),
-            })
-        operator._result = {
-            "success": True,
-            "message": rpt_("Found {count} matching asset(s)").format(count=len(rows)),
-            "results": rows,
-        }
-    except Exception as exc:
-        operator._result = {
-            "success": False,
-            "message": rpt_("Search failed: {error}").format(error=exc),
-        }
+    operator._result = search(prompt, image_bytes, asset_type=SEARCH_TYPE_ALL)
 
 
 def _status_api(metadata, operator):
@@ -402,6 +345,8 @@ def _status_api(metadata, operator):
 
 def _scan_asset_library_metadata(context):
     """Scan ENROLLED asset libraries for names/metadata without rendering."""
+    from mixar.modules.asset_search.constants import ASSET_KIND_MATERIAL
+    from mixar.modules.asset_search.core.asset_kinds import identity_entry
     from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
 
     metadata = []
@@ -427,6 +372,9 @@ def _scan_asset_library_metadata(context):
                             "library": lib.name,
                             "blend_file": str(rel_path),
                         })
+                    for name in data_from.materials:
+                        metadata.append(identity_entry(
+                            name, lib.name, str(rel_path), ASSET_KIND_MATERIAL))
             except Exception:
                 continue
     return metadata

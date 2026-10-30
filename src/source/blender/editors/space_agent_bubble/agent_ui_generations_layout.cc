@@ -77,7 +77,9 @@ GenResolveInput agent_ui_generations_input(const rctf &panel, const float u)
 
 GenFrame agent_ui_generations_frame(const rctf &panel, const float u)
 {
-  return agent_ui_generations_resolve(agent_ui_generations_input(panel, u));
+  GenResolveInput in = agent_ui_generations_input(panel, u);
+  in.search_row = true;
+  return agent_ui_generations_resolve(in);
 }
 
 }  // namespace blender

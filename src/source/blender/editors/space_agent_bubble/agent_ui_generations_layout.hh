@@ -29,7 +29,7 @@
 
 namespace blender {
 
-constexpr int GEN_LAYOUT_CHIP_COUNT = 5;
+constexpr int GEN_LAYOUT_CHIP_COUNT = 6;
 constexpr int GEN_LAYOUT_RAIL_COUNT = 2;
 
 /** Artboard floors (multiplied by the island unit) and em fractions of the
@@ -45,14 +45,17 @@ constexpr float GEN_PAD_SHRINK = 0.72f;
 constexpr const char *GEN_RAIL_LABELS[GEN_LAYOUT_RAIL_COUNT] = {N_("AI generations"),
                                                                  N_("My Libraries")};
 constexpr const char *GEN_FILTER_LABELS[GEN_LAYOUT_CHIP_COUNT] = {
-    N_("All"), N_("3D"), N_("Image"), N_("Video"), N_("Splats")};
+    N_("All"), N_("3D"), N_("Materials"), N_("Image"), N_("Video"), N_("Splats")};
 /** Widest label each action slot can show. The column is stable across
  * selection; `build_actions` must not grow a label past these. */
-constexpr const char *GEN_ACTION_PRIMARY[] = {
-    N_("Add to Scene"), N_("Select on Board"), N_("Select in Scene"), N_("Generating…")};
+constexpr const char *GEN_ACTION_PRIMARY[] = {N_("Add to Scene"),
+                                              N_("Apply to Selected"),
+                                              N_("Select on Board"),
+                                              N_("Select in Scene"),
+                                              N_("Generating…")};
 constexpr const char *GEN_ACTION_SECONDARY[] = {
     N_("Open Folder"), N_("Already in file"), N_("Open Queue")};
-constexpr int GEN_ACTION_PRIMARY_COUNT = 4;
+constexpr int GEN_ACTION_PRIMARY_COUNT = 5;
 constexpr int GEN_ACTION_SECONDARY_COUNT = 3;
 
 struct GenBox {
@@ -72,6 +75,9 @@ struct GenResolveInput {
   float sort_w_design, action_h_design, foot_design, cap_gap_design, row_gap_design;
   float lib_row_design;
   int max_cols;
+  /** Reserve the search row under the chips (the Library pane; the asset
+   * picker resolves the same frame without one). */
+  bool search_row;
 };
 
 struct GenFrame {
@@ -94,6 +100,9 @@ struct GenFrame {
   float chip_r;
   float chip_pad_x;
   GenBox sort;
+  /** Search row under the chips; zero-sized when the input asked for none. */
+  GenBox search;
+  bool has_search;
 
   float grid_x;
   float grid_right;
@@ -377,6 +386,14 @@ inline GenFrame agent_ui_generations_resolve(const GenResolveInput &in)
   float lowest = frame.chip[0].ymin;
   for (int i = 1; i < GEN_LAYOUT_CHIP_COUNT; i++) {
     lowest = std::min(lowest, frame.chip[i].ymin);
+  }
+  frame.has_search = in.search_row;
+  if (frame.has_search) {
+    /* Full grid width, chip height: the field reads as part of the filter
+     * strip, and the grid simply starts one row lower. */
+    const float top_s = lowest - gap;
+    frame.search = {frame.grid_x, frame.grid_right, top_s - frame.chip_h, top_s};
+    lowest = frame.search.ymin;
   }
   frame.grid_top = lowest - frame.block_gap;
   frame.grid_bottom = in.panel_ymin + pad;

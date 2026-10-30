@@ -51,8 +51,10 @@ def set_render_filter(asset_identities):
     if asset_identities is None:
         _render_filter = None
     else:
+        from mixar.modules.asset_search.core.asset_kinds import identity_key
+
         _render_filter = {
-            f"{a['name']}|{a['library']}|{a['blend_file']}"
+            identity_key(a['name'], a['library'], a['blend_file'], a.get('kind', ''))
             for a in asset_identities
         }
 

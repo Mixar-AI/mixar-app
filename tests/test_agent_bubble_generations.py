@@ -53,7 +53,9 @@ DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 LIBRARIES_CC = (CPP / "agent_ui_generations_libraries.cc").read_text(encoding="utf-8")
 NAV_CC = (CPP / "agent_ui_generations_navigation.cc").read_text(encoding="utf-8")
 SELECTION_CC = (CPP / "agent_ui_generations_selection.cc").read_text(encoding="utf-8")
-ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC + SELECTION_CC
+SEARCH_CC = (CPP / "agent_ui_generations_search.cc").read_text(encoding="utf-8")
+ALL_CC = (PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC + SELECTION_CC
+          + SEARCH_CC)
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
@@ -61,7 +63,7 @@ SPACE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 CMAKE = (CPP / "CMakeLists.txt").read_text(encoding="utf-8")
 
 
-def _load_ops_module():
+def _load_ops_module(filename="generations_ops.py"):
     """Import the operators with a REAL Operator base class.
 
     ``bpy.types.Operator`` is a MagicMock under the stub, and subclassing a
@@ -73,11 +75,10 @@ def _load_ops_module():
     import bpy
 
     path = (
-        SCRIPTS / "mixar" / "modules" / "agent_bubble" / "ui" / "operators" /
-        "generations_ops.py"
+        SCRIPTS / "mixar" / "modules" / "agent_bubble" / "ui" / "operators" / filename
     )
     spec = importlib.util.spec_from_file_location(
-        "_agent_bubble_generations_ops_under_test", path
+        "_agent_bubble_" + filename[:-3] + "_under_test", path
     )
     module = importlib.util.module_from_spec(spec)
     saved = bpy.types.Operator
@@ -90,6 +91,7 @@ def _load_ops_module():
 
 
 OPS = _load_ops_module()
+SEARCH_OPS = _load_ops_module("generations_search_ops.py")
 
 
 def _op_self(**fields):
@@ -107,7 +109,7 @@ def _op_self(**fields):
 
 @pytest.mark.parametrize("name", generations_props.PROP_NAMES)
 def test_every_pane_property_is_read_by_the_cpp(name):
-    assert f'"{name}"' in DATA_CC + SELECTION_CC, (
+    assert f'"{name}"' in DATA_CC + SELECTION_CC + SEARCH_CC + PANE_CC + LIBRARIES_CC, (
         f"{name} is registered but the pane never reads it — a property the "
         "C++ does not know about is state nothing can change"
     )
@@ -116,7 +118,17 @@ def test_every_pane_property_is_read_by_the_cpp(name):
 #: Written by Python, not by a control in the pane — the archiver bumps the
 #: revision so the pane knows to re-read a library it has already cached, and
 #: ``mixar.generations_select`` writes the multi-selection on Ctrl/Cmd-click.
-_WRITTEN_BY_PYTHON = {"mixar_generations_revision", "mixar_generations_multi"}
+_WRITTEN_BY_PYTHON = {
+    "mixar_generations_revision",
+    # The thumbnail backfill watcher (asset_search/core/train_support.py).
+    "mixar_generations_library_revision",
+    "mixar_generations_multi",
+    # The search request (core/library_search.py) and its image picker.
+    "mixar_generations_search_ref",
+    "mixar_generations_search_hits",
+    "mixar_generations_search_state",
+    "mixar_generations_search_message",
+}
 
 
 @pytest.mark.parametrize(
@@ -133,6 +145,10 @@ def test_every_pane_property_is_written_by_a_control(name):
     if name.endswith("_scroll"):
         assert f'"{name}"' in PANE_CC + LIBRARIES_CC
         assert "ui::ButtonType::Scroll" in LIBRARIES_CC
+        return
+    if name == "mixar_generations_query":
+        # A native text field bound to the property itself.
+        assert f'"{name}"' in PANE_CC and "ui::ButtonType::Text" in PANE_CC
         return
     path = f"window_manager.{name}"
     assert path in ALL_CC, (
@@ -210,7 +226,7 @@ def _cpp_operator_idnames(source):
 
 
 def test_every_operator_the_pane_dispatches_exists():
-    registered = {cls.bl_idname for cls in OPS.classes}
+    registered = {cls.bl_idname for cls in OPS.classes + SEARCH_OPS.classes}
     dispatched = _cpp_operator_idnames(ALL_CC)
     assert "WM_operatortype_append(MIXAR_OT_generations_navigate)" in SPACE_CC
     registered.add("mixar.generations_navigate")
@@ -219,7 +235,7 @@ def test_every_operator_the_pane_dispatches_exists():
 
 
 def test_no_operator_is_registered_without_a_caller():
-    registered = {cls.bl_idname for cls in OPS.classes}
+    registered = {cls.bl_idname for cls in OPS.classes + SEARCH_OPS.classes}
     dispatched = _cpp_operator_idnames(ALL_CC)
     assert not (registered - dispatched), (
         f"dead operators: {registered - dispatched}"
@@ -619,3 +635,46 @@ def test_no_debug_printing_survived():
     for source in (GRID_CC, DATA_CC, DETAIL_CC, PANE_CC, READ_CC):
         # Word boundary: BLI_snprintf is the sanctioned formatter.
         assert not re.search(r"\bprintf\(", source)
+
+
+# ---------------------------------------------------------------------------
+# Materials chip and search row
+# ---------------------------------------------------------------------------
+
+
+def test_materials_have_their_own_chip_and_leave_3d():
+    assert '"MATERIAL", GEN_FILTER_MATERIAL' in PANE_CC
+    assert "case GEN_FILTER_MATERIAL:" in DATA_CC
+    assert "!gen_item_is_material(item)" in DATA_CC  # 3D no longer lists materials
+    assert 'N_("Materials")' in (CPP / "agent_ui_generations_layout.hh").read_text(encoding="utf-8")
+
+
+def test_material_tiles_apply_to_the_selection():
+    assert 'IFACE_("Apply to Selected")' in DETAIL_CC
+    assert "gen_item_is_material(item)" in DETAIL_CC
+    spawn = (SCRIPTS / "mixar" / "modules" / "agent_bubble" / "core" / "spawn_asset.py").read_text(
+        encoding="utf-8")
+    assert 'kind.lower() == "material"' in spawn and "apply_library_material" in spawn
+
+
+def test_search_row_is_metered_on_confirm_only():
+    """Every search is a credit-metered call: the field must not update per keystroke."""
+    start = PANE_CC.index('"mixar_generations_query"')
+    field = PANE_CC[start - 600:start + 900]
+    assert "BUT_TEXTEDIT_UPDATE" not in field
+    assert '"mixar.generations_search_image"' in PANE_CC
+    assert '"mixar.generations_search_clear"' in PANE_CC
+    assert "agent_ui_generations_search.cc" in CMAKE
+
+
+def test_search_results_replace_the_sort():
+    assert "agent_ui_generations_apply_search(r_data);" in DATA_CC
+    gather = DATA_CC[DATA_CC.index("void agent_ui_generations_gather"):]
+    assert gather.index("agent_ui_generations_apply_search") < gather.index("std::stable_sort")
+
+
+def test_search_state_identifiers_match_the_cpp():
+    ids = {item[0] for item in generations_props.SEARCH_STATE_ITEMS}
+    assert ids == {"IDLE", "RUNNING", "DONE", "ERROR"}
+    for ident in ("RUNNING", "DONE", "ERROR"):
+        assert f'"{ident}"' in SEARCH_CC + PANE_CC + GRID_CC + DATA_CC

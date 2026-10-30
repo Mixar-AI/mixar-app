@@ -2,9 +2,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #include "BKE_context.hh"
+#include "BLI_listbase.h"
 #include "BLI_string.h"
 #include "BLT_translation.hh"
+#include "DNA_asset_types.h"
+#include "DNA_userdef_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_asset_library.hh"
+#include "ED_asset_list.hh"
 #include "RNA_access.hh"
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
@@ -18,6 +23,34 @@
 #include "agent_ui_generations_clip.hh"
 
 namespace blender {
+
+void agent_ui_generations_reload_user_libraries(const bContext *C, PointerRNA *wm_ptr)
+{
+  /* Static for the same reason as the generations edge in `_data.cc`: the
+   * asset lists it clears are process-global. Compared with != because the
+   * WindowManager value restarts at 0 on every file load. */
+  static int g_seen_revision = 0;
+  PropertyRNA *prop = RNA_struct_find_property(wm_ptr, "mixar_generations_library_revision");
+  if (!prop || RNA_property_type(prop) != PROP_INT) {
+    return;
+  }
+  const int revision = RNA_property_int_get(wm_ptr, prop);
+  if (revision == g_seen_revision) {
+    return;
+  }
+  g_seen_revision = revision;
+  /* Every connected library, not just the one on screen: the backfill wrote
+   * into several, and a list read before it would otherwise keep its old
+   * thumbnails until the app restarts. Rare (once per training run), and
+   * each list re-reads lazily the next time it is shown. */
+  for (const bUserAssetLibrary &lib : U.asset_libraries) {
+    if (!lib.name[0] || !lib.dirpath[0]) {
+      continue;
+    }
+    const AssetLibraryReference ref = blender::ed::asset::user_library_to_library_ref(lib);
+    blender::ed::asset::list::clear(&ref, C);
+  }
+}
 
 void agent_ui_generations_gather_files(const bContext *C,
                                        GenPaneData *data,

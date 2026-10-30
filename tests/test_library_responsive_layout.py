@@ -277,3 +277,62 @@ int main() {
         check=True,
     )
     subprocess.run([str(binary)], check=True)
+
+
+def test_search_row_sits_between_the_chips_and_the_grid(tmp_path):
+    compiler = _cxx()
+    if not compiler:
+        pytest.skip("C++ compiler unavailable")
+    source = tmp_path / "search_row.cc"
+    source.write_text(SEARCH_ROW_PROGRAM, encoding="utf-8")
+    exe = tmp_path / "search_row"
+    build = subprocess.run(
+        [compiler, "-std=c++17", "-I", str(CPP), str(source), "-o", str(exe)],
+        capture_output=True, text=True,
+    )
+    assert build.returncode == 0, build.stderr
+    run = subprocess.run([str(exe)], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+
+
+SEARCH_ROW_PROGRAM = r'''#include <cstdio>
+#include <cstring>
+#include "agent_ui_generations_layout.hh"
+using namespace blender;
+
+static int fails = 0;
+#define CHECK(cond) do { if (!(cond)) { std::fprintf(stderr, "fail %d: %s\n", __LINE__, #cond); fails++; } } while (0)
+
+static GenFrame resolve(float w, float h, float u, bool search) {
+  GenResolveInput in{};
+  in.panel_xmin = 0; in.panel_xmax = w; in.panel_ymin = 0; in.panel_ymax = h;
+  in.u = u; in.font_chip = 18 * u; in.font_cap = 16 * u; in.font_title = 26 * u;
+  in.font_meta = 15 * u; in.font_desc = 17 * u; in.font_action = 15 * u; in.font_lib = 16 * u;
+  for (int i = 0; i < GEN_LAYOUT_RAIL_COUNT; i++) in.rail_label[i] = 9.0f * float(std::strlen(GEN_RAIL_LABELS[i])) * u;
+  for (int i = 0; i < GEN_LAYOUT_CHIP_COUNT; i++) in.chip_label[i] = 9.0f * float(std::strlen(GEN_FILTER_LABELS[i])) * u;
+  in.action_primary = 160 * u; in.action_secondary = 140 * u;
+  in.tile_design = 146 * u; in.preview_design = 316 * u; in.sort_w_design = 56 * u;
+  in.foot_design = 28 * u; in.cap_gap_design = 10 * u; in.row_gap_design = 20 * u;
+  in.lib_row_design = 38 * u; in.max_cols = 4; in.search_row = search;
+  return agent_ui_generations_resolve(in);
+}
+
+int main() {
+  const float sizes[][3] = {{1300, 420, 1.0f}, {800, 320, 0.8f}, {520, 300, 0.6f}, {1800, 600, 1.4f}};
+  for (const auto &s : sizes) {
+    const GenFrame off = resolve(s[0], s[1], s[2], false);
+    const GenFrame on = resolve(s[0], s[1], s[2], true);
+    CHECK(!off.has_search);
+    CHECK(on.has_search);
+    float lowest_chip = on.chip[0].ymin;
+    for (int i = 1; i < GEN_LAYOUT_CHIP_COUNT; i++) lowest_chip = std::min(lowest_chip, on.chip[i].ymin);
+    CHECK(on.search.ymax <= lowest_chip - 0.5f);           /* below every chip row */
+    CHECK(on.grid_top <= on.search.ymin - 0.5f);           /* grid starts under it */
+    CHECK(on.search.xmin == on.grid_x && on.search.xmax == on.grid_right);
+    CHECK(std::fabs((on.search.ymax - on.search.ymin) - on.chip_h) < 0.01f);
+    CHECK(on.grid_top < off.grid_top);                     /* only the grid moved */
+    CHECK(on.detail_x == off.detail_x && on.cols == off.cols);
+  }
+  return fails ? 1 : 0;
+}
+'''

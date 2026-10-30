@@ -23,6 +23,7 @@ from bpy.props import EnumProperty, FloatProperty, IntProperty, StringProperty
 #: Module-level so a writer can bump the revision without importing bpy.types
 #: bookkeeping of its own — see :func:`bump_revision`.
 _REVISION_PROP = "mixar_generations_revision"
+_LIBRARY_REVISION_PROP = "mixar_generations_library_revision"
 
 SOURCE_ITEMS = (
     ('AI', "AI generations", "Everything Mixar has generated for you"),
@@ -32,9 +33,17 @@ SOURCE_ITEMS = (
 FILTER_ITEMS = (
     ('ALL', "All", "Every kind of generation"),
     ('THREE_D', "3D", "Meshes and other 3D assets"),
+    ('MATERIAL', "Materials", "Material assets from your libraries"),
     ('IMAGE', "Image", "Generated stills"),
     ('VIDEO', "Video", "Generated videos"),
     ('SPLAT', "Splats", "Gaussian splat worlds in this file"),
+)
+
+SEARCH_STATE_ITEMS = (
+    ('IDLE', "Idle", "No search is shown"),
+    ('RUNNING', "Searching", "A search is in flight"),
+    ('DONE', "Done", "The grid shows the search hits"),
+    ('ERROR', "Error", "The last search failed"),
 )
 
 SORT_ITEMS = (
@@ -54,6 +63,12 @@ PROP_NAMES = (
     "mixar_generations_scroll",
     "mixar_generations_library_scroll",
     "mixar_generations_revision",
+    "mixar_generations_library_revision",
+    "mixar_generations_query",
+    "mixar_generations_search_ref",
+    "mixar_generations_search_hits",
+    "mixar_generations_search_state",
+    "mixar_generations_search_message",
 )
 
 
@@ -77,6 +92,28 @@ def bump_revision():
         pass
 
 
+def bump_library_revision():
+    """Tell the Library pane the user's connected libraries changed on disk.
+
+    Unlike :func:`bump_revision` (the generations archive only), the pane
+    clears EVERY connected library's cached asset list on this edge: the
+    thumbnail backfill rewrites .blend files in whichever libraries were
+    trained, and their cached previews would otherwise stay blank until the
+    app restarts. Best-effort and main-thread only.
+    """
+    try:
+        wm = bpy.context.window_manager
+        if wm is not None:
+            setattr(wm, _LIBRARY_REVISION_PROP, getattr(wm, _LIBRARY_REVISION_PROP, 0) + 1)
+    except Exception:  # noqa: BLE001 — never break a timer over a repaint
+        pass
+
+
+def redraw_bubbles():
+    """Repaint every island (for writers outside a property update)."""
+    _redraw_bubbles(None, None)
+
+
 def _redraw_bubbles(_self, context):
     """Repaint every island so the grid reflects the change immediately."""
     wm = context.window_manager if context else bpy.context.window_manager
@@ -95,6 +132,24 @@ def _reset_scroll(self, context):
     """Start a changed source, library, filter or sort at its first row."""
     self.mixar_generations_scroll = 0.0
     _redraw_bubbles(self, context)
+
+
+def _change_filter(self, context):
+    """A new chip: first row; a shown search follows the Materials chip."""
+    _reset_scroll(self, context)
+    try:
+        from mixar.modules.agent_bubble.core import library_search
+
+        library_search.on_filter_changed(context)
+    except Exception:  # noqa: BLE001 — the filter itself must still apply
+        pass
+
+
+def _search(_self, context):
+    """The query or reference image changed (text confirmed / image picked)."""
+    from mixar.modules.agent_bubble.core import library_search
+
+    library_search.request(context)
 
 
 def _change_scope(self, context):
@@ -129,7 +184,7 @@ def register():
         description="Which kind of generation the grid is showing",
         items=FILTER_ITEMS,
         default='ALL',
-        update=_reset_scroll,
+        update=_change_filter,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_sort = EnumProperty(
@@ -164,6 +219,16 @@ def register():
         update=_change_scope,
         options={'SKIP_SAVE'},
     )
+    wm.mixar_generations_library_revision = IntProperty(
+        name="Library Revision",
+        description=(
+            "Bumped when .blend files in connected libraries were rewritten "
+            "(new thumbnails), so the pane re-reads every library"
+        ),
+        default=0,
+        update=_redraw_bubbles,
+        options={'SKIP_SAVE'},
+    )
     wm.mixar_generations_revision = IntProperty(
         name="Generations Revision",
         description=(
@@ -172,6 +237,44 @@ def register():
         ),
         default=0,
         update=_redraw_bubbles,
+        options={'SKIP_SAVE'},
+    )
+    # Search row. The query is written by the pane's native text field and
+    # the image by ``mixar.generations_search_image``; the rest by
+    # ``core/library_search.py`` (see that module for the hit-line format).
+    wm.mixar_generations_query = StringProperty(
+        name="Library Search",
+        description="Describe what you are looking for, then press Enter",
+        default="",
+        update=_search,
+        options={'SKIP_SAVE'},
+    )
+    wm.mixar_generations_search_ref = StringProperty(
+        name="Search Reference Image",
+        description="Image file the library is searched for look-alikes of",
+        default="",
+        subtype='FILE_PATH',
+        update=_search,
+        options={'SKIP_SAVE'},
+    )
+    wm.mixar_generations_search_hits = StringProperty(
+        name="Search Hits",
+        description="The search's hits, best first, one per line",
+        default="",
+        options={'SKIP_SAVE'},
+    )
+    wm.mixar_generations_search_state = EnumProperty(
+        name="Search State",
+        description="Where the Library search is",
+        items=SEARCH_STATE_ITEMS,
+        default='IDLE',
+        update=_redraw_bubbles,
+        options={'SKIP_SAVE'},
+    )
+    wm.mixar_generations_search_message = StringProperty(
+        name="Search Message",
+        description="Status line of the Library search",
+        default="",
         options={'SKIP_SAVE'},
     )
     # Native scrollbar painting requires a range >= 2; percentages preserve

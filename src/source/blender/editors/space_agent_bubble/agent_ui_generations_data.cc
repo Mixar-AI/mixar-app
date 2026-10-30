@@ -335,12 +335,15 @@ bool item_passes(const GenItem &item, const GenFilter filter)
       return true;
     case GEN_FILTER_3D:
       /* An image saved as an asset is still an image — the chip filters on
-       * the asset's real ID type, not on "is it in a library". A running job
-       * is shown here too: 3D is where the overwhelming majority of them
-       * land, and hiding it would make a generation vanish for as long as it
-       * takes to make. */
-      return (item.kind == GEN_ITEM_ASSET && !STREQ(item.id_dir, "Image")) ||
+       * the asset's real ID type, not on "is it in a library". Materials
+       * have their own chip. A running job is shown here too: 3D is where
+       * the overwhelming majority of them land, and hiding it would make a
+       * generation vanish for as long as it takes to make. */
+      return (item.kind == GEN_ITEM_ASSET && !STREQ(item.id_dir, "Image") &&
+              !gen_item_is_material(item)) ||
              item.kind == GEN_ITEM_JOB;
+    case GEN_FILTER_MATERIAL:
+      return gen_item_is_material(item);
     case GEN_FILTER_IMAGE:
       return item.kind == GEN_ITEM_IMAGE ||
              (item.kind == GEN_ITEM_ASSET && STREQ(item.id_dir, "Image"));
@@ -358,6 +361,9 @@ GenFilter filter_from_id(const char *id)
 {
   if (STREQ(id, "THREE_D")) {
     return GEN_FILTER_3D;
+  }
+  if (STREQ(id, "MATERIAL")) {
+    return GEN_FILTER_MATERIAL;
   }
   if (STREQ(id, "IMAGE")) {
     return GEN_FILTER_IMAGE;
@@ -403,6 +409,7 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
     gen_read_string(
         &wm_ptr, "mixar_generations_library", r_data->library, sizeof(r_data->library));
     agent_ui_generations_read_multi(&wm_ptr, r_data);
+    agent_ui_generations_read_search(&wm_ptr, r_data);
     r_data->scroll = gen_read_float(&wm_ptr, "mixar_generations_scroll");
     r_data->library_scroll = gen_read_float(&wm_ptr, "mixar_generations_library_scroll");
     if (PropertyRNA *rev = RNA_struct_find_property(&wm_ptr, "mixar_generations_revision");
@@ -428,6 +435,7 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
     if (reload) {
       g_seen_revision = revision;
     }
+    agent_ui_generations_reload_user_libraries(C, &wm_ptr);
   }
 
   gather_libraries(r_data);
@@ -461,6 +469,15 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
   }
   r_data->count = kept;
   r_data->items.resize(kept);
+  for (GenItem &item : r_data->items) {
+    item.score = -1.0f;
+  }
+
+  if (STREQ(r_data->search_state, "DONE")) {
+    /* Result order is the ranking; the newest/oldest sort does not apply. */
+    agent_ui_generations_apply_search(r_data);
+    return;
+  }
 
   const bool newest = r_data->newest_first;
   std::stable_sort(
@@ -472,19 +489,6 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
         }
         return newest ? (a.sort_time > b.sort_time) : (a.sort_time < b.sort_time);
       });
-}
-
-int agent_ui_generations_selected_index(const GenPaneData &data)
-{
-  if (!data.selected[0]) {
-    return -1;
-  }
-  for (int i = 0; i < data.count; i++) {
-    if (STREQ(data.items[i].key, data.selected)) {
-      return i;
-    }
-  }
-  return -1;
 }
 
 }  // namespace blender

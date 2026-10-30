@@ -246,7 +246,12 @@ void agent_ui_generations_grid(const bContext *C,
   const GenViewportClip clip(grid.view);
 
   if (data.count == 0) {
-    const char *empty = data.loading ? IFACE_("Loading assets…") :
+    const bool searching = STREQ(data.search_state, "RUNNING");
+    const char *empty = searching ? IFACE_("Searching…") :
+                        data.search_active ?
+                                       (data.search_message[0] ? IFACE_(data.search_message) :
+                                                                 IFACE_("No matches")) :
+                        data.loading ? IFACE_("Loading assets…") :
                         data.source != GEN_SOURCE_LIBRARY ?
                                        IFACE_("Your generations will appear here") :
                         data.lib_names.empty() ?
@@ -293,14 +298,22 @@ void agent_ui_generations_grid(const bContext *C,
       pane_label_centre(name, BLI_rctf_cent_x(&tile), cap2, font_cap, dim);
     }
     else {
-      const float age_w = item.age[0] ? pane_text_width(item.age, font_cap) : 0.0f;
+      /* A search result shows how well it matched where the age would be. */
+      char age[32];
+      if (item.score >= 0.0f) {
+        BLI_snprintf(age, sizeof(age), "%d%%", int(std::lround(item.score * 100.0f)));
+      }
+      else {
+        BLI_strncpy(age, item.age, sizeof(age));
+      }
+      const float age_w = age[0] ? pane_text_width(age, font_cap) : 0.0f;
       const float type_max = age_w > 0.0f ? text_w - age_w - frame.gap * 0.65f : text_w;
       char type_label[64];
       BLI_strncpy(type_label, item.type_label, sizeof(type_label));
       pane_fit_text(type_label, std::max(1.0f, type_max), font_cap);
       pane_label_left(type_label, tile.xmin + inset, cap1, font_cap, dim);
-      if (item.age[0]) {
-        pane_label_right(item.age, tile.xmax - inset, cap1, font_cap, dim);
+      if (age[0]) {
+        pane_label_right(age, tile.xmax - inset, cap1, font_cap, dim);
       }
 
       char name[96];

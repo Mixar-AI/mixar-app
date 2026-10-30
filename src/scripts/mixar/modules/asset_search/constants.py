@@ -34,3 +34,19 @@ GENERATION_LIBRARY_SUBPATH = "mixar/generations"
 # ONLY pure image->3D model generations — no retopology / rapid / uv / part /
 # scene-gen / auto-rig. Values match AsyncGLBJob.job_type (== backend service).
 GENERATION_LIBRARY_JOB_TYPES = frozenset({"image_to_3d", "model_3d"})
+
+# ============================================================================
+# ASSET KINDS
+# ============================================================================
+
+# Kinds this client indexes. The backend diffs and replaces only the kinds a
+# client declares (form field `kinds`), so an older desktop that knows only
+# objects/collections can never delete material vectors.
+ASSET_KIND_OBJECT = "OBJECT"
+ASSET_KIND_COLLECTION = "COLLECTION"
+ASSET_KIND_MATERIAL = "MATERIAL"
+INDEXED_ASSET_KINDS = (ASSET_KIND_OBJECT, ASSET_KIND_COLLECTION, ASSET_KIND_MATERIAL)
+# /search `asset_type` filter values.
+SEARCH_TYPE_MATERIAL = "material"
+SEARCH_TYPE_MODEL = "model"
+SEARCH_TYPE_ALL = "all"

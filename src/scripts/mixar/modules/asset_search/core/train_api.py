@@ -24,6 +24,7 @@ import json
 import os
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.core.asset_kinds import kinds_form_value
 from mixar.modules.asset_search.core.api_client import metered_client
 from mixar.modules.asset_search.constants import (
     ASSET_TRAIN_ENDPOINT,
@@ -55,7 +56,7 @@ def prepare_api(metadata, operator):
         client = train_client()
         resp = client.post(
             ASSET_TRAIN_PREPARE_ENDPOINT,
-            data={"metadata": json.dumps(metadata)},
+            data={"metadata": json.dumps(metadata), "kinds": kinds_form_value()},
             timeout=30,
             raise_for_status=False,
         )
@@ -163,6 +164,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
                     "mode": "incremental",
                     "removed_assets": json.dumps(removed_assets),
                     "metadata": "[]",
+                    "kinds": kinds_form_value(),
                     **({"metadata_checksum": metadata_checksum}
                        if metadata_checksum else {}),
                 },
@@ -192,6 +194,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
                 "mode": mode if is_first else "incremental",
                 "removed_assets": json.dumps(removed_assets if is_first else []),
                 "metadata": json.dumps(batch["metadata"]),
+                "kinds": kinds_form_value(),
             }
             # Stamp the full-library checksum only when everything is in.
             if is_last and metadata_checksum:

@@ -6,8 +6,8 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Library — the pane's frame: the source rail, the filter chips and
- * navigation. The tiles and their drag are `agent_ui_generations_grid.cc`,
+ * Library — the pane's frame: the source rail, the filter chips, the search
+ * row and navigation. The tiles and their drag are `agent_ui_generations_grid.cc`,
  * the right-hand inspector is `agent_ui_generations_detail.cc`, and the
  * gathering pass is `agent_ui_generations_data.cc`.
  *
@@ -38,6 +38,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -60,6 +61,101 @@ namespace {
 void hairline(const float x, const float y0, const float y1, const float u)
 {
   pane_column_divider(x, y0, y1, u);
+}
+
+/** File name of the reference image, for its chip. */
+const char *path_basename(const char *path)
+{
+  const char *base = path;
+  for (const char *c = path; *c; c++) {
+    if (*c == '/' || *c == '\\') {
+      base = c + 1;
+    }
+  }
+  return base;
+}
+
+/** Rects of the search row's three controls (clear is empty when hidden). */
+struct SearchRow {
+  rctf field;
+  rctf text; /* The editable part of the field, left of the status. */
+  rctf ref;
+  rctf clear;
+  char ref_label[96];
+  char status[128];
+  bool has_ref;
+};
+
+/**
+ * Paint the search row: the query field (a native text button is laid over
+ * it), the reference-image chip and, while a search is shown, a clear chip.
+ * The request itself is `agent_bubble/core/library_search.py`, started by the
+ * query property's update and the two operators.
+ */
+SearchRow search_row_paint(const GenFrame &frame, const GenPaneData &data)
+{
+  SearchRow s{};
+  const rctf row = gen_rct(frame.search);
+  const float h = BLI_rctf_size_y(&row);
+  const float r = std::min(frame.chip_r, h * 0.5f);
+  const float font = frame.font_chip;
+  const float pad = frame.chip_pad_x;
+  const float pill_on[4] = GEN_COL_PILL_ON;
+  const float chip_off[4] = GEN_COL_CHIP_OFF;
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(dim, TextSecondary);
+
+  s.has_ref = data.search_ref[0] != '\0';
+  const bool can_clear = data.search_active || s.has_ref ||
+                         STREQ(data.search_state, "ERROR");
+  BLI_strncpy(s.ref_label,
+              s.has_ref ? path_basename(data.search_ref) : IFACE_("Image"),
+              sizeof(s.ref_label));
+  const float ref_max = BLI_rctf_size_x(&row) * 0.3f;
+  pane_fit_text(s.ref_label, std::max(1.0f, ref_max - 2.0f * pad), font);
+  const float ref_w = pane_text_width(s.ref_label, font) + 2.0f * pad;
+
+  float right = row.xmax;
+  if (can_clear) {
+    s.clear = {row.xmax - h, row.xmax, row.ymin, row.ymax};
+    right = s.clear.xmin - frame.gap;
+  }
+  s.ref = {right - ref_w, right, row.ymin, row.ymax};
+  s.field = {row.xmin, s.ref.xmin - frame.gap, row.ymin, row.ymax};
+
+  pane_fill_round(&s.field, r, chip_off);
+  pane_fill_round(&s.ref, r, s.has_ref ? pill_on : chip_off);
+  pane_label_centre(s.ref_label,
+                    BLI_rctf_cent_x(&s.ref),
+                    BLI_rctf_cent_y(&s.ref),
+                    font,
+                    s.has_ref ? strong : dim);
+  if (can_clear) {
+    pane_fill_round(&s.clear, r, chip_off);
+    pane_label_centre("\xC3\x97", /* × */
+                      BLI_rctf_cent_x(&s.clear),
+                      BLI_rctf_cent_y(&s.clear),
+                      font,
+                      dim);
+  }
+
+  /* Status at the field's right end; the text button stops short of it. */
+  s.text = s.field;
+  /* The message is a msgid from `library_search.py` or server text, which
+   * the lookup leaves as it is. */
+  const char *status = STREQ(data.search_state, "RUNNING") ? IFACE_("Searching…") :
+                       data.search_message[0]               ? IFACE_(data.search_message) :
+                                                              "";
+  if (status[0]) {
+    const float status_font = frame.font_cap;
+    BLI_strncpy(s.status, status, sizeof(s.status));
+    pane_fit_text(s.status, std::max(1.0f, BLI_rctf_size_x(&s.field) * 0.4f), status_font);
+    const float status_w = pane_text_width(s.status, status_font);
+    pane_label_right(
+        s.status, s.field.xmax - pad, BLI_rctf_cent_y(&s.field), status_font, dim);
+    s.text.xmax = std::max(s.text.xmin + 1.0f, s.field.xmax - pad - status_w - frame.gap);
+  }
+  return s;
 }
 
 /** \} */
@@ -136,9 +232,10 @@ void agent_ui_generations_draw(const bContext *C,
   const ChipSpec chips[] = {
       {GEN_FILTER_LABELS[0], "ALL", GEN_FILTER_ALL},
       {GEN_FILTER_LABELS[1], "THREE_D", GEN_FILTER_3D},
-      {GEN_FILTER_LABELS[2], "IMAGE", GEN_FILTER_IMAGE},
-      {GEN_FILTER_LABELS[3], "VIDEO", GEN_FILTER_VIDEO},
-      {GEN_FILTER_LABELS[4], "SPLAT", GEN_FILTER_SPLAT},
+      {GEN_FILTER_LABELS[2], "MATERIAL", GEN_FILTER_MATERIAL},
+      {GEN_FILTER_LABELS[3], "IMAGE", GEN_FILTER_IMAGE},
+      {GEN_FILTER_LABELS[4], "VIDEO", GEN_FILTER_VIDEO},
+      {GEN_FILTER_LABELS[5], "SPLAT", GEN_FILTER_SPLAT},
   };
   rctf chip_rect[ARRAY_SIZE(chips)];
   for (int i = 0; i < int(ARRAY_SIZE(chips)); i++) {
@@ -151,6 +248,11 @@ void agent_ui_generations_draw(const bContext *C,
                       BLI_rctf_cent_y(&r),
                       font_chip,
                       active ? strong : dim);
+  }
+
+  SearchRow search{};
+  if (frame.has_search) {
+    search = search_row_paint(frame, data);
   }
 
   const GenGridMetrics grid = agent_ui_generations_grid_metrics(frame, data);
@@ -196,6 +298,41 @@ void agent_ui_generations_draw(const bContext *C,
     }
   }
 
+  /* ---- Search field: its own embossed block, like the other panes'
+   * prompt fields. Confirming the text (Enter) sets the property, whose
+   * update starts the search; there is deliberately no per-keystroke update,
+   * because every search is a metered backend call. ---- */
+  if (frame.has_search) {
+    PointerRNA wm_ptr = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
+    ui::Block *field_block = ui::block_begin(
+        C, region, "agent_island_generations_search", blender::ui::EmbossType::Emboss);
+    const rctf &f = search.text;
+    ui::Button *input = uiDefButR(field_block,
+                                  ui::ButtonType::Text,
+                                  "",
+                                  int(f.xmin),
+                                  int(f.ymin),
+                                  short(BLI_rctf_size_x(&f)),
+                                  short(BLI_rctf_size_y(&f)),
+                                  &wm_ptr,
+                                  "mixar_generations_query",
+                                  -1,
+                                  0.0f,
+                                  0.0f,
+                                  nullptr);
+    if (input) {
+      ui::mixar_style_button(
+          input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
+      ui::button_placeholder_set(input,
+                                 data.filter == GEN_FILTER_MATERIAL ?
+                                     IFACE_("Search your materials, then press Enter") :
+                                     IFACE_("Search your library, then press Enter"));
+    }
+    ui::block_end(C, field_block);
+    ui::block_draw(C, field_block);
+    GPU_blend(GPU_BLEND_ALPHA);
+  }
+
   /* ---- Controls: one unembossed block over the painted surface. ---- */
   ui::Block *block = ui::block_begin(
       C, region, "agent_island_generations", blender::ui::EmbossType::None);
@@ -232,6 +369,31 @@ void agent_ui_generations_draw(const bContext *C,
              "window_manager.mixar_generations_filter",
              chips[i].value,
              TIP_("Filter the grid"));
+  }
+  if (frame.has_search) {
+    uiDefButO(block,
+              ui::ButtonType::But,
+              "mixar.generations_search_image",
+              wm::OpCallContext::InvokeDefault,
+              "",
+              int(search.ref.xmin),
+              int(search.ref.ymin),
+              short(BLI_rctf_size_x(&search.ref)),
+              short(BLI_rctf_size_y(&search.ref)),
+              search.has_ref ? TIP_("Change the reference image") :
+                               TIP_("Search by a reference image (a photo of the surface or object)"));
+    if (BLI_rctf_size_x(&search.clear) > 0.0f) {
+      uiDefButO(block,
+                ui::ButtonType::But,
+                "mixar.generations_search_clear",
+                wm::OpCallContext::InvokeDefault,
+                "",
+                int(search.clear.xmin),
+                int(search.clear.ymin),
+                short(BLI_rctf_size_x(&search.clear)),
+                short(BLI_rctf_size_y(&search.clear)),
+                TIP_("Clear the search and show everything again"));
+    }
   }
   {
     ui::Button *but = uiDefButO(block,

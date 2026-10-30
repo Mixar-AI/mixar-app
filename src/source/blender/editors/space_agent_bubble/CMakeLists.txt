@@ -51,6 +51,7 @@ set(SRC
   agent_ui_generations_grid.cc
   agent_ui_generations_read.cc
   agent_ui_generations_selection.cc
+  agent_ui_generations_search.cc
   agent_ui_icons.cc
   agent_ui_tab_icons.cc
   agent_ui_layout.cc

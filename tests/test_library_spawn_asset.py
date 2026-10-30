@@ -288,7 +288,7 @@ def test_a_collection_is_linked_and_its_members_move(tmp_path, monkeypatch):
     assert member.selected
 
 
-def test_materials_and_missing_files_are_refused(tmp_path, monkeypatch):
+def test_materials_apply_and_other_types_and_missing_files_are_refused(tmp_path, monkeypatch):
     blend = tmp_path / "mat.blend"
     blend.write_bytes(b"blend")
     calls, _framed = _patch_load(monkeypatch, ["Paint"], lambda name: _Obj(name))
@@ -297,9 +297,19 @@ def test_materials_and_missing_files_are_refused(tmp_path, monkeypatch):
         _ViewLayer(_Collection("Scene"), _Collection("Scene")),
     )
 
+    # A material goes onto the selection (apply_material), never into the scene.
+    from mixar.modules.agent_bubble.core import apply_material
+
+    applied = []
+    monkeypatch.setattr(apply_material, "apply_library_material",
+                        lambda ctx, path, name: applied.append((path, name)) or (True, "applied"))
     ok, message = spawn_asset.spawn_library_asset(context, str(blend), "Material", "Paint")
+    assert ok and message == "applied" and applied == [(str(blend), "Paint")]
+    assert calls == []
+
+    ok, message = spawn_asset.spawn_library_asset(context, str(blend), "Image", "Paint")
     assert not ok
-    assert "objects and collections" in message
+    assert "objects, collections and materials" in message
     assert calls == []
 
     ok, message = spawn_asset.spawn_library_asset(context, str(tmp_path / "gone.blend"), "Object", "Paint")
