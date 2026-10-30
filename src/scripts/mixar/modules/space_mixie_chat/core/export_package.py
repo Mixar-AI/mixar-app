@@ -26,6 +26,11 @@ validates the objects' ``mixar_*`` game-semantics tags into the manifest's
 GLB). ``animations`` follows ``export_clips`` — the copies are static
 meshes, so clips only apply to armatures the named objects include or are
 skinned to.
+
+A repeat of the last export with the same arguments over an unchanged scene
+(the objects' transforms, geometry and materials) within ``REUSE_S`` returns
+the package already on disk (``reused``): a retry after a dropped reply costs
+nothing.
 """
 
 import hashlib
@@ -49,6 +54,8 @@ FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
 DESTINATIONS = ("mixar_exports", "downloads", "documents", "desktop", "project")
 GENERATOR = "Mixar export_package"
 _LEGACY_GENERATORS = (GENERATOR, "Mixar uv_bake.export_package")
+REUSE_S = 900
+_last = {}
 
 
 def _safe(name, fallback="asset"):
@@ -292,14 +299,139 @@ def _engine_prepare(engine, copies, renamed, col, joined):
                 if other and other != tags:
                     issues.append(f"{orig}: its mixar_* tags differ from {c.name}'s; "
                                   f"the joined mesh keeps {c.name}'s.")
+        tags = engine_targets.default_tags(tags)
         for key, value in tags.items():
             c[engine_targets.TAG_PREFIX + key] = value
+        if not (src is not None and _skinned(src)) and _turn_outward(c.data):
+            issues.append(f"{c.name}: its faces pointed inward (a closed mesh); the package turns them outward.")
         shape = engine_targets.collision_shape(tags, src is not None and _skinned(src))
         names = engine_targets.collision_names(engine, c.name, shape)
         hulls += engine_targets.build_collision(engine, c, shape, names, col)
         objects.append({"name": c.name, **tags, "origin": [round(float(v), 4) for v in c.matrix_world.translation],
                         "collision": engine_targets.collision_entry(engine, c.name, shape, names)})
     return objects, issues, hulls
+
+
+def _turn_outward(me) -> bool:
+    """Flip a closed mesh whose faces all point inward (negative volume).
+    Open meshes are left alone: which side of a plane is up is a choice."""
+    import bmesh
+
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(me)
+        if not bm.faces or not all(e.is_manifold for e in bm.edges):
+            return False
+        if bm.calc_volume(signed=True) >= 0:
+            return False
+        for f in bm.faces:
+            f.normal_flip()
+        bm.to_mesh(me)
+        return True
+    finally:
+        bm.free()
+
+
+def _upstream_image(socket, depth=6):
+    """The image an input reads, following links upstream (through mixes,
+    colour ramps and normal-map nodes), or None."""
+    if depth <= 0 or not socket.is_linked:
+        return None
+    for link in socket.links:
+        node = link.from_node
+        if node.type == "TEX_IMAGE" and node.image is not None:
+            return node.image
+        for inp in node.inputs:
+            found = _upstream_image(inp, depth - 1)
+            if found is not None:
+                return found
+    return None
+
+
+def _material_facts(mats):
+    """(name, base colour textured, its colour space, normal map, roughness
+    textured) per material, for ``engine_targets.material_report``."""
+    facts = []
+    for m in mats:
+        bsdf = None
+        if m is not None and m.use_nodes and m.node_tree is not None:
+            bsdf = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if bsdf is None:
+            facts.append((getattr(m, "name", "?"), False, None, False, False))
+            continue
+        image = _upstream_image(bsdf.inputs["Base Color"])
+        facts.append((m.name, image is not None, image.colorspace_settings.name if image is not None else None,
+                      _upstream_image(bsdf.inputs["Normal"]) is not None,
+                      bsdf.inputs["Roughness"].is_linked))
+    return facts
+
+
+def _fcurves(action):
+    """An action's F-curves: a layered action (Blender 4.4+) keeps them in
+    its strips' channel bags."""
+    if hasattr(action, "fcurves"):
+        return list(action.fcurves)
+    return [fc for layer in getattr(action, "layers", ()) for strip in layer.strips
+            for bag in getattr(strip, "channelbags", ()) for fc in bag.fcurves]
+
+
+def _signature(objs) -> str:
+    """The exported objects as they stand: transforms, geometry, modifiers,
+    their armatures' clips and material settings. Equal signatures mean an
+    equal package."""
+    import numpy as np
+
+    digest = hashlib.sha1()
+    mats = []
+    actions = []
+    for o in list(objs) + [a for a in _armatures(objs) if a not in objs]:
+        anim = getattr(o, "animation_data", None)
+        if anim is not None:
+            actions += [anim.action] + [s.action for t in anim.nla_tracks for s in t.strips]
+    for act in dict.fromkeys(a for a in actions if a is not None):
+        digest.update(act.name.encode())
+        for fc in _fcurves(act):
+            co = np.empty(len(fc.keyframe_points) * 2, dtype=np.float32)
+            fc.keyframe_points.foreach_get("co", co)
+            digest.update(f"{fc.data_path}[{fc.array_index}]".encode() + co.tobytes())
+    for o in objs:
+        digest.update(f"{o.name}|{o.type}|{tuple(map(tuple, o.matrix_world))}|".encode())
+        digest.update(repr([(m.type, m.show_viewport) for m in getattr(o, "modifiers", ())]).encode())
+        digest.update(repr(sorted(f"{k}={o[k]}" for k in o.keys() if k.startswith("mixar_"))).encode())
+        if o.type == "MESH":
+            co = np.empty(len(o.data.vertices) * 3, dtype=np.float32)
+            o.data.vertices.foreach_get("co", co)
+            digest.update(co.tobytes())
+            digest.update(str(len(o.data.polygons)).encode())
+        for slot in getattr(o, "material_slots", ()):
+            if slot.material is not None and slot.material not in mats:
+                mats.append(slot.material)
+    for m in mats:
+        digest.update(m.name.encode())
+        if m.use_nodes and m.node_tree is not None:
+            for n in m.node_tree.nodes:
+                digest.update(f"{n.name}:{n.type}".encode())
+                if n.type == "TEX_IMAGE" and n.image is not None:
+                    digest.update(f"{n.image.name}:{n.image.colorspace_settings.name}:{n.image.is_dirty}".encode())
+                for inp in n.inputs:
+                    value = getattr(inp, "default_value", None)
+                    digest.update(repr(value if isinstance(value, (int, float, str, bool)) else
+                                       tuple(value) if value is not None and hasattr(value, "__len__") else
+                                       None).encode())
+            digest.update(repr([(l.from_node.name, l.from_socket.identifier, l.to_node.name,
+                                 l.to_socket.identifier) for l in m.node_tree.links]).encode())
+    return digest.hexdigest()
+
+
+def _reusable(key, objs, root):
+    hit = _last.get(key)
+    if not hit or time.time() - hit["at"] > REUSE_S or hit["blend"] != bpy.data.filepath:
+        return None
+    if hit["signature"] != _signature(objs):
+        return None
+    if not all(os.path.isfile(os.path.join(root, f)) for f in hit["result"].get("files") or []):
+        return None
+    return dict(hit["result"], reused=True, seconds=0.0)
 
 
 def _select_only(objs):
@@ -516,6 +648,12 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     objs = _expand_empties(named, scene)
     stem = _safe(os.path.splitext(filename or named[0].name)[0])
     root = destination(where, folder or stem)
+    reuse_key = json.dumps([bpy.context.scene.name, list(names), fmt, filename, where, folder, join,
+                            list(texture_tiers or ()), include_source, manifest, readme, list(extra_files or ()),
+                            animations, engine, bake_materials], default=str)
+    reused = _reusable(reuse_key, objs, root)
+    if reused is not None:
+        return reused
     replaced = 0
     ext = {"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz", "usd": ".usdc"}[fmt]
     files = []
@@ -597,7 +735,10 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                 objects=engine_objects)
             skeletons = [engine_targets.skeleton_entry(engine, a.name, [b.name for b in a.data.bones])
                          for a in armatures]
+            report, material_issues = engine_targets.material_report(_material_facts(mats), len(copies))
+            engine_issues += material_issues
             engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues, skeletons)
+            engine_section["materials"] = report
         verification = verify_export(main, fmt, {
             "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
             "skinned_meshes": sum(1 for c in copies if _skinned(c)),
@@ -652,7 +793,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    verification_passed=bool(verification and verification.get("passed")),
                    issue_count=len((verification or {}).get("issues") or []),
                    file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024))
-    return {"delivery_status": verification_status(verification),
+    result = {"delivery_status": verification_status(verification),
             "warning": " ".join(filter(None, (verification_warning(verification), _bake_warning(baked)))),
             "destination": where,
             "folder": os.path.basename(root), "files": files,
@@ -664,3 +805,8 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},
             "seconds": round(time.perf_counter() - t0, 2)}
+    if success:
+        _last.clear()
+        _last[reuse_key] = {"at": time.time(), "blend": bpy.data.filepath, "signature": _signature(objs),
+                            "result": result}
+    return result

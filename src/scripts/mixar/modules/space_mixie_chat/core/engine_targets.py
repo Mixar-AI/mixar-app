@@ -23,7 +23,15 @@ what each object is for:
   adapter retargets with it, so a clip made on one humanoid plays on another.
 - **Readiness** — what would break or degrade on import (an unknown tag value,
   a textured mesh with no UVs, a non-power-of-two texture in Unreal, a physics
-  body with no collision), reported as ``issues`` and never fixed silently.
+  body with no collision, a colour texture read as Non-Color), reported as
+  ``issues`` and never fixed silently. A closed mesh whose faces all point
+  inward is the one exception: its copy is turned right side out (a game
+  engine culls and walks by face direction) and the issue says so.
+- **Materials** — what a game-ready look needs, reported as ``materials``:
+  flat (untextured) materials, textured ones with no normal map, and how
+  many materials there are per object.
+- **Body defaults** — an enemy or a player untagged ``mixar_body`` moves by
+  code, so it is ``kinematic``.
 
 The naming, tag, skeleton and readiness rules are pure functions (pinned
 outside Blender); ``build_collision`` alone touches ``bpy``.
@@ -83,6 +91,17 @@ def read_tags(obj, name=None) -> tuple[dict, list]:
     return tags, issues
 
 
+# Roles that move by code: their body defaults to kinematic.
+KINEMATIC_ROLES = ("enemy", "player")
+
+
+def default_tags(tags: dict) -> dict:
+    """``tags`` with the body a role implies when none is given."""
+    if "body" not in tags and tags.get("role") in KINEMATIC_ROLES:
+        return {**tags, "body": "kinematic"}
+    return tags
+
+
 def collision_shape(tags: dict, skinned: bool) -> str:
     """The hull a mesh gets: an explicit ``mixar_collision`` wins; a skinned
     mesh (a character, collided by its controller) and ``body: none`` get
@@ -137,6 +156,28 @@ def readiness_issues(engine: str, *, textures=(), meshes=(), objects=()) -> list
             issues.append(f"{entry.get('name')}: mixar_body '{body}' has no collision "
                           "(mixar_collision 'none').")
     return issues
+
+
+def material_report(materials, object_count: int) -> tuple[dict, list]:
+    """(the ``materials`` summary, issues) from per-material facts:
+    ``materials`` = (name, base colour textured, base colour space or None,
+    normal map, roughness textured)."""
+    report = {"count": 0, "per_object": 0.0, "untextured": [], "no_normal_map": [], "flat_roughness": []}
+    issues = []
+    for name, textured, colour_space, normal, rough in materials:
+        report["count"] += 1
+        if not textured:
+            report["untextured"].append(name)
+            continue
+        if colour_space and colour_space.lower() not in ("srgb", "filmic srgb", "agx base srgb"):
+            issues.append(f"{name}: its Base Color image is read as {colour_space}; colour textures are sRGB "
+                          "(the game shows it washed out).")
+        if not normal:
+            report["no_normal_map"].append(name)
+        if not rough:
+            report["flat_roughness"].append(name)
+    report["per_object"] = round(report["count"] / max(1, object_count), 2)
+    return report, issues
 
 
 def manifest_section(engine: str, objects: list, issues: list, skeletons: list | None = None) -> dict:

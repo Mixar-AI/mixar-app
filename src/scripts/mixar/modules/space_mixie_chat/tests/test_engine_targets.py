@@ -195,3 +195,22 @@ def test_a_mixamo_rig_maps_with_either_prefix_and_an_unknown_rig_does_not():
         "armature": "Robot_Rig", "naming": "custom", "profile": "ue5_mannequin", "bones": {}}
     assert et.skeleton_entry("unreal", "SK", TRIPO_V3)["naming"] == "tripo"
     assert et.manifest_section("godot", [], [])  .get("skeletons") is None
+
+
+def test_an_enemy_or_player_moves_by_code():
+    assert et.default_tags({"role": "enemy"}) == {"role": "enemy", "body": "kinematic"}
+    assert et.default_tags({"role": "player"})["body"] == "kinematic"
+    assert et.default_tags({"role": "enemy", "body": "rigid"})["body"] == "rigid"
+    assert et.default_tags({"role": "door"}) == {"role": "door"}
+
+
+def test_material_report_names_what_a_game_look_lacks():
+    report, issues = et.material_report([
+        ("Stone", True, "sRGB", True, True),
+        ("Flat", False, None, False, False),
+        ("Door", True, "Non-Color", False, False),
+    ], object_count=2)
+    assert report["count"] == 3 and report["per_object"] == 1.5
+    assert report["untextured"] == ["Flat"]
+    assert report["no_normal_map"] == ["Door"] and report["flat_roughness"] == ["Door"]
+    assert len(issues) == 1 and "Door" in issues[0] and "Non-Color" in issues[0]
