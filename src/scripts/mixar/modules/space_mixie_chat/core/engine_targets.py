@@ -46,13 +46,14 @@ ENGINE_FORMATS = {"godot": ("glb", "gltf", "fbx"), "unreal": ("fbx",), "uefn": (
 MANIFEST_VERSION = 1
 TAG_PREFIX = "mixar_"
 TAGS = {
-    "role": ("prop", "player", "enemy", "door", "pickup", "spawn", "trigger",
+    "role": ("prop", "player", "enemy", "ally", "weapon", "door", "pickup", "spawn", "trigger",
              "hazard", "checkpoint", "goal"),
     "body": ("static", "rigid", "kinematic", "none"),
     "pivot": ("hinge_x", "hinge_y", "hinge_z", "slide_x", "slide_y", "slide_z"),
     "nav": ("walkable", "obstacle", "ignore"),
     "light": ("baked", "dynamic"),
     "collision": ("box", "convex", "mesh", "none"),
+    "team": ("ct", "t"),
 }
 # An Unreal package's FBX keeps Blender's axes (Z up, Y forward) with the
 # axis and unit conversion baked into the vertices (Apply Transform): the
@@ -92,7 +93,7 @@ def read_tags(obj, name=None) -> tuple[dict, list]:
 
 
 # Roles that move by code: their body defaults to kinematic.
-KINEMATIC_ROLES = ("enemy", "player")
+KINEMATIC_ROLES = ("enemy", "player", "ally")
 
 
 def default_tags(tags: dict) -> dict:
