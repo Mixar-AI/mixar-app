@@ -336,7 +336,8 @@ def _ensure_sync_watchdog() -> None:
                 elif (
                     job.state == JobState.RUNNING_DOWNLOAD
                     and job.download_started_at > 0
-                    and now_mono - job.download_started_at
+                    # Time its import waits for a render does not count.
+                    and job.download_elapsed(now_mono)
                     > DOWNLOAD_WATCHDOG_DEADLINE_S
                 ):
                     queue._fail_timed_out(job)

@@ -147,6 +147,8 @@ class DownloadMixin:
         job.download_total_bytes = 0
         job.download_attempt = 0
         job.download_started_at = time.monotonic()
+        job.import_held_since = 0.0
+        job.import_held_s = 0.0
 
         # Deferred import: queue_manager imports this module at load time.
         from .queue_manager import _ensure_sync_watchdog
@@ -262,10 +264,16 @@ class DownloadMixin:
             # QA run (Oct 30): an auto-rig result imported during an agent
             # render crashed Mixar in Depsgraph::clear_all_nodes. Agent
             # scripts already wait (render_gate); results wait here.
-            if not getattr(job, "_import_held", False):
-                job._import_held = True
+            # The hold is not download time: the watchdog skips it
+            # (Job.download_elapsed), so a long render never fails the job
+            # and deletes the file it waits to import.
+            if not job.import_held_since:
+                job.import_held_since = time.monotonic()
                 logger.info("%s import of %s held until the render ends", LOG_PREFIX, os.path.basename(filepath))
             return RENDER_RETRY_S
+        if job.import_held_since:
+            job.import_held_s += time.monotonic() - job.import_held_since
+            job.import_held_since = 0.0
         try:
             import_options = dict(getattr(job, "import_options", None) or {})
             if file_type.upper() == "VIDEO":
