@@ -26,11 +26,6 @@ validates the objects' ``mixar_*`` game-semantics tags into the manifest's
 GLB). ``animations`` follows ``export_clips`` — the copies are static
 meshes, so clips only apply to armatures the named objects include or are
 skinned to.
-
-A repeat of the last export with the same arguments over an unchanged scene
-(the objects' transforms, geometry and materials) within ``REUSE_S`` returns
-the package already on disk (``reused``): a retry after a dropped reply costs
-nothing.
 """
 
 import hashlib
@@ -54,8 +49,6 @@ FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
 DESTINATIONS = ("mixar_exports", "downloads", "documents", "desktop", "project")
 GENERATOR = "Mixar export_package"
 _LEGACY_GENERATORS = (GENERATOR, "Mixar uv_bake.export_package")
-REUSE_S = 900
-_last = {}
 
 
 def _safe(name, fallback="asset"):
@@ -367,74 +360,6 @@ def _material_facts(mats):
     return facts
 
 
-def _fcurves(action):
-    """An action's F-curves: a layered action (Blender 4.4+) keeps them in
-    its strips' channel bags."""
-    if hasattr(action, "fcurves"):
-        return list(action.fcurves)
-    return [fc for layer in getattr(action, "layers", ()) for strip in layer.strips
-            for bag in getattr(strip, "channelbags", ()) for fc in bag.fcurves]
-
-
-def _signature(objs) -> str:
-    """The exported objects as they stand: transforms, geometry, modifiers,
-    their armatures' clips and material settings. Equal signatures mean an
-    equal package."""
-    import numpy as np
-
-    digest = hashlib.sha1()
-    mats = []
-    actions = []
-    for o in list(objs) + [a for a in _armatures(objs) if a not in objs]:
-        anim = getattr(o, "animation_data", None)
-        if anim is not None:
-            actions += [anim.action] + [s.action for t in anim.nla_tracks for s in t.strips]
-    for act in dict.fromkeys(a for a in actions if a is not None):
-        digest.update(act.name.encode())
-        for fc in _fcurves(act):
-            co = np.empty(len(fc.keyframe_points) * 2, dtype=np.float32)
-            fc.keyframe_points.foreach_get("co", co)
-            digest.update(f"{fc.data_path}[{fc.array_index}]".encode() + co.tobytes())
-    for o in objs:
-        digest.update(f"{o.name}|{o.type}|{tuple(map(tuple, o.matrix_world))}|".encode())
-        digest.update(repr([(m.type, m.show_viewport) for m in getattr(o, "modifiers", ())]).encode())
-        digest.update(repr(sorted(f"{k}={o[k]}" for k in o.keys() if k.startswith("mixar_"))).encode())
-        if o.type == "MESH":
-            co = np.empty(len(o.data.vertices) * 3, dtype=np.float32)
-            o.data.vertices.foreach_get("co", co)
-            digest.update(co.tobytes())
-            digest.update(str(len(o.data.polygons)).encode())
-        for slot in getattr(o, "material_slots", ()):
-            if slot.material is not None and slot.material not in mats:
-                mats.append(slot.material)
-    for m in mats:
-        digest.update(m.name.encode())
-        if m.use_nodes and m.node_tree is not None:
-            for n in m.node_tree.nodes:
-                digest.update(f"{n.name}:{n.type}".encode())
-                if n.type == "TEX_IMAGE" and n.image is not None:
-                    digest.update(f"{n.image.name}:{n.image.colorspace_settings.name}:{n.image.is_dirty}".encode())
-                for inp in n.inputs:
-                    value = getattr(inp, "default_value", None)
-                    digest.update(repr(value if isinstance(value, (int, float, str, bool)) else
-                                       tuple(value) if value is not None and hasattr(value, "__len__") else
-                                       None).encode())
-            digest.update(repr([(l.from_node.name, l.from_socket.identifier, l.to_node.name,
-                                 l.to_socket.identifier) for l in m.node_tree.links]).encode())
-    return digest.hexdigest()
-
-
-def _reusable(key, objs, root):
-    hit = _last.get(key)
-    if not hit or time.time() - hit["at"] > REUSE_S or hit["blend"] != bpy.data.filepath:
-        return None
-    if hit["signature"] != _signature(objs):
-        return None
-    if not all(os.path.isfile(os.path.join(root, f)) for f in hit["result"].get("files") or []):
-        return None
-    return dict(hit["result"], reused=True, seconds=0.0)
-
-
 def _select_only(objs):
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
@@ -649,12 +574,6 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     objs = _expand_empties(named, scene)
     stem = _safe(os.path.splitext(filename or named[0].name)[0])
     root = destination(where, folder or stem)
-    reuse_key = json.dumps([bpy.context.scene.name, list(names), fmt, filename, where, folder, join,
-                            list(texture_tiers or ()), include_source, manifest, readme, list(extra_files or ()),
-                            animations, engine, bake_materials], default=str)
-    reused = _reusable(reuse_key, objs, root)
-    if reused is not None:
-        return reused
     replaced = 0
     ext = {"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz", "usd": ".usdc"}[fmt]
     files = []
@@ -806,7 +725,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    verification_passed=bool(verification and verification.get("passed")),
                    issue_count=len((verification or {}).get("issues") or []),
                    file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024))
-    result = {"delivery_status": verification_status(verification),
+    return {"delivery_status": verification_status(verification),
             "warning": " ".join(filter(None, (verification_warning(verification), _bake_warning(baked)))),
             "destination": where,
             "folder": os.path.basename(root), "files": files,
@@ -818,8 +737,3 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},
             "seconds": round(time.perf_counter() - t0, 2)}
-    if success:
-        _last.clear()
-        _last[reuse_key] = {"at": time.time(), "blend": bpy.data.filepath, "signature": _signature(objs),
-                            "result": result}
-    return result

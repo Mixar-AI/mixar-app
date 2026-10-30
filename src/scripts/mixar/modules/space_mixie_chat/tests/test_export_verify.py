@@ -200,6 +200,15 @@ def test_export_package_signature_and_isolation():
             "animations", "triangles", "dimensions_m", "textures", "tiers", "seconds"} <= keys
 
 
+def test_every_export_package_call_writes_the_package():
+    """No reuse of an earlier package: a signature that misses one edit (a
+    modifier setting, a UV, a saved image) handed back stale files."""
+    src = open(os.path.join(_CORE, "export_package.py"), encoding="utf-8").read()
+    for gone in ("_reusable", "_signature", "REUSE_S", "reused"):
+        assert gone not in src, gone
+    assert not hasattr(export_package, "_last")
+
+
 def test_export_package_exporter_kwargs_follow_clip_request():
     kwargs, mode, _ = export_package.exporter_kwargs("glb", [])
     assert kwargs["export_animations"] is False and mode == "none"
