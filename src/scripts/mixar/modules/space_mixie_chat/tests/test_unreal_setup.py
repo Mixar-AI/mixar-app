@@ -120,12 +120,17 @@ def test_the_plugin_installs_enables_and_turns_the_server_on(tmp_path):
     assert f"{us.PERFORMANCE_SECTION}\nbThrottleCPUWhenNotForeground=False" in ini
     # The user's own project: Mixar edits only its own levels.
     assert (project / "Config" / "DefaultMixarLink.ini").read_text() == "[MixarLink]\nProjectMode=plugin\n"
+    # The MCP port is loopback-only even in a project that binds every port to any address.
+    engine_ini = (project / "Config" / "DefaultEngine.ini").read_text()
+    assert f"{us.LISTENERS_SECTION}\n{us.LISTENER_OVERRIDE}\n" in engine_ini
+    assert us.LISTENER_OVERRIDE == "+ListenerOverrides=(Port=9880,BindAddress=localhost)"
     # Again: replaced in place, nothing doubled.
     assert us.install_plugin(str(uproject), archive=_plugin_zip("0.2.0")) == "0.2.0"
     ini = (project / "Config" / "DefaultEditorPerProjectUserSettings.ini").read_text()
     assert ini.count(us.MCP_SECTION) == 1 and ini.count("ServerPortNumber") == 1
     assert [p["Name"] for p in json.load(open(uproject))["Plugins"]].count("MixarLink") == 1
     assert sorted(os.listdir(project / "Plugins")) == ["MixarLink"]  # no staging left behind
+    assert (project / "Config" / "DefaultEngine.ini").read_text().count("ListenerOverrides") == 1
 
 
 def test_a_project_without_the_settings_file_gets_one(tmp_path):
@@ -201,3 +206,27 @@ def test_the_plugin_download_is_the_pinned_release_checked_before_install(tmp_pa
     monkeypatch.setattr(us, "PLUGIN_SHA256", __import__("hashlib").sha256(archive).hexdigest())
     assert us.install_plugin(str(uproject)) == "0.5.2"
     assert (tmp_path / "Game" / "Plugins" / "MixarLink" / "MixarLink.uplugin").is_file()
+
+
+def test_the_listener_override_keeps_the_projects_own_entries(tmp_path):
+    ini = tmp_path / "Config" / "DefaultEngine.ini"
+    ini.parent.mkdir()
+    ini.write_text("[HTTPServer.Listeners]\nDefaultBindAddress=any\n+ListenerOverrides=(Port=30010,BindAddress=any)\n\n"
+                   "[/Script/Engine.RendererSettings]\nr.X=1\n")
+    us.enable_server(str(tmp_path))
+    us.enable_server(str(tmp_path))
+    text = ini.read_text()
+    section = text[text.index("[HTTPServer.Listeners]"):text.index("[/Script/Engine.RendererSettings]")]
+    assert section.splitlines()[1:4] == ["DefaultBindAddress=any", "+ListenerOverrides=(Port=30010,BindAddress=any)",
+                                         us.LISTENER_OVERRIDE]
+    assert "r.X=1" in text and text.count(us.LISTENER_OVERRIDE) == 1
+
+
+def test_the_connect_dialog_says_what_changes_in_the_project():
+    text = " ".join(us.PROJECT_CHANGES)
+    for said in ("Plugins folder", "Model Context Protocol", "All Toolsets", "Python", "MCP server",
+                 f"port {us.MCP_PORT}", "this computer only", "background", "Close the project"):
+        assert said in text, said
+    ops = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
+                            "engine_ops.py"), encoding="utf-8").read()
+    assert "unreal_setup.PROJECT_CHANGES" in ops

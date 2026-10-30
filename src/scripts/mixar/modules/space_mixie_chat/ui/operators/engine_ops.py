@@ -73,11 +73,11 @@ class MIXAR_OT_engine_pick(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# What the dialog says per engine: (title, project file, the new-project line).
+# What the dialog says per engine: (title, project file, what Connect changes
+# in the project, one label per line).
 ENGINE_TEXT = {
-    "GODOT": ("Godot", "project.godot", "Mixar Link (open source) is installed into the project's addons folder."),
-    "UNREAL": ("Unreal", ".uproject", "Mixar Link (open source) is installed into the project's Plugins folder, "
-                                      "with Unreal's MCP server turned on. Close the project in Unreal first."),
+    "GODOT": ("Godot", "project.godot", ("Mixar Link (open source) is installed into the project's addons folder.",)),
+    "UNREAL": ("Unreal", ".uproject", None),  # unreal_setup.PROJECT_CHANGES
 }
 
 
@@ -147,7 +147,11 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
             col.prop(self, "directory")
             col.label(text=f"The folder that holds {project_file}.")
         col.separator()
-        col.label(text=install_line)
+        if install_line is None:
+            from ...core import unreal_setup
+            install_line = unreal_setup.PROJECT_CHANGES
+        for line in install_line:
+            col.label(text=line)
 
     def execute(self, context):
         from ...core import engine_connect

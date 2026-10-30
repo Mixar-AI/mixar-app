@@ -15,7 +15,10 @@
   it needs enabled in the ``.uproject``, Unreal's MCP server turned on
   (``MCP_PORT``) and the editor's background throttle off (Mixar drives the
   editor while Mixar has the focus; a throttled editor takes seconds per
-  frame) in ``Config/DefaultEditorPerProjectUserSettings.ini``, and the
+  frame) in ``Config/DefaultEditorPerProjectUserSettings.ini``, that port
+  pinned to the loopback address in ``Config/DefaultEngine.ini`` (Unreal's
+  HTTP server binds ``localhost`` by default, but a project may set
+  ``DefaultBindAddress=any`` for every port), and the
   project mode in ``Config/DefaultMixarLink.ini``: ``owned`` for a game Mixar
   made (Mixar edits any level and sets the main level), ``plugin`` for the
   user's own project (Mixar edits only levels under ``/Game/Mixar``).
@@ -53,6 +56,9 @@ UNREAL_MIN = (5, 8)
 MCP_PORT = 9880
 MCP_SECTION = "[/Script/ModelContextProtocolEngine.ModelContextProtocolSettings]"
 PERFORMANCE_SECTION = "[/Script/UnrealEd.EditorPerformanceSettings]"
+LISTENERS_SECTION = "[HTTPServer.Listeners]"
+# Per-port override: wins over a project-wide DefaultBindAddress.
+LISTENER_OVERRIDE = f"+ListenerOverrides=(Port={MCP_PORT},BindAddress=localhost)"
 MODE_SECTION = "[MixarLink]"
 MODES = ("owned", "plugin")
 # Unreal's MCP server and the toolsets Mixar Link sits beside; Python runs the
@@ -61,6 +67,15 @@ REQUIRED_PLUGINS = ("ModelContextProtocol", "AllToolsets", "PythonScriptPlugin",
                     "MixarLink")
 TEMPLATE = "TP_ThirdPersonBP"
 TEMPLATE_PACKS = ("Characters", "LevelPrototyping", "Input")
+# What Connect Unreal changes in the user's project, for the Connect dialog.
+PROJECT_CHANGES = (
+    "Mixar Link (open source) is installed into the project's Plugins folder.",
+    "It enables the Model Context Protocol, All Toolsets, Python Script and",
+    "Editor Scripting plugins, and turns on Unreal's MCP server at editor start",
+    f"(this computer only, port {MCP_PORT}; any program on this computer can use it",
+    "while the editor runs). The editor keeps full speed in the background.",
+    "Close the project in Unreal first.",
+)
 NOT_INSTALLED = ("Unreal Engine 5.8 or newer is not installed. Install it from the Epic Games Launcher "
                  "(Unreal Engine > Library > Engine Versions), then connect again.")
 
@@ -233,12 +248,40 @@ def enable_plugins(uproject: str) -> None:
         json.dump(desc, fh, indent="\t")
 
 
+def _add_ini_line(path: str, section: str, line: str) -> None:
+    """``line`` under ``section`` once (an array entry: ``+Key=value``)."""
+    try:
+        with open(path, encoding="utf-8-sig") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        lines = []
+    start = next((i for i, x in enumerate(lines) if x.strip() == section), -1)
+    if start < 0:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines += [section, line]
+    else:
+        end = next((i for i in range(start + 1, len(lines)) if lines[i].strip().startswith("[")), len(lines))
+        if any(x.strip() == line for x in lines[start + 1:end]):
+            return
+        body = lines[start + 1:end]
+        while body and not body[-1].strip():
+            body.pop()
+        lines = lines[:start + 1] + body + [line] + ([""] if end < len(lines) else []) + lines[end:]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
 def enable_server(project: str) -> None:
-    """Unreal's MCP server on at editor start, on Mixar's port, and the editor
-    not throttled while it is in the background."""
+    """Unreal's MCP server on at editor start, on Mixar's port and bound to
+    the loopback address only, and the editor not throttled while it is in the
+    background. The server itself refuses a browser Origin other than
+    localhost (DNS rebinding) and has no token, so it is this machine's."""
     settings = os.path.join(project, "Config", "DefaultEditorPerProjectUserSettings.ini")
     _set_ini(settings, MCP_SECTION, {"bAutoStartServer": "True", "ServerPortNumber": str(MCP_PORT)})
     _set_ini(settings, PERFORMANCE_SECTION, {"bThrottleCPUWhenNotForeground": "False"})
+    _add_ini_line(os.path.join(project, "Config", "DefaultEngine.ini"), LISTENERS_SECTION, LISTENER_OVERRIDE)
 
 
 def set_mode(project: str, mode: str) -> None:
