@@ -190,11 +190,18 @@ def test_export_package_signature_and_isolation():
     assert "uv_bake" not in src.replace("uv_bake.export_package", "")  # legacy manifest tag only
     assert export_package.GENERATOR == "Mixar export_package"
     assert set(export_package.DESTINATIONS) == {"mixar_exports", "downloads", "documents", "desktop", "project"}
-    # The return dict carries both the verifier's dict and the legacy glb_check.
+    # The return dict carries both the verifier's dict and the legacy glb_check,
+    # whether it is returned directly or built as a variable first.
     tree = ast.parse(src)
     fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "export_package")
-    returned = next(n for n in ast.walk(fn) if isinstance(n, ast.Return) and isinstance(n.value, ast.Dict))
-    keys = {k.value for k in returned.value.keys if isinstance(k, ast.Constant)}
+    returns = [n.value for n in ast.walk(fn) if isinstance(n, ast.Return) and n.value is not None]
+    assert len(returns) == 1, "export_package has one way out"
+    returned = returns[0]
+    if isinstance(returned, ast.Name):
+        returned = next(n.value for n in ast.walk(fn) if isinstance(n, ast.Assign)
+                        and any(isinstance(t, ast.Name) and t.id == returned.id for t in n.targets))
+    assert isinstance(returned, ast.Dict)
+    keys = {k.value for k in returned.keys if isinstance(k, ast.Constant)}
     assert {"destination", "folder", "files", "main_file", "glb_check", "verification",
             "animations", "triangles", "dimensions_m", "textures", "tiers", "seconds"} <= keys
 
