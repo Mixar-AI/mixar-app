@@ -190,4 +190,8 @@ def test_a_mixamo_rig_maps_with_either_prefix_and_an_unknown_rig_does_not():
         assert m["bones"]["LeftUpperArm"] == prefix + "LeftArm"
         assert m["bones"]["LeftIndexProximal"] == prefix + "LeftHandIndex1"
     assert et.skeleton_map("godot", "Rig", ["Bone", "Bone.001"]) is None
+    # A custom rig still rides in the manifest, so the engine imports it skinned.
+    assert et.skeleton_entry("unreal", "Robot_Rig", ["Root", "Torso", "Head"]) == {
+        "armature": "Robot_Rig", "naming": "custom", "profile": "ue5_mannequin", "bones": {}}
+    assert et.skeleton_entry("unreal", "SK", TRIPO_V3)["naming"] == "tripo"
     assert et.manifest_section("godot", [], [])  .get("skeletons") is None

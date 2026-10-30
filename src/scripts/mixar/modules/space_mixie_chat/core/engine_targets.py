@@ -241,6 +241,14 @@ def skeleton_map(engine: str, armature_name: str, bone_names) -> dict | None:
     return {"armature": armature_name, "naming": naming, "profile": profile, "bones": bones}
 
 
+def skeleton_entry(engine: str, armature_name: str, bone_names) -> dict:
+    """The manifest entry for one armature: its bone map when the rig follows
+    a known naming, else ``naming: "custom"`` with no map — the engine still
+    imports it as a skinned character, it just retargets no humanoid clips."""
+    return skeleton_map(engine, armature_name, bone_names) or {
+        "armature": armature_name, "naming": "custom", "profile": PROFILES.get(engine), "bones": {}}
+
+
 def _pow2(n: int) -> bool:
     return n > 0 and n & (n - 1) == 0
 
