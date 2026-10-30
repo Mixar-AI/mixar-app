@@ -132,10 +132,18 @@ def _select(objs):
     layer.objects.active = objs[0]
 
 
+def _gpu() -> bool:
+    try:
+        from . import render_device  # noqa: PLC0415
+        return bool(render_device.use_gpu())
+    except Exception:  # noqa: BLE001 - no device module: bake where Cycles is set
+        return False
+
+
 def _render_state(scene):
     bake = scene.render.bake
     return {
-        "engine": scene.render.engine, "samples": scene.cycles.samples,
+        "engine": scene.render.engine, "samples": scene.cycles.samples, "device": scene.cycles.device,
         "denoise": getattr(scene.cycles, "use_denoising", None),
         "margin": bake.margin, "margin_type": getattr(bake, "margin_type", None),
         "use_clear": bake.use_clear, "target": getattr(bake, "target", None),
@@ -147,6 +155,7 @@ def _restore_render(scene, state):
     bake = scene.render.bake
     scene.render.engine = state["engine"]
     scene.cycles.samples = state["samples"]
+    scene.cycles.device = state["device"]
     if state["denoise"] is not None:
         scene.cycles.use_denoising = state["denoise"]
     bake.margin = state["margin"]
@@ -444,6 +453,11 @@ def _bake_all(jobs, objs, scene, state, current, report, created_mats, created_i
     _unwrap(objs, list(jobs.values()))
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 4
+    # On the user's GPU when Mixar may use it: a CPU bake of a game level's
+    # materials held Mixar's main thread 220-370 s per export (Sky Temple
+    # QA run, Oct 30).
+    if _gpu():
+        scene.cycles.device = "GPU"
     if hasattr(scene.cycles, "use_denoising"):
         scene.cycles.use_denoising = False
     sink, sink_image = _sink()
