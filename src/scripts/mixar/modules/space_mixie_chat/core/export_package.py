@@ -42,7 +42,7 @@ from .export_verification_status import verification_status, verification_warnin
 from .export_bake import baked_procedural_materials
 from .export_clips import animation_kwargs, clip_selection, select_clips
 from .export_materials import temporary_export_materials
-from .export_verify import file_clip_names, verify_export
+from .export_verify import file_clip_names, verify_export, writes_gltf_skin
 from . import engine_targets
 
 FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
@@ -673,7 +673,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             engine_section["materials"] = report
         verification = verify_export(main, fmt, {
             "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
-            "skinned_meshes": sum(1 for c in copies if _skinned(c)),
+            "skinned_meshes": sum(1 for c in copies if writes_gltf_skin(c)),
             "clips": clips if animations is not None else None,
             "joined": bool(join and len(meshes) > 1), "images_expected": len(images),
             "compression": "none",

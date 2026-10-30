@@ -165,6 +165,23 @@ def summarize_gltf(doc: dict, result: dict) -> None:
     result["checked"] = True
 
 
+def writes_gltf_skin(obj) -> bool:
+    """Whether the glTF exporter writes mesh ``obj`` as a skin, by its own
+    rule (io_scene_gltf2 ``blender/exp/nodes.py:gather_skin``): the last
+    Armature modifier names an armature, the mesh has a weighted vertex, and
+    it is not bone-parented to that same armature. Parenting alone makes no
+    skin: a prop parented to a bone (a rifle in a hand) is a plain node that
+    follows the bone, so counting it would expect a skin the file never has.
+    Weights are read from the object's own mesh, not the evaluated one."""
+    mods = [m for m in getattr(obj, "modifiers", ()) if m.type == "ARMATURE"]
+    if not mods or mods[-1].object is None or not len(getattr(obj, "vertex_groups", ())):
+        return False
+    parent = getattr(obj, "parent", None)
+    if parent is not None and getattr(obj, "parent_type", "") == "BONE" and parent.name == mods[-1].object.name:
+        return False
+    return any(len(v.groups) for v in getattr(getattr(obj, "data", None), "vertices", ()))
+
+
 def gltf_skinned_meshes(doc: dict) -> int:
     """Mesh nodes a skeleton actually moves: the node names a skin AND every
     primitive of its mesh carries ``JOINTS_0`` + ``WEIGHTS_0``. A skeleton

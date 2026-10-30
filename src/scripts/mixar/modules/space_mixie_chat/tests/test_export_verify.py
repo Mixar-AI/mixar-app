@@ -422,6 +422,35 @@ def test_clips_nobody_requested_are_flagged(tmp_path):
     assert any("not requested: soldier_motion_reference_walk" in issue for issue in result["issues"])
 
 
+def test_only_meshes_the_gltf_exporter_skins_are_expected_as_skins():
+    """A bone-parented prop has no glTF skin; counting every mesh with an
+    armature parent expected skins the file never has (false failures)."""
+    from types import SimpleNamespace as NS
+
+    rig, other = NS(name="Rig", type="ARMATURE"), NS(name="Other", type="ARMATURE")
+    weighted = NS(vertices=[NS(groups=[]), NS(groups=[NS(group=0, weight=1.0)])])
+    unweighted = NS(vertices=[NS(groups=[]), NS(groups=[])])
+
+    def mesh(parent=None, parent_type="OBJECT", mods=(), groups=("spine",), data=weighted):
+        return NS(type="MESH", parent=parent, parent_type=parent_type, vertex_groups=list(groups), data=data,
+                  modifiers=[NS(type="ARMATURE", object=o) for o in mods])
+
+    skin = export_verify.writes_gltf_skin
+    assert skin(mesh(rig, "OBJECT", [rig]))  # parented and deformed: a skin
+    assert skin(mesh(None, "OBJECT", [rig]))  # deformed, not parented: still a skin
+    assert skin(mesh(rig, "ARMATURE", [rig]))
+    assert not skin(mesh(rig, "BONE"))  # a rifle in a hand: follows the bone, no skin
+    assert not skin(mesh(rig, "ARMATURE"))  # parented, no modifier: the exporter writes no skin
+    assert not skin(mesh(rig, "BONE", [rig]))  # bone-parented to its own deformer: the exporter drops the skin
+    assert skin(mesh(rig, "BONE", [other]))
+    assert not skin(mesh(None, "OBJECT", [None]))  # a modifier with no armature
+    assert not skin(mesh(rig, "OBJECT", [rig], groups=()))  # no vertex groups
+    assert not skin(mesh(rig, "OBJECT", [rig], data=unweighted))  # groups, no weights
+    for src in (inspect.getsource(export_package.export_package),
+                open(os.path.join(_CORE, "agent_export.py"), encoding="utf-8").read()):
+        assert '"skinned_meshes": ' in src and "writes_gltf_skin(" in src
+
+
 def test_copies_keep_a_skinned_mesh_skinned():
     """Static copies are baked, a skinned copy keeps its armature (source)."""
     source = inspect.getsource(export_package._copies) + inspect.getsource(export_package._skinned_copy)
