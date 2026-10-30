@@ -135,6 +135,47 @@ def test_results_map_errors_images_and_scrub_paths(link):
     assert "/Users" not in json.dumps(tree) and "<local path>" in tree["data"]["note"]
 
 
+@pytest.mark.parametrize("text,expected", [
+    # Spaces inside a path, quoted and unquoted; any drive letter, either separator.
+    (r"Saved C:\Users\John Smith\Documents\Game\level.tscn ok", "Saved <local path> ok"),
+    ("Saved to D:/Unreal Projects/MyGame/Content/Maps/Arena.umap.", "Saved to <local path>."),
+    (r'Open "C:\Users\John Smith\My Game\main scene.tscn" failed', 'Open "<local path>" failed'),
+    (r"Open 'z:\Games\Some Folder\file name.txt' failed", "Open '<local path>' failed"),
+    ("C:/Users/John Smith/project", "<local path>"),
+    (r"Failed (E:\Users\Ann\x.gd)", "Failed (<local path>)"),
+    (r"escaped C:\\Users\\John Smith\\x.txt here", "escaped <local path> here"),
+    # UNC shares, home-relative and file:// paths.
+    (r"share at \\fileserver\team share\proj\a.txt now", "share at <local path> now"),
+    ("home ~/Projects/my game/scene.tscn there", "home <local path> there"),
+    (r"home ~\Projects\scene.tscn there", "home <local path> there"),
+    ("file:///Users/john/a.glb loaded", "<local path> loaded"),
+    # POSIX: system roots and any lower-case first folder.
+    ("root /root/proj/x.gd and /home/ann/My Stuff/a b.png", "root <local path> and <local path>"),
+    ("/Users/john doe/Library/Application Support/Godot/x.log", "<local path>"),
+    ('{"path": "/Volumes/Ext Drive/game/a.png"}', '{"path": "<local path>"}'),
+    ("plain /tmp/x and /srv/games/foo/bar", "plain <local path> and <local path>"),
+    ("in /private/var/folders/x/T/mixar-link-1/a.zip", "in <local path>"),
+    # Not local paths: engine resource paths, URLs, Unreal package paths, prose.
+    ("res://mixar/Crate/crate.glb and user://save.dat", "res://mixar/Crate/crate.glb and user://save.dat"),
+    ("https://example.com/a/b", "https://example.com/a/b"),
+    ("/Game/Mixar/Maps/Arena and /Script/Engine.Actor", "/Game/Mixar/Maps/Arena and /Script/Engine.Actor"),
+    ("50/50 and/or a/b", "50/50 and/or a/b"),
+])
+def test_scrub_removes_every_absolute_local_path(text, expected):
+    assert engine_link.scrub(text) == expected
+
+
+def test_scrub_walks_keys_lists_and_tuples():
+    out = engine_link.scrub({"C:\\Users\\Ann\\a.txt": ("/home/ann/b c/d.png", ["~/x/y"]), "n": 3})
+    assert out == {"<local path>": ["<local path>", ["<local path>"]], "n": 3}
+
+
+def test_scrub_stays_linear_on_long_text():
+    started = time.monotonic()
+    engine_link.scrub(("word /Users/abc " + "x" * 50 + " ") * 20000 + "C:\\ " + "a b c d " * 100000)
+    assert time.monotonic() - started < 2.0
+
+
 def test_the_callable_tools_are_the_adapters_minus_import():
     # Every adapter tool the backend's engine_* tools call by name. A name
     # missing here fails the agent's call in the client, before Godot sees it

@@ -58,7 +58,28 @@ NO_ENGINE = ("No game engine is connected. Connect one from the engine chip in t
              "(Godot 4.5+ or Unreal Engine 5.8+ with Mixar Link), then try again.")
 UNREAL_TRANSPORT = "unreal_mcp"
 
-_ABS_PATH = re.compile(r"(?:[A-Za-z]:\\|/(?:Users|home|private|var|tmp|Volumes|mnt)/)[^\s\"'<>|]*")
+# Absolute local paths in what an engine answers (``scrub``). A path starts at
+# a drive (any letter, either separator), a UNC share, ``~/``, a ``file://``
+# URL, a POSIX system root, or any lower-case first folder (a Linux mount):
+# never at a URL scheme (``res://``, ``https://``) or Unreal's capitalised
+# package roots (``/Game/…``, ``/Script/…``), which name things in the
+# project, not on the disk. Folders may hold spaces when a separator follows
+# (``C:\Users\John Smith\…``); the last name takes spaced words only up to
+# a file extension. A quoted path is scrubbed to its closing quote.
+_POSIX_ROOTS = ("Users|Volumes|Applications|Library|System|Network|private|home|root|tmp|var|mnt|media|"
+                "opt|srv|etc|usr|run|data|workspace|snap|proc|dev|sys|boot|nix|cygdrive")
+_NOT_AFTER = r"(?<![\w:/.~\\+=-])"
+_ROOT = (r"(?:(?<![A-Za-z0-9])[A-Za-z]:[\\/]"
+         r"|(?<![\w\\])\\\\[^\s\\/\"'`<>|]+[\\/]"
+         r"|(?<![\w~])~[\\/]"
+         r"|(?<![\w])[Ff][Ii][Ll][Ee]:/{2,}"
+         rf"|{_NOT_AFTER}/(?:{_POSIX_ROOTS})(?=[\\/\s\"'`)\],;]|$)"
+         rf"|{_NOT_AFTER}/[a-z][\w.-]*(?=/))")
+_SEP = r"[\\/]+"
+_NAME = r"[^\s\\/\"'`<>|*?]+"
+_ABS_PATH = re.compile(_ROOT + rf"(?:{_SEP}|{_NAME}(?: {_NAME})*{_SEP})*"
+                       rf"(?:{_NAME}(?: {_NAME}){{0,3}}?\.[A-Za-z0-9]{{1,8}}(?!\w)|{_NAME})?")
+_QUOTED_PATH = re.compile(r"([\"'`])(" + _ROOT + r"[^\r\n]*?)\1")
 _clients: dict = {}
 # Answers made on a worker thread (engine_prefetch), by call key, oldest first.
 _prefetched: dict = {}
@@ -71,13 +92,15 @@ class LinkError(RuntimeError):
 
 
 def scrub(value):
-    """``value`` with every absolute local path replaced (recursively)."""
+    """``value`` with every absolute local path replaced (recursively, keys
+    included)."""
     if isinstance(value, str):
+        value = _QUOTED_PATH.sub(lambda m: f"{m.group(1)}<local path>{m.group(1)}", value)
         return _ABS_PATH.sub("<local path>", value)
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [scrub(v) for v in value]
     if isinstance(value, dict):
-        return {k: scrub(v) for k, v in value.items()}
+        return {scrub(k) if isinstance(k, str) else k: scrub(v) for k, v in value.items()}
     return value
 
 
