@@ -35,6 +35,19 @@ from .model_io import import_file
 logger = get_logger(__name__)
 
 
+RENDER_RETRY_S = 0.5
+
+
+def _render_running() -> bool:
+    """A render on Blender's job thread (an agent preview, a scene render, F12)."""
+    try:
+        from mixar.modules.common.render_coordinator import core as render_slot  # noqa: PLC0415
+        busy = render_slot.busy()
+    except Exception:  # noqa: BLE001 - no coordinator: Blender's own tracker decides
+        busy = False
+    return bool(bpy.app.is_job_running("RENDER") or busy)
+
+
 def _split_object_names(object_names) -> list:
     """``import_file`` returns comma-joined names; custom jobs may pass lists."""
     if isinstance(object_names, (list, tuple, set)):
@@ -243,6 +256,16 @@ class DownloadMixin:
             self._pump()
             return None
 
+        if _render_running():
+            # A render evaluates its depsgraph on Blender's job thread; an
+            # import now edits the data that graph is built from. Sky Temple
+            # QA run (Oct 30): an auto-rig result imported during an agent
+            # render crashed Mixar in Depsgraph::clear_all_nodes. Agent
+            # scripts already wait (render_gate); results wait here.
+            if not getattr(job, "_import_held", False):
+                job._import_held = True
+                logger.info("%s import of %s held until the render ends", LOG_PREFIX, os.path.basename(filepath))
+            return RENDER_RETRY_S
         try:
             import_options = dict(getattr(job, "import_options", None) or {})
             if file_type.upper() == "VIDEO":
