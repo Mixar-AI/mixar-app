@@ -40,6 +40,17 @@ def _safe_folder_name(name: str) -> str:
     return " ".join(keep.split())[:60] or "My Game"
 
 
+def _godot_line() -> str:
+    from ...core import engine_connect
+    done, found = engine_connect.godot_probe()
+    if not done:
+        return "Looking for Godot on this computer…"
+    if found:
+        return f"Godot {'.'.join(str(v) for v in found['version'])} is installed."
+    return (f"Godot is not installed: Mixar downloads Godot {engine_connect.GODOT_VERSION} "
+            "(about 150 MB) into its own folder.")
+
+
 class MIXAR_OT_engine_pick(bpy.types.Operator):
     bl_idname = "mixar.engine_pick"
     bl_label = "Use This Editor"
@@ -106,11 +117,11 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
                 f"Unreal Engine {'.'.join(str(v) for v in found['version'])} is installed." if found else
                 "Install Unreal Engine 5.8+ from the Epic Games Launcher first.")
         else:
-            found = engine_connect.find_godot()
+            # Asking a Godot its version starts it (seconds): off the main
+            # thread; the dialog's line follows the probe as it redraws.
+            engine_connect.find_godot_async()
             type(self)._installed = True
-            type(self)._engine_line = (
-                f"Godot {'.'.join(str(v) for v in found['version'])} is installed." if found else
-                f"Godot is not installed: Mixar downloads Godot {engine_connect.GODOT_VERSION} (about 150 MB).")
+            type(self)._engine_line = ""
         wm = context.window_manager
         modal = getattr(wm, "mixar_invoke_modal_dialog", None)
         if modal is not None:
@@ -122,7 +133,7 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
         title, project_file, install_line = ENGINE_TEXT[self._key()]
         col = layout.column(align=False)
         col.label(text=f"Connect your {title} project")
-        col.label(text=self._engine_line, icon='INFO' if self._installed else 'ERROR')
+        col.label(text=self._engine_line or _godot_line(), icon='INFO' if self._installed else 'ERROR')
         if not self._installed:
             return
         col.separator()

@@ -13,8 +13,10 @@ chip (UI in ``ui/engine_chip.py``; the link itself is ``engine_link``).
   discovery file costs a socket timeout.
 - ``find_godot()`` / ``download_godot()``: a Godot 4.5+ on this machine, or
   the official ``GODOT_VERSION`` build (refused unless it matches
-  ``GODOT_SHA256``) downloaded into ~/Applications (macOS) or
-  ~/.mixar/engines (elsewhere).
+  ``GODOT_SHA256``) downloaded into ~/.mixar/engines, Mixar's own folder (a
+  Godot the user installed is used, never written over). ``find_godot``
+  starts each new binary once, so the Connect dialog asks
+  ``find_godot_async`` and reads ``godot_probe``.
 - ``install_addon(project)``: Mixar Link ``ADDON_VERSION`` (``ADDON_URL``,
   refused unless it matches ``ADDON_SHA256``) unpacked into ``<project>/addons/mixar_link`` and enabled
   in ``project.godot``; ``create_project`` makes a new one first.
@@ -184,13 +186,33 @@ def engine_context() -> dict | None:
 # Godot on this machine
 # ---------------------------------------------------------------------------
 
+# ``binary --version`` answers by (path, mtime, size): a probe starts the
+# engine, so each binary is asked once while it is unchanged.
+_versions: dict = {}
+# The background probe the Connect dialog reads (``find_godot_async``).
+_probe: dict = {"running": False, "done": False, "found": None}
+
+
 def _version_of(binary: str) -> tuple[int, ...] | None:
+    try:
+        st = os.stat(binary)
+    except OSError:
+        return None
+    key = (binary, st.st_mtime_ns, st.st_size)
+    if key in _versions:
+        return _versions[key]
     try:
         out = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=15).stdout
     except (OSError, subprocess.SubprocessError):
         return None
     match = re.match(r"\s*(\d+)\.(\d+)(?:\.(\d+))?", out or "")
-    return tuple(int(g or 0) for g in match.groups()) if match else None
+    _versions[key] = tuple(int(g or 0) for g in match.groups()) if match else None
+    return _versions[key]
+
+
+def _engines_dir() -> str:
+    """Where Mixar keeps the engines it downloads; nothing else writes here."""
+    return os.path.join(os.path.expanduser("~"), ".mixar", "engines")
 
 
 def godot_candidates() -> list[str]:
@@ -199,14 +221,18 @@ def godot_candidates() -> list[str]:
     override = os.environ.get("MIXAR_GODOT", "")
     if override and os.path.isfile(override):
         return [override]
+    mine = os.path.join(_engines_dir(), "godot*")
     if sys.platform == "darwin":
-        apps = glob.glob("/Applications/Godot*.app") + glob.glob(os.path.join(home, "Applications", "Godot*.app"))
+        apps = (glob.glob("/Applications/Godot*.app") + glob.glob(os.path.join(home, "Applications", "Godot*.app"))
+                + glob.glob(os.path.join(mine, "Godot*.app")))
         found = [os.path.join(a, "Contents", "MacOS", "Godot") for a in apps]
     elif sys.platform == "win32":
-        found = glob.glob(os.path.join(home, ".mixar", "engines", "godot*", "Godot*.exe")) + \
+        found = glob.glob(os.path.join(mine, "Godot*.exe")) + \
             glob.glob(os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Godot*", "Godot*.exe"))
+        # The editor, never its _console.exe twin (a terminal window beside it).
+        found = [p for p in found if not os.path.basename(p).lower().endswith("_console.exe")]
     else:
-        found = glob.glob(os.path.join(home, ".mixar", "engines", "godot*", "Godot*"))
+        found = glob.glob(os.path.join(mine, "Godot*"))
     for name in ("godot4", "godot"):
         path = shutil.which(name)
         if path:
@@ -215,7 +241,8 @@ def godot_candidates() -> list[str]:
 
 
 def find_godot() -> dict | None:
-    """The newest Godot 4.5+ here: {"binary", "version"} or None."""
+    """The newest Godot 4.5+ here: {"binary", "version"} or None. Runs each
+    new binary once (seconds): call it off the main thread."""
     best = None
     for binary in godot_candidates():
         version = _version_of(binary)
@@ -224,44 +251,71 @@ def find_godot() -> dict | None:
     return best
 
 
+def find_godot_async() -> None:
+    """``find_godot`` in a daemon thread for the Connect dialog, which reads
+    ``godot_probe()`` as it redraws; a probe already running is not doubled."""
+    if _probe["running"]:
+        return
+    _probe.update(running=True, done=False)
+
+    def run():
+        try:
+            found = find_godot()
+        except Exception:  # noqa: BLE001 - "not found" is the safe answer
+            found = None
+        _probe.update(running=False, done=True, found=found)
+
+    threading.Thread(target=run, name="mixar-godot-probe", daemon=True).start()
+
+
+def godot_probe() -> tuple[bool, dict | None]:
+    """(finished, the Godot found) of the last ``find_godot_async``."""
+    return bool(_probe["done"]), _probe["found"]
+
+
 def _godot_asset() -> tuple[str, str]:
-    """(release asset platform part, install folder) for this platform and CPU."""
-    home = os.path.expanduser("~")
+    """(release asset platform part, install folder) for this platform and CPU.
+    The folder is Mixar's own, on every platform: a Godot the user installed
+    (``/Applications/Godot.app``) is used, never written over."""
     arm = platform.machine().lower() in ("arm64", "aarch64")
+    dest = os.path.join(_engines_dir(), f"godot-{GODOT_VERSION}")
     if sys.platform == "darwin":
-        return "macos.universal.zip", os.path.join(home, "Applications")
+        return "macos.universal.zip", dest
     if sys.platform == "win32":
-        return (f"{'windows_arm64' if arm else 'win64'}.exe.zip",
-                os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
-    return (f"linux.{'arm64' if arm else 'x86_64'}.zip",
-            os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
+        return f"{'windows_arm64' if arm else 'win64'}.exe.zip", dest
+    return f"linux.{'arm64' if arm else 'x86_64'}.zip", dest
 
 
 def download_godot(progress=None) -> dict:
-    """The official Godot build for this platform, checked and unpacked;
-    returns find_godot()."""
+    """The official Godot build for this platform, checked, unpacked into a
+    fresh folder and moved into Mixar's engines folder (replacing only
+    Mixar's own earlier copy of that version); returns find_godot()."""
     part, dest = _godot_asset()
     expected = GODOT_SHA256.get(part)
     if not expected:
         raise RuntimeError(NO_GODOT_BUILD)
     asset = f"Godot_v{GODOT_VERSION}-stable_{part}"
-    archive = os.path.join(tempfile.mkdtemp(prefix="mixar-godot-"), asset)
+    os.makedirs(_engines_dir(), exist_ok=True)
+    work = tempfile.mkdtemp(prefix="mixar-godot-", dir=_engines_dir())
     try:
+        archive = os.path.join(work, asset)
         _download(f"{GODOT_RELEASES}/{GODOT_VERSION}-stable/{asset}", archive, progress, "Downloading Godot",
                   sha256=expected)
-    except Exception:
-        shutil.rmtree(os.path.dirname(archive), ignore_errors=True)
-        raise
-    os.makedirs(dest, exist_ok=True)
-    if sys.platform == "darwin":
-        # ditto keeps the bundle's symlinks and permissions; zipfile does not.
-        subprocess.run(["ditto", "-x", "-k", archive, dest], check=True)
-    else:
-        with zipfile.ZipFile(archive) as z:
-            z.extractall(dest)
-        for path in glob.glob(os.path.join(dest, "Godot*")):
-            os.chmod(path, 0o755)
-    shutil.rmtree(os.path.dirname(archive), ignore_errors=True)
+        unpacked = os.path.join(work, "unpacked")
+        os.makedirs(unpacked)
+        if sys.platform == "darwin":
+            # ditto keeps the bundle's symlinks and permissions; zipfile does not.
+            subprocess.run(["ditto", "-x", "-k", archive, unpacked], check=True)
+        else:
+            with zipfile.ZipFile(archive) as z:
+                z.extractall(unpacked)
+            for path in glob.glob(os.path.join(unpacked, "Godot*")):
+                os.chmod(path, 0o755)
+        if os.path.isdir(dest):
+            shutil.rmtree(dest)
+        os.replace(unpacked, dest)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
     found = find_godot()
     if not found:
         raise RuntimeError("Godot was downloaded but does not start.")
