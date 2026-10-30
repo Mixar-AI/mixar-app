@@ -46,7 +46,7 @@ ENGINE_FORMATS = {"godot": ("glb", "gltf", "fbx"), "unreal": ("fbx",), "uefn": (
 MANIFEST_VERSION = 1
 TAG_PREFIX = "mixar_"
 TAGS = {
-    "role": ("prop", "player", "enemy", "ally", "weapon", "door", "pickup", "spawn", "trigger",
+    "role": ("prop", "player", "enemy", "ally", "weapon", "door", "pickup", "spawn", "bombsite", "trigger",
              "hazard", "checkpoint", "goal"),
     "body": ("static", "rigid", "kinematic", "none"),
     "pivot": ("hinge_x", "hinge_y", "hinge_z", "slide_x", "slide_y", "slide_z"),
