@@ -197,20 +197,50 @@ msgstr "Angi et gjeldende tillegg før du endrer om det er aktivert"
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "Ukjent"
-
 msgid "That asset has no file on disk"
 msgstr "Den ressursen har ingen fil på disken"
 
 msgid "The asset's .blend is missing"
 msgstr "Ressursens .blend mangler"
 
-msgid "Only objects and collections can be added to the scene"
-msgstr "Bare objekter og samlinger kan legges til i scenen"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 msgid "'{name}' is not in that file anymore"
 msgstr "'{name}' er ikke i den filen lenger"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "Search failed"
+msgstr "Søk mislyktes"
+
+msgid "Unknown"
+msgstr "Ukjent"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 msgid "Could not add '{name}' to the scene"
 msgstr "Kunne ikke legge '{name}' til i scenen"
@@ -474,6 +504,24 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+msgid "Reference Image"
+msgstr "Referansebilde"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -669,6 +717,12 @@ msgstr "Alle typer generering"
 msgid "Meshes and other 3D assets"
 msgstr "Maskenett og andre 3D-ressurser"
 
+msgid "Materials"
+msgstr "Materialer"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 msgid "Generated stills"
 msgstr "Genererte stillbilder"
 
@@ -677,6 +731,27 @@ msgstr "Genererte videoer"
 
 msgid "Gaussian splat worlds in this file"
 msgstr "Gaussiske splat-verdener i denne filen"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+msgid "Done"
+msgstr "Ferdig"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "Feil"
+
+msgid "The last search failed"
+msgstr ""
 
 msgid "Newest first"
 msgstr "Nyeste først"
@@ -731,6 +806,36 @@ msgstr "Genereringsrevisjon"
 
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "Økes når noe skrives inn i et ressursbibliotek, slik at ruten leser det på nytt"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+msgid "Search Message"
+msgstr "Søkemelding"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 msgid "Library Scroll"
 msgstr "Bibliotekrulling"
@@ -810,9 +915,6 @@ msgstr "I kø, ikke sendt ut ennå"
 msgid "Executing now"
 msgstr "Utføres nå"
 
-msgid "Done"
-msgstr "Ferdig"
-
 msgid "Finished successfully"
 msgstr "Fullført"
 
@@ -878,8 +980,23 @@ msgstr "forhåndsvisningsarbeideren avsluttet før denne ressursen ble gjengitt"
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "{count} ressurser ble ikke gjengitt (arbeideren avsluttet tidlig)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+msgid "No trained model found. Please train first."
+msgstr "Fant ingen trent modell. Tren først."
+
 msgid "Server returned {status}"
 msgstr "Tjeneren svarte {status}"
+
+msgid "No matching assets found"
+msgstr "Fant ingen samsvarende ressurser"
+
+msgid "Found {count} matching asset(s)"
+msgstr "Samsvarende ressurser: {count}"
+
+msgid "Search failed: {error}"
+msgstr "Søk mislyktes: {error}"
 
 msgid "Prepare failed: {error}"
 msgstr "Klargjøring mislyktes: {error}"
@@ -1079,9 +1196,6 @@ msgstr "Kunne ikke lese referansebildet — det har ingen brukbare piksler. Lagr
 msgid "Reference image could not be read — searching with the text prompt only"
 msgstr "Referansebildet kunne ikke leses — søker bare med tekstledeteksten"
 
-msgid "Search failed"
-msgstr "Søk mislyktes"
-
 msgid "Refresh Asset Status"
 msgstr "Oppdater ressursstatus"
 
@@ -1093,18 +1207,6 @@ msgstr "Kunne ikke sjekke status"
 
 msgid "Embeddings are up to date"
 msgstr "Innbyggingene er oppdaterte"
-
-msgid "No trained model found. Please train first."
-msgstr "Fant ingen trent modell. Tren først."
-
-msgid "No matching assets found"
-msgstr "Fant ingen samsvarende ressurser"
-
-msgid "Found {count} matching asset(s)"
-msgstr "Samsvarende ressurser: {count}"
-
-msgid "Search failed: {error}"
-msgstr "Søk mislyktes: {error}"
 
 msgid "Status check failed: {error}"
 msgstr "Statussjekk mislyktes: {error}"
@@ -1154,8 +1256,8 @@ msgstr "Avbryt trening"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "Stopp treningen etter den gjeldende ressursen. Trinnvise kjøringer beholder ressursene som allerede er bygget inn. En full kjøring forkastes uendret"
 
-msgid "No objects or collections found in asset libraries"
-msgstr "Fant ingen objekter eller samlinger i ressursbibliotekene"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
 msgstr "Gjengir forhåndsvisninger i bakgrunnen {done}/{total} (appen forblir responsiv)"
@@ -1292,9 +1394,6 @@ msgstr "Trenger ny trening"
 msgid "Retraining Message"
 msgstr "Melding om ny trening"
 
-msgid "Search Message"
-msgstr "Søkemelding"
-
 msgid "Is Searching"
 msgstr "Søker"
 
@@ -1396,9 +1495,6 @@ msgstr "Fjernet"
 
 msgid "Delete confirmed — showing the recap"
 msgstr "Sletting bekreftet — viser oppsummeringen"
-
-msgid "Error"
-msgstr "Feil"
 
 msgid "Last request failed"
 msgstr "Siste forespørsel mislyktes"
@@ -1514,8 +1610,20 @@ msgstr "Bruk feltene nedenfor, eller Skann på nytt"
 msgid "Choose a local model first."
 msgstr "Velg en lokal modell først."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Start den lokale modellen først (den må kjøre for å lagre)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Basis-URL og modellnavn er påkrevd."
@@ -1671,6 +1779,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2034,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2963,17 @@ msgstr "Mixar kjører ikke fra en programpakke"
 msgid "No permission to update {path}"
 msgstr "Ingen tillatelse til å oppdatere {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Installasjonsmappen kunne ikke bestemmes"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Installasjonsstedet kunne ikke bestemmes"
@@ -2879,6 +3002,12 @@ msgstr "Kunne ikke starte oppdateringsprogrammet"
 msgid "Mixar didn't close"
 msgstr "Mixar lukket seg ikke"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Oppdateringer i appen støttes ikke på denne plattformen"
 
@@ -2893,6 +3022,72 @@ msgstr "Installasjonstype støttes ikke for {platform}: {installer_type}"
 
 msgid "This install can't be updated in place"
 msgstr "Denne installasjonen kan ikke oppdateres på stedet"
+
+msgid "Updated to Mixar {version}"
+msgstr "Oppdatert til Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "Oppdateringen ble installert."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Oppdateringen fikk ikke virkning"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Du kan laste ned {version} fra nedlastingssiden."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Du kan laste ned oppdateringen fra nedlastingssiden."
+
+msgid "Update was not installed"
+msgstr "Oppdateringen ble ikke installert"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} ble installert, men versjon {running} startet. Installer på nytt fra nedlastingssiden."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar kjørte fortsatt da installasjonsprogrammet prøvde å starte."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Det nedlastede installasjonsprogrammet bestod ikke signaturkontrollen."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Det nedlastede installasjonsprogrammet kunne ikke åpnes."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar kunne ikke erstattes på disken."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Installasjonsprogrammet ble ikke ferdig."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} av {total}"
@@ -2960,47 +3155,35 @@ msgstr "Kunne ikke se etter oppdateringer"
 msgid "Check your internet connection and try again."
 msgstr "Sjekk internettforbindelsen din og prøv igjen."
 
-msgid "Update didn't take effect"
-msgstr "Oppdateringen fikk ikke virkning"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} ble installert, men versjon {running} startet. Installer på nytt fra nedlastingssiden."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Oppdatert til Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Oppdateringen ble installert."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Du kan laste ned {version} fra nedlastingssiden."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Du kan laste ned oppdateringen fra nedlastingssiden."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Oppdateringen ble ikke installert"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar kjørte fortsatt da installasjonsprogrammet prøvde å starte."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Det nedlastede installasjonsprogrammet bestod ikke signaturkontrollen."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Det nedlastede installasjonsprogrammet kunne ikke åpnes."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar kunne ikke erstattes på disken."
-
-msgid "The installation was cancelled."
-msgstr "Installasjonen ble avbrutt."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer rapporterte en fatal feil."
-
-msgid "The installer did not finish."
-msgstr "Installasjonsprogrammet ble ikke ferdig."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Start Mixar på nytt og installer den nedlastede oppdateringen"
@@ -3046,6 +3229,9 @@ msgstr "Stopp nedlastingen av oppdateringen"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Denne oppdateringen kreves og kan ikke avbrytes"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Åpne Mixars nedlastingsside i standardnettleseren"
@@ -4853,6 +5039,15 @@ msgstr "Kunne ikke lese bildet '{name}': {error}"
 msgid "Smart segmentation failed"
 msgstr "Smart segmentering mislyktes"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Visningstype"
 
@@ -5705,6 +5900,9 @@ msgstr "Retopologi"
 msgid "Mesh Segmentation"
 msgstr "Maskenettsegmentering"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Automatisk rigg"
 
@@ -6141,6 +6339,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Fest genererte deler til en rigget eller vanlig kropp, lokalt"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -8377,9 +8578,6 @@ msgstr "1024px – standard kvalitet"
 msgid "2048px - High quality"
 msgstr "2048px – høy kvalitet"
 
-msgid "Reference Image"
-msgstr "Referansebilde"
-
 msgid "Style reference image for texture generation"
 msgstr "Stilreferansebilde for teksturgenerering"
 
@@ -9180,6 +9378,21 @@ msgstr "Fri tekst som navngir delene som skal letes etter"
 
 msgid "Smart segmentation started..."
 msgstr "Smart segmentering startet …"
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -11134,6 +11347,48 @@ msgstr "Mixar-operasjonshistorikk-ID"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Vedvarende ID per scene som nøkler denne scenens operasjonshistorikk."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Blanding"
 
@@ -11287,9 +11542,6 @@ msgstr "Gjeldende objekt"
 msgid "Show active object options"
 msgstr "Vis innstillinger for gjeldende objekt"
 
-msgid "Materials"
-msgstr "Materialer"
-
 msgid "Show material lists"
 msgstr "Vis materiallister"
 
@@ -11361,9 +11613,6 @@ msgstr "Valgt for gruppe"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Velg lag for satsvise operasjoner (flytt til gruppe osv.)"
-
-msgid "Higher quality"
-msgstr "Høyere kvalitet"
 
 msgid "Expand Layers"
 msgstr "Utvid lag"
@@ -15171,6 +15420,12 @@ msgstr "Navn på en oppføring i bpy.data.images som referanse"
 msgid "Called from chat/agent context"
 msgstr "Kalt fra chat-/agentkontekst"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Grensesnittstilstand er ikke tilgjengelig"
 
@@ -15179,6 +15434,9 @@ msgstr "Generering av penseltekstur pågår allerede"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Skriv inn en ledetekst for penselteksturen"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Kunne ikke legge penselgenerering i kø"
@@ -15284,6 +15542,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Lagliste i Substance 3D Painter-stil med innebygd blandingsmodus og ugjennomsiktighet."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Plassering"
+
+msgid "Object"
+msgstr "Objekt"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Flytt lagmaske"
@@ -16443,6 +16740,9 @@ msgstr "Ny bildemaske"
 msgid "Open Image as Mask..."
 msgstr "Åpne bilde som maske..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Hjørnepunktfargemasker"
 
@@ -16562,6 +16862,12 @@ msgstr "Prosess"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Genereringsprosess: «fast» eller «detailed»"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Duplikatjobb finnes allerede i køen"
@@ -17361,9 +17667,6 @@ msgstr "Tangent"
 
 msgid "Tangent space"
 msgstr "Tangentrom"
-
-msgid "Object"
-msgstr "Objekt"
 
 msgid "Object space"
 msgstr "Objektrom"
@@ -20229,7 +20532,28 @@ msgstr "«{name}» er ikke i ressursfilen lenger."
 msgid "Could not add the asset to the scene."
 msgstr "Kunne ikke legge ressursen til i scenen."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20607,6 @@ msgstr "Kunne ikke fortsette automatisk — trykk Enter på «continue» i chatt
 msgid "The request could not be completed."
 msgstr "Forespørselen kunne ikke fullføres."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Meldingen din nådde ikke frem til Mixie. Sjekk tilkoblingen, og send den på nytt."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Kunne ikke nå serveren. Sjekk tilkoblingen og prøv igjen."
 
@@ -20330,6 +20645,15 @@ msgstr "Håndskriftgjenkjenning er ikke tilgjengelig på denne serveren ennå �
 
 msgid "Handwriting conversion failed"
 msgstr "Håndskriftkonvertering mislyktes"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Meldingen din nådde ikke frem til Mixie. Sjekk tilkoblingen, og send den på nytt."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20993,15 @@ msgid "Pick"
 msgstr "Plukk"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23727,6 @@ msgstr "Merknadspolygon"
 msgid "Annotate Eraser"
 msgstr "Merknadsviskelær"
 
-msgid "Placement"
-msgstr "Plassering"
-
 msgid "(none — draw to create)"
 msgstr "(ingen — tegn for å opprette)"
 
@@ -25293,6 +25623,9 @@ msgstr "Egenskaper"
 msgid "Blend (.blend)"
 msgstr "Blend (.blend)"
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25551,6 +25884,12 @@ msgstr "Spør Mixie om hva som helst..."
 msgid "Write your prompt here..."
 msgstr "Skriv ledeteksten din her..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 msgid "Everything Mixar has generated"
 msgstr "Alt Mixar har generert"
 
@@ -25559,6 +25898,15 @@ msgstr ""
 
 msgid "Filter the grid"
 msgstr "Filtrer rutenettet"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 msgid "Newest first / oldest first"
 msgstr "Nyeste først / eldste først"
@@ -25577,6 +25925,12 @@ msgstr "Splat-verden"
 
 msgid "In this file"
 msgstr "I denne filen"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 msgid "Show the asset's .blend in the file browser"
 msgstr "Viser ressursens .blend i filutforskeren"
@@ -25945,6 +26299,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26802,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Forhåndsvis\n"
-"\n"
-"Åpne dette bildet eller denne videoen i et eget vindu. Flere forhåndsvisninger kan være åpne samtidig."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26829,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Forhåndsvis\n"
-"\n"
-"Åpne dette resultatet i et eget vindu. Flere forhåndsvisninger kan være åpne samtidig."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27078,17 @@ msgstr "Valgt moodboard-element er ikke en video"
 msgid "Cannot decode video: %s"
 msgstr "Kan ikke dekode video: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Dette tavleelementet har ikke bilde eller video å forhåndsvise"
 
 msgid "This node has no image or video to preview"
 msgstr "Denne noden har ikke bilde eller video å forhåndsvise"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Bildeforhåndsvisning"
@@ -26739,8 +27102,8 @@ msgstr "Forhåndsvisningsvinduet åpnet ikke en bilderedigering"
 msgid "Preview Media"
 msgstr "Forhåndsvis medier"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Åpne dette bildet eller denne videoen i et eget forhåndsvisningsvindu. Flere kan være åpne samtidig"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Node hvis resultat skal åpnes"
@@ -26837,6 +27200,18 @@ msgstr "Plasser en redigerbar node der malen slippes"
 
 msgid "Template to place"
 msgstr "Mal som skal plasseres"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Velg Mixie3D-forhåndsvisning"

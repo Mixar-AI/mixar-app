@@ -197,20 +197,50 @@ msgstr "Agordu aktivan aldonaĵon antaŭ ol ŝanĝi ĝian ebligitan staton"
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "Nekonata"
-
 msgid "That asset has no file on disk"
 msgstr "Tiu rimedo ne havas dosieron sur disko"
 
 msgid "The asset's .blend is missing"
 msgstr "La .blend de la rimedo mankas"
 
-msgid "Only objects and collections can be added to the scene"
-msgstr "Nur objektoj kaj kolektoj povas aldoniĝi al la sceno"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 msgid "'{name}' is not in that file anymore"
 msgstr "'{name}' ne plu estas en tiu dosiero"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "Search failed"
+msgstr "Serĉo malsukcesis"
+
+msgid "Unknown"
+msgstr "Nekonata"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 msgid "Could not add '{name}' to the scene"
 msgstr "Ne eblis aldoni '{name}' al la sceno"
@@ -474,6 +504,24 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+msgid "Reference Image"
+msgstr "Referenca bildo"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -669,6 +717,12 @@ msgstr "Ĉiu speco de generado"
 msgid "Meshes and other 3D assets"
 msgstr "Maŝaroj kaj aliaj 3D-rimedoj"
 
+msgid "Materials"
+msgstr "Materialoj"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 msgid "Generated stills"
 msgstr "Generitaj senmovaj bildoj"
 
@@ -677,6 +731,27 @@ msgstr "Generitaj videoj"
 
 msgid "Gaussian splat worlds in this file"
 msgstr "Gaŭsaj splataj mondoj en ĉi tiu dosiero"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+msgid "Done"
+msgstr "Preta"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "Eraro"
+
+msgid "The last search failed"
+msgstr ""
 
 msgid "Newest first"
 msgstr "Plej novaj unue"
@@ -731,6 +806,36 @@ msgstr "Revizio de generadoj"
 
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "Pligrandiĝas, kiam io skribas en rimedbibliotekon, por ke la panelo relegu ĝin"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+msgid "Search Message"
+msgstr "Serĉa mesaĝo"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 msgid "Library Scroll"
 msgstr "Rulumado de biblioteko"
@@ -810,9 +915,6 @@ msgstr "Envicigita, ankoraŭ ne sendita"
 msgid "Executing now"
 msgstr "Plenumante nun"
 
-msgid "Done"
-msgstr "Preta"
-
 msgid "Finished successfully"
 msgstr "Finiĝis sukcese"
 
@@ -878,8 +980,23 @@ msgstr "antaŭvida laboristo eliris antaŭ ol redoni ĉi tiun rimedon"
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "{count} rimedoj ne estis redonitaj (laboristo eliris frue)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+msgid "No trained model found. Please train first."
+msgstr "Neniu trejnita modelo trovita. Bonvolu unue trejni."
+
 msgid "Server returned {status}"
 msgstr "Servilo resendis {status}"
+
+msgid "No matching assets found"
+msgstr "Neniuj kongruaj rimedoj trovitaj"
+
+msgid "Found {count} matching asset(s)"
+msgstr "Trovitaj kongruaj rimedoj: {count}"
+
+msgid "Search failed: {error}"
+msgstr "Serĉo malsukcesis: {error}"
 
 msgid "Prepare failed: {error}"
 msgstr "Preparado malsukcesis: {error}"
@@ -1079,9 +1196,6 @@ msgstr "Ne eblis legi la referencan bildon — ĝi ne havas uzeblajn bilderajn d
 msgid "Reference image could not be read — searching with the text prompt only"
 msgstr "La referenca bildo ne legeblis — serĉante nur per la teksta invito"
 
-msgid "Search failed"
-msgstr "Serĉo malsukcesis"
-
 msgid "Refresh Asset Status"
 msgstr "Refreŝigi staton de rimedoj"
 
@@ -1093,18 +1207,6 @@ msgstr "Ne eblis kontroli la staton"
 
 msgid "Embeddings are up to date"
 msgstr "Enkorpigoj estas ĝisdataj"
-
-msgid "No trained model found. Please train first."
-msgstr "Neniu trejnita modelo trovita. Bonvolu unue trejni."
-
-msgid "No matching assets found"
-msgstr "Neniuj kongruaj rimedoj trovitaj"
-
-msgid "Found {count} matching asset(s)"
-msgstr "Trovitaj kongruaj rimedoj: {count}"
-
-msgid "Search failed: {error}"
-msgstr "Serĉo malsukcesis: {error}"
 
 msgid "Status check failed: {error}"
 msgstr "Kontrolo de stato malsukcesis: {error}"
@@ -1154,8 +1256,8 @@ msgstr "Nuligi trejnadon"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "Haltas la trejnadon post la nuna rimedo. Pliigaj ruladoj konservas la jam enkorpigitajn rimedojn; plena rulado estas forĵetita senŝanĝe"
 
-msgid "No objects or collections found in asset libraries"
-msgstr "Neniuj objektoj aŭ kolektoj trovitaj en rimedbibliotekoj"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
 msgstr "Redonante antaŭvidojn fone {done}/{total} (la aplikaĵo restas respondema)"
@@ -1292,9 +1394,6 @@ msgstr "Bezonas novan trejnadon"
 msgid "Retraining Message"
 msgstr "Mesaĝo pri nova trejnado"
 
-msgid "Search Message"
-msgstr "Serĉa mesaĝo"
-
 msgid "Is Searching"
 msgstr "Ĉu serĉas"
 
@@ -1396,9 +1495,6 @@ msgstr "Forigita"
 
 msgid "Delete confirmed — showing the recap"
 msgstr "Forigo konfirmita — montrante la resumon"
-
-msgid "Error"
-msgstr "Eraro"
 
 msgid "Last request failed"
 msgstr "La lasta peto malsukcesis"
@@ -1514,8 +1610,20 @@ msgstr "Uzu la subajn kampojn, aŭ Reskani"
 msgid "Choose a local model first."
 msgstr "Unue elektu lokan modelon."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Unue startigu la lokan modelon (ĝi devas ruli por konservi)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Baza URL kaj modela nomo estas devigaj."
@@ -1671,6 +1779,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2034,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2963,17 @@ msgstr "Mixar ne rulas el aplikaĵa pakaĵo"
 msgid "No permission to update {path}"
 msgstr "Neniu permeso ĝisdatigi {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Instala dosierujo ne povis esti solvita"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Instala loko ne povis esti solvita"
@@ -2879,6 +3002,12 @@ msgstr "Ne eblis startigi la ĝisdatigilon"
 msgid "Mixar didn't close"
 msgstr "Mixar ne fermiĝis"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Enaplikaĵaj ĝisdatigoj ne estas subtenataj sur ĉi tiu platformo"
 
@@ -2893,6 +3022,72 @@ msgstr "Nesubtenata tipo de instalilo por {platform}: {installer_type}"
 
 msgid "This install can't be updated in place"
 msgstr "Ĉi tiu instalaĵo ne povas ĝisdatiĝi surloke"
+
+msgid "Updated to Mixar {version}"
+msgstr "Ĝisdatigita al Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "La ĝisdatigo estis instalita sukcese."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Ĝisdatigo ne efikis"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Vi povas elŝuti {version} el la paĝo de elŝutoj."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Vi povas elŝuti la ĝisdatigon el la paĝo de elŝutoj."
+
+msgid "Update was not installed"
+msgstr "Ĝisdatigo ne estis instalita"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} estis instalita, sed versio {running} startis. Reinstalu el la paĝo de elŝutoj."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar ankoraŭ rulis, kiam la instalilo provis starti."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "La elŝutita instalilo malsukcesis sian subskriban kontrolon."
+
+msgid "The downloaded installer could not be opened."
+msgstr "La elŝutita instalilo ne povis esti malfermita."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar ne povis esti anstataŭigita sur disko."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "La instalilo ne finis."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} el {total}"
@@ -2960,47 +3155,35 @@ msgstr "Ne eblis kontroli ĝisdatigojn"
 msgid "Check your internet connection and try again."
 msgstr "Kontrolu vian retkonekton kaj provu denove."
 
-msgid "Update didn't take effect"
-msgstr "Ĝisdatigo ne efikis"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} estis instalita, sed versio {running} startis. Reinstalu el la paĝo de elŝutoj."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Ĝisdatigita al Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "La ĝisdatigo estis instalita sukcese."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Vi povas elŝuti {version} el la paĝo de elŝutoj."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Vi povas elŝuti la ĝisdatigon el la paĝo de elŝutoj."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Ĝisdatigo ne estis instalita"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar ankoraŭ rulis, kiam la instalilo provis starti."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "La elŝutita instalilo malsukcesis sian subskriban kontrolon."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "La elŝutita instalilo ne povis esti malfermita."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar ne povis esti anstataŭigita sur disko."
-
-msgid "The installation was cancelled."
-msgstr "La instalo estis nuligita."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "La instalilo de Windows raportis fatalan eraron."
-
-msgid "The installer did not finish."
-msgstr "La instalilo ne finis."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Relanĉi Mixar kaj instali la elŝutitan ĝisdatigon"
@@ -3046,6 +3229,9 @@ msgstr "Haltigi elŝuton de la ĝisdatigo"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Ĉi tiu ĝisdatigo estas deviga kaj ne povas esti nuligita"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Malfermi la paĝon de elŝutoj de Mixar en la defaŭlta retumilo"
@@ -4853,6 +5039,15 @@ msgstr "Malsukcesis legi bildon '{name}': {error}"
 msgid "Smart segmentation failed"
 msgstr "Inteligenta segmentado malsukcesis"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Vida tipo"
 
@@ -5705,6 +5900,9 @@ msgstr "Retopologio"
 msgid "Mesh Segmentation"
 msgstr "Segmentado de maŝaro"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Aŭtomata skeletigo"
 
@@ -6141,6 +6339,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Alkroĉas generitajn partojn al skeletigita aŭ simpla korpo, loke"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -8377,9 +8578,6 @@ msgstr "1024px - Norma kvalito"
 msgid "2048px - High quality"
 msgstr "2048px - Alta kvalito"
 
-msgid "Reference Image"
-msgstr "Referenca bildo"
-
 msgid "Style reference image for texture generation"
 msgstr "Stila referenca bildo por tekstura generado"
 
@@ -9180,6 +9378,21 @@ msgstr "Libera teksto, kiu nomas la serĉotajn partojn"
 
 msgid "Smart segmentation started..."
 msgstr "Inteligenta segmentado komenciĝis..."
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -11134,6 +11347,48 @@ msgstr "ID de la operacia historio de Mixar"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Persista identigilo po sceno, kiu ŝlosas la operacian historion de ĉi tiu sceno."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Mikso"
 
@@ -11287,9 +11542,6 @@ msgstr "Aktiva objekto"
 msgid "Show active object options"
 msgstr "Montri opciojn de la aktiva objekto"
 
-msgid "Materials"
-msgstr "Materialoj"
-
 msgid "Show material lists"
 msgstr "Montri materialajn listojn"
 
@@ -11361,9 +11613,6 @@ msgstr "Elektita por grupo"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Elekti tavolon por araj operacioj (movi al grupo, ktp.)"
-
-msgid "Higher quality"
-msgstr "Pli alta kvalito"
 
 msgid "Expand Layers"
 msgstr "Malfaldi tavolojn"
@@ -15171,6 +15420,12 @@ msgstr "Nomo de ero de bpy.data.images uzota kiel referenco"
 msgid "Called from chat/agent context"
 msgstr "Vokita el babilo aŭ agenta kunteksto"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "UI-stato ne disponeblas"
 
@@ -15179,6 +15434,9 @@ msgstr "Generado de penika teksturo jam okazas"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Bonvolu enigi inviton por la penika teksturo"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Malsukcesis envicigi la generadon de peniko"
@@ -15284,6 +15542,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Tavol-listo laŭ la stilo de Substance 3D Painter, kun enlinia miksa modo kaj opakeco."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Lokigo"
+
+msgid "Object"
+msgstr "Objekto"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Movi tavolan maskon"
@@ -16443,6 +16740,9 @@ msgstr "Nova bilda masko"
 msgid "Open Image as Mask..."
 msgstr "Malfermi bildon kiel maskon..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Maskoj de vertica koloro"
 
@@ -16562,6 +16862,12 @@ msgstr "Dukto"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Genera dukto: 'fast' aŭ 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Duobla tasko jam estas en la vico"
@@ -17361,9 +17667,6 @@ msgstr "Tanĝanto"
 
 msgid "Tangent space"
 msgstr "Tanĝanta spaco"
-
-msgid "Object"
-msgstr "Objekto"
 
 msgid "Object space"
 msgstr "Objekta spaco"
@@ -20229,7 +20532,28 @@ msgstr "'{name}' ne plu estas en la rimeda dosiero."
 msgid "Could not add the asset to the scene."
 msgstr "Ne eblis aldoni la rimedon al la sceno."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20607,6 @@ msgstr "Ne eblis daŭrigi aŭtomate — premu Enter sur \"continue\" en la babil
 msgid "The request could not be completed."
 msgstr "La peto ne povis esti plenumita."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Via mesaĝo ne atingis Mixie. Kontrolu vian konekton, poste sendu ĝin denove."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Ne eblis atingi la servilon. Bonvolu kontroli vian konekton kaj provi denove."
 
@@ -20330,6 +20645,15 @@ msgstr "Manskriba rekono ankoraŭ ne disponeblas sur ĉi tiu servilo — tajpu l
 
 msgid "Handwriting conversion failed"
 msgstr "Konverto de manskribo malsukcesis"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Via mesaĝo ne atingis Mixie. Kontrolu vian konekton, poste sendu ĝin denove."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20993,15 @@ msgid "Pick"
 msgstr "Elekti"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23727,6 @@ msgstr "Prinoti plurlateron"
 msgid "Annotate Eraser"
 msgstr "Prinota viŝilo"
 
-msgid "Placement"
-msgstr "Lokigo"
-
 msgid "(none — draw to create)"
 msgstr "(neniu — desegnu por krei)"
 
@@ -25293,6 +25623,9 @@ msgstr "Ecoj"
 msgid "Blend (.blend)"
 msgstr "Blend (.blend)"
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25551,6 +25884,12 @@ msgstr "Demandu ion ajn al Mixie..."
 msgid "Write your prompt here..."
 msgstr "Skribu vian inviton ĉi tie..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 msgid "Everything Mixar has generated"
 msgstr "Ĉio, kion Mixar generis"
 
@@ -25559,6 +25898,15 @@ msgstr ""
 
 msgid "Filter the grid"
 msgstr "Filtri la kradon"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 msgid "Newest first / oldest first"
 msgstr "Plej novaj unue / plej malnovaj unue"
@@ -25577,6 +25925,12 @@ msgstr "Splata mondo"
 
 msgid "In this file"
 msgstr "En ĉi tiu dosiero"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 msgid "Show the asset's .blend in the file browser"
 msgstr "Montras la .blend de la rimedo en la dosierfoliumilo"
@@ -25945,6 +26299,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26802,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Antaŭvidi\n"
-"\n"
-"Malfermi ĉi tiun bildon aŭ videon en propra fenestro. Pluraj antaŭvidoj povas esti malfermitaj samtempe."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26829,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Antaŭvidi\n"
-"\n"
-"Malfermi ĉi tiun rezulton en propra fenestro. Pluraj antaŭvidoj povas esti malfermitaj samtempe."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27078,17 @@ msgstr "La elektita ero de la inspirtabulo ne estas video"
 msgid "Cannot decode video: %s"
 msgstr "Ne eblas malkodi videon: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Ĉi tiu tabula ero ne havas bildon aŭ videon antaŭvideblan"
 
 msgid "This node has no image or video to preview"
 msgstr "Ĉi tiu nodo ne havas bildon aŭ videon antaŭvideblan"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Bilda antaŭvido"
@@ -26739,8 +27102,8 @@ msgstr "La antaŭvida fenestro ne malfermis bildredaktilon"
 msgid "Preview Media"
 msgstr "Antaŭvidi medion"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Malfermas ĉi tiun bildon aŭ videon en propra antaŭvida fenestro. Pluraj povas esti malfermitaj samtempe"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Nodo, kies rezulton malfermi"
@@ -26837,6 +27200,18 @@ msgstr "Metas redakteblan nodon, kie la ŝablono estas demetita"
 
 msgid "Template to place"
 msgstr "Ŝablono metota"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Elekti antaŭvidon de Mixie3D"

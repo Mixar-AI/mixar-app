@@ -197,20 +197,50 @@ msgstr "Ορίστε ένα ενεργό πρόσθετο πριν αλλάξε�
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "Άγνωστο"
-
 msgid "That asset has no file on disk"
 msgstr "Αυτός ο πόρος δεν έχει αρχείο στον δίσκο"
 
 msgid "The asset's .blend is missing"
 msgstr "Το .blend του πόρου λείπει"
 
-msgid "Only objects and collections can be added to the scene"
-msgstr "Μόνο αντικείμενα και συλλογές προστίθενται στη σκηνή"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 msgid "'{name}' is not in that file anymore"
 msgstr "Το «{name}» δεν βρίσκεται πια σε αυτό το αρχείο"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "Search failed"
+msgstr "Η αναζήτηση απέτυχε"
+
+msgid "Unknown"
+msgstr "Άγνωστο"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 msgid "Could not add '{name}' to the scene"
 msgstr "Δεν ήταν δυνατή η προσθήκη του «{name}» στη σκηνή"
@@ -474,6 +504,24 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+msgid "Reference Image"
+msgstr "Εικόνα αναφοράς"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -669,6 +717,12 @@ msgstr "Κάθε είδος παραγωγής"
 msgid "Meshes and other 3D assets"
 msgstr "Πολύγωνα και άλλοι πόροι 3D"
 
+msgid "Materials"
+msgstr "Υλικά"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 msgid "Generated stills"
 msgstr "Δημιουργημένες στατικές εικόνες"
 
@@ -677,6 +731,27 @@ msgstr "Δημιουργημένα βίντεο"
 
 msgid "Gaussian splat worlds in this file"
 msgstr "Κόσμοι γκαουσιανού splat σε αυτό το αρχείο"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+msgid "Done"
+msgstr "Ολοκληρώθηκε"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "Σφάλμα"
+
+msgid "The last search failed"
+msgstr ""
 
 msgid "Newest first"
 msgstr "Πρώτα τα νεότερα"
@@ -731,6 +806,36 @@ msgstr "Αναθεώρηση παραγωγών"
 
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "Αυξάνεται όταν κάτι γράφει σε βιβλιοθήκη πόρων, ώστε το τμήμα να την ξαναδιαβάσει"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+msgid "Search Message"
+msgstr "Μήνυμα αναζήτησης"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 msgid "Library Scroll"
 msgstr "Κύλιση βιβλιοθήκης"
@@ -810,9 +915,6 @@ msgstr "Στην ουρά, δεν έχει αποσταλεί ακόμη"
 msgid "Executing now"
 msgstr "Εκτελείται τώρα"
 
-msgid "Done"
-msgstr "Ολοκληρώθηκε"
-
 msgid "Finished successfully"
 msgstr "Ολοκληρώθηκε με επιτυχία"
 
@@ -878,8 +980,23 @@ msgstr "ο εργάτης προεπισκόπησης τερμάτισε πρι
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "Πόροι που δεν αποδόθηκαν: {count} (ο εργάτης τερμάτισε νωρίς)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+msgid "No trained model found. Please train first."
+msgstr "Δεν βρέθηκε εκπαιδευμένο μοντέλο. Εκπαιδεύστε πρώτα."
+
 msgid "Server returned {status}"
 msgstr "Ο διακομιστής επέστρεψε {status}"
+
+msgid "No matching assets found"
+msgstr "Δεν βρέθηκαν αντίστοιχοι πόροι"
+
+msgid "Found {count} matching asset(s)"
+msgstr "Βρέθηκαν αντίστοιχοι πόροι: {count}"
+
+msgid "Search failed: {error}"
+msgstr "Η αναζήτηση απέτυχε: {error}"
 
 msgid "Prepare failed: {error}"
 msgstr "Η προετοιμασία απέτυχε: {error}"
@@ -1079,9 +1196,6 @@ msgstr "Δεν ήταν δυνατή η ανάγνωση της εικόνας �
 msgid "Reference image could not be read — searching with the text prompt only"
 msgstr "Η εικόνα αναφοράς δεν διαβάστηκε — η αναζήτηση συνεχίζει μόνο με την προτροπή κειμένου"
 
-msgid "Search failed"
-msgstr "Η αναζήτηση απέτυχε"
-
 msgid "Refresh Asset Status"
 msgstr "Ανανέωση κατάστασης πόρων"
 
@@ -1093,18 +1207,6 @@ msgstr "Δεν ήταν δυνατός ο έλεγχος κατάστασης"
 
 msgid "Embeddings are up to date"
 msgstr "Οι ενσωματώσεις είναι ενημερωμένες"
-
-msgid "No trained model found. Please train first."
-msgstr "Δεν βρέθηκε εκπαιδευμένο μοντέλο. Εκπαιδεύστε πρώτα."
-
-msgid "No matching assets found"
-msgstr "Δεν βρέθηκαν αντίστοιχοι πόροι"
-
-msgid "Found {count} matching asset(s)"
-msgstr "Βρέθηκαν αντίστοιχοι πόροι: {count}"
-
-msgid "Search failed: {error}"
-msgstr "Η αναζήτηση απέτυχε: {error}"
 
 msgid "Status check failed: {error}"
 msgstr "Ο έλεγχος κατάστασης απέτυχε: {error}"
@@ -1154,8 +1256,8 @@ msgstr "Ακύρωση εκπαίδευσης"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "Σταματά την εκπαίδευση μετά τον τρέχοντα πόρο. Οι σταδιακές εκτελέσεις κρατούν τους ήδη ενσωματωμένους πόρους· μια πλήρης εκτέλεση απορρίπτεται αμετάβλητη"
 
-msgid "No objects or collections found in asset libraries"
-msgstr "Δεν βρέθηκαν αντικείμενα ή συλλογές στις βιβλιοθήκες πόρων"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
 msgstr "Απόδοση προεπισκοπήσεων στο παρασκήνιο {done}/{total} (η εφαρμογή μένει αποκρίσιμη)"
@@ -1292,9 +1394,6 @@ msgstr "Χρειάζεται νέα εκπαίδευση"
 msgid "Retraining Message"
 msgstr "Μήνυμα νέας εκπαίδευσης"
 
-msgid "Search Message"
-msgstr "Μήνυμα αναζήτησης"
-
 msgid "Is Searching"
 msgstr "Αναζητά"
 
@@ -1396,9 +1495,6 @@ msgstr "Αφαιρέθηκε"
 
 msgid "Delete confirmed — showing the recap"
 msgstr "Η διαγραφή επιβεβαιώθηκε — εμφανίζεται η ανακεφαλαίωση"
-
-msgid "Error"
-msgstr "Σφάλμα"
 
 msgid "Last request failed"
 msgstr "Το τελευταίο αίτημα απέτυχε"
@@ -1514,8 +1610,20 @@ msgstr "Χρησιμοποιήστε τα πεδία παρακάτω ή την 
 msgid "Choose a local model first."
 msgstr "Επιλέξτε πρώτα ένα τοπικό μοντέλο."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Εκκινήστε πρώτα το τοπικό μοντέλο (πρέπει να εκτελείται για να αποθηκευτεί)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Απαιτούνται το βασικό URL και το όνομα μοντέλου."
@@ -1671,6 +1779,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2034,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2963,17 @@ msgstr "Το Mixar δεν εκτελείται από πακέτο εφαρμο�
 msgid "No permission to update {path}"
 msgstr "Δεν υπάρχει άδεια ενημέρωσης του {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Ο κατάλογος εγκατάστασης δεν ήταν δυνατό να προσδιοριστεί"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Η τοποθεσία εγκατάστασης δεν ήταν δυνατό να προσδιοριστεί"
@@ -2879,6 +3002,12 @@ msgstr "Δεν ήταν δυνατή η εκκίνηση του προγράμμ
 msgid "Mixar didn't close"
 msgstr "Το Mixar δεν έκλεισε"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Οι ενημερώσεις μέσα στην εφαρμογή δεν υποστηρίζονται σε αυτή την πλατφόρμα"
 
@@ -2893,6 +3022,72 @@ msgstr "Μη υποστηριζόμενος τύπος προγράμματος 
 
 msgid "This install can't be updated in place"
 msgstr "Αυτή η εγκατάσταση δεν ενημερώνεται επιτόπου"
+
+msgid "Updated to Mixar {version}"
+msgstr "Ενημερώθηκε στο Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "Η ενημέρωση εγκαταστάθηκε με επιτυχία."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Η ενημέρωση δεν εφαρμόστηκε"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Μπορείτε να κατεβάσετε την {version} από τη σελίδα λήψεων."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Μπορείτε να κατεβάσετε την ενημέρωση από τη σελίδα λήψεων."
+
+msgid "Update was not installed"
+msgstr "Η ενημέρωση δεν εγκαταστάθηκε"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Εγκαταστάθηκε το Mixar {target}, αλλά ξεκίνησε η έκδοση {running}. Εγκαταστήστε ξανά από τη σελίδα λήψεων."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Το Mixar εκτελούνταν ακόμη όταν το πρόγραμμα εγκατάστασης προσπάθησε να ξεκινήσει."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Το ληφθέν πρόγραμμα εγκατάστασης απέτυχε στον έλεγχο υπογραφής."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Το ληφθέν πρόγραμμα εγκατάστασης δεν άνοιξε."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Το Mixar δεν αντικαταστάθηκε στον δίσκο."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Το πρόγραμμα εγκατάστασης δεν ολοκληρώθηκε."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} από {total}"
@@ -2960,47 +3155,35 @@ msgstr "Δεν ήταν δυνατός ο έλεγχος ενημερώσεων"
 msgid "Check your internet connection and try again."
 msgstr "Ελέγξτε τη σύνδεσή σας στο διαδίκτυο και δοκιμάστε ξανά."
 
-msgid "Update didn't take effect"
-msgstr "Η ενημέρωση δεν εφαρμόστηκε"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Εγκαταστάθηκε το Mixar {target}, αλλά ξεκίνησε η έκδοση {running}. Εγκαταστήστε ξανά από τη σελίδα λήψεων."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Ενημερώθηκε στο Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Η ενημέρωση εγκαταστάθηκε με επιτυχία."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Μπορείτε να κατεβάσετε την {version} από τη σελίδα λήψεων."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Μπορείτε να κατεβάσετε την ενημέρωση από τη σελίδα λήψεων."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Η ενημέρωση δεν εγκαταστάθηκε"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Το Mixar εκτελούνταν ακόμη όταν το πρόγραμμα εγκατάστασης προσπάθησε να ξεκινήσει."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Το ληφθέν πρόγραμμα εγκατάστασης απέτυχε στον έλεγχο υπογραφής."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Το ληφθέν πρόγραμμα εγκατάστασης δεν άνοιξε."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Το Mixar δεν αντικαταστάθηκε στον δίσκο."
-
-msgid "The installation was cancelled."
-msgstr "Η εγκατάσταση ακυρώθηκε."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Το Windows Installer ανέφερε μοιραίο σφάλμα."
-
-msgid "The installer did not finish."
-msgstr "Το πρόγραμμα εγκατάστασης δεν ολοκληρώθηκε."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Επανεκκινήστε το Mixar και εγκαταστήστε τη ληφθείσα ενημέρωση"
@@ -3046,6 +3229,9 @@ msgstr "Διακοπή λήψης της ενημέρωσης"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Αυτή η ενημέρωση απαιτείται και δεν ακυρώνεται"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Ανοίγει τη σελίδα λήψεων του Mixar στο προεπιλεγμένο πρόγραμμα περιήγησης"
@@ -4853,6 +5039,15 @@ msgstr "Αποτυχία ανάγνωσης της εικόνας «{name}»: {e
 msgid "Smart segmentation failed"
 msgstr "Η έξυπνη τμηματοποίηση απέτυχε"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Τύπος προβολής"
 
@@ -5705,6 +5900,9 @@ msgstr "Επανατοπολογία"
 msgid "Mesh Segmentation"
 msgstr "Τμηματοποίηση πολυγώνων"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Αυτόματος σκελετός"
 
@@ -6141,6 +6339,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Προσαρτά τα δημιουργημένα μέρη σε σκελετωμένο ή απλό σώμα, τοπικά"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -8377,9 +8578,6 @@ msgstr "1024px - Τυπική ποιότητα"
 msgid "2048px - High quality"
 msgstr "2048px - Υψηλή ποιότητα"
 
-msgid "Reference Image"
-msgstr "Εικόνα αναφοράς"
-
 msgid "Style reference image for texture generation"
 msgstr "Εικόνα αναφοράς στυλ για παραγωγή υφής"
 
@@ -9180,6 +9378,21 @@ msgstr "Ελεύθερο κείμενο που ονομάζει τα μέρη π
 
 msgid "Smart segmentation started..."
 msgstr "Η έξυπνη τμηματοποίηση ξεκίνησε…"
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -11134,6 +11347,48 @@ msgstr "Αναγνωριστικό ιστορικού λειτουργιών Mix
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Μόνιμο αναγνωριστικό ανά σκηνή που κλειδώνει το ιστορικό λειτουργιών αυτής της σκηνής."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Ανάμιξη"
 
@@ -11287,9 +11542,6 @@ msgstr "Ενεργό αντικείμενο"
 msgid "Show active object options"
 msgstr "Εμφάνιση επιλογών ενεργού αντικειμένου"
 
-msgid "Materials"
-msgstr "Υλικά"
-
 msgid "Show material lists"
 msgstr "Εμφάνιση λιστών υλικών"
 
@@ -11361,9 +11613,6 @@ msgstr "Επιλεγμένο για γκρουπ"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Επιλογή στρώματος για λειτουργίες παρτίδας (μετακίνηση σε γκρουπ κ.λπ.)"
-
-msgid "Higher quality"
-msgstr "Υψηλότερη ποιότητα"
 
 msgid "Expand Layers"
 msgstr "Ανάπτυξη στρωμάτων"
@@ -15171,6 +15420,12 @@ msgstr "Όνομα καταχώρισης bpy.data.images που χρησιμο�
 msgid "Called from chat/agent context"
 msgstr "Κλήση από το πλαίσιο συνομιλίας/πράκτορα"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Η κατάσταση περιβάλλοντος δεν είναι διαθέσιμη"
 
@@ -15179,6 +15434,9 @@ msgstr "Η παραγωγή υφής πινέλου είναι ήδη σε εξ�
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Εισαγάγετε μια προτροπή για την υφή πινέλου"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Αποτυχία προσθήκης παραγωγής πινέλου στην ουρά"
@@ -15284,6 +15542,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Λίστα στρωμάτων σε στυλ Substance 3D Painter, με ενσωματωμένη κατάσταση ανάμιξης και αδιαφάνεια."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Τοποθέτηση"
+
+msgid "Object"
+msgstr "Αντικείμενο"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Μετακίνηση μάσκας στρώματος"
@@ -16443,6 +16740,9 @@ msgstr "Νέα μάσκα εικόνας"
 msgid "Open Image as Mask..."
 msgstr "Άνοιγμα εικόνας ως μάσκα..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Μάσκες χρώματος κορυφών"
 
@@ -16562,6 +16862,12 @@ msgstr "Ροή"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Ροή παραγωγής: 'fast' ή 'detailed'."
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Υπάρχει ήδη διπλότυπη εργασία στην ουρά."
@@ -17361,9 +17667,6 @@ msgstr "Εφαπτομένη"
 
 msgid "Tangent space"
 msgstr "Χώρος εφαπτομένης"
-
-msgid "Object"
-msgstr "Αντικείμενο"
 
 msgid "Object space"
 msgstr "Χώρος αντικειμένου"
@@ -20229,7 +20532,28 @@ msgstr "Το '{name}' δεν υπάρχει πλέον στο αρχείο πό�
 msgid "Could not add the asset to the scene."
 msgstr "Δεν ήταν δυνατή η προσθήκη του πόρου στη σκηνή."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20607,6 @@ msgstr "Δεν ήταν δυνατή η αυτόματη συνέχεια — π
 msgid "The request could not be completed."
 msgstr "Το αίτημα δεν ήταν δυνατό να ολοκληρωθεί."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Το μήνυμά σας δεν έφτασε στη Mixie. Ελέγξτε τη σύνδεσή σας και στείλτε το ξανά."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Δεν ήταν δυνατή η επικοινωνία με τον διακομιστή. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά."
 
@@ -20330,6 +20645,15 @@ msgstr "Η αναγνώριση χειρογράφου δεν είναι ακό�
 
 msgid "Handwriting conversion failed"
 msgstr "Η μετατροπή χειρογράφου απέτυχε."
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Το μήνυμά σας δεν έφτασε στη Mixie. Ελέγξτε τη σύνδεσή σας και στείλτε το ξανά."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20993,15 @@ msgid "Pick"
 msgstr "Διάλεγμα"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23727,6 @@ msgstr "Πολύγωνο σχολιασμού"
 msgid "Annotate Eraser"
 msgstr "Γόμα σχολιασμού"
 
-msgid "Placement"
-msgstr "Τοποθέτηση"
-
 msgid "(none — draw to create)"
 msgstr "(κανένα — σχεδιάστε για δημιουργία)"
 
@@ -25293,6 +25623,9 @@ msgstr "Ιδιότητες"
 msgid "Blend (.blend)"
 msgstr "Blend (.blend)"
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25551,6 +25884,12 @@ msgstr "Ρωτήστε τη Mixie οτιδήποτε..."
 msgid "Write your prompt here..."
 msgstr "Γράψτε την προτροπή σας εδώ..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 msgid "Everything Mixar has generated"
 msgstr "Ό,τι έχει παραγάγει το Mixar"
 
@@ -25559,6 +25898,15 @@ msgstr ""
 
 msgid "Filter the grid"
 msgstr "Φιλτράρισμα του πλέγματος"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 msgid "Newest first / oldest first"
 msgstr "Νεότερα πρώτα / παλαιότερα πρώτα"
@@ -25577,6 +25925,12 @@ msgstr "Κόσμος γκαουσιανού splat"
 
 msgid "In this file"
 msgstr "Σε αυτό το αρχείο"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 msgid "Show the asset's .blend in the file browser"
 msgstr "Εμφανίζει το .blend του πόρου στην περιήγηση αρχείων"
@@ -25945,6 +26299,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26802,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Προεπισκόπηση\n"
-"\n"
-"Άνοιγμα αυτής της εικόνας ή του βίντεο σε δικό του παράθυρο. Μπορούν να είναι ανοιχτές πολλές προεπισκοπήσεις ταυτόχρονα."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26829,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Προεπισκόπηση\n"
-"\n"
-"Άνοιγμα αυτού του αποτελέσματος σε δικό του παράθυρο. Μπορούν να είναι ανοιχτές πολλές προεπισκοπήσεις ταυτόχρονα."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27078,17 @@ msgstr "Το επιλεγμένο στοιχείο Moodboard δεν είναι �
 msgid "Cannot decode video: %s"
 msgstr "Αδυναμία αποκωδικοποίησης βίντεο: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Αυτό το στοιχείο πίνακα δεν έχει εικόνα ή βίντεο για προεπισκόπηση"
 
 msgid "This node has no image or video to preview"
 msgstr "Αυτός ο κόμβος δεν έχει εικόνα ή βίντεο για προεπισκόπηση"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Προεπισκόπηση εικόνας"
@@ -26739,8 +27102,8 @@ msgstr "Το παράθυρο προεπισκόπησης δεν άνοιξε �
 msgid "Preview Media"
 msgstr "Προεπισκόπηση μέσου"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Ανοίγει αυτή την εικόνα ή το βίντεο σε δικό του παράθυρο προεπισκόπησης. Μπορούν να είναι ανοιχτά πολλά ταυτόχρονα"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Κόμβος του οποίου το αποτέλεσμα θα ανοίξει"
@@ -26837,6 +27200,18 @@ msgstr "Τοποθετεί επεξεργάσιμο κόμβο εκεί όπου
 
 msgid "Template to place"
 msgstr "Πρότυπο για τοποθέτηση"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Επιλογή προεπισκόπησης Mixie3D"

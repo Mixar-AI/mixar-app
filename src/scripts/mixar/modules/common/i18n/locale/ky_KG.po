@@ -197,20 +197,50 @@ msgstr "Иштетилген абалын өзгөртүүдөн мурун ак
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "Белгисиз"
-
 msgid "That asset has no file on disk"
 msgstr "Бул ресурстун дискте файлы жок"
 
 msgid "The asset's .blend is missing"
 msgstr "Ресурстун .blend файлы жок"
 
-msgid "Only objects and collections can be added to the scene"
-msgstr "Сахнага объекттер менен топтомдорду гана кошууга болот"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 msgid "'{name}' is not in that file anymore"
 msgstr "'{name}' ал файлда эми жок"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "Search failed"
+msgstr "Издөө ишке ашкан жок"
+
+msgid "Unknown"
+msgstr "Белгисиз"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 msgid "Could not add '{name}' to the scene"
 msgstr "'{name}' сахнага кошулган жок"
@@ -474,6 +504,24 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+msgid "Reference Image"
+msgstr "Үлгү сүрөт"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -669,6 +717,12 @@ msgstr "Генерациянын бардык түрү"
 msgid "Meshes and other 3D assets"
 msgstr "Политорлор жана башка 3D ресурстар"
 
+msgid "Materials"
+msgstr "Материалдар"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 msgid "Generated stills"
 msgstr "Генерацияланган сүрөттөр"
 
@@ -677,6 +731,27 @@ msgstr "Генерацияланган видеолор"
 
 msgid "Gaussian splat worlds in this file"
 msgstr "Бул файлдагы Гаусс сплаты дүйнөлөрү"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+msgid "Done"
+msgstr "Даяр"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "Ката"
+
+msgid "The last search failed"
+msgstr ""
 
 msgid "Newest first"
 msgstr "Адегенде жаңылары"
@@ -731,6 +806,36 @@ msgstr "Генерациялардын версиясы"
 
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "Ресурс китепканасына бир нерсе жазылганда көбөйөт, ошондуктан такта аны кайра окуйт"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+msgid "Search Message"
+msgstr "Издөө билдирүүсү"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 msgid "Library Scroll"
 msgstr "Китепкананы сыдыруу"
@@ -810,9 +915,6 @@ msgstr "Кезекте, али жөнөтүлө элек"
 msgid "Executing now"
 msgstr "Азыр аткарылууда"
 
-msgid "Done"
-msgstr "Даяр"
-
 msgid "Finished successfully"
 msgstr "Ийгиликтүү аяктады"
 
@@ -878,8 +980,23 @@ msgstr "алдын ала көрүү процесси бул ресурсту в
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "{count} ресурс визуалдаштырылган жок (процесс эрте чыгып кетти)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+msgid "No trained model found. Please train first."
+msgstr "Үйрөтүлгөн модель табылган жок. Адегенде үйрөтүңүз."
+
 msgid "Server returned {status}"
 msgstr "Сервер {status} кайтарды"
+
+msgid "No matching assets found"
+msgstr "Дал келген ресурс табылган жок"
+
+msgid "Found {count} matching asset(s)"
+msgstr "{count} дал келген ресурс табылды"
+
+msgid "Search failed: {error}"
+msgstr "Издөө ишке ашкан жок: {error}"
 
 msgid "Prepare failed: {error}"
 msgstr "Даярдоо ишке ашкан жок: {error}"
@@ -1079,9 +1196,6 @@ msgstr "Үлгү сүрөттү окуу мүмкүн болгон жок — а
 msgid "Reference image could not be read — searching with the text prompt only"
 msgstr "Үлгү сүрөт окулган жок — текст промпт менен гана издөөдө"
 
-msgid "Search failed"
-msgstr "Издөө ишке ашкан жок"
-
 msgid "Refresh Asset Status"
 msgstr "Ресурстун абалын жаңылоо"
 
@@ -1093,18 +1207,6 @@ msgstr "Абалды текшерүү мүмкүн болгон жок"
 
 msgid "Embeddings are up to date"
 msgstr "Эмбеддингдер жаңыланган"
-
-msgid "No trained model found. Please train first."
-msgstr "Үйрөтүлгөн модель табылган жок. Адегенде үйрөтүңүз."
-
-msgid "No matching assets found"
-msgstr "Дал келген ресурс табылган жок"
-
-msgid "Found {count} matching asset(s)"
-msgstr "{count} дал келген ресурс табылды"
-
-msgid "Search failed: {error}"
-msgstr "Издөө ишке ашкан жок: {error}"
 
 msgid "Status check failed: {error}"
 msgstr "Абалды текшерүү ишке ашкан жок: {error}"
@@ -1154,8 +1256,8 @@ msgstr "Үйрөтүүнү жокко чыгаруу"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "Учурдагы ресурстан кийин үйрөтүүнү токтотот. Кошумча иштөөлөр мурунтан эмбеддингделген ресурстарды сактайт; толук иштөө өзгөртүлбөй ташталат"
 
-msgid "No objects or collections found in asset libraries"
-msgstr "Ресурс китепканаларында объект же топтом табылган жок"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
 msgstr "Алдын ала көрүнүштөр фондо визуалдаштырылууда {done}/{total} (колдонмо жооп берет)"
@@ -1292,9 +1394,6 @@ msgstr "Кайра үйрөтүү керек"
 msgid "Retraining Message"
 msgstr "Кайра үйрөтүү билдирүүсү"
 
-msgid "Search Message"
-msgstr "Издөө билдирүүсү"
-
 msgid "Is Searching"
 msgstr "Издөөдө"
 
@@ -1396,9 +1495,6 @@ msgstr "Өчүрүлдү"
 
 msgid "Delete confirmed — showing the recap"
 msgstr "Өчүрүү ырасталды — жыйынтык көрсөтүлүүдө"
-
-msgid "Error"
-msgstr "Ката"
 
 msgid "Last request failed"
 msgstr "Акыркы сурам ишке ашкан жок"
@@ -1514,8 +1610,20 @@ msgstr "Төмөнкү талааларды колдонуңуз же Кайра
 msgid "Choose a local model first."
 msgstr "Адегенде жергиликтүү моделди тандаңыз."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Адегенде жергиликтүү моделди иштетиңиз (сактоо үчүн ал иштеп турушу керек)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Негизги URL жана моделдин аты талап кылынат."
@@ -1671,6 +1779,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2034,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2963,17 @@ msgstr "Mixar колдонмо топтомунан иштебей жатат"
 msgid "No permission to update {path}"
 msgstr "{path} жаңылоого уруксат жок"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Орнотуу каталогу аныкталган жок"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Орнотуу орду аныкталган жок"
@@ -2879,6 +3002,12 @@ msgstr "Жаңырткычты баштоо мүмкүн болгон жок"
 msgid "Mixar didn't close"
 msgstr "Mixar жабылган жок"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Бул платформада колдонмонун ичиндеги жаңылоо колдоого алынбайт"
 
@@ -2893,6 +3022,72 @@ msgstr "{platform} үчүн колдоого алынбаган орноткуч
 
 msgid "This install can't be updated in place"
 msgstr "Бул орнотууну ордунда жаңылоого болбойт"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version} версиясына жаңыланды"
+
+msgid "The update was installed successfully."
+msgstr "Жаңылоо ийгиликтүү орнотулду."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Жаңылоо күчүнө кирген жок"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} {version} версиясын түшүрүүлөр барагынан түшүрө аласыз."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Жаңылоону түшүрүүлөр барагынан түшүрө аласыз."
+
+msgid "Update was not installed"
+msgstr "Жаңылоо орнотулган жок"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} орнотулду, бирок {running} версиясы башталды. Түшүрүүлөр барагынан кайра орнотуңуз."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Орноткуч башталаарда Mixar дагы эле иштеп жаткан."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Түшүрүлгөн орноткуч колтамга текшерүүсүнөн өткөн жок."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Түшүрүлгөн орноткучту ачуу мүмкүн болгон жок."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar'ды дискте алмаштыруу мүмкүн болгон жок."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Орноткуч бүткөн жок."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total} ичинен {transferred}"
@@ -2960,47 +3155,35 @@ msgstr "Жаңылоолорду текшерүү мүмкүн болгон жо
 msgid "Check your internet connection and try again."
 msgstr "Интернет туташууңузду текшерип, кайра аракет кылыңыз."
 
-msgid "Update didn't take effect"
-msgstr "Жаңылоо күчүнө кирген жок"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} орнотулду, бирок {running} версиясы башталды. Түшүрүүлөр барагынан кайра орнотуңуз."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version} версиясына жаңыланды"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Жаңылоо ийгиликтүү орнотулду."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} {version} версиясын түшүрүүлөр барагынан түшүрө аласыз."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Жаңылоону түшүрүүлөр барагынан түшүрө аласыз."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Жаңылоо орнотулган жок"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Орноткуч башталаарда Mixar дагы эле иштеп жаткан."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Түшүрүлгөн орноткуч колтамга текшерүүсүнөн өткөн жок."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Түшүрүлгөн орноткучту ачуу мүмкүн болгон жок."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar'ды дискте алмаштыруу мүмкүн болгон жок."
-
-msgid "The installation was cancelled."
-msgstr "Орнотуу жокко чыгарылды."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows орноткучу олуттуу ката кабарлады."
-
-msgid "The installer did not finish."
-msgstr "Орноткуч бүткөн жок."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Mixar'ды кайра иштетип, түшүрүлгөн жаңылоону орнотуу"
@@ -3046,6 +3229,9 @@ msgstr "Жаңылоону түшүрүүнү токтотуу"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Бул жаңылоо талап кылынат жана аны жокко чыгарууга болбойт"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Mixar түшүрүүлөр барагын баштапкы браузерде ачат"
@@ -4853,6 +5039,15 @@ msgstr "'{name}' сүрөтүн окуу ишке ашкан жок: {error}"
 msgid "Smart segmentation failed"
 msgstr "Акылдуу сегментация ишке ашкан жок"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Көрүнүш түрү"
 
@@ -5705,6 +5900,9 @@ msgstr "Ретопология"
 msgid "Mesh Segmentation"
 msgstr "Политор сегментациясы"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Авто риг"
 
@@ -6141,6 +6339,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Генерацияланган бөлүктөрдү ригделген же жөнөкөй денеге жергиликтүү бекитет"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -8377,9 +8578,6 @@ msgstr "1024px — стандарттык сапат"
 msgid "2048px - High quality"
 msgstr "2048px — жогорку сапат"
 
-msgid "Reference Image"
-msgstr "Үлгү сүрөт"
-
 msgid "Style reference image for texture generation"
 msgstr "Текстура генерациясы үчүн стиль үлгү сүрөтү"
 
@@ -9180,6 +9378,21 @@ msgstr "Издөө керек болгон бөлүктөрдү атоочу э�
 
 msgid "Smart segmentation started..."
 msgstr "Акылдуу сегментация башталды..."
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -11134,6 +11347,48 @@ msgstr "Mixar операция тарыхынын идентификатору"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Бул сахнанын операция тарыхын ачкычтоочу туруктуу, сахнага тиешелүү идентификатор."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Аралаштыруу"
 
@@ -11287,9 +11542,6 @@ msgstr "Активдүү объект"
 msgid "Show active object options"
 msgstr "Активдүү объекттин параметрлерин көрсөтөт"
 
-msgid "Materials"
-msgstr "Материалдар"
-
 msgid "Show material lists"
 msgstr "Материал тизмелерин көрсөтөт"
 
@@ -11361,9 +11613,6 @@ msgstr "Топ үчүн тандалды"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Топтомдук аракеттер үчүн катты тандайт (топко ташуу ж.б.)"
-
-msgid "Higher quality"
-msgstr "Жогорураак сапат"
 
 msgid "Expand Layers"
 msgstr "Каттарды жайып көрсөтүү"
@@ -15171,6 +15420,12 @@ msgstr "Үлгү катары колдонула турган bpy.data.images ж
 msgid "Called from chat/agent context"
 msgstr "Маек/агент контекстинен чакырылат"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Интерфейс абалы жеткиликсиз"
 
@@ -15179,6 +15434,9 @@ msgstr "Кыл калем текстурасынын генерациясы му
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Кыл калем текстурасы үчүн промпт киргизиңиз"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Кыл калем генерациясын кезекке коюу ишке ашкан жок"
@@ -15284,6 +15542,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Substance 3D Painter стилиндеги кат тизмеси, катардагы аралаштыруу режими жана тунуксуздук менен."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Жайгаштыруу"
+
+msgid "Object"
+msgstr "Объект"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Кат маскасын ташуу"
@@ -16443,6 +16740,9 @@ msgstr "Жаңы сүрөт маскасы"
 msgid "Open Image as Mask..."
 msgstr "Сүрөттү маска катары ачуу..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Чоку түсүнүн маскалары"
 
@@ -16562,6 +16862,12 @@ msgstr "Конвейер"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Генерация конвейери: 'fast' же 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Кайталанган тапшырма кезекте мурунтан бар"
@@ -17361,9 +17667,6 @@ msgstr "Тангенс"
 
 msgid "Tangent space"
 msgstr "Тангенс мейкиндиги"
-
-msgid "Object"
-msgstr "Объект"
 
 msgid "Object space"
 msgstr "Объект мейкиндиги"
@@ -20229,7 +20532,28 @@ msgstr "'{name}' ресурс файлында мындан ары жок."
 msgid "Could not add the asset to the scene."
 msgstr "Ресурс сахнага кошулган жок."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20607,6 @@ msgstr "Автоматтык улантылган жок — курууну ул
 msgid "The request could not be completed."
 msgstr "Сурам аткарылган жок."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Билдирүүңүз Mixie'ге жеткен жок. Туташууңузду текшерип, кайра жөнөтүңүз."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Серверге жеткен жок. Туташууңузду текшерип, кайра аракет кылыңыз."
 
@@ -20330,6 +20645,15 @@ msgstr "Кол жазманы таануу бул серверде али жет
 
 msgid "Handwriting conversion failed"
 msgstr "Кол жазманы айландыруу ишке ашпады"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Билдирүүңүз Mixie'ге жеткен жок. Туташууңузду текшерип, кайра жөнөтүңүз."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20993,15 @@ msgid "Pick"
 msgstr "Тандап алуу"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23727,6 @@ msgstr "Аннотация көп бурчтугу"
 msgid "Annotate Eraser"
 msgstr "Аннотация өчүргүчү"
 
-msgid "Placement"
-msgstr "Жайгаштыруу"
-
 msgid "(none — draw to create)"
 msgstr "(жок — түзүү үчүн тартыңыз)"
 
@@ -25293,6 +25623,9 @@ msgstr "Касиеттери"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25551,6 +25884,12 @@ msgstr "Mixie'ден каалаганыңызды сураңыз..."
 msgid "Write your prompt here..."
 msgstr "Промптуңузду бул жерге жазыңыз..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 msgid "Everything Mixar has generated"
 msgstr "Mixar генерациялагандардын баары"
 
@@ -25559,6 +25898,15 @@ msgstr ""
 
 msgid "Filter the grid"
 msgstr "Торду чыпкалоо"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 msgid "Newest first / oldest first"
 msgstr "Адегенде жаңылары / адегенде эскилери"
@@ -25577,6 +25925,12 @@ msgstr "Сплат дүйнөсү"
 
 msgid "In this file"
 msgstr "Бул файлда"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 msgid "Show the asset's .blend in the file browser"
 msgstr "Ресурстун .blend файлын файл серепчиде көрсөтөт"
@@ -25945,6 +26299,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26802,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Алдын ала көрүү\n"
-"\n"
-"Бул сүрөттү же видеону өз терезесинде ачат. Бир нече алдын ала көрүү бир убакта ачык боло алат."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26829,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Алдын ала көрүү\n"
-"\n"
-"Бул жыйынтыкты өз терезесинде ачат. Бир нече алдын ала көрүү бир убакта ачык боло алат."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27078,17 @@ msgstr "Тандалган мудборд элементи видео эмес."
 msgid "Cannot decode video: %s"
 msgstr "Видео чечилбейт: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Бул такта элементинде алдын ала көрө турган сүрөт же видео жок."
 
 msgid "This node has no image or video to preview"
 msgstr "Бул түйүндө алдын ала көрө турган сүрөт же видео жок."
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Сүрөттү алдын ала көрүү"
@@ -26739,8 +27102,8 @@ msgstr "Алдын ала көрүү терезеси сүрөт редакто�
 msgid "Preview Media"
 msgstr "Медианы алдын ала көрүү"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Бул сүрөттү же видеону өз алдын ала көрүү терезесинде ачат. Бир нечеси бир убакта ачык боло алат."
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Жыйынтыгы ачыла турган түйүн."
@@ -26837,6 +27200,18 @@ msgstr "Шаблон ташталган жерге оңдолуучу түйүн
 
 msgid "Template to place"
 msgstr "Коюла турган шаблон."
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Mixie3D алдын ала көрүүсүн тандоо"

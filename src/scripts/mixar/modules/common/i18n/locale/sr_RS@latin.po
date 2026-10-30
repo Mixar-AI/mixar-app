@@ -247,9 +247,6 @@ msgstr "Postavite aktivni dodatak pre nego što promenite njegovo omogućeno sta
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "Nepoznato"
-
 # derived
 msgid "That asset has no file on disk"
 msgstr "Taj resurs nema datoteku na disku"
@@ -258,13 +255,46 @@ msgstr "Taj resurs nema datoteku na disku"
 msgid "The asset's .blend is missing"
 msgstr "Nedostaje .blend datoteka resursa"
 
-# derived
-msgid "Only objects and collections can be added to the scene"
-msgstr "U scenu mogu da se dodaju samo objekti i kolekcije"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 # derived
 msgid "'{name}' is not in that file anymore"
 msgstr "„{name}“ više nije u toj datoteci"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+# derived
+msgid "Search failed"
+msgstr "Pretraga nije uspela"
+
+msgid "Unknown"
+msgstr "Nepoznato"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 # derived
 msgid "Could not add '{name}' to the scene"
@@ -587,6 +617,25 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+# derived
+msgid "Reference Image"
+msgstr "Referentna slika"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -832,6 +881,12 @@ msgstr "Sve vrste generisanja"
 msgid "Meshes and other 3D assets"
 msgstr "Meševi i drugi 3D resursi"
 
+msgid "Materials"
+msgstr "Materijali"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 # derived
 msgid "Generated stills"
 msgstr "Generisane statične slike"
@@ -843,6 +898,28 @@ msgstr "Generisani video-snimci"
 # derived
 msgid "Gaussian splat worlds in this file"
 msgstr "Svetovi gausovog splata u ovoj datoteci"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+# derived
+msgid "Done"
+msgstr "Gotovo"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "Greška"
+
+msgid "The last search failed"
+msgstr ""
 
 # derived
 msgid "Newest first"
@@ -913,6 +990,37 @@ msgstr "Revizija generisanja"
 # derived
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "Povećava se kada nešto upiše u zbirku resursa, da bi okno ponovo pročitalo sadržaj"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+# derived
+msgid "Search Message"
+msgstr "Poruka pretrage"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 # derived
 msgid "Library Scroll"
@@ -1018,10 +1126,6 @@ msgid "Executing now"
 msgstr "Izvršava se"
 
 # derived
-msgid "Done"
-msgstr "Gotovo"
-
-# derived
 msgid "Finished successfully"
 msgstr "Uspešno završeno"
 
@@ -1105,9 +1209,28 @@ msgstr "radnik pregleda je izašao pre renderovanja ovog resursa"
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "Resursi koji nisu renderovani: {count} (radnik je izašao ranije)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+# derived
+msgid "No trained model found. Please train first."
+msgstr "Nije pronađen obučeni model. Prvo obučite."
+
 # derived
 msgid "Server returned {status}"
 msgstr "Server je vratio {status}"
+
+# derived
+msgid "No matching assets found"
+msgstr "Nisu pronađeni odgovarajući resursi"
+
+# derived
+msgid "Found {count} matching asset(s)"
+msgstr "Pronađeni odgovarajući resursi: {count}"
+
+# derived
+msgid "Search failed: {error}"
+msgstr "Pretraga nije uspela: {error}"
 
 # derived
 msgid "Prepare failed: {error}"
@@ -1372,10 +1495,6 @@ msgid "Reference image could not be read — searching with the text prompt only
 msgstr "Referentna slika nije mogla da se pročita — pretraga samo tekstualnim promptom"
 
 # derived
-msgid "Search failed"
-msgstr "Pretraga nije uspela"
-
-# derived
 msgid "Refresh Asset Status"
 msgstr "Osveži status resursa"
 
@@ -1390,22 +1509,6 @@ msgstr "Nije moguće proveriti status"
 # derived
 msgid "Embeddings are up to date"
 msgstr "Ugradnje su ažurne"
-
-# derived
-msgid "No trained model found. Please train first."
-msgstr "Nije pronađen obučeni model. Prvo obučite."
-
-# derived
-msgid "No matching assets found"
-msgstr "Nisu pronađeni odgovarajući resursi"
-
-# derived
-msgid "Found {count} matching asset(s)"
-msgstr "Pronađeni odgovarajući resursi: {count}"
-
-# derived
-msgid "Search failed: {error}"
-msgstr "Pretraga nije uspela: {error}"
 
 # derived
 msgid "Status check failed: {error}"
@@ -1469,9 +1572,8 @@ msgstr "Odustani od obuke"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "Zaustavlja obuku posle tekućeg resursa. Postepena pokretanja zadržavaju već ugrađene resurse; puno pokretanje se odbacuje nepromenjeno"
 
-# derived
-msgid "No objects or collections found in asset libraries"
-msgstr "U zbirkama resursa nisu pronađeni objekti ni kolekcije"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 # derived
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
@@ -1652,10 +1754,6 @@ msgid "Retraining Message"
 msgstr "Poruka o ponovnoj obuci"
 
 # derived
-msgid "Search Message"
-msgstr "Poruka pretrage"
-
-# derived
 msgid "Is Searching"
 msgstr "Pretraga je u toku"
 
@@ -1790,9 +1888,6 @@ msgstr "Uklonjeno"
 # derived
 msgid "Delete confirmed — showing the recap"
 msgstr "Brisanje je potvrđeno — prikazuje se rezime"
-
-msgid "Error"
-msgstr "Greška"
 
 # derived
 msgid "Last request failed"
@@ -1932,9 +2027,20 @@ msgstr "Koristite polja ispod ili Ponovo skeniraj"
 msgid "Choose a local model first."
 msgstr "Prvo izaberite lokalni model."
 
-# derived
-msgid "Start the local model first (it must be running to save)."
-msgstr "Prvo pokrenite lokalni model (mora da radi da bi se sačuvalo)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 # derived
 msgid "Base URL and model name are required."
@@ -2101,6 +2207,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -2378,6 +2487,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -3518,9 +3630,18 @@ msgstr "Mixar ne radi iz paketa aplikacije"
 msgid "No permission to update {path}"
 msgstr "Nema dozvole za ažuriranje {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 # derived
 msgid "Install directory could not be resolved"
 msgstr "Direktorijum instalacije nije mogao da se razreši"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 # derived
 msgid "Install location could not be resolved"
@@ -3558,6 +3679,12 @@ msgstr "Nije moguće pokrenuti program za ažuriranje"
 msgid "Mixar didn't close"
 msgstr "Mixar se nije zatvorio"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 # derived
 msgid "In-app updates aren't supported on this platform"
 msgstr "Ažuriranja unutar aplikacije nisu podržana na ovoj platformi"
@@ -3577,6 +3704,84 @@ msgstr "Nepodržana vrsta instalatora za {platform}: {installer_type}"
 # derived
 msgid "This install can't be updated in place"
 msgstr "Ova instalacija ne može da se ažurira na mestu"
+
+# derived
+msgid "Updated to Mixar {version}"
+msgstr "Ažurirano na Mixar {version}"
+
+# derived
+msgid "The update was installed successfully."
+msgstr "Ažuriranje je uspešno instalirano."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+# derived
+msgid "Update didn't take effect"
+msgstr "Ažuriranje nije stupilo na snagu"
+
+# derived
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Možete preuzeti {version} sa stranice za preuzimanje."
+
+# derived
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Možete preuzeti ažuriranje sa stranice za preuzimanje."
+
+# derived
+msgid "Update was not installed"
+msgstr "Ažuriranje nije instalirano"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+# derived
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Instaliran je Mixar {target}, ali je pokrenuta verzija {running}. Ponovo instalirajte sa stranice za preuzimanje."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+# derived
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar je još radio kada je instalator pokušao da se pokrene."
+
+# derived
+msgid "The downloaded installer failed its signature check."
+msgstr "Preuzeti instalator nije prošao proveru potpisa."
+
+# derived
+msgid "The downloaded installer could not be opened."
+msgstr "Preuzeti instalator nije mogao da se otvori."
+
+# derived
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar nije mogao da se zameni na disku."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+# derived
+msgid "The installer did not finish."
+msgstr "Instalator nije završio."
 
 # derived
 msgid "{percent}% — {transferred} of {total}"
@@ -3666,61 +3871,35 @@ msgstr "Nije moguće proveriti ažuriranja"
 msgid "Check your internet connection and try again."
 msgstr "Proverite internet vezu i pokušajte ponovo."
 
-# derived
-msgid "Update didn't take effect"
-msgstr "Ažuriranje nije stupilo na snagu"
+msgid "Another Mixar window"
+msgstr ""
 
-# derived
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Instaliran je Mixar {target}, ali je pokrenuta verzija {running}. Ponovo instalirajte sa stranice za preuzimanje."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-# derived
-msgid "Updated to Mixar {version}"
-msgstr "Ažurirano na Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-# derived
-msgid "The update was installed successfully."
-msgstr "Ažuriranje je uspešno instalirano."
+msgid "Close other apps to update"
+msgstr ""
 
-# derived
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Možete preuzeti {version} sa stranice za preuzimanje."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-# derived
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Možete preuzeti ažuriranje sa stranice za preuzimanje."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-# derived
-msgid "Update was not installed"
-msgstr "Ažuriranje nije instalirano"
+msgid "Finishing background work"
+msgstr ""
 
-# derived
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar je još radio kada je instalator pokušao da se pokrene."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-# derived
-msgid "The downloaded installer failed its signature check."
-msgstr "Preuzeti instalator nije prošao proveru potpisa."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-# derived
-msgid "The downloaded installer could not be opened."
-msgstr "Preuzeti instalator nije mogao da se otvori."
-
-# derived
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar nije mogao da se zameni na disku."
-
-# derived
-msgid "The installation was cancelled."
-msgstr "Instalacija je otkazana."
-
-# derived
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows instalator je prijavio kobnu grešku."
-
-# derived
-msgid "The installer did not finish."
-msgstr "Instalator nije završio."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 # derived
 msgid "Restart Mixar and install the downloaded update"
@@ -3780,6 +3959,9 @@ msgstr "Zaustavlja preuzimanje ažuriranja"
 # derived
 msgid "This update is required and cannot be cancelled"
 msgstr "Ovo ažuriranje je obavezno i ne može se otkazati"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 # derived
 msgid "Open the Mixar downloads page in the default browser"
@@ -6048,6 +6230,15 @@ msgstr "Čitanje slike „{name}“ nije uspelo: {error}"
 msgid "Smart segmentation failed"
 msgstr "Pametna segmentacija nije uspela"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 # derived
 msgid "View Type"
 msgstr "Vrsta pogleda"
@@ -7063,6 +7254,9 @@ msgstr "Retopologija"
 msgid "Mesh Segmentation"
 msgstr "Segmentacija meša"
 
+msgid "Smart UV"
+msgstr ""
+
 # derived
 msgid "Auto Rig"
 msgstr "Automatski rig"
@@ -7637,6 +7831,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Prilaže generisane delove rigovanom ili običnom telu, lokalno"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 # derived
@@ -10551,10 +10748,6 @@ msgid "2048px - High quality"
 msgstr "2048px — visoki kvalitet"
 
 # derived
-msgid "Reference Image"
-msgstr "Referentna slika"
-
-# derived
 msgid "Style reference image for texture generation"
 msgstr "Referentna slika stila za generisanje tekstura"
 
@@ -11600,6 +11793,21 @@ msgstr "Slobodan tekst koji imenuje delove koje treba tražiti"
 # derived
 msgid "Smart segmentation started..."
 msgstr "Pametna segmentacija je pokrenuta..."
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -14164,6 +14372,48 @@ msgstr "ID istorijata operacija Mixar-a"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Trajni identifikator po sceni koji vezuje istorijat operacija ove scene."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Mešanje"
 
@@ -14349,9 +14599,6 @@ msgstr "Aktivan objekat"
 msgid "Show active object options"
 msgstr "Prikaži opcije aktivnog objekta"
 
-msgid "Materials"
-msgstr "Materijali"
-
 # derived
 msgid "Show material lists"
 msgstr "Prikaži spiskove materijala"
@@ -14444,10 +14691,6 @@ msgstr "Izabrano za grupu"
 # derived
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Izaberi sloj za paketne operacije (premeštanje u grupu itd.)"
-
-# derived
-msgid "Higher quality"
-msgstr "Viši kvalitet"
 
 # derived
 msgid "Expand Layers"
@@ -19373,6 +19616,12 @@ msgstr "Ime stavke bpy.data.images koja se koristi kao referenca"
 msgid "Called from chat/agent context"
 msgstr "Pozvano iz konteksta četa ili agenta"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 # derived
 msgid "UI state not available"
 msgstr "Stanje sučelja nije dostupno"
@@ -19384,6 +19633,9 @@ msgstr "Generisanje teksture četkice je već u toku"
 # derived
 msgid "Please enter a prompt for the brush texture"
 msgstr "Molimo unesite prompt za teksturu četkice"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 # derived
 msgid "Failed to enqueue brush generation"
@@ -19520,6 +19772,45 @@ msgstr ""
 # derived
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Spisak slojeva u stilu Substance 3D Painter sa ugrađenim režimom mešanja i neprozirnošću."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Lokacija"
+
+msgid "Object"
+msgstr "Objekat"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 # derived
 msgid "Move Layer Mask"
@@ -21035,6 +21326,9 @@ msgstr "Nova maska slike"
 msgid "Open Image as Mask..."
 msgstr "Otvori sliku kao masku…"
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 # derived
 msgid "Vertex Color Masks"
 msgstr "Maske boje temena"
@@ -21193,6 +21487,12 @@ msgstr "Tok"
 # derived
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Tok generisanja: 'fast' ili 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 # derived
 msgid "Duplicate job already in queue"
@@ -22229,9 +22529,6 @@ msgstr "Magenta"
 # derived
 msgid "Tangent space"
 msgstr "Tangentni prostor"
-
-msgid "Object"
-msgstr "Objekat"
 
 # derived
 msgid "Object space"
@@ -25933,7 +26230,28 @@ msgstr "„{name}“ više nije u datoteci resursa."
 msgid "Could not add the asset to the scene."
 msgstr "Nije bilo moguće dodati resurs u scenu."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -25996,16 +26314,6 @@ msgid "The request could not be completed."
 msgstr "Zahtev nije mogao da se dovrši."
 
 # derived
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Vaša poruka nije stigla do Mixie. Proverite vezu, pa je pošaljite ponovo."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
-# derived
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Server nije dostupan. Proverite vezu i pokušajte ponovo."
 
@@ -26056,6 +26364,16 @@ msgstr "Prepoznavanje rukopisa još nije dostupno na ovom serveru — umesto tog
 # derived
 msgid "Handwriting conversion failed"
 msgstr "Pretvaranje rukopisa nije uspelo"
+
+# derived
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaša poruka nije stigla do Mixie. Proverite vezu, pa je pošaljite ponovo."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -26479,6 +26797,15 @@ msgid "Pick"
 msgstr "Izaberi"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 # derived
@@ -29973,9 +30300,6 @@ msgstr "Anotacija poligona"
 msgid "Annotate Eraser"
 msgstr "Anotacija brisača"
 
-msgid "Placement"
-msgstr "Lokacija"
-
 # derived
 msgid "(none — draw to create)"
 msgstr "(ništa — crtajte da napravite)"
@@ -32205,6 +32529,9 @@ msgstr "Osobine"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -32511,6 +32838,12 @@ msgstr "Pitajte Mixie bilo šta..."
 msgid "Write your prompt here..."
 msgstr "Napišite prompt ovde..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 # derived
 msgid "Everything Mixar has generated"
 msgstr "Sve što je Mixar generisao"
@@ -32521,6 +32854,15 @@ msgstr ""
 # derived
 msgid "Filter the grid"
 msgstr "Filtriraj mrežu"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 # derived
 msgid "Newest first / oldest first"
@@ -32545,6 +32887,12 @@ msgstr "Svet splata"
 # derived
 msgid "In this file"
 msgstr "U ovoj datoteci"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 # derived
 msgid "Show the asset's .blend in the file browser"
@@ -33007,6 +33355,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 # derived
@@ -33644,15 +34001,11 @@ msgstr ""
 "\n"
 "Sačuvajte ovu sliku ili video na disk."
 
-# derived
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Pregled\n"
-"\n"
-"Otvorite ovu sliku ili video u sopstvenom prozoru. Nekoliko pregleda može biti otvoreno odjednom."
 
 # derived
 msgid ""
@@ -33677,15 +34030,11 @@ msgstr ""
 "\n"
 "Sačuvajte generisani rezultat ovog čvora na disk."
 
-# derived
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Pregled\n"
-"\n"
-"Otvorite ovaj rezultat u sopstvenom prozoru. Nekoliko pregleda može biti otvoreno odjednom."
 
 # derived
 msgid ""
@@ -34003,6 +34352,9 @@ msgstr "Izabrana stavka mudborda nije video"
 msgid "Cannot decode video: %s"
 msgstr "Nije moguće dekodirati video: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 # derived
 msgid "This board item has no image or video to preview"
 msgstr "Ova stavka table nema sliku ili video za pregled"
@@ -34010,6 +34362,9 @@ msgstr "Ova stavka table nema sliku ili video za pregled"
 # derived
 msgid "This node has no image or video to preview"
 msgstr "Ovaj čvor nema sliku ili video za pregled"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Uvećanje slike"
@@ -34026,9 +34381,8 @@ msgstr "Prozor za pregled nije otvorio uređivač slika"
 msgid "Preview Media"
 msgstr "Pregledaj medij"
 
-# derived
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Otvara ovu sliku ili video u sopstvenom prozoru za pregled. Nekoliko ih može biti otvoreno odjednom"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 # derived
 msgid "Node whose result to open"
@@ -34157,6 +34511,18 @@ msgstr "Postavlja uredljiv čvor tamo gde je šablon otpušten"
 # derived
 msgid "Template to place"
 msgstr "Šablon za postavljanje"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 # derived
 msgid "Select Mixie3D Preview"

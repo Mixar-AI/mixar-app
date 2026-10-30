@@ -197,20 +197,50 @@ msgstr "활성화 상태를 변경하기 전에 활성 애드온을 설정하세
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
-msgid "Unknown"
-msgstr "알 수 없는"
-
 msgid "That asset has no file on disk"
 msgstr "해당 에셋은 디스크에 파일이 없습니다"
 
 msgid "The asset's .blend is missing"
 msgstr "에셋의 .blend 파일이 없습니다"
 
-msgid "Only objects and collections can be added to the scene"
-msgstr "오브젝트와 컬렉션만 씬에 추가할 수 있습니다"
+msgid "No scene is open to apply this to"
+msgstr ""
+
+msgid "Select the objects to apply this material to"
+msgstr ""
+
+msgid "The selection is painted with Mixar Paint layers; its material was not replaced"
+msgstr ""
+
+msgid "None of the selected objects can hold a material"
+msgstr ""
+
+msgid "Could not apply '{name}'"
+msgstr ""
 
 msgid "'{name}' is not in that file anymore"
 msgstr "'{name}'이(가) 더 이상 해당 파일에 없습니다"
+
+msgid "Applied '{name}' to {count} object(s); skipped {skipped} painted with Mixar Paint layers"
+msgstr ""
+
+msgid "Applied '{name}' to {count} object(s)"
+msgstr ""
+
+msgid "Could not read the reference image: {error}"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "Search failed"
+msgstr "검색 실패"
+
+msgid "Unknown"
+msgstr "알 수 없는"
+
+msgid "Only objects, collections and materials can be used from here"
+msgstr ""
 
 msgid "Could not add '{name}' to the scene"
 msgstr "'{name}'을(를) 씬에 추가할 수 없습니다"
@@ -474,6 +504,24 @@ msgstr ""
 msgid "Nothing is selected"
 msgstr ""
 
+msgid "Search by Image"
+msgstr ""
+
+msgid "Choose an image (a photo of the surface or object you want) and find the closest assets in your libraries"
+msgstr ""
+
+msgid "Reference Image"
+msgstr "참조 이미지"
+
+msgid "Choose an image file"
+msgstr ""
+
+msgid "Clear Search"
+msgstr ""
+
+msgid "Clear the search text and image and show every asset again"
+msgstr ""
+
 msgid "Open Mixie"
 msgstr ""
 
@@ -669,6 +717,12 @@ msgstr "모든 종류의 생성물입니다"
 msgid "Meshes and other 3D assets"
 msgstr "메시 및 기타 3D 에셋입니다"
 
+msgid "Materials"
+msgstr "머티리얼"
+
+msgid "Material assets from your libraries"
+msgstr ""
+
 msgid "Generated stills"
 msgstr "생성된 정지 이미지입니다"
 
@@ -677,6 +731,27 @@ msgstr "생성된 비디오입니다"
 
 msgid "Gaussian splat worlds in this file"
 msgstr "이 파일의 가우시안 스플랫 월드입니다"
+
+msgid "No search is shown"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "A search is in flight"
+msgstr ""
+
+msgid "Done"
+msgstr "완료"
+
+msgid "The grid shows the search hits"
+msgstr ""
+
+msgid "Error"
+msgstr "오류"
+
+msgid "The last search failed"
+msgstr ""
 
 msgid "Newest first"
 msgstr "최신순"
@@ -731,6 +806,36 @@ msgstr "생성물 리비전"
 
 msgid "Bumped when something writes into an asset library, so the pane re-reads it"
 msgstr "에셋 라이브러리에 무언가가 기록되면 증가하여 패널이 다시 읽도록 합니다"
+
+msgid "Library Search"
+msgstr ""
+
+msgid "Describe what you are looking for, then press Enter"
+msgstr ""
+
+msgid "Search Reference Image"
+msgstr ""
+
+msgid "Image file the library is searched for look-alikes of"
+msgstr ""
+
+msgid "Search Hits"
+msgstr ""
+
+msgid "The search's hits, best first, one per line"
+msgstr ""
+
+msgid "Search State"
+msgstr ""
+
+msgid "Where the Library search is"
+msgstr ""
+
+msgid "Search Message"
+msgstr "검색 메시지"
+
+msgid "Status line of the Library search"
+msgstr ""
 
 msgid "Library Scroll"
 msgstr "라이브러리 스크롤"
@@ -810,9 +915,6 @@ msgstr "대기열에 있으며 아직 전달되지 않았습니다"
 msgid "Executing now"
 msgstr "지금 실행 중입니다"
 
-msgid "Done"
-msgstr "완료"
-
 msgid "Finished successfully"
 msgstr "성공적으로 완료되었습니다"
 
@@ -878,8 +980,23 @@ msgstr "이 에셋을 렌더링하기 전에 미리보기 워커가 종료되었
 msgid "{count} assets were not rendered (worker exited early)"
 msgstr "에셋 {count}개가 렌더링되지 않았습니다 (워커가 일찍 종료됨)"
 
+msgid "Nothing is indexed yet. Train your libraries first."
+msgstr ""
+
+msgid "No trained model found. Please train first."
+msgstr "학습된 모델이 없습니다. 먼저 학습하세요."
+
 msgid "Server returned {status}"
 msgstr "서버 응답: {status}"
+
+msgid "No matching assets found"
+msgstr "일치하는 에셋이 없습니다"
+
+msgid "Found {count} matching asset(s)"
+msgstr "일치하는 에셋 {count}개를 찾았습니다"
+
+msgid "Search failed: {error}"
+msgstr "검색 실패: {error}"
 
 msgid "Prepare failed: {error}"
 msgstr "준비 실패: {error}"
@@ -1079,9 +1196,6 @@ msgstr "참조 이미지를 읽을 수 없습니다 — 사용 가능한 픽셀 
 msgid "Reference image could not be read — searching with the text prompt only"
 msgstr "참조 이미지를 읽을 수 없습니다 — 텍스트 프롬프트로만 검색합니다"
 
-msgid "Search failed"
-msgstr "검색 실패"
-
 msgid "Refresh Asset Status"
 msgstr "에셋 상태 새로고침"
 
@@ -1093,18 +1207,6 @@ msgstr "상태를 확인할 수 없습니다"
 
 msgid "Embeddings are up to date"
 msgstr "임베딩이 최신 상태입니다"
-
-msgid "No trained model found. Please train first."
-msgstr "학습된 모델이 없습니다. 먼저 학습하세요."
-
-msgid "No matching assets found"
-msgstr "일치하는 에셋이 없습니다"
-
-msgid "Found {count} matching asset(s)"
-msgstr "일치하는 에셋 {count}개를 찾았습니다"
-
-msgid "Search failed: {error}"
-msgstr "검색 실패: {error}"
 
 msgid "Status check failed: {error}"
 msgstr "상태 확인 실패: {error}"
@@ -1154,8 +1256,8 @@ msgstr "학습 취소"
 msgid "Stop training after the current asset. Incremental runs keep the already-embedded assets; a full run is discarded unchanged"
 msgstr "현재 에셋 이후 학습을 중지합니다. 증분 실행은 이미 임베딩된 에셋을 유지하며, 전체 실행은 변경 없이 폐기됩니다"
 
-msgid "No objects or collections found in asset libraries"
-msgstr "에셋 라이브러리에서 오브젝트나 컬렉션을 찾을 수 없습니다"
+msgid "No objects, collections or materials found in asset libraries"
+msgstr ""
 
 msgid "Rendering previews in background {done}/{total} (app stays responsive)"
 msgstr "백그라운드에서 미리보기 렌더링 중 {done}/{total} (앱은 계속 사용 가능)"
@@ -1292,9 +1394,6 @@ msgstr "재학습 필요"
 msgid "Retraining Message"
 msgstr "재학습 메시지"
 
-msgid "Search Message"
-msgstr "검색 메시지"
-
 msgid "Is Searching"
 msgstr "검색 중"
 
@@ -1396,9 +1495,6 @@ msgstr "제거됨"
 
 msgid "Delete confirmed — showing the recap"
 msgstr "삭제가 확인되었습니다 — 요약을 표시합니다"
-
-msgid "Error"
-msgstr "오류"
 
 msgid "Last request failed"
 msgstr "마지막 요청이 실패했습니다"
@@ -1514,8 +1610,20 @@ msgstr "아래 필드를 사용하거나 다시 스캔하세요"
 msgid "Choose a local model first."
 msgstr "먼저 로컬 모델을 선택하세요."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "먼저 로컬 모델을 시작하세요 (저장하려면 실행 중이어야 합니다)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "기본 URL과 모델 이름이 필요합니다."
@@ -1671,6 +1779,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2034,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2963,17 @@ msgstr "Mixar가 애플리케이션 번들에서 실행되고 있지 않습니�
 msgid "No permission to update {path}"
 msgstr "{path}을(를) 업데이트할 권한이 없습니다"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "설치 디렉터리를 확인할 수 없습니다"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "설치 위치를 확인할 수 없습니다"
@@ -2879,6 +3002,12 @@ msgstr "업데이터를 시작할 수 없습니다"
 msgid "Mixar didn't close"
 msgstr "Mixar가 종료되지 않았습니다"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "이 플랫폼에서는 앱 내 업데이트가 지원되지 않습니다"
 
@@ -2893,6 +3022,72 @@ msgstr "{platform}에서 지원되지 않는 설치 프로그램 유형: {instal
 
 msgid "This install can't be updated in place"
 msgstr "이 설치는 제자리에서 업데이트할 수 없습니다"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version}(으)로 업데이트되었습니다"
+
+msgid "The update was installed successfully."
+msgstr "업데이트가 성공적으로 설치되었습니다."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "업데이트가 적용되지 않았습니다"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} 다운로드 페이지에서 {version}을(를) 다운로드할 수 있습니다."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} 다운로드 페이지에서 업데이트를 다운로드할 수 있습니다."
+
+msgid "Update was not installed"
+msgstr "업데이트가 설치되지 않았습니다"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target}이(가) 설치되었지만 버전 {running}이(가) 시작되었습니다. 다운로드 페이지에서 다시 설치하세요."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "설치 프로그램이 시작하려 할 때 Mixar가 아직 실행 중이었습니다."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "다운로드한 설치 프로그램이 서명 검사를 통과하지 못했습니다."
+
+msgid "The downloaded installer could not be opened."
+msgstr "다운로드한 설치 프로그램을 열 수 없습니다."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "디스크에서 Mixar를 교체할 수 없습니다."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "설치 프로그램이 완료되지 않았습니다."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total} 중 {transferred}"
@@ -2960,47 +3155,35 @@ msgstr "업데이트를 확인할 수 없습니다"
 msgid "Check your internet connection and try again."
 msgstr "인터넷 연결을 확인하고 다시 시도하세요."
 
-msgid "Update didn't take effect"
-msgstr "업데이트가 적용되지 않았습니다"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target}이(가) 설치되었지만 버전 {running}이(가) 시작되었습니다. 다운로드 페이지에서 다시 설치하세요."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version}(으)로 업데이트되었습니다"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "업데이트가 성공적으로 설치되었습니다."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} 다운로드 페이지에서 {version}을(를) 다운로드할 수 있습니다."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} 다운로드 페이지에서 업데이트를 다운로드할 수 있습니다."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "업데이트가 설치되지 않았습니다"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "설치 프로그램이 시작하려 할 때 Mixar가 아직 실행 중이었습니다."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "다운로드한 설치 프로그램이 서명 검사를 통과하지 못했습니다."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "다운로드한 설치 프로그램을 열 수 없습니다."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "디스크에서 Mixar를 교체할 수 없습니다."
-
-msgid "The installation was cancelled."
-msgstr "설치가 취소되었습니다."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer에서 치명적인 오류를 보고했습니다."
-
-msgid "The installer did not finish."
-msgstr "설치 프로그램이 완료되지 않았습니다."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Mixar를 다시 시작하고 다운로드한 업데이트를 설치합니다"
@@ -3046,6 +3229,9 @@ msgstr "업데이트 다운로드를 중지합니다"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "필수 업데이트이므로 취소할 수 없습니다"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "기본 브라우저에서 Mixar 다운로드 페이지를 엽니다"
@@ -4853,6 +5039,15 @@ msgstr "이미지 '{name}'을(를) 읽지 못했습니다: {error}"
 msgid "Smart segmentation failed"
 msgstr "스마트 분할 실패"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "뷰 유형"
 
@@ -5705,6 +5900,9 @@ msgstr "리토폴로지"
 msgid "Mesh Segmentation"
 msgstr "메시 분할"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "자동 리그"
 
@@ -6141,6 +6339,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "생성된 파트를 리깅된 바디나 일반 바디에 로컬로 부착합니다"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -8377,9 +8578,6 @@ msgstr "1024px - 표준 품질"
 msgid "2048px - High quality"
 msgstr "2048px - 고품질"
 
-msgid "Reference Image"
-msgstr "참조 이미지"
-
 msgid "Style reference image for texture generation"
 msgstr "텍스처 생성용 스타일 참조 이미지입니다"
 
@@ -9180,6 +9378,21 @@ msgstr "찾을 파트의 이름을 적은 자유 텍스트"
 
 msgid "Smart segmentation started..."
 msgstr "스마트 세그멘테이션을 시작했습니다..."
+
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
 
 msgid "Agent Video Generation"
 msgstr ""
@@ -11134,6 +11347,48 @@ msgstr "Mixar 작업 기록 ID"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "이 씬의 작업 기록을 식별하는 씬별 영구 ID입니다."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "혼합"
 
@@ -11287,9 +11542,6 @@ msgstr "활성 오브젝트"
 msgid "Show active object options"
 msgstr "활성 오브젝트 옵션 표시"
 
-msgid "Materials"
-msgstr "머티리얼"
-
 msgid "Show material lists"
 msgstr "머티리얼 목록 표시"
 
@@ -11361,9 +11613,6 @@ msgstr "그룹용으로 선택됨"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "일괄 작업(그룹으로 이동 등)을 위해 레이어를 선택합니다"
-
-msgid "Higher quality"
-msgstr "더 높은 품질"
 
 msgid "Expand Layers"
 msgstr "레이어 펼치기"
@@ -15171,6 +15420,12 @@ msgstr "참조로 사용할 bpy.data.images 항목의 이름"
 msgid "Called from chat/agent context"
 msgstr "채팅/에이전트 컨텍스트에서 호출됨"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "UI 상태를 사용할 수 없습니다"
 
@@ -15179,6 +15434,9 @@ msgstr "브러시 텍스처 생성이 이미 진행 중입니다"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "브러시 텍스처용 프롬프트를 입력하세요"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "브러시 생성을 대기열에 추가하지 못했습니다"
@@ -15284,6 +15542,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "혼합 모드와 불투명도가 인라인으로 표시되는 Substance 3D Painter 스타일의 레이어 목록입니다."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "배치"
+
+msgid "Object"
+msgstr "오브젝트"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "레이어 마스크 이동"
@@ -16443,6 +16740,9 @@ msgstr "새 이미지 마스크"
 msgid "Open Image as Mask..."
 msgstr "이미지를 마스크로 열기..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "버텍스 색상 마스크"
 
@@ -16562,6 +16862,12 @@ msgstr "파이프라인"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "생성 파이프라인: 'fast' 또는 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "동일한 작업이 이미 대기열에 있습니다"
@@ -17361,9 +17667,6 @@ msgstr "탄젠트"
 
 msgid "Tangent space"
 msgstr "탄젠트 공간"
-
-msgid "Object"
-msgstr "오브젝트"
 
 msgid "Object space"
 msgstr "오브젝트 공간"
@@ -20229,7 +20532,28 @@ msgstr "'{name}'이(가) 더 이상 에셋 파일에 없습니다."
 msgid "Could not add the asset to the scene."
 msgstr "에셋을 씬에 추가할 수 없습니다."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20607,6 @@ msgstr "자동으로 재개할 수 없습니다 — 채팅에서 \"continue\"에
 msgid "The request could not be completed."
 msgstr "요청을 완료할 수 없습니다."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "메시지가 Mixie에 전달되지 않았습니다. 연결 상태를 확인한 후 다시 보내세요."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "서버에 연결할 수 없습니다. 연결 상태를 확인하고 다시 시도하세요."
 
@@ -20330,6 +20645,15 @@ msgstr "이 서버에서는 아직 필기 인식을 사용할 수 없습니다 �
 
 msgid "Handwriting conversion failed"
 msgstr "필기 변환 실패"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "메시지가 Mixie에 전달되지 않았습니다. 연결 상태를 확인한 후 다시 보내세요."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20993,15 @@ msgid "Pick"
 msgstr "선택"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23727,6 @@ msgstr "주석 폴리곤"
 msgid "Annotate Eraser"
 msgstr "주석 지우게"
 
-msgid "Placement"
-msgstr "배치"
-
 msgid "(none — draw to create)"
 msgstr "(없음 — 그려서 만들기)"
 
@@ -25293,6 +25623,9 @@ msgstr "속성"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25551,6 +25884,12 @@ msgstr "Mixie에게 무엇이든 물어보세요..."
 msgid "Write your prompt here..."
 msgstr "여기에 프롬프트를 입력하세요..."
 
+msgid "Search your materials, then press Enter"
+msgstr ""
+
+msgid "Search your library, then press Enter"
+msgstr ""
+
 msgid "Everything Mixar has generated"
 msgstr "Mixar가 생성한 모든 항목"
 
@@ -25559,6 +25898,15 @@ msgstr ""
 
 msgid "Filter the grid"
 msgstr "그리드를 필터링합니다"
+
+msgid "Change the reference image"
+msgstr ""
+
+msgid "Search by a reference image (a photo of the surface or object)"
+msgstr ""
+
+msgid "Clear the search and show everything again"
+msgstr ""
 
 msgid "Newest first / oldest first"
 msgstr "최신순 / 오래된 순"
@@ -25577,6 +25925,12 @@ msgstr "스플랫 월드"
 
 msgid "In this file"
 msgstr "이 파일에 있음"
+
+msgid "Apply to Selected"
+msgstr ""
+
+msgid "Apply this material to the selected objects"
+msgstr ""
 
 msgid "Show the asset's .blend in the file browser"
 msgstr "파일 브라우저에서 에셋의 .blend 파일을 표시합니다"
@@ -25945,6 +26299,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26802,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"미리보기\n"
-"\n"
-"이 이미지나 비디오를 별도 창에서 엽니다. 여러 미리보기를 동시에 열 수 있습니다."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26829,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"미리보기\n"
-"\n"
-"이 결과를 별도 창에서 엽니다. 여러 미리보기를 동시에 열 수 있습니다."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27078,17 @@ msgstr "선택한 무드보드 항목이 비디오가 아닙니다"
 msgid "Cannot decode video: %s"
 msgstr "비디오를 디코딩할 수 없습니다: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "이 보드 항목에는 미리 볼 이미지나 비디오가 없습니다"
 
 msgid "This node has no image or video to preview"
 msgstr "이 노드에는 미리 볼 이미지나 비디오가 없습니다"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "이미지 미리보기"
@@ -26739,8 +27102,8 @@ msgstr "미리보기 창에서 이미지 에디터가 열리지 않았습니다"
 msgid "Preview Media"
 msgstr "미디어 미리보기"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "이 이미지나 비디오를 별도 미리보기 창에서 엽니다. 여러 개를 동시에 열 수 있습니다"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "결과를 열 노드"
@@ -26837,6 +27200,18 @@ msgstr "템플릿을 놓은 위치에 편집 가능한 노드를 배치합니다
 
 msgid "Template to place"
 msgstr "배치할 템플릿"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Mixie3D 미리보기 선택"
