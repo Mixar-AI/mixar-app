@@ -18,6 +18,12 @@ This module finds the newest live one, speaks MCP to it (Streamable HTTP,
 ``initialize`` → ``Mcp-Session-Id``, one re-initialize on a 404 session), and
 returns JSON-safe dicts for the backend.
 
+An agent's engine call reaches here as a script on Blender's main thread. The
+engine can take minutes (a playtest, an import), so ``engine_prefetch`` makes
+the call on a worker thread as the script arrives and the script, once it
+runs, takes the stored answer (``_prefetchable``): Mixar's UI and every other
+scene tab's scripts never wait on the engine.
+
 Privacy: the backend never sends or receives a local path. ``link_import``
 resolves a package from a destination KIND and a folder NAME (the
 ``export_asset`` result's ``destination`` / ``folder``) and hands the absolute
@@ -27,12 +33,15 @@ through ``link_call``. Every string coming back is scrubbed of absolute paths.
 
 from __future__ import annotations
 
+import functools
 import glob
 import json
 import os
 import re
 import socket
 import sys
+import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -51,6 +60,10 @@ UNREAL_TRANSPORT = "unreal_mcp"
 
 _ABS_PATH = re.compile(r"(?:[A-Za-z]:\\|/(?:Users|home|private|var|tmp|Volumes|mnt)/)[^\s\"'<>|]*")
 _clients: dict = {}
+# Answers made on a worker thread (engine_prefetch), by call key, oldest first.
+_prefetched: dict = {}
+_prefetch_lock = threading.Lock()
+PREFETCH_KEEP_S = 1800.0
 
 
 class LinkError(RuntimeError):
@@ -316,6 +329,43 @@ def _fail(err: Exception) -> dict:
 # Called by the backend (agent scripts)
 # ---------------------------------------------------------------------------
 
+def call_key(fn: str, kwargs: dict) -> str:
+    return f"{fn}:{json.dumps(kwargs, sort_keys=True, default=str)}"
+
+
+def store_prefetched(key: str, result: dict) -> None:
+    now = time.monotonic()
+    with _prefetch_lock:
+        for k in [k for k, v in _prefetched.items() if v and now - v[0][0] > PREFETCH_KEEP_S]:
+            del _prefetched[k]
+        _prefetched.setdefault(key, []).append((now, result))
+
+
+def take_prefetched(key: str):
+    with _prefetch_lock:
+        queue = _prefetched.get(key)
+        if not queue:
+            return None
+        _, result = queue.pop(0)
+        if not queue:
+            del _prefetched[key]
+        return result
+
+
+def _prefetchable(fn):
+    """The answer engine_prefetch already made for this exact call, else the
+    call itself. ``fn.__wrapped__`` is the call alone."""
+    @functools.wraps(fn)
+    def call(*args, **kwargs):
+        if not args:
+            found = take_prefetched(call_key(fn.__name__, kwargs))
+            if found is not None:
+                return found
+        return fn(*args, **kwargs)
+    return call
+
+
+@_prefetchable
 def link_status(engine: str | None = None) -> dict:
     """Every live adapter, and the chosen one's own ``status``."""
     found = adapters(engine)
@@ -331,6 +381,7 @@ def link_status(engine: str | None = None) -> dict:
     return out
 
 
+@_prefetchable
 def link_call(tool: str, arguments: dict | None = None, engine: str | None = None,
               timeout: float = 60.0) -> dict:
     if tool not in CALLABLE_TOOLS:
@@ -342,6 +393,7 @@ def link_call(tool: str, arguments: dict | None = None, engine: str | None = Non
         return _fail(err)
 
 
+@_prefetchable
 def link_import(folder: str, destination: str = "mixar_exports", engine: str | None = None,
                 timeout: float = 180.0) -> dict:
     """Import the ``export_asset`` package ``folder`` (at ``destination``)
@@ -381,6 +433,7 @@ def _build(engine: str | None):
     return str(data.get("dir") or ""), [f for f in data.get("files") or [] if isinstance(f, dict)]
 
 
+@_prefetchable
 def link_build_manifest(engine: str | None = None) -> dict:
     """The last web build's files (name + bytes), no folder."""
     try:
@@ -391,6 +444,7 @@ def link_build_manifest(engine: str | None = None) -> dict:
                                        for f in files]}
 
 
+@_prefetchable
 def link_upload_build(uploads: list, engine: str | None = None) -> dict:
     """PUT each build file to its presigned URL (``[{name, url, headers}]``
     from the backend). The build folder is read here, on this machine."""

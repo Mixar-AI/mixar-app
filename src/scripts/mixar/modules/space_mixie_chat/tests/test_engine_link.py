@@ -332,3 +332,54 @@ def test_unreal_sends_free_shaped_arguments_as_one_json_string(unreal):
     engine_link.link_call("set_property", {"node": "Door", "property": "label", "value": "Gate"})
     sent = _FakeUnreal.calls[-1][1]["arguments"]
     assert sent == {"node": "Door", "property": "label", "value": json.dumps("Gate")}
+
+
+def _backend_script(fn, kwargs):
+    # modules/agent/tools/domains/engine.py:_link, verbatim in shape.
+    encoded = json.dumps(kwargs)
+    return ("import json\n"
+            f"from mixar.modules.space_mixie_chat.core.engine_link import {fn}\n"
+            f"result = {{'engine_link': {fn}(**json.loads({encoded!r}))}}\n"
+            "print('\\n__RESULT__' + json.dumps(result))\n")
+
+
+def test_an_engine_script_is_recognised_and_others_are_not():
+    from mixar.modules.space_mixie_chat.core import engine_prefetch as ep
+    kwargs = {"tool": "playtest", "arguments": {"steps": [{"wait": 1}]}, "timeout": 300.0}
+    assert ep.parse(_backend_script("link_call", kwargs)) == ("link_call", kwargs)
+    assert ep.parse(_backend_script("link_status", {})) == ("link_status", {})
+    assert ep.parse("import bpy\nprint(1)\n") is None
+    assert ep.parse(_backend_script("adapters", {})) is None
+
+
+def test_the_engine_call_runs_off_the_main_thread_and_the_script_takes_its_answer(unreal):
+    from mixar.modules.space_mixie_chat.core import engine_prefetch as ep
+    script = _backend_script("link_call", {"tool": "scene_tree", "arguments": {"max_nodes": 5}, "timeout": 30.0})
+    handle = ep.maybe_start(script)
+    deadline = time.time() + 10
+    while handle.state() != "ready" and time.time() < deadline:
+        time.sleep(0.02)
+    assert handle.state() == "ready"
+    calls = len(_FakeUnreal.calls)
+    scope = {}
+    exec(compile(script.replace("print(", "_ = ("), "<engine script>", "exec"), scope)
+    # The script took the stored answer: no second call reached the engine.
+    assert len(_FakeUnreal.calls) == calls
+    assert scope["result"]["engine_link"]["error"] == "No level is open."
+
+
+def test_an_engine_call_past_its_time_answers_with_a_timeout(unreal, monkeypatch):
+    from mixar.modules.space_mixie_chat.core import engine_prefetch as ep
+    gate = threading.Event()
+    monkeypatch.setattr(engine_link.link_status, "__wrapped__", lambda **kw: gate.wait(5) or {"success": True})
+    monkeypatch.setattr(ep, "HEADROOM_S", 0.0)
+    script = _backend_script("link_status", {})
+    handle = ep.EngineCallPrefetch("link_status", {"timeout": 0.05})
+    time.sleep(0.1)
+    assert handle.state() == "ready"
+    answer = engine_link.take_prefetched(handle.key)
+    assert answer["success"] is False and "did not answer in time" in answer["error"]
+    gate.set()
+    time.sleep(0.1)
+    assert engine_link.take_prefetched(handle.key) is None  # the late answer is not stored twice
+    assert ep.parse(script) == ("link_status", {})

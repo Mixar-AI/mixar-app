@@ -118,7 +118,7 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
         layout = self.layout
         title, project_file, install_line = ENGINE_TEXT[self._key()]
         col = layout.column(align=False)
-        col.label(text=f"Connect a {title} project")
+        col.label(text=f"Connect your {title} project")
         col.label(text=self._engine_line, icon='INFO' if self._installed else 'ERROR')
         if not self._installed:
             return
