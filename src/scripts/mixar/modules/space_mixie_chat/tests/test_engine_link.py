@@ -214,6 +214,7 @@ def test_destination_lookup_never_creates_a_folder(tmp_path, monkeypatch):
 
 class _Store(http.server.BaseHTTPRequestHandler):
     got: dict = {}
+    sent: dict = {}
 
     def log_message(self, *a):
         pass
@@ -221,6 +222,8 @@ class _Store(http.server.BaseHTTPRequestHandler):
     def do_PUT(self):
         type(self).got[self.path] = (self.headers.get("Content-Type"),
                                      self.rfile.read(int(self.headers["Content-Length"])))
+        type(self).sent[self.path] = (self.headers.get("Content-Length"), self.headers.get("Transfer-Encoding"),
+                                      self.headers.get("x-amz-meta-share"))
         self.send_response(200)
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -235,8 +238,9 @@ def test_a_web_build_uploads_from_the_engine_folder(link, tmp_path, monkeypatch)
     def build_info(self, name, args):
         if name != "build_info":
             return None
+        # The engine's own figures are stale: the manifest reads the disk.
         return {"content": [{"type": "text", "text": "{}"}], "isError": False, "structuredContent": {
-            "dir": str(web), "files": [{"name": "index.html", "bytes": 13}, {"name": "index.wasm", "bytes": 8}]}}
+            "dir": str(web), "files": [{"name": "index.html", "bytes": 1}, {"name": "index.wasm", "bytes": 999}]}}
 
     monkeypatch.setattr(_Fake, "build_info", build_info, raising=False)
     original = _Fake.do_POST
@@ -259,13 +263,23 @@ def test_a_web_build_uploads_from_the_engine_folder(link, tmp_path, monkeypatch)
     try:
         out = engine_link.link_upload_build([
             {"name": "index.html", "url": f"{base}/k/index.html", "headers": {"Content-Type": "text/html"}},
-            {"name": "index.wasm", "url": f"{base}/k/index.wasm", "headers": {"Content-Type": "application/wasm"}}])
+            {"name": "index.wasm", "url": f"{base}/k/index.wasm",
+             "headers": {"Content-Type": "application/wasm", "x-amz-meta-share": "s1", "Content-Length": "999"}}])
         refused = engine_link.link_upload_build([{"name": "../../etc/passwd", "url": f"{base}/x", "headers": {}}])
+        # Rebuilt after the manifest: the signed length no longer fits, nothing is sent.
+        (web / "index.wasm").write_bytes(b"\0asm12345678")
+        got, _Store.got = dict(_Store.got), {}
+        changed = engine_link.link_upload_build([{"name": "index.wasm", "url": f"{base}/k/index.wasm",
+                                                  "headers": {}}])
     finally:
         store.shutdown()
     assert out == {"success": True, "uploaded": 2, "bytes": 21}
-    assert _Store.got["/k/index.wasm"] == ("application/wasm", b"\0asm1234")
+    assert got["/k/index.wasm"] == ("application/wasm", b"\0asm1234")
+    # The whole file, its exact length (not the engine's, not a stale header), never chunked; the given headers ride.
+    assert _Store.sent["/k/index.wasm"] == ("8", None, "s1")
+    assert _Store.sent["/k/index.html"][:2] == ("13", None)
     assert not refused["success"] and "/etc" not in json.dumps(refused)
+    assert not changed["success"] and "changed since the share started" in changed["error"] and not _Store.got
 
 
 # ---------------------------------------------------------------------------

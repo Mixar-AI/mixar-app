@@ -444,6 +444,9 @@ def link_import(folder: str, destination: str = "mixar_exports", engine: str | N
 # ---------------------------------------------------------------------------
 
 UPLOAD_TIMEOUT_S = 300.0
+# The sizes the last build manifest declared, by file name (the upload URLs
+# are signed for them).
+_declared: dict = {}
 
 
 def _build(engine: str | None):
@@ -458,43 +461,62 @@ def _build(engine: str | None):
 
 @_prefetchable
 def link_build_manifest(engine: str | None = None) -> dict:
-    """The last web build's files (name + bytes), no folder."""
+    """The last web build's files (name + bytes), no folder. ``bytes`` is
+    each file's real size on disk now, not the engine's figure: the backend
+    signs each upload URL for exactly that length."""
     try:
-        _, files = _build(engine)
+        folder, files = _build(engine)
     except LinkError as err:
         return _fail(err)
-    return {"success": True, "files": [{"name": str(f.get("name")), "bytes": int(f.get("bytes") or 0)}
-                                       for f in files]}
+    out = []
+    for f in files:
+        name = os.path.basename(str(f.get("name") or ""))
+        try:
+            size = os.path.getsize(os.path.join(folder, name))
+        except OSError:
+            return {"success": False, "error": f"{name} is missing from the web build; build it again."}
+        out.append({"name": name, "bytes": size})
+    _declared.clear()
+    _declared.update({f["name"]: f["bytes"] for f in out})
+    return {"success": True, "files": out}
 
 
 @_prefetchable
 def link_upload_build(uploads: list, engine: str | None = None) -> dict:
     """PUT each build file to its presigned URL (``[{name, url, headers}]``
-    from the backend). The build folder is read here, on this machine."""
+    from the backend). The build folder is read here, on this machine. Each
+    PUT sends the whole file with its exact Content-Length (never chunked),
+    because the URL is signed for the size the manifest declared; a file
+    whose size changed since then is not sent."""
     try:
         folder, files = _build(engine)
     except LinkError as err:
         return _fail(err)
-    present = {str(f.get("name")) for f in files}
+    present = {os.path.basename(str(f.get("name") or "")) for f in files}
     total = 0
     for up in uploads or []:
         name = os.path.basename(str(up.get("name") or ""))
         if name not in present:
             return {"success": False, "error": f"{name} is not in the web build; build it again."}
-        path = os.path.join(folder, name)
-        size = os.path.getsize(path)
-        with open(path, "rb") as fh:
-            req = urllib.request.Request(str(up.get("url")), data=fh, method="PUT")
-            for k, v in (up.get("headers") or {}).items():
+        try:
+            with open(os.path.join(folder, name), "rb") as fh:
+                body = fh.read()
+        except OSError:
+            return {"success": False, "error": f"{name} could not be read; build it again."}
+        if name in _declared and len(body) != _declared[name]:
+            return {"success": False, "error": f"{name} changed since the share started; share it again."}
+        req = urllib.request.Request(str(up.get("url")), data=body, method="PUT")
+        for k, v in (up.get("headers") or {}).items():
+            if str(k).lower() not in ("content-length", "transfer-encoding"):
                 req.add_header(k, v)
-            req.add_header("Content-Length", str(size))
-            try:
-                with urllib.request.urlopen(req, timeout=UPLOAD_TIMEOUT_S) as resp:
-                    if resp.status not in (200, 201, 204):
-                        return {"success": False, "error": f"Uploading {name} failed (HTTP {resp.status})."}
-            except urllib.error.HTTPError as err:
-                return {"success": False, "error": f"Uploading {name} failed (HTTP {err.code})."}
-            except (urllib.error.URLError, OSError) as err:
-                return {"success": False, "error": f"Uploading {name} failed ({type(err).__name__})."}
-        total += size
+        req.add_header("Content-Length", str(len(body)))
+        try:
+            with urllib.request.urlopen(req, timeout=UPLOAD_TIMEOUT_S) as resp:
+                if resp.status not in (200, 201, 204):
+                    return {"success": False, "error": f"Uploading {name} failed (HTTP {resp.status})."}
+        except urllib.error.HTTPError as err:
+            return {"success": False, "error": f"Uploading {name} failed (HTTP {err.code})."}
+        except (urllib.error.URLError, OSError) as err:
+            return {"success": False, "error": f"Uploading {name} failed ({type(err).__name__})."}
+        total += len(body)
     return {"success": True, "uploaded": len(uploads or []), "bytes": total}
