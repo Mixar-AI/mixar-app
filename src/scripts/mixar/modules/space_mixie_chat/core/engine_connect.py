@@ -12,10 +12,11 @@ chip (UI in ``ui/engine_chip.py``; the link itself is ``engine_link``).
   the read runs off the main thread (``refresh_async``), because a stale
   discovery file costs a socket timeout.
 - ``find_godot()`` / ``download_godot()``: a Godot 4.5+ on this machine, or
-  the official build downloaded into ~/Applications (macOS) or
+  the official ``GODOT_VERSION`` build (refused unless it matches
+  ``GODOT_SHA256``) downloaded into ~/Applications (macOS) or
   ~/.mixar/engines (elsewhere).
-- ``install_addon(project)``: the latest Mixar Link release
-  (``ADDON_URL``) unpacked into ``<project>/addons/mixar_link`` and enabled
+- ``install_addon(project)``: Mixar Link ``ADDON_VERSION`` (``ADDON_URL``,
+  refused unless it matches ``ADDON_SHA256``) unpacked into ``<project>/addons/mixar_link`` and enabled
   in ``project.godot``; ``create_project`` makes a new one first.
 - ``connect(project)``: install, open Godot on the project, wait for its
   discovery file. ``connect(project, engine="unreal")`` does the same for
@@ -29,9 +30,11 @@ sent to the backend (``engine_context`` carries names only).
 from __future__ import annotations
 
 import glob
+import hashlib
 import io
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -44,11 +47,31 @@ import zipfile
 
 from . import engine_link, unreal_setup
 
-ADDON_REPO = "satyam-fp/mixar-engine-godot"
-ADDON_URL = f"https://github.com/{ADDON_REPO}/releases/latest/download/mixar_link.zip"
+# Mixar Link for Godot: one exact release, checked before it is installed.
+# A new release is these two lines (sha256 of the release's mixar_link.zip).
+ADDON_VERSION = "0.4.0"
+ADDON_SHA256 = "d4fef97bb6b846fc19e4d4b55e6d02441fc1496c99b79b11feff1c9f07bf7409"
+ADDON_REPO = "Mixar-AI/mixar-engine-godot"
+ADDON_URL = f"https://github.com/{ADDON_REPO}/releases/download/v{ADDON_VERSION}/mixar_link.zip"
+# The Godot editor Mixar downloads when none is installed, and the sha256 of
+# each official build it may fetch, by the asset's platform part
+# (``Godot_v<version>-stable_<part>`` on godotengine/godot's release). A new
+# Godot is the version plus these hashes; a platform missing here is never
+# downloaded.
 GODOT_VERSION = "4.7.2"
+GODOT_SHA256 = {
+    "macos.universal.zip": "c58a24e31d720be9d62f60cb5627c4e695fb72f21b0cfe1bc9ccaa9a3b3ba63e",
+    "win64.exe.zip": "731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953",
+    "windows_arm64.exe.zip": "2d206e0b1d2366eb3508971c670c52333dcd7218b818102d77ca7ceaa86892ba",
+    "linux.x86_64.zip": "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4",
+    "linux.arm64.zip": "5dd0d86405cf7e8adf79fb6377b38ba682a2846cb378ffe5364f38c01ad29b9d",
+}
 GODOT_MIN = (4, 5)
 GODOT_RELEASES = "https://github.com/godotengine/godot/releases/download"
+CHECKSUM_FAILED = ("The downloaded {what} is not the release Mixar expects (checksum mismatch); "
+                   "nothing was installed. Try again, or update Mixar.")
+NO_GODOT_BUILD = ("Mixar has no Godot download for this machine; install Godot 4.5 or newer from "
+                  "godotengine.org, then connect again.")
 PLUGIN_CFG = "res://addons/mixar_link/plugin.cfg"
 CONNECT_TIMEOUT_S = 120.0
 # Unreal's first open of a project compiles its shaders: minutes, not seconds.
@@ -202,23 +225,34 @@ def find_godot() -> dict | None:
 
 
 def _godot_asset() -> tuple[str, str]:
-    """(release asset name, install folder) for this platform."""
+    """(release asset platform part, install folder) for this platform and CPU."""
     home = os.path.expanduser("~")
+    arm = platform.machine().lower() in ("arm64", "aarch64")
     if sys.platform == "darwin":
-        return f"Godot_v{GODOT_VERSION}-stable_macos.universal.zip", os.path.join(home, "Applications")
+        return "macos.universal.zip", os.path.join(home, "Applications")
     if sys.platform == "win32":
-        return (f"Godot_v{GODOT_VERSION}-stable_win64.exe.zip",
+        return (f"{'windows_arm64' if arm else 'win64'}.exe.zip",
                 os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
-    return (f"Godot_v{GODOT_VERSION}-stable_linux.x86_64.zip",
+    return (f"linux.{'arm64' if arm else 'x86_64'}.zip",
             os.path.join(home, ".mixar", "engines", f"godot-{GODOT_VERSION}"))
 
 
 def download_godot(progress=None) -> dict:
-    """The official Godot build for this platform, unpacked; returns find_godot()."""
-    asset, dest = _godot_asset()
-    os.makedirs(dest, exist_ok=True)
+    """The official Godot build for this platform, checked and unpacked;
+    returns find_godot()."""
+    part, dest = _godot_asset()
+    expected = GODOT_SHA256.get(part)
+    if not expected:
+        raise RuntimeError(NO_GODOT_BUILD)
+    asset = f"Godot_v{GODOT_VERSION}-stable_{part}"
     archive = os.path.join(tempfile.mkdtemp(prefix="mixar-godot-"), asset)
-    _download(f"{GODOT_RELEASES}/{GODOT_VERSION}-stable/{asset}", archive, progress, "Downloading Godot")
+    try:
+        _download(f"{GODOT_RELEASES}/{GODOT_VERSION}-stable/{asset}", archive, progress, "Downloading Godot",
+                  sha256=expected)
+    except Exception:
+        shutil.rmtree(os.path.dirname(archive), ignore_errors=True)
+        raise
+    os.makedirs(dest, exist_ok=True)
     if sys.platform == "darwin":
         # ditto keeps the bundle's symlinks and permissions; zipfile does not.
         subprocess.run(["ditto", "-x", "-k", archive, dest], check=True)
@@ -234,16 +268,22 @@ def download_godot(progress=None) -> dict:
     return found
 
 
-def _download(url: str, path: str, progress, label: str) -> None:
+def _download(url: str, path: str, progress, label: str, sha256: str) -> None:
+    """``url`` into ``path``, only when its bytes hash to ``sha256``."""
+    digest = hashlib.sha256()
     with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mixar"}), timeout=60) as resp:
         total = int(resp.headers.get("Content-Length") or 0)
         done = 0
         with open(path + ".part", "wb") as out:
             while chunk := resp.read(1 << 20):
                 out.write(chunk)
+                digest.update(chunk)
                 done += len(chunk)
                 if progress and total:
                     progress(f"{label} {int(100 * done / total)}%")
+    if digest.hexdigest() != sha256:
+        os.remove(path + ".part")
+        raise RuntimeError(CHECKSUM_FAILED.format(what="Godot"))
     os.replace(path + ".part", path)
 
 
@@ -282,8 +322,9 @@ def enable_plugin(project: str) -> None:
 
 
 def install_addon(project: str, progress=None, archive: bytes | None = None) -> str:
-    """The latest Mixar Link release (or ``archive``) into the project, enabled;
-    returns its version. A previous copy is replaced."""
+    """Mixar Link ``ADDON_VERSION`` (or ``archive``) into the project,
+    enabled; returns its version. A previous copy is replaced. A download that
+    is not byte-for-byte the pinned release installs nothing."""
     if not os.path.isfile(os.path.join(project, "project.godot")):
         raise ValueError("That folder is not a Godot project (no project.godot).")
     if archive is None:
@@ -292,6 +333,8 @@ def install_addon(project: str, progress=None, archive: bytes | None = None) -> 
         with urllib.request.urlopen(urllib.request.Request(ADDON_URL, headers={"User-Agent": "Mixar"}),
                                     timeout=60) as resp:
             archive = resp.read()
+        if hashlib.sha256(archive).hexdigest() != ADDON_SHA256:
+            raise RuntimeError(CHECKSUM_FAILED.format(what="Mixar Link"))
     addons = os.path.join(project, "addons")
     target = os.path.join(addons, "mixar_link")
     staging = tempfile.mkdtemp(prefix="mixar-link-", dir=project)

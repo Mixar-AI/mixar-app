@@ -153,3 +153,62 @@ def test_the_handshake_sends_and_reads_the_capability():
     assert "set_server_capabilities(capabilities)" in reader
     sender = src[src.index("def _perform_handshake"):src.index("def _set_server_capabilities")]
     assert "set_server_capabilities" not in sender.replace("result_sink=self._set_server_capabilities", "")
+
+
+class _Resp(io.BytesIO):
+    def __init__(self, data):
+        super().__init__(data)
+        self.headers = {"Content-Length": str(len(data))}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def test_the_addon_download_is_the_pinned_release_checked_before_install(tmp_path, monkeypatch):
+    assert ec.ADDON_URL == (f"https://github.com/Mixar-AI/mixar-engine-godot/releases/download/"
+                            f"v{ec.ADDON_VERSION}/mixar_link.zip")
+    assert "latest" not in ec.ADDON_URL and len(ec.ADDON_SHA256) == 64
+    project = ec.create_project(str(tmp_path / "Ruins"), "Ruins")
+    before = open(os.path.join(project, "project.godot")).read()
+    archive = _addon_zip(version="0.4.0")
+    monkeypatch.setattr(ec.urllib.request, "urlopen", lambda req, timeout: _Resp(archive))
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        ec.install_addon(project)
+    assert not os.path.exists(os.path.join(project, "addons"))
+    assert open(os.path.join(project, "project.godot")).read() == before
+    monkeypatch.setattr(ec, "ADDON_SHA256", __import__("hashlib").sha256(archive).hexdigest())
+    assert ec.install_addon(project) == "0.4.0"
+
+
+@pytest.mark.parametrize("plat,machine,part", [
+    ("darwin", "arm64", "macos.universal.zip"), ("darwin", "x86_64", "macos.universal.zip"),
+    ("win32", "AMD64", "win64.exe.zip"), ("win32", "ARM64", "windows_arm64.exe.zip"),
+    ("linux", "x86_64", "linux.x86_64.zip"), ("linux", "aarch64", "linux.arm64.zip")])
+def test_every_godot_build_mixar_fetches_has_a_pinned_hash(monkeypatch, plat, machine, part):
+    monkeypatch.setattr(ec.sys, "platform", plat)
+    monkeypatch.setattr(ec.platform, "machine", lambda: machine)
+    assert ec._godot_asset()[0] == part
+    assert len(ec.GODOT_SHA256[part]) == 64 and int(ec.GODOT_SHA256[part], 16) >= 0
+
+
+def test_a_godot_download_that_does_not_match_installs_nothing(tmp_path, monkeypatch):
+    dest = tmp_path / "engines"
+    monkeypatch.setattr(ec, "_godot_asset", lambda: ("linux.x86_64.zip", str(dest)))
+    urls = []
+    monkeypatch.setattr(ec.urllib.request, "urlopen",
+                        lambda req, timeout: urls.append(req.full_url) or _Resp(b"not godot"))
+    temps = []
+    real_mkdtemp = ec.tempfile.mkdtemp
+    monkeypatch.setattr(ec.tempfile, "mkdtemp", lambda **kw: temps.append(real_mkdtemp(**kw)) or temps[-1])
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        ec.download_godot()
+    assert urls == [f"{ec.GODOT_RELEASES}/{ec.GODOT_VERSION}-stable/Godot_v{ec.GODOT_VERSION}-stable_linux.x86_64.zip"]
+    assert not dest.exists() and not os.path.exists(temps[0])
+    # A platform with no pinned build is never downloaded.
+    monkeypatch.setattr(ec, "_godot_asset", lambda: ("linux.x86_32.zip", str(dest)))
+    with pytest.raises(RuntimeError, match="no Godot download for this machine"):
+        ec.download_godot()
+    assert len(urls) == 1

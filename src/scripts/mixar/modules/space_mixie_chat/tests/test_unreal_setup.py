@@ -168,3 +168,36 @@ def test_connect_unreal_installs_opens_and_selects_the_new_editor(monkeypatch, t
     assert opened["uproject"].endswith("Arena.uproject")
     assert out["editor"]["id"] == "unreal-4242" and picked == ["unreal-4242"]
     assert modes == ["owned"]  # a game Mixar made
+
+
+class _Resp(io.BytesIO):
+    headers = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def test_the_plugin_download_is_the_pinned_release_checked_before_install(tmp_path, monkeypatch):
+    assert us.PLUGIN_URL == (f"https://github.com/Mixar-AI/mixar-engine-unreal/releases/download/"
+                             f"v{us.PLUGIN_VERSION}/MixarLink.zip")
+    assert "latest" not in us.PLUGIN_URL and len(us.PLUGIN_SHA256) == 64
+    uproject = tmp_path / "Game" / "Game.uproject"
+    uproject.parent.mkdir()
+    uproject.write_text(json.dumps({"FileVersion": 3, "Plugins": []}))
+    archive = _plugin_zip("0.5.2")
+    urls = []
+    monkeypatch.setattr(us.urllib.request, "urlopen", lambda req, timeout: urls.append(req.full_url) or _Resp(archive))
+    # Not the pinned bytes: refused, the project untouched.
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        us.install_plugin(str(uproject))
+    assert urls == [us.PLUGIN_URL]
+    assert not (tmp_path / "Game" / "Plugins" / "MixarLink").exists()
+    assert not (tmp_path / "Game" / "Config").exists()
+    assert json.loads(uproject.read_text())["Plugins"] == []
+    # The pinned bytes install.
+    monkeypatch.setattr(us, "PLUGIN_SHA256", __import__("hashlib").sha256(archive).hexdigest())
+    assert us.install_plugin(str(uproject)) == "0.5.2"
+    assert (tmp_path / "Game" / "Plugins" / "MixarLink" / "MixarLink.uplugin").is_file()

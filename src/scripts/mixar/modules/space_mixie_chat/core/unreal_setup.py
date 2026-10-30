@@ -10,8 +10,8 @@
 - ``create_project(folder, name, unreal)``: a new third-person game from the
   engine's own template (``TP_ThirdPersonBP`` plus its shared Characters,
   LevelPrototyping and Input content).
-- ``install_plugin(uproject, mode)``: the latest Mixar Link for Unreal release
-  (``PLUGIN_URL``) unpacked into ``<project>/Plugins/MixarLink``, the plugins
+- ``install_plugin(uproject, mode)``: Mixar Link for Unreal ``PLUGIN_VERSION``
+  (``PLUGIN_URL``, refused unless it matches ``PLUGIN_SHA256``) unpacked into ``<project>/Plugins/MixarLink``, the plugins
   it needs enabled in the ``.uproject``, Unreal's MCP server turned on
   (``MCP_PORT``) and the editor's background throttle off (Mixar drives the
   editor while Mixar has the focus; a throttled editor takes seconds per
@@ -28,6 +28,7 @@ leaves the machine except the plugin download.
 from __future__ import annotations
 
 import glob
+import hashlib
 import io
 import json
 import os
@@ -40,8 +41,14 @@ import tempfile
 import urllib.request
 import zipfile
 
-PLUGIN_REPO = "satyam-fp/mixar-engine-unreal"
-PLUGIN_URL = f"https://github.com/{PLUGIN_REPO}/releases/latest/download/MixarLink.zip"
+# Mixar Link for Unreal: one exact release, checked before it is installed.
+# A new release is these two lines (sha256 of the release's MixarLink.zip).
+PLUGIN_VERSION = "0.5.2"
+PLUGIN_SHA256 = "f8a7d58f4a456ea45ceaf759a9ab9a2f159b235591565927c259d36115e918d0"
+PLUGIN_REPO = "Mixar-AI/mixar-engine-unreal"
+PLUGIN_URL = f"https://github.com/{PLUGIN_REPO}/releases/download/v{PLUGIN_VERSION}/MixarLink.zip"
+CHECKSUM_FAILED = ("The downloaded Mixar Link for Unreal is not the release Mixar expects (checksum mismatch); "
+                   "nothing was installed. Try again, or update Mixar.")
 UNREAL_MIN = (5, 8)
 MCP_PORT = 9880
 MCP_SECTION = "[/Script/ModelContextProtocolEngine.ModelContextProtocolSettings]"
@@ -241,9 +248,10 @@ def set_mode(project: str, mode: str) -> None:
 
 
 def install_plugin(uproject: str, progress=None, archive: bytes | None = None, mode: str = "plugin") -> str:
-    """The latest Mixar Link for Unreal (or ``archive``) into the project's
-    Plugins/, everything it needs enabled; returns its version. A previous copy
-    is replaced."""
+    """Mixar Link for Unreal ``PLUGIN_VERSION`` (or ``archive``) into the
+    project's Plugins/, everything it needs enabled; returns its version. A
+    previous copy is replaced. A download that is not byte-for-byte the pinned
+    release installs nothing."""
     if not uproject.endswith(".uproject") or not os.path.isfile(uproject):
         raise ValueError("That folder is not an Unreal project (no .uproject).")
     project = os.path.dirname(uproject)
@@ -253,6 +261,8 @@ def install_plugin(uproject: str, progress=None, archive: bytes | None = None, m
         with urllib.request.urlopen(urllib.request.Request(PLUGIN_URL, headers={"User-Agent": "Mixar"}),
                                     timeout=60) as resp:
             archive = resp.read()
+        if hashlib.sha256(archive).hexdigest() != PLUGIN_SHA256:
+            raise RuntimeError(CHECKSUM_FAILED)
     plugins = os.path.join(project, "Plugins")
     target = os.path.join(plugins, "MixarLink")
     os.makedirs(plugins, exist_ok=True)
