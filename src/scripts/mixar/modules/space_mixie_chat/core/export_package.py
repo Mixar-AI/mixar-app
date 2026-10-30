@@ -12,10 +12,10 @@ skinned mesh's copy keeps its armature (parent, Armature modifier, vertex
 groups) so the file still carries a skin; a named empty stands for the
 meshes and armatures under it.
 Mixar paint slots on the copies are swapped to their baked Principled/image
-materials (``export_materials``) for the whole package; every material an
-exporter cannot read (procedural nodes, an unbaked stack) is then baked to
-images on the copies (``export_bake``, ``bake_materials``), reported as
-``baked_materials``.
+materials (``export_materials``) for the whole package. In an ENGINE package
+every material an exporter cannot read (procedural nodes, an unbaked stack)
+is then baked to images on the copies (``export_bake``), reported as
+``baked_materials``; an ordinary package exports its materials as they are.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
 never an absolute local path. ``engine`` (``godot`` | ``unreal`` | ``uefn``,
@@ -553,12 +553,13 @@ def _write_source(root, stem, include_source, col, copies, mats, images):
 
 def export_package(names, fmt="glb", filename=None, where="mixar_exports", folder=None, join=False,
                    texture_tiers=(), include_source=False, manifest=True, readme=None,
-                   extra_files=(), animations=None, engine=None, bake_materials=True):
+                   extra_files=(), animations=None, engine=None):
     """``include_source`` may be True or a file name for the .blend; ``readme``
     text is written as README.md; ``extra_files`` are (name, text) pairs;
     ``animations`` is None (all) / [] (none) / [clip names]; ``engine`` is
-    None or one of ``engine_targets.ENGINES``; ``bake_materials`` bakes
-    procedural materials to images on the copies."""
+    None or one of ``engine_targets.ENGINES``, and only an engine package
+    bakes procedural materials to images on the copies (a Smart UV project
+    and Cycles bakes on the main thread, so never for an ordinary export)."""
     t0 = time.perf_counter()
     fmt = fmt.lower()
     if fmt not in FORMATS:
@@ -599,9 +600,10 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         # Mixar paint slots on the COPIES become their baked Principled/image
         # materials first, so the file, textures/, tiers, the .blend source
         # and the manifest all describe what an exporter can read.
-        swap.enter_context(temporary_export_materials(copies))
-        baked = (swap.enter_context(baked_procedural_materials(copies))
-                 if bake_materials and fmt in ("glb", "gltf", "fbx", "usdz", "usd") else None)
+        # An engine package then bakes what is still procedural (an unbaked
+        # stack included); an ordinary package exports what the swap leaves.
+        swap.enter_context(temporary_export_materials(copies, keep_unbaked=bool(engine)))
+        baked = swap.enter_context(baked_procedural_materials(copies)) if engine else None
         mats = []
         for c in copies:
             for s in c.material_slots:
@@ -732,7 +734,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             "replaced_previous_files": replaced, "engine": engine_section,
             "main_file": stem + ext, "glb_check": check, "verification": verification,
             "triangles": tris, "dimensions_m": dims, "textures": len(tex), "tiers": tiers,
-            "baked_materials": baked,
+            **({"baked_materials": baked} if baked is not None else {}),
             "animations": {"clips": clips, "clips_requested": animations,
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},

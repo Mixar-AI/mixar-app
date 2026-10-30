@@ -104,8 +104,8 @@ def test_package_swaps_the_copies_before_reading_their_materials():
               if isinstance(n, ast.FunctionDef) and n.name == "export_package")
     body = ast.get_source_segment(source, fn)
     copies = body.index("_copies(meshes, join")
-    swap = body.index("swap.enter_context(temporary_export_materials(copies))")
-    bake = body.index("swap.enter_context(baked_procedural_materials(copies))")
+    swap = body.index("swap.enter_context(temporary_export_materials(copies, keep_unbaked=bool(engine)))")
+    bake = body.index("swap.enter_context(baked_procedural_materials(copies)) if engine else None")
     mats = body.index("images = _material_images(mats)")
     assert copies < swap < bake < mats, "materials/textures must be read after the swap and the bake"
     # Unwound before the copies are deleted, on success and on failure.
@@ -120,6 +120,29 @@ def test_an_unbaked_stack_is_left_for_the_package_bake(swap_env):
     created, removed = swap_env
     fresh = _Mat("Plaster", mixar="unbaked")
     obj = _Obj("Copy", [fresh])
-    with export_materials.temporary_export_materials([obj]):
+    with export_materials.temporary_export_materials([obj], keep_unbaked=True):
         assert obj.data.materials[0] is fresh
     assert created == [] and removed == []
+
+
+def test_an_ordinary_export_swaps_an_unbaked_stack_as_before(swap_env):
+    """Only an engine package bakes, so only it keeps the stack for the bake."""
+    created, _ = swap_env
+    fresh = _Mat("Plaster", mixar="unbaked")
+    obj = _Obj("Copy", [fresh])
+    with export_materials.temporary_export_materials([obj]):
+        assert obj.data.materials[0] is not fresh
+    assert [(name, index) for name, index, _ in created] == [("Copy", 0)]
+    assert obj.data.materials[0] is fresh
+
+
+def test_only_an_engine_package_bakes_its_materials():
+    """The bake (a Smart UV project and Cycles bakes on the main thread) ran
+    on every export_asset; ordinary packages export as they did before it."""
+    import inspect
+    from mixar.modules.space_mixie_chat.core import export_package
+    params = inspect.signature(export_package.export_package).parameters
+    assert "bake_materials" not in params
+    source = (CORE / "export_package.py").read_text(encoding="utf-8")
+    assert "baked_procedural_materials(copies)) if engine else None" in source
+    assert '**({"baked_materials": baked} if baked is not None else {})' in source

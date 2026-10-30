@@ -8,10 +8,12 @@ While an export runs, every slot whose active output reaches a Mixar group
 is swapped to the Principled/image material that
 ``paint/core/asset_export/bake_and_assign.create_export_material`` builds from
 the stack's BAKED channel images. The swap is undone and the temporary
-materials are freed on exit. A stack with NO baked channel is left alone: the
-swap would hand the exporter a flat Principled with no image, and the package
-bake (``export_bake.baked_procedural_materials``) only bakes what it can still
-see as procedural. cs-go iter 4's map package wrote 0 images that way.
+materials are freed on exit. With ``keep_unbaked`` (an engine package, whose
+bake runs next) a stack with NO baked channel is left alone: the swap would
+hand the exporter a flat Principled with no image, and the package bake
+(``export_bake.baked_procedural_materials``) only bakes what it can still see
+as procedural. cs-go iter 4's map package wrote 0 images that way. Every
+other export swaps every Mixar slot, as it always did.
 """
 
 from contextlib import contextmanager
@@ -32,8 +34,9 @@ def has_baked_channel(tree) -> bool:
 
 
 @contextmanager
-def temporary_export_materials(meshes):
-    """Swap every Mixar slot to a Principled/image material for export."""
+def temporary_export_materials(meshes, keep_unbaked=False):
+    """Swap every Mixar slot to a Principled/image material for export;
+    ``keep_unbaked`` skips stacks with no baked channel (left for the bake)."""
     from mixar.modules.paint.core.asset_export.bake_and_assign import (
         create_export_material,
     )
@@ -45,7 +48,7 @@ def temporary_export_materials(meshes):
             try:
                 for index, material in enumerate(list(obj.data.materials)):
                     nodes = active_mixar_nodes(material)
-                    if not nodes or not has_baked_channel(nodes[0].node_tree):
+                    if not nodes or (keep_unbaked and not has_baked_channel(nodes[0].node_tree)):
                         continue
                     obj.active_material_index = index
                     export_material = create_export_material(

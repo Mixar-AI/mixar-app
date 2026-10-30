@@ -114,11 +114,12 @@ def main():
 
     def export(tag, limit):
         state["bakes"], state["limit"] = 0, limit
-        res = package.export_package(names, fmt="glb", filename=f"bake_smoke_{tag}")
+        # Only an engine package bakes its materials.
+        res = package.export_package(names, fmt="glb", filename=f"bake_smoke_{tag}", engine="godot")
         root = package.destination("mixar_exports", f"bake_smoke_{tag}", create=False)
         images = _images(os.path.join(root, f"bake_smoke_{tag}.glb"))
         shutil.rmtree(root, ignore_errors=True)
-        report = res["baked_materials"] or {}
+        report = res.get("baked_materials") or {}
         return {"fresh": sorted(b["material"] for b in report.get("baked", []) if not b["reused"]),
                 "reused": sorted(b["material"] for b in report.get("baked", []) if b["reused"]),
                 "skipped": sorted(s["material"] for s in report.get("skipped", [])),
