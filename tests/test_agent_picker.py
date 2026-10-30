@@ -461,7 +461,11 @@ def test_every_account_gate_is_busy_so_the_card_says_it_is_saving(catalog, gate)
         kw["busy"] = True
     assert picker.chip(picker.picker_state(cred, pref, **kw))["state"] == picker.STATE_BUSY
     card = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_model_card_data.cc").read_text()
-    assert '"mixar_agent_source_state") == "BUSY"' in card
+    # The model card reads its state from mixar_agent_source_state and words a
+    # BUSY gate as saving (the engine card shares the code with its own props).
+    assert 'wm_string(wm, src.state_prop) == "BUSY" ? IFACE_(src.gate_busy)' in card
+    model = card[card.index("static const Source model{"):card.index("static const Source engine{")]
+    assert '"mixar_agent_source_state"' in model and "Saving your change" in model
 
 
 def test_the_mirror_follows_a_hosted_pick_and_a_dialog_save(catalog, monkeypatch):

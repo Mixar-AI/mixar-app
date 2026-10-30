@@ -85,8 +85,8 @@ const Source &card_source(const CardKind kind)
                             "MIXAR_OT_agent_pick",
                             "MIXAR_BYOK_OT_open_dialog",
                             "model_card",
-                            "Saving your change\xe2\x80\xa6",
-                            "Finish or stop the current reply to change the model"};
+                            N_("Saving your change\xe2\x80\xa6"),
+                            N_("Finish or stop the current reply to change the model")};
   /* space_mixie_chat/ui/properties/engine_chip_props.py mirrors these. */
   static const Source engine{CardKind::Engine,
                              "mixar_engine_tabs",
@@ -96,8 +96,8 @@ const Source &card_source(const CardKind kind)
                              "MIXAR_OT_engine_pick",
                              "MIXAR_OT_engine_connect",
                              "engine_card",
-                             "Connecting\xe2\x80\xa6",
-                             "Finish or stop the current reply to switch the engine"};
+                             N_("Connecting\xe2\x80\xa6"),
+                             N_("Finish or stop the current reply to switch the engine")};
   return kind == CardKind::Engine ? engine : model;
 }
 
