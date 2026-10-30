@@ -9,6 +9,8 @@ The card's wire format is the model card's (byok/core/picker.py): records split
 by U+001E, fields by U+001F.
 - tab:  ``id|label|enabled|cost|note|heading|action``
 - row:  ``tab|kind|label|meta|current|enabled|provider|model|thinking``
+The chip's name is empty (the C++ draws no chip) until the connected server
+lists the engine tools (``engine_connect.server_supports``).
 Each engine is a tab (GODOT, UNREAL, …). A row's ``model`` field carries the
 editor id (``godot-<pid>``, ``unreal-<pid>``) that ``MIXAR_OT_engine_pick``
 receives as ``editor``; a tab's footer runs ``MIXAR_OT_engine_connect`` with
@@ -89,7 +91,7 @@ def build(st: dict | None = None) -> dict:
                                 int(editor.get("id") == st.get("selected")), 1, "", editor.get("id", ""), ""))
         rows.append(_record(key, "footer", f"Connect {name}…", "", 0, int(not st.get("busy")), "", "connect", ""))
     return {
-        "mixar_engine_chip_name": engine_connect.chip_label(st),
+        "mixar_engine_chip_name": engine_connect.chip_label(st) if engine_connect.server_supports() else "",
         "mixar_engine_state": chip_state(st),
         "mixar_engine_tab": _current_tab(st),
         "mixar_engine_tabs": RS.join(tabs),

@@ -25,6 +25,13 @@ from mixar.modules.space_mixie_chat.core import engine_connect as ec  # noqa: E4
 from mixar.modules.space_mixie_chat.core import engine_link  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _server_has_engine_tools():
+    ec.set_server_capabilities([ec.ENGINE_LINK_CAPABILITY])
+    yield
+    ec.set_server_capabilities([])
+
+
 def _addon_zip(extra=None, version="0.2.1"):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
@@ -113,3 +120,36 @@ def test_the_pick_survives_only_while_its_editor_lives(monkeypatch, tmp_path):
 def test_godot_and_unreal_connect_uefn_does_not_yet():
     assert [e["key"] for e in ec.ENGINES if e["available"]] == ["godot", "unreal"]
     assert {e["key"] for e in ec.ENGINES} >= {"godot", "unreal", "uefn"}
+
+
+def test_nothing_reads_or_connects_until_the_server_lists_the_engine_tools(monkeypatch):
+    threads = []
+    monkeypatch.setattr(ec.threading, "Thread", lambda *a, **kw: threads.append(kw) or MagicMock())
+    ec.set_server_capabilities(["agent_history_v1"])
+    assert ec.server_supports() is False
+    ec.refresh_async()
+    ec.connect_async("/somewhere")
+    assert threads == []
+    ec._set(connected=True, editors=[{"id": "godot-1", "engine": "godot", "project_name": "Ruins"}],
+            selected="godot-1")
+    assert ec.engine_context() is None
+    ec.set_server_capabilities(None)  # a reply without the list
+    assert ec.server_supports() is False
+    ec.set_server_capabilities(["agent_history_v1", "engine_link_v1"])
+    assert ec.server_supports() is True and ec.engine_context()["project_name"] == "Ruins"
+    ec.refresh_async()
+    assert [t["name"] for t in threads] == ["mixar-engine-refresh"]
+    ec._set(connected=False, editors=[], selected="")
+
+
+def test_the_handshake_sends_and_reads_the_capability():
+    core = os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "core")
+    src = open(os.path.join(core, "socket_connection.py"), encoding="utf-8").read()
+    assert ec.ENGINE_LINK_CAPABILITY == "engine_link_v1"
+    assert "*([ENGINE_LINK_CAPABILITY] if not self._role else [])" in src
+    # Set from the reply only (the reset before a handshake leaves it alone),
+    # so an offline socket keeps the last known answer.
+    reader = src[src.index("def _set_server_capabilities"):]
+    assert "set_server_capabilities(capabilities)" in reader
+    sender = src[src.index("def _perform_handshake"):src.index("def _set_server_capabilities")]
+    assert "set_server_capabilities" not in sender.replace("result_sink=self._set_server_capabilities", "")

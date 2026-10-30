@@ -4,6 +4,9 @@
 """Connecting Mixar to a game engine: the logic behind the composer's engine
 chip (UI in ``ui/engine_chip.py``; the link itself is ``engine_link``).
 
+- ``server_supports()``: whether the connected Mixar server has the engine
+  tools (it lists ``engine_link_v1`` in its handshake reply). Until one
+  does, the chip is hidden and nothing here reads editors or connects.
 - ``state()``: what the chip shows. Live editors come from ``engine_link``
   (their discovery files), the picked one is remembered across launches, and
   the read runs off the main thread (``refresh_async``), because a stale
@@ -57,11 +60,31 @@ ENGINES = (
     {"key": "uefn", "label": "UEFN", "available": False},
 )
 
+# Sent in the agent handshake and listed back by a server with the engine
+# tools (socket_connection); both ends use the same name.
+ENGINE_LINK_CAPABILITY = "engine_link_v1"
+
 # ``engine``: which engine ``busy`` / ``error`` belong to (the connect running or failed).
 _state: dict = {"connected": False, "editors": [], "selected": "", "busy": "", "error": "", "engine": "",
                 "at": 0.0}
 _lock = threading.Lock()
 _refreshing = False
+_server_supports = False
+
+
+# ---------------------------------------------------------------------------
+# Whether the server has the engine tools
+# ---------------------------------------------------------------------------
+
+def set_server_capabilities(capabilities) -> None:
+    """From each handshake reply (socket_connection). Only an answering
+    server changes it: while the socket is offline the last answer stands."""
+    global _server_supports
+    _server_supports = ENGINE_LINK_CAPABILITY in (capabilities or ())
+
+
+def server_supports() -> bool:
+    return _server_supports
 
 
 # ---------------------------------------------------------------------------
@@ -88,9 +111,10 @@ def refresh() -> dict:
 
 
 def refresh_async() -> None:
-    """Refresh in a daemon thread; a refresh already running is not doubled."""
+    """Refresh in a daemon thread; a refresh already running is not doubled.
+    Nothing to read while the server has no engine tools."""
     global _refreshing
-    if _refreshing:
+    if _refreshing or not server_supports():
         return
     _refreshing = True
 
@@ -123,6 +147,8 @@ def chip_label(st: dict | None = None) -> str:
 
 def engine_context() -> dict | None:
     """Names only, for the agent: which engine and project are connected."""
+    if not server_supports():
+        return None
     st = state()
     chosen = next((e for e in st.get("editors") or [] if e["id"] == st.get("selected")), None)
     if not chosen:
@@ -344,7 +370,11 @@ def _await_link(proc, engine: str, timeout: float, version: str) -> dict:
 
 
 def connect_async(project: str, *, engine: str = "godot", new_name: str | None = None) -> None:
-    """``connect`` in a thread; progress and errors land in ``state()``."""
+    """``connect`` in a thread; progress and errors land in ``state()``.
+    Nothing happens while the server has no engine tools."""
+    if not server_supports():
+        return
+
     def run():
         try:
             _set(busy="Connecting…", error="", engine=engine)

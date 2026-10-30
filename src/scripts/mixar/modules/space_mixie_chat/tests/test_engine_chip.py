@@ -15,6 +15,9 @@ if _SRC_SCRIPTS not in sys.path:
 for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
+import pytest  # noqa: E402
+
+from mixar.modules.space_mixie_chat.core import engine_connect as ec  # noqa: E402
 from mixar.modules.space_mixie_chat.core import engine_mirror as em  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(_SRC_SCRIPTS, "..", ".."))
@@ -23,6 +26,13 @@ EDITORS = [{"id": "godot-1", "engine": "godot", "project_name": "Ruins", "versio
             "adapter_version": "0.3.0"},
            {"id": "godot-2", "engine": "godot", "project_name": "Arena", "version": "4.7.2-stable (official)",
             "adapter_version": "0.3.0"}]
+
+
+@pytest.fixture(autouse=True)
+def _server_has_engine_tools():
+    ec.set_server_capabilities([ec.ENGINE_LINK_CAPABILITY])
+    yield
+    ec.set_server_capabilities([])
 
 
 def _rows(mirror):
@@ -119,3 +129,18 @@ def test_chat_sends_carry_the_engine_context_names_only():
     src = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "core", "turn_transport.py"),
                encoding="utf-8").read()
     assert "payload['engine_context'] = context" in src and "if method == 'chat':" in src
+
+
+def test_no_chip_until_the_server_lists_the_engine_tools():
+    ec.set_server_capabilities(["agent_history_v1"])
+    for st in ({"connected": False, "editors": [], "selected": "", "busy": "", "error": ""},
+               {"connected": True, "editors": EDITORS, "selected": "godot-2", "busy": "", "error": ""}):
+        assert em.build(st)["mixar_engine_chip_name"] == ""  # the C++ draws no chip for an empty name
+    props = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "properties",
+                              "engine_chip_props.py"), encoding="utf-8").read()
+    assert 'default="", options={\'SKIP_SAVE\'}' in props and "Connect engine" not in props
+    tick = props[props.index("def _tick"):props.index("def register")]
+    assert tick.index("server_supports()") < tick.index("refresh_async()")
+    ops = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
+                            "engine_ops.py"), encoding="utf-8").read()
+    assert ops.count("return engine_connect.server_supports() and not engine_connect.state().get(\"busy\")") == 2

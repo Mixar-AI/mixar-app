@@ -13,6 +13,9 @@ with the engine Source).
   be installed from the Epic Games Launcher), installs Mixar Link into the
   project, enables it, opens the editor and waits for its link, in the
   background: the chip shows the progress and turns green.
+
+Both do nothing until the connected server lists the engine tools
+(``engine_connect.server_supports``).
 """
 
 import os
@@ -49,7 +52,7 @@ class MIXAR_OT_engine_pick(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from ...core import engine_connect
-        return not engine_connect.state().get("busy")
+        return engine_connect.server_supports() and not engine_connect.state().get("busy")
 
     def execute(self, context):
         from ...core import engine_connect
@@ -89,7 +92,7 @@ class MIXAR_OT_engine_connect(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from ...core import engine_connect
-        return not engine_connect.state().get("busy")
+        return engine_connect.server_supports() and not engine_connect.state().get("busy")
 
     def _key(self) -> str:
         return self.engine.upper() if self.engine.upper() in ENGINE_TEXT else "GODOT"
