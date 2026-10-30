@@ -181,7 +181,31 @@ def material_report(materials, object_count: int) -> tuple[dict, list]:
     return report, issues
 
 
-def manifest_section(engine: str, objects: list, issues: list, skeletons: list | None = None) -> dict:
+def markers(roots, scene_objects) -> tuple[list, list]:
+    """Tagged empties under the exported objects (spawn points, bomb sites,
+    triggers placed as empties) -> (manifest markers, issues). They carry no
+    mesh, so the file drops them; the manifest lists them and the engine
+    adapter places them (Unreal: a TargetPoint carrying the tags)."""
+    import math
+
+    out, issues, seen = [], [], set()
+    for root in roots:
+        for o in [root] + list(getattr(root, "children_recursive", ())):
+            if o.type != "EMPTY" or o.name in seen or o.name not in scene_objects:
+                continue
+            seen.add(o.name)
+            tags, tag_issues = read_tags(o)
+            issues += tag_issues
+            if "role" not in tags:
+                continue
+            m = o.matrix_world
+            out.append({"name": o.name, **tags, "position": [round(float(v), 4) for v in m.translation],
+                        "yaw_deg": round(math.degrees(m.to_euler().z), 2)})
+    return out, issues
+
+
+def manifest_section(engine: str, objects: list, issues: list, skeletons: list | None = None,
+                     markers_list: list | None = None) -> dict:
     section = {
         "target": engine, "version": MANIFEST_VERSION, "axes": "blender_z_up",
         "objects": objects, "collision_nodes": sum(len((o.get("collision") or {}).get("nodes") or [])
@@ -190,6 +214,8 @@ def manifest_section(engine: str, objects: list, issues: list, skeletons: list |
     }
     if skeletons:
         section["skeletons"] = list(skeletons)
+    if markers_list:
+        section["markers"] = list(markers_list)
     return section
 
 

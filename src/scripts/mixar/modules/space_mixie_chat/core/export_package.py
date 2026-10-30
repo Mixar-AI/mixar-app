@@ -737,7 +737,10 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                          for a in armatures]
             report, material_issues = engine_targets.material_report(_material_facts(mats), len(copies))
             engine_issues += material_issues
-            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues, skeletons)
+            marker_list, marker_issues = engine_targets.markers(named, scene.objects)
+            engine_issues += marker_issues
+            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues, skeletons,
+                                                             marker_list)
             engine_section["materials"] = report
         verification = verify_export(main, fmt, {
             "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),

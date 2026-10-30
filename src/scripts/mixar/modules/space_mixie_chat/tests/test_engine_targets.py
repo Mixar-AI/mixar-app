@@ -214,3 +214,38 @@ def test_material_report_names_what_a_game_look_lacks():
     assert report["untextured"] == ["Flat"]
     assert report["no_normal_map"] == ["Door"] and report["flat_roughness"] == ["Door"]
     assert len(issues) == 1 and "Door" in issues[0] and "Non-Color" in issues[0]
+
+
+def test_tagged_empties_become_manifest_markers():
+    """Spawn points and bomb sites are empties: the file drops them, so the
+    manifest lists them (uat4 2026-10-30: ten tagged spawn empties of a map
+    never reached Unreal and the level made do with one marker a side)."""
+    import math
+
+    class _Matrix:
+        def __init__(self, at, yaw):
+            self.translation = at
+            self._yaw = yaw
+
+        def to_euler(self):
+            return type("E", (), {"z": self._yaw})()
+
+    def empty(name, tags, at=(0.0, 0.0, 0.0), yaw=0.0, kind="EMPTY", children=()):
+        o = _Obj(name, **{f"mixar_{k}": v for k, v in tags.items()})
+        o.type, o.matrix_world, o.children_recursive = kind, _Matrix(at, yaw), list(children)
+        return o
+
+    spawn = empty("Spawn_T_1", {"role": "spawn", "team": "t"}, (1.0, -24.0, 0.0), math.radians(90))
+    site = empty("Site_A", {"role": "bombsite"}, (21.0, 16.0, 2.0))
+    loose = empty("Group", {})
+    bad = empty("Spawn_X", {"role": "spawn", "team": "blue"})
+    wall = empty("Wall", {"role": "prop"}, kind="MESH")
+    root = empty("Map", {}, children=[spawn, site, loose, bad, wall])
+    names = {o.name for o in (root, spawn, site, loose, bad, wall)}
+    found, issues = et.markers([root], names)
+    assert [m["name"] for m in found] == ["Spawn_T_1", "Site_A", "Spawn_X"]
+    assert found[0] == {"name": "Spawn_T_1", "role": "spawn", "team": "t", "position": [1.0, -24.0, 0.0],
+                        "yaw_deg": 90.0}
+    assert "team" not in found[2] and any("blue" in i for i in issues)
+    assert et.manifest_section("unreal", [], [], markers_list=found)["markers"] == found
+    assert "markers" not in et.manifest_section("unreal", [], [])
