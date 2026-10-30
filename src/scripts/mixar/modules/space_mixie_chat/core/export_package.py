@@ -282,18 +282,19 @@ def _skinned(obj):
         m.type == "ARMATURE" and m.object is not None for m in getattr(obj, "modifiers", ()))
 
 
-def _engine_prepare(engine, copies, renamed, col, joined):
+def _engine_prepare(engine, copies, renamed, col, joined, sources=None):
     """Game-semantics tags read off the ORIGINAL objects onto their copies, a
     collision mesh set per copy -> (manifest objects, issues, hull objects)."""
     originals = {orig: o for o, orig in renamed}
     objects, issues, hulls = [], [], []
     for c in copies:
-        src = originals.get(c.name)
+        source = (sources or {}).get(c.name, c.name)
+        src = originals.get(source)
         tags, tag_issues = engine_targets.read_tags(src, c.name) if src is not None else ({}, [])
         issues += tag_issues
         if joined:
             for o, orig in renamed:
-                if orig == c.name:
+                if orig == source:
                     continue
                 other, _ = engine_targets.read_tags(o, orig)
                 if other and other != tags:
@@ -690,9 +691,18 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
         images = _material_images(mats)
         main = os.path.join(root, stem + ext)
         engine_objects, engine_issues = [], []
+        sources = {}  # a renamed copy's name -> its original's
+        if engine in ("unreal", "uefn"):
+            for c, safe in zip(copies, engine_targets.unreal_names([c.name for c in copies])):
+                if c.name != safe:
+                    before = c.name
+                    c.name = safe
+                    if c.name != safe:  # an unrelated object holds that name
+                        c.name = f"{safe}_pkg"
+                    sources[c.name] = before
         if engine:
             engine_objects, engine_issues, hulls = _engine_prepare(
-                engine, copies, renamed, col, bool(join and len(meshes) > 1))
+                engine, copies, renamed, col, bool(join and len(meshes) > 1), sources)
         exported = list(copies) + hulls + armatures
         with clip_selection(armatures, animations, scene) as (clips, clips_missing):
             anim_mode, warning = _export(fmt, main, exported, animations, engine)

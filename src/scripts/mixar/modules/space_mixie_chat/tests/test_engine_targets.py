@@ -249,3 +249,12 @@ def test_tagged_empties_become_manifest_markers():
     assert "team" not in found[2] and any("blue" in i for i in issues)
     assert et.manifest_section("unreal", [], [], markers_list=found)["markers"] == found
     assert "markers" not in et.manifest_section("unreal", [], [])
+
+
+def test_unreal_names_are_plain_and_unique():
+    """Unreal's FBX importer rewrites other characters and two names can land
+    on one (27 pieces of a map vanished, uat4 2026-10-30)."""
+    names = et.unreal_names(["Rail_-0.682", "Rail_0.682", "Rail__0_682", "Crate", "Door (1)", "crate"],
+                            taken=["Floor"])
+    assert names == ["Rail__0_682", "Rail_0_682", "Rail__0_682_2", "Crate", "Door__1_", "crate_2"]
+    assert all(n.replace("_", "").isalnum() for n in names)

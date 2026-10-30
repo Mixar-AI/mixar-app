@@ -181,6 +181,24 @@ def material_report(materials, object_count: int) -> tuple[dict, list]:
     return report, issues
 
 
+def unreal_names(names: list, taken=()) -> list:
+    """Object names Unreal keeps as they are: letters, digits and ``_`` only,
+    unique. Unreal's FBX importer rewrites other characters itself, and two
+    names can land on one (``Rail_-0.682`` and ``Rail_0.682``: 27 pieces of
+    a map vanished, uat4 2026-10-30)."""
+    import re
+
+    out, used = [], {n.lower() for n in taken}
+    for name in names:
+        base = re.sub(r"[^A-Za-z0-9_]", "_", name) or "Object"
+        safe, i = base, 2
+        while safe.lower() in used:
+            safe, i = f"{base}_{i}", i + 1
+        used.add(safe.lower())
+        out.append(safe)
+    return out
+
+
 def markers(roots, scene_objects) -> tuple[list, list]:
     """Tagged empties under the exported objects (spawn points, bomb sites,
     triggers placed as empties) -> (manifest markers, issues). They carry no
