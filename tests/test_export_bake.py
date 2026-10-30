@@ -108,3 +108,24 @@ def test_texture_size_follows_area_within_bounds():
     assert export_bake.texture_size(24.0) == 1024  # a 2 m cube at 128 px/m
     assert export_bake.texture_size(400.0) == 2048  # capped
     assert export_bake.texture_size(400.0, hi=4096) == 4096
+
+
+def test_a_level_too_large_to_bake_is_skipped_at_once_with_the_way_out(monkeypatch):
+    """A 1042-piece map's bake ran past the export's 600 s before the budget was
+    ever checked (uat4 2026-10-30): a bake that large is refused up front."""
+    mat, bsdf = _material()
+    _link(_Node("ShaderNodeTexNoise", ("Vector",)), bsdf.inputs["Base Color"])
+    mat.name = mat.name_full = "Limestone"
+    class _Piece:  # hashable, as Blender objects are
+        type = "MESH"
+
+        def __init__(self):
+            self.data = types.SimpleNamespace(materials=[mat], uv_layers=[], polygons=[None] * 6)
+
+    pieces = [_Piece() for _ in range(export_bake.MAX_BAKE_OBJECTS + 1)]
+    monkeypatch.setattr(export_bake.bpy, "context", types.SimpleNamespace(mode="OBJECT"), raising=False)
+    with export_bake.baked_procedural_materials(pieces) as report:
+        pass
+    assert report["baked"] == []
+    assert len(report["skipped"]) == 1 and "too large to bake" in report["skipped"][0]["reason"]
+    assert "image-textured" in report["skipped"][0]["reason"]

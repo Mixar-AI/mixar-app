@@ -77,6 +77,11 @@ def _readable(socket):
     return True
 
 
+# Beyond these a bake would outlast the export (unwrap + Cycles bake of a whole level).
+MAX_BAKE_OBJECTS = 300
+MAX_BAKE_FACES = 600_000
+
+
 def plan(material):
     """What to bake for ``material``: None when an exporter reads it as is,
     else {"mode": "principled" | "surface", "channels": [Principled inputs]}.
@@ -392,9 +397,20 @@ def baked_procedural_materials(copies, *, density=128, max_px=2048, margin=8, bu
         yield report
         return
 
+    objs = list({o: None for job in jobs.values() for o in job["slots"]})
+    faces = sum(len(o.data.polygons) for o in objs)
+    if len(objs) > MAX_BAKE_OBJECTS or faces > MAX_BAKE_FACES:
+        # unwrapping and baking a whole level at once ran past the export's 600 s
+        # (a 1042-piece map, uat4 2026-10-30); the budget is checked only between bakes
+        reason = (f"too large to bake in one export ({len(objs)} objects, {faces} faces; the limit is "
+                  f"{MAX_BAKE_OBJECTS} objects / {MAX_BAKE_FACES} faces): give these pieces image-textured "
+                  "materials (flatten layered materials) or export the level in parts")
+        report["skipped"] = [{"material": j["material"].name, "reason": reason} for j in jobs.values()]
+        report["seconds"] = round(time.perf_counter() - t0, 2)
+        yield report
+        return
     scene = bpy.context.scene
     state = _render_state(scene)
-    objs = list({o: None for job in jobs.values() for o in job["slots"]})
     current = {(o, i): m for o in objs for i, m in enumerate(o.data.materials)}
     original = dict(current)
     created_mats, created_images, export_mats = [], [], {}
