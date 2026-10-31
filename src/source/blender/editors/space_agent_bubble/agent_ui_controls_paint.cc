@@ -426,7 +426,9 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send"),
+  label_centre(state->stop_visible ? IFACE_("Stop") :
+               state->steer_ready  ? IFACE_("Steer") :
+                                     IFACE_("Send"),
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,

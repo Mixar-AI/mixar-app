@@ -146,7 +146,8 @@ def test_agent_action_reads_send_not_generate():
     run); Stop only while busy with an empty composer — `stop_visible` is
     derived once in agent_ui_state.cc and read by both the paint and the
     button row."""
-    assert 'label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send")' in CONTROLS_PAINT_CC
+    assert 'label_centre(state->stop_visible ? IFACE_("Stop") :' in CONTROLS_PAINT_CC
+    assert 'state->steer_ready  ? IFACE_("Steer") :' in CONTROLS_PAINT_CC
     state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
     assert "r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;" in state_cc
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
@@ -155,10 +156,29 @@ def test_agent_action_reads_send_not_generate():
     assert '"mixie_chat.send_message"' in references
     send = _function_body(references, "void agent_bubble_send_button(")
     assert 'state.stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in send
-    assert 'state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send")' in send
+    assert 'TIP_("Stop the running turn. To change direction instead, type a message: "' in send
+    assert 'TIP_("Send this to Mixie now. It adjusts the running work without stopping")' in send
     column = _function_body(references, "void agent_bubble_references_draw(")
     assert "agent_bubble_send_button(C, region, block, layout, state)" in column
     assert '"Generate"' not in send
+
+
+def test_a_working_run_tells_the_user_typing_steers_it():
+    """Users stopped runs to redirect them (the next message a correction or
+    the same prompt resent), not knowing a typed message joins the run. The
+    steer state mirrors core/composer_send.py:is_interjection (BUSY + open
+    run) plus an open run whose workers still build; before the run opens
+    Send is refused, so the placeholder says Mixie is starting instead."""
+    state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
+    gather = _function_body(state_cc, "void agent_ui_state_gather(")
+    assert 'const bool run_open = read_bool_prop(&scene_ptr, "mixie_run_open");' in gather
+    assert "r_state->steer_ready = (busy && run_open) || r_state->status_active;" in gather
+    assert 'IFACE_("Type to steer Mixie, no need to stop it...")' in gather
+    assert 'IFACE_("Mixie is getting started...")' in gather
+    # Scribble's own placeholders are set later in the gather and still win.
+    assert gather.index("Type to steer Mixie") < gather.index("Draw or type instructions.")
+    draw_hh = (BUBBLE / "agent_ui_draw.hh").read_text(encoding="utf-8")
+    assert "bool steer_ready;" in draw_hh
 
 
 def test_the_qa_probe_only_replaces_the_transport_boundary():

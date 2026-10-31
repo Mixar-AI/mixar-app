@@ -137,7 +137,12 @@ void agent_bubble_send_button(const bContext * /*C*/,
             int(r.ymin) - region->winrct.ymin,
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
-            state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send"));
+            state.stop_visible ?
+                TIP_("Stop the running turn. To change direction instead, type a message: "
+                     "Mixie reads it while it works and keeps what it has built") :
+            state.steer_ready ?
+                TIP_("Send this to Mixie now. It adjusts the running work without stopping") :
+                TIP_("Send"));
 
   /* Refine / Revert: the moodboard node's operators, addressed at the
    * composer. Same tooltips and disabled hints as the node tile, so one

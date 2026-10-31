@@ -297,6 +297,8 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # Stop on a pending question dismisses it rather than stopping work.
         origin = ('question_dismissed' if session.get_state(scene) == SessionState.AWAITING_INPUT
                   else self.origin)
+        from ...core import steer_hint
+        was_steerable = steer_hint.steerable(session, scene)
 
         from ...core.export_destination import clear_destination
         clear_destination(session.get_session_id(scene))
@@ -359,6 +361,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         session.clear_streaming()
         session.set_run(scene, "", False)
         session.set_connected(scene)
+        steer_hint.after_stop(was_steerable, origin)
 
         for window in context.window_manager.windows:
             for area in window.screen.areas:

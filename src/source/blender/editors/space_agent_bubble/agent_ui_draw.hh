@@ -48,6 +48,12 @@ struct AgentIslandState {
   /* The primary button reads Stop instead of Send: busy AND nothing typed.
    * A non-empty composer always sends (an interjection joins the open run). */
   bool stop_visible;
+  /* A message sent now joins the running work instead of starting a turn:
+   * BUSY with the run open (core/composer_send.py:is_interjection) or an open
+   * run whose workers still build. The button reads Steer and the empty
+   * composer says so — users stopped turns to redirect them, not knowing a
+   * typed message steers without stopping. */
+  bool steer_ready;
   /* A conversation exists, so the panel splits: transcript above, input below.
    * Empty, the input takes the whole panel exactly as the artboard draws it. */
   bool has_transcript;

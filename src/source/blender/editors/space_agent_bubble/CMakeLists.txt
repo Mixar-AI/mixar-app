@@ -86,6 +86,7 @@ set(SRC
   agent_ui_model_card.hh
   agent_ui_model_card_intern.hh
   agent_ui_provider.hh
+  agent_ui_rna_read.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh

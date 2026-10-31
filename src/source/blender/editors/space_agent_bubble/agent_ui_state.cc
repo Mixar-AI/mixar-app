@@ -22,7 +22,8 @@
  *   auto switch   scene.mixie_chat_auto_mode
  *   model chip    wm.mixar_agent_{source,source_label,chip_name,source_state}
  *                 (absent until the Python half registers them)
- *   placeholder   shown while scene.mixie_chat_input is empty
+ *   placeholder   shown while scene.mixie_chat_input is empty; says a typed
+ *                 message steers while scene.mixie_run_open is set
  *   queue count   live rows in wm.mixie_queue.items
  *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
  *
@@ -60,74 +61,14 @@
 #include "agent_ui_cat_activity.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_provider.hh"
+#include "agent_ui_rna_read.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
 namespace {
 
-void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy,
-                      const bool tail = false)
-{
-  out[0] = '\0';
-  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
-  if (!prop || RNA_property_type(prop) != PROP_STRING) {
-    return;
-  }
-  char fixed[512];
-  int len = 0;
-  char *value = RNA_property_string_get_alloc(ptr, prop, fixed, sizeof(fixed), &len);
-  if (value) {
-    const char *start = value;
-    if (tail && len >= out_maxncpy) {
-      start += len - out_maxncpy + 1;
-      while ((*start & 0xc0) == 0x80) {
-        start++;
-      }
-    }
-    BLI_strncpy_utf8(out, start, out_maxncpy);
-    if (value != fixed) {
-      MEM_delete(value);
-    }
-  }
-}
-
-bool read_bool_prop(PointerRNA *ptr, const char *name)
-{
-  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
-  return (prop && RNA_property_type(prop) == PROP_BOOLEAN) ?
-             RNA_property_boolean_get(ptr, prop) :
-             false;
-}
-
-/** The enum item's UI name — the label the property itself already carries. */
-void read_enum_name(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy)
-{
-  out[0] = '\0';
-  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
-  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
-    return;
-  }
-  const int value = RNA_property_enum_get(ptr, prop);
-  const char *label = nullptr;
-  if (RNA_property_enum_name_gettexted(nullptr, ptr, prop, value, &label) && label) {
-    BLI_strncpy(out, label, out_maxncpy);
-  }
-}
-
-bool enum_is(PointerRNA *ptr, const char *name, const char *identifier)
-{
-  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
-  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
-    return false;
-  }
-  const int value = RNA_property_enum_get(ptr, prop);
-  const char *ident = nullptr;
-  if (RNA_property_enum_identifier(nullptr, ptr, prop, value, &ident) && ident) {
-    return STREQ(ident, identifier);
-  }
-  return false;
-}
+using namespace agent_ui_rna;
 
 /**
  * Title of the history row for the session this scene is on.
@@ -319,6 +260,17 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     read_string_prop(&scene_ptr, "mixie_chat_input", r_state->input_text, sizeof(r_state->input_text));
     r_state->prompt_empty = (r_state->input_text[0] == '\0');
     r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;
+    const bool run_open = read_bool_prop(&scene_ptr, "mixie_run_open");
+    const bool busy = enum_is(&scene_ptr, "mixie_chat_state", "BUSY");
+    r_state->steer_ready = (busy && run_open) || r_state->status_active;
+    if (r_state->steer_ready) {
+      r_state->placeholder = IFACE_("Type to steer Mixie, no need to stop it...");
+    }
+    else if (busy) {
+      /* Routing (or a quick edit) runs before the run opens; Send is refused
+       * until then (core/composer_send.py:can_send). */
+      r_state->placeholder = IFACE_("Mixie is getting started...");
+    }
 
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
     r_state->has_transcript =
