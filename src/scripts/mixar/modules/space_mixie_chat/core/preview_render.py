@@ -278,6 +278,28 @@ def _install():
             handlers.append(callback)
 
 
+def _release_route_pin(source, scene) -> bool:
+    """Put a routed script's window back on the user's tab before the invoke.
+
+    Left to the executor's restore after the script, that scene switch freed the
+    job's RenderEngine mid-start (``main_thread_routing.release_pin``). Only for a
+    job on the private copy, which the operator names itself, and only when the
+    tab it returns to is on the source's frame: the render operator copies the
+    CONTEXT scene's frame onto the scene it renders. Every other job keeps the
+    old order and relies on the ``engine.cc`` overlay. True when released.
+    """
+    if scene is source:
+        return False
+    try:
+        from . import main_thread_routing as routing
+    except ImportError:
+        return False
+    target = routing.pin_restore_target()
+    if target is None or target.frame_current != source.frame_current:
+        return False
+    return routing.release_pin("native_render")
+
+
 def poll(key):
     """Read-only state delivery, including changes since render completion."""
     if _job is not None and _job["key"] == key:
@@ -460,32 +482,41 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
             job["render"]["engine_downgraded"] = downgraded
         bpy.app.handlers.render_complete.append(_complete)
         bpy.app.handlers.render_cancel.append(_cancelled)
+        kwargs = {}
+        if scene is not source:
+            # Name the copy through the operator, never the context: bpy.ops
+            # first evaluates the context scene's viewport depsgraph, which for
+            # the copy is a second full evaluation of the user's objects (and
+            # crashed in base-flag evaluation). The context stays on the user's
+            # scene, already evaluated. A single-layer render must name the
+            # copy's own layer, or it takes the window's layer of the user's scene.
+            kwargs["scene"] = scene.name
+            if scene.render.use_single_layer:
+                layer = scene.view_layers.get(getattr(win.view_layer, "name", ""))
+                kwargs["layer"] = (layer or scene.view_layers[0]).name
+        # Flush our own setting writes before taking the revision baseline, and
+        # before the job thread exists: an evaluation after the invoke would run
+        # beside the job's own depsgraph build over the same objects.
+        bpy.context.view_layer.update()
+        override = {"window": win, "scene": source}
+        if _release_route_pin(source, scene):
+            # The window now shows the user's tab, which the switch just
+            # evaluated; it is the context, as for an unrouted script. bpy.ops
+            # evaluates the context scene first, and the routed scene, shown by
+            # no window any more, crashed that evaluation (deg copy-on-eval).
+            override = {"window": win}
         # The pixels go to the agent; never open an image-editor window.
         view = context.preferences.view
         display = view.render_display_type
         try:
             view.render_display_type = "NONE"
-            kwargs = {}
-            if scene is not source:
-                # Name the copy through the operator, never the context: bpy.ops
-                # first evaluates the context scene's viewport depsgraph, which for
-                # the copy is a second full evaluation of the user's objects (and
-                # crashed in base-flag evaluation). The context stays on the user's
-                # scene, already evaluated. A single-layer render must name the
-                # copy's own layer, or it takes the window's layer of the user's scene.
-                kwargs["scene"] = scene.name
-                if scene.render.use_single_layer:
-                    layer = scene.view_layers.get(getattr(win.view_layer, "name", ""))
-                    kwargs["layer"] = (layer or scene.view_layers[0]).name
-            with bpy.context.temp_override(window=win, scene=source):
+            with bpy.context.temp_override(**override):
                 ret = bpy.ops.render.render("INVOKE_DEFAULT", write_still=False, **kwargs)
         finally:
             view.render_display_type = display
         if "RUNNING_MODAL" not in ret:
             raise RuntimeError("async_render_not_started")
         render_slot.phase(reservation, "rendering")
-        # Flush our own setting writes before taking the revision baseline.
-        bpy.context.view_layer.update()
         job["revision"] = _revision
         return {"job_id": key, "status": "running", "render_revision": _revision,
                 "scene_session": session, "render": dict(job["render"])}
