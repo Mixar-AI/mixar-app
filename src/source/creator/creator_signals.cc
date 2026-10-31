@@ -54,6 +54,7 @@
 #  endif
 
 #  include "creator_intern.h" /* Own include. */
+#  include "mixar_crash_info.h" /* MIXAR: crash symbolication block. */
 
 namespace blender {
 
@@ -131,6 +132,8 @@ static void crashlog_file_generate(const char *filepath, const void *os_info)
 
   fputs("\n# backtrace\n", fp);
   BLI_system_backtrace_with_os_info(fp, os_info);
+  /* MIXAR: images, debug ids and raw frame addresses for offline symbolication. */
+  mixar_crash_info_write(fp, os_info);
 
 #  ifdef WITH_PYTHON
   /* Generate python back-trace if Python is currently active. */

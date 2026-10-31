@@ -43,6 +43,8 @@ mkdir -p "${BUILD_ENV_DIR}"
 
 # Generate environment configuration header
 echo "Generating environment configuration for: $MIXAR_ENV"
+# The crash log's symbolication block names the build (mixar_crash_info.cc).
+MIXAR_GIT_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
 mkdir -p "$SOURCE_DIR/source/creator"
 cat > "$SOURCE_DIR/source/creator/mixar_env_config.h" << EOF
 #pragma once
@@ -52,6 +54,8 @@ cat > "$SOURCE_DIR/source/creator/mixar_env_config.h" << EOF
 #define MIXAR_BASE_URL "$MIXAR_BACKEND_URL"
 #define MIXAR_FRONTEND_BASE_URL "$MIXAR_FRONTEND_URL"
 #define MIXAR_CURRENT_ENV "$MIXAR_ENV"
+#define MIXAR_APP_VERSION "$MIXAR_VERSION"
+#define MIXAR_GIT_SHA "$MIXAR_GIT_SHA"
 
 // Environment-specific macros for conditional compilation
 EOF

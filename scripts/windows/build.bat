@@ -98,6 +98,9 @@ echo [4/8] Generating environment config header for: %MIXAR_ENV%...
 if not exist "%SOURCE_DIR%\source\creator" mkdir "%SOURCE_DIR%\source\creator"
 
 set "HEADER_FILE=%SOURCE_DIR%\source\creator\mixar_env_config.h"
+REM The crash log's symbolication block names the build (mixar_crash_info.cc).
+set "MIXAR_GIT_SHA=unknown"
+for /f "usebackq delims=" %%s in (`git -C "%ROOT_DIR%" rev-parse HEAD 2^>nul`) do set "MIXAR_GIT_SHA=%%s"
 set "HEADER_TMP=%HEADER_FILE%.tmp"
 
 REM Write to temp file first; only overwrite if content changed (preserves timestamp when unchanged,
@@ -110,6 +113,8 @@ echo.
 echo #define MIXAR_BASE_URL "%MIXAR_BACKEND_URL%"
 echo #define MIXAR_FRONTEND_BASE_URL "%MIXAR_FRONTEND_URL%"
 echo #define MIXAR_CURRENT_ENV "%MIXAR_ENV%"
+echo #define MIXAR_APP_VERSION "%MIXAR_VERSION%"
+echo #define MIXAR_GIT_SHA "%MIXAR_GIT_SHA%"
 echo.
 echo // Environment-specific macros for conditional compilation
 ) > "%HEADER_TMP%"
@@ -340,6 +345,12 @@ if defined BUILD_WITH_NINJA (
     )
 )
 
+REM Release PDBs for crash symbolication: on when the release pipeline sets
+REM MIXAR_DEBUG_SYMBOLS=1 (see cmake/mixar_overrides.cmake). The PDB is never
+REM installed (MIXAR_INSTALL_RELEASE_PDB stays OFF); CI uploads it instead.
+set "RELEASE_PDB=OFF"
+for %%F in (1 on yes y true) do if /i "%MIXAR_DEBUG_SYMBOLS%"=="%%F" set "RELEASE_PDB=ON"
+
 REM --- [5/8] CMake Configure ---
 REM Always configure after overlay, as build.sh does. Restored upstream CMake
 REM files can be older than build.ninja, so Ninja's timestamp check alone can
@@ -352,7 +363,7 @@ cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
     -S "%SOURCE_DIR%" ^
     -B "%BUILD_ENV_DIR%" ^
     -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
-    -DWITH_WINDOWS_RELEASE_PDB=OFF ^
+    -DWITH_WINDOWS_RELEASE_PDB=%RELEASE_PDB% ^
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
     %TOOLCHAIN_CMAKE_ARGS% ^
     %CUDA_CMAKE_ARGS%
