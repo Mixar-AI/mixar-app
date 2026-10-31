@@ -270,6 +270,14 @@ def _reject_stale_session(req: ExecutionRequest) -> None:
         logger.debug("lane scene sweep scheduling skipped", exc_info=True)
 
 
+def _request_save_point(reason: str) -> None:
+    try:
+        from mixar.modules.session_recovery.runtime import request_save_point
+        request_save_point(reason)
+    except Exception:  # noqa: BLE001 — never in the script path's way
+        pass
+
+
 def _note_output_landed() -> None:
     # Rejection-window tracking only — no event is emitted here (the backend
     # covers agent tool telemetry server-side).
@@ -409,6 +417,10 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
             logger.exception("Executor history failed (id: %s)", req.request_id)
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
+
+    # Crash safety: the agent changed the scene, so a save point is due once
+    # its scripts pause (coalesced; never written while scripts are queued).
+    _request_save_point("agent_script")
 
     # Continue timer if more requests pending. The same tab back-to-back
     # keeps the 500 ms breather (safe for edit mode operations); another
