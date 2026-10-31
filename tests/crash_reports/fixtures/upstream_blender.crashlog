@@ -1,0 +1,26 @@
+# Blender 5.1.0, Commit date: 2026-03-16 18:50, Hash adfe2921d5f3
+
+# backtrace
+0   Blender                             0x00000001036ee300 _ZN7blender33BLI_system_backtrace_with_os_infoEP7__sFILEPKv + 56
+1   Blender                             0x0000000102de283c _ZN7blenderL19sig_handle_crash_fnEi + 260
+2   libsystem_platform.dylib            0x000000019bc1f744 _sigtramp + 56
+3   Blender                             0x0000000103b16114 _ZN7blender7animrig39foreach_action_slot_use_with_referencesERNS_2IDENS_11FunctionRefIFbS2_RPNS_7bActionERiPcEEE + 112
+4   Blender                             0x0000000103b16098 _ZN7blender7animrig23foreach_action_slot_useERKNS_2IDENS_11FunctionRefIFbRKNS0_6ActionEiEEE + 40
+5   Blender                             0x0000000103b0f464 _ZN7blender7animrig26generic_assign_action_slotEPNS0_4SlotERNS_2IDERPNS_7bActionERiPc + 456
+6   Blender                             0x0000000103fe93fc _ZN7blender24AnimData_action_slot_setEPNS_10PointerRNAES0_PNS_10ReportListE + 376
+7   Blender                             0x0000000103f9f9f0 _ZN7blender24RNA_property_pointer_setEPNS_10PointerRNAEPNS_11PropertyRNAES0_PNS_10ReportListE + 504
+8   Blender                             0x00000001045d8e48 _ZN7blenderL16pyrna_py_to_propEPNS_10PointerRNAEPNS_11PropertyRNAEPvP7_objectPKc + 3388
+9   Blender                             0x0000000107ab41a8 PyObject_SetAttr + 176
+10  Blender                             0x0000000107b9042c _PyEval_EvalFrameDefault + 42508
+11  Blender                             0x0000000107b858e8 PyEval_EvalCode + 252
+12  Blender                             0x0000000107bf29dc run_eval_code_obj + 180
+13  Blender                             0x0000000107bf2690 run_mod + 328
+14  Blender                             0x0000000107bf1aa8 PyRun_FileExFlags + 176
+15  Blender                             0x00000001045c8d04 _ZN7blenderL18python_script_execEPNS_8bContextEPKcPNS_4TextEPNS_10ReportListEb + 472
+16  Blender                             0x0000000102de0c64 _ZN7blenderL26arg_handle_python_file_runEiPPKcPv + 256
+17  Blender                             0x00000001036f9084 _ZN7blender14BLI_args_parseEPNS_5bArgsEiPFiiPPKcPvES5_ + 188
+18  Blender                             0x0000000102ddd304 main + 932
+19  dyld                                0x000000019b84dd54 start + 7184
+
+# Python backtrace
+  File "/Users/jdoe/scratch/variants2.py", line 13 in <module>

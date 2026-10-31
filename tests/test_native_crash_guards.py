@@ -209,6 +209,16 @@ def test_signals_overlay_tracks_the_pinned_upstream():
         count=1,
         flags=re.DOTALL,
     )
+    overlay = overlay.replace(
+        '#  include "mixar_crash_info.h" /* MIXAR: crash symbolication block. */\n', "", 1
+    )
+    overlay = re.sub(
+        r"  /\* MIXAR: images, debug ids.*?\*/\n  mixar_crash_info_write\(fp, os_info\);\n",
+        "",
+        overlay,
+        count=1,
+        flags=re.DOTALL,
+    )
     assert overlay == upstream
 
 
@@ -239,3 +249,21 @@ def test_autosave_runs_under_the_passive_agent_modals():
         # A Python operator `mixar.agent_viewport_block` is `MIXAR_OT_agent_viewport_block`
         # in C++; a rename on either side would silently starve autosave again.
         assert f'bl_idname = "{prefix.lower()}.{name}"' in py, (prefix, name)
+
+
+def test_crash_log_gets_the_symbolication_block_after_the_backtrace():
+    """Every crash log carries images, debug ids and raw frame addresses.
+
+    The block goes after Blender's own backtrace and before the Python
+    backtrace, so older readers that stop at "# Python backtrace" still parse
+    the log, and it is written for every platform (``os_info`` is the
+    Windows exception context).
+    """
+    src = SIGNALS.read_text()
+    generate = _fn(src, "static void crashlog_file_generate")
+    backtrace = generate.index("BLI_system_backtrace_with_os_info(fp, os_info);")
+    block = generate.index("mixar_crash_info_write(fp, os_info);")
+    python = generate.index("BPY_python_backtrace(fp);")
+    assert backtrace < block < python
+    cmake = (ROOT / "src/source/creator/CMakeLists.txt").read_text()
+    assert "mixar_crash_info.cc" in cmake

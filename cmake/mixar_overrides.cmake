@@ -101,3 +101,35 @@ if(SCCACHE_PROGRAM)
 else()
   message(STATUS "sccache not found - building without compiler cache")
 endif()
+
+# Release debug information for crash symbolication, set by the release
+# pipeline (MIXAR_DEBUG_SYMBOLS=1 in .github/workflows/release.yml; local
+# builds leave it off and build exactly as before).
+#
+#   macOS / Linux  -g1: function names, line tables and inlining only (clang
+#                  reads it as -gline-tables-only). Code generation does not
+#                  change. The CI turns the debug info into a dSYM / .debug file
+#                  and the shipped binary is stripped as before (package.sh
+#                  strips the debug map too, so it does not grow).
+#   Windows        WITH_WINDOWS_RELEASE_PDB is passed by build.bat; the PDB
+#                  stays out of the install (MIXAR_INSTALL_RELEASE_PDB).
+#
+# The base CMAKE_<LANG>_FLAGS are used because the platform files overwrite
+# CMAKE_<LANG>_FLAGS_RELEASE after this preload runs.
+mixar_env_bool(MIXAR_DEBUG_SYMBOLS OFF MIXAR_DEBUG_SYMBOLS_ENABLED)
+if(MIXAR_DEBUG_SYMBOLS_ENABLED AND NOT CMAKE_HOST_WIN32)
+  set(CMAKE_C_FLAGS "-g1" CACHE STRING "C compiler flags" FORCE)
+  set(CMAKE_CXX_FLAGS "-g1" CACHE STRING "C++ compiler flags" FORCE)
+  if(NOT CMAKE_HOST_APPLE)
+    # Symbols are filed by GNU build-id; make sure the linker writes one.
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--build-id=sha1" CACHE STRING "Linker flags" FORCE)
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--build-id=sha1" CACHE STRING "Linker flags" FORCE)
+  endif()
+  message(STATUS "Mixar: release debug information ON (-g1) for crash symbolication")
+elseif(NOT CMAKE_HOST_WIN32 AND "${CMAKE_CXX_FLAGS}" STREQUAL "-g1")
+  # A build directory configured by a release build: drop what it cached.
+  set(CMAKE_C_FLAGS "" CACHE STRING "C compiler flags" FORCE)
+  set(CMAKE_CXX_FLAGS "" CACHE STRING "C++ compiler flags" FORCE)
+  set(CMAKE_EXE_LINKER_FLAGS "" CACHE STRING "Linker flags" FORCE)
+  set(CMAKE_SHARED_LINKER_FLAGS "" CACHE STRING "Linker flags" FORCE)
+endif()
