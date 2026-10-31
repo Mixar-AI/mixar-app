@@ -410,6 +410,13 @@ class EventProcessor:
                 archive_current(scene)
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"history upsert on complete skipped: {e}")
+            # Crash safety: the settled turn (scene + transcript) gets a
+            # save point.
+            try:
+                from mixar.modules.session_recovery.runtime import request_save_point
+                request_save_point("turn_end")
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"save point request on complete skipped: {e}")
 
             # Session settled to IDLE — remove any agentlane:* workspace
             # scenes whose backend removal scripts never landed (dropped as

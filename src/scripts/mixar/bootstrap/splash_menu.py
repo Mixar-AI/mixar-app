@@ -188,6 +188,14 @@ class WM_MT_splash(Menu):
         layout.emboss = 'PULLDOWN_MENU'
         layout.scale_y = 1.3
 
+        # After a crash the splash opens with the restore question, so the
+        # first thing on screen is the way back (session_recovery).
+        try:
+            from mixar.modules.session_recovery import runtime as recovery
+            recovery.draw_offer(layout, in_splash=True)
+        except Exception:  # noqa: BLE001 — the splash must draw whatever happens
+            pass
+
         split = layout.split()
 
         col1 = split.column()

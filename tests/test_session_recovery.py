@@ -435,3 +435,103 @@ def test_the_passive_list_matches_the_native_autosave():
         r"passive_idnames\[\] = \{(.*?)\};", src, re.S).group(1)))
     from mixar.modules.session_recovery import runtime
     assert native == set(runtime.PASSIVE_MODALS)
+
+
+# =============================================================================
+# Runtime flows (bpy mocked)
+# =============================================================================
+
+@pytest.fixture
+def rt(tmp_path, monkeypatch):
+    from mixar.modules.session_recovery import runtime
+    from mixar.modules.session_recovery.scheduler import SavePointScheduler
+
+    jr = journal.Journal(str(tmp_path / "recovery"), pid=4242, now=NOW)
+    sched = SavePointScheduler()
+    sched.reset(0.0)
+    monkeypatch.setitem(runtime._state, "journal", jr)
+    monkeypatch.setitem(runtime._state, "scheduler", sched)
+    monkeypatch.setitem(runtime._state, "decided", False)
+    monkeypatch.setattr(runtime, "_main_window", lambda: None)
+    monkeypatch.setattr(runtime, "native_autosave_path", lambda: str(tmp_path / "T" / "4242_autosave.mixar"))
+    monkeypatch.setattr(runtime, "_tab_scenes", lambda: [])
+    monkeypatch.setattr(runtime, "agent_scenes", lambda: [{"scene": "Scene", "session_id": "sid"}])
+    monkeypatch.setattr(runtime, "_job_records", lambda: [])
+    monkeypatch.setattr(runtime.bpy.data, "filepath", "", raising=False)
+    monkeypatch.setattr(runtime.bpy.app.timers, "register",
+                        lambda fn, first_interval=0, persistent=False: None, raising=False)
+    return runtime
+
+
+def test_a_save_point_is_the_native_autosave_moved_into_the_journal(rt, tmp_path, monkeypatch):
+    def save_auto_save():
+        _file(tmp_path / "T" / "4242_autosave.mixar", data=b"blend")
+        return {'FINISHED'}
+    monkeypatch.setattr(rt.bpy.ops.wm, "save_auto_save", save_auto_save, raising=False)
+    record = rt.write_save_point(["agent_script"])
+    assert record["reason"] == "agent_script" and record["agent_scenes"][0]["session_id"] == "sid"
+    assert os.path.isfile(record["file"]) and not os.path.exists(tmp_path / "T" / "4242_autosave.mixar")
+    assert rt._state["scheduler"].last_cost_s == pytest.approx(record["cost_s"], abs=1e-3)
+
+
+def test_a_failed_write_files_nothing(rt, monkeypatch):
+    monkeypatch.setattr(rt.bpy.ops.wm, "save_auto_save", lambda: {'CANCELLED'}, raising=False)
+    assert rt.write_save_point(["timer"]) is None
+    assert rt._state["journal"].data["save_points"] == []
+    assert rt._state["scheduler"].last_failed_at > 0
+
+
+def test_the_restore_attempt_is_on_disk_before_the_read(rt, tmp_path, monkeypatch):
+    point = _file(tmp_path / "recovery" / "old" / "sp-1.mixar")
+    old = _session(tmp_path, "old2")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "old2", "dir": old["dir"], "legacy": False, "failed_points": [],
+        "older": [], "debris": [],
+        "target": {"kind": "save_point", "path": point, "at": NOW - 60, "original_path": "",
+                   "agent_scenes": [], "jobs": []}})
+    seen = {}
+
+    def recover_auto_save(filepath):
+        seen["manifest"] = journal.read_manifest(rt._state["journal"].dir)
+        seen["path"] = filepath
+        return {'FINISHED'}
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save", recover_auto_save, raising=False)
+    import mixar.modules.space_mixie_chat.core.checkpoint_timeline as ct
+    monkeypatch.setattr(ct, "_retitle", lambda path: seen.setdefault("retitle", path))
+    monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
+    assert rt.restore_deferred()
+    rt._restore_now()
+    attempt = seen["manifest"]["restore_attempt"]
+    assert attempt == {"point": point, "from_session": "old2", "at": attempt["at"], "confirmed": False}
+    assert seen["path"] == point and seen["retitle"] == ""  # untitled stays untitled
+    inherited = rt._state["journal"].data["inherited_points"]
+    assert inherited[0]["path"] == point and inherited[0]["source_dir"] == old["dir"]
+    rt._confirm_restore()
+    assert rt._state["journal"].data["restore_attempt"]["confirmed"] is True
+    assert journal.read_manifest(old["dir"])["resolved"] == "restored"
+
+
+def test_a_read_that_fails_keeps_the_work_for_next_launch(rt, tmp_path, monkeypatch):
+    point = _file(tmp_path / "recovery" / "old" / "sp-1.mixar")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "old", "dir": "", "legacy": False, "failed_points": [], "older": [], "debris": [],
+        "target": {"kind": "save_point", "path": point, "at": NOW, "original_path": ""}})
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save", lambda filepath: {'CANCELLED'}, raising=False)
+    monkeypatch.setattr(rt, "_report", lambda text: None)
+    assert rt.restore_deferred()
+    rt._restore_now()
+    assert rt._state["journal"].data.get("restore_attempt") is None
+    assert rt._state["decided"] is False and rt.current_offer() is not None
+
+
+def test_start_fresh_resolves_the_session_and_retires_legacy_files(rt, tmp_path, monkeypatch):
+    crashed = _session(tmp_path, "crashed")
+    legacy = _file(tmp_path / "T" / "x_9_autosave.mixar")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "crashed", "dir": crashed["dir"], "legacy": False, "failed_points": [],
+        "debris": [], "target": {"kind": "save_point", "path": "p", "at": NOW},
+        "older": [{"legacy": True, "dir": "", "target": {"path": legacy}}]})
+    rt.discard_offer()
+    assert journal.read_manifest(crashed["dir"])["resolved"] == "dismissed"
+    assert not os.path.exists(legacy) and os.path.exists(legacy + ".dismissed")
+    assert rt.current_offer() is None

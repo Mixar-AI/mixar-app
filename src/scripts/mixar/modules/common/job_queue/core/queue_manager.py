@@ -424,6 +424,30 @@ class FeatureQueue(DownloadMixin):
         self._pump()
         return True
 
+    def adopt(self, job: Job) -> bool:
+        """Take back a job submitted before Mixar closed (crash restore).
+
+        The job already has its backend id, so it skips submit and waits in
+        RUNNING_POLL like any submitted job; a ``job.get`` for it imports a
+        result that finished while the app was closed. Returns False when the
+        queue already holds that backend job.
+        """
+        if not job.backend_job_id or any(
+            j.backend_job_id == job.backend_job_id for j in self._jobs
+        ):
+            return False
+        job.feature_key = self.feature_key
+        job.state = JobState.RUNNING_POLL
+        job.poll_count = 0
+        job.poll_start_time = time.time()
+        if not job.backend_status:
+            job.backend_status = "PENDING"
+        self._jobs.append(job)
+        self._notify()
+        _ensure_sync_watchdog()
+        _request_backend_job_get(job.backend_job_id)
+        return True
+
     def cancel(self, job_id: str) -> None:
         job = self._find(job_id)
         if job is None or job.state in TERMINAL_STATES:
