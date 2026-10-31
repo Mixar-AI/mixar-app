@@ -54,7 +54,10 @@ def dirty_images():
     found = []
     for image in bpy.data.images:
         try:
-            if image.type != "IMAGE" or image.source == "TILED" or not image.is_dirty:
+            # Generated images are type UV_TEST; only the render and compositor
+            # results are not document data.
+            if image.type in ("RENDER_RESULT", "COMPOSITING") or image.source == "TILED" \
+                    or not image.is_dirty:
                 continue
             if not image.has_data or image.size[0] <= 0 or image.size[1] <= 0:
                 continue

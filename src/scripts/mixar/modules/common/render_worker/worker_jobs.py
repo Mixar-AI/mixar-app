@@ -110,7 +110,7 @@ def render_preview(context, scene, view_layer, key="", width=0, height=0, engine
         ret = bpy.ops.render.render(**kwargs)
         if "FINISHED" not in ret:
             raise RuntimeError("async_render_not_started")
-        pixels = pr._read_png(scene)
+        pixels = pr._read_png(scene, require_loaded=False)
         result = {"job_id": key, "status": "done", "render": info,
                   "image_url": "data:image/png;base64," + base64.b64encode(pixels).decode("ascii")}
     except Exception as exc:

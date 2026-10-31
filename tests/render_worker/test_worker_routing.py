@@ -369,6 +369,31 @@ def test_a_file_load_cancels_the_worker_job(preview, monkeypatch):
     assert cancelled == ["j1"] and preview._job is None
 
 
+def test_generated_and_painted_images_count_as_dirty(monkeypatch):
+    """Script-filled images are type UV_TEST: they must be carried as pixels
+    (the first QA run lost them because only type IMAGE was kept)."""
+    from mixar.modules.common.render_worker import snapshot
+
+    def image(name, type_, dirty=True, source="GENERATED"):
+        return SimpleNamespace(name=name, type=type_, is_dirty=dirty, source=source,
+                               has_data=True, size=(4, 4))
+    images = [image("painted", "IMAGE", source="FILE"), image("generated", "UV_TEST"),
+              image("clean", "IMAGE", dirty=False, source="FILE"),
+              image("Render Result", "RENDER_RESULT"), image("Viewer Node", "COMPOSITING"),
+              image("udim", "IMAGE", source="TILED")]
+    fake = MagicMock(name="bpy")
+    fake.data.images = images
+    monkeypatch.setattr(snapshot, "bpy", fake)
+    assert [i.name for i in snapshot.dirty_images()] == ["painted", "generated"]
+
+
+def test_the_worker_reads_render_result_without_has_data():
+    from pathlib import Path
+    from mixar.modules.common.render_worker import worker_jobs
+    src = Path(worker_jobs.__file__).read_text(encoding="utf-8")
+    assert "_read_png(scene, require_loaded=False)" in src
+
+
 def test_the_synchronous_render_lives_only_in_the_worker():
     from pathlib import Path
     from mixar.modules.common.render_worker import worker_jobs  # noqa: F401 — importable

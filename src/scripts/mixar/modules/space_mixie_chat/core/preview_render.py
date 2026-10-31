@@ -145,9 +145,11 @@ def _remove_render_handlers():
             handlers.remove(callback)
 
 
-def _read_png(scene) -> bytes:
+def _read_png(scene, require_loaded=True) -> bytes:
     image = bpy.data.images.get("Render Result")
-    if image is None or not image.has_data:
+    # In a --background worker the Render Result holds pixels that has_data
+    # does not report (no image buffer is acquired); save_render reads them.
+    if image is None or (require_loaded and not image.has_data):
         raise RuntimeError("missing_pixels")
     with tempfile.TemporaryDirectory(prefix="mixar_preview_") as folder:
         path = folder + "/preview.png"
