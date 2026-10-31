@@ -1,0 +1,132 @@
+{"app_name": "Mixar", "timestamp": "2026-10-26 18:31:29.00 -0700", "app_version": "4.3.5", "slice_uuid": "939a6ef7-d796-3b10-b0fe-7e630bda0841", "build_version": "4.3.5 2026-10-26", "platform": 1, "bundleID": "com.mixar.mixar", "share_with_app_devs": 0, "is_first_party": 0, "bug_type": "309", "os_version": "macOS 26.2 (25C56)", "roots_installed": 0, "name": "Mixar", "incident_id": "00000000-0000-4000-8000-000000000027"}
+{
+ "uptime": 510000,
+ "procRole": "Unspecified",
+ "version": 2,
+ "modelCode": "Mac16,8",
+ "osVersion": {
+  "train": "macOS 26.2",
+  "build": "25C56",
+  "releaseType": "User"
+ },
+ "captureTime": "2026-10-26 18:31:26.6980 -0700",
+ "procName": "Mixar",
+ "procPath": "/Users/USER/*/Mixar.app/Contents/MacOS/Mixar",
+ "bundleInfo": {
+  "CFBundleShortVersionString": "4.3.5",
+  "CFBundleVersion": "4.3.5 2026-10-26",
+  "CFBundleIdentifier": "com.mixar.mixar"
+ },
+ "cpuType": "ARM-64",
+ "exception": {
+  "codes": "0x0000000000000000, 0x0000000000000000",
+  "rawCodes": [
+   0,
+   0
+  ],
+  "type": "EXC_CRASH",
+  "signal": "SIGSEGV"
+ },
+ "termination": {
+  "flags": 0,
+  "code": 11,
+  "namespace": "SIGNAL",
+  "indicator": "Segmentation fault: 11",
+  "byProc": "Mixar",
+  "byPid": 11440
+ },
+ "faultingThread": 1,
+ "incident": "00000000-0000-4000-8000-000000000027",
+ "threads": [
+  {
+   "id": 12122745,
+   "frames": []
+  },
+  {
+   "triggered": true,
+   "id": 12122752,
+   "frames": [
+    {
+     "imageOffset": 2992,
+     "symbol": "semaphore_wait_trap",
+     "symbolLocation": 8,
+     "imageIndex": 1
+    },
+    {
+     "imageOffset": 14736,
+     "symbol": "_dispatch_sema4_wait",
+     "symbolLocation": 28,
+     "imageIndex": 2
+    },
+    {
+     "imageOffset": 16192,
+     "symbol": "_dispatch_semaphore_wait_slow",
+     "symbolLocation": 132,
+     "imageIndex": 2
+    },
+    {
+     "imageOffset": 12092,
+     "symbol": "IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolProvider::threadLoop(std::__1::shared_ptr<IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolData>)",
+     "symbolLocation": 56,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 12940,
+     "symbol": "void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolProvider::*)(std::__1::shared_ptr<IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolData>), IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolProvider*, std::__1::shared_ptr<IlmThread_3_4::(anonymous namespace)::DefaultThreadPoolData>>>(void*)",
+     "symbolLocation": 88,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 27656,
+     "symbol": "_pthread_start",
+     "symbolLocation": 136,
+     "imageIndex": 3
+    },
+    {
+     "imageOffset": 7080,
+     "symbol": "thread_start",
+     "symbolLocation": 8,
+     "imageIndex": 3
+    }
+   ]
+  }
+ ],
+ "usedImages": [
+  {
+   "source": "P",
+   "arch": "arm64",
+   "base": 4580556800,
+   "size": 32768,
+   "uuid": "0cb06fa6-e5d1-36a8-8e9d-d581a5545b0e",
+   "name": "libIlmThread.dylib",
+   "path": "/Users/USER/*/Mixar.app/Contents/Resources/lib/libIlmThread.dylib"
+  },
+  {
+   "source": "P",
+   "arch": "arm64e",
+   "base": 6907830272,
+   "size": 246944,
+   "uuid": "548c45c8-9733-3f0d-8ef4-c06df1df2ad0",
+   "name": "libsystem_kernel.dylib",
+   "path": "/usr/lib/system/libsystem_kernel.dylib"
+  },
+  {
+   "source": "P",
+   "arch": "arm64e",
+   "base": 6906277888,
+   "size": 290400,
+   "uuid": "a4b349e8-dd6f-3b71-84d9-34f3b4acd849",
+   "name": "libdispatch.dylib",
+   "path": "/usr/lib/system/libdispatch.dylib"
+  },
+  {
+   "source": "P",
+   "arch": "arm64e",
+   "base": 6908080128,
+   "size": 51900,
+   "uuid": "527c4ba0-91a5-378b-b3e2-d38269ca5a66",
+   "name": "libsystem_pthread.dylib",
+   "path": "/usr/lib/system/libsystem_pthread.dylib"
+  }
+ ]
+}
