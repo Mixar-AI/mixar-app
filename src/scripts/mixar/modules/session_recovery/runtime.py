@@ -606,9 +606,35 @@ def _confirm_restore():
     return None
 
 
+def _settle_restored_scenes() -> None:
+    """A tab saved mid-turn comes back reading BUSY with an open run, and no
+    connect event will move it when the socket is already up (QA: Continue
+    was refused as "not idle"). Nothing is running in this process, so every
+    tab is idle when connected, offline otherwise; the reconnect checks below
+    still adopt a turn the server kept running."""
+    try:
+        session = _session_manager()
+        from mixar.modules.space_mixie_chat.core.jsonrpc_client import get_jsonrpc_client
+        client = get_jsonrpc_client()
+        online = bool(client is not None and getattr(client, "is_connected", False))
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[RECOVERY] scene settle skipped: {e}")
+        return
+    for scene in _tab_scenes():
+        try:
+            session.set_run(scene, "", False)
+            if online:
+                session.set_connected(scene)
+            else:
+                session.set_disconnected(scene)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"[RECOVERY] settle {scene.name} skipped: {e}")
+
+
 def _after_restore():
     """After load_post handlers ran: generations, Continue notices, re-checks."""
     target = _state["restore_target"] or {}
+    _settle_restored_scenes()
     try:
         _adopt_jobs(target.get("jobs") or [])
     except Exception as e:  # noqa: BLE001
