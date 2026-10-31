@@ -181,7 +181,9 @@ class _Worker:
                     "TMP": os.path.join(folder, "tmp")})
         argv = _argv()
         self.log_path = os.path.join(folder, "worker.log")
+        started = time.perf_counter()
         self.proc = subprocess.Popen(argv, **_popen_kwargs(env, folder))
+        self.spawn_ms = round((time.perf_counter() - started) * 1000, 2)
         self.pid = self.proc.pid
         self._reader = threading.Thread(target=self._read, name="mixar-render-worker-" + kind,
                                         daemon=True)
@@ -532,7 +534,7 @@ def _ensure_maintenance():
 def workers() -> dict:
     """Live workers for diagnostics: kind -> {pid, ready, job, boot_s}."""
     return {kind: {"pid": w.pid, "ready": w.ready, "job": w.job, "boot_s": w.boot_s,
-                   "alive": w.alive()} for kind, w in list(_workers.items())}
+                   "spawn_ms": w.spawn_ms, "alive": w.alive()} for kind, w in list(_workers.items())}
 
 
 def shutdown_all(remove_files: bool = False) -> None:
