@@ -240,8 +240,12 @@ def _cancelled(_scene, _depsgraph=None):
 def _before_load(_unused, _extra=None):
     global _job, _revision
     if _job is not None:
-        render_slot.release(_job["reservation"])
+        if _job.get("worker"):
+            _drop_worker_job(_job)
+        else:
+            render_slot.release(_job["reservation"])
     _job = None
+    _forget_worker_snapshots()
     _revision += 1
     _records.clear()
     _remove_render_handlers()
@@ -262,7 +266,8 @@ def _before_undo(*_args):
     """Undo has already killed the job (``WM_jobs_kill_all``) and frees the data
     only after this handler: settle now, while the copy and rig are still valid.
     A later ``_finish`` would write through dangling references and crash."""
-    if _job is not None:
+    if _job is not None and not _job.get("worker"):
+        # A worker job renders its own snapshot: undo changes nothing it uses.
         _finish(_job["key"], _job.get("completed", False))
 
 
@@ -280,7 +285,11 @@ def _install():
 
 def poll(key):
     """Read-only state delivery, including changes since render completion."""
-    if _job is not None and _job["key"] == key:
+    if _job is not None and _job["key"] == key and _job.get("worker"):
+        running = _poll_worker(_job)
+        if running is not None:
+            return running
+    elif _job is not None and _job["key"] == key:
         if (not _job["finishing"] and time.monotonic() - _job["started_at"] > LOST_AFTER_S
                 and not bpy.app.is_job_running("RENDER")):
             _finish(key, False, lost=True)  # completion was lost: self-heal
@@ -352,7 +361,8 @@ def _downgrade_over_budget(scene, set_value, max_faces, fallback=None):
                                  fallback or _engine_id(scene, "eevee") or _EEVEE_ENGINES[0])
 
 
-def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0, budget_engine=None):
+def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0, budget_engine=None,
+                    use_gpu=None):
     render = scene.render
     wanted = _engine_id(scene, engine)
     if wanted is not None and str(render.engine) != wanted:
@@ -377,7 +387,11 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
             set_value(scene.cycles, "use_denoising", True)
         # The device is the user's preference, enabled once at startup; here it
         # is a per-job setting like any other, restored on every exit path.
-        if render_device.use_gpu():
+        # A worker process is told the app's decision (``use_gpu``): the user may
+        # have changed the preference this session without saving it.
+        gpu = (render_device.use_gpu() if use_gpu is None
+               else bool(use_gpu) and render_device.gpu_enabled())
+        if gpu:
             set_value(scene.cycles, "device", "GPU")
     elif engine_id in _EEVEE_ENGINES:
         eevee = getattr(scene, "eevee", None)
@@ -385,6 +399,37 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
         if samples is not None:
             set_value(eevee, "taa_render_samples", min(samples, EEVEE_SAMPLE_CAP))
     return downgraded
+
+
+def _configure(context, source, scene, set_value, job, width=0, height=0, engine="",
+               max_faces=0, inspection=None, use_gpu=None) -> dict:
+    """Give ``scene`` the job's look: the inspection rig (its world, sun, camera
+    and engine) or the call's engine, then size, samples, device and the
+    geometry budget. Shared by the native job and the worker process, so both
+    render the same picture. Returns the render info the reply carries.
+    ``job['inspection']`` is set before the rig is built, so a failure part-way
+    still cleans up what it created."""
+    if inspection is not None:
+        from .inspection_preview import Inspection
+        job['inspection'] = Inspection(source, scene, inspection, set_value)
+        job['inspection'].prepare(context)
+        width, height = int(inspection.get('width', 1024)), int(inspection.get('height', 768))
+        engine = ''  # The inspection rig already chose its shading engine.
+    downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces,
+                                'BLENDER_WORKBENCH' if inspection is not None else None,
+                                use_gpu=use_gpu)
+    if inspection is not None and downgraded:
+        set_value(scene.display.shading, 'color_type', 'MATERIAL')
+        job['inspection'].metadata['warning'] = (
+            'Geometry exceeds the material-preview memory budget. This is a solid '
+            'structural preview; material nodes were not evaluated. Repair instancing '
+            'or reduce unique geometry before judging materials.')
+    info = _render_info(scene)
+    if downgraded:
+        # Rides the render info the backend already forwards, so the model
+        # discloses that it did not get the engine it asked for.
+        info["engine_downgraded"] = downgraded
+    return info
 
 
 def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=None):
@@ -416,6 +461,18 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
     if (source.camera is None and inspection is None) or win is None or bpy.app.background:
         return {"job_id": key, "status": "failed", "error": "camera_and_window_required",
                 "scene_session": session, "render": _render_info(source)}
+    args = {"width": width, "height": height, "engine": engine, "max_faces": max_faces,
+            "inspection": inspection}
+    value = _start_worker(context, key, source, session, args)
+    if value is not None:
+        return value
+    return _start_native(context, key, source, session, win, **args)
+
+
+def _start_native(context, key, source, session, win, width=0, height=0, engine="", max_faces=0,
+                  inspection=None):
+    """The in-process path: Blender's interactive render job on a private copy."""
+    global _job
     reservation = render_slot.acquire("agent-preview:" + key)
     if reservation is None:
         return {"job_id": key, "status": "busy", "error": "another_render_running"}
@@ -434,25 +491,8 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
         if inspection is not None or render_scene.isolate_final(source):
             scene = render_scene.create(source, inspection=inspection is not None)
             job["scene"] = job["render_scene"] = scene
-        if inspection is not None:
-            from .inspection_preview import Inspection
-            job['inspection'] = Inspection(source, scene, inspection, set_value)
-            job['inspection'].prepare(context)
-            width, height = int(inspection.get('width', 1024)), int(inspection.get('height', 768))
-            engine = ''  # The inspection rig already chose its shading engine.
-        downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces,
-                                    'BLENDER_WORKBENCH' if inspection is not None else None)
-        if inspection is not None and downgraded:
-            set_value(scene.display.shading, 'color_type', 'MATERIAL')
-            job['inspection'].metadata['warning'] = (
-                'Geometry exceeds the material-preview memory budget. This is a solid '
-                'structural preview; material nodes were not evaluated. Repair instancing '
-                'or reduce unique geometry before judging materials.')
-        job["render"] = _render_info(scene)
-        if downgraded:
-            # Rides the render info the backend already forwards, so the model
-            # discloses that it did not get the engine it asked for.
-            job["render"]["engine_downgraded"] = downgraded
+        job["render"] = _configure(context, source, scene, set_value, job, width, height,
+                                   engine, max_faces, inspection)
         bpy.app.handlers.render_complete.append(_complete)
         bpy.app.handlers.render_cancel.append(_cancelled)
         # The pixels go to the agent; never open an image-editor window.
@@ -504,3 +544,193 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
                  "scene_session": session, "render": job["render"] or _render_info(source)}
         _publish(key, value)
         return value
+
+
+# ---------------------------------------------------------------------------
+# Out of process: the same job in a background Mixar worker
+# ---------------------------------------------------------------------------
+#
+# Every native crash in this feature's history was in the user's process: the
+# render job thread reading a scene or depsgraph the main thread freed, the
+# OpenImageDenoise kernel, an import landing mid-render. The worker renders a
+# SNAPSHOT of the document in a second Mixar (``common/render_worker``), so a
+# crash there costs one retry on a fresh worker, nothing of the user's runs on
+# Blender's render job thread, and agent scripts are no longer refused with
+# ``render_in_progress`` while a preview renders. The reply is the same dict,
+# field for field: the worker runs ``_configure`` / ``_read_png`` / the
+# inspection rig itself, and this process adds what only it knows
+# (``scene_session``, the revisions, ``scene_advanced``, the elapsed time).
+#
+# A worker that cannot start falls back to the native job for that call, and
+# after repeated boot failures the session stops trying (``supervisor.available``).
+# A job that crashes its worker twice fails with ``render_worker_crashed``: the
+# same render in this process would most likely crash the app.
+
+#: The worker's own bound: the held-open call gives up at PREVIEW_DEFERRED_MAX_S
+#: (240 s); the worker is killed a little after, so it never renders for nobody.
+WORKER_TIMEOUT_S = 270.0
+_last_worker = {}   # diagnostics of the last worker job (QA and logs)
+
+
+def last_worker_job() -> dict:
+    return dict(_last_worker)
+
+
+def _jobs_dir() -> str:
+    import os
+    from mixar.modules.common.render_worker import supervisor
+    folder = os.path.join(supervisor.root_dir(), "jobs")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _start_worker(context, key, source, session, args):
+    """Hand the job to a worker; None when this call must run in-process."""
+    global _job
+    try:
+        from mixar.modules.common.render_worker import snapshot, supervisor
+        if not supervisor.available():
+            return None
+    except Exception:
+        return None
+    import os
+    started = time.monotonic()
+    view_layer = getattr(context, "view_layer", None)
+    try:
+        record = snapshot.write_or_reuse(
+            "preview", lambda: snapshot.fingerprint(source, _revision), _flush_view_layer)
+    except Exception:
+        # A snapshot that cannot be written (disk full, a save refused) leaves
+        # the in-process job, exactly as before the worker existed.
+        return None
+    out = os.path.join(_jobs_dir(), "preview-%s.json" % key)
+    params = dict(args, key=key, use_gpu=render_device.use_gpu())
+    try:
+        job_id = supervisor.submit("preview", {
+            "kind": "preview", "snapshot": record["path"], "images": record["images"],
+            "scene": source.name, "view_layer": getattr(view_layer, "name", ""),
+            "params": params, "out": out}, timeout_s=WORKER_TIMEOUT_S)
+    except Exception:
+        snapshot.release(record)
+        return None
+    snapshot.acquire(record)
+    info = _render_info(source)
+    _job = {"key": key, "scene": source, "settings": [], "started_at": started,
+            "revision": _revision, "finishing": False, "scene_session": session,
+            "render": info, "reservation": None, "render_scene": None, "worker": job_id,
+            "snapshot": record, "out": out, "args": args,
+            "view_layer": getattr(view_layer, "name", "")}
+    _last_worker.clear()
+    _last_worker.update({"key": key, "job": job_id, "state": "running",
+                         "snapshot_bytes": record["bytes"], "snapshot_reused": record["reused"],
+                         "snapshot_save_s": record["save_s"], "snapshot_images_s": record["images_s"],
+                         "dirty_images": record["image_count"],
+                         "start_s": round(time.monotonic() - started, 4)})
+    return {"job_id": key, "status": "running", "render_revision": _revision,
+            "scene_session": session, "render": dict(info)}
+
+
+def _flush_view_layer():
+    """Evaluate the tags the snapshot save left (its save handlers write scene
+    properties), so the revision baseline taken next is not advanced by them."""
+    try:
+        bpy.context.view_layer.update()
+    except Exception:
+        pass
+
+
+def _drop_worker_job(job):
+    try:
+        from mixar.modules.common.render_worker import snapshot, supervisor
+        supervisor.cancel(job["worker"])
+        supervisor.forget(job["worker"])
+        snapshot.release(job["snapshot"])
+    except Exception:
+        pass
+
+
+def _forget_worker_snapshots():
+    try:
+        from mixar.modules.common.render_worker import snapshot
+        snapshot.invalidate()
+    except Exception:
+        pass
+
+
+def _fallback_native(job):
+    """The worker never started: run this call's job in-process after all."""
+    source = job["scene"]
+    try:
+        _ = source.name
+    except ReferenceError:
+        return {"job_id": job["key"], "status": "failed", "error": "scene_unavailable",
+                "scene_session": job["scene_session"]}
+    win = next(iter(bpy.context.window_manager.windows), None)
+    if win is None:
+        return {"job_id": job["key"], "status": "failed", "error": "camera_and_window_required",
+                "scene_session": job["scene_session"]}
+    overrides = {"window": win, "scene": source}
+    layer = source.view_layers.get(job.get("view_layer") or "")
+    if layer is not None:
+        overrides["view_layer"] = layer
+    with bpy.context.temp_override(**overrides):
+        return _start_native(bpy.context, job["key"], source, job["scene_session"], win,
+                             **job["args"])
+
+
+def _poll_worker(job):
+    """Advance a worker job; the running reply, or None once it is terminal and
+    published (``poll`` then reads the record)."""
+    global _job
+    import json
+    import os
+    from mixar.modules.common.render_worker import snapshot, supervisor
+
+    key = job["key"]
+    state = supervisor.poll(job["worker"])
+    if state["state"] in ("queued", "running"):
+        return {"job_id": key, "status": "running", "render_revision": job["revision"],
+                "scene_session": job["scene_session"], "render": dict(job["render"])}
+    _job = None
+    supervisor.forget(job["worker"])
+    snapshot.release(job["snapshot"])
+    _last_worker.update(state=state["state"], error=state.get("error", ""),
+                        attempts=state.get("attempts"), pid=state.get("pid"),
+                        retried_after_crash=state.get("retried_after_crash"),
+                        worker_seconds=state.get("seconds"),
+                        elapsed_s=round(time.monotonic() - job["started_at"], 3))
+    if state["state"] == "failed" and state.get("error") == "worker_unavailable":
+        _last_worker["fallback"] = "in_process"
+        value = _fallback_native(job)
+        if value.get("status") != "running":
+            _publish(key, value)
+            return value
+        return value
+    result = None
+    if state["state"] == "done":
+        try:
+            with open(state["out"], encoding="utf-8") as handle:
+                result = json.load(handle)
+        except (OSError, ValueError):
+            result = None
+        try:
+            os.remove(state["out"])
+        except OSError:
+            pass
+    if not isinstance(result, dict):
+        error = {"worker_crashed": "render_worker_crashed",
+                 "worker_timeout": "preview_timeout"}.get(state.get("error"),
+                                                          "async_render_unavailable")
+        result = {"job_id": key, "status": "failed", "error": error,
+                  "render": dict(job["render"])}
+        if job["args"].get("inspection") is not None:
+            result["success"] = False
+    result.update(job_id=key, render_revision=job["revision"],
+                  scene_session=job["scene_session"], scene_revision=_revision)
+    if result.get("status") == "done":
+        result["scene_advanced"] = _revision != job["revision"]
+    result["render"] = dict(result.get("render") or job["render"],
+                            elapsed_seconds=round(time.monotonic() - job["started_at"], 3))
+    _publish(key, result)
+    return None
+

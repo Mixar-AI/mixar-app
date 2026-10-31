@@ -46,14 +46,36 @@ def _safe(name, fallback="asset"):
     return (s or fallback)[:96]
 
 
+_project_folder_override = None   # set in a worker: the user's folder, not the snapshot's
+_telemetry_enabled = True          # a worker leaves telemetry to the app
+
+
+def set_project_folder(folder) -> None:
+    """In a worker process, ``bpy.data.filepath`` is the snapshot: ``project``
+    must mean the folder of the user's own saved file ("" = unsaved)."""
+    global _project_folder_override
+    _project_folder_override = None if folder is None else str(folder)
+
+
+def set_telemetry_enabled(enabled: bool) -> None:
+    global _telemetry_enabled
+    _telemetry_enabled = bool(enabled)
+
+
+def _project_folder() -> str:
+    if _project_folder_override is not None:
+        return _project_folder_override
+    return os.path.dirname(bpy.data.filepath) if bpy.data.filepath else ""
+
+
 def destination(where, subfolder=None):
     """Absolute folder for a named destination (created)."""
     where = (where or "mixar_exports").lower()
     if where not in DESTINATIONS:
         raise ValueError(f"destination must be one of {DESTINATIONS}")
     home = os.path.expanduser("~")
-    if where == "project" and bpy.data.filepath:
-        base = os.path.dirname(bpy.data.filepath)
+    if where == "project" and _project_folder():
+        base = _project_folder()
     elif where == "downloads":
         base = os.path.join(home, "Downloads")
     elif where == "desktop":
@@ -322,6 +344,8 @@ def _bounds(objs):
 
 
 def _telemetry(event, fmt, **props):
+    if not _telemetry_enabled:
+        return
     try:
         from mixar.modules.common.analytics.export_events import (
             capture_export, capture_export_initiated,
@@ -355,7 +379,29 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    extra_files=(), animations=None):
     """``include_source`` may be True or a file name for the .blend; ``readme``
     text is written as README.md; ``extra_files`` are (name, text) pairs;
-    ``animations`` is None (all) / [] (none) / [clip names]."""
+    ``animations`` is None (all) / [] (none) / [clip names].
+
+    Called by the agent's script (the GUI executor), the package is built in a
+    background worker process on a snapshot of the document and the call
+    returns ``{"__deferred_job__": key}``: the executor holds the reply open and
+    answers it with this function's ordinary return value when the worker is
+    done (``poll_job``). Elsewhere, or when no worker can run, it is built here.
+    """
+    kwargs = {"names": list(names), "fmt": fmt, "filename": filename, "where": where,
+              "folder": folder, "join": join, "texture_tiers": list(texture_tiers or ()),
+              "include_source": include_source, "manifest": manifest, "readme": readme,
+              "extra_files": [list(x) for x in extra_files or ()], "animations": animations}
+    deferred = _submit_to_worker(kwargs)
+    if deferred is not None:
+        return deferred
+    return _export_in_process(**kwargs)
+
+
+def _export_in_process(names, fmt="glb", filename=None, where="mixar_exports", folder=None,
+                       join=False, texture_tiers=(), include_source=False, manifest=True,
+                       readme=None, extra_files=(), animations=None):
+    """The package itself, built from this process's data (the app's, or a
+    worker's snapshot)."""
     t0 = time.perf_counter()
     fmt = fmt.lower()
     if fmt not in FORMATS:
@@ -485,3 +531,189 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},
             "seconds": round(time.perf_counter() - t0, 2)}
+
+
+# ---------------------------------------------------------------------------
+# Out of process: the package built by a background Mixar worker
+# ---------------------------------------------------------------------------
+#
+# A package applies modifiers to copies (``new_from_object``, which crashed the
+# app on a dangling material), swaps materials, bakes and writes files: minutes
+# of main-thread work on a heavy scene, all of it in the user's process. Here
+# the same ``_export_in_process`` runs in a worker on a snapshot. The files go
+# to the same named destination; the user's scene, selection and names are
+# never touched (the copies' ``.mixar_export_src`` renames happen in the
+# snapshot). A worker that never starts builds it here after all; a package
+# that crashes two workers fails with a plain message, never the app.
+
+#: The backend waits PACKAGE_TIMEOUT_S (600 s) for the reply.
+WORKER_REPLY_MAX_S = 590.0
+WORKER_TIMEOUT_S = 580.0
+_worker_jobs = {}    # key -> {"worker", "snapshot", "kwargs", "scene", "view_layer", ...}
+_last_worker = {}
+
+
+def last_worker_job() -> dict:
+    return dict(_last_worker)
+
+
+def _worker_allowed() -> bool:
+    if bpy.app.background:
+        return False
+    try:
+        from . import main_thread_executor
+        if not main_thread_executor.accepts_deferred_jobs():
+            return False
+        from mixar.modules.common.render_worker import supervisor
+        return supervisor.available()
+    except Exception:
+        return False
+
+
+def _validate(kwargs):
+    """The errors the in-process build raises before it changes anything, so a
+    bad call fails the same way, at once."""
+    fmt = str(kwargs["fmt"]).lower()
+    if fmt not in FORMATS:
+        raise ValueError(f"format must be one of {FORMATS}")
+    scene = bpy.context.scene
+    objs = [scene.objects[n] for n in kwargs["names"]]
+    if not [o for o in objs if o.type == "MESH"]:
+        raise ValueError("names must include at least one mesh object")
+    destination(kwargs["where"])  # an unknown destination raises here
+
+
+def _submit_to_worker(kwargs):
+    if not _worker_allowed():
+        return None
+    _validate(kwargs)
+    import uuid
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    started = time.perf_counter()
+    try:
+        record = snapshot.write("export")
+    except Exception:
+        return None
+    key = uuid.uuid4().hex
+    out = os.path.join(supervisor.root_dir(), "jobs", "export-%s.json" % key)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    scene = bpy.context.scene
+    view_layer = bpy.context.view_layer
+    try:
+        job_id = supervisor.submit("export", {
+            "kind": "export", "snapshot": record["path"], "images": record["images"],
+            "scene": scene.name, "view_layer": getattr(view_layer, "name", ""),
+            "params": {"kwargs": kwargs, "project_dir": _project_folder()}, "out": out},
+            timeout_s=WORKER_TIMEOUT_S)
+    except Exception:
+        snapshot.remove_folder(record["folder"])
+        return None
+    snapshot.acquire(record)
+    _worker_jobs[key] = {"worker": job_id, "snapshot": record, "kwargs": kwargs, "scene": scene,
+                         "view_layer": getattr(view_layer, "name", ""), "out": out,
+                         "started": time.perf_counter()}
+    _last_worker.clear()
+    _last_worker.update(key=key, job=job_id, state="running", snapshot_bytes=record["bytes"],
+                        snapshot_save_s=record["save_s"], snapshot_images_s=record["images_s"],
+                        dirty_images=record["image_count"],
+                        submit_s=round(time.perf_counter() - started, 4))
+    _telemetry("initiated", str(kwargs["fmt"]).lower())
+    return {"__deferred_job__": key}
+
+
+def _completed_telemetry(job, result):
+    kwargs = job["kwargs"]
+    fmt = str(kwargs["fmt"]).lower()
+    verification = result.get("verification") if isinstance(result.get("verification"), dict) else None
+    _telemetry("completed", fmt, success=bool(result.get("success")),
+               extension={"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz",
+                          "usd": ".usdc"}.get(fmt, ""),
+               scope="named", use_case="package", destination_kind=kwargs["where"],
+               duration_ms=int((time.perf_counter() - job["started"]) * 1000),
+               delivery_status=verification_status(verification),
+               verification_checked=bool(verification and verification.get("checked")),
+               verification_passed=bool(verification and verification.get("passed")),
+               issue_count=len((verification or {}).get("issues") or []),
+               file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024),
+               out_of_process=True)
+
+
+def _in_process_now(job) -> dict:
+    """The worker never started: build the package here, in the call's scene."""
+    scene = job["scene"]
+    try:
+        overrides = {"scene": scene}
+        layer = scene.view_layers.get(job["view_layer"])
+        if layer is not None:
+            overrides["view_layer"] = layer
+        window = next(iter(bpy.context.window_manager.windows), None)
+        if window is not None:
+            overrides["window"] = window
+        with bpy.context.temp_override(**overrides):
+            result = _export_in_process(**job["kwargs"])
+        result["success"] = True
+    except ReferenceError:
+        result = {"success": False, "error": "the scene was closed before the export ran"}
+    except Exception as exc:
+        result = {"success": False, "error": type(exc).__name__ + ": " + str(exc)}
+    return result
+
+
+_WORKER_ERRORS = {
+    "worker_crashed": "the background export process crashed twice on this package; "
+                      "the app and the scene are unaffected",
+    "worker_timeout": "the background export did not finish in time and was stopped",
+    "worker_job_failed": "the background export process could not run this package",
+    "scene_unavailable": "the scene was not found in the export snapshot",
+}
+
+
+def poll_job(key) -> dict:
+    """``{"status": "running"}`` or ``{"status": "done", "result": <reply>}``
+    for a worker package (``preview_deferral.defer_job``)."""
+    import json
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    job = _worker_jobs.get(key)
+    if job is None:
+        return {"status": "done", "result": {"success": False, "error": "export job not found"}}
+    state = supervisor.poll(job["worker"])
+    if state["state"] in ("queued", "running"):
+        return {"status": "running"}
+    _worker_jobs.pop(key, None)
+    supervisor.forget(job["worker"])
+    snapshot.release(job["snapshot"])
+    _last_worker.update(state=state["state"], error=state.get("error", ""),
+                        attempts=state.get("attempts"), pid=state.get("pid"),
+                        retried_after_crash=state.get("retried_after_crash"),
+                        worker_seconds=state.get("seconds"),
+                        elapsed_s=round(time.perf_counter() - job["started"], 3))
+    result = None
+    if state["state"] == "done":
+        try:
+            with open(state["out"], encoding="utf-8") as handle:
+                result = json.load(handle)
+        except (OSError, ValueError):
+            result = None
+        try:
+            os.remove(state["out"])
+        except OSError:
+            pass
+    elif state.get("error") == "worker_unavailable":
+        _last_worker["fallback"] = "in_process"
+        # The in-process build reports its own telemetry.
+        return {"status": "done", "result": _in_process_now(job)}
+    if not isinstance(result, dict):
+        message = _WORKER_ERRORS.get(state.get("error"), "the background export failed")
+        result = {"success": False, "error": "RuntimeError: " + message}
+    _completed_telemetry(job, result)
+    return {"status": "done", "result": result}
+
+
+def cancel_job(key) -> None:
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    job = _worker_jobs.pop(key, None)
+    if job is None:
+        return
+    supervisor.cancel(job["worker"])
+    supervisor.forget(job["worker"])
+    snapshot.release(job["snapshot"])

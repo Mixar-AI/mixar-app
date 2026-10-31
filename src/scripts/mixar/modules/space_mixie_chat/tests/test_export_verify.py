@@ -190,7 +190,8 @@ def test_export_package_signature_and_isolation():
     assert set(export_package.DESTINATIONS) == {"mixar_exports", "downloads", "documents", "desktop", "project"}
     # The return dict carries both the verifier's dict and the legacy glb_check.
     tree = ast.parse(src)
-    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "export_package")
+    # The build itself (in the app or in a background worker); export_package routes to it.
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_export_in_process")
     returned = next(n for n in ast.walk(fn) if isinstance(n, ast.Return) and isinstance(n.value, ast.Dict))
     keys = {k.value for k in returned.value.keys if isinstance(k, ast.Constant)}
     assert {"destination", "folder", "files", "main_file", "glb_check", "verification",

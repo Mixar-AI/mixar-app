@@ -34,12 +34,17 @@ from ..constants import PREVIEW_DEFERRED_MAX_S
 logger = get_logger(__name__)
 
 DEFERRED_KEY = "__deferred_preview__"
+# A job in a background worker process (``common/render_worker``) other than a
+# preview: an export package. Any number may be pending, each answered on its
+# own request id when ``poll`` reports it terminal.
+JOB_KEY = "__deferred_job__"
 RESULT_PREFIX = "__RESULT__"
 POLL_INTERVAL_S = 0.25
 
 # Read from the WebSocket thread (liveness), written on the main thread.
 _lock = threading.Lock()
 _pending: Optional[dict] = None   # {"req", "key", "started", "timer"}
+_jobs: dict = {}                   # worker-job key -> entry (also "poll", "cancel", "max_s")
 
 
 def _printed_result(output: str) -> dict:
@@ -53,6 +58,21 @@ def _printed_result(output: str) -> dict:
                 return {}
             return parsed if isinstance(parsed, dict) else {}
     return {}
+
+
+def _deferred_key(result: dict, marker: str) -> Optional[str]:
+    if not isinstance(result, dict) or not result.get("success"):
+        return None
+    key = result.get(marker)
+    if key is None:
+        key = _printed_result(result.get("output", "")).get(marker)
+    return key if isinstance(key, str) and key else None
+
+
+def deferred_job_key(result: dict) -> Optional[str]:
+    """The worker-job key when a script result asks to be held open
+    (``{"__deferred_job__": key}``, e.g. an export package), else None."""
+    return _deferred_key(result, JOB_KEY)
 
 
 def deferred_preview_key(result: dict) -> Optional[str]:
@@ -139,6 +159,7 @@ def _complete(pending, result: dict, *, update_scene=True) -> None:
     req = pending["req"]
     merged = dict(pending["initial_result"])
     merged.pop(DEFERRED_KEY, None)
+    merged.pop(JOB_KEY, None)
     # A printed deferral marker must not override the actual terminal result
     # when the backend parses stdout's __RESULT__ convention.
     merged.pop("output", None)
@@ -217,9 +238,10 @@ def defer_response(req, key: str, *, scene=None, initial_result=None) -> bool:
 
 def fail_pending(error: str, session_id: str | None = None, *, update_scene=True) -> bool:
     """Reply to a pending deferral with a fixed error code. True if one existed."""
+    failed_jobs = _fail_jobs(error, session_id, update_scene=update_scene)
     pending = _take(session_id=session_id)
     if pending is None:
-        return False
+        return failed_jobs
     try:
         if (threading.current_thread() is threading.main_thread()
                 and bpy.app.timers.is_registered(pending["timer"])):
@@ -234,7 +256,7 @@ def fail_pending(error: str, session_id: str | None = None, *, update_scene=True
 def get_pending_inflight() -> Optional[dict]:
     """Liveness view of the held tool call (thread-safe, no bpy)."""
     with _lock:
-        pending = _pending
+        pending = _pending or next(iter(_jobs.values()), None)
     if pending is None:
         return None
     req = pending["req"]
@@ -253,3 +275,123 @@ def _install_load_pre() -> None:
     handlers = bpy.app.handlers.load_pre
     if _on_load_pre not in handlers:
         handlers.append(_on_load_pre)
+
+
+# ---------------------------------------------------------------------------
+# Worker jobs (export packages): any number held open at once
+# ---------------------------------------------------------------------------
+
+def _owner(entry) -> str:
+    req = entry["req"]
+    return str((req.agent_ctx or {}).get("chat_session_id") or entry["scene_session"]
+               or req.session_id or "")
+
+
+def _take_job(key, expected=None) -> Optional[dict]:
+    with _lock:
+        entry = _jobs.get(key)
+        if entry is None or (expected is not None and entry is not expected):
+            return None
+        del _jobs[key]
+        entry["req"].response_deferred = False
+    return entry
+
+
+def _tick_job(entry) -> Optional[float]:
+    key = entry["key"]
+    with _lock:
+        if _jobs.get(key) is not entry:
+            return None
+    try:
+        value = entry["poll"](key)
+    except Exception:
+        logger.exception("Worker job poll failed for %s", key)
+        value = {"status": "failed", "result": {"success": False, "error": "worker_poll_failed"}}
+    elapsed = time.monotonic() - entry["started"]
+    if value.get("status") == "running":
+        if elapsed < entry["max_s"]:
+            return POLL_INTERVAL_S
+        _cancel_job(entry)
+        result = {"success": False, "error": "worker_job_timeout", "job_id": key}
+    else:
+        result = dict(value.get("result") or {"success": False, "error": "worker_job_failed"})
+    if _take_job(key, entry) is not entry:
+        return None
+    logger.info("%s %s: %s after %.1fs", entry["req"].tool_name, key,
+                "ok" if result.get("success") else result.get("error"), elapsed)
+    _complete(entry, result)
+    return None
+
+
+def _cancel_job(entry) -> None:
+    cancel, key = entry.get("cancel"), entry["key"]
+    if cancel is None:
+        return
+
+    def _run():
+        try:
+            cancel(key)
+        except Exception:
+            logger.debug("Worker job cancel failed", exc_info=True)
+
+    if threading.current_thread() is threading.main_thread():
+        _run()
+    else:  # an abort on the socket thread: the worker pool is main-thread state
+        from .main_thread_executor import run_on_main_thread
+        run_on_main_thread(_run)
+
+
+def defer_job(req, key: str, *, poll, cancel=None, max_s: float, scene=None,
+              initial_result=None) -> bool:
+    """Park ``req`` until worker job ``key`` is terminal. ``poll(key)`` returns
+    ``{"status": "running"}`` or ``{"status": "done", "result": <reply dict>}``;
+    ``cancel(key)`` stops it when the call is abandoned. Returns True when the
+    caller must NOT respond itself. A second deferral of the same key (the
+    backend retried the call) supersedes the first."""
+    previous = _take_job(key)
+    if previous is not None:
+        _complete(previous, {"success": False, "error": "job_superseded", "job_id": key})
+    if scene is None:
+        scene = getattr(bpy.context, "scene", None)
+    entry = {"req": req, "key": key, "started": time.monotonic(), "poll": poll,
+             "cancel": cancel, "max_s": float(max_s),
+             "scene_name": str(getattr(scene, "name", "") or ""),
+             "scene_session": str(getattr(scene, "mixie_session_id", "") or ""),
+             "initial_result": dict(initial_result or {})}
+    entry["timer"] = lambda: _tick_job(entry)
+    with _lock:
+        _jobs[key] = entry
+        req.response_deferred = True
+    record_phase(req, "worker_wait")
+    try:
+        _install_load_pre()
+        bpy.app.timers.register(entry["timer"], first_interval=POLL_INTERVAL_S)
+    except Exception:
+        logger.exception("%s %s: poller registration failed", req.tool_name, key)
+        if _take_job(key, entry) is entry:
+            _cancel_job(entry)
+            _complete(entry, {"success": False, "error": "worker_job_unavailable", "job_id": key})
+    return True
+
+
+def _fail_jobs(error: str, session_id: str | None, *, update_scene=True) -> bool:
+    with _lock:
+        keys = [key for key, entry in _jobs.items()
+                if session_id is None or _owner(entry) == session_id
+                or entry["req"].session_id == session_id]
+    failed = False
+    for key in keys:
+        entry = _take_job(key)
+        if entry is None:
+            continue
+        failed = True
+        try:
+            if (threading.current_thread() is threading.main_thread()
+                    and bpy.app.timers.is_registered(entry["timer"])):
+                bpy.app.timers.unregister(entry["timer"])
+        except Exception:
+            pass
+        _cancel_job(entry)
+        _complete(entry, {"success": False, "error": error, "job_id": key},
+                  update_scene=update_scene)
+    return failed

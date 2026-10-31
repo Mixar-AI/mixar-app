@@ -67,6 +67,9 @@ _execution_gate_until: float = 0.0
 # Lock-guarded because it crosses threads.
 _inflight_lock = threading.Lock()
 _inflight: Optional[dict] = None
+# >0 while this executor runs a script whose reply it can hold open
+# (``accepts_deferred_jobs``). Main thread only.
+_deferrable_depth = 0
 
 
 def _set_inflight(tool_name: str, request_id: str, session_id: str) -> None:
@@ -317,6 +320,7 @@ def _process_one_request() -> Optional[float]:
 
 def _execute_dequeued_request(req, status, lane) -> Optional[float]:
     """Dispatch a taken request; execution failures never strand the next one."""
+    global _deferrable_depth
     previous = lanes.switch_to(lane)
     if previous is not None:
         from mixar.modules.common.scenes_log import slog
@@ -370,7 +374,11 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
                 result_dict = {"success": False, "error": "Previous script still executing"}
             else:
                 execution_started = True
-                result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                _deferrable_depth += 1
+                try:
+                    result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                finally:
+                    _deferrable_depth -= 1
     except Exception:
         logger.exception("Executor request failed (id: %s)", req.request_id)
         result_dict = {"success": False, "error": "Executor request failed",
@@ -388,8 +396,11 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
     # deferral's timer when the native job ends, and this queue keeps draining.
     from .preview_deferral import defer_response, deferred_preview_key
     deferred_key = deferred_preview_key(result_dict)
-    if deferred_key is None or not defer_response(req, deferred_key, scene=chat_scene,
-                                                  initial_result=result_dict):
+    if deferred_key is None:
+        held = _defer_worker_job(req, result_dict, chat_scene)
+    else:
+        held = defer_response(req, deferred_key, scene=chat_scene, initial_result=result_dict)
+    if not held:
         try:
             archive_history(req.tool_name, req.script, result_dict, chat_scene, req.request_id)
             if chat_scene:
@@ -406,6 +417,26 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         return TIMER_INTERVAL if lanes.other_pending(lane) else 0.50
 
     return _stop_timer_if_idle()  # Stop timer when queue empty
+
+
+def _defer_worker_job(req, result_dict, chat_scene) -> bool:
+    """Hold the reply of a script that handed its work to a background worker
+    (``{"__deferred_job__": key}``); the job's owner answers it."""
+    from .preview_deferral import deferred_job_key, defer_job
+    key = deferred_job_key(result_dict)
+    if key is None:
+        return False
+    from . import export_package
+    return defer_job(req, key, poll=export_package.poll_job, cancel=export_package.cancel_job,
+                     max_s=export_package.WORKER_REPLY_MAX_S, scene=chat_scene,
+                     initial_result=result_dict)
+
+
+def accepts_deferred_jobs() -> bool:
+    """Whether the script running now may answer ``{"__deferred_job__": key}``:
+    only a script this GUI executor runs (it holds the reply open). The headless
+    sandbox pump and direct calls have no deferral, so they work in-process."""
+    return _deferrable_depth > 0
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> bool:
