@@ -15,6 +15,10 @@ SESSION_PREFIX = "session-"
 # Crash files: Blender's handler writes <tempdir base>/mixar.crash.txt, or
 # <blend name>.crash.txt when a file is open. macOS also keeps its own report.
 CRASH_TXT_GLOB = "*.crash.txt"
+# The background render worker (Mixar --background, spawned by the app) gets
+# its own temp dir, so its crash log lands in
+# <tmp>/mixar_render_worker/<app pid>/worker-<kind>/tmp/ (common/render_worker).
+WORKER_CRASH_GLOB = ("mixar_render_worker", "*", "worker-*", "tmp", "*.crash.txt")
 MACOS_REPORTS_DIR = "~/Library/Logs/DiagnosticReports"
 MACOS_REPORT_GLOB = "Mixar*.ips"
 MAX_FILE_AGE_DAYS = 30

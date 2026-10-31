@@ -10,6 +10,13 @@ Sources (newest first, at most ``MAX_REPORTS_PER_LAUNCH`` per launch):
   skipped.
 - ``~/Library/Logs/DiagnosticReports/Mixar*.ips`` on macOS: crashes Blender's
   handler does not catch (abort, terminate, the pre-4.3.1 SIGBUS path).
+- the background render worker's own crash logs
+  (``<tmp>/mixar_render_worker/<app pid>/worker-<kind>/tmp/*.crash.txt``).
+
+A crash of the render worker (a ``Mixar --background`` child of the app) is not
+the app crashing: it is reported as kind ``worker_crash``, grouped apart. It is
+recognised by where its crash log lives, or, for an ``.ips``, by its parent
+process being Mixar.
 
 Windows Error Reporting has nothing for Mixar: Blender's exception filter ends
 the process itself, so a Windows crash is only ever in crash.txt.
@@ -27,6 +34,7 @@ from datetime import datetime, timezone
 
 from ..constants import (
     CRASH_TXT_GLOB,
+    WORKER_CRASH_GLOB,
     MACOS_REPORT_GLOB,
     MACOS_REPORTS_DIR,
     MAX_FILE_AGE_DAYS,
@@ -50,6 +58,7 @@ def candidate_files(temp_dirs: list[str], report_dirs: list[str] | None = None,
     now = time.time() if now is None else now
     found: dict[str, tuple[str, str, float]] = {}
     patterns = [(os.path.join(d, CRASH_TXT_GLOB), "crash_txt") for d in temp_dirs if d]
+    patterns += [(os.path.join(d, *WORKER_CRASH_GLOB), "worker_crash_txt") for d in temp_dirs if d]
     patterns += [(os.path.join(d, MACOS_REPORT_GLOB), "macos_ips") for d in (report_dirs or []) if d]
     for pattern, source in patterns:
         for path in glob.glob(pattern):
@@ -69,6 +78,15 @@ def _read(path: str) -> str | None:
             return handle.read(MAX_FILE_BYTES)
     except OSError:
         return None
+
+
+def worker_kind(path: str) -> str | None:
+    """``render`` for ``.../worker-render/tmp/mixar.crash.txt``."""
+    parts = os.path.normpath(path).split(os.sep)
+    for part in reversed(parts):
+        if part.startswith("worker-"):
+            return part[len("worker-"):][:32] or None
+    return None
 
 
 def session_for(sessions: list[dict], mtime: float) -> dict | None:
@@ -101,26 +119,33 @@ def build_reports(
         text = _read(path)
         if not text:
             continue
-        if source == "crash_txt":
+        kind = "native"
+        if source in ("crash_txt", "worker_crash_txt"):
             parsed = parse_crash_txt(text)
             report_id = report_id_for("crash_txt", text)
+            if source == "worker_crash_txt":
+                kind = "worker_crash"
+                if parsed is not None:
+                    parsed["worker_kind"] = worker_kind(path)
         else:
             parsed = parse_ips(text)
             report_id = report_id_for("ips", str((parsed or {}).get("report_key") or text))
         if not parsed or not parsed.get("is_mixar"):
             continue
+        kind = parsed.get("kind") or kind
         if store.is_sent(report_id):
             continue
         reports.append(native_report(
             parsed,
-            source=source,
+            kind=kind,
+            source="crash_txt" if source == "worker_crash_txt" else source,
             report_id=report_id,
             device_id=device_id,
             crashed_at=datetime.fromtimestamp(mtime, tz=timezone.utc),
             static=static,
             session=session_for(sessions, mtime),
             current=current,
-            raw_text=text if source == "crash_txt" else None,
+            raw_text=text if source != "macos_ips" else None,
         ))
         if len(reports) >= limit:
             break

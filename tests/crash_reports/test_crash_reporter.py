@@ -204,3 +204,28 @@ def test_new_crash_logs_carry_build_images_and_addresses(tmp_path):
     assert report["images"][0]["id"] == "8061b8de1ba9340fa6af312e3b71dbc5"
     assert all("address" in frame for frame in report["frames"])
     assert "# mixar symbolication v1" in report["raw_text"]
+
+
+def test_render_worker_crashes_are_reported_as_worker_crashes(tmp_path):
+    temp = tmp_path / "T"
+    worker_tmp = temp / "mixar_render_worker" / "4242" / "worker-render" / "tmp"
+    worker_tmp.mkdir(parents=True)
+    shutil.copy(FIXTURES / "macos_render_v1.crashlog", worker_tmp / "snapshot.crash.txt")
+    reports_dir = tmp_path / "DiagnosticReports"
+    reports_dir.mkdir()
+    shutil.copy(FIXTURES / "macos_worker_bad_access.ips.json", reports_dir / "Mixar-2026-10-31-111819.ips")
+    shutil.copy(FIXTURES / "macos_abort.ips.json", reports_dir / "Mixar-2026-10-23-152401.ips")
+    reports = harvest.build_reports(temp_dirs=[str(temp)], report_dirs=[str(reports_dir)],
+                                    store=Store(str(tmp_path / "s")), own_pid=1, device_id=DEVICE,
+                                    static=STATIC, current=CURRENT)
+    by_kind = sorted((r["kind"], r["source"]) for r in reports)
+    assert by_kind == [("native", "macos_ips"), ("worker_crash", "crash_txt"), ("worker_crash", "macos_ips")]
+    worker_txt = next(r for r in reports if r["kind"] == "worker_crash" and r["source"] == "crash_txt")
+    assert worker_txt["context"]["worker_kind"] == "render"
+    assert "/" not in json.dumps(worker_txt["context"])
+
+
+def test_app_crash_log_is_not_mistaken_for_a_worker_one(tmp_path, temp_dir):
+    reports = harvest.build_reports(temp_dirs=[str(temp_dir)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    assert {r["kind"] for r in reports} == {"native"}
