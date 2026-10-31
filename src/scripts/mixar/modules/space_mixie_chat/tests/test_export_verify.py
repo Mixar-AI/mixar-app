@@ -193,9 +193,10 @@ def test_export_package_signature_and_isolation():
     # The return dict carries both the verifier's dict and the legacy glb_check,
     # whether it is returned directly or built as a variable first.
     tree = ast.parse(src)
-    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "export_package")
+    # The build itself (in the app or in a background worker); export_package routes to it.
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_export_in_process")
     returns = [n.value for n in ast.walk(fn) if isinstance(n, ast.Return) and n.value is not None]
-    assert len(returns) == 1, "export_package has one way out"
+    assert len(returns) == 1, "the build has one way out"
     returned = returns[0]
     if isinstance(returned, ast.Name):
         returned = next(n.value for n in ast.walk(fn) if isinstance(n, ast.Assign)
@@ -452,7 +453,7 @@ def test_only_meshes_the_gltf_exporter_skins_are_expected_as_skins():
     assert not skin(mesh(None, "OBJECT", [None]))  # a modifier with no armature
     assert not skin(mesh(rig, "OBJECT", [rig], groups=()))  # no vertex groups
     assert not skin(mesh(rig, "OBJECT", [rig], data=unweighted))  # groups, no weights
-    for src in (inspect.getsource(export_package.export_package),
+    for src in (inspect.getsource(export_package._export_in_process),
                 open(os.path.join(_CORE, "agent_export.py"), encoding="utf-8").read()):
         assert '"skinned_meshes": ' in src and "writes_gltf_skin(" in src
 
@@ -463,7 +464,7 @@ def test_copies_keep_a_skinned_mesh_skinned():
     assert "_skinned_copy(o, orig, me)" in source
     assert 'modifiers.new("Armature", "ARMATURE")' in source
     assert "matrix_parent_inverse" in source
-    assert "skinned_meshes" in inspect.getsource(export_package.export_package)
+    assert "skinned_meshes" in inspect.getsource(export_package._export_in_process)
 
 
 def test_a_named_empty_stands_for_its_meshes_and_armatures():

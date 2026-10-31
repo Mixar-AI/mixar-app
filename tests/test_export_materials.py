@@ -101,7 +101,7 @@ def test_both_lanes_share_the_one_swap():
 def test_package_swaps_the_copies_before_reading_their_materials():
     source = (CORE / "export_package.py").read_text(encoding="utf-8")
     fn = next(n for n in ast.parse(source).body
-              if isinstance(n, ast.FunctionDef) and n.name == "export_package")
+              if isinstance(n, ast.FunctionDef) and n.name == "_export_in_process")
     body = ast.get_source_segment(source, fn)
     copies = body.index("_copies(meshes, join")
     swap = body.index("swap.enter_context(temporary_export_materials(copies, keep_unbaked=bool(engine)))")
