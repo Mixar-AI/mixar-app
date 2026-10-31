@@ -26,9 +26,9 @@ LEAKS = ("/Users/", "jdoe", "Jane", "@example", "Sample prompt", "Client Work", 
 def temp_dir(tmp_path):
     folder = tmp_path / "T"
     folder.mkdir()
-    for name in ("macos_render.crash.txt", "upstream_blender.crash.txt"):
+    for name in ("macos_render.crashlog", "upstream_blender.crashlog"):
         shutil.copy(FIXTURES / name, folder / ("mixar.crash.txt" if name.startswith("macos") else "blender.crash.txt"))
-    shutil.copy(FIXTURES / "windows_access_violation.crash.txt", folder / "castle.crash.txt")
+    shutil.copy(FIXTURES / "windows_access_violation.crashlog", folder / "castle.crash.txt")
     return folder
 
 
@@ -195,7 +195,7 @@ def test_old_crash_files_are_ignored(tmp_path, temp_dir):
 def test_new_crash_logs_carry_build_images_and_addresses(tmp_path):
     folder = tmp_path / "T"
     folder.mkdir()
-    shutil.copy(FIXTURES / "macos_render_v1.crash.txt", folder / "mixar.crash.txt")
+    shutil.copy(FIXTURES / "macos_render_v1.crashlog", folder / "mixar.crash.txt")
     reports = harvest.build_reports(temp_dirs=[str(folder)], store=Store(str(tmp_path / "s")), own_pid=1,
                                     device_id=DEVICE, static=STATIC, current=CURRENT)
     report = reports[0]

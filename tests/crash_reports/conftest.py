@@ -3,7 +3,11 @@
 
 """Fixtures for crash-reporting tests. The crash files under ``fixtures/`` are
 scrubbed copies of real Mixar crash logs (prompts, paths and ids replaced with
-synthetic ones) plus synthetic Windows / Linux logs in Blender's format."""
+synthetic ones) plus synthetic Windows / Linux logs in Blender's format.
+
+They are ``*.crashlog`` (licensed in REUSE.toml), not ``*.crash.txt``: the
+SPDX bot prepends a comment header to every ``.txt`` it sees, and a crash log
+must start with Blender's ``# Blender`` line to be one."""
 
 from pathlib import Path
 

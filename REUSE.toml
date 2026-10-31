@@ -58,7 +58,7 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 
 # Test fixtures: data files with no comment syntax for an inline header.
 [[annotations]]
-path = ["tests/**/fixtures/*.json", "tests/**/fixtures/*.crash.txt"]
+path = ["tests/**/fixtures/*.json", "tests/**/fixtures/*.crashlog"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"

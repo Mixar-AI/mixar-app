@@ -8,7 +8,7 @@ from mixar.modules.common.crash_reports.core.parse_ips import parse_ips
 
 
 def test_macos_render_crash(fixture_text):
-    parsed = parse_crash_txt(fixture_text("macos_render.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("macos_render.crashlog"))
     assert parsed["is_mixar"] and parsed["platform"] == "darwin"
     assert parsed["blender_version"] == "5.2.0" and parsed["build_hash"] == "fbe6228777e7"
     assert parsed["crash_type"] == "SIGSEGV"
@@ -31,18 +31,18 @@ def test_macos_render_crash(fixture_text):
 
 
 def test_operators_carry_no_arguments(fixture_text):
-    parsed = parse_crash_txt(fixture_text("macos_render.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("macos_render.crashlog"))
     assert all("(" not in name and "/" not in name for name in parsed["operators"])
 
 
 def test_vanilla_blender_crash_is_not_mixars(fixture_text):
-    parsed = parse_crash_txt(fixture_text("upstream_blender.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("upstream_blender.crashlog"))
     assert parsed is not None and parsed["is_mixar"] is False
     assert parsed["blender_version"] == "5.1.0"
 
 
 def test_windows_access_violation(fixture_text):
-    parsed = parse_crash_txt(fixture_text("windows_access_violation.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("windows_access_violation.crashlog"))
     assert parsed["is_mixar"] and parsed["platform"] == "windows"
     assert parsed["crash_type"] == "EXCEPTION_ACCESS_VIOLATION"
     assert parsed["crash_module"] == "Mixar.exe"
@@ -58,7 +58,7 @@ def test_windows_access_violation(fixture_text):
 
 
 def test_linux_segv(fixture_text):
-    parsed = parse_crash_txt(fixture_text("linux_segv.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("linux_segv.crashlog"))
     assert parsed["is_mixar"] and parsed["platform"] == "linux"
     assert parsed["frames"][1] == {"module": "Mixar", "function": "", "offset": 0x1D3E0F1, "address": 0x5631A3A3E0F1}
     assert parsed["frames"][3]["function"] == "_ZN7blender3bke17mesh_calc_normalsEPNS_4MeshE"
@@ -94,7 +94,7 @@ def test_ips_from_another_app_or_garbage_is_skipped():
 
 
 def test_symbolication_block_on_macos(fixture_text):
-    parsed = parse_crash_txt(fixture_text("macos_render_v1.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("macos_render_v1.crashlog"))
     assert parsed["app_version"] == "4.3.8" and parsed["git_sha"] == "0123456789abcdef0123456789abcdef01234567"
     assert parsed["arch"] == "arm64"
     assert parsed["images"][0] == {
@@ -107,7 +107,7 @@ def test_symbolication_block_on_macos(fixture_text):
 
 
 def test_symbolication_block_rebuilds_windows_frames(fixture_text):
-    parsed = parse_crash_txt(fixture_text("windows_access_violation_v1.crash.txt"))
+    parsed = parse_crash_txt(fixture_text("windows_access_violation_v1.crashlog"))
     assert parsed["app_version"] == "4.3.8"
     assert [frame["module"] for frame in parsed["frames"]] == ["Mixar.exe", "Mixar.exe", "nvoglv64.dll", "Mixar.exe"]
     assert parsed["frames"][0] == {"module": "Mixar.exe", "function": "", "offset": 0x1D2C3D4, "address": 0x7FF6A1D2C3D4}

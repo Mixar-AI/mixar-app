@@ -92,7 +92,7 @@ def test_python_file_keeps_only_the_in_app_part(path, expected):
 
 
 def test_scrub_crash_text_on_a_real_crash_log(fixture_text):
-    raw = fixture_text("macos_render.crash.txt")
+    raw = fixture_text("macos_render.crashlog")
     scrubbed = scrub_crash_text(raw, ("jdoe",))
     assert "jdoe" not in scrubbed.lower()
     assert "Sample prompt" not in scrubbed and "@example.com" not in scrubbed
@@ -103,7 +103,7 @@ def test_scrub_crash_text_on_a_real_crash_log(fixture_text):
 
 
 def test_scrub_crash_text_on_a_windows_log(fixture_text):
-    scrubbed = scrub_crash_text(fixture_text("windows_access_violation.crash.txt"), NO_NAMES)
+    scrubbed = scrub_crash_text(fixture_text("windows_access_violation.crashlog"), NO_NAMES)
     for leaked in ("Jane Smith", "Client Work", "castle", "jane.smith@", "fileserver", "Program Files"):
         assert leaked not in scrubbed
     assert "EXCEPTION_ACCESS_VIOLATION" in scrubbed and "nvoglv64.dll" in scrubbed
