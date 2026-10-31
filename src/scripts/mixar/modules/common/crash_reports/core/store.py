@@ -113,6 +113,15 @@ class Store:
         except OSError:
             pass
 
+    def prune_ended_sessions(self, own_pid: int, settled_s: float) -> None:
+        """Drop other sessions' breadcrumbs once every crash file they could
+        match has been harvested: those that ended more than ``settled_s`` ago."""
+        cutoff = time.time() - settled_s
+        for data in self.sessions(own_pid):
+            pid = data.get("pid")
+            if isinstance(pid, int) and float(data.get("updated_at") or 0) < cutoff:
+                self.remove_session(pid)
+
     def sessions(self, own_pid: int) -> list[dict]:
         """Breadcrumbs of other (ended) sessions; stale ones are pruned."""
         out = []
