@@ -12,6 +12,11 @@ Layout::
     <native frames: macOS ``backtrace_symbols``, Linux ``backtrace_symbols``,
      or Windows exception record + stack + loaded modules>
 
+    # mixar symbolication v1                  (Mixar builds from 4.3.8 on)
+    mixar_version / git_sha / arch
+    image base=0x.. vmaddr=0x.. size=0x.. id=<debug id> name=<file name>
+    frame <n> 0x<return address>
+
     # Python backtrace
       File "<path>", line N in <function>      (innermost first)
 
@@ -30,11 +35,19 @@ from .scrub import operator_name, python_file
 
 _HEADER = re.compile(r"^#\s+Blender\s+(?P<version>[\w.\-]+)(?:,.*?Hash\s+(?P<hash>[0-9a-f]+))?", re.IGNORECASE)
 _MAC_FRAME = re.compile(
-    r"^\s*\d+\s+(?P<module>\S+)\s+0x[0-9a-fA-F]+\s+(?P<function>.+?)(?:\s+\+\s+(?P<offset>\d+))?\s*$"
+    r"^\s*\d+\s+(?P<module>\S+)\s+(?P<address>0x[0-9a-fA-F]+)\s+(?P<function>.+?)"
+    r"(?:\s+\+\s+(?P<offset>\d+))?\s*$"
 )
 _LINUX_FRAME = re.compile(
-    r"^(?P<path>[^\s(]+)\((?P<function>[^)+]*)(?:\+(?P<offset>0x[0-9a-fA-F]+))?\)\s*\[0x[0-9a-fA-F]+\]"
+    r"^(?P<path>[^\s(]+)\((?P<function>[^)+]*)(?:\+(?P<offset>0x[0-9a-fA-F]+))?\)\s*\[(?P<address>0x[0-9a-fA-F]+)\]"
 )
+_SYM_IMAGE = re.compile(
+    r"^image\s+base=(?P<base>0x[0-9a-fA-F]+)\s+vmaddr=(?P<vmaddr>0x[0-9a-fA-F]+)\s+"
+    r"size=(?P<size>0x[0-9a-fA-F]+)\s+id=(?P<id>\S+)\s+name=(?P<name>.*?)\s*$"
+)
+_SYM_FRAME = re.compile(r"^frame\s+\d+\s+(?P<address>0x[0-9a-fA-F]+)\s*$")
+_SYM_VALUE = re.compile(r"^(?P<key>mixar_version|git_sha|arch)\s+(?P<value>\S+)\s*$")
+MAX_IMAGES = 32
 _WIN_FRAME = re.compile(r"^(?P<module>\S[^:]*?)\s*:0x(?P<address>[0-9A-Fa-f]+)\s+(?P<symbol>.+?)\s*$")
 _WIN_MODULE = re.compile(r"^0x(?P<base>[0-9A-Fa-f]+)\s+(?P<version>\S*)\s+(?P<name>\S+)")
 _WIN_FIELD = re.compile(r"^(?P<key>ExceptionCode|Exception [A-Z]\w*)\s*:\s*(?P<value>.+?)\s*$")
@@ -47,8 +60,8 @@ def _basename(path: str) -> str:
     return re.split(r"[\\/]", path.strip())[-1]
 
 
-def _sections(text: str) -> tuple[list[str], list[str], list[str], list[str]]:
-    header, report, native, python = [], [], [], []
+def _sections(text: str) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
+    header, report, native, symbols, python = [], [], [], [], []
     target = report
     for index, line in enumerate(text.splitlines()):
         if index == 0 and line.startswith("#") and "backtrace" not in line:
@@ -57,11 +70,48 @@ def _sections(text: str) -> tuple[list[str], list[str], list[str], list[str]]:
         if line.startswith("# Python backtrace"):
             target = python
             continue
+        if line.startswith("# mixar symbolication"):
+            target = symbols
+            continue
         if line.startswith("# backtrace"):
             target = native
             continue
         target.append(line)
-    return header, report, native, python
+    return header, report, native, symbols, python
+
+
+def _symbolication(lines: list[str]) -> dict:
+    """The symbolication block: build, images (file names only) and raw addresses."""
+    values: dict = {}
+    images: list[dict] = []
+    addresses: list[int] = []
+    for line in lines:
+        stripped = line.strip()
+        value = _SYM_VALUE.match(stripped)
+        if value:
+            values[value.group("key")] = value.group("value")
+            continue
+        image = _SYM_IMAGE.match(stripped)
+        if image and len(images) < MAX_IMAGES:
+            images.append({
+                "name": _basename(image.group("name"))[:128],
+                "id": "" if image.group("id") == "-" else image.group("id").lower()[:80],
+                "base": int(image.group("base"), 16),
+                "vmaddr": int(image.group("vmaddr"), 16),
+                "size": int(image.group("size"), 16),
+            })
+            continue
+        frame = _SYM_FRAME.match(stripped)
+        if frame and len(addresses) < MAX_FRAMES:
+            addresses.append(int(frame.group("address"), 16))
+    return {"values": values, "images": images, "addresses": addresses}
+
+
+def image_for(images: list[dict], address: int) -> dict | None:
+    for image in images:
+        if image["base"] <= address < image["base"] + max(image.get("size") or 0, 1):
+            return image
+    return None
 
 
 def _windows(native: list[str]) -> tuple[dict, list[dict]]:
@@ -125,6 +175,7 @@ def _posix(native: list[str]) -> tuple[dict, list[dict]]:
                 "module": mac.group("module"),
                 "function": mac.group("function").strip(),
                 "offset": int(mac.group("offset")) if mac.group("offset") else None,
+                "address": int(mac.group("address"), 16),
             })
             continue
         linux = _LINUX_FRAME.match(line.strip())
@@ -134,6 +185,7 @@ def _posix(native: list[str]) -> tuple[dict, list[dict]]:
                 "module": _basename(linux.group("path")),
                 "function": linux.group("function").strip(),
                 "offset": int(offset, 16) if offset else None,
+                "address": int(linux.group("address"), 16),
             })
     # The POSIX handler only runs for SIGSEGV / SIGBUS (both "bad access").
     info = {
@@ -159,8 +211,9 @@ def parse_crash_txt(text: str) -> dict | None:
     """The parsed crash, or None when the text is not a Blender crash log."""
     if not text or "# backtrace" not in text:
         return None
-    header, report, native, python = _sections(text)
+    header, report, native, symbols, python = _sections(text)
     match = _HEADER.match(header[0]) if header else None
+    symbolication = _symbolication(symbols)
     if any(line.strip().startswith("Exception Record") for line in native):
         info, frames = _windows(native)
         platform = "windows"
@@ -169,6 +222,22 @@ def parse_crash_txt(text: str) -> dict | None:
         platform = "darwin" if any("libsystem_" in f["module"] or f["module"] == "dyld" for f in frames) else (
             "linux" if any(".so" in f["module"] for f in frames) else None
         )
+    images = symbolication["images"]
+    if symbolication["addresses"] and not any(frame.get("address") for frame in frames):
+        # Windows: Blender's walk stops at the first frame without symbols; the
+        # block's walk from the exception context has every return address.
+        frames = []
+        for address in symbolication["addresses"]:
+            image = image_for(images, address)
+            frames.append({
+                "module": image["name"] if image else None,
+                "function": "",
+                "offset": address - image["base"] if image else None,
+                "address": address,
+            })
+    if any(image["name"].lower() in APP_BINARIES for image in images):
+        info["app_binary"] = True
+    mixar_version = symbolication["values"].get("mixar_version")
     operators = [name for name in (operator_name(line) for line in report) if name]
     python_frames = []
     for line in python:
@@ -190,4 +259,8 @@ def parse_crash_txt(text: str) -> dict | None:
         "frames": frames[:MAX_FRAMES],
         "python_frames": python_frames[:MAX_FRAMES],
         "operators": operators[-MAX_OPERATORS:],
+        "app_version": mixar_version if mixar_version and mixar_version != "unknown" else None,
+        "git_sha": (symbolication["values"].get("git_sha") or "")[:64] or None,
+        "arch": symbolication["values"].get("arch"),
+        "images": images,
     }

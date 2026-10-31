@@ -72,6 +72,9 @@ def native_report(
         "frames": parsed.get("frames", [])[:MAX_FRAMES],
         "python_frames": parsed.get("python_frames", [])[:MAX_FRAMES],
         "operators": parsed.get("operators", []),
+        "git_sha": parsed.get("git_sha"),
+        "arch": parsed.get("arch"),
+        "images": parsed.get("images") or [],
         "context": _context(static, session_ctx, current, parsed),
     }
     payload = scrub_value({key: value for key, value in payload.items() if value is not None})

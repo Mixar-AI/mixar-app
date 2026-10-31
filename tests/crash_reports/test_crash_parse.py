@@ -17,7 +17,10 @@ def test_macos_render_crash(fixture_text):
     assert functions[3] == "_ZN7blender22DEG_id_type_any_existsEPKNS_9DepsgraphEs"
     assert parsed["frames"][3] == {
         "module": "Mixar", "function": "_ZN7blender22DEG_id_type_any_existsEPKNS_9DepsgraphEs", "offset": 24,
+        "address": 0x000000010568127C,
     }
+    # An old log has no symbolication block: nothing invented.
+    assert parsed["images"] == [] and parsed["app_version"] is None and parsed["git_sha"] is None
     assert parsed["frames"][2]["module"] == "libsystem_platform.dylib"
     assert parsed["operators"][-1] == "bpy.ops.mixie.imagegen_generate"
     assert "bpy.ops.mixie_chat.send_message" in parsed["operators"]
@@ -57,7 +60,7 @@ def test_windows_access_violation(fixture_text):
 def test_linux_segv(fixture_text):
     parsed = parse_crash_txt(fixture_text("linux_segv.crash.txt"))
     assert parsed["is_mixar"] and parsed["platform"] == "linux"
-    assert parsed["frames"][1] == {"module": "Mixar", "function": "", "offset": 0x1D3E0F1}
+    assert parsed["frames"][1] == {"module": "Mixar", "function": "", "offset": 0x1D3E0F1, "address": 0x5631A3A3E0F1}
     assert parsed["frames"][3]["function"] == "_ZN7blender3bke17mesh_calc_normalsEPNS_4MeshE"
     assert parsed["frames"][2]["module"] == "libc.so.6"
     assert parsed["thread"] == "main"
@@ -88,3 +91,25 @@ def test_macos_segv_report_is_skipped_because_crash_txt_has_it(fixture_text):
 def test_ips_from_another_app_or_garbage_is_skipped():
     assert parse_ips('{"app_name": "Blender"}\n{}') is None
     assert parse_ips("not json") is None
+
+
+def test_symbolication_block_on_macos(fixture_text):
+    parsed = parse_crash_txt(fixture_text("macos_render_v1.crash.txt"))
+    assert parsed["app_version"] == "4.3.8" and parsed["git_sha"] == "0123456789abcdef0123456789abcdef01234567"
+    assert parsed["arch"] == "arm64"
+    assert parsed["images"][0] == {
+        "name": "Mixar", "id": "8061b8de1ba9340fa6af312e3b71dbc5",
+        "base": 0x104A4C000, "vmaddr": 0x100000000, "size": 0x7A1C000,
+    }
+    # macOS keeps the named frames; each carries its absolute address.
+    assert parsed["frames"][3]["function"].startswith("_ZN7blender22DEG_id_type_any_exists")
+    assert parsed["frames"][3]["address"] == 0x000000010568127C
+
+
+def test_symbolication_block_rebuilds_windows_frames(fixture_text):
+    parsed = parse_crash_txt(fixture_text("windows_access_violation_v1.crash.txt"))
+    assert parsed["app_version"] == "4.3.8"
+    assert [frame["module"] for frame in parsed["frames"]] == ["Mixar.exe", "Mixar.exe", "nvoglv64.dll", "Mixar.exe"]
+    assert parsed["frames"][0] == {"module": "Mixar.exe", "function": "", "offset": 0x1D2C3D4, "address": 0x7FF6A1D2C3D4}
+    assert parsed["images"][0]["id"] == "3f2504e04f8911d39a0c0305e82c33011"
+    assert all("/" not in image["name"] and "\\" not in image["name"] for image in parsed["images"])

@@ -190,3 +190,17 @@ def test_old_crash_files_are_ignored(tmp_path, temp_dir):
     for name in os.listdir(temp_dir):
         os.utime(temp_dir / name, (old, old))
     assert harvest.candidate_files([str(temp_dir)], [str(temp_dir)]) == []
+
+
+def test_new_crash_logs_carry_build_images_and_addresses(tmp_path):
+    folder = tmp_path / "T"
+    folder.mkdir()
+    shutil.copy(FIXTURES / "macos_render_v1.crash.txt", folder / "mixar.crash.txt")
+    reports = harvest.build_reports(temp_dirs=[str(folder)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    report = reports[0]
+    assert report["app_version"] == "4.3.8"  # from the crash log, not the reporting session
+    assert report["git_sha"] == "0123456789abcdef0123456789abcdef01234567" and report["arch"] == "arm64"
+    assert report["images"][0]["id"] == "8061b8de1ba9340fa6af312e3b71dbc5"
+    assert all("address" in frame for frame in report["frames"])
+    assert "# mixar symbolication v1" in report["raw_text"]
