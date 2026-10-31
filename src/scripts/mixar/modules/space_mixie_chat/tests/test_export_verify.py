@@ -38,7 +38,7 @@ VERIFICATION_KEYS = {
 def test_glb_parse_reads_counts_names_bounds_and_clips(tmp_path):
     path = write_glb(tmp_path / "hero.glb", meshes=2, animations=["Walk", "Run"])
     result = export_verify.verify_export(path, "glb", {
-        "mesh_count": 2, "armature_count": 1, "clips": ["walk"], "joined": False,
+        "mesh_count": 2, "armature_count": 1, "clips": ["walk", "run"], "joined": False,
         "images_expected": 1,
     })
     assert VERIFICATION_KEYS <= set(result)
@@ -182,19 +182,37 @@ def test_usdz_listing_flags_missing_layer(tmp_path):
 def test_export_package_signature_and_isolation():
     params = inspect.signature(export_package.export_package).parameters
     assert list(params) == ["names", "fmt", "filename", "where", "folder", "join", "texture_tiers",
-                            "include_source", "manifest", "readme", "extra_files", "animations"]
+                            "include_source", "manifest", "readme", "extra_files", "animations",
+                            "engine"]
+    assert params["engine"].default is None
     assert params["animations"].default is None
     src = open(os.path.join(_CORE, "export_package.py"), encoding="utf-8").read()
     assert "uv_bake" not in src.replace("uv_bake.export_package", "")  # legacy manifest tag only
     assert export_package.GENERATOR == "Mixar export_package"
     assert set(export_package.DESTINATIONS) == {"mixar_exports", "downloads", "documents", "desktop", "project"}
-    # The return dict carries both the verifier's dict and the legacy glb_check.
+    # The return dict carries both the verifier's dict and the legacy glb_check,
+    # whether it is returned directly or built as a variable first.
     tree = ast.parse(src)
     fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "export_package")
-    returned = next(n for n in ast.walk(fn) if isinstance(n, ast.Return) and isinstance(n.value, ast.Dict))
-    keys = {k.value for k in returned.value.keys if isinstance(k, ast.Constant)}
+    returns = [n.value for n in ast.walk(fn) if isinstance(n, ast.Return) and n.value is not None]
+    assert len(returns) == 1, "export_package has one way out"
+    returned = returns[0]
+    if isinstance(returned, ast.Name):
+        returned = next(n.value for n in ast.walk(fn) if isinstance(n, ast.Assign)
+                        and any(isinstance(t, ast.Name) and t.id == returned.id for t in n.targets))
+    assert isinstance(returned, ast.Dict)
+    keys = {k.value for k in returned.keys if isinstance(k, ast.Constant)}
     assert {"destination", "folder", "files", "main_file", "glb_check", "verification",
             "animations", "triangles", "dimensions_m", "textures", "tiers", "seconds"} <= keys
+
+
+def test_every_export_package_call_writes_the_package():
+    """No reuse of an earlier package: a signature that misses one edit (a
+    modifier setting, a UV, a saved image) handed back stale files."""
+    src = open(os.path.join(_CORE, "export_package.py"), encoding="utf-8").read()
+    for gone in ("_reusable", "_signature", "REUSE_S", "reused"):
+        assert gone not in src, gone
+    assert not hasattr(export_package, "_last")
 
 
 def test_export_package_exporter_kwargs_follow_clip_request():
@@ -379,3 +397,98 @@ def test_glb_dimensions_are_world_space(tmp_path):
     assert [round(v, 4) for v in lo] == [8.0, 0.0, 0.0]
     assert [round(v, 4) for v in hi] == [14.0, 4.0, 12.0]
     assert export_gltf_bounds.gltf_world_bounds({"nodes": [{"name": "empty"}], "scenes": [{"nodes": [0]}]}) is None
+
+
+def test_a_rigged_mesh_without_joint_weights_fails_verification(tmp_path):
+    """The Oct 26 CS:GO run: the package held the skeleton and both clips, the
+    mesh had no JOINTS_0 / WEIGHTS_0, Godot bound no skin and the soldier slid
+    around frozen while every export reported ``verified``."""
+    weighted = write_glb(tmp_path / "ok.glb", skin="weighted", animations=["walk", "run"])
+    ok = export_verify.verify_export(weighted, "glb", {
+        "mesh_count": 1, "armature_count": 1, "skinned_meshes": 1, "clips": ["walk", "run"],
+        "images_expected": 1})
+    assert ok["passed"] is True, ok["issues"]
+    assert ok["skins"] == 1 and ok["skinned_meshes"] == 1
+    for kind in ("unweighted", None):
+        path = write_glb(tmp_path / f"{kind}.glb", skin=kind, animations=["walk", "run"])
+        bad = export_verify.verify_export(path, "glb", {
+            "mesh_count": 1, "armature_count": 1, "skinned_meshes": 1, "clips": ["walk", "run"],
+            "images_expected": 1})
+        assert bad["passed"] is False and bad["skinned_meshes"] == 0
+        assert any("lost their skin" in issue for issue in bad["issues"])
+    # a static mesh beside nothing expects no skin
+    plain = export_verify.verify_export(write_glb(tmp_path / "p.glb"), "glb", {"mesh_count": 1})
+    assert plain["passed"] is True and plain["skinned_meshes"] == 0
+
+
+def test_clips_nobody_requested_are_flagged(tmp_path):
+    path = write_glb(tmp_path / "c.glb", animations=["walk", "run", "soldier_motion_reference_walk"])
+    result = export_verify.verify_export(path, "glb", {"mesh_count": 1, "clips": ["walk", "run"]})
+    assert result["passed"] is False
+    assert any("not requested: soldier_motion_reference_walk" in issue for issue in result["issues"])
+
+
+def test_only_meshes_the_gltf_exporter_skins_are_expected_as_skins():
+    """A bone-parented prop has no glTF skin; counting every mesh with an
+    armature parent expected skins the file never has (false failures)."""
+    from types import SimpleNamespace as NS
+
+    rig, other = NS(name="Rig", type="ARMATURE"), NS(name="Other", type="ARMATURE")
+    weighted = NS(vertices=[NS(groups=[]), NS(groups=[NS(group=0, weight=1.0)])])
+    unweighted = NS(vertices=[NS(groups=[]), NS(groups=[])])
+
+    def mesh(parent=None, parent_type="OBJECT", mods=(), groups=("spine",), data=weighted):
+        return NS(type="MESH", parent=parent, parent_type=parent_type, vertex_groups=list(groups), data=data,
+                  modifiers=[NS(type="ARMATURE", object=o) for o in mods])
+
+    skin = export_verify.writes_gltf_skin
+    assert skin(mesh(rig, "OBJECT", [rig]))  # parented and deformed: a skin
+    assert skin(mesh(None, "OBJECT", [rig]))  # deformed, not parented: still a skin
+    assert skin(mesh(rig, "ARMATURE", [rig]))
+    assert not skin(mesh(rig, "BONE"))  # a rifle in a hand: follows the bone, no skin
+    assert not skin(mesh(rig, "ARMATURE"))  # parented, no modifier: the exporter writes no skin
+    assert not skin(mesh(rig, "BONE", [rig]))  # bone-parented to its own deformer: the exporter drops the skin
+    assert skin(mesh(rig, "BONE", [other]))
+    assert not skin(mesh(None, "OBJECT", [None]))  # a modifier with no armature
+    assert not skin(mesh(rig, "OBJECT", [rig], groups=()))  # no vertex groups
+    assert not skin(mesh(rig, "OBJECT", [rig], data=unweighted))  # groups, no weights
+    for src in (inspect.getsource(export_package.export_package),
+                open(os.path.join(_CORE, "agent_export.py"), encoding="utf-8").read()):
+        assert '"skinned_meshes": ' in src and "writes_gltf_skin(" in src
+
+
+def test_copies_keep_a_skinned_mesh_skinned():
+    """Static copies are baked, a skinned copy keeps its armature (source)."""
+    source = inspect.getsource(export_package._copies) + inspect.getsource(export_package._skinned_copy)
+    assert "_skinned_copy(o, orig, me)" in source
+    assert 'modifiers.new("Armature", "ARMATURE")' in source
+    assert "matrix_parent_inverse" in source
+    assert "skinned_meshes" in inspect.getsource(export_package.export_package)
+
+
+def test_a_named_empty_stands_for_its_meshes_and_armatures():
+    """Oct 26: ``export_asset`` on a generated asset's root empty failed with
+    "names must include at least one mesh object"."""
+    from types import SimpleNamespace as NS
+
+    def obj(name, kind, children=()):
+        return NS(name=name, type=kind, children_recursive=list(children))
+
+    body, rig, light = obj("Body", "MESH"), obj("Rig", "ARMATURE"), obj("Lamp", "LIGHT")
+    gun = obj("Gun", "MESH")
+    root = obj("Soldier", "EMPTY", [rig, body, light])
+    scene = NS(objects={o.name: o for o in (root, body, rig, light, gun)})
+    out = export_package._expand_empties([root, gun, body], scene)
+    assert [o.name for o in out] == ["Soldier", "Rig", "Body", "Gun"]
+
+
+def test_a_skinned_mesh_is_measured_in_its_bind_pose(tmp_path):
+    """The armature node's scale is already in a skinned mesh's positions."""
+    doc = export_verify.read_glb_json(write_glb(tmp_path / "s.glb", skin="weighted", size=(0.4, 1.8, 0.3)))
+    doc["nodes"].append({"name": "Armature", "scale": [1.8, 1.8, 1.8], "children": [0]})
+    doc["scenes"] = [{"nodes": [len(doc["nodes"]) - 1]}]
+    lo, hi = export_gltf_bounds.gltf_world_bounds(doc)
+    assert round(hi[1] - lo[1], 3) == 1.8
+    del doc["nodes"][0]["skin"]  # a plain child mesh still follows its parent
+    lo, hi = export_gltf_bounds.gltf_world_bounds(doc)
+    assert round(hi[1] - lo[1], 3) == 3.24

@@ -6,6 +6,7 @@
  *
  * The model card's QA targets, exported once per island window through its
  * WINDOW region as window-level targets (the card is drawn over every region):
+ * (The engine chip's card reports the same surfaces as `engine_card_*`.)
  * `model_card` (text = the open tab's id), `model_card_tab` (label; value =
  * id; sel = open), `model_card_row` (label; value = model; detail = "pick" |
  * "level"; sel = current; only the visible part of a row),
@@ -50,18 +51,20 @@ void qa_targets(const wmWindow *win,
     return;
   }
   const Layout layout = layout_compute(*state, card_rise(*state)); /* As drawn. */
-  auto add = [&](const char *surface, const std::string &text, const rctf &rect) -> MixarQATarget & {
+  /* model_card_* for the model chip's card, engine_card_* for the engine chip's. */
+  const std::string prefix = state->src->qa_prefix;
+  auto add = [&](const char *part, const std::string &text, const rctf &rect) -> MixarQATarget & {
     MixarQATarget target;
-    target.surface = surface;
+    target.surface = prefix + part;
     target.text = text;
     BLI_rcti_rctf_copy_round(&target.rect_win, &rect);
     target.window_level = true;
     r_targets.push_back(std::move(target));
     return r_targets.back();
   };
-  add("model_card", state->tab, layout.card);
+  add("", state->tab, layout.card);
   for (int i = 0; i < int(state->tabs.size()) && i < int(layout.tab_cells.size()); i++) {
-    MixarQATarget &t = add("model_card_tab", state->tabs[i].label, layout.tab_cells[i]);
+    MixarQATarget &t = add("_tab", state->tabs[i].label, layout.tab_cells[i]);
     t.value = state->tabs[i].id;
     t.index = i;
     t.sel = state->tabs[i].id == state->tab;
@@ -80,11 +83,11 @@ void qa_targets(const wmWindow *win,
       continue;
     }
     if (line.kind == LineKind::Note) {
-      add("model_card_note", line.trailing, visible).index = i;
+      add("_note", line.trailing, visible).index = i;
       continue;
     }
     const Row &row = state->rows[line.row];
-    MixarQATarget &t = add("model_card_row", row.label, visible);
+    MixarQATarget &t = add("_row", row.label, visible);
     t.value = row.model;
     t.detail = line.kind == LineKind::Level ? "level" : "pick";
     t.index = i;
@@ -93,19 +96,19 @@ void qa_targets(const wmWindow *win,
     if (line.disclosure) {
       rctf trailing = trailing_rect(*state, layout, r);
       BLI_rctf_isect(&trailing, &layout.list, &trailing);
-      MixarQATarget &d = add("model_card_disclosure", line.trailing, trailing);
+      MixarQATarget &d = add("_disclosure", line.trailing, trailing);
       d.value = state->thinking_open ? "open" : "closed";
       d.enabled = t.enabled;
     }
   }
   for (int i = 0; i < int(state->footers.size()) && i < int(layout.footer_cells.size()); i++) {
     const Row &row = state->rows[state->footers[i]];
-    MixarQATarget &t = add("model_card_footer", row.label, layout.footer_cells[i]);
+    MixarQATarget &t = add("_footer", row.label, layout.footer_cells[i]);
     t.index = i;
     t.enabled = row.enabled;
   }
   if (layout.max_scroll > 0.0f) {
-    MixarQATarget &t = add("model_card_scrollbar", "", layout.bar_thumb);
+    MixarQATarget &t = add("_scrollbar", "", layout.bar_thumb);
     t.value = std::to_string(state->scroll / layout.max_scroll);
   }
 }

@@ -336,7 +336,8 @@ def _ensure_sync_watchdog() -> None:
                 elif (
                     job.state == JobState.RUNNING_DOWNLOAD
                     and job.download_started_at > 0
-                    and now_mono - job.download_started_at
+                    # Time its import waits for a render does not count.
+                    and job.download_elapsed(now_mono)
                     > DOWNLOAD_WATCHDOG_DEADLINE_S
                 ):
                     queue._fail_timed_out(job)
@@ -422,30 +423,6 @@ class FeatureQueue(DownloadMixin):
         self._notify_enqueue_toast(job)
         self._notify()
         self._pump()
-        return True
-
-    def adopt(self, job: Job) -> bool:
-        """Take back a job submitted before Mixar closed (crash restore).
-
-        The job already has its backend id, so it skips submit and waits in
-        RUNNING_POLL like any submitted job; a ``job.get`` for it imports a
-        result that finished while the app was closed. Returns False when the
-        queue already holds that backend job.
-        """
-        if not job.backend_job_id or any(
-            j.backend_job_id == job.backend_job_id for j in self._jobs
-        ):
-            return False
-        job.feature_key = self.feature_key
-        job.state = JobState.RUNNING_POLL
-        job.poll_count = 0
-        job.poll_start_time = time.time()
-        if not job.backend_status:
-            job.backend_status = "PENDING"
-        self._jobs.append(job)
-        self._notify()
-        _ensure_sync_watchdog()
-        _request_backend_job_get(job.backend_job_id)
         return True
 
     def cancel(self, job_id: str) -> None:

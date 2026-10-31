@@ -24,6 +24,22 @@ struct wmWindow;
 
 namespace agent_model_card {
 
+/** Which chip opened the card: the model chip, or the engine chip. The card's
+ * painter, layout and motion are shared; what it reads and runs is not. */
+enum class CardKind { Model = 0, Engine = 1 };
+inline constexpr int CARD_KIND_COUNT = 2;
+
+/** Where a card's rows come from and what its clicks run. */
+struct Source {
+  CardKind kind;
+  const char *tabs_prop, *rows_prop, *current_prop, *state_prop;
+  const char *pick_op, *footer_op;
+  const char *qa_prefix;  /* "model_card" -> model_card_row, … */
+  const char *gate_busy;  /* The pick poll fails while *state_prop reads BUSY. */
+  const char *gate_other; /* … and otherwise. */
+};
+const Source &card_source(CardKind kind);
+
 /** One source tab: `id|label|enabled|cost|note|heading|action` on the wire.
  * `action == "settings"`: the tab is a button, not a page — a click opens AI
  * Provider Settings (no key saved: there is nothing to pick from). */
@@ -69,6 +85,7 @@ struct Layout {
 };
 
 struct State {
+  const Source *src = nullptr;
   wmWindow *win = nullptr;
   void *draw_handle = nullptr;
   wmTimer *timer = nullptr;

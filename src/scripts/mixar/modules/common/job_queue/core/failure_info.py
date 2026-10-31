@@ -99,7 +99,13 @@ def clean_reason(raw) -> str:
         return ""
     cut = text.find("Traceback (most recent call last)")
     if cut >= 0:
-        text = text[:cut]
+        # Keep the exception the traceback ends in: a Python operator's
+        # failure reads "Error: Python: Traceback …" and the frames alone
+        # were all that was dropped, leaving "Error: Python:" (uat4, 28 Oct:
+        # two Tripo rig imports failed with nothing else to go on).
+        tail = [ln.strip() for ln in text[cut:].splitlines() if ln.strip()]
+        last = tail[-1] if len(tail) > 1 else ""
+        text = (text[:cut].rstrip() + " " + last).strip()
     for pattern in _CREDENTIAL_PATTERNS:
         text = pattern.sub("[redacted]", text)
     text = _URL.sub(r"\1/…", text)

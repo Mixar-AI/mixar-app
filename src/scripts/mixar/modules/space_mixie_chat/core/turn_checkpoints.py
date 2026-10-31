@@ -260,12 +260,6 @@ def capture(scene, label: str, *, kind: str = "turn", session_id: str = "", prot
         _write_index(session_id, _prune(session_id, items, protect_id))
         _prune_sessions_once_per_day(session_id)
         logger.info(f"Turn checkpoint {checkpoint_id} written ({size} bytes, turn {record['turn_index']})")
-        try:
-            # Crash safety: this file is also a restorable state, at no cost.
-            from mixar.modules.session_recovery.runtime import note_snapshot
-            note_snapshot(os.path.join(directory, filename), record["original_path"])
-        except Exception:  # noqa: BLE001
-            pass
         return record
     except Exception as e:  # noqa: BLE001 — never block the message
         logger.warning(f"Turn checkpoint skipped: {e}", exc_info=True)

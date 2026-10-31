@@ -261,17 +261,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if self.action_value == BYOK_DIALOG_CHAT_ACTION:
             return bpy.ops.mixar_byok.open_dialog('INVOKE_DEFAULT')
 
-        # Crash-restore notice: Continue sends the continuation message on the
-        # next tick (the send must not run inside this click handler);
-        # Start fresh only removes the notice.
-        from mixar.modules.session_recovery import runtime as recovery
-        if self.action_value == recovery.DISMISS_ACTION:
-            recovery.remove_notice(context.scene)
-            return {'FINISHED'}
-        if self.action_value.startswith(recovery.CONTINUE_PREFIX):
-            recovery.continue_deferred(context.scene.name)
-            return {'FINISHED'}
-
         # Turn-resume prompt (#1258): adopt the orphaned turn locally (replay
         # + follow via the attach endpoint) or dismiss the bubble — both are
         # client-local, no backend round-trip, work right after reconnect.

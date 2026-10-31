@@ -379,6 +379,11 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
         # is a per-job setting like any other, restored on every exit path.
         if render_device.use_gpu():
             set_value(scene.cycles, "device", "GPU")
+            # Denoise where it renders: the CPU OpenImageDenoise kernel crashed
+            # Mixar mid-preview (CPUInputProcessKernel_run_f32, Sky Temple QA
+            # run, Oct 30) with the GPU rendering.
+            if hasattr(scene.cycles, "denoising_use_gpu"):
+                set_value(scene.cycles, "denoising_use_gpu", True)
     elif engine_id in _EEVEE_ENGINES:
         eevee = getattr(scene, "eevee", None)
         samples = getattr(eevee, "taa_render_samples", None)

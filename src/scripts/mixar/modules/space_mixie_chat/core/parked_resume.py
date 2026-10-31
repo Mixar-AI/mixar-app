@@ -80,11 +80,9 @@ def can_send_continue(scene) -> bool:
     return session.get_state(scene) == SessionState.IDLE and not session.run_open(scene)
 
 
-def send_continue(scene, text: str = CONTINUE_MESSAGE) -> bool:
+def send_continue(scene) -> bool:
     """Send the bare continuation message through the normal chat send path
     (full guards: state, connection, optimistic UI). IDLE-only by design.
-    ``text`` replaces it for a caller that must say more (the crash restore
-    tells the agent its scene came back from a save point).
 
     Callers inside a native click handler must NOT call this directly: the
     send can tear the island windows down, freeing the region that handler
@@ -94,7 +92,7 @@ def send_continue(scene, text: str = CONTINUE_MESSAGE) -> bool:
     if not can_send_continue(scene):
         return False
     previous = scene.mixie_chat_input
-    scene.mixie_chat_input = text
+    scene.mixie_chat_input = CONTINUE_MESSAGE
     # The send operator reads context.scene: pin the parked tab's scene for
     # the call so a background tab resumes into ITS chat, then restore.
     window = getattr(bpy.context, "window", None) or next(iter(bpy.context.window_manager.windows), None)

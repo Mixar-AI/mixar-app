@@ -370,6 +370,24 @@ def _remove_new_scenes(bpy, before: set, active) -> list:
     return removed
 
 
+def _with_document_window(bpy, call):
+    """Run ``call`` with the document window as context when the current one is
+    missing (a timer tick) or temporary (the chat island / pill). The importer
+    builds an armature through ``context.window.scene`` and Edit Mode; without
+    a document window it raised "Error: Python:" mid-rig and left an orphan
+    "Armature" (uat4, 28 Oct; reproduced on Blender 5.1 with window=None)."""
+    current = getattr(bpy.context, "window", None)
+    if current is not None and not current.screen.is_temporary:
+        return call()
+    windows = [w for w in bpy.context.window_manager.windows
+               if getattr(w, "screen", None) is not None and not w.screen.is_temporary]
+    if not windows:
+        return call()
+    document = max(windows, key=lambda w: w.width * w.height)
+    with bpy.context.temp_override(window=document, screen=document.screen):
+        return call()
+
+
 def import_gltf(filepath: str, **kwargs: Any):
     """``bpy.ops.import_scene.gltf`` confined to the current scene. Returns the
     operator's result set. ``kwargs`` go to the operator unchanged."""
@@ -379,7 +397,7 @@ def import_gltf(filepath: str, **kwargs: Any):
     active = bpy.context.scene
     before = _scene_keys(bpy)
     try:
-        return bpy.ops.import_scene.gltf(filepath=filepath, **kwargs)
+        return _with_document_window(bpy, lambda: bpy.ops.import_scene.gltf(filepath=filepath, **kwargs))
     finally:
         removed = _remove_new_scenes(bpy, before, active)
         if stripped or removed:

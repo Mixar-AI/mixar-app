@@ -7,6 +7,9 @@ CAPABILITY = 'agent_history_v1'
 # v2: image bytes leave the socket; agent.history_sync sends {"blobs": "reference"}
 # and the archive thread fetches GET /agent/history/blob over HTTP.
 CAPABILITY_V2 = 'agent_history_v2'
+# v3: agent.history_read takes roles / tools / oldest_first / offset / max_chars,
+# so the backend can list the user's own messages from the first one on.
+CAPABILITY_QUERY = 'agent_history_query_v1'
 # Stable across reconnects; recovery removes only the archive sync warning.
 SYNC_NOTICE_ID = 'mixar-agent-history-sync'
 POLL_SECONDS = 2.0
@@ -23,5 +26,8 @@ BACKOFF_MAX_SECONDS = 60.0  # poll interval cap after consecutive failures
 SEGMENT_BYTES = 8 * 1024 * 1024
 MAX_RECORD_BYTES = 12 * 1024 * 1024
 MAX_READ_CHARS = 12000
+# A filtered query is read by the backend, which keeps only the user's text
+# before anything reaches a model; it may ask for more.
+MAX_QUERY_READ_CHARS = 200000
 MAX_READ_RECORDS = 20
 MAX_BLOB_BYTES = 8 * 1024 * 1024

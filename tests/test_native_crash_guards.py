@@ -212,8 +212,18 @@ def test_signals_overlay_tracks_the_pinned_upstream():
     assert overlay == upstream
 
 
+ACTION_ITERATORS = ROOT / "src/source/blender/animrig/intern/action_iterators.cc"
 WM_FILES = ROOT / "src/source/blender/windowmanager/intern/wm_files.cc"
 MODULES = ROOT / "src/scripts/mixar/modules"
+
+
+def test_action_slot_iterators_skip_an_armature_with_no_pose():
+    """``NlaStrip.action_slot`` on a fresh ``bpy.data.objects.new()`` armature
+    walked ``object.pose->chanbase`` with no pose and segfaulted (cs-go-3 run,
+    28 Oct). Both iterators must check the pose first."""
+    src = ACTION_ITERATORS.read_text()
+    assert src.count("object.pose->chanbase") == 2
+    assert src.count("object.type == OB_ARMATURE && object.pose") == 2
 
 
 def test_autosave_runs_under_the_passive_agent_modals():

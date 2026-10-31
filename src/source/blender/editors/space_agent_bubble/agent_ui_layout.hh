@@ -154,6 +154,10 @@ struct AgentIslandLayout {
    * row is too narrow to carry it without eating Upload Reference. */
   rctf chip_model;
   AgentModelChipForm model_form; /* Full: badge + name; Label: name; Icon: badge. */
+  /* The engine chip (the connected game engine, agent_ui_engine.hh), right of
+   * the model chip; empty when not mirrored or the row dropped it. */
+  rctf chip_engine;
+  bool engine_icon_only; /* The status dot alone. */
   /* Form each chip was fitted at (#agent_chip_fit): 0 is the full label; a
    * higher index sheds text down to the chip's icon. Painters read this. */
   int chip_form[AGENT_CHIP_SLOT_COUNT];

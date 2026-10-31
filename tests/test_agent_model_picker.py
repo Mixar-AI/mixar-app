@@ -18,6 +18,7 @@ class in the mock) and are driven directly.
 """
 
 import ast
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -140,7 +141,10 @@ def test_the_island_chip_opens_the_hand_drawn_model_card():
 def test_every_pick_runs_the_one_pick_operator():
     data = (ISLAND / "agent_ui_model_card_data.cc").read_text(encoding="utf-8")
     card = (ISLAND / "agent_ui_model_card.cc").read_text(encoding="utf-8")
-    assert f'PICK_OP = "{PICK_OP}"' in card and f'PICK_OP = "{PICK_OP}"' in data
+    # The card is source-aware (model chip / engine chip): the model card's
+    # pick operator is its Source's, and every pick runs src.pick_op.
+    model_source = data[data.index("static const Source model{"):data.index("static const Source engine{")]
+    assert f'"{PICK_OP}"' in model_source and "src.pick_op" in card
     ops = PICK_OPS_SOURCE.read_text(encoding="utf-8")
     assert 'bl_idname = "mixar.agent_pick"' in ops
     for prop in ("source", "provider", "model", "thinking"):
@@ -201,11 +205,20 @@ def test_the_footer_invokes_the_dialog_not_executes_it():
     deliberate no-op ("clicking does nothing" was a real report). The card's
     footer calls it with InvokeDefault, after closing itself."""
     card = (ISLAND / "agent_ui_model_card.cc").read_text(encoding="utf-8")
-    assert 'SETTINGS_OP = "MIXAR_BYOK_OT_open_dialog"' in card
+    data = (ISLAND / "agent_ui_model_card_data.cc").read_text(encoding="utf-8")
+    model_source = data[data.index("static const Source model{"):data.index("static const Source engine{")]
+    # The model card's footer operator is the dialog (Source: pick_op, footer_op).
+    ops = re.findall(r'"(MIXAR_\w+)"', model_source)
+    assert ops[:2] == ["MIXAR_OT_agent_pick", "MIXAR_BYOK_OT_open_dialog"]
+    intern = (ISLAND / "agent_ui_model_card_intern.hh").read_text(encoding="utf-8")
+    assert "const char *pick_op, *footer_op;" in intern
     footer = card[card.index("wmOperatorStatus run_footer("):]
     footer = footer[:footer.index("\n}\n")]
-    assert footer.index("teardown(C, op)") < footer.index("WM_operator_name_call(")
-    assert "wm::OpCallContext::InvokeDefault" in footer
+    # Looked up from the card's own Source, called after the card closed itself.
+    lookup = footer.index("WM_operatortype_find(src.footer_op, true)")
+    call = footer.index("WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault")
+    assert footer.index("teardown(C, op)") < lookup < call
+    assert "ExecDefault" not in footer
 
 
 def test_the_dialog_opens_in_the_main_window_not_the_island():

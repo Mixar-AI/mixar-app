@@ -33,7 +33,8 @@ enum class AgentIslandControl {
   Clear,
   Voice,
   Auto,
-  Model, /* The model chip (opens the model popup). */
+  Model,  /* The model chip (opens the model popup). */
+  Engine, /* The engine chip (opens the engine card). */
   Generate,
   Refine,
   Revert,

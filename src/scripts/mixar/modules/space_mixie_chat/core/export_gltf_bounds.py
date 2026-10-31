@@ -7,7 +7,11 @@ Walks ``scenes[0].nodes`` recursively, composes each node's ``matrix`` or
 TRS (glTF: column-major, quaternion ``[x, y, z, w]``) into a world matrix,
 transforms the 8 corners of every mesh primitive's POSITION min/max box and
 unions them — so a multi-part asset whose parts are placed by node
-transforms reports its real extent, not the largest single part. Pure
+transforms reports its real extent, not the largest single part. A SKINNED
+mesh node's transform is ignored (glTF: its joints place the vertices), and
+its POSITION box is read as the bind pose the exporter wrote: Blender writes
+it with the armature's scale already in, so composing the armature node's
+scale on top read a 1.8 m soldier as 3.24 m (Oct 26). Pure
 Python, no ``bpy``, so the verifier stays testable outside Blender.
 """
 
@@ -100,11 +104,12 @@ def gltf_world_bounds(doc: dict) -> list | None:
             if mesh_index not in boxes:
                 boxes[mesh_index] = _mesh_box(meshes[mesh_index], accessors)
             box = boxes[mesh_index]
+            place = IDENTITY if node.get("skin") is not None else world
             if box is not None:
                 for cx in (box[0][0], box[1][0]):
                     for cy in (box[0][1], box[1][1]):
                         for cz in (box[0][2], box[1][2]):
-                            point = _transform(world, (float(cx), float(cy), float(cz)))
+                            point = _transform(place, (float(cx), float(cy), float(cz)))
                             for axis in range(3):
                                 lo[axis] = point[axis] if lo[axis] is None else min(lo[axis], point[axis])
                                 hi[axis] = point[axis] if hi[axis] is None else max(hi[axis], point[axis])

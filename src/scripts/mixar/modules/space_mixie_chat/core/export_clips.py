@@ -186,8 +186,14 @@ def animation_kwargs(fmt: str, requested) -> tuple[dict, str, str]:
             # writes every track regardless of mute; ACTIONS exports the
             # single non-muted strip of each track (clip_selection mutes the
             # rest) and the active action, which clip_selection clears.
-            return {"export_animations": True, "export_animation_mode": "ACTIONS"}, mode, ""
-        return {"export_animations": True}, mode, ""
+            # With one armature the exporter also adds EVERY bone action in
+            # the file (``export_anim_single_armature``), which would leak
+            # clips nobody asked for.
+            return {"export_animations": True, "export_animation_mode": "ACTIONS",
+                    "export_anim_single_armature": False}, mode, ""
+        # Every clip = the armatures' active action and NLA strips
+        # (``scene_clips``), not every bone action in the file.
+        return {"export_animations": True, "export_anim_single_armature": False}, mode, ""
     if family == "usd":
         if mode == "none":
             return {"export_animation": False}, mode, ""
