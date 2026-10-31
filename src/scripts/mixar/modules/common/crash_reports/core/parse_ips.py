@@ -8,6 +8,10 @@ one for every Mixar crash, including the ones Blender's handler never sees
 (``SIGABRT``: ``std::terminate``, asserts, ``abort()`` from ``BLI_mmap``'s
 ``SIGBUS`` handler before 4.3.1).
 
+A report whose parent process is Mixar is the background render worker
+(``common/render_worker``: the app spawns ``Mixar --background``); it is
+returned as ``kind: worker_crash`` so it is never counted as the app crashing.
+
 A ``SIGSEGV`` / ``SIGBUS`` that Mixar raised on itself is the re-raise at the
 end of Blender's handler: the real stack is in ``mixar.crash.txt`` and the
 ``.ips`` "triggered" thread is whichever thread received the re-raise, so such
@@ -67,7 +71,9 @@ def parse_ips(text: str) -> dict | None:
     os_version = (body.get("osVersion") or {}).get("train") or header.get("os_version")
     crash_type = signal or exception.get("type") or "unknown"
     thread_name = (thread or {}).get("queue") or (thread or {}).get("name")
+    worker = body.get("parentProc") == "Mixar"
     return {
+        "kind": "worker_crash" if worker else "native",
         "report_key": header.get("incident_id") or body.get("incident"),
         "app_version": header.get("app_version") or (body.get("bundleInfo") or {}).get("CFBundleShortVersionString"),
         "blender_version": None,

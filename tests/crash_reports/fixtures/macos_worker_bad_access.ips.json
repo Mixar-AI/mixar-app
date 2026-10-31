@@ -1,0 +1,178 @@
+{"app_name": "Mixar", "timestamp": "2026-10-31 11:18:19.00 -0700", "app_version": "4.3.6", "slice_uuid": "3a7ea826-afe6-30a6-ada8-ea5a49d8bdb5", "build_version": "4.3.6 2026-10-31", "platform": 1, "bundleID": "com.mixar.mixar", "share_with_app_devs": 0, "is_first_party": 0, "bug_type": "309", "os_version": "macOS 26.2 (25C56)", "roots_installed": 0, "name": "Mixar", "incident_id": "00000000-0000-4000-8000-000000000099"}
+{
+ "procName": "Mixar",
+ "procPath": "/Users/USER/*/Mixar.app/Contents/MacOS/Mixar",
+ "bundleInfo": {
+  "CFBundleShortVersionString": "4.3.6",
+  "CFBundleVersion": "4.3.6 2026-10-31",
+  "CFBundleIdentifier": "com.mixar.mixar"
+ },
+ "cpuType": "ARM-64",
+ "osVersion": {
+  "train": "macOS 26.2",
+  "build": "25C56",
+  "releaseType": "User"
+ },
+ "exception": {
+  "codes": "0x0000000000000001, 0x0000000000000000",
+  "rawCodes": [
+   1,
+   0
+  ],
+  "type": "EXC_BAD_ACCESS",
+  "signal": "SIGSEGV",
+  "subtype": "KERN_INVALID_ADDRESS at 0x0000000000000000"
+ },
+ "termination": {
+  "flags": 0,
+  "code": 11,
+  "namespace": "SIGNAL",
+  "indicator": "Segmentation fault: 11",
+  "byProc": "exc handler",
+  "byPid": 14222
+ },
+ "parentProc": "Mixar",
+ "parentPid": 12977,
+ "threads": [
+  {
+   "triggered": true,
+   "id": 20459914,
+   "queue": "com.apple.main-thread",
+   "frames": [
+    {
+     "imageOffset": 2692,
+     "symbol": "_platform_strlen",
+     "symbolLocation": 4,
+     "imageIndex": 2
+    },
+    {
+     "imageOffset": 45676,
+     "symbol": "string_at",
+     "symbolLocation": 112,
+     "imageIndex": 1
+    },
+    {
+     "imageOffset": 16464,
+     "symbol": "ffi_call_SYSV",
+     "symbolLocation": 80,
+     "imageIndex": 3
+    },
+    {
+     "imageOffset": 54788,
+     "symbol": "ffi_call_int",
+     "symbolLocation": 1220,
+     "imageIndex": 3
+    },
+    {
+     "imageOffset": 51276,
+     "symbol": "_ctypes_callproc",
+     "symbolLocation": 1400,
+     "imageIndex": 1
+    },
+    {
+     "imageOffset": 38776,
+     "symbol": "PyCFuncPtr_call",
+     "symbolLocation": 1336,
+     "imageIndex": 1
+    },
+    {
+     "imageOffset": 91206420,
+     "symbol": "_PyObject_MakeTpCall",
+     "symbolLocation": 300,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 92449264,
+     "symbol": "_PyEval_EvalFrameDefault",
+     "symbolLocation": 7716,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 92440224,
+     "symbol": "PyEval_EvalCode",
+     "symbolLocation": 252,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 92889640,
+     "symbol": "run_eval_code_obj",
+     "symbolLocation": 180,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 92888796,
+     "symbol": "run_mod",
+     "symbolLocation": 328,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 92885748,
+     "symbol": "PyRun_FileExFlags",
+     "symbolLocation": 176,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 26800696,
+     "symbol": "blender::python_script_exec(blender::bContext*, char const*, blender::Text*, blender::ReportList*, bool)",
+     "symbolLocation": 472,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 71732,
+     "symbol": "blender::arg_handle_python_file_run(int, char const**, void*)",
+     "symbolLocation": 256,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 9672832,
+     "symbol": "blender::BLI_args_parse(blender::bArgs*, int, int (*)(int, char const**, void*), void*)",
+     "symbolLocation": 188,
+     "imageIndex": 0
+    },
+    {
+     "imageOffset": 56252,
+     "symbol": "main",
+     "symbolLocation": 1084,
+     "imageIndex": 0
+    }
+   ]
+  }
+ ],
+ "usedImages": [
+  {
+   "arch": "arm64",
+   "base": 4344610816,
+   "size": 127287296,
+   "uuid": "3a7ea826-afe6-30a6-ada8-ea5a49d8bdb5",
+   "name": "Mixar",
+   "path": "/Users/USER/*/Mixar.app/Contents/MacOS/Mixar"
+  },
+  {
+   "arch": "arm64",
+   "base": 4720345088,
+   "size": 98304,
+   "uuid": "952802f9-b491-3a18-99fe-0f17bd668efc",
+   "name": "_ctypes.cpython-313-darwin.so",
+   "path": "/Users/USER/*/Mixar.app/Contents/Resources/5.2/python/lib/python3.13/lib-dynload/_ctypes.cpython-313-darwin.so"
+  },
+  {
+   "arch": "arm64e",
+   "base": 6908133376,
+   "size": 33776,
+   "uuid": "4dbaf982-1576-3ffc-86be-03a9d2c96be5",
+   "name": "libsystem_platform.dylib",
+   "path": "/usr/lib/system/libsystem_platform.dylib"
+  },
+  {
+   "arch": "arm64e",
+   "base": 7246757888,
+   "size": 57952,
+   "uuid": "3aed8f3d-4d24-3786-8463-f371eccdbce7",
+   "name": "libffi.dylib",
+   "path": "/usr/lib/libffi.dylib"
+  }
+ ],
+ "faultingThread": 0,
+ "incident": "00000000-0000-4000-8000-000000000099",
+ "pid": 14222
+}

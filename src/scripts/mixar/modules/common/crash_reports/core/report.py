@@ -19,7 +19,7 @@ from .scrub import python_file, scrub_crash_text, scrub_text, scrub_value
 _CONTEXT_KEYS = (
     "gpu_vendor", "gpu_renderer", "gpu_driver", "gpu_backend", "cycles_device",
     "cycles_scene_device", "render_engine", "open_tabs", "agent_session_id", "agent_run_id",
-    "app_session_id", "cpu_arch", "cpu_count", "ram_gb", "model",
+    "app_session_id", "cpu_arch", "cpu_count", "ram_gb", "model", "worker_kind",
 )
 
 
@@ -43,6 +43,7 @@ def native_report(
     parsed: dict,
     *,
     source: str,
+    kind: str = "native",
     report_id: str,
     device_id: str,
     crashed_at: datetime | None,
@@ -57,7 +58,7 @@ def native_report(
     payload = {
         "report_id": report_id,
         "device_id": device_id,
-        "kind": "native",
+        "kind": kind,
         "source": source,
         "crashed_at": (parsed.get("crashed_at")
                        or (crashed_at.astimezone(timezone.utc).isoformat() if crashed_at else None)),

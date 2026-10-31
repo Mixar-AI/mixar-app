@@ -113,3 +113,15 @@ def test_symbolication_block_rebuilds_windows_frames(fixture_text):
     assert parsed["frames"][0] == {"module": "Mixar.exe", "function": "", "offset": 0x1D2C3D4, "address": 0x7FF6A1D2C3D4}
     assert parsed["images"][0]["id"] == "3f2504e04f8911d39a0c0305e82c33011"
     assert all("/" not in image["name"] and "\\" not in image["name"] for image in parsed["images"])
+
+
+def test_render_worker_ips_is_a_worker_crash(fixture_text):
+    # QA build: the background render worker (Mixar --background, parent Mixar)
+    # died on EXC_BAD_ACCESS in a ctypes call.
+    parsed = parse_ips(fixture_text("macos_worker_bad_access.ips.json"))
+    assert parsed["kind"] == "worker_crash"
+    assert parsed["frames"][0]["function"] == "_platform_strlen"
+
+
+def test_app_ips_stays_an_app_crash(fixture_text):
+    assert parse_ips(fixture_text("macos_abort.ips.json"))["kind"] == "native"
