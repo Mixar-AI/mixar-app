@@ -843,7 +843,7 @@ def _validate(kwargs):
     objs = _expand_empties([scene.objects[n] for n in kwargs["names"]], scene)
     if not [o for o in objs if o.type == "MESH"]:
         raise ValueError("names must include at least one mesh object")
-    destination(kwargs["where"], create=False)  # an unknown destination raises here
+    destination(kwargs["where"])  # an unknown destination raises here
 
 
 def _submit_to_worker(kwargs):
