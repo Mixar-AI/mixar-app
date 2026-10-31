@@ -22,7 +22,7 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import ENDPOINT, REQUEST_TIMEOUT_S
+from ..constants import ENDPOINT, REQUEST_TIMEOUT_S, SESSION_MATCH_SLACK_S
 from . import harvest
 from .store import Store
 
@@ -178,6 +178,10 @@ class Reporter:
                 complete = False
                 break
             self.store.mark_sent(payload["report_id"], outcome)
+        if complete:
+            # Breadcrumbs only match crash files to a session; once every file
+            # is handled, an ended session's breadcrumb has no further use.
+            self.store.prune_ended_sessions(self.own_pid, SESSION_MATCH_SLACK_S)
         return complete
 
     def _send_pending(self, device_id: str) -> None:

@@ -229,3 +229,22 @@ def test_app_crash_log_is_not_mistaken_for_a_worker_one(tmp_path, temp_dir):
     reports = harvest.build_reports(temp_dirs=[str(temp_dir)], store=Store(str(tmp_path / "s")), own_pid=1,
                                     device_id=DEVICE, static=STATIC, current=CURRENT)
     assert {r["kind"] for r in reports} == {"native"}
+
+
+def test_ended_sessions_breadcrumbs_go_once_their_crash_files_are_handled(tmp_path, temp_dir):
+    reporter = _reporter(tmp_path, temp_dir)
+    store = reporter.store
+    store.write_session(777, {"pid": 777, "started_at": time.time() - 7200, "updated_at": time.time() - 3600})
+    store.write_session(778, {"pid": 778, "started_at": time.time() - 120, "updated_at": time.time() - 30})
+    reporter.tick()
+    assert reporter.harvest_done
+    assert not os.path.exists(store.session_path(777))
+    assert os.path.exists(store.session_path(778))  # a late macOS report may still match it
+    assert os.path.exists(store.session_path(4242))  # the running session's own
+
+
+def test_breadcrumbs_stay_while_crash_files_wait_for_consent(tmp_path, temp_dir):
+    reporter = _reporter(tmp_path, temp_dir, gate=False)
+    reporter.store.write_session(777, {"pid": 777, "started_at": time.time() - 7200, "updated_at": time.time() - 3600})
+    reporter.tick()
+    assert os.path.exists(reporter.store.session_path(777))
