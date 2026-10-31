@@ -535,3 +535,44 @@ def test_start_fresh_resolves_the_session_and_retires_legacy_files(rt, tmp_path,
     assert journal.read_manifest(crashed["dir"])["resolved"] == "dismissed"
     assert not os.path.exists(legacy) and os.path.exists(legacy + ".dismissed")
     assert rt.current_offer() is None
+
+
+def test_an_autosave_target_keeps_what_the_newest_save_point_knew(tmp_path):
+    # QA 2026-10-30: the machine slept after the last save point, the native
+    # autosave on wake won, and the Continue notice was lost with its metadata.
+    s = _session(tmp_path, "s", pid=321)
+    s["save_points"] = [_point(tmp_path, "s", 1, NOW - 300, scenes=["A", "B"],
+                               agent_scenes=[{"scene": "A", "session_id": "sid"}],
+                               jobs=[{"cls": "AsyncGLBJob", "backend_job_id": "j"}])]
+    _file(tmp_path / "T" / "321_autosave.mixar", mtime=NOW - 30)
+    offer = decision.find_offer([s], autosaves=decision.native_autosaves(str(tmp_path / "T")), now=NOW)
+    target = offer["target"]
+    assert target["kind"] == "autosave"
+    assert target["agent_scenes"] == [{"scene": "A", "session_id": "sid"}]
+    assert target["scenes"] == ["A", "B"] and target["jobs"][0]["backend_job_id"] == "j"
+
+
+def test_a_clock_that_moved_backwards_does_not_stop_saving():
+    s = _sched(timer_s=120.0)
+    s.record_save(10_000.0, 0.1, True)
+    s.note_change()
+    assert s.due(5_000.0, busy=False, dirty=True) == (True, ["timer"])
+
+
+def test_save_points_from_before_a_restore_are_dropped(rt, tmp_path, monkeypatch):
+    jr = rt._state["journal"]
+    jr.add_save_point(_file(tmp_path / "startup.mixar"), now=NOW, reason="timer", cost_s=0.01,
+                      original_path="")
+    point = _file(tmp_path / "recovery" / "old" / "sp-1.mixar")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "old", "dir": "", "legacy": False, "failed_points": [], "older": [], "debris": [],
+        "target": {"kind": "save_point", "path": point, "at": NOW - 60, "original_path": "",
+                   "agent_scenes": [], "jobs": []}})
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save", lambda filepath: {'FINISHED'}, raising=False)
+    import mixar.modules.space_mixie_chat.core.checkpoint_timeline as ct
+    monkeypatch.setattr(ct, "_retitle", lambda path: None)
+    monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
+    assert rt.restore_deferred()
+    rt._restore_now()
+    assert jr.data["save_points"] == []
+    assert [p["path"] for p in jr.data["inherited_points"]] == [point]

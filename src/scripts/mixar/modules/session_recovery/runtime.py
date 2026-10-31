@@ -85,7 +85,10 @@ def _now() -> float:
 
 
 def _mono() -> float:
-    return time.monotonic()
+    """The scheduler's clock. Wall time, not monotonic: on macOS the
+    monotonic clock stops while the machine sleeps, so after a wake the
+    timer would wait another full interval on a document hours old."""
+    return time.time()
 
 
 def _main_window():
@@ -570,7 +573,9 @@ def _restore_now():
             pass
     _state["restore_target"] = dict(target, source_dir=offer.get("dir", ""))
     if jr is not None:
-        jr.set_fields(document_path=target.get("original_path") or "")
+        # Save points this launch wrote before the restore hold the startup
+        # file: dropped, or a crash now would offer that over the restored work.
+        jr.reset_document(target.get("original_path") or "")
         jr.set_inherited([dict(target, source_dir=offer.get("dir", ""))])
     if _state["scheduler"] is not None:
         _state["scheduler"].reset(_mono())

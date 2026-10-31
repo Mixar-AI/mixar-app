@@ -64,6 +64,11 @@ class SavePointScheduler:
         """``(True, reasons)`` when a save point should be written now."""
         if busy:
             return False, []
+        if now < self.last_save_at:
+            # The wall clock moved backwards (a time-zone or NTP change):
+            # restart the intervals from now instead of waiting for it.
+            self.last_save_at = now - self.policy.timer_s
+            self.last_failed_at = 0.0
         if self.last_failed_at and now - self.last_failed_at < self.policy.retry_s:
             return False, []
         if self.last_save_at and now - self.last_save_at < self.gap_s():

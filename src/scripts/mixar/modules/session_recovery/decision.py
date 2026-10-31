@@ -100,6 +100,16 @@ def candidates_for(session: dict, *, autosaves=(), exists=os.path.isfile,
                       "at": float(snap.get("at") or 0.0),
                       "original_path": snap.get("original_path", ""),
                       "scenes": [], "agent_scenes": [], "jobs": []})
+    # A native autosave or the project file knows nothing about the agent or
+    # the jobs; the newest save point of the same session does.
+    points = session.get("save_points") or []
+    if points:
+        newest = max(points, key=lambda p: float(p.get("at") or 0.0))
+        for cand in found:
+            if cand["kind"] in ("autosave", "project", "snapshot"):
+                for key in ("scenes", "agent_scenes", "jobs"):
+                    if not cand[key]:
+                        cand[key] = list(newest.get(key) or [])
     found = [c for c in found if c["path"] and exists(c["path"])]
     # Newest first; on a tie the richer record wins (a save point knows the
     # agent's tabs and the jobs, a native autosave of the same moment does not).
