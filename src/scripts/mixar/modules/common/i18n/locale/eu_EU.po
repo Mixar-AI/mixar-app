@@ -1514,8 +1514,20 @@ msgstr "Erabili beheko eremuak, edo Bireskaneatu"
 msgid "Choose a local model first."
 msgstr "Aukeratu lehenik eredu lokal bat."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Hasi lehenik eredu lokala (martxan egon behar du gordetzeko)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Oinarrizko URLa eta ereduaren izena nahitaezkoak dira."
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixar ez da aplikazio-pakete batetik exekutatzen ari"
 msgid "No permission to update {path}"
 msgstr "Ez dago {path} eguneratzeko baimenik"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Ezin izan da instalazio-direktorioa ebatzi"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Ezin izan da instalazio-kokalekua ebatzi"
@@ -2879,6 +2906,12 @@ msgstr "Ezin izan da eguneratzailea abiatu"
 msgid "Mixar didn't close"
 msgstr "Mixar ez da itxi"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Aplikazio barruko eguneratzeak ez dira onartzen plataforma honetan"
 
@@ -2893,6 +2926,72 @@ msgstr "Instalatzaile mota ez da onartzen {platform} plataforman: {installer_typ
 
 msgid "This install can't be updated in place"
 msgstr "Instalazio hau ezin da bertan eguneratu"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version} bertsiora eguneratuta"
+
+msgid "The update was installed successfully."
+msgstr "Eguneratzea behar bezala instalatu da."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Eguneratzeak ez du eraginik izan"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} {version} deskarga dezakezu deskargen orritik."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Eguneratzea deskarga dezakezu deskargen orritik."
+
+msgid "Update was not installed"
+msgstr "Eguneratzea ez da instalatu"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} instalatu da, baina {running} bertsioa abiatu da. Instalatu berriro deskargen orritik."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar oraindik martxan zegoen instalatzailea abiatzen saiatu zenean."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Deskargatutako instalatzaileak sinaduraren egiaztapenean huts egin du."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Ezin izan da deskargatutako instalatzailea ireki."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Ezin izan da Mixar diskoan ordezkatu."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Instalatzaileak ez du amaitu."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} / {total}"
@@ -2960,47 +3059,35 @@ msgstr "Ezin izan da eguneratzerik egiaztatu"
 msgid "Check your internet connection and try again."
 msgstr "Egiaztatu Interneteko konexioa eta saiatu berriro."
 
-msgid "Update didn't take effect"
-msgstr "Eguneratzeak ez du eraginik izan"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} instalatu da, baina {running} bertsioa abiatu da. Instalatu berriro deskargen orritik."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version} bertsiora eguneratuta"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Eguneratzea behar bezala instalatu da."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} {version} deskarga dezakezu deskargen orritik."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Eguneratzea deskarga dezakezu deskargen orritik."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Eguneratzea ez da instalatu"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar oraindik martxan zegoen instalatzailea abiatzen saiatu zenean."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Deskargatutako instalatzaileak sinaduraren egiaztapenean huts egin du."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Ezin izan da deskargatutako instalatzailea ireki."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Ezin izan da Mixar diskoan ordezkatu."
-
-msgid "The installation was cancelled."
-msgstr "Instalazioa bertan behera utzi da."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer-ek errore larria jakinarazi du."
-
-msgid "The installer did not finish."
-msgstr "Instalatzaileak ez du amaitu."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Berrabiarazi Mixar eta instalatu deskargatutako eguneratzea"
@@ -3046,6 +3133,9 @@ msgstr "Gelditu eguneratzearen deskarga"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Eguneratze hau nahitaezkoa da eta ezin da bertan behera utzi"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Ireki Mixar-en deskargen orria arakatzaile lehenetsian"
@@ -4853,6 +4943,15 @@ msgstr "Ezin izan da '{name}' irudia irakurri: {error}"
 msgid "Smart segmentation failed"
 msgstr "Segmentazio adimendunak huts egin du"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Ikuspegi mota"
 
@@ -5705,6 +5804,9 @@ msgstr "Erretopologia"
 msgid "Mesh Segmentation"
 msgstr "Amaraun-segmentazioa"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Eskeleto automatikoa"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lotu sortutako piezak eskeletatutako edo soileko gorputz bati, lokalean"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "Bilatu beharreko zatiak izendatzen dituen testu librea"
 msgid "Smart segmentation started..."
 msgstr "Segmentazio adimenduna hasita..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "Mixarren eragiketa-historiaren IDa"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Eszena bakoitzeko identifikatzaile iraunkorra, eszena honen eragiketa-historia lotzen duena."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Nahastea"
 
@@ -11361,9 +11523,6 @@ msgstr "Talderako hautatuta"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Hautatu geruza sorta-eragiketetarako (taldera eraman, etab.)"
-
-msgid "Higher quality"
-msgstr "Kalitate handiagoa"
 
 msgid "Expand Layers"
 msgstr "Hedatu geruzak"
@@ -15171,6 +15330,12 @@ msgstr "Erreferentzia gisa erabiliko den bpy.data.images sarreraren izena"
 msgid "Called from chat/agent context"
 msgstr "Txat/agente testuingurutik deitua"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Interfazearen egoera ez dago erabilgarri"
 
@@ -15179,6 +15344,9 @@ msgstr "Pintzel-testuraren sorkuntza jada abian da"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Idatzi pintzel-testuraren gonbit bat, mesedez"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Ezin izan da pintzel-sorkuntza ilaran jarri"
@@ -15284,6 +15452,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Substance 3D Painter estiloko geruza-zerrenda, nahasketa-modua eta opakutasuna lerroan bertan."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Kokapena"
+
+msgid "Object"
+msgstr "Objektua"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Mugitu geruza-maskara"
@@ -16443,6 +16650,9 @@ msgstr "Irudi-maskara berria"
 msgid "Open Image as Mask..."
 msgstr "Ireki irudia maskara gisa..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Erpin-kolorearen maskarak"
 
@@ -16562,6 +16772,12 @@ msgstr "Katea"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Sorkuntza-katea: 'fast' edo 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Lan bikoiztua ilaran dago jada"
@@ -17361,9 +17577,6 @@ msgstr "Tangentea"
 
 msgid "Tangent space"
 msgstr "Tangentearen espazioa"
-
-msgid "Object"
-msgstr "Objektua"
 
 msgid "Object space"
 msgstr "Objektu-espazioa"
@@ -20229,7 +20442,28 @@ msgstr "'{name}' ez dago jada baliabide-fitxategian."
 msgid "Could not add the asset to the scene."
 msgstr "Ezin izan da baliabidea eszenara gehitu."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20517,6 @@ msgstr "Ezin izan da automatikoki berrekin — sakatu Enter \"continue\" gainean
 msgid "The request could not be completed."
 msgstr "Ezin izan da eskaera osatu."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Zure mezua ez da Mixiera iritsi. Egiaztatu konexioa eta bidali berriro."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Ezin izan da zerbitzarira iritsi. Egiaztatu konexioa eta saiatu berriro, mesedez."
 
@@ -20330,6 +20555,21 @@ msgstr "Eskuz idazketaren aitorpena ez dago oraindik erabilgarri zerbitzari hone
 
 msgid "Handwriting conversion failed"
 msgstr "Eskuz idazketaren bihurketak huts egin du"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Zure mezua ez da Mixiera iritsi. Egiaztatu konexioa eta bidali berriro."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20909,15 @@ msgid "Pick"
 msgstr "Hautatu"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23643,6 @@ msgstr "Oharpen-poligonoa"
 msgid "Annotate Eraser"
 msgstr "Oharpen-borragoma"
 
-msgid "Placement"
-msgstr "Kokapena"
-
 msgid "(none — draw to create)"
 msgstr "(bat ere ez — marraztu sortzeko)"
 
@@ -25293,6 +25539,9 @@ msgstr "Propietateak"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25446,8 +25695,11 @@ msgstr "Falta%s%s%s detektatu da!"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "Hasi edo gelditu zirriborroaren testu-zirriborroan diktatzen"
 
-msgid "Stop the running turn"
-msgstr "Gelditu martxan dagoen txanda"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25544,6 +25796,9 @@ msgstr "Jasotzen"
 
 msgid "NEW"
 msgstr "BERRIA"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Galdetu Mixieri edozer..."
@@ -25776,6 +26031,12 @@ msgstr "Arakatu sorkuntza-lanak uhartearen ilaran"
 msgid "Describe your scene here..."
 msgstr "Deskribatu eszena hemen..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "Marraztu edo idatzi argibideak. Enter bidaltzeko."
 
@@ -25945,6 +26206,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26709,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Aurrebista\n"
-"\n"
-"Ireki irudi edo bideo hau bere leihoan. Hainbat aurrebista ireki daitezke aldi berean."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26736,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Aurrebista\n"
-"\n"
-"Ireki emaitza hau bere leihoan. Hainbat aurrebista ireki daitezke aldi berean."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +26985,17 @@ msgstr "Hautatutako moodboard elementua ez da bideoa"
 msgid "Cannot decode video: %s"
 msgstr "Ezin da bideoa deskodetu: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Taula-elementu honek ez du aurrebistarako irudirik edo bideorik"
 
 msgid "This node has no image or video to preview"
 msgstr "Nodo honek ez du aurrebistarako irudirik edo bideorik"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Irudiaren aurrebista"
@@ -26739,8 +27009,8 @@ msgstr "Aurrebista-leihoak ez du irudi-editore bat ireki"
 msgid "Preview Media"
 msgstr "Aurreikusi euskarria"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Ireki irudi edo bideo hau bere aurrebista-leihoan. Hainbat ireki daitezke aldi berean"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Emaitza irekiko den nodoa"
@@ -26837,6 +27107,18 @@ msgstr "Kokatu nodo editagarri bat txantiloia jaregiten den lekuan"
 
 msgid "Template to place"
 msgstr "Kokatzeko txantiloia"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Hautatu Mixie3D aurrebista"

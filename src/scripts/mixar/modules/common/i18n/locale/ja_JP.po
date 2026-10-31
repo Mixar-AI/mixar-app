@@ -1514,8 +1514,20 @@ msgstr "下のフィールドを使用するか、再スキャンしてくださ
 msgid "Choose a local model first."
 msgstr "先にローカルモデルを選択してください。"
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "先にローカルモデルを起動してください（保存するには実行中である必要があります）。"
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "ベースURLとモデル名は必須です。"
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixarはアプリケーションバンドルから実行されていま�
 msgid "No permission to update {path}"
 msgstr "{path} を更新する権限がありません"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "インストールディレクトリを特定できませんでした"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "インストール場所を特定できませんでした"
@@ -2879,6 +2906,12 @@ msgstr "アップデーターを起動できませんでした"
 msgid "Mixar didn't close"
 msgstr "Mixarが終了しませんでした"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "このプラットフォームではアプリ内アップデートはサポートされていません"
 
@@ -2893,6 +2926,72 @@ msgstr "{platform} ではサポートされていないインストーラーの�
 
 msgid "This install can't be updated in place"
 msgstr "このインストールはその場で更新できません"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version} に更新しました"
+
+msgid "The update was installed successfully."
+msgstr "アップデートは正常にインストールされました。"
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "アップデートが反映されませんでした"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} {version} はダウンロードページからダウンロードできます。"
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} アップデートはダウンロードページからダウンロードできます。"
+
+msgid "Update was not installed"
+msgstr "アップデートはインストールされませんでした"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} がインストールされましたが、バージョン {running} が起動しました。ダウンロードページから再インストールしてください。"
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "インストーラーの起動時にMixarがまだ実行中でした。"
+
+msgid "The downloaded installer failed its signature check."
+msgstr "ダウンロードしたインストーラーの署名チェックに失敗しました。"
+
+msgid "The downloaded installer could not be opened."
+msgstr "ダウンロードしたインストーラーを開けませんでした。"
+
+msgid "Mixar could not be replaced on disk."
+msgstr "ディスク上のMixarを置き換えられませんでした。"
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "インストーラーが完了しませんでした。"
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} / {total}"
@@ -2960,47 +3059,35 @@ msgstr "アップデートを確認できませんでした"
 msgid "Check your internet connection and try again."
 msgstr "インターネット接続を確認して、もう一度お試しください。"
 
-msgid "Update didn't take effect"
-msgstr "アップデートが反映されませんでした"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} がインストールされましたが、バージョン {running} が起動しました。ダウンロードページから再インストールしてください。"
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version} に更新しました"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "アップデートは正常にインストールされました。"
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} {version} はダウンロードページからダウンロードできます。"
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} アップデートはダウンロードページからダウンロードできます。"
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "アップデートはインストールされませんでした"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "インストーラーの起動時にMixarがまだ実行中でした。"
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "ダウンロードしたインストーラーの署名チェックに失敗しました。"
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "ダウンロードしたインストーラーを開けませんでした。"
-
-msgid "Mixar could not be replaced on disk."
-msgstr "ディスク上のMixarを置き換えられませんでした。"
-
-msgid "The installation was cancelled."
-msgstr "インストールはキャンセルされました。"
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows インストーラーが致命的なエラーを報告しました。"
-
-msgid "The installer did not finish."
-msgstr "インストーラーが完了しませんでした。"
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Mixarを再起動して、ダウンロードしたアップデートをインストールします"
@@ -3046,6 +3133,9 @@ msgstr "アップデートのダウンロードを停止します"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "このアップデートは必須のため、キャンセルできません"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Mixarのダウンロードページを既定のブラウザーで開きます"
@@ -4853,6 +4943,15 @@ msgstr "画像「{name}」の読み込みに失敗しました: {error}"
 msgid "Smart segmentation failed"
 msgstr "スマートセグメンテーションに失敗しました"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "ビュータイプ"
 
@@ -5705,6 +5804,9 @@ msgstr "リトポロジー"
 msgid "Mesh Segmentation"
 msgstr "メッシュのセグメンテーション"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "自動リグ"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "生成されたパーツを、リグ付きまたはリグなしの体にローカルで取り付けます"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "探すパーツを示す自由記述テキスト"
 msgid "Smart segmentation started..."
 msgstr "スマートセグメンテーションを開始しました..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "Mixar操作履歴ID"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "このシーンの操作履歴を識別する、シーンごとの永続ID。"
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "ブレンド"
 
@@ -11361,9 +11523,6 @@ msgstr "グループ用に選択"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "一括操作 (グループへの移動など) 用にレイヤーを選択します"
-
-msgid "Higher quality"
-msgstr "より高品質"
 
 msgid "Expand Layers"
 msgstr "レイヤーを展開"
@@ -15175,6 +15334,12 @@ msgstr "参照として使用するbpy.data.imagesエントリの名前"
 msgid "Called from chat/agent context"
 msgstr "チャット/エージェントのコンテクストから呼び出し"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "UIの状態を利用できません"
 
@@ -15183,6 +15348,9 @@ msgstr "ブラシテクスチャは既に生成中です"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "ブラシテクスチャのプロンプトを入力してください"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "ブラシ生成のキュー追加に失敗しました"
@@ -15288,6 +15456,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "ブレンドモードと不透明度をインラインで表示する、Substance 3D Painter風のレイヤーリスト。"
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "配置"
+
+msgid "Object"
+msgstr "オブジェクト"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "レイヤーマスクを移動"
@@ -16447,6 +16654,9 @@ msgstr "新規画像マスク"
 msgid "Open Image as Mask..."
 msgstr "画像をマスクとして開く..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "頂点カラーマスク"
 
@@ -16566,6 +16776,12 @@ msgstr "パイプライン"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "生成パイプライン: 'fast' または 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "同じジョブが既にキューに入っています"
@@ -17365,9 +17581,6 @@ msgstr "タンジェント"
 
 msgid "Tangent space"
 msgstr "タンジェント空間"
-
-msgid "Object"
-msgstr "オブジェクト"
 
 msgid "Object space"
 msgstr "オブジェクト空間"
@@ -20233,7 +20446,28 @@ msgstr "'{name}' はもうアセットファイル内にありません。"
 msgid "Could not add the asset to the scene."
 msgstr "アセットをシーンに追加できませんでした。"
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20287,15 +20521,6 @@ msgstr "自動的に再開できませんでした — ビルドを再開する�
 msgid "The request could not be completed."
 msgstr "リクエストを完了できませんでした。"
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "メッセージが Mixie に届きませんでした。接続を確認してから、もう一度送信してください。"
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "サーバーに接続できませんでした。接続を確認して、もう一度お試しください。"
 
@@ -20334,6 +20559,21 @@ msgstr "このサーバーでは手書き認識をまだ利用できません �
 
 msgid "Handwriting conversion failed"
 msgstr "手書きの変換に失敗しました"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "メッセージが Mixie に届きませんでした。接続を確認してから、もう一度送信してください。"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20673,6 +20913,15 @@ msgid "Pick"
 msgstr "ピック"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23398,9 +23647,6 @@ msgstr "アノテートポリゴン"
 msgid "Annotate Eraser"
 msgstr "アノテート消しゴム"
 
-msgid "Placement"
-msgstr "配置"
-
 msgid "(none — draw to create)"
 msgstr "（なし — 描画して作成）"
 
@@ -25297,6 +25543,9 @@ msgstr "プロパティ"
 msgid "Blend (.blend)"
 msgstr "Blendファイル（.blend）"
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25450,8 +25699,11 @@ msgstr "不足しているものが検出されました：%s%s%s"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "スケッチの下書きへの音声入力を開始/停止します"
 
-msgid "Stop the running turn"
-msgstr "実行中のターンを停止します"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25548,6 +25800,9 @@ msgstr "キャッチ中"
 
 msgid "NEW"
 msgstr "新着"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Mixieに何でも聞いてください..."
@@ -25780,6 +26035,12 @@ msgstr "アイランドのキューで生成ジョブを閲覧します"
 msgid "Describe your scene here..."
 msgstr "ここにシーンを説明してください..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "描画するか指示を入力してください。Enterで送信します。"
 
@@ -25949,6 +26210,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26443,11 +26713,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"プレビュー\n"
-"\n"
-"この画像または動画を別ウィンドウで開きます。複数のプレビューを同時に開けます。"
 
 msgid ""
 "Rename\n"
@@ -26473,11 +26740,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"プレビュー\n"
-"\n"
-"この結果を別ウィンドウで開きます。複数のプレビューを同時に開けます。"
 
 msgid ""
 "Cancel edit\n"
@@ -26725,11 +26989,17 @@ msgstr "選択したムードボードアイテムは動画ではありません
 msgid "Cannot decode video: %s"
 msgstr "動画をデコードできません：%s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "このボードアイテムにはプレビューできる画像または動画がありません"
 
 msgid "This node has no image or video to preview"
 msgstr "このノードにはプレビューできる画像または動画がありません"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "画像のプレビュー"
@@ -26743,8 +27013,8 @@ msgstr "プレビューウィンドウで画像エディターが開きません
 msgid "Preview Media"
 msgstr "メディアをプレビュー"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "この画像または動画を専用のプレビューウィンドウで開きます。複数同時に開けます"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "結果を開くノード"
@@ -26841,6 +27111,18 @@ msgstr "テンプレートをドロップした位置に編集可能なノード
 
 msgid "Template to place"
 msgstr "配置するテンプレート"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Mixie3Dプレビューを選択"

@@ -1514,8 +1514,20 @@ msgstr "Folosiți câmpurile de mai jos sau Rescanare"
 msgid "Choose a local model first."
 msgstr "Alegeți mai întâi un model local."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Porniți mai întâi modelul local (trebuie să ruleze ca să se salveze)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "URL-ul de bază și numele modelului sunt obligatorii."
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixar nu rulează dintr-un pachet de aplicație"
 msgid "No permission to update {path}"
 msgstr "Nu există permisiune de actualizare pentru {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Directorul de instalare nu a putut fi determinat"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Locația de instalare nu a putut fi determinată"
@@ -2879,6 +2906,12 @@ msgstr "Programul de actualizare nu a putut porni"
 msgid "Mixar didn't close"
 msgstr "Mixar nu s-a închis"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Actualizările din aplicație nu sunt acceptate pe această platformă"
 
@@ -2893,6 +2926,72 @@ msgstr "Tip de program de instalare neacceptat pentru {platform}: {installer_typ
 
 msgid "This install can't be updated in place"
 msgstr "Această instalare nu poate fi actualizată pe loc"
+
+msgid "Updated to Mixar {version}"
+msgstr "Actualizat la Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "Actualizarea a fost instalată cu succes."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Actualizarea nu a avut efect"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Puteți descărca {version} de pe pagina de descărcări."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Puteți descărca actualizarea de pe pagina de descărcări."
+
+msgid "Update was not installed"
+msgstr "Actualizarea nu a fost instalată"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} a fost instalat, dar a pornit versiunea {running}. Reinstalați de pe pagina de descărcări."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar încă rula când programul de instalare a încercat să pornească."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Programul de instalare descărcat nu a trecut verificarea semnăturii."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Programul de instalare descărcat nu a putut fi deschis."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar nu a putut fi înlocuit pe disc."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Programul de instalare nu s-a terminat."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} din {total}"
@@ -2960,47 +3059,35 @@ msgstr "Nu s-au putut verifica actualizările"
 msgid "Check your internet connection and try again."
 msgstr "Verificați conexiunea la internet și încercați din nou."
 
-msgid "Update didn't take effect"
-msgstr "Actualizarea nu a avut efect"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} a fost instalat, dar a pornit versiunea {running}. Reinstalați de pe pagina de descărcări."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Actualizat la Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Actualizarea a fost instalată cu succes."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Puteți descărca {version} de pe pagina de descărcări."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Puteți descărca actualizarea de pe pagina de descărcări."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Actualizarea nu a fost instalată"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar încă rula când programul de instalare a încercat să pornească."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Programul de instalare descărcat nu a trecut verificarea semnăturii."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Programul de instalare descărcat nu a putut fi deschis."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar nu a putut fi înlocuit pe disc."
-
-msgid "The installation was cancelled."
-msgstr "Instalarea a fost anulată."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer a raportat o eroare fatală."
-
-msgid "The installer did not finish."
-msgstr "Programul de instalare nu s-a terminat."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Reporniți Mixar și instalați actualizarea descărcată"
@@ -3046,6 +3133,9 @@ msgstr "Oprește descărcarea actualizării"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Această actualizare este necesară și nu poate fi anulată"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Deschide pagina de descărcări Mixar în browserul implicit"
@@ -4853,6 +4943,15 @@ msgstr "Nu s-a putut citi imaginea '{name}': {error}"
 msgid "Smart segmentation failed"
 msgstr "Segmentarea inteligentă a eșuat"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Tip de vedere"
 
@@ -5705,6 +5804,9 @@ msgstr "Retopologie"
 msgid "Mesh Segmentation"
 msgstr "Segmentare plasă"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Rig automat"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Atașează local părțile generate la un corp rigat sau simplu"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "Text liber care numește părțile de căutat"
 msgid "Smart segmentation started..."
 msgstr "Segmentare inteligentă pornită..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "ID istoric operații Mixar"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Identificator persistent, per scenă, care indexează istoricul de operații al acestei scene."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Amestec"
 
@@ -11361,9 +11523,6 @@ msgstr "Selectat pentru grup"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Selectează stratul pentru operații în lot (mutare în grup etc.)"
-
-msgid "Higher quality"
-msgstr "Calitate mai înaltă"
 
 msgid "Expand Layers"
 msgstr "Extindere straturi"
@@ -15171,6 +15330,12 @@ msgstr "Numele unei intrări din bpy.data.images de folosit ca referință"
 msgid "Called from chat/agent context"
 msgstr "Apelat din contextul chatului/agentului"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Starea interfeței nu este disponibilă"
 
@@ -15179,6 +15344,9 @@ msgstr "Generarea texturii de pensulă este deja în curs"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Vă rugăm să introduceți un prompt pentru textura pensulei"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Nu s-a putut pune în coadă generarea pensulei"
@@ -15284,6 +15452,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Listă de straturi în stil Substance 3D Painter, cu mod de amestec și opacitate pe același rând."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Plasare"
+
+msgid "Object"
+msgstr "Obiect"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Mutare mască de strat"
@@ -16443,6 +16650,9 @@ msgstr "Mască din imagine nouă"
 msgid "Open Image as Mask..."
 msgstr "Deschidere imagine ca mască..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Măști din culoare de vârfuri"
 
@@ -16562,6 +16772,12 @@ msgstr "Flux"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Flux de generare: „fast” sau „detailed”"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "O sarcină duplicat este deja în coadă"
@@ -17361,9 +17577,6 @@ msgstr "Tangenta"
 
 msgid "Tangent space"
 msgstr "Spațiu tangent"
-
-msgid "Object"
-msgstr "Obiect"
 
 msgid "Object space"
 msgstr "Spațiu obiect"
@@ -20229,7 +20442,28 @@ msgstr "„{name}” nu mai este în fișierul de resurse."
 msgid "Could not add the asset to the scene."
 msgstr "Resursa nu a putut fi adăugată în scenă."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20517,6 @@ msgstr "Nu s-a putut relua automat — apăsați Enter pe „continue” în cha
 msgid "The request could not be completed."
 msgstr "Cererea nu a putut fi finalizată."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Mesajul dvs. nu a ajuns la Mixie. Verificați conexiunea, apoi trimiteți-l din nou."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Serverul nu a putut fi contactat. Verificați conexiunea și încercați din nou."
 
@@ -20330,6 +20555,21 @@ msgstr "Recunoașterea scrisului de mână nu este încă disponibilă pe acest 
 
 msgid "Handwriting conversion failed"
 msgstr "Conversia scrisului de mână a eșuat"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Mesajul dvs. nu a ajuns la Mixie. Verificați conexiunea, apoi trimiteți-l din nou."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20909,15 @@ msgid "Pick"
 msgstr "Alegere"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23643,6 @@ msgstr "Poligon de adnotare"
 msgid "Annotate Eraser"
 msgstr "Radieră de adnotare"
 
-msgid "Placement"
-msgstr "Plasare"
-
 msgid "(none — draw to create)"
 msgstr "(nimic — desenați pentru a crea)"
 
@@ -25293,6 +25539,9 @@ msgstr "Proprietăți"
 msgid "Blend (.blend)"
 msgstr "Blend (.blend)"
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25446,8 +25695,11 @@ msgstr "Lipsă%s%s%s detectată!"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "Pornește sau oprește dictarea în ciorna schiței"
 
-msgid "Stop the running turn"
-msgstr "Oprește tura în curs"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25544,6 +25796,9 @@ msgstr "Prinde"
 
 msgid "NEW"
 msgstr "NOU"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Întrebați Mixie orice..."
@@ -25776,6 +26031,12 @@ msgstr "Răsfoiește sarcinile de generare din Coada insulei"
 msgid "Describe your scene here..."
 msgstr "Descrieți scena aici..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "Desenați sau scrieți instrucțiuni. Enter pentru trimitere."
 
@@ -25945,6 +26206,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26709,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Previzualizare\n"
-"\n"
-"Deschide această imagine sau acest video în propria fereastră. Mai multe previzualizări pot fi deschise deodată."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26736,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Previzualizare\n"
-"\n"
-"Deschide acest rezultat în propria fereastră. Mai multe previzualizări pot fi deschise deodată."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +26985,17 @@ msgstr "Elementul Moodboard selectat nu este un video"
 msgid "Cannot decode video: %s"
 msgstr "Nu se poate decoda videoul: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Acest element de panou nu are imagine sau video de previzualizat"
 
 msgid "This node has no image or video to preview"
 msgstr "Acest nod nu are imagine sau video de previzualizat"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Previzualizare imagine"
@@ -26739,8 +27009,8 @@ msgstr "Fereastra de previzualizare nu a deschis un editor de imagini"
 msgid "Preview Media"
 msgstr "Previzualizare media"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Deschide această imagine sau acest video în propria fereastră de previzualizare. Mai multe pot fi deschise deodată"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Nodul al cărui rezultat se deschide"
@@ -26837,6 +27107,18 @@ msgstr "Plasează un nod editabil acolo unde este lăsat șablonul"
 
 msgid "Template to place"
 msgstr "Șablon de plasat"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Selectare previzualizare Mixie3D"

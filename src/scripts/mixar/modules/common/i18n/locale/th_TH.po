@@ -1514,8 +1514,20 @@ msgstr "ใช้ช่องด้านล่าง หรือสแกน�
 msgid "Choose a local model first."
 msgstr "โปรดเลือกโมเดลในเครื่องก่อน"
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "โปรดเริ่มโมเดลในเครื่องก่อน (โมเดลต้องทำงานอยู่จึงจะบันทึกได้)"
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "ต้องระบุ URL หลักและชื่อโมเดล"
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixar ไม่ได้ทำงานจากบันเดิลแ
 msgid "No permission to update {path}"
 msgstr "ไม่มีสิทธิ์อัปเดต {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "ไม่สามารถระบุไดเรกทอรีการติดตั้งได้"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "ไม่สามารถระบุตำแหน่งการติดตั้งได้"
@@ -2879,6 +2906,12 @@ msgstr "ไม่สามารถเริ่มตัวอัปเดตไ
 msgid "Mixar didn't close"
 msgstr "Mixar ไม่ได้ปิดลง"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "แพลตฟอร์มนี้ไม่รองรับการอัปเดตภายในแอป"
 
@@ -2893,6 +2926,72 @@ msgstr "ชนิดตัวติดตั้งที่ไม่รองร
 
 msgid "This install can't be updated in place"
 msgstr "การติดตั้งนี้ไม่สามารถอัปเดตในที่เดิมได้"
+
+msgid "Updated to Mixar {version}"
+msgstr "อัปเดตเป็น Mixar {version} แล้ว"
+
+msgid "The update was installed successfully."
+msgstr "ติดตั้งการอัปเดตเรียบร้อยแล้ว"
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "การอัปเดตไม่มีผล"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} คุณสามารถดาวน์โหลด {version} ได้จากหน้าดาวน์โหลด"
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} คุณสามารถดาวน์โหลดการอัปเดตได้จากหน้าดาวน์โหลด"
+
+msgid "Update was not installed"
+msgstr "ไม่ได้ติดตั้งการอัปเดต"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "ติดตั้ง Mixar {target} แล้ว แต่รุ่น {running} ถูกเปิดขึ้นมา โปรดติดตั้งใหม่จากหน้าดาวน์โหลด"
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar ยังทำงานอยู่ขณะที่ตัวติดตั้งพยายามเริ่มทำงาน"
+
+msgid "The downloaded installer failed its signature check."
+msgstr "ตัวติดตั้งที่ดาวน์โหลดมาไม่ผ่านการตรวจสอบลายเซ็น"
+
+msgid "The downloaded installer could not be opened."
+msgstr "ไม่สามารถเปิดตัวติดตั้งที่ดาวน์โหลดมาได้"
+
+msgid "Mixar could not be replaced on disk."
+msgstr "ไม่สามารถแทนที่ Mixar บนดิสก์ได้"
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "ตัวติดตั้งทำงานไม่เสร็จสิ้น"
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} จาก {total}"
@@ -2960,47 +3059,35 @@ msgstr "ไม่สามารถตรวจหาการอัปเดต
 msgid "Check your internet connection and try again."
 msgstr "โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง"
 
-msgid "Update didn't take effect"
-msgstr "การอัปเดตไม่มีผล"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "ติดตั้ง Mixar {target} แล้ว แต่รุ่น {running} ถูกเปิดขึ้นมา โปรดติดตั้งใหม่จากหน้าดาวน์โหลด"
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "อัปเดตเป็น Mixar {version} แล้ว"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "ติดตั้งการอัปเดตเรียบร้อยแล้ว"
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} คุณสามารถดาวน์โหลด {version} ได้จากหน้าดาวน์โหลด"
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} คุณสามารถดาวน์โหลดการอัปเดตได้จากหน้าดาวน์โหลด"
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "ไม่ได้ติดตั้งการอัปเดต"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar ยังทำงานอยู่ขณะที่ตัวติดตั้งพยายามเริ่มทำงาน"
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "ตัวติดตั้งที่ดาวน์โหลดมาไม่ผ่านการตรวจสอบลายเซ็น"
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "ไม่สามารถเปิดตัวติดตั้งที่ดาวน์โหลดมาได้"
-
-msgid "Mixar could not be replaced on disk."
-msgstr "ไม่สามารถแทนที่ Mixar บนดิสก์ได้"
-
-msgid "The installation was cancelled."
-msgstr "การติดตั้งถูกยกเลิก"
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer รายงานข้อผิดพลาดร้ายแรง"
-
-msgid "The installer did not finish."
-msgstr "ตัวติดตั้งทำงานไม่เสร็จสิ้น"
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "รีสตาร์ท Mixar และติดตั้งการอัปเดตที่ดาวน์โหลดมา"
@@ -3046,6 +3133,9 @@ msgstr "หยุดดาวน์โหลดการอัปเดต"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "การอัปเดตนี้จำเป็นและไม่สามารถยกเลิกได้"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "เปิดหน้าดาวน์โหลด Mixar ในเบราว์เซอร์เริ่มต้น"
@@ -4853,6 +4943,15 @@ msgstr "อ่านภาพ '{name}' ไม่สำเร็จ: {error}"
 msgid "Smart segmentation failed"
 msgstr "การแบ่งส่วนอัจฉริยะล้มเหลว"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "ชนิดมุมมอง"
 
@@ -5705,6 +5804,9 @@ msgstr "รีโทโพโลยี"
 msgid "Mesh Segmentation"
 msgstr "การแบ่งส่วนเมช"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "ริกอัตโนมัติ"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "แนบชิ้นส่วนที่สร้างเข้ากับร่างกายที่ริกแล้วหรือร่างกายธรรมดาภายในเครื่อง"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "ข้อความอิสระที่ระบุชื่อช
 msgid "Smart segmentation started..."
 msgstr "เริ่มแบ่งส่วนอัจฉริยะแล้ว..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "ID ประวัติการดำเนินการ Mixar"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "id ถาวรต่อฉากที่ใช้เป็นคีย์ของประวัติการดำเนินการของฉากนี้"
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "ผสม"
 
@@ -11361,9 +11523,6 @@ msgstr "เลือกไว้สำหรับกลุ่ม"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "เลือกชั้นภาพสำหรับการดำเนินการเป็นชุด (ย้ายไปยังกลุ่ม ฯลฯ)"
-
-msgid "Higher quality"
-msgstr "คุณภาพสูงขึ้น"
 
 msgid "Expand Layers"
 msgstr "ขยายชั้นภาพ"
@@ -15171,6 +15330,12 @@ msgstr "ชื่อรายการใน bpy.data.images ที่จะใ�
 msgid "Called from chat/agent context"
 msgstr "เรียกจากบริบทแชต/เอเจนต์"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "ไม่มีสถานะ UI"
 
@@ -15179,6 +15344,9 @@ msgstr "กำลังสร้างพื้นผิวแปรงอยู
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "กรุณาป้อนพรอมต์สำหรับพื้นผิวแปรง"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "เพิ่มการสร้างแปรงเข้าคิวไม่สำเร็จ"
@@ -15284,6 +15452,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "รายการชั้นภาพสไตล์ Substance 3D Painter พร้อมโหมดผสมและความทึบในบรรทัด"
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "การจัดวาง"
+
+msgid "Object"
+msgstr "วัตถุ"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "ย้ายหน้ากากชั้นภาพ"
@@ -16443,6 +16650,9 @@ msgstr "หน้ากากภาพใหม่"
 msgid "Open Image as Mask..."
 msgstr "เปิดภาพเป็นหน้ากาก..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "หน้ากากสีจุดยอด"
 
@@ -16562,6 +16772,12 @@ msgstr "ไปป์ไลน์"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "ไปป์ไลน์การสร้าง: 'fast' หรือ 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "มีงานซ้ำอยู่ในคิวแล้ว"
@@ -17361,9 +17577,6 @@ msgstr "เส้นสัมผัส"
 
 msgid "Tangent space"
 msgstr "ปริภูมิเส้นสัมผัส"
-
-msgid "Object"
-msgstr "วัตถุ"
 
 msgid "Object space"
 msgstr "ปริภูมิวัตถุ"
@@ -20229,7 +20442,28 @@ msgstr "'{name}' ไม่อยู่ในไฟล์สินทรัพย
 msgid "Could not add the asset to the scene."
 msgstr "ไม่สามารถเพิ่มสินทรัพย์ลงในฉากได้"
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20517,6 @@ msgstr "ไม่สามารถทำต่อโดยอัตโนมั
 msgid "The request could not be completed."
 msgstr "ไม่สามารถดำเนินการตามคำขอให้เสร็จสมบูรณ์ได้"
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "ข้อความของคุณไปไม่ถึง Mixie โปรดตรวจสอบการเชื่อมต่อ แล้วส่งอีกครั้ง"
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
 
@@ -20330,6 +20555,21 @@ msgstr "เซิร์ฟเวอร์นี้ยังไม่รองร
 
 msgid "Handwriting conversion failed"
 msgstr "แปลงลายมือไม่สำเร็จ"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "ข้อความของคุณไปไม่ถึง Mixie โปรดตรวจสอบการเชื่อมต่อ แล้วส่งอีกครั้ง"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20909,15 @@ msgid "Pick"
 msgstr "เลือก"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23643,6 @@ msgstr "บรรณนิทัศน์แบบรูปหลายเหล
 msgid "Annotate Eraser"
 msgstr "ยางลบบรรณนิทัศน์"
 
-msgid "Placement"
-msgstr "การจัดวาง"
-
 msgid "(none — draw to create)"
 msgstr "(ไม่มี — วาดเพื่อสร้าง)"
 
@@ -25293,6 +25539,9 @@ msgstr "คุณสมบัติ"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25446,8 +25695,11 @@ msgstr "ตรวจพบว่าขาด%s%s%s!"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "เริ่มหรือหยุดการพิมพ์ด้วยเสียงลงในภาพร่างฉบับร่าง"
 
-msgid "Stop the running turn"
-msgstr "หยุดรอบที่กำลังทำงาน"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25544,6 +25796,9 @@ msgstr "กำลังจับ"
 
 msgid "NEW"
 msgstr "ใหม่"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "ถาม Mixie ได้ทุกเรื่อง..."
@@ -25776,6 +26031,12 @@ msgstr "เรียกดูงานการสร้างในคิวข
 msgid "Describe your scene here..."
 msgstr "อธิบายฉากของคุณที่นี่..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "วาดหรือพิมพ์คำสั่ง กด Enter เพื่อส่ง"
 
@@ -25945,6 +26206,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26709,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"ดูตัวอย่าง\n"
-"\n"
-"เปิดภาพหรือวิดีโอนี้ในหน้าต่างของมันเอง เปิดพร้อมกันได้หลายหน้าต่าง"
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26736,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"ดูตัวอย่าง\n"
-"\n"
-"เปิดผลลัพธ์นี้ในหน้าต่างของมันเอง เปิดพร้อมกันได้หลายหน้าต่าง"
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +26985,17 @@ msgstr "รายการมู้ดบอร์ดที่เลือกไ
 msgid "Cannot decode video: %s"
 msgstr "ถอดรหัสวิดีโอไม่ได้: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "รายการบอร์ดนี้ไม่มีภาพหรือวิดีโอให้ดูตัวอย่าง"
 
 msgid "This node has no image or video to preview"
 msgstr "จุดต่อนี้ไม่มีภาพหรือวิดีโอให้ดูตัวอย่าง"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "ดูตัวอย่างภาพ"
@@ -26739,8 +27009,8 @@ msgstr "หน้าต่างดูตัวอย่างไม่ได้
 msgid "Preview Media"
 msgstr "ดูตัวอย่างสื่อ"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "เปิดภาพหรือวิดีโอนี้ในหน้าต่างดูตัวอย่างของมันเอง เปิดพร้อมกันได้หลายหน้าต่าง"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "จุดต่อที่ผลลัพธ์จะถูกเปิด"
@@ -26837,6 +27107,18 @@ msgstr "วางจุดต่อที่แก้ไขได้ตรงจ
 
 msgid "Template to place"
 msgstr "เทมเพลตที่จะวาง"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "เลือกตัวอย่าง Mixie3D"

@@ -1514,8 +1514,20 @@ msgstr "請使用下方欄位，或重新掃描"
 msgid "Choose a local model first."
 msgstr "請先選擇本機模型。"
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "請先啟動本機模型（必須在執行中才能儲存）。"
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "必須填寫基礎 URL 和模型名稱。"
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixar 並非從應用程式套件執行"
 msgid "No permission to update {path}"
 msgstr "沒有更新 {path} 的權限"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "無法解析安裝目錄"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "無法解析安裝位置"
@@ -2879,6 +2906,12 @@ msgstr "無法啟動更新程式"
 msgid "Mixar didn't close"
 msgstr "Mixar 未關閉"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "此平台不支援應用程式內更新"
 
@@ -2893,6 +2926,72 @@ msgstr "{platform} 不支援的安裝程式類型：{installer_type}"
 
 msgid "This install can't be updated in place"
 msgstr "此安裝無法直接更新"
+
+msgid "Updated to Mixar {version}"
+msgstr "已更新至 Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "更新已成功安裝。"
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "更新未生效"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason}你可以從下載頁面下載 {version}。"
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason}你可以從下載頁面下載更新。"
+
+msgid "Update was not installed"
+msgstr "未安裝更新"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "已安裝 Mixar {target}，但啟動的是版本 {running}。請從下載頁面重新安裝。"
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "安裝程式嘗試啟動時，Mixar 仍在執行。"
+
+msgid "The downloaded installer failed its signature check."
+msgstr "已下載的安裝程式未通過簽章檢查。"
+
+msgid "The downloaded installer could not be opened."
+msgstr "無法開啟已下載的安裝程式。"
+
+msgid "Mixar could not be replaced on disk."
+msgstr "無法取代磁碟上的 Mixar。"
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "安裝程式未完成。"
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}%——{transferred} / {total}"
@@ -2960,47 +3059,35 @@ msgstr "無法檢查更新"
 msgid "Check your internet connection and try again."
 msgstr "請檢查網際網路連線後再試一次。"
 
-msgid "Update didn't take effect"
-msgstr "更新未生效"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "已安裝 Mixar {target}，但啟動的是版本 {running}。請從下載頁面重新安裝。"
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "已更新至 Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "更新已成功安裝。"
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason}你可以從下載頁面下載 {version}。"
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason}你可以從下載頁面下載更新。"
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "未安裝更新"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "安裝程式嘗試啟動時，Mixar 仍在執行。"
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "已下載的安裝程式未通過簽章檢查。"
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "無法開啟已下載的安裝程式。"
-
-msgid "Mixar could not be replaced on disk."
-msgstr "無法取代磁碟上的 Mixar。"
-
-msgid "The installation was cancelled."
-msgstr "安裝已取消。"
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer 回報了嚴重錯誤。"
-
-msgid "The installer did not finish."
-msgstr "安裝程式未完成。"
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "重新啟動 Mixar 並安裝已下載的更新"
@@ -3046,6 +3133,9 @@ msgstr "停止下載更新"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "此更新為必要更新，無法取消"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "在預設瀏覽器中開啟 Mixar 下載頁面"
@@ -4853,6 +4943,15 @@ msgstr "無法讀取影像「{name}」：{error}"
 msgid "Smart segmentation failed"
 msgstr "智慧分割失敗"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "檢視類型"
 
@@ -5705,6 +5804,9 @@ msgstr "重新拓樸"
 msgid "Mesh Segmentation"
 msgstr "網格分割"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "自動綁定"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "在本機將生成的部件附加至已綁定或一般的身體"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "以自由文字說明要尋找的部件"
 msgid "Smart segmentation started..."
 msgstr "已開始智慧分割…"
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "Mixar 操作歷史 ID"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "每個場景持久保存的 ID，用於對應此場景的操作歷史。"
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "交混"
 
@@ -11361,9 +11523,6 @@ msgstr "已選取以編組"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "選取層以進行批次操作（移至群組等）"
-
-msgid "Higher quality"
-msgstr "更高品質"
 
 msgid "Expand Layers"
 msgstr "展開層"
@@ -15171,6 +15330,12 @@ msgstr "要作為參考的 bpy.data.images 項目名稱"
 msgid "Called from chat/agent context"
 msgstr "從聊天/智慧代理情境呼叫"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "UI 狀態無法使用"
 
@@ -15179,6 +15344,9 @@ msgstr "筆刷紋理生成已在進行中"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "請輸入筆刷紋理的提示詞"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "無法將筆刷生成加入佇列"
@@ -15284,6 +15452,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Substance 3D Painter 風格的層列表，可直接調整交混模式與不透明度。"
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "放置"
+
+msgid "Object"
+msgstr "物體"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "移動層遮罩"
@@ -16443,6 +16650,9 @@ msgstr "新增影像遮罩"
 msgid "Open Image as Mask..."
 msgstr "開啟影像作為遮罩…"
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "頂點色彩遮罩"
 
@@ -16562,6 +16772,12 @@ msgstr "流程"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "生成管線：'fast' 或 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "相同的任務已在佇列中"
@@ -17361,9 +17577,6 @@ msgstr "切線"
 
 msgid "Tangent space"
 msgstr "切線空間"
-
-msgid "Object"
-msgstr "物體"
 
 msgid "Object space"
 msgstr "物體空間"
@@ -20229,7 +20442,28 @@ msgstr "「{name}」已不在素材檔案中。"
 msgid "Could not add the asset to the scene."
 msgstr "無法將素材加入場景。"
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20517,6 @@ msgstr "無法自動繼續。請在聊天中的「continue」上按 Enter，以�
 msgid "The request could not be completed."
 msgstr "無法完成請求。"
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "你的訊息未能送達 Mixie。請檢查網路連線，然後重新傳送。"
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "無法連線至伺服器。請檢查網路連線後再試一次。"
 
@@ -20330,6 +20555,21 @@ msgstr "此伺服器尚未提供手寫辨識，請改為輸入訊息"
 
 msgid "Handwriting conversion failed"
 msgstr "手寫轉換失敗"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "你的訊息未能送達 Mixie。請檢查網路連線，然後重新傳送。"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20909,15 @@ msgid "Pick"
 msgstr "挑選"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23394,9 +23643,6 @@ msgstr "註記多邊形"
 msgid "Annotate Eraser"
 msgstr "註記橡皮擦"
 
-msgid "Placement"
-msgstr "放置"
-
 msgid "(none — draw to create)"
 msgstr "（無 — 繪製以建立）"
 
@@ -25293,6 +25539,9 @@ msgstr "屬性"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25446,8 +25695,11 @@ msgstr "偵測到缺少%s%s%s！"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "開始或停止聽寫至草圖草稿"
 
-msgid "Stop the running turn"
-msgstr "停止執行中的回合"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25544,6 +25796,9 @@ msgstr "捕捉中"
 
 msgid "NEW"
 msgstr "新"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "向 Mixie 提出任何問題..."
@@ -25776,6 +26031,12 @@ msgstr "瀏覽智慧代理氣泡「佇列」中的生成任務"
 msgid "Describe your scene here..."
 msgstr "在此描述你的場景..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "繪製或輸入指示。按 Enter 傳送。"
 
@@ -25945,6 +26206,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26709,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"預覽\n"
-"\n"
-"在獨立視窗中開啟此影像或視訊。可同時開啟多個預覽。"
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26736,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"預覽\n"
-"\n"
-"在獨立視窗中開啟此結果。可同時開啟多個預覽。"
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +26985,17 @@ msgstr "所選的情緒板項目不是視訊"
 msgid "Cannot decode video: %s"
 msgstr "無法解碼視訊：%s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "此畫板項目沒有可預覽的影像或視訊"
 
 msgid "This node has no image or video to preview"
 msgstr "此節點沒有可預覽的影像或視訊"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "影像預覽"
@@ -26739,8 +27009,8 @@ msgstr "預覽視窗未開啟影像編輯器"
 msgid "Preview Media"
 msgstr "預覽媒體"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "在獨立的預覽視窗中開啟此影像或視訊。可同時開啟多個"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "要開啟其結果的節點"
@@ -26837,6 +27107,18 @@ msgstr "在範本拖放處放置可編輯的節點"
 
 msgid "Template to place"
 msgstr "要放置的範本"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "選取 Mixie3D 預覽"

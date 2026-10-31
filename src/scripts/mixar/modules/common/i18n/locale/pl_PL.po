@@ -1514,8 +1514,20 @@ msgstr "Użyj pól poniżej lub skanuj ponownie"
 msgid "Choose a local model first."
 msgstr "Najpierw wybierz model lokalny."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Najpierw uruchom model lokalny (musi działać, aby zapisać)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "Wymagany jest podstawowy adres URL i nazwa modelu."
@@ -1671,6 +1683,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1938,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2867,17 @@ msgstr "Mixar nie jest uruchomiony z pakietu aplikacji"
 msgid "No permission to update {path}"
 msgstr "Brak uprawnień do aktualizacji {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Nie można ustalić katalogu instalacji"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Nie można ustalić lokalizacji instalacji"
@@ -2879,6 +2906,12 @@ msgstr "Nie można uruchomić programu aktualizującego"
 msgid "Mixar didn't close"
 msgstr "Mixar nie został zamknięty"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Aktualizacje w aplikacji nie są obsługiwane na tej platformie"
 
@@ -2893,6 +2926,72 @@ msgstr "Nieobsługiwany typ instalatora dla {platform}: {installer_type}"
 
 msgid "This install can't be updated in place"
 msgstr "Tej instalacji nie można zaktualizować na miejscu"
+
+msgid "Updated to Mixar {version}"
+msgstr "Zaktualizowano do Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "Aktualizacja została pomyślnie zainstalowana."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Aktualizacja nie została zastosowana"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Wersję {version} można pobrać ze strony pobierania."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Aktualizację można pobrać ze strony pobierania."
+
+msgid "Update was not installed"
+msgstr "Aktualizacja nie została zainstalowana"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Zainstalowano Mixar {target}, ale uruchomiła się wersja {running}. Zainstaluj ponownie ze strony pobierania."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar nadal działał, gdy instalator próbował się uruchomić."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Pobrany instalator nie przeszedł weryfikacji podpisu."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Nie można otworzyć pobranego instalatora."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Nie można zastąpić Mixar na dysku."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Instalator nie zakończył działania."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} z {total}"
@@ -2960,47 +3059,35 @@ msgstr "Nie można sprawdzić aktualizacji"
 msgid "Check your internet connection and try again."
 msgstr "Sprawdź połączenie z internetem i spróbuj ponownie."
 
-msgid "Update didn't take effect"
-msgstr "Aktualizacja nie została zastosowana"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Zainstalowano Mixar {target}, ale uruchomiła się wersja {running}. Zainstaluj ponownie ze strony pobierania."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Zaktualizowano do Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Aktualizacja została pomyślnie zainstalowana."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Wersję {version} można pobrać ze strony pobierania."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Aktualizację można pobrać ze strony pobierania."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Aktualizacja nie została zainstalowana"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar nadal działał, gdy instalator próbował się uruchomić."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Pobrany instalator nie przeszedł weryfikacji podpisu."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Nie można otworzyć pobranego instalatora."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Nie można zastąpić Mixar na dysku."
-
-msgid "The installation was cancelled."
-msgstr "Instalacja została anulowana."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Instalator Windows zgłosił błąd krytyczny."
-
-msgid "The installer did not finish."
-msgstr "Instalator nie zakończył działania."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Uruchamia ponownie Mixar i instaluje pobraną aktualizację"
@@ -3046,6 +3133,9 @@ msgstr "Zatrzymuje pobieranie aktualizacji"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Ta aktualizacja jest wymagana i nie można jej anulować"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Otwiera stronę pobierania Mixar w domyślnej przeglądarce"
@@ -4853,6 +4943,15 @@ msgstr "Nie udało się odczytać obrazu „{name}”: {error}"
 msgid "Smart segmentation failed"
 msgstr "Inteligentna segmentacja nie powiodła się"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Typ widoku"
 
@@ -5705,6 +5804,9 @@ msgstr "Ponowna topologia"
 msgid "Mesh Segmentation"
 msgstr "Segmentacja siatki"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Automatyczny rig"
 
@@ -6141,6 +6243,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Lokalnie dołącza wygenerowane części do ciała z rigiem lub bez"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9286,21 @@ msgstr "Dowolny tekst określający części do wyszukania"
 msgid "Smart segmentation started..."
 msgstr "Rozpoczęto inteligentną segmentację..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11254,48 @@ msgstr "Identyfikator historii operacji Mixar"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "Trwały identyfikator sceny, do którego przypisana jest historia operacji tej sceny."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Mieszaj"
 
@@ -11361,9 +11523,6 @@ msgstr "Wybrana do grupy"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Wybiera warstwę do operacji wsadowych (przeniesienie do grupy itp.)"
-
-msgid "Higher quality"
-msgstr "Wyższa jakość"
 
 msgid "Expand Layers"
 msgstr "Rozwiń warstwy"
@@ -15171,6 +15330,12 @@ msgstr "Nazwa wpisu w bpy.data.images do użycia jako odniesienie"
 msgid "Called from chat/agent context"
 msgstr "Wywołane z kontekstu czatu/agenta"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Stan interfejsu jest niedostępny"
 
@@ -15179,6 +15344,9 @@ msgstr "Generowanie tekstury pędzla już trwa"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Proszę wprowadzić monit dla tekstury pędzla"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Nie udało się dodać generowania pędzla do kolejki"
@@ -15284,6 +15452,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Lista warstw w stylu Substance 3D Painter z trybem mieszania i kryciem w wierszu."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Umieszczenie"
+
+msgid "Object"
+msgstr "Obiekt"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Przenieś maskę warstwy"
@@ -16443,6 +16650,9 @@ msgstr "Nowa maska obrazu"
 msgid "Open Image as Mask..."
 msgstr "Otwórz obraz jako maskę..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Maski koloru wierzchołków"
 
@@ -16562,6 +16772,12 @@ msgstr "Proces liniowy"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Potok generowania: 'fast' lub 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Identyczne zadanie jest już w kolejce"
@@ -17361,9 +17577,6 @@ msgstr "Styczna"
 
 msgid "Tangent space"
 msgstr "Przestrzeń styczna"
-
-msgid "Object"
-msgstr "Obiekt"
 
 msgid "Object space"
 msgstr "Przestrzeń obiektu"
@@ -20229,7 +20442,28 @@ msgstr "Zasobu '{name}' nie ma już w pliku zasobów."
 msgid "Could not add the asset to the scene."
 msgstr "Nie można dodać zasobu do sceny."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20517,6 @@ msgstr "Nie można wznowić automatycznie — aby kontynuować budowę, należy 
 msgid "The request could not be completed."
 msgstr "Nie można było zrealizować żądania."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Twoja wiadomość nie dotarła do Mixie. Sprawdź połączenie i wyślij ją ponownie."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Nie można połączyć się z serwerem. Proszę sprawdzić połączenie i spróbować ponownie."
 
@@ -20330,6 +20555,21 @@ msgstr "Rozpoznawanie pisma odręcznego nie jest jeszcze dostępne na tym serwer
 
 msgid "Handwriting conversion failed"
 msgstr "Konwersja pisma odręcznego nie powiodła się"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Twoja wiadomość nie dotarła do Mixie. Sprawdź połączenie i wyślij ją ponownie."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
+
+msgid "Tip: you can steer Mixie without stopping"
+msgstr ""
+
+msgid "Type your change while Mixie works and press Steer. It adjusts the running work and keeps what it has built."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20909,15 @@ msgid "Pick"
 msgstr "Wybór"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -23395,9 +23644,6 @@ msgstr "Adnotacja wielokąta"
 msgid "Annotate Eraser"
 msgstr "Adnotacja gumki"
 
-msgid "Placement"
-msgstr "Umieszczenie"
-
 msgid "(none — draw to create)"
 msgstr "(brak — narysuj, aby utworzyć)"
 
@@ -25294,6 +25540,9 @@ msgstr "Właściwości"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25447,8 +25696,11 @@ msgstr "Wykryto brak:%s%s%s!"
 msgid "Start or stop dictating into the sketch draft"
 msgstr "Rozpoczyna lub kończy dyktowanie do szkicu"
 
-msgid "Stop the running turn"
-msgstr "Zatrzymuje bieżącą turę"
+msgid "Stop the running turn. To change direction instead, type a message: Mixie reads it while it works and keeps what it has built"
+msgstr ""
+
+msgid "Send this to Mixie now. It adjusts the running work without stopping"
+msgstr ""
 
 msgid ""
 "Revert\n"
@@ -25545,6 +25797,9 @@ msgstr "Łapie"
 
 msgid "NEW"
 msgstr "NOWE"
+
+msgid "Steer"
+msgstr ""
 
 msgid "Ask Mixie anything..."
 msgstr "Zapytaj Mixie o cokolwiek..."
@@ -25777,6 +26032,12 @@ msgstr "Przegląda zadania generowania na karcie Kolejka dymka agenta"
 msgid "Describe your scene here..."
 msgstr "Opisz tutaj scenę..."
 
+msgid "Type to steer Mixie, no need to stop it..."
+msgstr ""
+
+msgid "Mixie is getting started..."
+msgstr ""
+
 msgid "Draw or type instructions. Enter to send."
 msgstr "Narysuj lub wpisz instrukcje. Enter, aby wysłać."
 
@@ -25946,6 +26207,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26440,11 +26710,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Podgląd\n"
-"\n"
-"Otwiera ten obraz lub film w osobnym oknie. Można otworzyć kilka podglądów jednocześnie."
 
 msgid ""
 "Rename\n"
@@ -26470,11 +26737,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Podgląd\n"
-"\n"
-"Otwiera ten wynik w osobnym oknie. Można otworzyć kilka podglądów jednocześnie."
 
 msgid ""
 "Cancel edit\n"
@@ -26722,11 +26986,17 @@ msgstr "Zaznaczony element moodboardu nie jest filmem"
 msgid "Cannot decode video: %s"
 msgstr "Nie można zdekodować filmu: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Ten element tablicy nie ma obrazu ani filmu do podglądu"
 
 msgid "This node has no image or video to preview"
 msgstr "Ten węzeł nie ma obrazu ani filmu do podglądu"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Podgląd obrazu"
@@ -26740,8 +27010,8 @@ msgstr "Okno podglądu nie otworzyło edytora obrazów"
 msgid "Preview Media"
 msgstr "Podgląd multimediów"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Otwiera ten obraz lub film w osobnym oknie podglądu. Można otworzyć kilka jednocześnie"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Węzeł, którego wynik ma zostać otwarty"
@@ -26838,6 +27108,18 @@ msgstr "Umieszcza edytowalny węzeł w miejscu upuszczenia szablonu"
 
 msgid "Template to place"
 msgstr "Szablon do umieszczenia"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Wybierz podgląd Mixie3D"
