@@ -687,10 +687,18 @@ def _report(text: str) -> None:
 # The Continue notice in the chat
 # =============================================================================
 
+# The save-point time each tab's notice names, and the Continue messages sent
+# but not yet answered (command id -> (session id, save-point time)): a refused
+# Continue puts the notice back.
+_notice_saved_at: dict = {}
+_continue_sent: dict = {}
+
+
 def add_continue_notice(scene, session_id: str, saved_at: float) -> None:
     """A notice bubble: the agent was working, Continue or Start fresh."""
     if scene is None or not session_id or not hasattr(scene, "mixie_chat_messages"):
         return
+    _notice_saved_at[scene.name] = saved_at
     stamp = time.strftime("%H:%M", time.localtime(saved_at or _now()))
     title = rpt_("Mixar closed while the agent was working")
     body = rpt_("Your scene is back from the save point at {time}. Continue lets the agent "
@@ -738,6 +746,11 @@ def continue_deferred(scene_name: str) -> None:
             return None
         from mixar.modules.space_mixie_chat.core.parked_resume import send_continue
         if send_continue(scene, text=CONTINUE_TEXT):
+            sent = next((m.bubble_id for m in reversed(scene.mixie_chat_messages)
+                         if m.sender == "USER"), "")
+            if sent:
+                _continue_sent[sent] = (getattr(scene, "mixie_session_id", "") or "",
+                                        _notice_saved_at.get(scene.name, 0.0))
             remove_notice(scene)
         else:
             _report(rpt_("The agent can continue once Mixar is connected and the chat is idle. "
@@ -745,6 +758,15 @@ def continue_deferred(scene_name: str) -> None:
         return None
 
     bpy.app.timers.register(_run, first_interval=0.05)
+
+
+def continue_refused(scene, command_id: str) -> None:
+    """The backend refused a sent Continue (credits, a server error): show the
+    notice again, below the refusal, so Continue is one click once it is fixed.
+    A key or sign-in refusal never comes here: that card resends the message."""
+    entry = _continue_sent.pop(command_id or "", None)
+    if entry is not None and scene is not None:
+        add_continue_notice(scene, entry[0], entry[1])
 
 
 def _redraw() -> None:
