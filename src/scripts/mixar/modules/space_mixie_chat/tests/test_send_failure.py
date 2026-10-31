@@ -164,3 +164,29 @@ def test_the_strings_are_marked_for_translation():
     text = open(src, encoding='utf-8').read()
     for msgid in (MSG_NOT_DELIVERED, MSG_OFFLINE, MSG_FAILED):
         assert f'n_("{msgid}")' in text
+
+
+def test_a_refused_continue_gets_its_crash_notice_back(chat, monkeypatch):
+    from mixar.modules.session_recovery import runtime
+    restored = []
+    monkeypatch.setattr(runtime, 'add_continue_notice',
+                        lambda scene, sid, saved_at: restored.append((sid, saved_at)))
+    monkeypatch.setitem(runtime._continue_sent, 'cmd-continue', ('sess-1', 1234.0))
+    scene, _ = _loading_scene('IDLE')
+    chat.processor.handle_command_error({'ok': False, 'command_id': 'cmd-other', 'message': 'boom'}, scene)
+    assert restored == []  # another message's refusal leaves the notice alone
+    chat.processor.handle_command_error({'ok': False, 'command_id': 'cmd-continue', 'message': 'boom'}, scene)
+    assert restored == [('sess-1', 1234.0)]
+    chat.processor.handle_command_error({'ok': False, 'command_id': 'cmd-continue', 'message': 'boom'}, scene)
+    assert restored == [('sess-1', 1234.0)]  # once
+
+
+def test_a_key_refused_continue_leaves_the_card_to_resend_it(chat, monkeypatch):
+    from mixar.modules.session_recovery import runtime
+    restored = []
+    monkeypatch.setattr(runtime, 'add_continue_notice', lambda *a: restored.append(a))
+    monkeypatch.setitem(runtime._continue_sent, 'cmd-continue', ('sess-1', 1.0))
+    scene, _ = _loading_scene('BUSY')
+    chat.processor.handle_command_error(
+        {'ok': False, 'command_id': 'cmd-continue', 'data': {'code': 'byok_key_required'}}, scene)
+    assert chat.cards and restored == []
