@@ -728,10 +728,22 @@ def _redraw() -> None:
 # Registration
 # =============================================================================
 
+def recovery_root() -> str:
+    """Per profile, beside Mixar's other user data (``DATAFILES/mixar``): a
+    second profile (or a QA instance) never offers another's work."""
+    try:
+        path = bpy.utils.user_resource('DATAFILES', path="mixar/recovery", create=True)
+        if isinstance(path, str) and path:
+            return path
+    except Exception:  # noqa: BLE001
+        pass
+    return journal.recovery_root()
+
+
 def register() -> None:
     if not enabled() or _state["journal"] is not None:
         return
-    root = journal.recovery_root()
+    root = recovery_root()
     os.makedirs(root, exist_ok=True)
     try:
         journal.prune(root, _now())

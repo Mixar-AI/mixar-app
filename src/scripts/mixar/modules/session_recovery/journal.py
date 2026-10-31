@@ -4,7 +4,7 @@
 
 """The recovery journal: one directory per running Mixar, on disk.
 
-``~/.mixar/recovery/<session>/`` holds ``manifest.json`` (what this launch
+``<profile>/datafiles/mixar/recovery/<session>/`` holds ``manifest.json`` (what this launch
 has to recover from), the save points (``sp-<seq>.mixar``) and ``lock``.
 The lock is held for the whole life of the process; the OS drops it when the
 process dies, however it dies, so a free lock on a directory whose manifest
@@ -33,8 +33,9 @@ DISMISSED_KEEP_S = 7 * 24 * 3600    # a resolved session's files stay this long
 
 
 def recovery_root() -> str:
-    """Per-user app data next to ``checkpoints`` and ``chat_history``; never
-    Blender's session temp dir, which a clean quit purges."""
+    """Fallback when the profile's data dir is unavailable (``runtime`` uses
+    ``DATAFILES/mixar/recovery``); never Blender's session temp dir, which a
+    clean quit purges."""
     return os.path.join(os.path.expanduser("~"), ".mixar", "recovery")
 
 
