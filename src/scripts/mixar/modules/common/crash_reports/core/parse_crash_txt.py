@@ -168,6 +168,26 @@ def _windows(native: list[str]) -> tuple[dict, list[dict]]:
     return info, frames
 
 
+def _agreeing(index: int, address: int, image, walk: list[dict]):
+    """Walk line ``index`` when it names the block frame at ``address``, else None."""
+    if index >= len(walk):
+        return None
+    line = walk[index]
+    start = line.get("_address")
+    module = str(line.get("module") or "").lower()
+    if start is None or (image and module != str(image["name"]).lower()):
+        return None
+    if address == start:
+        return line
+    if not line.get("function") or address < start:
+        return None
+    if any(str(other.get("module") or "").lower() == module and other.get("function")
+           and other.get("_address") is not None and start < other["_address"] <= address
+           for other in walk):
+        return None  # a nearer logged symbol: the walks disagree
+    return line
+
+
 def _posix(native: list[str]) -> tuple[dict, list[dict]]:
     frames = []
     for line in native:
@@ -256,13 +276,17 @@ def parse_crash_txt(text: str) -> dict | None:
     if addresses and (platform == "windows" or not any(frame.get("address") for frame in frames)):
         # Windows: Blender's walk stops at the first frame without symbols; the
         # block's walk from the exception context has every return address.
-        # Blender's own walk names its frames (exports, "Symbols not available"
-        # otherwise): a block frame at the same address keeps that name.
-        named = {frame["_address"]: frame for frame in frames if frame.get("_address") is not None}
+        # Blender's own walk names its frames: a named line prints the SYMBOL's
+        # start (SymFromAddr), a nameless one the frame's pc. The two walks agree
+        # frame by frame, so block frame i takes walk line i's name when both are
+        # in the same module and the symbol starts at or below the frame's address
+        # with no other logged symbol of that module between them (the server's
+        # windows_frames rule, so both sides name the same frames).
+        walk = list(frames)
         frames = []
-        for address in addresses:
+        for index, address in enumerate(addresses):
             image = image_for(images, address)
-            known = named.get(address)
+            known = _agreeing(index, address, image, walk)
             frames.append({
                 "module": image["name"] if image else (known["module"] if known else None),
                 "function": known["function"] if known else "",

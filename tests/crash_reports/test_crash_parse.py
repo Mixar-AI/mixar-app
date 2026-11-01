@@ -229,3 +229,17 @@ def test_one_trampoline_or_no_reraise_keeps_the_stack(fixture_text):
     # handler) is not faulthandler: nothing is dropped.
     text = MAC_CHAINED.replace("pthread_kill + 296", "some_handler + 296").replace("raise + 32", "other + 32")
     assert len(parse_crash_txt(text)["frames"]) == 10
+
+
+def test_windows_block_frames_keep_the_walks_names(fixture_text):
+    # Real Windows log (Mixar 5.2, ctypes access violation): Blender's walk prints
+    # each named frame at its SYMBOL's start, the block every return address.
+    parsed = parse_crash_txt(fixture_text("windows_ctypes_v1_named.crashlog"))
+    names = [(frame["module"], frame["function"]) for frame in parsed["frames"][:4]]
+    assert names == [("_ctypes.pyd", "DllCanUnloadNow"),
+                     ("python313.dll", "PyObject_GenericGetAttrWithDict"),
+                     ("python313.dll", "PyObject_GetAttr"),
+                     ("python313.dll", "PyEval_EvalFrameDefault")]
+    # The first nameless line ends Blender's walk; frames past it stay unnamed.
+    assert parsed["frames"][14]["module"] == "mixar.exe" and parsed["frames"][14]["function"] == ""
+    assert all(frame["function"] == "" for frame in parsed["frames"][15:])
