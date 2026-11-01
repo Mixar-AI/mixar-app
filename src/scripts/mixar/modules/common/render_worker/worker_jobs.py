@@ -63,8 +63,17 @@ def restore_images(manifest_path: str) -> int:
 
 
 def _crash_now():
+    """A real native access violation, like the crashes the worker guards against.
+
+    A plain memory read in ``_ctypes``' own code, not a foreign call: on Windows
+    ctypes wraps foreign calls (``string_at``) in SEH and raises ``OSError``
+    instead of crashing, and ``faulthandler._sigsegv()`` is a CRT ``raise()``
+    that ``_exit(3)``s under ``SIG_DFL`` without reaching Blender's filter. This
+    read is ``SIGSEGV`` on POSIX and ``EXCEPTION_ACCESS_VIOLATION`` on Windows,
+    so faulthandler dumps and Blender's handler writes ``*.crash.txt``.
+    """
     import ctypes
-    ctypes.string_at(0)  # SIGSEGV in native code, like the crashes this guards against
+    return ctypes.c_int.from_address(8).value
 
 
 def _context(job):
