@@ -24,8 +24,15 @@ import re
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 _UNC = re.compile(r"(?<![\w:\\])\\\\[^\\/\r\n\"'<>|]+\\(?:[^\\/:*?\"<>|\r\n]+\\)*")
 _WIN = re.compile(r"\b[A-Za-z]:(?:\\\\|[\\/])(?:[^\\/:*?\"<>|\r\n]+(?:\\\\|[\\/]))*")
-_POSIX = re.compile(r"(?<![\w.:/\\-])/(?:[^/\r\n\"'<>:()\[\]]+/)+")
+# A POSIX directory may hold spaces and balanced ``(...)`` / ``[...]``
+# ("Dropbox (Personal)"); a lone bracket ends it, so ``f(/a/b.py) (/c/d.py)``
+# or a backtrace's ``mixar(+0x1f) [0x55]`` is never read as one directory.
+_POSIX_CHAR = r"[^/\r\n\"'<>:()\[\]]"
+_POSIX_GROUP = rf"\({_POSIX_CHAR}*\)|\[{_POSIX_CHAR}*\]"
+_POSIX = re.compile(rf"(?<![\w.:/\\-])/(?:(?:{_POSIX_CHAR}|{_POSIX_GROUP})+/)+")
 _TILDE = re.compile(r"~[\\/](?:[^\\/\r\n\"'<>:]+[\\/])*")
+# A project name right after a scrubbed directory may hold spaces too.
+_PATH_BLEND = re.compile(r"(<path>[\\/])[^\\/\r\n\"'<>:*?|]+?\.(blend|mixar)\d*\b", re.IGNORECASE)
 _BLEND = re.compile(r"[^\\/\s\"'<>:]+\.(blend|mixar)\d*\b", re.IGNORECASE)
 
 _REPORT_PROPERTY = re.compile(r"^(?P<lhs>bpy\.[\w.\[\]\"' ]+?)\s*=\s*.*#\s*Property\s*$")
@@ -61,6 +68,7 @@ def scrub_text(text: str, user_names: tuple[str, ...] | None = None) -> str:
     text = _WIN.sub(r"<path>\\", text)
     text = _TILDE.sub("<path>/", text)
     text = _POSIX.sub("<path>/", text)
+    text = _PATH_BLEND.sub(lambda m: f"{m.group(1)}<file>.{m.group(2).lower()}", text)
     text = _BLEND.sub(lambda m: f"<file>.{m.group(1).lower()}", text)
     for name in local_user_names() if user_names is None else user_names:
         text = re.sub(rf"(?<![\w]){re.escape(name)}(?![\w])", "<user>", text, flags=re.IGNORECASE)

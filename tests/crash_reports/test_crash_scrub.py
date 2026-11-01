@@ -36,8 +36,18 @@ NO_NAMES = ()
     ("mail jane.doe+mixar@example.co.uk now", "mail <email> now"),
     ("JDOE@Example.COM", "<email>"),
     # Project file names are user content.
-    ("/Users/jdoe/Desktop/My Secret Scene.blend", "<path>/My Secret <file>.blend"),
+    ("/Users/jdoe/Desktop/My Secret Scene.blend", "<path>/<file>.blend"),
     ("pear_123_autosave.mixar", "<file>.mixar"),
+    # Folder names with parentheses or brackets (Dropbox, OneDrive, archives).
+    ("/Users/jane/Dropbox (Personal)/Client Work/castle.blend", "<path>/<file>.blend"),
+    ('open "/Users/jane/Dropbox (Personal)/Client Work/notes.txt" now', 'open "<path>/notes.txt" now'),
+    ("/Volumes/Work [2026]/Client Work (old)/shot 010.png", "<path>/shot 010.png"),
+    (r"D:\Dropbox (Personal)\Client Work\castle.blend", r"<path>\<file>.blend"),
+    (r"\\nas01\Team (Shared)\Client Work\castle.mixar", r"<path>\<file>.mixar"),
+    ("~/Dropbox (Personal)/Client Work/castle.blend", "<path>/<file>.blend"),
+    # A lone bracket ends a directory: frames and two paths on a line stay apart.
+    ("/opt/mixar/mixar(+0x1f2e) [0x55d0c0]", "<path>/mixar(+0x1f2e) [0x55d0c0]"),
+    ("f(/Users/jane/a.py) (/Users/jane/b.py)", "f(<path>/a.py) (<path>/b.py)"),
 ])
 def test_scrub_text_paths_and_emails(raw, expected):
     assert scrub_text(raw, NO_NAMES) == expected

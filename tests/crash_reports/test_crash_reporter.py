@@ -20,7 +20,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 STATIC = {"platform": "darwin", "os_version": "macOS 26.2", "cpu_arch": "arm64", "cpu_count": 12, "ram_gb": 32}
 CURRENT = {"app_version": "4.3.7", "blender_version": "5.2.0", "gpu_vendor": "Apple", "open_tabs": 1}
 DEVICE = "0123456789abcdef0123456789abcdef"
-LEAKS = ("/Users/", "jdoe", "Jane", "@example", "Sample prompt", "Client Work", "fileserver", "castle")
+LEAKS = ("/Users/", "jdoe", "Jane", "@example", "Sample prompt", "Client Work", "fileserver", "castle",
+         "Personal", "Dropbox")
 
 
 @pytest.fixture
@@ -334,3 +335,19 @@ def test_crash_files_handled_per_launch_stay_capped(tmp_path, temp_dir, monkeypa
         reporter.tick()
     assert len(server.payloads) == 3
     assert len(os.listdir(temp_dir / "mixar_render_worker_crashes")) == 2  # left for the next launch
+
+
+def test_a_folder_name_with_parentheses_does_not_leak(tmp_path):
+    folder = tmp_path / "T"
+    folder.mkdir()
+    text = (FIXTURES / "macos_render_v1.crashlog").read_text(encoding="utf-8").replace(
+        "/Users/jdoe/Library/Application Support/Mixar/4.3/scripts/mixar/modules/space_mixie_chat/core/executor.py",
+        "/Users/jdoe/Dropbox (Personal)/Client Work/tools/helper.py")
+    assert "Dropbox (Personal)" in text
+    (folder / "mixar.crash.txt").write_text(text, encoding="utf-8")
+    reports = harvest.build_reports(temp_dirs=[str(folder)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    wire = json.dumps(reports)
+    assert "helper.py" in wire
+    for leak in LEAKS:
+        assert leak not in wire, leak
