@@ -170,9 +170,13 @@ def draw_left(layout, context, *, tier):
     if not context.space_data.show_region_tool_header:
         restore = surface.row()
         compact = tiers.at_most(tier, tiers.NARROW)
-        restore.operator('mixar.zen_object_controls_show',
-                         text='' if compact else 'Object Controls',
-                         icon='PREFERENCES').show = True
+        if hasattr(bpy.types, "MIXAR_OT_zen_object_controls_show"):
+            restore.operator('mixar.zen_object_controls_show',
+                             text='' if compact else 'Object Controls',
+                             icon='PREFERENCES').show = True
+        else:  # not registered yet (deferred UI registration)
+            restore.enabled = False
+            restore.label(text='' if compact else 'Object Controls', icon='PREFERENCES')
         style(restore)
 
 
