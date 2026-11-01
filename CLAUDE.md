@@ -94,7 +94,7 @@ Every change is a performance change: a click lands at once, windows keep drawin
 1. **Package setup** — synthetic packages for `src/scripts/mixar/` (no `__init__.py` needed in most subdirs).
 2. **Network** — `modules/common/network` (`core/setup.py:configure_network()`): exports the resolved proxy to the environment and installs the OS trust store (`truststore`) by replacing `ssl.SSLContext`. Must precede every bootstrap module — only contexts created afterwards are affected.
 3. **Bootstrap modules** — `src/scripts/mixar/bootstrap/*.py`, each with `register()`/`unregister()` (agent connection, paint module, generation catalog cache, update checker, sandbox supervisor, etc.).
-4. **UI auto-discovery** — every file under `modules/**/ui/` is loaded in time-budgeted (~4ms/frame) batches: properties first (priority 0), then operators/core (1), then panels/menus/headers (2).
+4. **UI auto-discovery** — every file under `modules/**/ui/` is loaded in time-budgeted (~4ms/frame) batches: properties first (priority 0), then operators/core (1), then keymaps (2; their items set operator properties, which exist only once the operator registers), then panels/menus/headers (3).
 
 Rules: expose a `classes` tuple and let the fallback mechanism register it — hand-write `register()`/`unregister()` only when genuinely needed. For cross-directory property dependencies, drive import order via the module's `__init__.py` (reference: `paint/__init__.py`).
 

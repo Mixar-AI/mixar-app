@@ -280,9 +280,13 @@ def _discover_ui_files(modules_path):
             if fname.endswith('.py') and not fname.startswith('__'):
                 ui_files.append(Path(root, fname))
 
-    # Sort order: properties (0) → operators/core (1) → panels/menus/headers (2)
-    # Panels and menus draw operators immediately when registered, so all
-    # operators must be loaded before any panel/menu/header/toolbar.
+    # Sort order: properties (0) → operators/core (1) → keymaps (2)
+    # → panels/menus/headers (3). Panels and menus draw operators immediately
+    # when registered, so all operators must be loaded before any
+    # panel/menu/header/toolbar. Keymap items set operator properties
+    # (``kmi.properties.origin``), which exist only once the operator is
+    # registered; a keymap sorted before its operators (``ui/keymap.py`` is
+    # shallower than ``ui/operators/*``) waited for the retry pass at the end.
     def sort_key(x):
         parts_lower = {p.lower() for p in x.parts}
         stem_lower = x.stem.lower()
@@ -291,6 +295,8 @@ def _discover_ui_files(modules_path):
             priority = 0
         elif any(kw in stem_lower for kw in _DISPLAY_KEYWORDS) \
                 or parts_lower & {'panels', 'menus'}:
+            priority = 3
+        elif 'keymap' in stem_lower:
             priority = 2
         else:
             priority = 1
