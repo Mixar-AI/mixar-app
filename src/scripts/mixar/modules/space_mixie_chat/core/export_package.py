@@ -918,11 +918,27 @@ def _in_process_now(job) -> dict:
         layer = scene.view_layers.get(job["view_layer"])
         if layer is not None:
             overrides["view_layer"] = layer
-        window = next(iter(bpy.context.window_manager.windows), None)
+        # The document window, never the chat island; it shows the call's tab
+        # for the export as a routed script's pin would, and goes back after.
+        from .preview_render import _document_window
+        window = _document_window()
+        shown = window.scene if window is not None else None
+        if window is not None and shown is not scene:
+            if bpy.app.is_job_running("RENDER"):
+                # Switching the window's scene under a running render crashed.
+                return {"success": False, "error": "export_busy_rendering"}
+            window.scene = scene
         if window is not None:
             overrides["window"] = window
-        with bpy.context.temp_override(**overrides):
-            result = _export_in_process(**job["kwargs"])
+        try:
+            with bpy.context.temp_override(**overrides):
+                result = _export_in_process(**job["kwargs"])
+        finally:
+            if window is not None and shown is not None and window.scene is not shown:
+                try:
+                    window.scene = shown
+                except (ReferenceError, RuntimeError):
+                    pass
         result["success"] = True
     except ReferenceError:
         result = {"success": False, "error": "the scene was closed before the export ran"}

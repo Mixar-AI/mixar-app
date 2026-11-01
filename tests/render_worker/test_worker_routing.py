@@ -552,3 +552,38 @@ def test_the_synchronous_render_lives_only_in_the_worker():
     src = Path(worker_jobs.__file__).read_text(encoding="utf-8")
     body = src[src.index("def render_preview("):src.index("def _run_preview(")]
     assert "if not bpy.app.background:" in body and "raise RuntimeError" in body
+
+
+def _windows(monkeypatch, pkg, shown):
+    from mixar.modules.space_mixie_chat.core import preview_render
+    window = SimpleNamespace(scene=shown, seen=[])
+    real = pkg._export_in_process
+
+    def export(**kw):
+        window.seen.append(window.scene.name)
+        return {"files": ["Chair.glb"]}
+
+    monkeypatch.setattr(preview_render, "_document_window", lambda: window)
+    monkeypatch.setattr(pkg, "_export_in_process", export)
+    return window, real
+
+
+def test_the_in_process_fallback_shows_the_calls_tab_and_puts_the_users_back(pkg, monkeypatch):
+    key = pkg.export_package(["Chair"])["__deferred_job__"]
+    user_tab = SimpleNamespace(name="UserTab")
+    window, _ = _windows(monkeypatch, pkg, user_tab)
+    pkg.bpy.app.is_job_running = lambda kind: False
+    pkg.state["value"] = {"state": "failed", "error": "worker_unavailable", "attempts": 0}
+    assert pkg.poll_job(key)["result"] == {"files": ["Chair.glb"], "success": True}
+    assert window.seen == ["Scene"] and window.scene is user_tab
+
+
+def test_the_in_process_fallback_never_switches_tabs_under_a_render(pkg, monkeypatch):
+    key = pkg.export_package(["Chair"])["__deferred_job__"]
+    user_tab = SimpleNamespace(name="UserTab")
+    window, _ = _windows(monkeypatch, pkg, user_tab)
+    pkg.bpy.app.is_job_running = lambda kind: True
+    pkg.state["value"] = {"state": "failed", "error": "worker_unavailable", "attempts": 0}
+    result = pkg.poll_job(key)["result"]
+    assert result["success"] is False and result["error"] == "export_busy_rendering"
+    assert window.seen == [] and window.scene is user_tab
