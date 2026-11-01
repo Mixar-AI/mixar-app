@@ -540,3 +540,14 @@ def test_server_answer_releases_the_held_frame(wire):
     assert 'cmd' not in events._outbox
     events.reconnect()
     assert 'cmd' not in wire.probes  # settled: nothing left to ask about or resend
+
+
+def test_a_retired_turn_after_a_crash_restore_settles_without_the_lost_response_note(env, settle):
+    # The backend retires the crashed app's turn on reconnect (ended / cancelled,
+    # no replay); the tab already shows the crash-restore Continue notice.
+    settle.scene.mixie_chat_messages = [SimpleNamespace(bubble_id='crash-resume-1a2b3c4d')]
+    recovery(status='ended', end_status='cancelled', replay_available=False)
+    turn = events._turns['turn']
+    assert turn.complete and not turn.pending
+    assert settle.scene.mixie_chat_state == 'IDLE' and not settle.scene.mixie_run_open
+    assert settle.notices == []

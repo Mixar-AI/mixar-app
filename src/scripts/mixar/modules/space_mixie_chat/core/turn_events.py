@@ -475,6 +475,15 @@ def _request_replay(turn):
         turn.recovering = False
 
 
+def _has_crash_restore_notice(scene) -> bool:
+    try:
+        from mixar.modules.session_recovery.runtime import BUBBLE_PREFIX
+    except Exception:  # noqa: BLE001
+        return False
+    return any(getattr(m, "bubble_id", "").startswith(BUBBLE_PREFIX)
+               for m in getattr(scene, "mixie_chat_messages", ()))
+
+
 def _replay_unavailable(scene, turn):
     from .queue_processor import get_event_processor
     from .message_helpers import add_agent_message
@@ -485,8 +494,11 @@ def _replay_unavailable(scene, turn):
     get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
-    add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
-                                  'Check the scene before continuing.'))
+    if not _has_crash_restore_notice(scene):
+        # After a crash restore the tab already explains itself (Continue or
+        # Start fresh); the crashed app's turn was retired, not lost.
+        add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
+                                      'Check the scene before continuing.'))
     turn.complete = True
     turn.pending.clear()
     if turn.turn_id:
