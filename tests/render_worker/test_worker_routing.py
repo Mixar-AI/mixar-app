@@ -150,6 +150,23 @@ def test_only_the_gui_executor_accepts_deferred_jobs():
     src = open(mte.__file__, encoding="utf-8").read()
     body = src[src.index("def _execute_dequeued_request("):src.index("def _defer_worker_job(")]
     assert "_deferrable_depth += 1" in body and "_deferrable_depth -= 1" in body
+    assert "_deferrable_tool, _deferred_claimed = req.tool_name, False" in body
+    assert '_deferrable_tool, _deferred_claimed = "", False' in body
+
+
+def test_only_the_export_asset_script_may_defer_and_only_once(monkeypatch):
+    from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
+    monkeypatch.setattr(mte, "_deferrable_depth", 1)
+    monkeypatch.setattr(mte, "_deferred_claimed", False)
+    monkeypatch.setattr(mte, "_deferrable_tool", "execute_bpy_script")
+    assert mte.may_defer_job() is False and mte.claim_deferred_job() is False
+    monkeypatch.setattr(mte, "_deferrable_tool", "export_asset")
+    assert mte.may_defer_job() is True
+    assert mte.claim_deferred_job() is True
+    assert mte.may_defer_job() is False and mte.claim_deferred_job() is False
+    monkeypatch.setattr(mte, "_deferrable_depth", 0)
+    monkeypatch.setattr(mte, "_deferred_claimed", False)
+    assert mte.may_defer_job() is False, "outside the executor"
 
 
 # --------------------------------------------------------------------------
@@ -159,10 +176,11 @@ def test_only_the_gui_executor_accepts_deferred_jobs():
 @pytest.fixture
 def pkg(monkeypatch, tmp_path):
     from mixar.modules.space_mixie_chat.core import export_package as module
-    from mixar.modules.common.render_worker import snapshot, supervisor
+    from mixar.modules.common.render_worker import memory, snapshot, supervisor
 
     fake = MagicMock(name="bpy")
     fake.app.background = False
+    monkeypatch.setattr(memory, "worker_fits", lambda kind: True)
     fake.data.filepath = str(tmp_path / "proj" / "scene.blend")
     mesh = SimpleNamespace(type="MESH", name="Chair")
     scene = SimpleNamespace(name="Scene", objects={"Chair": mesh},
@@ -188,6 +206,8 @@ def pkg(monkeypatch, tmp_path):
     monkeypatch.setattr(supervisor, "poll", lambda job_id: dict(state["value"]))
     from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
     monkeypatch.setattr(mte, "_deferrable_depth", 1)
+    monkeypatch.setattr(mte, "_deferrable_tool", "export_asset")
+    monkeypatch.setattr(mte, "_deferred_claimed", False)
     module.submitted, module.state = jobs, state
     yield module
 
@@ -240,6 +260,32 @@ def test_outside_the_executor_the_package_is_built_in_process(pkg, monkeypatch):
     assert not pkg.submitted
 
 
+def test_without_memory_for_a_second_copy_the_package_is_built_in_process(pkg, monkeypatch):
+    from mixar.modules.common.render_worker import memory
+    kinds = []
+    monkeypatch.setattr(memory, "worker_fits", lambda kind: kinds.append(kind) and False)
+    monkeypatch.setattr(pkg, "_export_in_process", lambda **kw: {"built": kw["names"]})
+    assert pkg.export_package(["Chair"]) == {"built": ["Chair"]}
+    assert kinds == ["export"] and not pkg.submitted
+
+
+def test_a_raw_script_gets_the_package_itself_never_a_key(pkg, monkeypatch):
+    """A raw script may read ``result['files']`` or call twice: a deferred key
+    there was never polled and the caller got a KeyError."""
+    from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
+    monkeypatch.setattr(mte, "_deferrable_tool", "execute_bpy_script")
+    monkeypatch.setattr(pkg, "_export_in_process", lambda **kw: {"files": ["Chair.glb"]})
+    assert pkg.export_package(["Chair"])["files"] == ["Chair.glb"]
+    assert not pkg.submitted
+
+
+def test_only_the_first_call_of_the_export_asset_script_is_deferred(pkg, monkeypatch):
+    monkeypatch.setattr(pkg, "_export_in_process", lambda **kw: {"files": ["Chair.glb"]})
+    assert "__deferred_job__" in pkg.export_package(["Chair"])
+    assert pkg.export_package(["Chair"]) == {"files": ["Chair.glb"]}
+    assert len(pkg.submitted) == 1
+
+
 def test_inside_a_worker_the_package_is_built_in_process(pkg, monkeypatch):
     pkg.bpy.app.background = True
     monkeypatch.setattr(pkg, "_export_in_process", lambda **kw: {"built": True})
@@ -252,6 +298,18 @@ def test_a_bad_call_fails_at_once_as_before(pkg):
     with pytest.raises(ValueError):
         pkg.export_package(["Chair"], "obj")
     assert not pkg.submitted
+
+
+def test_an_engine_is_validated_as_the_build_reads_it(pkg):
+    reply = pkg.export_package(["Chair"], "fbx", engine=" Unreal ")
+    assert "__deferred_job__" in reply
+    assert pkg.submitted["j1"]["params"]["kwargs"]["engine"] == " Unreal "
+    base = {"names": ["Chair"], "where": "mixar_exports"}
+    pkg._validate(dict(base, fmt="glb", engine="Godot"))
+    with pytest.raises(ValueError, match="engine must be one of"):
+        pkg._validate(dict(base, fmt="fbx", engine="unity"))
+    with pytest.raises(ValueError, match="a unreal package is fbx"):
+        pkg._validate(dict(base, fmt="glb", engine="UNREAL"))
 
 
 def test_the_project_destination_follows_the_users_file_in_a_worker(monkeypatch, tmp_path):
@@ -336,20 +394,114 @@ def test_a_twice_crashed_preview_fails_with_a_fixed_code(preview):
     assert value["success"] is False
 
 
-def test_a_preview_whose_worker_never_started_renders_natively(preview, monkeypatch):
-    _worker_job(preview, scene=SimpleNamespace(name="Scene", view_layers={}))
-    preview.bpy.context.window_manager.windows = [object()]
+def _window(scene, *, temporary=False, size=(1600, 1000)):
+    return SimpleNamespace(scene=scene, screen=SimpleNamespace(is_temporary=temporary),
+                           width=size[0], height=size[1])
+
+
+def _fallback(preview, monkeypatch, *, shown, source, inspection=None, native=None):
+    """A worker that never started, the document window showing ``shown``
+    and the chat island (a temporary window, listed first) another tab."""
+    _worker_job(preview, scene=source, args={"inspection": inspection})
+    island = _window(SimpleNamespace(name="Island tab", frame_current=1), temporary=True,
+                     size=(400, 300))
+    document = _window(shown)
+    preview.bpy.context.window_manager.windows = [island, document]
+    preview.bpy.app.is_job_running.return_value = False
+    monkeypatch.setattr(preview, "_render_info", lambda scene: {"engine": "CYCLES"})
     preview.state["value"] = {"state": "failed", "error": "worker_unavailable", "attempts": 0}
     calls = {}
 
-    def native(context, key, source, session, win, **args):
-        calls.update(key=key, session=session, args=args)
+    def default_native(context, key, source, session, win, release_window=None, **args):
+        calls.update(key=key, session=session, args=args, win=win, shown_at_call=win.scene,
+                     release=release_window)
+        if release_window is not None:
+            calls["released"] = release_window(source, SimpleNamespace(name="~Mixar agent render"))
+            calls["shown_at_invoke"] = win.scene
         return {"job_id": key, "status": "running"}
 
-    monkeypatch.setattr(preview, "_start_native", native)
+    monkeypatch.setattr(preview, "_start_native", native or default_native)
+    return document, calls
+
+
+def _scene(name, frame=1):
+    return SimpleNamespace(name=name, frame_current=frame, view_layers={})
+
+
+def test_a_preview_whose_worker_never_started_renders_natively(preview, monkeypatch):
+    source = _scene("Scene")
+    document, calls = _fallback(preview, monkeypatch, shown=source, source=source)
     value = preview.poll(KEY)
     assert value["status"] == "running" and calls["key"] == KEY and calls["session"] == "sess"
+    assert calls["win"] is document, "the document window, never the chat island"
+    assert calls["release"] is None, "the user's own tab needs no pin"
     assert preview.last_worker_job()["fallback"] == "in_process"
+
+
+def test_a_background_tab_is_shown_for_the_setup_and_released_before_the_invoke(preview, monkeypatch):
+    user, source = _scene("User tab"), _scene("Agent tab")
+    document, calls = _fallback(preview, monkeypatch, shown=user, source=source,
+                                inspection={"view": "hero"})
+    assert preview.poll(KEY)["status"] == "running"
+    assert calls["shown_at_call"] is source, "the setup sees the source on screen"
+    assert calls["released"] is True and calls["shown_at_invoke"] is user
+    assert document.scene is user
+
+
+def test_a_background_tab_without_a_private_copy_is_refused(preview, monkeypatch):
+    from mixar.modules.space_mixie_chat.core import render_scene
+    monkeypatch.setattr(render_scene, "isolate_final", lambda scene: False)  # compositing
+    user, source = _scene("User tab"), _scene("Agent tab")
+    document, calls = _fallback(preview, monkeypatch, shown=user, source=source)
+    value = preview.poll(KEY)
+    assert value["status"] == "failed" and value["error"] == "render_scene_not_shown"
+    assert not calls and document.scene is user
+
+
+def test_a_background_tab_on_another_frame_is_refused(preview, monkeypatch):
+    user, source = _scene("User tab", frame=1), _scene("Agent tab", frame=40)
+    document, calls = _fallback(preview, monkeypatch, shown=user, source=source,
+                                inspection={"view": "hero"})
+    assert preview.poll(KEY)["error"] == "render_scene_not_shown"
+    assert not calls and document.scene is user
+
+
+def test_a_setup_failure_on_a_background_tab_restores_the_users_tab(preview, monkeypatch):
+    user, source = _scene("User tab"), _scene("Agent tab")
+
+    def failing(context, key, source, session, win, release_window=None, **args):
+        return {"job_id": key, "status": "failed", "error": "inspection_focus_not_found"}
+
+    document, _ = _fallback(preview, monkeypatch, shown=user, source=source,
+                            inspection={"view": "hero"}, native=failing)
+    assert preview.poll(KEY)["error"] == "inspection_focus_not_found"
+    assert document.scene is user
+
+
+def test_the_release_never_lets_the_source_itself_render_unshown(preview, monkeypatch):
+    user, source = _scene("User tab"), _scene("Agent tab")
+    seen = {}
+
+    def native(context, key, src, session, win, release_window=None, **args):
+        with pytest.raises(RuntimeError):
+            release_window(src, src)
+        seen["shown"] = win.scene
+        return {"job_id": key, "status": "failed", "error": "async_render_unavailable"}
+
+    document, _ = _fallback(preview, monkeypatch, shown=user, source=source,
+                            inspection={"view": "hero"}, native=native)
+    preview.poll(KEY)
+    assert seen["shown"] is source and document.scene is user
+
+
+def test_without_memory_for_a_second_copy_a_preview_renders_in_process(preview, monkeypatch):
+    from mixar.modules.common.render_worker import memory, snapshot, supervisor
+    monkeypatch.setattr(supervisor, "available", lambda: True)
+    monkeypatch.setattr(memory, "worker_fits", lambda kind: kind != "preview")
+    written = []
+    monkeypatch.setattr(snapshot, "write_or_reuse", lambda *a, **k: written.append(a))
+    assert preview._start_worker(MagicMock(), KEY, SimpleNamespace(name="Scene"), "sess", {}) is None
+    assert not written, "no snapshot is written for a job that runs in-process"
 
 
 def test_undo_never_settles_a_worker_job(preview, monkeypatch):

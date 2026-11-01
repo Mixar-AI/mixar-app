@@ -499,8 +499,12 @@ def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=No
 
 
 def _start_native(context, key, source, session, win, width=0, height=0, engine="", max_faces=0,
-                  inspection=None):
-    """The in-process path: Blender's interactive render job on a private copy."""
+                  inspection=None, release_window=None):
+    """The in-process path: Blender's interactive render job on a private copy.
+
+    ``release_window(source, scene)`` puts a pinned window back on the user's
+    tab before the invoke (default: the routed script's pin,
+    ``_release_route_pin``); True when it did."""
     global _job
     reservation = render_slot.acquire("agent-preview:" + key)
     if reservation is None:
@@ -541,7 +545,8 @@ def _start_native(context, key, source, session, win, width=0, height=0, engine=
         # beside the job's own depsgraph build over the same objects.
         bpy.context.view_layer.update()
         override = {"window": win, "scene": source}
-        if _release_route_pin(source, scene):
+        release = release_window if release_window is not None else _release_route_pin
+        if release(source, scene):
             # The window now shows the user's tab, which the switch just
             # evaluated; it is the context, as for an unrouted script. bpy.ops
             # evaluates the context scene first, and the routed scene, shown by
@@ -623,11 +628,12 @@ def _jobs_dir() -> str:
 
 
 def _start_worker(context, key, source, session, args):
-    """Hand the job to a worker; None when this call must run in-process."""
+    """Hand the job to a worker; None when this call must run in-process (no
+    worker, or no memory for the worker's copy of the document)."""
     global _job
     try:
-        from mixar.modules.common.render_worker import snapshot, supervisor
-        if not supervisor.available():
+        from mixar.modules.common.render_worker import memory, snapshot, supervisor
+        if not supervisor.available() or not memory.worker_fits("preview"):
             return None
     except Exception:
         return None
@@ -695,25 +701,72 @@ def _forget_worker_snapshots():
         pass
 
 
+def _document_window():
+    """The document's main window: never the chat island or pill, which live
+    in temporary companion windows (``queue_download._document_window``)."""
+    windows = [w for w in bpy.context.window_manager.windows
+               if getattr(w, "screen", None) is not None and not w.screen.is_temporary]
+    return max(windows, key=lambda w: w.width * w.height) if windows else None
+
+
 def _fallback_native(job):
-    """The worker never started: run this call's job in-process after all."""
+    """The worker never started: run this call's job in-process after all.
+
+    This runs from a timer tick, after the script's routing pin was released,
+    so the document window shows whatever tab the user is on. A scene no
+    window shows must never be rendered (or be the context of ``bpy.ops``):
+    its evaluation crashed in deg copy-on-eval. On the user's own tab the job
+    runs as an unrouted script's would. On a background tab it runs the way a
+    routed script's job does: the window is pinned to the source for the setup
+    (the private copy, the inspection rig), put back on the user's tab before
+    the invoke, and the copy renders by name with that tab as the context.
+    When that order is impossible (no private copy for this scene, or the
+    user's tab is on another frame, which the operator would copy onto the
+    render), the call fails with ``render_scene_not_shown``."""
     source = job["scene"]
     try:
         _ = source.name
     except ReferenceError:
         return {"job_id": job["key"], "status": "failed", "error": "scene_unavailable",
                 "scene_session": job["scene_session"]}
-    win = next(iter(bpy.context.window_manager.windows), None)
+    win = _document_window()
     if win is None:
         return {"job_id": job["key"], "status": "failed", "error": "camera_and_window_required",
                 "scene_session": job["scene_session"]}
-    overrides = {"window": win, "scene": source}
-    layer = source.view_layers.get(job.get("view_layer") or "")
-    if layer is not None:
-        overrides["view_layer"] = layer
-    with bpy.context.temp_override(**overrides):
-        return _start_native(bpy.context, job["key"], source, job["scene_session"], win,
-                             **job["args"])
+    shown = win.scene
+    if shown == source:
+        overrides = {"window": win, "scene": source}
+        layer = source.view_layers.get(job.get("view_layer") or "")
+        if layer is not None:
+            overrides["view_layer"] = layer
+        with bpy.context.temp_override(**overrides):
+            return _start_native(bpy.context, job["key"], source, job["scene_session"], win,
+                                 **job["args"])
+    copied = job["args"].get("inspection") is not None or render_scene.isolate_final(source)
+    if shown is None or not copied or shown.frame_current != source.frame_current:
+        return {"job_id": job["key"], "status": "failed", "error": "render_scene_not_shown",
+                "scene_session": job["scene_session"], "render": _render_info(source)}
+
+    def release(src, scene):
+        if scene is src:
+            # Never invoke on a scene the window will stop showing after it.
+            raise RuntimeError("render_scene_not_shown")
+        win.scene = shown
+        return True
+
+    win.scene = source
+    try:
+        with bpy.context.temp_override(window=win):
+            return _start_native(bpy.context, job["key"], source, job["scene_session"], win,
+                                 release_window=release, **job["args"])
+    finally:
+        # A setup that failed before the invoke: the user's tab, as it was.
+        # (A started job already has it back: release ran before the invoke.)
+        try:
+            if win.scene != shown and not bpy.app.is_job_running("RENDER"):
+                win.scene = shown
+        except (ReferenceError, RuntimeError):
+            pass
 
 
 def _poll_worker(job):

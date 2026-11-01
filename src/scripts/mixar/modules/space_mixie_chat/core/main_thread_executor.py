@@ -70,6 +70,17 @@ _inflight: Optional[dict] = None
 # >0 while this executor runs a script whose reply it can hold open
 # (``accepts_deferred_jobs``). Main thread only.
 _deferrable_depth = 0
+# That script's tool, and whether a call in it already handed its work to a
+# worker (``claim_deferred_job``). Main thread only.
+_deferrable_tool = ""
+_deferred_claimed = False
+#: Tools whose script returns the call's value as its final result (the
+#: backend's export_asset template: ``result = export_package(...)``), so a
+#: ``{"__deferred_job__": key}`` reaches the executor and is held open. Any
+#: other script may call it twice, read ``result["files"]`` or fail after it:
+#: the key would be dropped, the job never polled, the caller handed a
+#: KeyError. Such a call builds the package at once.
+DEFERRED_JOB_TOOLS = frozenset({"export_asset"})
 
 
 def _set_inflight(tool_name: str, request_id: str, session_id: str) -> None:
@@ -328,7 +339,7 @@ def _process_one_request() -> Optional[float]:
 
 def _execute_dequeued_request(req, status, lane) -> Optional[float]:
     """Dispatch a taken request; execution failures never strand the next one."""
-    global _deferrable_depth
+    global _deferrable_depth, _deferrable_tool, _deferred_claimed
     previous = lanes.switch_to(lane)
     if previous is not None:
         from mixar.modules.common.scenes_log import slog
@@ -383,10 +394,12 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
             else:
                 execution_started = True
                 _deferrable_depth += 1
+                _deferrable_tool, _deferred_claimed = req.tool_name, False
                 try:
                     result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
                 finally:
                     _deferrable_depth -= 1
+                    _deferrable_tool, _deferred_claimed = "", False
     except Exception:
         logger.exception("Executor request failed (id: %s)", req.request_id)
         result_dict = {"success": False, "error": "Executor request failed",
@@ -449,6 +462,23 @@ def accepts_deferred_jobs() -> bool:
     only a script this GUI executor runs (it holds the reply open). The headless
     sandbox pump and direct calls have no deferral, so they work in-process."""
     return _deferrable_depth > 0
+
+
+def may_defer_job() -> bool:
+    """Whether a call may answer ``{"__deferred_job__": key}`` now: a script
+    this executor runs, sent by one of :data:`DEFERRED_JOB_TOOLS`, that has
+    not deferred a call yet."""
+    return accepts_deferred_jobs() and _deferrable_tool in DEFERRED_JOB_TOOLS \
+        and not _deferred_claimed
+
+
+def claim_deferred_job() -> bool:
+    """Take the script's one deferral (the call is about to return its key)."""
+    global _deferred_claimed
+    if not may_defer_job():
+        return False
+    _deferred_claimed = True
+    return True
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> bool:

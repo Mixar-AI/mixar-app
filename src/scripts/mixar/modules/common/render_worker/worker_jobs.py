@@ -46,7 +46,12 @@ def restore_images(manifest_path: str) -> int:
                 image.source = "GENERATED"
                 image.generated_width, image.generated_height = width, height
                 image.use_generated_float = bool(entry.get("float"))
-            buffer = np.fromfile(os.path.join(folder, entry["file"]), dtype=np.float32)
+            path = os.path.join(folder, entry["file"])
+            if entry.get("dtype") == "uint8":
+                buffer = np.fromfile(path, dtype=np.uint8).astype(np.float32)
+                buffer *= np.float32(1.0 / 255.0)  # Blender's own byte -> float
+            else:  # float32, and every manifest written before ``dtype``
+                buffer = np.fromfile(path, dtype=np.float32)
             if buffer.size != width * height * channels or image.channels != channels:
                 continue
             image.pixels.foreach_set(buffer)

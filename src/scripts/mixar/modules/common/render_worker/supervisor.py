@@ -63,14 +63,63 @@ _maintain_registered = False
 
 _swept = False
 
+#: Worker crash reports outlive the session folder here, a sibling of
+#: ``mixar_render_worker``; the crash reporter (``common/crash_reports``)
+#: reads ``<tempdir>/mixar_render_worker_crashes/*.crash.txt``.
+CRASH_DIR_NAME = "mixar_render_worker_crashes"
+_CRASH_SUFFIX = ".crash.txt"
+
 
 def _parent_dir() -> str:
     return os.path.join(tempfile.gettempdir(), "mixar_render_worker")
 
 
-def _pid_alive(pid: int) -> bool:
+def crash_dir() -> str:
+    return os.path.join(os.path.dirname(_parent_dir()), CRASH_DIR_NAME)
+
+
+def _windows_pid_alive(pid: int, since: float = 0.0) -> bool:
+    """A process ``pid`` is running and started before ``since`` (epoch s;
+    0 skips that check: a younger process reused the pid of a dead session).
+    Unreadable reads as alive: a live session's folder is never swept."""
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not handle:
+        # ERROR_INVALID_PARAMETER: no such process. Anything else (access
+        # denied: another user's process) exists.
+        return ctypes.get_last_error() != 87
+    try:
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return True
+        if code.value != 259:  # STILL_ACTIVE
+            return False
+        if since:
+            times = [wintypes.FILETIME() for _ in range(4)]
+            kernel32.GetProcessTimes.argtypes = [wintypes.HANDLE] + [
+                ctypes.POINTER(wintypes.FILETIME)] * 4
+            if kernel32.GetProcessTimes(handle, *[ctypes.byref(t) for t in times]):
+                created = (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+                # FILETIME: 100 ns ticks since 1601; a minute of slack for clocks.
+                if (created - 116444736000000000) / 1e7 > since + 60:
+                    return False
+        return True
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _pid_alive(pid: int, since: float = 0.0) -> bool:
     if os.name == "nt":
-        return True  # stale folders there are left to the age rule below
+        try:
+            return _windows_pid_alive(pid, since)
+        except Exception:
+            return True
     try:
         os.kill(pid, 0)
         return True
@@ -80,8 +129,58 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _keep_crash_reports(worker_folder: str, session: str, kind: str) -> list:
+    """Move a worker's ``*.crash.txt`` out of its temp dir into
+    :func:`crash_dir` as ``<session pid>-<kind>-<n>.crash.txt`` (never
+    overwriting), before anything deletes the worker folder. Returns the new
+    paths. Plain file moves, no ``bpy``: safe from atexit."""
+    import shutil
+    folder = os.path.join(worker_folder, "tmp")
+    try:
+        reports = sorted((os.path.join(folder, name) for name in os.listdir(folder)
+                          if name.endswith(_CRASH_SUFFIX)), key=os.path.getmtime)
+    except OSError:
+        return []
+    kept = []
+    target = crash_dir()
+    for report in reports:
+        try:
+            os.makedirs(target, exist_ok=True)
+            for n in range(1, 10000):
+                path = os.path.join(target, "%s-%s-%d%s" % (session, kind, n, _CRASH_SUFFIX))
+                try:
+                    with open(report, "rb") as src, open(path, "xb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    break
+                except FileExistsError:
+                    continue
+            else:
+                continue
+            os.remove(report)
+            kept.append(path)
+        except OSError:
+            continue
+    return kept
+
+
+def _keep_session_crash_reports(session_folder: str) -> list:
+    """:func:`_keep_crash_reports` for every worker of one app session."""
+    session = os.path.basename(os.path.normpath(session_folder))
+    kept = []
+    try:
+        names = os.listdir(session_folder)
+    except OSError:
+        return kept
+    for name in names:
+        if name.startswith("worker-"):
+            kept += _keep_crash_reports(os.path.join(session_folder, name), session,
+                                        name[len("worker-"):])
+    return kept
+
+
 def _sweep_stale() -> None:
-    """Folders of app sessions that ended without cleaning up (a crash, a kill)."""
+    """Folders of app sessions that ended without cleaning up (a crash, a kill).
+    Only a session whose process is gone; its workers' crash reports are kept."""
     import shutil
     parent = _parent_dir()
     try:
@@ -93,17 +192,21 @@ def _sweep_stale() -> None:
             continue
         path = os.path.join(parent, name)
         try:
-            old = time.time() - os.path.getmtime(path) > 86400
+            # Created when the session first used a worker: an older process
+            # with the same pid (Windows) cannot be that session.
+            since = os.path.getctime(path)
         except OSError:
             continue
-        if old or not _pid_alive(int(name)):
-            shutil.rmtree(path, ignore_errors=True)
+        if _pid_alive(int(name), since):
+            continue
+        _keep_session_crash_reports(path)
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def root_dir() -> str:
     """The folder that holds snapshots, job outputs, worker logs and the
     worker's own temp dir (so its crash report lands here, never beside the
-    app's own ``mixar.crash.txt``)."""
+    app's own ``mixar.crash.txt``; a worker death moves it to :func:`crash_dir`)."""
     global _swept
     if not _swept:
         _swept = True
@@ -350,12 +453,9 @@ def _fail(job_id, code):
         job["state"], job["error"] = "failed", code
 
 
-def _crash_summary(worker) -> str:
+def _crash_summary(reports) -> str:
     """First lines of the worker's own crash report (local log only)."""
     try:
-        folder = os.path.join(worker.folder, "tmp")
-        reports = sorted((os.path.join(folder, name) for name in os.listdir(folder)
-                          if name.endswith(".crash.txt")), key=os.path.getmtime)
         if not reports:
             return ""
         with open(reports[-1], encoding="utf-8", errors="replace") as handle:
@@ -374,6 +474,8 @@ def _on_death(worker):
     job_id, started = worker.job, worker.started_job
     worker.job = None
     code = worker.proc.returncode
+    # Before the worker folder can be deleted (quit, the next launch's sweep).
+    reports = _keep_crash_reports(worker.folder, str(os.getpid()), worker.kind)
     if job_id is None:
         return
     job = _jobs.get(job_id)
@@ -392,7 +494,7 @@ def _on_death(worker):
             _requeue(job_id)
         return
     logger.warning("Render worker %s crashed in job %s (code %s, attempt %d): %s",
-                   worker.kind, job_id, code, job["attempts"], _crash_summary(worker))
+                   worker.kind, job_id, code, job["attempts"], _crash_summary(reports))
     if job["attempts"] >= MAX_JOB_ATTEMPTS:
         _fail(job_id, "worker_crashed")
     else:
@@ -547,7 +649,9 @@ def shutdown_all(remove_files: bool = False) -> None:
         worker.kill()
     if remove_files:
         import shutil
-        shutil.rmtree(os.path.join(_parent_dir(), str(os.getpid())), ignore_errors=True)
+        session = os.path.join(_parent_dir(), str(os.getpid()))
+        _keep_session_crash_reports(session)
+        shutil.rmtree(session, ignore_errors=True)
 
 
 def reset_for_tests() -> None:

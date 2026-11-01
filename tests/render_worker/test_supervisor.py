@@ -17,6 +17,7 @@ import signal
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -169,9 +170,163 @@ def test_stale_folders_of_dead_sessions_are_swept(sup, tmp_path, monkeypatch):
     stale = tmp_path / "999999"
     stale.mkdir()
     monkeypatch.setattr(sup, "_swept", False)
-    monkeypatch.setattr(sup, "_pid_alive", lambda pid: pid != 999999)
+    monkeypatch.setattr(sup, "_pid_alive", lambda pid, since=0.0: pid != 999999)
     sup.root_dir()
     assert not stale.exists()
+
+
+def test_an_old_folder_of_a_live_session_is_never_swept(sup, tmp_path, monkeypatch):
+    """A second instance must not delete a long-running instance's worker
+    folder: only a dead pid is swept, however old the folder is."""
+    live = tmp_path / "424242"
+    (live / "worker-preview" / "tmp").mkdir(parents=True)
+    os.utime(live, (time.time() - 3 * 86400, time.time() - 3 * 86400))
+    monkeypatch.setattr(sup, "_swept", False)
+    monkeypatch.setattr(sup, "_pid_alive", lambda pid, since=0.0: True)
+    sup.root_dir()
+    assert live.exists()
+
+
+# --------------------------------------------------------------------------
+# Worker crash reports survive the worker folder
+# --------------------------------------------------------------------------
+
+@pytest.fixture
+def crash_dir(monkeypatch, tmp_path):
+    folder = tmp_path / "crashes"
+    monkeypatch.setattr(supervisor, "crash_dir", lambda: str(folder))
+    return folder
+
+
+def _crash_file(worker_folder, name="mixar_worker_snapshot_1.crash.txt", text="# Blender crash\n"):
+    tmp = Path(worker_folder) / "tmp"
+    tmp.mkdir(parents=True, exist_ok=True)
+    (tmp / name).write_text(text)
+    return tmp / name
+
+
+def test_the_crash_folder_name_is_the_contract_with_the_crash_reporter():
+    assert supervisor.CRASH_DIR_NAME == "mixar_render_worker_crashes"
+    import tempfile
+    assert supervisor.crash_dir() == os.path.join(tempfile.gettempdir(), "mixar_render_worker_crashes")
+
+
+def test_a_crash_report_is_moved_without_overwriting(tmp_path, crash_dir):
+    worker = tmp_path / "123" / "worker-preview"
+    (crash_dir).mkdir()
+    (crash_dir / "123-preview-1.crash.txt").write_text("earlier")
+    original = _crash_file(worker, text="new crash")
+    kept = supervisor._keep_crash_reports(str(worker), "123", "preview")
+    assert [Path(p).name for p in kept] == ["123-preview-2.crash.txt"]
+    assert (crash_dir / "123-preview-1.crash.txt").read_text() == "earlier"
+    assert (crash_dir / "123-preview-2.crash.txt").read_text() == "new crash"
+    assert not original.exists()
+    assert supervisor._keep_crash_reports(str(worker), "123", "preview") == []
+
+
+@pytest.mark.skipif(not hasattr(signal, "SIGSEGV"), reason="POSIX signal")
+def test_a_crashed_worker_keeps_its_report_before_the_retry(sup, tmp_path, crash_dir, monkeypatch):
+    seen = {}
+    real = sup._keep_crash_reports
+
+    def keep(folder, session, kind):
+        if not seen:  # the first death: the worker wrote its report as it died
+            _crash_file(folder, text="first crash")
+        seen.setdefault("calls", []).append((session, kind))
+        return real(folder, session, kind)
+
+    monkeypatch.setattr(sup, "_keep_crash_reports", keep)
+    sup.crash_next("preview", 1)
+    state = _wait(sup, sup.submit("preview", _job(tmp_path), timeout_s=10))
+    assert state["state"] == "done" and state["retried_after_crash"]
+    assert seen["calls"][0] == (str(os.getpid()), "preview")
+    kept = sorted(crash_dir.glob("*.crash.txt"))
+    assert [p.name for p in kept] == ["%d-preview-1.crash.txt" % os.getpid()]
+    assert kept[0].read_text() == "first crash"
+
+
+def test_quit_keeps_crash_reports_before_removing_the_session_folder(sup, tmp_path, crash_dir):
+    session = Path(sup.root_dir())
+    _crash_file(session / "worker-export", text="unseen crash")
+    sup.shutdown_all(remove_files=True)
+    assert not session.exists()
+    assert (crash_dir / ("%d-export-1.crash.txt" % os.getpid())).read_text() == "unseen crash"
+
+
+def test_the_stale_sweep_keeps_crash_reports_of_dead_sessions(sup, tmp_path, crash_dir, monkeypatch):
+    stale = tmp_path / "999999"
+    _crash_file(stale / "worker-preview", text="last session's crash")
+    monkeypatch.setattr(sup, "_swept", False)
+    monkeypatch.setattr(sup, "_pid_alive", lambda pid, since=0.0: pid != 999999)
+    sup.root_dir()
+    assert not stale.exists()
+    assert (crash_dir / "999999-preview-1.crash.txt").read_text() == "last session's crash"
+
+
+# --------------------------------------------------------------------------
+# Windows liveness (ctypes mocked)
+# --------------------------------------------------------------------------
+
+def _fake_kernel32(monkeypatch, *, handle=1, last_error=0, exit_code=259, created_unix=None):
+    import ctypes
+    closed = []
+
+    def exit_code_of(h, code_ref):
+        code_ref._obj.value = exit_code
+        return 1
+
+    def times_of(h, created, *rest):
+        if created_unix is None:
+            return 0
+        ticks = int(created_unix * 1e7) + 116444736000000000
+        created._obj.dwHighDateTime, created._obj.dwLowDateTime = ticks >> 32, ticks & 0xFFFFFFFF
+        return 1
+
+    def kernel32():
+        # Plain functions, so the code under test can set argtypes / restype.
+        return SimpleNamespace(OpenProcess=lambda access, inherit, pid: handle,
+                               CloseHandle=lambda h: closed.append(h) or 1,
+                               GetExitCodeProcess=lambda h, ref: exit_code_of(h, ref),
+                               GetProcessTimes=lambda h, *refs: times_of(h, *refs))
+
+    monkeypatch.setattr(ctypes, "WinDLL", lambda name, use_last_error=False: kernel32(), raising=False)
+    monkeypatch.setattr(ctypes, "get_last_error", lambda: last_error, raising=False)
+    import ctypes.wintypes  # noqa: F401 — importable on every platform
+    return closed
+
+
+def test_windows_a_running_process_is_alive(monkeypatch):
+    closed = _fake_kernel32(monkeypatch)
+    assert supervisor._windows_pid_alive(4321) is True
+    assert closed == [1], "the handle is closed"
+
+
+def test_windows_an_exited_process_is_dead(monkeypatch):
+    _fake_kernel32(monkeypatch, exit_code=0)
+    assert supervisor._windows_pid_alive(4321) is False
+
+
+def test_windows_no_such_process_is_dead_and_access_denied_is_alive(monkeypatch):
+    _fake_kernel32(monkeypatch, handle=None, last_error=87)
+    assert supervisor._windows_pid_alive(4321) is False
+    _fake_kernel32(monkeypatch, handle=None, last_error=5)
+    assert supervisor._windows_pid_alive(4321) is True
+
+
+def test_windows_a_pid_reused_by_a_younger_process_is_dead(monkeypatch):
+    folder_created = time.time() - 3600
+    _fake_kernel32(monkeypatch, created_unix=folder_created + 600)
+    assert supervisor._windows_pid_alive(4321, since=folder_created) is False
+    _fake_kernel32(monkeypatch, created_unix=folder_created - 600)
+    assert supervisor._windows_pid_alive(4321, since=folder_created) is True
+
+
+def test_windows_liveness_that_cannot_be_read_is_alive(monkeypatch):
+    def broken(pid, since=0.0):
+        raise OSError("no kernel32")
+    monkeypatch.setattr(supervisor.os, "name", "nt")
+    monkeypatch.setattr(supervisor, "_windows_pid_alive", broken)
+    assert supervisor._pid_alive(4321) is True
 
 
 def test_unknown_kinds_are_refused(sup, tmp_path):

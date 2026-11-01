@@ -18,8 +18,17 @@ document from Python that is both complete and safe in this process:
 
 A .blend does not hold the pixels of an image that was painted or generated and
 not saved. Every such (dirty) image is written beside the snapshot as raw
-float32 RGBA, listed in ``images.json``, and the worker puts the pixels back
-after it loads the file (``worker_jobs.restore_images``).
+pixels, listed in ``images.json``, and the worker puts them back after it loads
+the file (``worker_jobs.restore_images``). A byte image is written as uint8
+(its own precision, a quarter of the float32 size), a float image as float32;
+the manifest names the ``dtype``.
+
+A preview snapshot is reused while the scene fingerprint holds and every dirty
+image still has the pixels it was written with: each written image keeps a
+change key (size, channels and a CRC-32 of the whole pixel buffer), and a
+reuse re-reads the buffers to compare. Blender has no pixel revision in
+Python; the read plus CRC costs about a tenth of the write it saves (4K float:
+~0.1 s against ~1 s).
 
 Snapshots live under ``supervisor.root_dir()``; :func:`acquire` /
 :func:`release` count the jobs that still need one (a crashed job is sent
@@ -67,22 +76,53 @@ def dirty_images():
     return found
 
 
-def _write_images(images, folder) -> list:
+def _pixels(image):
     import numpy as np
 
-    manifest = []
+    width, height, channels = int(image.size[0]), int(image.size[1]), int(image.channels)
+    buffer = np.empty(width * height * channels, dtype=np.float32)
+    image.pixels.foreach_get(buffer)
+    return buffer, width, height, channels
+
+
+def _change_key(image, buffer, width, height, channels) -> tuple:
+    import zlib
+    return (image.name, width, height, channels, bool(image.is_float),
+            zlib.crc32(memoryview(buffer)))
+
+
+def image_keys(images) -> list:
+    """The change key of each image's current pixels (one full read each)."""
+    keys = []
+    for image in images:
+        buffer, width, height, channels = _pixels(image)
+        keys.append(_change_key(image, buffer, width, height, channels))
+    return keys
+
+
+def _write_images(images, folder):
+    """Write the pixels; returns ``(manifest, change keys)``."""
+    import numpy as np
+
+    manifest, keys = [], []
     for index, image in enumerate(images):
-        width, height = int(image.size[0]), int(image.size[1])
-        channels = int(image.channels)
-        buffer = np.empty(width * height * channels, dtype=np.float32)
-        image.pixels.foreach_get(buffer)
-        name = "image_%04d.f32" % index
+        buffer, width, height, channels = _pixels(image)
+        keys.append(_change_key(image, buffer, width, height, channels))
+        if image.is_float:
+            name, dtype = "image_%04d.f32" % index, "float32"
+        else:
+            # A byte image holds 8 bits per channel: x255 rounds back exactly.
+            np.multiply(buffer, 255.0, out=buffer)
+            np.rint(buffer, out=buffer)
+            np.clip(buffer, 0.0, 255.0, out=buffer)
+            buffer = buffer.astype(np.uint8)
+            name, dtype = "image_%04d.u8" % index, "uint8"
         buffer.tofile(os.path.join(folder, name))
-        manifest.append({"name": image.name, "file": name, "width": width, "height": height,
-                         "channels": channels, "float": bool(image.is_float),
+        manifest.append({"name": image.name, "file": name, "dtype": dtype, "width": width,
+                         "height": height, "channels": channels, "float": bool(image.is_float),
                          "colorspace": str(image.colorspace_settings.name),
                          "alpha_mode": str(image.alpha_mode)})
-    return manifest
+    return manifest, keys
 
 
 def write(purpose: str = "job") -> dict:
@@ -95,7 +135,7 @@ def write(purpose: str = "job") -> dict:
     path = os.path.join(folder, SNAPSHOT_PREFIX + str(_counter) + ".blend")
     started = time.perf_counter()
     images = dirty_images()
-    manifest = _write_images(images, folder) if images else []
+    manifest, keys = _write_images(images, folder) if images else ([], [])
     images_path = ""
     if manifest:
         images_path = os.path.join(folder, "images.json")
@@ -112,7 +152,7 @@ def write(purpose: str = "job") -> dict:
         remove_folder(folder)
         raise RuntimeError("snapshot_failed")
     return {"folder": folder, "path": path, "images": images_path,
-            "image_count": len(manifest), "bytes": os.path.getsize(path),
+            "image_count": len(manifest), "image_keys": keys, "bytes": os.path.getsize(path),
             "save_s": round(time.perf_counter() - started - images_s, 4),
             "images_s": round(images_s, 4)}
 
@@ -135,14 +175,21 @@ def fingerprint(scene, revision) -> tuple:
 
 def write_or_reuse(purpose: str, key_fn, after_write=None) -> dict:
     """Reuse the last ``purpose`` snapshot while ``key_fn()`` is unchanged and
-    no image holds unsaved pixels; otherwise write a new one. ``after_write``
-    runs before the new key is taken (the caller flushes the depsgraph tags the
-    save's own handlers left, so they do not read as a change next time)."""
+    every dirty image holds the pixels it was written with; otherwise write a
+    new one. ``after_write`` runs before the new key is taken (the caller
+    flushes the depsgraph tags the save's own handlers left, so they do not
+    read as a change next time)."""
     cached = _cached.get(purpose)
     key = key_fn()
-    if cached is not None and cached[0] == key and not dirty_images() \
-            and os.path.isfile(cached[1]["path"]):
-        return dict(cached[1], reused=True, save_s=0.0, images_s=0.0)
+    if cached is not None and cached[0] == key and os.path.isfile(cached[1]["path"]):
+        started = time.perf_counter()
+        try:
+            unchanged = image_keys(dirty_images()) == cached[1].get("image_keys")
+        except (ReferenceError, RuntimeError, AttributeError):
+            unchanged = False
+        if unchanged:
+            return dict(cached[1], reused=True, save_s=0.0,
+                        images_s=round(time.perf_counter() - started, 4))
     record = write(purpose)
     if after_write is not None:
         after_write()

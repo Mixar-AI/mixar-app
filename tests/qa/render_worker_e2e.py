@@ -188,10 +188,12 @@ t0 = time.perf_counter()
 ns['qa_rw_t0'][RID] = t0
 try:
     mte._deferrable_depth += 1
+    mte._deferrable_tool, mte._deferred_claimed = TOOL, False
     try:
         res = ScriptExecutor().execute(SCRIPT, push_undo=False).to_dict()
     finally:
         mte._deferrable_depth -= 1
+        mte._deferrable_tool, mte._deferred_claimed = '', False
 finally:
     sup.available = original
 main_s = time.perf_counter() - t0

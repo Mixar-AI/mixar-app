@@ -586,11 +586,14 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     and Cycles bakes, done in the worker when one runs, so never for an
     ordinary export).
 
-    Called by the agent's script (the GUI executor), the package is built in a
-    background worker process on a snapshot of the document and the call
-    returns ``{"__deferred_job__": key}``: the executor holds the reply open and
-    answers it with this function's ordinary return value when the worker is
-    done (``poll_job``). Elsewhere, or when no worker can run, it is built here.
+    Called by the backend's ``export_asset`` script (the GUI executor), the
+    package is built in a background worker process on a snapshot of the
+    document and the call returns ``{"__deferred_job__": key}``: the executor
+    holds the reply open and answers it with this function's ordinary return
+    value when the worker is done (``poll_job``). Only that script, whose
+    result IS this return value, and only its first call
+    (``main_thread_executor.may_defer_job``). From any other script, elsewhere,
+    or when no worker can run, it is built here and returned at once.
     """
     kwargs = {"names": list(names), "fmt": fmt, "filename": filename, "where": where,
               "folder": folder, "join": join, "texture_tiers": list(texture_tiers or ()),
@@ -818,10 +821,12 @@ def _worker_allowed() -> bool:
         return False
     try:
         from . import main_thread_executor
-        if not main_thread_executor.accepts_deferred_jobs():
+        # Only the export_asset template keeps the deferred key as its result.
+        if not main_thread_executor.may_defer_job():
             return False
-        from mixar.modules.common.render_worker import supervisor
-        return supervisor.available()
+        from mixar.modules.common.render_worker import memory, supervisor
+        # No memory for the worker's copy of the document: build it here.
+        return supervisor.available() and memory.worker_fits("export")
     except Exception:
         return False
 
@@ -834,7 +839,9 @@ def _validate(kwargs):
         raise ValueError(f"format must be one of {FORMATS}")
     engine = kwargs.get("engine")
     if engine is not None:
-        if engine not in engine_targets.ENGINES:
+        # The build accepts what normalise_engine accepts ('Godot', ' unreal ').
+        engine = engine_targets.normalise_engine(engine)
+        if engine is None:
             raise ValueError(f"engine must be one of {engine_targets.ENGINES}")
         if fmt not in engine_targets.ENGINE_FORMATS[engine]:
             raise ValueError(f"a {engine} package is {' or '.join(engine_targets.ENGINE_FORMATS[engine])}")
@@ -871,6 +878,8 @@ def _submit_to_worker(kwargs):
     except Exception:
         snapshot.remove_folder(record["folder"])
         return None
+    from . import main_thread_executor
+    main_thread_executor.claim_deferred_job()
     snapshot.acquire(record)
     _worker_jobs[key] = {"worker": job_id, "snapshot": record, "kwargs": kwargs, "scene": scene,
                          "view_layer": getattr(view_layer, "name", ""), "out": out,
