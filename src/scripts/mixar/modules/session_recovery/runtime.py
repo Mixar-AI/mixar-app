@@ -592,6 +592,9 @@ def _confirm_restore_files() -> None:
     if jr is not None and jr.data.get("restore_attempt"):
         attempt = dict(jr.data["restore_attempt"], confirmed=True)
         jr.set_fields(restore_attempt=attempt)
+        # The crashed session stays a fallback until now; it goes once a
+        # save point of ours covers the restored document (here or later).
+        jr.release_inherited()
     if offer.get("dir"):
         _resolve_dirs([offer["dir"]], "restored")
     _resolve_others(offer, "superseded")

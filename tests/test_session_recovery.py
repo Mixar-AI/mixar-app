@@ -605,3 +605,70 @@ def test_restored_tabs_are_settled_idle_when_connected(rt, monkeypatch):
     calls.clear()
     rt._settle_restored_scenes()
     assert ("offline", "A") in calls and ("idle", "A") not in calls
+
+
+# -- the crashed session a restore came from ----------------------------------
+
+def _restored_journal(tmp_path, *, confirmed):
+    """Launch B restored launch A's ``sp-2``; A's directory is the fallback."""
+    root = str(tmp_path / "recovery")
+    a = _session(tmp_path, "a")
+    a["save_points"] = [_point(tmp_path, "a", 1, NOW - 900), _point(tmp_path, "a", 2, NOW - 600)]
+    journal.write_manifest(a["dir"], {k: v for k, v in a.items() if k not in ("dir", "alive")})
+    jr = journal.Journal(root, pid=4242, now=NOW - 60, session="b")
+    jr.set_fields(restore_attempt={"point": a["save_points"][1]["file"], "from_session": "a",
+                                   "at": NOW - 60, "confirmed": confirmed})
+    jr.set_inherited([{"kind": "save_point", "path": a["save_points"][1]["file"], "at": NOW - 600,
+                       "original_path": "", "source_dir": a["dir"]}])
+    return a, jr
+
+
+def test_an_unconfirmed_restore_keeps_the_crashed_session_it_came_from(tmp_path):
+    # A save point lands 15 s after the restore, confirmation only at 20 s: a
+    # crash between them must still find A's older points and the loop.
+    a, jr = _restored_journal(tmp_path, confirmed=False)
+    jr.add_save_point(_file(tmp_path / "T" / "b.mixar"), now=NOW - 45, reason="timer",
+                      cost_s=0.1, original_path="")
+    assert os.path.isdir(a["dir"]) and jr.data["inherited_points"]
+    sessions = journal.list_sessions(str(tmp_path / "recovery"), alive=lambda d: False)
+    offer = decision.find_offer(sessions, now=NOW)
+    assert offer["session"] == "b" and offer["loop"] is True
+    assert offer["failed_points"] == [a["save_points"][1]["file"]]
+    # A's older point is still on offer, never the one whose restore crashed.
+    older = [o["target"]["path"] for o in offer["older"]]
+    assert older == [a["save_points"][0]["file"]]
+
+
+def test_a_confirmed_restore_drops_its_source_at_the_next_save_point(tmp_path):
+    a, jr = _restored_journal(tmp_path, confirmed=True)
+    jr.add_save_point(_file(tmp_path / "T" / "b.mixar"), now=NOW - 45, reason="timer",
+                      cost_s=0.1, original_path="")
+    assert not os.path.exists(a["dir"]) and jr.data["inherited_points"] == []
+
+
+def test_confirmation_drops_the_source_only_once_a_save_point_covers_it(rt, tmp_path, monkeypatch):
+    a, _ = _restored_journal(tmp_path, confirmed=False)
+    jr = rt._state["journal"]
+    jr.set_fields(restore_attempt={"point": a["save_points"][1]["file"], "confirmed": False})
+    jr.set_inherited([{"path": a["save_points"][1]["file"], "at": NOW - 600, "source_dir": a["dir"]}])
+    monkeypatch.setitem(rt._state, "offer", {"session": "a", "dir": a["dir"], "older": [], "debris": []})
+    rt._confirm_restore()
+    assert jr.data["restore_attempt"]["confirmed"] is True
+    assert os.path.isdir(a["dir"])  # nothing of ours covers the document yet
+    jr.add_save_point(_file(tmp_path / "T" / "c.mixar"), now=NOW, reason="timer",
+                      cost_s=0.1, original_path="")
+    assert not os.path.exists(a["dir"])
+
+
+def test_confirming_after_a_save_point_drops_the_source_at_once(rt, tmp_path, monkeypatch):
+    a, _ = _restored_journal(tmp_path, confirmed=False)
+    jr = rt._state["journal"]
+    jr.set_fields(restore_attempt={"point": a["save_points"][1]["file"], "confirmed": False})
+    jr.set_inherited([{"path": a["save_points"][1]["file"], "at": NOW - 600, "source_dir": a["dir"]}])
+    jr.add_save_point(_file(tmp_path / "T" / "d.mixar"), now=NOW, reason="timer",
+                      cost_s=0.1, original_path="")
+    assert os.path.isdir(a["dir"])
+    monkeypatch.setitem(rt._state, "offer", {"session": "a", "dir": a["dir"], "older": [], "debris": []})
+    rt._confirm_restore()
+    assert not os.path.exists(a["dir"]) and jr.data["inherited_points"] == []
+

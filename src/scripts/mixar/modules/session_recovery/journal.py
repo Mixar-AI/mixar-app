@@ -289,16 +289,25 @@ class Journal:
         for old in points[:-KEEP_SAVE_POINTS]:
             _remove(old["file"])
         self.data["save_points"] = points[-KEEP_SAVE_POINTS:]
+        self.flush()
+        self.release_inherited()
+        return record
+
+    def release_inherited(self) -> None:
+        """Drop the crashed session a restore came from, once our own save
+        point covers the restored document AND the restore is confirmed.
+        Until then its older points are the fallbacks the crash-loop guard
+        offers if the restored document crashes too."""
         inherited = self.data.get("inherited_points") or []
+        attempt = self.data.get("restore_attempt") or {}
+        if not inherited or not self.data["save_points"] or (attempt and not attempt.get("confirmed")):
+            return
         self.data["inherited_points"] = []
         self.flush()
         for point in inherited:
-            # Our own save point now covers the restored document: the session
-            # it came from is no longer needed as a fallback.
             source = point.get("source_dir") or ""
             if source and os.path.isdir(source) and os.path.dirname(source) == self.root:
                 shutil.rmtree(source, ignore_errors=True)
-        return record
 
     def add_snapshot(self, path: str, *, now: float, original_path: str) -> None:
         """A turn-checkpoint file: a free, older candidate (never copied)."""
