@@ -3,6 +3,8 @@
 
 """Parsers for Blender's crash.txt (macOS, Windows, Linux) and macOS .ips reports."""
 
+import textwrap
+
 from mixar.modules.common.crash_reports.core.parse_crash_txt import parse_crash_txt
 from mixar.modules.common.crash_reports.core.parse_ips import parse_ips
 
@@ -125,3 +127,105 @@ def test_render_worker_ips_is_a_worker_crash(fixture_text):
 
 def test_app_ips_stays_an_app_crash(fixture_text):
     assert parse_ips(fixture_text("macos_abort.ips.json"))["kind"] == "native"
+
+
+# -- Windows crash log: frame names -----------------------------------------
+
+
+SYMBOLICATION = textwrap.dedent("""\
+    # mixar symbolication v1
+    mixar_version 4.3.9
+    git_sha 0123456789abcdef0123456789abcdef01234567
+    arch x86_64
+    image base=0x7ff6c4000000 vmaddr=0x140000000 size=0x9000000 id=3f2504e04f8911d39a0c0305e82c33011 name=mixar.exe
+    image base=0x7fff11910000 vmaddr=0x180000000 size=0x40000 id=- name=_ctypes.pyd
+    image base=0x7fff01800000 vmaddr=0x180000000 size=0x400000 id=- name=python313.dll
+    frame 0 0x00007fff1191ca80
+    frame 1 0x00007fff018d57d0
+    frame 2 0x00007ff6c512772a
+    frame 3 0x00007fff018d4de0
+    frame 4 0x00007fff019fc5a0
+    frame 5 0x00007fff019fc330
+    frame 6 0x00007ff6c4a00a44
+    """)
+
+
+def test_windows_frames_keep_the_names_the_crash_log_gives(fixture_text):
+    parsed = parse_crash_txt(fixture_text("windows_ctypes_access_violation.crashlog"))
+    assert parsed["crash_type"] == "EXCEPTION_ACCESS_VIOLATION"
+    assert parsed["crash_module"] == "_ctypes.pyd"
+    assert [(f["module"], f["function"]) for f in parsed["frames"]] == [
+        ("_ctypes.pyd", "DllCanUnloadNow"),
+        ("python313.dll", "PyObject_GenericGetAttrWithDict"),
+        ("mixar.exe", ""),  # "Symbols not available" is no name
+        ("python313.dll", "PyObject_GetAttr"),
+        ("python313.dll", "PyEval_EvalFrameDefault"),
+        ("python313.dll", "PyEval_EvalCode"),
+    ]
+    assert parsed["frames"][0]["offset"] == 0x7FFF1191CA80 - 0x7FFF11910000
+    assert all("_address" not in frame for frame in parsed["frames"])
+
+
+def test_windows_frames_rebuilt_from_the_symbolication_block_keep_their_names(fixture_text):
+    text = fixture_text("windows_ctypes_access_violation.crashlog")
+    parsed = parse_crash_txt(text.replace("# Python backtrace", SYMBOLICATION + "\n# Python backtrace"))
+    functions = [frame["function"] for frame in parsed["frames"]]
+    # The block's walk is longer than Blender's: its extra frame has no name.
+    assert functions == ["DllCanUnloadNow", "PyObject_GenericGetAttrWithDict", "", "PyObject_GetAttr",
+                         "PyEval_EvalFrameDefault", "PyEval_EvalCode", ""]
+    assert parsed["frames"][0] == {"module": "_ctypes.pyd", "function": "DllCanUnloadNow",
+                                   "offset": 0xCA80, "address": 0x7FFF1191CA80}
+    assert parsed["frames"][-1]["module"] == "mixar.exe"
+
+
+MAC_CHAINED = textwrap.dedent("""\
+    # Blender 5.2.0, Commit date: 2026-07-13 15:20, Hash fbe6228777e7
+
+    # backtrace
+    0   Mixar                               0x0000000102a52578 _ZN7blender33BLI_system_backtrace_with_os_infoEP7__sFILEPKv + 56
+    1   Mixar                               0x00000001021374b8 _ZN7blenderL19sig_handle_crash_fnEi + 368
+    2   libsystem_platform.dylib            0x000000019bc1f744 _sigtramp + 56
+    3   libsystem_pthread.dylib             0x000000019bc15888 pthread_kill + 296
+    4   libsystem_c.dylib                   0x000000019bae2d30 raise + 32
+    5   Mixar                               0x0000000103e00010 faulthandler_fatal_error + 400
+    6   libsystem_platform.dylib            0x000000019bc1f744 _sigtramp + 56
+    7   _ctypes.cpython-313-darwin.so       0x0000000105000100 _ctypes_string_at + 12
+    8   Mixar                               0x0000000103f00200 _PyEval_EvalFrameDefault + 4000
+    9   Mixar                               0x0000000102131b18 main + 920
+
+    # mixar symbolication v1
+    mixar_version 4.3.9
+    git_sha 0123456789abcdef0123456789abcdef01234567
+    arch arm64
+    image base=0x102000000 vmaddr=0x100000000 size=0x7a1c000 id=8061b8de1ba9340fa6af312e3b71dbc5 name=Mixar
+    frame 0 0x00000001021374b8
+    frame 1 0x000000019bc1f744
+    frame 2 0x000000019bc15888
+    frame 3 0x000000019bae2d30
+    frame 4 0x0000000103e00010
+    frame 5 0x000000019bc1f744
+    frame 6 0x0000000105000100
+    frame 7 0x0000000103f00200
+    frame 8 0x0000000102131b18
+
+    # Python backtrace
+    """)
+
+
+def test_the_faulthandler_reraise_is_dropped_from_a_posix_stack():
+    parsed = parse_crash_txt(MAC_CHAINED)
+    functions = [frame["function"].split(" ")[0] for frame in parsed["frames"]]
+    # As without faulthandler: Blender's handler, one trampoline, the fault.
+    assert functions[:4] == ["_ZN7blender33BLI_system_backtrace_with_os_infoEP7__sFILEPKv",
+                             "_ZN7blenderL19sig_handle_crash_fnEi", "_sigtramp", "_ctypes_string_at"]
+    assert "faulthandler_fatal_error" not in functions and "raise" not in functions
+    assert parsed["platform"] == "darwin" and parsed["is_mixar"]
+
+
+def test_one_trampoline_or_no_reraise_keeps_the_stack(fixture_text):
+    before = parse_crash_txt(fixture_text("macos_render.crashlog"))["frames"]
+    assert [f["function"] for f in before][2] == "_sigtramp"
+    # Two trampolines without a raise between them (a crash inside a signal
+    # handler) is not faulthandler: nothing is dropped.
+    text = MAC_CHAINED.replace("pthread_kill + 296", "some_handler + 296").replace("raise + 32", "other + 32")
+    assert len(parse_crash_txt(text)["frames"]) == 10

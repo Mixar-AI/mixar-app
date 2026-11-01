@@ -148,8 +148,10 @@ def _windows(native: list[str]) -> tuple[dict, list[dict]]:
         base = modules.get(module.lower())
         frames.append({
             "module": _basename(module),
-            "function": "" if symbol.lower() == "symbols not available" else symbol,
+            # "DllCanUnloadNow" for _ctypes.pyd is the nearest export, still a lead.
+            "function": "" if symbol.lower() == "symbols not available" else symbol[:512],
             "offset": address - base if base is not None and address >= base else None,
+            "_address": address,
         })
     code = fields.get("ExceptionCode", "")
     info = {
@@ -187,13 +189,36 @@ def _posix(native: list[str]) -> tuple[dict, list[dict]]:
                 "offset": int(offset, 16) if offset else None,
                 "address": int(linux.group("address"), 16),
             })
+    frames, dropped = _drop_chained_reraise(frames)
     # The POSIX handler only runs for SIGSEGV / SIGBUS (both "bad access").
     info = {
+        "dropped_addresses": [frame["address"] for frame in dropped],
         "crash_type": "SIGSEGV",
         "crash_module": None,
         "app_binary": any(frame["module"].lower() in APP_BINARIES for frame in frames),
     }
     return info, frames
+
+
+_TRAMPOLINES = ("_sigtramp", "__restore_rt")
+_RERAISE = ("raise", "pthread_kill", "__pthread_kill", "_pthread_kill", "__GI_raise")
+
+
+def _drop_chained_reraise(frames: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Python's faulthandler handles the signal first (``crash_reports/core/pyfault.py``)
+    and re-raises it into Blender's handler, so the log reads: Blender's handler,
+    trampoline, the re-raise (``pthread_kill`` / ``raise``), faulthandler, a second
+    trampoline, then the faulting frames. Drop the middle stretch: the log reads as
+    it did without faulthandler (handler, trampoline, fault)."""
+    trampolines = [index for index, frame in enumerate(frames[:24])
+                   if str(frame.get("function") or "") in _TRAMPOLINES]
+    if len(trampolines) < 2:
+        return frames, []
+    first, second = trampolines[0], trampolines[1]
+    stretch = frames[first + 1:second + 1]
+    if not any(str(frame.get("function") or "") in _RERAISE for frame in stretch):
+        return frames, []
+    return frames[:first + 1] + frames[second + 1:], stretch
 
 
 def _thread(frames: list[dict]) -> str | None:
@@ -223,18 +248,29 @@ def parse_crash_txt(text: str) -> dict | None:
             "linux" if any(".so" in f["module"] for f in frames) else None
         )
     images = symbolication["images"]
-    if symbolication["addresses"] and not any(frame.get("address") for frame in frames):
+    addresses = symbolication["addresses"]
+    # The faulthandler re-raise left the log: its addresses leave the block too.
+    for address in info.pop("dropped_addresses", []):
+        if address in addresses:
+            addresses.remove(address)
+    if addresses and (platform == "windows" or not any(frame.get("address") for frame in frames)):
         # Windows: Blender's walk stops at the first frame without symbols; the
         # block's walk from the exception context has every return address.
+        # Blender's own walk names its frames (exports, "Symbols not available"
+        # otherwise): a block frame at the same address keeps that name.
+        named = {frame["_address"]: frame for frame in frames if frame.get("_address") is not None}
         frames = []
-        for address in symbolication["addresses"]:
+        for address in addresses:
             image = image_for(images, address)
+            known = named.get(address)
             frames.append({
-                "module": image["name"] if image else None,
-                "function": "",
-                "offset": address - image["base"] if image else None,
+                "module": image["name"] if image else (known["module"] if known else None),
+                "function": known["function"] if known else "",
+                "offset": address - image["base"] if image else (known["offset"] if known else None),
                 "address": address,
             })
+    for frame in frames:
+        frame.pop("_address", None)
     if any(image["name"].lower() in APP_BINARIES for image in images):
         info["app_binary"] = True
     mixar_version = symbolication["values"].get("mixar_version")
