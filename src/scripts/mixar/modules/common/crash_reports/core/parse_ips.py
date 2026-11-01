@@ -88,6 +88,7 @@ def parse_ips(text: str) -> dict | None:
         "frames": frames,
         "python_frames": [],
         "operators": [],
+        "pid": body.get("pid") if isinstance(body.get("pid"), int) else None,
         "cpu_arch": body.get("cpuType"),
         "model": body.get("modelCode"),
     }

@@ -13,6 +13,9 @@
   Cycles device, open tabs, agent session/run ids), refreshed by the heartbeat
   and removed on a clean quit. A crash file written while a session's
   breadcrumb was live inherits its context on the next launch.
+- ``pyfault-<pid>.txt``: the session's faulthandler dump (``pyfault.py``),
+  removed with its breadcrumb (a clean quit, pruning), once the crash report
+  it belongs to is handled, or when no breadcrumb is left to pair it with.
 
 Every function here does file I/O and runs on the reporter's worker thread;
 writes are atomic (temp file + replace).
@@ -29,6 +32,8 @@ from datetime import datetime, timedelta, timezone
 from ..constants import (
     MAX_PENDING_EXCEPTIONS,
     PENDING_FILE,
+    PYFAULT_PREFIX,
+    PYFAULT_SUFFIX,
     SENT_LEDGER,
     SENT_LEDGER_DAYS,
     SESSION_MAX_AGE_DAYS,
@@ -109,10 +114,48 @@ class Store:
         _write_json(self.session_path(pid), data)
 
     def remove_session(self, pid: int) -> None:
+        for path in (self.session_path(pid), self.pyfault_path(pid)):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    # faulthandler dumps ----------------------------------------------------
+    def pyfault_path(self, pid: int) -> str:
+        return self._path(f"{PYFAULT_PREFIX}{pid}{PYFAULT_SUFFIX}")
+
+    def trim_pyfault(self, pid: int, max_bytes: int) -> None:
+        """Empty the running session's dump once it outgrows ``max_bytes``
+        (faulthandler appends: its next dump starts the file again)."""
+        path = self.pyfault_path(pid)
         try:
-            os.unlink(self.session_path(pid))
+            if os.path.getsize(path) > max_bytes:
+                os.truncate(path, 0)
         except OSError:
             pass
+
+    def prune_orphan_pyfaults(self, own_pid: int, settled_s: float) -> None:
+        """Dumps of other sessions with no breadcrumb left (it ended before its
+        first heartbeat, or was pruned) and untouched for ``settled_s``."""
+        cutoff = time.time() - settled_s
+        try:
+            names = os.listdir(self.directory)
+        except OSError:
+            return
+        for name in names:
+            if not (name.startswith(PYFAULT_PREFIX) and name.endswith(PYFAULT_SUFFIX)):
+                continue
+            pid_text = name[len(PYFAULT_PREFIX):-len(PYFAULT_SUFFIX)]
+            if not pid_text.isdigit() or int(pid_text) == own_pid:
+                continue
+            if os.path.exists(self.session_path(int(pid_text))):
+                continue
+            path = self._path(name)
+            try:
+                if os.stat(path).st_mtime < cutoff:
+                    os.unlink(path)
+            except OSError:
+                continue
 
     def prune_ended_sessions(self, own_pid: int, settled_s: float) -> None:
         """Drop other sessions' breadcrumbs once every crash file they could
@@ -141,10 +184,7 @@ class Store:
             data = _read_json(path, None)
             updated = data.get("updated_at", 0) if isinstance(data, dict) else 0
             if not isinstance(data, dict) or now - float(updated or 0) > SESSION_MAX_AGE_DAYS * 86400:
-                try:
-                    os.unlink(path)
-                except OSError:
-                    pass
+                self.remove_session(int(pid_text))
                 continue
             out.append(data)
         return out

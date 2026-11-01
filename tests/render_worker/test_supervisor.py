@@ -224,6 +224,58 @@ def test_a_crash_report_is_moved_without_overwriting(tmp_path, crash_dir):
     assert supervisor._keep_crash_reports(str(worker), "123", "preview") == []
 
 
+def _dump(worker_folder, pid, text="Fatal Python error: Segmentation fault\n\n", mtime=None):
+    tmp = Path(worker_folder) / "tmp"
+    tmp.mkdir(parents=True, exist_ok=True)
+    path = tmp / ("pyfault-%d.txt" % pid)
+    path.write_text(text)
+    if mtime is not None:
+        os.utime(path, (mtime, mtime))
+    return path
+
+
+def test_the_faulthandler_dump_moves_beside_its_crash_report(tmp_path, crash_dir):
+    worker = tmp_path / "123" / "worker-preview"
+    now = time.time()
+    crash = _crash_file(worker, text="new crash")
+    os.utime(crash, (now, now))
+    crashed = _dump(worker, 501, text="Fatal Python error: Segmentation fault\n\nCurrent thread 0x1", mtime=now)
+    killed = _dump(worker, 500, text="", mtime=now)  # an earlier worker, killed: an empty dump
+    older = _dump(worker, 499, mtime=now - 3600)  # an earlier crash's leftover
+    kept = supervisor._keep_crash_reports(str(worker), "123", "preview")
+    assert [Path(p).name for p in kept] == ["123-preview-1.crash.txt"]
+    assert (crash_dir / "123-preview-1.pyfault.txt").read_text().endswith("Current thread 0x1")
+    assert not crashed.exists() and killed.exists() and older.exists()
+
+
+def test_a_dump_without_a_crash_report_is_kept_alone_on_macos_only(tmp_path, crash_dir, monkeypatch):
+    worker = tmp_path / "123" / "worker-render"
+    (crash_dir).mkdir()
+    (crash_dir / "123-render-1.crash.txt").write_text("earlier")
+    _dump(worker, 501, text="Fatal Python error: Aborted\n\n")
+    empty = _dump(worker, 502, text="")
+    monkeypatch.setattr(supervisor.sys, "platform", "win32")
+    assert supervisor._keep_crash_reports(str(worker), "123", "render") == []
+    assert sorted(p.name for p in crash_dir.iterdir()) == ["123-render-1.crash.txt"]
+    monkeypatch.setattr(supervisor.sys, "platform", "darwin")
+    assert supervisor._keep_crash_reports(str(worker), "123", "render") == []  # no crash log moved
+    assert (crash_dir / "123-render-2.pyfault.txt").read_text().startswith("Fatal Python error: Aborted")
+    assert empty.exists()
+    # The next crash report skips the number the lone dump holds.
+    _crash_file(worker, text="next crash")
+    kept = supervisor._keep_crash_reports(str(worker), "123", "render")
+    assert [Path(p).name for p in kept] == ["123-render-3.crash.txt"]
+
+
+def test_quit_keeps_the_dump_with_the_crash_report(sup, tmp_path, crash_dir):
+    session = Path(sup.root_dir())
+    _crash_file(session / "worker-export", text="unseen crash")
+    _dump(session / "worker-export", 777)
+    sup.shutdown_all(remove_files=True)
+    assert not session.exists()
+    assert (crash_dir / ("%d-export-1.pyfault.txt" % os.getpid())).exists()
+
+
 @pytest.mark.skipif(not hasattr(signal, "SIGSEGV"), reason="POSIX signal")
 def test_a_crashed_worker_keeps_its_report_before_the_retry(sup, tmp_path, crash_dir, monkeypatch):
     seen = {}

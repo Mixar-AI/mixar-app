@@ -33,6 +33,7 @@ import itertools
 import os
 import queue
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -68,6 +69,13 @@ _swept = False
 #: reads ``<tempdir>/mixar_render_worker_crashes/*.crash.txt``.
 CRASH_DIR_NAME = "mixar_render_worker_crashes"
 _CRASH_SUFFIX = ".crash.txt"
+#: The worker's faulthandler dump (``worker_main.py``, ``crash_reports/core/
+#: pyfault.py``): ``pyfault-<pid>.txt`` in its temp dir, kept beside its crash
+#: log as ``<session pid>-<kind>-<n>.pyfault.txt`` (crash_reports constants).
+_PYFAULT_PREFIX = "pyfault-"
+_PYFAULT_SUFFIX = ".txt"
+_PYFAULT_COPY_SUFFIX = ".pyfault.txt"
+_FATAL_MARKER = b"Fatal Python error: "
 
 
 def _parent_dir() -> str:
@@ -132,35 +140,100 @@ def _pid_alive(pid: int, since: float = 0.0) -> bool:
 def _keep_crash_reports(worker_folder: str, session: str, kind: str) -> list:
     """Move a worker's ``*.crash.txt`` out of its temp dir into
     :func:`crash_dir` as ``<session pid>-<kind>-<n>.crash.txt`` (never
-    overwriting), before anything deletes the worker folder. Returns the new
-    paths. Plain file moves, no ``bpy``: safe from atexit."""
-    import shutil
+    overwriting), before anything deletes the worker folder, each with the
+    faulthandler dump written closest to it as ``<...-n>.pyfault.txt``. On
+    macOS a dump with no crash log (an abort: the ``.ips`` has the native
+    stack) is kept alone. Returns the new crash log paths. Plain file moves,
+    no ``bpy``: safe from atexit."""
     folder = os.path.join(worker_folder, "tmp")
     try:
-        reports = sorted((os.path.join(folder, name) for name in os.listdir(folder)
-                          if name.endswith(_CRASH_SUFFIX)), key=os.path.getmtime)
+        names = os.listdir(folder)
     except OSError:
         return []
+    reports = sorted((os.path.join(folder, name) for name in names if name.endswith(_CRASH_SUFFIX)),
+                     key=_mtime_or_zero)
+    dumps = [os.path.join(folder, name) for name in names
+             if name.startswith(_PYFAULT_PREFIX) and name.endswith(_PYFAULT_SUFFIX)]
     kept = []
-    target = crash_dir()
     for report in reports:
+        written = _mtime_or_zero(report)
+        target = _move_numbered(report, session, kind, _CRASH_SUFFIX)
+        if target is None:
+            continue
+        kept.append(target)
+        dump = _closest_dump(dumps, written)
+        if dump is not None:
+            dumps.remove(dump)
+            try:
+                _move_file(dump, target[:-len(_CRASH_SUFFIX)] + _PYFAULT_COPY_SUFFIX)
+            except FileExistsError:
+                pass
+    if not reports and sys.platform == "darwin":
+        for dump in dumps:
+            if _is_fatal_dump(dump):
+                _move_numbered(dump, session, kind, _PYFAULT_COPY_SUFFIX)
+    return kept
+
+
+def _mtime_or_zero(path: str) -> float:
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return 0.0
+
+
+def _closest_dump(dumps: list, when: float):
+    """The non-empty dump written closest to ``when``."""
+    best, best_gap = None, None
+    for dump in dumps:
         try:
-            os.makedirs(target, exist_ok=True)
-            for n in range(1, 10000):
-                path = os.path.join(target, "%s-%s-%d%s" % (session, kind, n, _CRASH_SUFFIX))
-                try:
-                    with open(report, "rb") as src, open(path, "xb") as dst:
-                        shutil.copyfileobj(src, dst)
-                    break
-                except FileExistsError:
-                    continue
-            else:
+            if os.path.getsize(dump) == 0:
                 continue
-            os.remove(report)
-            kept.append(path)
         except OSError:
             continue
-    return kept
+        gap = abs(_mtime_or_zero(dump) - when)
+        if best_gap is None or gap < best_gap:
+            best, best_gap = dump, gap
+    return best
+
+
+def _is_fatal_dump(path: str) -> bool:
+    try:
+        with open(path, "rb") as handle:
+            return _FATAL_MARKER in handle.read(1 << 20)
+    except OSError:
+        return False
+
+
+def _move_file(source: str, target: str) -> bool:
+    """Copy ``source`` to a new ``target``, then delete it. A taken ``target``
+    raises ``FileExistsError`` (never overwritten); any other error is False."""
+    import shutil
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(source, "rb") as src, open(target, "xb") as dst:
+            shutil.copyfileobj(src, dst)
+        os.remove(source)
+        return True
+    except FileExistsError:
+        raise
+    except OSError:
+        return False
+
+
+def _move_numbered(source: str, session: str, kind: str, suffix: str):
+    """Move ``source`` into :func:`crash_dir` as ``<session>-<kind>-<n><suffix>``
+    with the first ``n`` no crash log or dump holds yet; its path, or None."""
+    target_dir = crash_dir()
+    for n in range(1, 10000):
+        stem = os.path.join(target_dir, "%s-%s-%d" % (session, kind, n))
+        if any(os.path.exists(stem + other) for other in (_CRASH_SUFFIX, _PYFAULT_COPY_SUFFIX)):
+            continue
+        try:
+            return stem + suffix if _move_file(source, stem + suffix) else None
+        except FileExistsError:
+            continue
+    return None
 
 
 def _keep_session_crash_reports(session_folder: str) -> list:

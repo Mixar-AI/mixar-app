@@ -24,6 +24,19 @@ WORKER_CRASH_GLOB = (WORKER_CRASH_DIR, "*.crash.txt")
 # A log still in the worker's own temp dir (the supervisor died before moving
 # it): <tmp>/mixar_render_worker/<app pid>/worker-<kind>/tmp/. Read only.
 WORKER_TMP_CRASH_GLOB = ("mixar_render_worker", "*", "worker-*", "tmp", "*.crash.txt")
+# Python's faulthandler writes the Python stacks of a native crash to a file
+# per process: <state>/pyfault-<pid>.txt for the app, <worker tmp>/
+# pyfault-<pid>.txt for a render worker. The supervisor moves a crashed
+# worker's file next to its crash log as <pid>-<kind>-<n>.pyfault.txt.
+PYFAULT_PREFIX = "pyfault-"
+PYFAULT_SUFFIX = ".txt"
+WORKER_PYFAULT_SUFFIX = ".pyfault.txt"
+# A faulthandler dump belongs to a crash file written within this long of it
+# (macOS writes an .ips some seconds after the process died).
+PYFAULT_MATCH_S = 120
+# Windows also dumps on first-chance exceptions that are then handled: past
+# this size the running session's file is emptied.
+PYFAULT_MAX_BYTES = 1024 * 1024
 MACOS_REPORTS_DIR = "~/Library/Logs/DiagnosticReports"
 MACOS_REPORT_GLOB = "Mixar*.ips"
 MAX_FILE_AGE_DAYS = 30
@@ -33,6 +46,7 @@ SENT_LEDGER_DAYS = 120
 
 # Wire bounds (mirrors the backend schema).
 MAX_FRAMES = 64
+MAX_PYTHON_STACK = 64
 MAX_OPERATORS = 50
 MAX_RAW_CHARS = 200_000
 MAX_MESSAGE_CHARS = 512

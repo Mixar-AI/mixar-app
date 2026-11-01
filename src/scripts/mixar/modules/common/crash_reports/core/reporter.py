@@ -11,7 +11,14 @@ Until then crash files simply stay where they are and exceptions wait in
 ``pending.json``. Outcome of one POST:
 - 2xx: handled, recorded in ``sent.json`` (never sent again);
 - 401 / 403 / 429 / 5xx / network error: kept, retried on a later heartbeat;
+- 422 for a crash report that carries the newer optional fields
+  (``python_stack`` / ``python_thread``): sent once more without them, so an
+  older backend that rejects them still gets the crash;
 - any other 4xx: the server refuses it for good; recorded so it is not retried.
+
+A crash report's faulthandler dump (``pyfault.py``) is deleted once its report
+is handled; the running session's own dump is emptied past
+``PYFAULT_MAX_BYTES`` (Windows also dumps handled first-chance exceptions).
 
 Crash files are harvested once per launch, and again whenever a render worker
 crash log this session has not seen lands in ``mixar_render_worker_crashes``,
@@ -28,13 +35,23 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import ENDPOINT, MAX_REPORTS_PER_LAUNCH, REQUEST_TIMEOUT_S, SESSION_MATCH_SLACK_S
+from ..constants import (
+    ENDPOINT,
+    MAX_REPORTS_PER_LAUNCH,
+    PYFAULT_MAX_BYTES,
+    REQUEST_TIMEOUT_S,
+    SESSION_MATCH_SLACK_S,
+)
 from . import harvest
 from .store import Store
 
 logger = get_logger(__name__)
 
 SENT, LATER, REFUSED = "sent", "later", "refused"
+# 422: refused, but maybe only for a field this backend does not know yet.
+INVALID = "invalid"
+# Optional report fields newer than the first backend schema.
+NEWER_FIELDS = ("python_stack", "python_thread")
 
 
 def default_gate() -> bool:
@@ -81,7 +98,7 @@ def default_send(payload: dict) -> str:
     if status in (0, 401, 403, 408, 429) or status >= 500:
         return LATER
     logger.debug("Crash report refused by the server (HTTP %s)", status)
-    return REFUSED
+    return INVALID if status == 422 else REFUSED
 
 
 def _wire(payload: dict) -> dict:
@@ -163,6 +180,7 @@ class Reporter:
             fresh, self._new_exceptions = self._new_exceptions, []
         if fresh:
             self.store.add_pending(fresh)
+        self.store.trim_pyfault(self.own_pid, PYFAULT_MAX_BYTES)
         # A render worker that crashed since the last harvest: harvest again.
         worker_files = harvest.worker_crash_files(self.temp_dirs)
         if self.harvest_done and worker_files - self._worker_seen:
@@ -186,11 +204,12 @@ class Reporter:
         ) if limit > 0 else []
         complete = True
         for payload in reports:
-            outcome = self._send(_wire(payload))
+            outcome = self._send_one(_wire(payload))
             if outcome == LATER:
                 complete = False
                 break
-            self.store.mark_sent(payload["report_id"], outcome)
+            self.store.mark_sent(payload["report_id"], REFUSED if outcome == INVALID else outcome)
+            harvest.remove_pyfault(payload.get("_pyfault_path"))
             self._handled += 1
         harvest.remove_handled_worker_crashes(self.temp_dirs, self.store)
         if complete:
@@ -198,7 +217,15 @@ class Reporter:
             # Breadcrumbs only match crash files to a session; once every file
             # is handled, an ended session's breadcrumb has no further use.
             self.store.prune_ended_sessions(self.own_pid, SESSION_MATCH_SLACK_S)
+            self.store.prune_orphan_pyfaults(self.own_pid, SESSION_MATCH_SLACK_S)
         return complete
+
+    def _send_one(self, wire: dict) -> str:
+        """One POST; a 422 on a report with the newer fields is retried once without them."""
+        outcome = self._send(wire)
+        if outcome == INVALID and any(key in wire for key in NEWER_FIELDS):
+            outcome = self._send({key: value for key, value in wire.items() if key not in NEWER_FIELDS})
+        return outcome
 
     def _send_pending(self, device_id: str) -> None:
         handled = set()

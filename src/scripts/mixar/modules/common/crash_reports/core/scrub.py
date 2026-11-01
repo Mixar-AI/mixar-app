@@ -115,6 +115,27 @@ def python_file(path: str) -> str:
     return normalized.rsplit("/", 1)[-1]
 
 
+_BUNDLED_SCRIPTS = re.compile(r"/scripts/(?:startup|modules|addons_core|freestyle)/")
+
+
+def python_stack_file(path: str) -> str:
+    """A faulthandler frame's file: our own modules package-relative
+    (``mixar/modules/...``), Blender's bundled scripts from ``scripts/``,
+    anything else its basename. Never a directory of the user's."""
+    normalized = (path or "").replace("\\", "/")
+    index = normalized.rfind("/scripts/mixar/")
+    if index >= 0:
+        return normalized[index + len("/scripts/"):]
+    if normalized.startswith("mixar/"):
+        return normalized
+    bundled = None
+    for bundled in _BUNDLED_SCRIPTS.finditer(normalized):
+        pass
+    if bundled is not None:
+        return normalized[bundled.start() + 1:]
+    return normalized.rsplit("/", 1)[-1]
+
+
 def scrub_crash_text(text: str, user_names: tuple[str, ...] | None = None) -> str:
     """A whole crash.txt with the report log reduced and every path scrubbed."""
     if not text:

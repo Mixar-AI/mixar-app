@@ -13,7 +13,7 @@ import hashlib
 import traceback
 from datetime import datetime, timezone
 
-from ..constants import MAX_FRAMES, MAX_MESSAGE_CHARS, MAX_RAW_CHARS
+from ..constants import MAX_FRAMES, MAX_MESSAGE_CHARS, MAX_PYTHON_STACK, MAX_RAW_CHARS
 from .scrub import python_file, scrub_crash_text, scrub_text, scrub_value
 
 _CONTEXT_KEYS = (
@@ -72,6 +72,9 @@ def native_report(
         "thread": parsed.get("thread"),
         "frames": parsed.get("frames", [])[:MAX_FRAMES],
         "python_frames": parsed.get("python_frames", [])[:MAX_FRAMES],
+        # faulthandler's crashing thread (pyfault.py): innermost LAST, as Python prints it.
+        "python_stack": (parsed.get("python_stack") or [])[-MAX_PYTHON_STACK:] or None,
+        "python_thread": parsed.get("python_thread") if parsed.get("python_stack") else None,
         "operators": parsed.get("operators", []),
         "git_sha": parsed.get("git_sha"),
         "arch": parsed.get("arch"),

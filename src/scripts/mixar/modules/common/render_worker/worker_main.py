@@ -15,6 +15,11 @@ file load, save or depsgraph event), the Cycles compute device the user enabled
 is switched on, and the process lowers its own priority so the user's app is
 served first. Then it reports ``ready`` and reads jobs from stdin, one at a time.
 
+Crash: Python's ``faulthandler`` writes the Python stacks of a native crash to
+``pyfault-<pid>.txt`` in the worker's temp dir (``TMPDIR``, the same folder as
+Blender's ``*.crash.txt``); the supervisor moves it with the crash log
+(``_keep_crash_reports``). It starts first, so a crash while booting has one too.
+
 Exit: stdin closing (the app quit or died), a ``quit`` message, or memory
 above :data:`RECYCLE_RSS_MB` after a job (the supervisor starts a fresh one on
 the next job). ``os._exit`` skips Blender's exit path: nothing of the user's
@@ -88,7 +93,25 @@ def _enable_compute_device():
         pass
 
 
+def _enable_faulthandler():
+    try:
+        import tempfile
+        from mixar.modules.common.crash_reports.core import pyfault
+        pyfault.enable(tempfile.gettempdir())
+    except Exception:
+        pass
+
+
+def _disable_faulthandler():
+    try:
+        from mixar.modules.common.crash_reports.core import pyfault
+        pyfault.disable(remove=True)
+    except Exception:
+        pass
+
+
 def main():
+    _enable_faulthandler()
     _lower_priority()
     _register_ui_modules()
     _drop_handlers()
@@ -113,6 +136,7 @@ def main():
             reason = "recycle"
             break
     _emit({"type": "exit", "reason": reason})
+    _disable_faulthandler()
     try:
         import bpy
         import shutil

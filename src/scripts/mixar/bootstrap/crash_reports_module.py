@@ -10,7 +10,12 @@
   worker, which refreshes this session's breadcrumb, sends crash files left by
   earlier sessions and sends queued exceptions once the user is signed in with
   Share Usage Data on;
-- a clean quit removes this session's breadcrumb.
+- Python's ``faulthandler`` writes the Python stacks of a native crash to
+  ``<state>/pyfault-<pid>.txt`` (``crash_reports/core/pyfault.py``); the next
+  launch pairs it with the crash log. Blender's own crash handler was
+  installed by ``main_signal_setup()`` in ``main()`` before Python started, so
+  faulthandler runs first and chains to it;
+- a clean quit removes this session's breadcrumb and faulthandler file.
 
 Headless runs (``--background``: sandbox children, CI, render workers) report
 nothing.
@@ -63,7 +68,14 @@ def _heartbeat():
 
 
 def _on_exit():
-    """A clean quit: stop the worker and drop this session's breadcrumb."""
+    """A clean quit: stop faulthandler and the worker, drop this session's
+    breadcrumb and faulthandler file."""
+    try:
+        from mixar.modules.common.crash_reports.core import pyfault
+
+        pyfault.disable(remove=True)
+    except Exception:  # noqa: BLE001
+        pass
     reporter = _reporter
     if reporter is not None:
         reporter.stop(clean=True)
@@ -71,6 +83,15 @@ def _on_exit():
         from mixar.modules.common.crash_reports.core.store import Store
 
         Store(_state_path).remove_session(os.getpid())
+
+
+def _enable_faulthandler(state_path: str) -> None:
+    try:
+        from mixar.modules.common.crash_reports.core import pyfault
+
+        pyfault.enable(state_path)
+    except Exception:  # noqa: BLE001 - no Python stack is better than no start-up
+        pass
 
 
 def register() -> None:
@@ -86,6 +107,7 @@ def register() -> None:
 
         static = crash_context.static_context()
         _state_path = _state_dir()
+        _enable_faulthandler(_state_path)
         _reporter = Reporter(state_dir=_state_path, temp_dirs=_temp_dirs(), static=static,
                              report_dirs=default_report_dirs(static.get("platform", "")))
         _reporter.start()
