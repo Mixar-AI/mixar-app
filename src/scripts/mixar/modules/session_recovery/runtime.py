@@ -225,6 +225,18 @@ def note_snapshot(path: str, original_path: str = "") -> None:
         logger.debug(f"[RECOVERY] snapshot note skipped: {e}")
 
 
+def note_job_landed(job_id: str) -> None:
+    """A generation result was imported: a restore of a file written after
+    this must not adopt that job again. Never raises."""
+    jr = _state["journal"]
+    if jr is None or not job_id:
+        return
+    try:
+        jr.note_job_landed(str(job_id), now=_now())
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[RECOVERY] landed job note skipped: {e}")
+
+
 def write_save_point(reasons) -> dict | None:
     """Write one save point now. Returns its record, or None."""
     jr, scheduler = _state["journal"], _state["scheduler"]

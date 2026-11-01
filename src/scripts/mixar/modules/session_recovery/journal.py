@@ -28,6 +28,7 @@ LOCK = "lock"
 VERSION = 1
 KEEP_SAVE_POINTS = 3
 KEEP_SNAPSHOTS = 3
+KEEP_LANDED_JOBS = 50
 MAX_AGE_S = 14 * 24 * 3600          # any dead session older than this is pruned
 DISMISSED_KEEP_S = 7 * 24 * 3600    # a resolved session's files stay this long
 
@@ -254,6 +255,7 @@ class Journal:
             "snapshots": [],
             "inherited_points": [],
             "failed_points": [],
+            "landed_jobs": [],
         }
         self.flush()
 
@@ -335,6 +337,15 @@ class Journal:
 
     def set_inherited(self, points: list) -> None:
         self.data["inherited_points"] = list(points)
+        self.flush()
+
+    def note_job_landed(self, job_id: str, *, now: float) -> None:
+        """A generation's result was imported: a candidate written after
+        ``now`` holds it, so a restore of that file must not adopt the job
+        again (it would import the result twice)."""
+        landed = [j for j in self.data.get("landed_jobs") or [] if j.get("id") != job_id]
+        landed.append({"id": job_id, "at": now})
+        self.data["landed_jobs"] = landed[-KEEP_LANDED_JOBS:]
         self.flush()
 
     def set_fields(self, **fields) -> None:

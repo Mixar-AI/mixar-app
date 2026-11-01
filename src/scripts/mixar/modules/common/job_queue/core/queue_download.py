@@ -92,11 +92,13 @@ def _record_output_landed(job: Job, file_type: str, object_names, *,
         pass
 
 
-def _request_save_point() -> None:
+def _request_save_point(job: Job) -> None:
     """Crash safety: a paid result just landed in the scene; ask for a save
-    point so a crash cannot take it."""
+    point so a crash cannot take it, and note the job as landed so a restore
+    of a file written after now never adopts (and imports) it again."""
     try:
-        from mixar.modules.session_recovery.runtime import request_save_point
+        from mixar.modules.session_recovery.runtime import note_job_landed, request_save_point
+        note_job_landed(getattr(job, "backend_job_id", "") or "")
         request_save_point("generation_import")
     except Exception:  # noqa: BLE001
         pass
@@ -113,7 +115,7 @@ class DownloadMixin:
         job.state = JobState.SUCCESS
         # Image/texture results create no scene objects — land without uids.
         _record_output_landed(job, "CUSTOM", object_names, resolve_uids=False)
-        _request_save_point()
+        _request_save_point(job)
         self._notify()
         self._pump()
         return None
@@ -300,7 +302,7 @@ class DownloadMixin:
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
             _record_output_landed(job, file_type, obj_names, resolve_uids=True)
-            _request_save_point()
+            _request_save_point(job)
         except Exception as e:
             # The full traceback goes to the log; the reason keeps its last line.
             logger.exception("[JobQueue] import of %s result failed", file_type)

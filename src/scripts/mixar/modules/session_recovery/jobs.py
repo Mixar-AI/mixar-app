@@ -12,7 +12,9 @@ every catalog and agent generation — are rebuilt from that record and
 adopted by their queue in ``RUNNING_POLL``; ``job.get`` then imports a result
 that is already done. Their post-import hooks were Python callables and are
 gone: the result lands the default way (a model in the scene, an image on the
-moodboard). Bespoke queues are only named in the restore notice.
+moodboard). Bespoke queues are only named in the restore notice. A job
+whose result the journal saw land (``landed_jobs``) before the restored file
+was written is already in that file and is not adopted again.
 """
 
 from __future__ import annotations

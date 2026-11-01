@@ -672,3 +672,40 @@ def test_confirming_after_a_save_point_drops_the_source_at_once(rt, tmp_path, mo
     rt._confirm_restore()
     assert not os.path.exists(a["dir"]) and jr.data["inherited_points"] == []
 
+
+# -- generations that landed before the crash -----------------------------------
+
+def test_a_job_that_landed_before_a_candidate_was_written_is_not_adopted_again(tmp_path):
+    s = _session(tmp_path, "s", pid=321, landed_jobs=[{"id": "done", "at": NOW - 200}])
+    s["save_points"] = [_point(tmp_path, "s", 1, NOW - 300, jobs=[
+        {"cls": "AsyncGLBJob", "backend_job_id": "done"},
+        {"cls": "AsyncGLBJob", "backend_job_id": "running"}])]
+    _file(tmp_path / "T" / "321_autosave.mixar", mtime=NOW - 30)
+    offer = decision.find_offer([s], autosaves=decision.native_autosaves(str(tmp_path / "T")), now=NOW)
+    # The autosave was written after "done" was imported: it holds the result.
+    assert offer["target"]["kind"] == "autosave"
+    assert [j["backend_job_id"] for j in offer["target"]["jobs"]] == ["running"]
+    # The save point predates the import: restoring it must import "done" again.
+    fallback = offer["fallbacks"][0]
+    assert fallback["kind"] == "save_point"
+    assert [j["backend_job_id"] for j in fallback["jobs"]] == ["done", "running"]
+
+
+def test_landed_jobs_are_journaled_bounded_and_on_disk(tmp_path):
+    jr = journal.Journal(str(tmp_path / "recovery"), pid=42, now=NOW)
+    for i in range(journal.KEEP_LANDED_JOBS + 5):
+        jr.note_job_landed(f"j{i}", now=NOW + i)
+    jr.note_job_landed("j10", now=NOW + 999)  # landing twice keeps the latest
+    landed = journal.read_manifest(jr.dir)["landed_jobs"]
+    assert len(landed) == journal.KEEP_LANDED_JOBS
+    assert landed[-1] == {"id": "j10", "at": NOW + 999}
+    assert [e["id"] for e in landed].count("j10") == 1
+
+
+def test_runtime_notes_a_landed_job_and_never_raises(rt, monkeypatch):
+    rt.note_job_landed("abc")
+    assert rt._state["journal"].data["landed_jobs"][-1]["id"] == "abc"
+    rt.note_job_landed("")
+    assert len(rt._state["journal"].data["landed_jobs"]) == 1
+    monkeypatch.setitem(rt._state, "journal", None)
+    rt.note_job_landed("abc")

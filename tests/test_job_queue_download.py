@@ -864,3 +864,14 @@ def test_manual_job_falls_back_to_the_shown_scene_only_without_a_name(tabs):
     kept = _tab("Kept", "")
     tabs.scenes["Kept"] = kept
     assert tabs.module.resolve_job_scene("Kept", "") is kept
+
+
+def test_a_landed_result_is_journaled_before_the_save_point(monkeypatch):
+    """A restore of a file written after the import must not adopt the job
+    again (session_recovery: ``landed_jobs``)."""
+    from mixar.modules.session_recovery import runtime
+    calls = []
+    monkeypatch.setattr(runtime, "note_job_landed", lambda job_id: calls.append(("landed", job_id)))
+    monkeypatch.setattr(runtime, "request_save_point", lambda reason: calls.append(("save", reason)))
+    QD._request_save_point(SimpleNamespace(backend_job_id="job-42"))
+    assert calls == [("landed", "job-42"), ("save", "generation_import")]

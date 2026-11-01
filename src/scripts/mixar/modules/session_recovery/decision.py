@@ -110,6 +110,16 @@ def candidates_for(session: dict, *, autosaves=(), exists=os.path.isfile,
                 for key in ("scenes", "agent_scenes", "jobs"):
                     if not cand[key]:
                         cand[key] = list(newest.get(key) or [])
+    # A job whose result landed before a candidate was written is already in
+    # that file; adopting it after the restore would import it a second time.
+    landed = {}
+    for entry in session.get("landed_jobs") or []:
+        if isinstance(entry, dict) and entry.get("id"):
+            landed[entry["id"]] = float(entry.get("at") or 0.0)
+    if landed:
+        for cand in found:
+            cand["jobs"] = [j for j in cand["jobs"]
+                            if landed.get(j.get("backend_job_id"), float("inf")) > cand["at"]]
     found = [c for c in found if c["path"] and exists(c["path"])]
     # Newest first; on a tie the richer record wins (a save point knows the
     # agent's tabs and the jobs, a native autosave of the same moment does not).
