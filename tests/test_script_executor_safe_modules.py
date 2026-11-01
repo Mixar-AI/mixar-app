@@ -211,3 +211,22 @@ def test_fingerprint_failure_preserves_inventory_and_known_edits(
                       rotation_euler=(0, 0, 0), scale=(1, 1, 1), material_slots=[]))
     changes = executor._detect_changes(before, executor._capture_scene_state())
     assert changes['created'] == ['new'] and changes['deleted'] == [removed.name]
+
+
+@pytest.mark.parametrize("script, scans", [
+    ("__RESULT__ = len(bpy.data.objects)", False),
+    ("ob = bpy.data.objects['A']\nob.location.x = 1.0", False),
+    ("dg = bpy.context.evaluated_depsgraph_get()\n__RESULT__ = 1", True),
+    ("ev = obj.evaluated_get(dg)", True),
+    ("mesh.materials.append(mat.original)", True),
+    ("bpy.data.meshes.new_from_object(o)", True),
+])
+def test_the_evaluated_material_scan_runs_only_after_scripts_that_touch_evaluated_data(
+        executor, monkeypatch, script, scans):
+    # The scan walks every material slot in the file; a script that never
+    # named evaluated data cannot have stored an evaluated material.
+    module = sys.modules[executor.__class__.__module__]
+    calls = []
+    monkeypatch.setattr(module, "restore_original_materials", lambda: calls.append(1) or 0)
+    executor.execute(script, push_undo=False)
+    assert bool(calls) is scans

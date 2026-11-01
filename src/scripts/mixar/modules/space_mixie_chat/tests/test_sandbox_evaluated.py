@@ -53,3 +53,21 @@ def test_nothing_to_swap_is_a_no_op(monkeypatch):
     monkeypatch.setattr(se, "bpy", fake)
     assert se.restore_original_materials() == 0
     assert "material.original" in se.NOTE.format(count=1)
+
+
+def test_only_a_script_that_names_evaluated_data_is_scanned():
+    for script in ("dg = bpy.context.evaluated_depsgraph_get()",
+                   "for inst in depsgraph.object_instances: pass",
+                   "e = ob.evaluated_get(dg)",
+                   "me = ev.to_mesh()",
+                   "bpy.data.meshes.new_from_object(ev)",
+                   "slot.material = m.original",
+                   "bpy.app.handlers.frame_change_post.append(f)",
+                   "x = dg.id_eval_get(ob)"):
+        assert se.may_store_evaluated(script), script
+    for script in ("__RESULT__ = [o.name for o in bpy.data.objects]",
+                   "bpy.data.objects['Cube'].location.z += 1",
+                   "me.materials.append(bpy.data.materials['Steel'])"):
+        assert not se.may_store_evaluated(script), script
+    # No source: scan, as before.
+    assert se.may_store_evaluated(None) and se.may_store_evaluated("")

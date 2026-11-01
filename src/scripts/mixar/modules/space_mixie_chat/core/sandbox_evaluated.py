@@ -11,13 +11,33 @@ joined from 48 evaluated meshes crashed ``export_asset`` this way
 (``foreach_libblock_make_usercounts_callback``).
 
 The copies are still alive when the script returns, so their originals can be
-read then: ``restore_original_materials`` runs right after every agent script.
+read then: ``restore_original_materials`` runs right after an agent script
+that could have handled evaluated data (``may_store_evaluated``). The scan
+walks every material slot in the file, so a script that never named the
+depsgraph or an evaluated datablock (most of them, every read-only one) skips it.
 """
 
 import bpy
 
 # Every ID type whose datablock carries a ``materials`` list.
 _DATA = ("meshes", "curves", "metaballs", "volumes", "pointclouds", "hair_curves", "grease_pencils")
+
+# A script reaches evaluated data only through one of these (lower-cased
+# substrings): ``evaluated_get`` / ``evaluated_depsgraph_get`` / ``is_evaluated``
+# / ``id_eval_get`` ("eval"), a depsgraph or its ``object_instances`` (also a
+# handler's depsgraph argument, "handlers"), ``to_mesh`` / ``to_curve`` /
+# ``new_from_object``, or ``.original``. Over-matching only costs a scan.
+_EVALUATED_TOKENS = ("eval", "depsgraph", "object_instances", "handlers", "to_mesh", "to_curve",
+                     "new_from_object", "original")
+
+
+def may_store_evaluated(script) -> bool:
+    """Whether ``script`` could have put an evaluated material in real data.
+    True when the source is unavailable: then the scan runs."""
+    if not isinstance(script, str) or not script:
+        return True
+    source = script.lower()
+    return any(token in source for token in _EVALUATED_TOKENS)
 
 
 def restore_original_materials() -> int:

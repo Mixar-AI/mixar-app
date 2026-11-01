@@ -48,7 +48,7 @@ from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
-from .sandbox_evaluated import NOTE as EVALUATED_NOTE, restore_original_materials
+from .sandbox_evaluated import NOTE as EVALUATED_NOTE, may_store_evaluated, restore_original_materials
 from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
 from .executor_scene_state import SceneStateMixin
 
@@ -480,10 +480,12 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
 
         finally:
             # Before anything else re-evaluates: a stored evaluated material is
-            # still alive now and dangles after (sandbox_evaluated.py).
+            # still alive now and dangles after (sandbox_evaluated.py). Only a
+            # script that handled evaluated data can have stored one.
             evaluated_swapped = 0
             try:
-                evaluated_swapped = restore_original_materials()
+                if may_store_evaluated(script):
+                    evaluated_swapped = restore_original_materials()
             except Exception:  # noqa: BLE001 - never mask the script's own result
                 logger.exception("Restoring original materials after a script failed")
             # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
