@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The reporter: harvest, consent/sign-in gate, never resend, never delete."""
+"""The reporter: harvest, consent/sign-in gate, never resend, never delete an
+app crash log (only our own render-worker copies, once handled)."""
 
 import json
 import os
@@ -248,3 +249,88 @@ def test_breadcrumbs_stay_while_crash_files_wait_for_consent(tmp_path, temp_dir)
     reporter.store.write_session(777, {"pid": 777, "started_at": time.time() - 7200, "updated_at": time.time() - 3600})
     reporter.tick()
     assert os.path.exists(reporter.store.session_path(777))
+
+
+# -- render-worker crash logs the supervisor moved into our own folder ---------
+
+def _worker_crash(temp: Path, name: str, salt: str = "") -> Path:
+    folder = temp / "mixar_render_worker_crashes"
+    folder.mkdir(exist_ok=True)
+    path = folder / name
+    path.write_text((FIXTURES / "macos_render_v1.crashlog").read_text(encoding="utf-8") + salt, encoding="utf-8")
+    return path
+
+
+def test_the_worker_crash_folder_is_harvested_as_worker_crashes(tmp_path):
+    temp = tmp_path / "T"
+    temp.mkdir()
+    _worker_crash(temp, "5150-preview-render-2.crash.txt")
+    reports = harvest.build_reports(temp_dirs=[str(temp)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    assert [(r["kind"], r["source"]) for r in reports] == [("worker_crash", "crash_txt")]
+    assert reports[0]["context"]["worker_kind"] == "preview-render"
+
+
+def test_a_worker_crash_mid_session_is_reported_in_that_session(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    assert len(server.payloads) == 2 and reporter.harvest_done
+    reporter.tick()  # nothing new: no harvest
+    assert len(server.payloads) == 2
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    reporter.tick()
+    assert len(server.payloads) == 3 and server.payloads[-1]["kind"] == "worker_crash"
+    assert reporter.harvest_done
+    assert not crash.exists()  # our copy goes once handled
+    assert (temp_dir / "mixar.crash.txt").exists()  # the app's own log never does
+    reporter.tick()
+    assert len(server.payloads) == 3
+
+
+def test_a_refused_worker_crash_is_deleted_and_a_retryable_one_kept(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    server.outcomes = [LATER]
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    reporter.tick()
+    assert crash.exists() and not reporter.harvest_done
+    server.outcomes = [REFUSED]
+    reporter.tick()
+    assert not crash.exists() and reporter.harvest_done
+
+
+def test_worker_crashes_wait_for_consent_and_old_ones_are_pruned(tmp_path, temp_dir):
+    fresh = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    old = _worker_crash(temp_dir, "5151-render-1.crash.txt", salt="\n")
+    stale = time.time() - 40 * 86400
+    os.utime(old, (stale, stale))
+    os.utime(temp_dir / "castle.crash.txt", (stale, stale))
+    reporter = _reporter(tmp_path, temp_dir, gate=False)
+    reporter.tick()
+    assert fresh.exists() and not old.exists()
+    assert (temp_dir / "castle.crash.txt").exists()  # not ours: never deleted
+
+
+def test_a_worker_crash_sent_by_an_earlier_launch_is_deleted(tmp_path, temp_dir):
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    store = Store(str(tmp_path / "state"))
+    store.mark_sent(harvest.report_id_for("crash_txt", crash.read_text(encoding="utf-8")))
+    server = FakeServer()
+    _reporter(tmp_path, temp_dir, server=server).tick()
+    assert not crash.exists()
+    assert all(p["kind"] == "native" for p in server.payloads)
+
+
+def test_crash_files_handled_per_launch_stay_capped(tmp_path, temp_dir, monkeypatch):
+    from mixar.modules.common.crash_reports.core import reporter as reporter_mod
+    monkeypatch.setattr(reporter_mod, "MAX_REPORTS_PER_LAUNCH", 3)
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    for i in range(3):
+        _worker_crash(temp_dir, f"5150-render-{i}.crash.txt", salt="\n" * (i + 1))
+        reporter.tick()
+    assert len(server.payloads) == 3
+    assert len(os.listdir(temp_dir / "mixar_render_worker_crashes")) == 2  # left for the next launch

@@ -12,6 +12,12 @@ Until then crash files simply stay where they are and exceptions wait in
 - 2xx: handled, recorded in ``sent.json`` (never sent again);
 - 401 / 403 / 429 / 5xx / network error: kept, retried on a later heartbeat;
 - any other 4xx: the server refuses it for good; recorded so it is not retried.
+
+Crash files are harvested once per launch, and again whenever a render worker
+crash log this session has not seen lands in ``mixar_render_worker_crashes``,
+so a worker that crashes mid-session is reported in that session (the sent
+ledger makes a re-harvest safe). At most ``MAX_REPORTS_PER_LAUNCH`` crash files
+are handled per launch.
 """
 
 from __future__ import annotations
@@ -22,7 +28,7 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import ENDPOINT, REQUEST_TIMEOUT_S, SESSION_MATCH_SLACK_S
+from ..constants import ENDPOINT, MAX_REPORTS_PER_LAUNCH, REQUEST_TIMEOUT_S, SESSION_MATCH_SLACK_S
 from . import harvest
 from .store import Store
 
@@ -101,6 +107,8 @@ class Reporter:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.harvest_done = False
+        self._worker_seen: set[str] = set()
+        self._handled = 0
 
     # Main-thread API (no I/O) ---------------------------------------------
     def start(self) -> None:
@@ -155,6 +163,10 @@ class Reporter:
             fresh, self._new_exceptions = self._new_exceptions, []
         if fresh:
             self.store.add_pending(fresh)
+        # A render worker that crashed since the last harvest: harvest again.
+        worker_files = harvest.worker_crash_files(self.temp_dirs)
+        if self.harvest_done and worker_files - self._worker_seen:
+            self.harvest_done = False
         if self.harvest_done and not self.store.pending():
             return
         if not self._gate():
@@ -163,14 +175,15 @@ class Reporter:
         if not device_id:
             return
         if not self.harvest_done:
-            self.harvest_done = self._send_crash_files(device_id, current)
+            self.harvest_done = self._send_crash_files(device_id, current, worker_files)
         self._send_pending(device_id)
 
-    def _send_crash_files(self, device_id: str, current: dict) -> bool:
+    def _send_crash_files(self, device_id: str, current: dict, worker_files: set[str]) -> bool:
+        limit = MAX_REPORTS_PER_LAUNCH - self._handled
         reports = harvest.build_reports(
             temp_dirs=self.temp_dirs, report_dirs=self.report_dirs, store=self.store, own_pid=self.own_pid,
-            device_id=device_id, static=self.static, current=current,
-        )
+            device_id=device_id, static=self.static, current=current, limit=limit,
+        ) if limit > 0 else []
         complete = True
         for payload in reports:
             outcome = self._send(_wire(payload))
@@ -178,7 +191,10 @@ class Reporter:
                 complete = False
                 break
             self.store.mark_sent(payload["report_id"], outcome)
+            self._handled += 1
+        harvest.remove_handled_worker_crashes(self.temp_dirs, self.store)
         if complete:
+            self._worker_seen = set(worker_files)
             # Breadcrumbs only match crash files to a session; once every file
             # is handled, an ended session's breadcrumb has no further use.
             self.store.prune_ended_sessions(self.own_pid, SESSION_MATCH_SLACK_S)

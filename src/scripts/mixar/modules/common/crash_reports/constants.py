@@ -16,9 +16,14 @@ SESSION_PREFIX = "session-"
 # <blend name>.crash.txt when a file is open. macOS also keeps its own report.
 CRASH_TXT_GLOB = "*.crash.txt"
 # The background render worker (Mixar --background, spawned by the app) gets
-# its own temp dir, so its crash log lands in
-# <tmp>/mixar_render_worker/<app pid>/worker-<kind>/tmp/ (common/render_worker).
-WORKER_CRASH_GLOB = ("mixar_render_worker", "*", "worker-*", "tmp", "*.crash.txt")
+# its own temp dir; its supervisor (common/render_worker) moves each crashed
+# worker's log to <tmp>/mixar_render_worker_crashes/<pid>-<kind>-<n>.crash.txt.
+# These are our own copies: deleted once handled, or past MAX_FILE_AGE_DAYS.
+WORKER_CRASH_DIR = "mixar_render_worker_crashes"
+WORKER_CRASH_GLOB = (WORKER_CRASH_DIR, "*.crash.txt")
+# A log still in the worker's own temp dir (the supervisor died before moving
+# it): <tmp>/mixar_render_worker/<app pid>/worker-<kind>/tmp/. Read only.
+WORKER_TMP_CRASH_GLOB = ("mixar_render_worker", "*", "worker-*", "tmp", "*.crash.txt")
 MACOS_REPORTS_DIR = "~/Library/Logs/DiagnosticReports"
 MACOS_REPORT_GLOB = "Mixar*.ips"
 MAX_FILE_AGE_DAYS = 30

@@ -4,8 +4,9 @@
 """Crash-reporting state on disk: ``<user config>/mixar/crash_reports/``.
 
 - ``sent.json``: report id -> when it was handled (sent, or refused for good by
-  the server). A crash file is never deleted by Mixar; the ledger is what keeps
-  it from being sent twice.
+  the server). The ledger is what keeps a crash file from being sent twice;
+  Mixar never deletes one, except its own render-worker copies in
+  ``mixar_render_worker_crashes`` once handled.
 - ``pending.json``: uncaught Python exceptions (already scrubbed) waiting for a
   signed-in, consented session.
 - ``session-<pid>.json``: the running session's breadcrumb (versions, GPU,
