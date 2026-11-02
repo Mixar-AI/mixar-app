@@ -1,0 +1,12 @@
+# Blender 5.2.0, Commit date: 2026-07-13 15:20, Hash fbe6228777e7
+bpy.ops.object.editmode_toggle()  # Operator
+
+# backtrace
+/home/jdoe/apps/Mixar-4.3.6/Mixar(_ZN7blender33BLI_system_backtrace_with_os_infoEP8_IO_FILEPKv+0x2a) [0x5631a3b1c2da]
+/home/jdoe/apps/Mixar-4.3.6/Mixar(+0x1d3e0f1) [0x5631a3a3e0f1]
+/lib/x86_64-linux-gnu/libc.so.6(+0x42520) [0x7f6c1e442520]
+/home/jdoe/apps/Mixar-4.3.6/Mixar(_ZN7blender3bke17mesh_calc_normalsEPNS_4MeshE+0x44) [0x5631a3b20044]
+/home/jdoe/apps/Mixar-4.3.6/Mixar(_ZN7blender2ed6object20editmode_toggle_execEPNS_8bContextEPNS_10wmOperatorE+0x1a0) [0x5631a3b301a0]
+/home/jdoe/apps/Mixar-4.3.6/Mixar(main+0x3a4) [0x5631a3a00a44]
+
+# Python backtrace

@@ -311,6 +311,7 @@ class SocketConnection:
         from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
         from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
         from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
+        from .engine_connect import ENGINE_LINK_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -333,6 +334,9 @@ class SocketConnection:
                 "agent_history_v1",
                 # Image bytes by HTTP reference; sync frames stay small.
                 "agent_history_v2",
+                # agent.history_read filters (roles/tools/order/offset): the
+                # backend lists the user's own messages from the first one on.
+                "agent_history_query_v1",
                 "script_execution",
                 # Prepared terrain imports plus mesh_bounds/linked_scatter.
                 # The backend gates these APIs on the connected instance.
@@ -347,6 +351,9 @@ class SocketConnection:
                 "liveness",
                 *([MCP_CAPABILITY] if not self._role else []),
                 *(["mixar_ui_v1"] if not self._role else []),
+                # engine.* tools through the composer's engine chip; the
+                # chip shows only when the server lists it back.
+                *([ENGINE_LINK_CAPABILITY] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
@@ -434,3 +441,6 @@ class SocketConnection:
         self.agent_history_blobs_by_reference = 'agent_history_v2' in capabilities
         # Chat images upload over HTTP; commands carry references (attachment_upload).
         self.agent_attachments_by_reference = 'agent_attachments_v1' in capabilities
+        # The engine chip; kept across a reconnect (only a reply changes it).
+        from .engine_connect import set_server_capabilities
+        set_server_capabilities(capabilities)

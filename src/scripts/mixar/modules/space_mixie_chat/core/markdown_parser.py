@@ -21,6 +21,20 @@ logger = get_logger(__name__)
 _md = mistune.create_markdown(renderer='ast', plugins=['table'])
 
 
+def _link_url(node: dict) -> str:
+    url = (node.get('attrs') or {}).get('url') or node.get('link') or ''
+    return url.strip() if isinstance(url, str) else ''
+
+
+def _with_url(label: str, node: dict) -> str:
+    """A link's text followed by its URL, unless the text already is the URL
+    or the URL only points inside the page."""
+    url = _link_url(node)
+    if not url or url.startswith('#') or url in label:
+        return label
+    return f"{label} ({url})" if label.strip() else url
+
+
 def _extract_text(node) -> str:
     """Recursively extract plain text from AST node."""
     if isinstance(node, str):
@@ -41,7 +55,10 @@ def _extract_text(node) -> str:
         if node_type == 'linebreak':
             return '\n'
 
-        if node_type in ('strong', 'emphasis', 'link'):
+        if node_type == 'link':
+            return _with_url(_extract_text(node.get('children', [])), node)
+
+        if node_type in ('strong', 'emphasis'):
             return _extract_text(node.get('children', []))
 
         children = node.get('children', [])
@@ -83,8 +100,9 @@ def _extract_inline(node) -> str:
         if node_type == 'linebreak':
             return '\n'
         if node_type == 'link':
-            # Render the link's visible text only (URL dropped for now).
-            return _extract_inline(node.get('children', []))
+            # The bubble cannot open a link, so its URL is shown after the
+            # text, where the reader can see and copy it.
+            return _with_url(_extract_inline(node.get('children', [])), node)
 
         children = node.get('children', [])
         if children:

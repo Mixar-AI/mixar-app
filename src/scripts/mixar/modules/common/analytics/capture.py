@@ -273,6 +273,19 @@ def _capture_operator_result(op_id, result, context):
         pass
 
 
+def _report_operator_exception() -> None:
+    """Blender prints an operator's exception through PyErr_Display, which
+    skips sys.excepthook, so Mixar's own operators report it here (the crash
+    reporter dedupes, rate-limits, scrubs and gates it on consent)."""
+    try:
+        import sys
+
+        from mixar.modules.common.crash_reports import report_exception
+        report_exception(*sys.exc_info(), source="operator")
+    except Exception:
+        pass
+
+
 def _operator_wrapper(original, op_id: str, *, with_event: bool):
     """Build a wrapper with the exact RNA method signature.
 
@@ -290,6 +303,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context, event)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)
             return result
@@ -302,6 +316,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)
             return result

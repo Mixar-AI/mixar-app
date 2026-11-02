@@ -7,13 +7,21 @@ GLB / glTF / FBX / USD(Z) + ``textures/`` + ``manifest.json`` + optional
 lower-resolution texture tiers, a ``.blend`` source and a README.
 
 Exports run on temporary copies (transforms and modifiers applied, parents
-flattened, optionally joined), so the user's objects are never changed.
+flattened, optionally joined), so the user's objects are never changed. A
+skinned mesh's copy keeps its armature (parent, Armature modifier, vertex
+groups) so the file still carries a skin; a named empty stands for the
+meshes and armatures under it.
 Mixar paint slots on the copies are swapped to their baked Principled/image
-materials (``export_materials``) for the whole package; an unbaked stack
-still ships untextured.
+materials (``export_materials``) for the whole package. In an ENGINE package
+every material an exporter cannot read (procedural nodes, an unbaked stack)
+is then baked to images on the copies (``export_bake``), reported as
+``baked_materials``; an ordinary package exports its materials as they are.
 Destinations are NAMED (downloads, documents, desktop, project,
 mixar_exports); results report file names relative to the package folder,
-never an absolute local path. The written main file is verified with
+never an absolute local path. ``engine`` (``godot`` | ``unreal`` | ``uefn``,
+``engine_targets``) adds collision hulls named for that engine's importer,
+validates the objects' ``mixar_*`` game-semantics tags into the manifest's
+``engine`` section and reports what would degrade on import. The written main file is verified with
 ``export_verify`` (``verification``; ``glb_check`` keeps the same dict for
 GLB). ``animations`` follows ``export_clips`` — the copies are static
 meshes, so clips only apply to armatures the named objects include or are
@@ -31,9 +39,11 @@ import bpy
 
 from .export_verification_status import verification_status, verification_warning
 
+from .export_bake import baked_procedural_materials
 from .export_clips import animation_kwargs, clip_selection, select_clips
 from .export_materials import temporary_export_materials
-from .export_verify import file_clip_names, verify_export
+from .export_verify import file_clip_names, verify_export, writes_gltf_skin
+from . import engine_targets
 
 FORMATS = ("glb", "gltf", "fbx", "usdz", "usd")
 DESTINATIONS = ("mixar_exports", "downloads", "documents", "desktop", "project")
@@ -46,14 +56,37 @@ def _safe(name, fallback="asset"):
     return (s or fallback)[:96]
 
 
-def destination(where, subfolder=None):
-    """Absolute folder for a named destination (created)."""
+_project_folder_override = None   # set in a worker: the user's folder, not the snapshot's
+_telemetry_enabled = True          # a worker leaves telemetry to the app
+
+
+def set_project_folder(folder) -> None:
+    """In a worker process, ``bpy.data.filepath`` is the snapshot: ``project``
+    must mean the folder of the user's own saved file ("" = unsaved)."""
+    global _project_folder_override
+    _project_folder_override = None if folder is None else str(folder)
+
+
+def set_telemetry_enabled(enabled: bool) -> None:
+    global _telemetry_enabled
+    _telemetry_enabled = bool(enabled)
+
+
+def _project_folder() -> str:
+    if _project_folder_override is not None:
+        return _project_folder_override
+    return os.path.dirname(bpy.data.filepath) if bpy.data.filepath else ""
+
+
+def destination(where, subfolder=None, create=True):
+    """Absolute folder for a named destination (created unless ``create`` is
+    False — a lookup of an existing package)."""
     where = (where or "mixar_exports").lower()
     if where not in DESTINATIONS:
         raise ValueError(f"destination must be one of {DESTINATIONS}")
     home = os.path.expanduser("~")
-    if where == "project" and bpy.data.filepath:
-        base = os.path.dirname(bpy.data.filepath)
+    if where == "project" and _project_folder():
+        base = _project_folder()
     elif where == "downloads":
         base = os.path.join(home, "Downloads")
     elif where == "desktop":
@@ -63,7 +96,8 @@ def destination(where, subfolder=None):
     else:
         base = os.path.join(home, "Documents", "Mixar Exports")
     path = os.path.join(base, _safe(subfolder)) if subfolder else base
-    os.makedirs(path, exist_ok=True)
+    if create:
+        os.makedirs(path, exist_ok=True)
     return path
 
 
@@ -118,16 +152,35 @@ def _material_images(mats):
     return out
 
 
-def _copies(objs, join):
+def _copies(objs, join, keep_origins=False):
     """World-baked, parent-free, modifier-applied mesh copies. Self-cleaning:
     a failure part-way undoes the renames and drops the temp collection, so
-    the user's objects never keep the ``.mixar_export_src`` name."""
-    deps = bpy.context.evaluated_depsgraph_get()
+    the user's objects never keep the ``.mixar_export_src`` name.
+    ``keep_origins`` (engine packages) bakes rotation and scale but leaves each
+    copy at its original's world origin, so a door turns about its hinge and a
+    pickup spins about its own centre; the world placement is unchanged.
+
+    A SKINNED mesh (parented to an armature or deformed by one) stays skinned:
+    its copy applies every modifier but the Armature ones, keeps its vertex
+    groups, its transform and its armature parent, and gets the same Armature
+    modifiers — baking the deform would freeze it in the current pose and the
+    file would carry a skeleton the mesh no longer follows. Skinned copies are
+    never joined."""
+    skinned = {o for o in objs if _skinned(o)}
+    held = []
+    for o in skinned:
+        for m in o.modifiers:
+            if m.type == "ARMATURE" and m.show_viewport:
+                m.show_viewport = False
+                held.append(m)
     col = bpy.data.collections.new("mixar_export_tmp")
     bpy.context.scene.collection.children.link(col)
     out = []
     renamed = []
     try:
+        if held:
+            bpy.context.view_layer.update()
+        deps = bpy.context.evaluated_depsgraph_get()
         for o in objs:
             # the copy takes the original's name so exported node names are clean
             orig = o.name
@@ -135,24 +188,69 @@ def _copies(objs, join):
             renamed.append((o, orig))
             ev = o.evaluated_get(deps)
             me = bpy.data.meshes.new_from_object(ev, preserve_all_data_layers=True, depsgraph=deps)
-            me.transform(o.matrix_world)
-            if o.matrix_world.is_negative:
-                me.flip_normals()
-            c = bpy.data.objects.new(orig, me)
+            if o in skinned:
+                c = _skinned_copy(o, orig, me)
+            else:
+                me.transform(o.matrix_world)
+                if o.matrix_world.is_negative:
+                    me.flip_normals()
+                origin = None
+                if keep_origins:
+                    from mathutils import Matrix
+                    origin = o.matrix_world.translation.copy()
+                    me.transform(Matrix.Translation(-origin))
+                c = bpy.data.objects.new(orig, me)
+                if origin is not None:
+                    c.location = origin
             for idx, slot in enumerate(o.material_slots):
                 if slot.link == "OBJECT" and slot.material is not None and idx < len(me.materials):
                     me.materials[idx] = slot.material
             col.objects.link(c)
             out.append(c)
-        if join and len(out) > 1:
-            ctx = {"active_object": out[0], "selected_editable_objects": out, "selected_objects": out}
+        static = [c for c, o in zip(out, objs) if o not in skinned]
+        if join and len(static) > 1:
+            ctx = {"active_object": static[0], "selected_editable_objects": static, "selected_objects": static}
             with bpy.context.temp_override(**ctx):
                 bpy.ops.object.join()
-            out = [out[0]]
+            out = [c for c, o in zip(out, objs) if o in skinned or c is static[0]]
     except Exception:
         _cleanup(col, renamed)
         raise
+    finally:
+        for m in held:
+            m.show_viewport = True
+        # parented (skinned) copies get their world matrix here
+        bpy.context.view_layer.update()
     return col, out, renamed
+
+
+def _skinned_copy(o, name, me):
+    """A copy of skinned ``o`` that the exporters still write as a skin:
+    the un-deformed mesh with its vertex groups, ``o``'s transform and armature
+    parent, and ``o``'s Armature modifiers pointing at the same armatures."""
+    c = bpy.data.objects.new(name, me)
+    for vg in o.vertex_groups:
+        if c.vertex_groups.get(vg.name) is None:
+            c.vertex_groups.new(name=vg.name)
+    if o.parent is not None:
+        c.parent = o.parent
+        c.parent_type = o.parent_type
+        c.parent_bone = o.parent_bone
+        c.matrix_parent_inverse = o.matrix_parent_inverse.copy()
+        c.matrix_basis = o.matrix_basis.copy()
+    else:
+        c.matrix_world = o.matrix_world.copy()
+    mods = [m for m in o.modifiers if m.type == "ARMATURE" and m.object is not None]
+    if not mods and o.parent is not None and o.parent.type == "ARMATURE" and o.parent_type == "ARMATURE":
+        mods = [None]  # parented with automatic weights: deform by the parent
+    for m in mods:
+        cm = c.modifiers.new("Armature", "ARMATURE")
+        cm.object = o.parent if m is None else m.object
+        if m is not None:
+            cm.use_vertex_groups = m.use_vertex_groups
+            cm.use_bone_envelopes = m.use_bone_envelopes
+            cm.use_deform_preserve_volume = m.use_deform_preserve_volume
+    return c
 
 
 def _cleanup(col, renamed):
@@ -164,6 +262,19 @@ def _cleanup(col, renamed):
     bpy.data.collections.remove(col)
     for o, orig in renamed:
         o.name = orig
+
+
+def _expand_empties(objs, scene):
+    """A named empty stands for the hierarchy under it (a generated asset's
+    root, a level's group): its mesh and armature descendants in this scene
+    join the export, in order, each once."""
+    out = []
+    for o in objs:
+        group = [o] + (list(o.children_recursive) if o.type == "EMPTY" else [])
+        for c in group:
+            if c not in out and (c is o or (c.type in ("MESH", "ARMATURE") and c.name in scene.objects)):
+                out.append(c)
+    return out
 
 
 def _armatures(objs):
@@ -180,6 +291,97 @@ def _armatures(objs):
     return found
 
 
+def _skinned(obj):
+    parent = getattr(obj, "parent", None)
+    return (parent is not None and parent.type == "ARMATURE") or any(
+        m.type == "ARMATURE" and m.object is not None for m in getattr(obj, "modifiers", ()))
+
+
+def _engine_prepare(engine, copies, renamed, col, joined, sources=None):
+    """Game-semantics tags read off the ORIGINAL objects onto their copies, a
+    collision mesh set per copy -> (manifest objects, issues, hull objects)."""
+    originals = {orig: o for o, orig in renamed}
+    objects, issues, hulls = [], [], []
+    for c in copies:
+        source = (sources or {}).get(c.name, c.name)
+        src = originals.get(source)
+        tags, tag_issues = engine_targets.read_tags(src, c.name) if src is not None else ({}, [])
+        issues += tag_issues
+        if joined:
+            for o, orig in renamed:
+                if orig == source:
+                    continue
+                other, _ = engine_targets.read_tags(o, orig)
+                if other and other != tags:
+                    issues.append(f"{orig}: its mixar_* tags differ from {c.name}'s; "
+                                  f"the joined mesh keeps {c.name}'s.")
+        tags = engine_targets.default_tags(tags)
+        for key, value in tags.items():
+            c[engine_targets.TAG_PREFIX + key] = value
+        if not (src is not None and _skinned(src)) and _turn_outward(c.data):
+            issues.append(f"{c.name}: its faces pointed inward (a closed mesh); the package turns them outward.")
+        shape = engine_targets.collision_shape(tags, src is not None and _skinned(src))
+        names = engine_targets.collision_names(engine, c.name, shape)
+        hulls += engine_targets.build_collision(engine, c, shape, names, col)
+        objects.append({"name": c.name, **tags, "origin": [round(float(v), 4) for v in c.matrix_world.translation],
+                        "collision": engine_targets.collision_entry(engine, c.name, shape, names)})
+    return objects, issues, hulls
+
+
+def _turn_outward(me) -> bool:
+    """Flip a closed mesh whose faces all point inward (negative volume).
+    Open meshes are left alone: which side of a plane is up is a choice."""
+    import bmesh
+
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(me)
+        if not bm.faces or not all(e.is_manifold for e in bm.edges):
+            return False
+        if bm.calc_volume(signed=True) >= 0:
+            return False
+        for f in bm.faces:
+            f.normal_flip()
+        bm.to_mesh(me)
+        return True
+    finally:
+        bm.free()
+
+
+def _upstream_image(socket, depth=6):
+    """The image an input reads, following links upstream (through mixes,
+    colour ramps and normal-map nodes), or None."""
+    if depth <= 0 or not socket.is_linked:
+        return None
+    for link in socket.links:
+        node = link.from_node
+        if node.type == "TEX_IMAGE" and node.image is not None:
+            return node.image
+        for inp in node.inputs:
+            found = _upstream_image(inp, depth - 1)
+            if found is not None:
+                return found
+    return None
+
+
+def _material_facts(mats):
+    """(name, base colour textured, its colour space, normal map, roughness
+    textured) per material, for ``engine_targets.material_report``."""
+    facts = []
+    for m in mats:
+        bsdf = None
+        if m is not None and m.use_nodes and m.node_tree is not None:
+            bsdf = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if bsdf is None:
+            facts.append((getattr(m, "name", "?"), False, None, False, False))
+            continue
+        image = _upstream_image(bsdf.inputs["Base Color"])
+        facts.append((m.name, image is not None, image.colorspace_settings.name if image is not None else None,
+                      _upstream_image(bsdf.inputs["Normal"]) is not None,
+                      bsdf.inputs["Roughness"].is_linked))
+    return facts
+
+
 def _select_only(objs):
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
@@ -188,8 +390,10 @@ def _select_only(objs):
     bpy.context.view_layer.objects.active = objs[0]
 
 
-def exporter_kwargs(fmt, animations=None):
-    """The package exporter's fixed settings plus the clip request."""
+def exporter_kwargs(fmt, animations=None, engine=None):
+    """The package exporter's fixed settings plus the clip request; an
+    ``engine`` package keeps custom properties (glTF node extras) and an
+    Unreal-family FBX takes the ``unreal`` export preset."""
     if fmt in ("glb", "gltf"):
         kw = dict(export_format="GLB" if fmt == "glb" else "GLTF_SEPARATE",
                   use_selection=True, use_active_scene=True, export_yup=True, export_apply=True,
@@ -208,14 +412,20 @@ def exporter_kwargs(fmt, animations=None):
                   export_global_up_selection="Y", export_textures_mode="NEW",
                   overwrite_textures=True, relative_paths=True,
                   export_cameras=False, export_lights=False)
+    if engine and fmt in ("glb", "gltf"):
+        kw["export_extras"] = True
+    elif engine in ("unreal", "uefn") and fmt == "fbx":
+        from .export_presets import PRESETS
+        kw.update(PRESETS["unreal"]["fbx"])
+        kw.update(engine_targets.PACKAGE_FBX)
     anim, mode, warning = animation_kwargs(fmt, animations)
     kw.update(anim)
     return kw, mode, warning
 
 
-def _export(fmt, path, objs, animations=None):
+def _export(fmt, path, objs, animations=None, engine=None):
     _select_only(objs)
-    kw, mode, warning = exporter_kwargs(fmt, animations)
+    kw, mode, warning = exporter_kwargs(fmt, animations, engine)
     if fmt in ("glb", "gltf"):
         r = bpy.ops.export_scene.gltf(filepath=path, **kw)
     elif fmt == "fbx":
@@ -310,18 +520,33 @@ def _swap_images(mats, mapping):
     return undo
 
 
+def _bake_warning(baked):
+    """One line when procedural materials went out unbaked (they arrive flat)."""
+    skipped = (baked or {}).get("skipped") or []
+    if not skipped:
+        return ""
+    names = ", ".join(s["material"] for s in skipped[:8])
+    return (f"{len(skipped)} procedural material(s) were not baked and will look flat in the file: "
+            f"{names}. {skipped[0]['reason']}.")
+
+
 def _bounds(objs):
+    """World extents of the copies; a skinned copy keeps its own transform
+    (its rest pose under the armature), so every copy is read in world space."""
     import numpy as np
     pts = []
     for o in objs:
         co = np.empty(len(o.data.vertices) * 3)
         o.data.vertices.foreach_get("co", co)
-        pts.append(co.reshape(-1, 3))
+        m = np.array(o.matrix_world)
+        pts.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
     p = np.concatenate(pts) if pts else np.zeros((1, 3))
     return (p.max(0) - p.min(0)).tolist()
 
 
 def _telemetry(event, fmt, **props):
+    if not _telemetry_enabled:
+        return
     try:
         from mixar.modules.common.analytics.export_events import (
             capture_export, capture_export_initiated,
@@ -352,17 +577,54 @@ def _write_source(root, stem, include_source, col, copies, mats, images):
 
 def export_package(names, fmt="glb", filename=None, where="mixar_exports", folder=None, join=False,
                    texture_tiers=(), include_source=False, manifest=True, readme=None,
-                   extra_files=(), animations=None):
+                   extra_files=(), animations=None, engine=None):
     """``include_source`` may be True or a file name for the .blend; ``readme``
     text is written as README.md; ``extra_files`` are (name, text) pairs;
-    ``animations`` is None (all) / [] (none) / [clip names]."""
+    ``animations`` is None (all) / [] (none) / [clip names]; ``engine`` is
+    None or one of ``engine_targets.ENGINES``, and only an engine package
+    bakes procedural materials to images on the copies (a Smart UV project
+    and Cycles bakes, done in the worker when one runs, so never for an
+    ordinary export).
+
+    Called by the backend's ``export_asset`` script (the GUI executor), the
+    package is built in a background worker process on a snapshot of the
+    document and the call returns ``{"__deferred_job__": key}``: the executor
+    holds the reply open and answers it with this function's ordinary return
+    value when the worker is done (``poll_job``). Only that script, whose
+    result IS this return value, and only its first call
+    (``main_thread_executor.may_defer_job``). From any other script, elsewhere,
+    or when no worker can run, it is built here and returned at once.
+    """
+    kwargs = {"names": list(names), "fmt": fmt, "filename": filename, "where": where,
+              "folder": folder, "join": join, "texture_tiers": list(texture_tiers or ()),
+              "include_source": include_source, "manifest": manifest, "readme": readme,
+              "extra_files": [list(x) for x in extra_files or ()], "animations": animations,
+              "engine": engine}
+    deferred = _submit_to_worker(kwargs)
+    if deferred is not None:
+        return deferred
+    return _export_in_process(**kwargs)
+
+
+def _export_in_process(names, fmt="glb", filename=None, where="mixar_exports", folder=None,
+                       join=False, texture_tiers=(), include_source=False, manifest=True,
+                       readme=None, extra_files=(), animations=None, engine=None):
+    """The package itself, built from this process's data (the app's, or a
+    worker's snapshot)."""
     t0 = time.perf_counter()
     fmt = fmt.lower()
     if fmt not in FORMATS:
         raise ValueError(f"format must be one of {FORMATS}")
+    if engine is not None:
+        engine = engine_targets.normalise_engine(engine)
+        if engine is None:
+            raise ValueError(f"engine must be one of {engine_targets.ENGINES}")
+        if fmt not in engine_targets.ENGINE_FORMATS[engine]:
+            raise ValueError(f"a {engine} package is {' or '.join(engine_targets.ENGINE_FORMATS[engine])}")
     scene = bpy.context.scene
-    objs = [scene.objects[n] for n in names]
-    stem = _safe(os.path.splitext(filename or objs[0].name)[0])
+    named = [scene.objects[n] for n in names]
+    objs = _expand_empties(named, scene)
+    stem = _safe(os.path.splitext(filename or named[0].name)[0])
     root = destination(where, folder or stem)
     replaced = 0
     ext = {"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz", "usd": ".usdc"}[fmt]
@@ -380,14 +642,19 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
     prev_active = bpy.context.view_layer.objects.active
     success = False
     verification = None
+    engine_section = None
+    hulls = []
     clips, clips_missing = select_clips(armatures, animations)
-    col, copies, renamed = _copies(meshes, join)
+    col, copies, renamed = _copies(meshes, join, keep_origins=bool(engine))
     swap = ExitStack()
     try:
         # Mixar paint slots on the COPIES become their baked Principled/image
         # materials first, so the file, textures/, tiers, the .blend source
         # and the manifest all describe what an exporter can read.
-        swap.enter_context(temporary_export_materials(copies))
+        # An engine package then bakes what is still procedural (an unbaked
+        # stack included); an ordinary package exports what the swap leaves.
+        swap.enter_context(temporary_export_materials(copies, keep_unbaked=bool(engine)))
+        baked = swap.enter_context(baked_procedural_materials(copies)) if engine else None
         mats = []
         for c in copies:
             for s in c.material_slots:
@@ -395,9 +662,22 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                     mats.append(s.material)
         images = _material_images(mats)
         main = os.path.join(root, stem + ext)
-        exported = list(copies) + armatures
+        engine_objects, engine_issues = [], []
+        sources = {}  # a renamed copy's name -> its original's
+        if engine in ("unreal", "uefn"):
+            for c, safe in zip(copies, engine_targets.unreal_names([c.name for c in copies])):
+                if c.name != safe:
+                    before = c.name
+                    c.name = safe
+                    if c.name != safe:  # an unrelated object holds that name
+                        c.name = f"{safe}_pkg"
+                    sources[c.name] = before
+        if engine:
+            engine_objects, engine_issues, hulls = _engine_prepare(
+                engine, copies, renamed, col, bool(join and len(meshes) > 1), sources)
+        exported = list(copies) + hulls + armatures
         with clip_selection(armatures, animations, scene) as (clips, clips_missing):
-            anim_mode, warning = _export(fmt, main, exported, animations)
+            anim_mode, warning = _export(fmt, main, exported, animations, engine)
         files.append(stem + ext)
         tex = _save_textures(images, os.path.join(root, "textures"))
         files += [f"textures/{f}" for _, f in tex.values()]
@@ -411,7 +691,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             try:
                 tier_name = f"{stem}_{size}{ext}"
                 with clip_selection(armatures, animations, scene):
-                    _export(fmt, os.path.join(root, tier_name), exported, animations)
+                    _export(fmt, os.path.join(root, tier_name), exported, animations, engine)
             finally:
                 for node, img in undo:
                     node.image = img
@@ -427,13 +707,32 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                 with open(os.path.join(root, _safe(name)), "w", encoding="utf-8") as fh:
                     fh.write(str(text))
                 files.append(_safe(name))
+        if engine:
+            engine_issues += engine_targets.readiness_issues(
+                engine,
+                textures=[(f"textures/{f}", tuple(img.size)) for img, (_, f) in tex.items()],
+                meshes=[(c.name, bool(c.data.uv_layers),
+                         bool(_material_images([s.material for s in c.material_slots])))
+                        for c in copies],
+                objects=engine_objects)
+            skeletons = [engine_targets.skeleton_entry(engine, a.name, [b.name for b in a.data.bones])
+                         for a in armatures]
+            report, material_issues = engine_targets.material_report(_material_facts(mats), len(copies))
+            engine_issues += material_issues
+            marker_list, marker_issues = engine_targets.markers(named, scene.objects)
+            engine_issues += marker_issues
+            engine_section = engine_targets.manifest_section(engine, engine_objects, engine_issues, skeletons,
+                                                             marker_list)
+            engine_section["materials"] = report
         verification = verify_export(main, fmt, {
-            "mesh_count": len(copies), "armature_count": len(armatures),
+            "mesh_count": len(copies), "extra_meshes": len(hulls), "armature_count": len(armatures),
+            "skinned_meshes": sum(1 for c in copies if writes_gltf_skin(c)),
             "clips": clips if animations is not None else None,
             "joined": bool(join and len(meshes) > 1), "images_expected": len(images),
             "compression": "none",
         })
-        if verification.get("checked") and verification.get("animations") and animations is None:
+        # The clips reported are the ones the FILE holds, requested or not.
+        if verification.get("checked") and (verification.get("animations") or animations):
             clips = file_clip_names(clips, verification["animations"])
         warning = " ".join(filter(None, (warning, verification_warning(verification))))
         check = verification if fmt == "glb" else None
@@ -447,6 +746,10 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             "textures": [{"file": f"textures/{f}", "size": list(img.size)} for img, (_, f) in tex.items()],
             "animations": clips, "tiers": tiers, "files": [], "generator": GENERATOR,
         }
+        if engine_section is not None:
+            info["engine"] = engine_section
+        if baked and (baked["baked"] or baked["skipped"]):
+            info["baked_materials"] = baked
         for f in files:
             p = os.path.join(root, f)
             info["files"].append({"file": f, "bytes": os.path.getsize(p), "sha256_16": _sha(p)})
@@ -467,7 +770,7 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
             bpy.context.view_layer.objects.active = prev_active
         duration_ms = int((time.perf_counter() - t0) * 1000)
         _telemetry("completed", fmt, success=success, extension=ext, scope="named",
-                   use_case="package", destination_kind=where,
+                   use_case="package", destination_kind=where, engine=engine or "",
                    mesh_count=len(copies), armature_count=len(armatures),
                    clip_count=len(clips), duration_ms=duration_ms,
                    delivery_status=verification_status(verification),
@@ -476,12 +779,229 @@ def export_package(names, fmt="glb", filename=None, where="mixar_exports", folde
                    issue_count=len((verification or {}).get("issues") or []),
                    file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024))
     return {"delivery_status": verification_status(verification),
-            "warning": verification_warning(verification), "destination": where,
+            "warning": " ".join(filter(None, (verification_warning(verification), _bake_warning(baked)))),
+            "destination": where,
             "folder": os.path.basename(root), "files": files,
-            "replaced_previous_files": replaced,
+            "replaced_previous_files": replaced, "engine": engine_section,
             "main_file": stem + ext, "glb_check": check, "verification": verification,
             "triangles": tris, "dimensions_m": dims, "textures": len(tex), "tiers": tiers,
+            **({"baked_materials": baked} if baked is not None else {}),
             "animations": {"clips": clips, "clips_requested": animations,
                            "clips_missing": clips_missing, "mode": anim_mode,
                            "warning": warning},
             "seconds": round(time.perf_counter() - t0, 2)}
+
+
+# ---------------------------------------------------------------------------
+# Out of process: the package built by a background Mixar worker
+# ---------------------------------------------------------------------------
+#
+# A package applies modifiers to copies (``new_from_object``, which crashed the
+# app on a dangling material), swaps materials, bakes and writes files: minutes
+# of main-thread work on a heavy scene, all of it in the user's process. Here
+# the same ``_export_in_process`` runs in a worker on a snapshot. The files go
+# to the same named destination; the user's scene, selection and names are
+# never touched (the copies' ``.mixar_export_src`` renames happen in the
+# snapshot). A worker that never starts builds it here after all; a package
+# that crashes two workers fails with a plain message, never the app.
+
+#: The backend waits PACKAGE_TIMEOUT_S (600 s) for the reply.
+WORKER_REPLY_MAX_S = 590.0
+WORKER_TIMEOUT_S = 580.0
+_worker_jobs = {}    # key -> {"worker", "snapshot", "kwargs", "scene", "view_layer", ...}
+_last_worker = {}
+
+
+def last_worker_job() -> dict:
+    return dict(_last_worker)
+
+
+def _worker_allowed() -> bool:
+    if bpy.app.background:
+        return False
+    try:
+        from . import main_thread_executor
+        # Only the export_asset template keeps the deferred key as its result.
+        if not main_thread_executor.may_defer_job():
+            return False
+        from mixar.modules.common.render_worker import memory, supervisor
+        # No memory for the worker's copy of the document: build it here.
+        return supervisor.available() and memory.worker_fits("export")
+    except Exception:
+        return False
+
+
+def _validate(kwargs):
+    """The errors the in-process build raises before it changes anything, so a
+    bad call fails the same way, at once."""
+    fmt = str(kwargs["fmt"]).lower()
+    if fmt not in FORMATS:
+        raise ValueError(f"format must be one of {FORMATS}")
+    engine = kwargs.get("engine")
+    if engine is not None:
+        # The build accepts what normalise_engine accepts ('Godot', ' unreal ').
+        engine = engine_targets.normalise_engine(engine)
+        if engine is None:
+            raise ValueError(f"engine must be one of {engine_targets.ENGINES}")
+        if fmt not in engine_targets.ENGINE_FORMATS[engine]:
+            raise ValueError(f"a {engine} package is {' or '.join(engine_targets.ENGINE_FORMATS[engine])}")
+    scene = bpy.context.scene
+    # A named empty stands for the meshes under it, as in the build itself.
+    objs = _expand_empties([scene.objects[n] for n in kwargs["names"]], scene)
+    if not [o for o in objs if o.type == "MESH"]:
+        raise ValueError("names must include at least one mesh object")
+    destination(kwargs["where"])  # an unknown destination raises here
+
+
+def _submit_to_worker(kwargs):
+    if not _worker_allowed():
+        return None
+    _validate(kwargs)
+    import uuid
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    started = time.perf_counter()
+    try:
+        record = snapshot.write("export")
+    except Exception:
+        return None
+    key = uuid.uuid4().hex
+    out = os.path.join(supervisor.root_dir(), "jobs", "export-%s.json" % key)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    scene = bpy.context.scene
+    view_layer = bpy.context.view_layer
+    try:
+        job_id = supervisor.submit("export", {
+            "kind": "export", "snapshot": record["path"], "images": record["images"],
+            "scene": scene.name, "view_layer": getattr(view_layer, "name", ""),
+            "params": {"kwargs": kwargs, "project_dir": _project_folder()}, "out": out},
+            timeout_s=WORKER_TIMEOUT_S)
+    except Exception:
+        snapshot.remove_folder(record["folder"])
+        return None
+    from . import main_thread_executor
+    main_thread_executor.claim_deferred_job()
+    snapshot.acquire(record)
+    _worker_jobs[key] = {"worker": job_id, "snapshot": record, "kwargs": kwargs, "scene": scene,
+                         "view_layer": getattr(view_layer, "name", ""), "out": out,
+                         "started": time.perf_counter()}
+    _last_worker.clear()
+    _last_worker.update(key=key, job=job_id, state="running", snapshot_bytes=record["bytes"],
+                        snapshot_save_s=record["save_s"], snapshot_images_s=record["images_s"],
+                        dirty_images=record["image_count"],
+                        submit_s=round(time.perf_counter() - started, 4))
+    _telemetry("initiated", str(kwargs["fmt"]).lower())
+    return {"__deferred_job__": key}
+
+
+def _completed_telemetry(job, result):
+    kwargs = job["kwargs"]
+    fmt = str(kwargs["fmt"]).lower()
+    verification = result.get("verification") if isinstance(result.get("verification"), dict) else None
+    _telemetry("completed", fmt, success=bool(result.get("success")),
+               extension={"glb": ".glb", "gltf": ".gltf", "fbx": ".fbx", "usdz": ".usdz",
+                          "usd": ".usdc"}.get(fmt, ""),
+               scope="named", use_case="package", destination_kind=kwargs["where"],
+               duration_ms=int((time.perf_counter() - job["started"]) * 1000),
+               delivery_status=verification_status(verification),
+               verification_checked=bool(verification and verification.get("checked")),
+               verification_passed=bool(verification and verification.get("passed")),
+               issue_count=len((verification or {}).get("issues") or []),
+               file_size_kb=int((verification or {}).get("file_size_bytes", 0) // 1024),
+               out_of_process=True)
+
+
+def _in_process_now(job) -> dict:
+    """The worker never started: build the package here, in the call's scene."""
+    scene = job["scene"]
+    try:
+        overrides = {"scene": scene}
+        layer = scene.view_layers.get(job["view_layer"])
+        if layer is not None:
+            overrides["view_layer"] = layer
+        # The document window, never the chat island; it shows the call's tab
+        # for the export as a routed script's pin would, and goes back after.
+        from .preview_render import _document_window
+        window = _document_window()
+        shown = window.scene if window is not None else None
+        if window is not None and shown is not scene:
+            if bpy.app.is_job_running("RENDER"):
+                # Switching the window's scene under a running render crashed.
+                return {"success": False, "error": "export_busy_rendering"}
+            window.scene = scene
+        if window is not None:
+            overrides["window"] = window
+        try:
+            with bpy.context.temp_override(**overrides):
+                result = _export_in_process(**job["kwargs"])
+        finally:
+            if window is not None and shown is not None and window.scene is not shown:
+                try:
+                    window.scene = shown
+                except (ReferenceError, RuntimeError):
+                    pass
+        result["success"] = True
+    except ReferenceError:
+        result = {"success": False, "error": "the scene was closed before the export ran"}
+    except Exception as exc:
+        result = {"success": False, "error": type(exc).__name__ + ": " + str(exc)}
+    return result
+
+
+_WORKER_ERRORS = {
+    "worker_crashed": "the background export process crashed twice on this package; "
+                      "the app and the scene are unaffected",
+    "worker_timeout": "the background export did not finish in time and was stopped",
+    "worker_job_failed": "the background export process could not run this package",
+    "scene_unavailable": "the scene was not found in the export snapshot",
+}
+
+
+def poll_job(key) -> dict:
+    """``{"status": "running"}`` or ``{"status": "done", "result": <reply>}``
+    for a worker package (``preview_deferral.defer_job``)."""
+    import json
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    job = _worker_jobs.get(key)
+    if job is None:
+        return {"status": "done", "result": {"success": False, "error": "export job not found"}}
+    state = supervisor.poll(job["worker"])
+    if state["state"] in ("queued", "running"):
+        return {"status": "running"}
+    _worker_jobs.pop(key, None)
+    supervisor.forget(job["worker"])
+    snapshot.release(job["snapshot"])
+    _last_worker.update(state=state["state"], error=state.get("error", ""),
+                        attempts=state.get("attempts"), pid=state.get("pid"),
+                        retried_after_crash=state.get("retried_after_crash"),
+                        worker_seconds=state.get("seconds"),
+                        elapsed_s=round(time.perf_counter() - job["started"], 3))
+    result = None
+    if state["state"] == "done":
+        try:
+            with open(state["out"], encoding="utf-8") as handle:
+                result = json.load(handle)
+        except (OSError, ValueError):
+            result = None
+        try:
+            os.remove(state["out"])
+        except OSError:
+            pass
+    elif state.get("error") == "worker_unavailable":
+        _last_worker["fallback"] = "in_process"
+        # The in-process build reports its own telemetry.
+        return {"status": "done", "result": _in_process_now(job)}
+    if not isinstance(result, dict):
+        message = _WORKER_ERRORS.get(state.get("error"), "the background export failed")
+        result = {"success": False, "error": "RuntimeError: " + message}
+    _completed_telemetry(job, result)
+    return {"status": "done", "result": result}
+
+
+def cancel_job(key) -> None:
+    from mixar.modules.common.render_worker import snapshot, supervisor
+    job = _worker_jobs.pop(key, None)
+    if job is None:
+        return
+    supervisor.cancel(job["worker"])
+    supervisor.forget(job["worker"])
+    snapshot.release(job["snapshot"])

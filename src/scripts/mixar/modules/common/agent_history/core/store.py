@@ -20,7 +20,8 @@ import threading
 import time
 import uuid
 
-from ..constants import MAX_BLOB_BYTES, MAX_READ_CHARS, MAX_READ_RECORDS, MAX_RECORD_BYTES, SEGMENT_BYTES
+from ..constants import (MAX_BLOB_BYTES, MAX_QUERY_READ_CHARS, MAX_READ_CHARS, MAX_READ_RECORDS,
+                         MAX_RECORD_BYTES, SEGMENT_BYTES)
 from . import idle_cache
 
 _LOCK = threading.RLock()
@@ -263,19 +264,45 @@ def write_batch(owner, packet, scene_history_id=None):
         return ack
 
 
-def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10):
-    """Bounded read-only retrieval. No supplied paths and no script execution."""
+def _wanted(record, roles, tools):
+    """``roles`` / ``tools`` select message records: a payload role in
+    ``roles`` OR a tool result from a tool in ``tools``."""
+    if not (roles or tools):
+        return True
+    if record.get('kind') != 'message':
+        return False
+    payload = record.get('payload') or {}
+    return payload.get('role') in (roles or ()) or (
+        payload.get('role') == 'tool' and payload.get('tool') in (tools or ()))
+
+
+def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10,
+         roles=None, tools=None, oldest_first=False, offset=0, max_chars=None):
+    """Bounded read-only retrieval. No supplied paths and no script execution.
+
+    ``task_id`` may be a list. Newest first unless ``oldest_first``; ``offset``
+    skips that many matching records; ``max_chars`` (capped) raises the text
+    budget of a filtered read."""
     directory = root() / valid_id(session)
     if not directory.is_dir():
         return {'status': 'unavailable'}
     limit = max(1, min(int(limit), MAX_READ_RECORDS))
+    budget = MAX_READ_CHARS
+    if max_chars and (roles or tools):
+        budget = max(1, min(int(max_chars), MAX_QUERY_READ_CHARS))
+    skip = max(0, int(offset or 0))
+    tasks = set(task_id) if isinstance(task_id, (list, tuple)) else {task_id}
     with _locked(session):
         manifest = _manifest(directory, valid_id(owner))
         rows, used = [], 0
-        for segment in sorted((directory / 'events').glob('*.jsonl'), reverse=True):
-            for line in reversed(segment.read_bytes().splitlines()):
+        segments = sorted((directory / 'events').glob('*.jsonl'), reverse=not oldest_first)
+        for segment in segments:
+            lines = segment.read_bytes().splitlines()
+            for line in (lines if oldest_first else reversed(lines)):
                 event = json.loads(line)
-                if task_id and event['task_id'] != task_id:
+                if task_id and event['task_id'] not in tasks:
+                    continue
+                if (roles or tools) and event['kind'] != 'message':
                     continue
                 if message_id and event.get('message_id') != message_id:
                     continue
@@ -288,6 +315,11 @@ def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10)
                 if hashlib.sha256(raw).hexdigest() != digest:
                     raise ValueError('archive_blob_corrupt')
                 record = json.loads(raw)
+                if not _wanted(record, roles, tools):
+                    continue
+                if skip:
+                    skip -= 1
+                    continue
                 if image_id:
                     blob = record['payload']['blob']
                     if not _HASH.fullmatch(blob):
@@ -298,7 +330,7 @@ def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10)
                     return {'status': 'available', 'image': {**record['payload'],
                             'base64': base64.b64encode(image).decode()}}
                 text = raw.decode()
-                remaining = MAX_READ_CHARS - used
+                remaining = budget - used
                 if remaining <= 0:
                     return {'status': 'available', 'records': rows, 'gaps': manifest['gaps']}
                 rows.append({'event_id': event['event_id'], 'text': text[:remaining],
@@ -322,3 +354,28 @@ def known_sessions(owner):
         except (ValueError, OSError):
             continue
     return result
+
+
+def reassign_owner(old_owner, new_owner):
+    """A claimed guest's chats become the account's: every session archive
+    the guest owns is re-filed under ``new_owner`` (manifest only, under the
+    session lock, atomically). Without it the account's reads and writes hit
+    ``archive_owner_or_version_mismatch`` — the Oct 26 run signed in mid-chat
+    and its ``read_agent_history`` answered ``unavailable``. Returns the
+    number of sessions moved."""
+    old_owner, new_owner = valid_id(old_owner), valid_id(new_owner)
+    moved = 0
+    for path in root().glob('*/manifest.json'):
+        try:
+            session = valid_id(path.parent.name)
+            with _locked(session):
+                manifest = json.loads(path.read_text())
+                if manifest.get('owner_id') != old_owner:
+                    continue
+                manifest['owner_id'] = new_owner
+                _atomic(path, canonical(manifest))
+                idle_cache.discard(path.parent)
+                moved += 1
+        except (ValueError, OSError):
+            continue
+    return moved

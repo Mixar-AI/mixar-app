@@ -1,0 +1,30 @@
+# Blender 5.2.0, Commit date: 2026-07-13 15:20, Hash fbe6228777e7
+bpy.ops.mixie_chat.send_message()  # Operator
+
+# backtrace
+Exception Record:
+
+ExceptionCode         : EXCEPTION_ACCESS_VIOLATION
+Exception Address     : 0x00007FFF1191CA80
+Exception Module      : _ctypes.pyd
+Exception Flags       : 0x00000000
+Exception Parameters  : 0x2
+	Parameters[0] (action)  : 0x0000000000000000 (read)
+	Parameters[1] (address) : 0x0000000000000008
+
+
+Stack trace:
+_ctypes.pyd         :0x00007FFF1191CA80  DllCanUnloadNow
+python313.dll       :0x00007FFF018D57D0  PyObject_GenericGetAttrWithDict
+mixar.exe           :0x00007FF6C512772A  Symbols not available
+python313.dll       :0x00007FFF018D4DE0  PyObject_GetAttr
+python313.dll       :0x00007FFF019FC5A0  PyEval_EvalFrameDefault
+python313.dll       :0x00007FFF019FC330  PyEval_EvalCode
+
+
+Loaded Modules :
+0x00007FF6C4000000          4.3.9.0             mixar.exe
+0x00007FFF11910000          3.13.1150.1013      _ctypes.pyd
+0x00007FFF01800000          3.13.1150.1013      python313.dll
+
+# Python backtrace

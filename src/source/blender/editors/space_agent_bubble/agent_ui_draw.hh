@@ -105,6 +105,14 @@ struct AgentIslandState {
   char model_source_label[32];
   char model_chip_name[96];
   char model_chip_state[16];
+
+  /* The engine chip (wm.mixar_engine_*; space_mixie_chat/core/engine_connect.py
+   * decides, the C++ only draws): its label ("Godot · Ruins", "Connect
+   * engine") and state "CONNECTED" | "OFF" | "BUSY" | "ERROR" (the dot's
+   * colour). Absent mirror = no chip. Read by `agent_ui_engine_gather`. */
+  bool engine_available;
+  char engine_chip_name[96];
+  char engine_state[16];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

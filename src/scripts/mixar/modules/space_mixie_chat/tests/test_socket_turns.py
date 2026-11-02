@@ -285,11 +285,10 @@ def test_completed_background_delivery_survives_expired_journal(env, monkeypatch
     assert not events._turns['wakeup'].complete
 
 
-@pytest.mark.parametrize('pending', ['turn', 'command', 'unknown_turn'])
+@pytest.mark.parametrize('pending', ['command', 'unknown_turn'])
 def test_missing_delivery_is_not_hidden_by_open_run(env, monkeypatch, pending):
     started()
-    if pending != 'turn':
-        event(0, {'type': 'turn_end', 'status': 'in_progress'})
+    event(0, {'type': 'turn_end', 'status': 'in_progress'})
     events._drain()
     if pending == 'command':  # admitted by the server, its turn never rendered
         events.expect(env.scene, 'new-command')
@@ -302,6 +301,26 @@ def test_missing_delivery_is_not_hidden_by_open_run(env, monkeypatch, pending):
     monkeypatch.setattr(events, '_replay_unavailable', unavailable)
     events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
     unavailable.assert_called_once()
+
+
+@pytest.mark.parametrize('info', [{'status': 'unavailable'}, {'status': 'unavailable', 'missing': True}])
+def test_a_status_without_a_turn_id_reattaches_a_live_turn_instead_of_settling_it(env, monkeypatch, info):
+    """uat4, 28 Oct (session b3a5b631, twice): an hour into a running turn the
+    server's session pointer had expired, so the reconnect's ``agent.status``
+    answered ``missing``. The chat said "The connection lost part of this
+    response", the tab went IDLE and every later script was refused while the
+    server kept working. The turn's own attach decides, by its id."""
+    started()
+    event(0)
+    events._drain()
+    unavailable = MagicMock()
+    monkeypatch.setattr(events, '_replay_unavailable', unavailable)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
+    unavailable.assert_not_called()
+    turn = events._turns['turn']
+    assert not turn.complete and turn.recovering and env.replay == [0]
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
+    assert env.replay == [0]  # An attach already in flight is not repeated.
 
 
 @pytest.mark.parametrize('held', [True, False])
@@ -521,3 +540,14 @@ def test_server_answer_releases_the_held_frame(wire):
     assert 'cmd' not in events._outbox
     events.reconnect()
     assert 'cmd' not in wire.probes  # settled: nothing left to ask about or resend
+
+
+def test_a_retired_turn_after_a_crash_restore_settles_without_the_lost_response_note(env, settle):
+    # The backend retires the crashed app's turn on reconnect (ended / cancelled,
+    # no replay); the tab already shows the crash-restore Continue notice.
+    settle.scene.mixie_chat_messages = [SimpleNamespace(bubble_id='crash-resume-1a2b3c4d')]
+    recovery(status='ended', end_status='cancelled', replay_available=False)
+    turn = events._turns['turn']
+    assert turn.complete and not turn.pending
+    assert settle.scene.mixie_chat_state == 'IDLE' and not settle.scene.mixie_run_open
+    assert settle.notices == []

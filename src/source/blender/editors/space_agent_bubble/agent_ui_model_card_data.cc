@@ -33,7 +33,6 @@ namespace blender::agent_model_card {
 
 namespace {
 
-constexpr const char *PICK_OP = "MIXAR_OT_agent_pick";
 /** The pick poll is Python (a turn in flight, a change being saved): asked at
  * 10 Hz, not every 60 Hz tick. The operator checks it again when it runs. */
 constexpr double POLL_SECONDS = 0.1;
@@ -75,6 +74,32 @@ std::string wm_string(wmWindowManager *wm, const char *name)
 }
 
 }  // namespace
+
+const Source &card_source(const CardKind kind)
+{
+  static const Source model{CardKind::Model,
+                            "mixar_agent_tabs",
+                            "mixar_agent_rows",
+                            "mixar_agent_source",
+                            "mixar_agent_source_state",
+                            "MIXAR_OT_agent_pick",
+                            "MIXAR_BYOK_OT_open_dialog",
+                            "model_card",
+                            N_("Saving your change\xe2\x80\xa6"),
+                            N_("Finish or stop the current reply to change the model")};
+  /* space_mixie_chat/ui/properties/engine_chip_props.py mirrors these. */
+  static const Source engine{CardKind::Engine,
+                             "mixar_engine_tabs",
+                             "mixar_engine_rows",
+                             "mixar_engine_tab",
+                             "mixar_engine_state",
+                             "MIXAR_OT_engine_pick",
+                             "MIXAR_OT_engine_connect",
+                             "engine_card",
+                             N_("Connecting\xe2\x80\xa6"),
+                             N_("Finish or stop the current reply to switch the engine")};
+  return kind == CardKind::Engine ? engine : model;
+}
 
 bool is_default_row(const Row &row)
 {
@@ -172,12 +197,13 @@ void rebuild_lines(State &state)
 bool refresh(bContext *C, State &state, const bool force)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
-  const std::string tabs = wm_string(wm, "mixar_agent_tabs");
-  const std::string rows = wm_string(wm, "mixar_agent_rows");
+  const Source &src = *state.src;
+  const std::string tabs = wm_string(wm, src.tabs_prop);
+  const std::string rows = wm_string(wm, src.rows_prop);
   bool gated = state.gated;
   const double now = BLI_time_now_seconds();
   if (force || now - state.polled_at >= POLL_SECONDS) {
-    wmOperatorType *ot = WM_operatortype_find(PICK_OP, true);
+    wmOperatorType *ot = WM_operatortype_find(src.pick_op, true);
     gated = ot && !WM_operator_poll_context(C, ot, wm::OpCallContext::InvokeDefault);
     state.polled_at = now;
   }
@@ -186,12 +212,11 @@ bool refresh(bContext *C, State &state, const bool force)
   }
   state.raw_tabs = tabs;
   state.raw_rows = rows;
-  state.source = wm_string(wm, "mixar_agent_source");
+  state.source = wm_string(wm, src.current_prop);
   state.gated = gated;
   state.gate_text = !gated ? "" :
-                    wm_string(wm, "mixar_agent_source_state") == "BUSY" ?
-                             IFACE_("Saving your change\xe2\x80\xa6") :
-                             IFACE_("Finish or stop the current reply to change the model");
+                    wm_string(wm, src.state_prop) == "BUSY" ? IFACE_(src.gate_busy) :
+                                                               IFACE_(src.gate_other);
   state.tabs.clear();
   for (const std::string &rec : split(tabs, RS)) {
     const std::vector<std::string> f = split(rec, FS);
