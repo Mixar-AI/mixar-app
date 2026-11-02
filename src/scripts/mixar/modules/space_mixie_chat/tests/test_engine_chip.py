@@ -61,9 +61,8 @@ def test_nothing_connected_explains_the_connect():
     assert m["mixar_engine_chip_name"] == "Connect engine" and m["mixar_engine_state"] == "OFF"
     godot = _tabs(m)[0]
     assert godot[0] == "GODOT" and godot[2] == "1" and "Connect Godot installs Mixar Link" in godot[4]
-    unreal, uefn = _tabs(m)[1:]
+    unreal, = _tabs(m)[1:]
     assert unreal[0] == "UNREAL" and unreal[2] == "1" and "Unreal Engine 5.8+" in unreal[4]
-    assert uefn[0] == "UEFN" and uefn[2] == "0"
     footers = [(r[0], r[2]) for r in _rows(m) if r[1] == "footer"]
     assert footers == [("GODOT", "Connect Godot…"), ("UNREAL", "Connect Unreal…")]
     assert m["mixar_engine_tab"] == "GODOT"

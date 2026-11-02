@@ -82,7 +82,7 @@ UNREAL_CONNECT_TIMEOUT_S = 1800.0
 ENGINES = (
     {"key": "godot", "label": "Godot", "available": True},
     {"key": "unreal", "label": "Unreal Engine", "available": True},
-    {"key": "uefn", "label": "UEFN", "available": False},
+    # UEFN is not offered yet; its export profile stays in engine_targets.
 )
 
 # Sent in the agent handshake and listed back by a server with the engine
