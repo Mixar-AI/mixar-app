@@ -191,6 +191,8 @@ set(SRC
   mixar_sso_success_page.h
   mixar_sso_failure_page.h
   mixar_local_auth_server.cc
+  mixar_crash_info.h
+  mixar_crash_info.cc
   creator_intern.h
 )
 
@@ -1287,7 +1289,13 @@ elseif(WIN32)
       endif()
     endif()
 
-    if(WITH_WINDOWS_RELEASE_STRIPPED_PDB)
+    # MIXAR: the release PDB feeds crash symbolication from the build tree (the
+    # release pipeline uploads it); it is not shipped unless asked for.
+    option(MIXAR_INSTALL_RELEASE_PDB "Install mixar.pdb next to Mixar.exe" OFF)
+    mark_as_advanced(MIXAR_INSTALL_RELEASE_PDB)
+    if(NOT MIXAR_INSTALL_RELEASE_PDB)
+      # Nothing to install.
+    elseif(WITH_WINDOWS_RELEASE_STRIPPED_PDB)
       # Icky hack for older CMAKE from https://stackoverflow.com/a/21198501
       # `$<CONFIG>` will work in newer CMAKE but the version currently (3.12)
       # on the build-bot does not support this endeavor.

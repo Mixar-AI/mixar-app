@@ -21,6 +21,7 @@ import requests
 from mixar.modules.common.i18n import rpt_
 
 from ....config.config import get_server_url
+from .request_headers import auth_headers
 from ...common.network import classify_network_error, log_network_failure
 from ....config.logging_config import get_logger
 from ..utils.constants import AUTH_BASE_URL
@@ -370,10 +371,7 @@ def login(username, password):
     """
     try:
         url = f"{get_server_url()}/api/v1/auth/login"
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "accept": "application/json",
-        }
+        headers = auth_headers(**{"Content-Type": "application/x-www-form-urlencoded"})
         form_fields = {
             "username": username,
             "password": password,
@@ -692,11 +690,7 @@ def _refresh_access_token_locked(refresh_token, idempotency_key):
 
     try:
         url = f"{get_server_url()}/api/v1/auth/refresh"
-        headers = {
-            "Content-Type": "application/json",
-            "accept": "application/json",
-            "Idempotency-Key": idempotency_key,
-        }
+        headers = auth_headers(json_body=True, **{"Idempotency-Key": idempotency_key})
         data = json.dumps({"refresh_token": refresh_token})
 
         response = requests.post(url, headers=headers, data=data, timeout=30)
@@ -807,10 +801,7 @@ def get_user_info():
 
     try:
         url = f"{get_server_url()}/{AUTH_BASE_URL}/me"
-        headers = {
-            "accept": "application/json",
-            "Authorization": f"Bearer {token}",
-        }
+        headers = auth_headers(bearer=token)
 
         response = requests.get(url, headers=headers, timeout=10)
 
@@ -882,11 +873,7 @@ def create_dashboard_handoff_url(source="texture_painting", target=None):
 
     try:
         url = f"{get_server_url()}/api/v1/auth/handoff/create"
-        headers = {
-            "Content-Type": "application/json",
-            "accept": "application/json",
-            "Authorization": f"Bearer {token}",
-        }
+        headers = auth_headers(json_body=True, bearer=token)
         payload = {"source": source}
         if target:
             payload["target"] = target

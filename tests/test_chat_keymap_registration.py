@@ -76,3 +76,29 @@ def test_unregister_cancels_deferred_registration(keymap):
     module.bpy.app.timers.is_registered.return_value = True
     module.unregister()
     module.bpy.app.timers.unregister.assert_called_once_with(module.register)
+
+
+def _startup_bootstrap():
+    path = Path(__file__).parents[1] / 'src/scripts/startup/bootstrap/__init__.py'
+    spec = importlib.util.spec_from_file_location('qa_startup_bootstrap', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_keymaps_register_after_every_operator_and_before_panels():
+    # Regression: ui/keymap.py is shallower than ui/operators/session_ops.py, so it
+    # sorted first and ``kmi.properties.origin`` raised (abort_session unregistered);
+    # the chat keymap waited for the retry pass at the end of deferred loading.
+    bootstrap = _startup_bootstrap()
+    modules = Path(__file__).parents[1] / 'src/scripts/mixar/modules'
+    order = [p.relative_to(modules).as_posix() for p in bootstrap._discover_ui_files(modules)]
+    keymaps = [i for i, p in enumerate(order) if 'keymap' in p.rsplit('/', 1)[-1]]
+    # Operator files named like display code (``layer_menus.py``) load with panels.
+    operators = [i for i, p in enumerate(order) if '/ui/operators/' in p
+                 and not any(kw in p.rsplit('/', 1)[-1] for kw in bootstrap._DISPLAY_KEYWORDS)]
+    assert order.index('space_mixie_chat/ui/operators/session_ops.py') in operators
+    panels = [i for i, p in enumerate(order) if '/ui/panels/' in p]
+    assert 'space_mixie_chat/ui/keymap.py' in order
+    assert keymaps and operators and panels
+    assert max(operators) < min(keymaps) and max(keymaps) < min(panels)

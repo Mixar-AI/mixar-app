@@ -34,7 +34,14 @@ void agent_model_card_anchor(const wmWindow *win, const rctf &chip, float text_s
 /** The card is open (the chip draws lit). */
 bool agent_model_card_is_open();
 
-/** `MIXAR_OT_agent_model_card` and the card's QA targets. */
+/** The same card on the engine chip (agent_ui_engine.hh): its rows come from
+ * `wm.mixar_engine_*`, a pick runs `MIXAR_OT_engine_pick`, the footer
+ * `MIXAR_OT_engine_connect`. */
+void agent_engine_card_anchor(const wmWindow *win, const rctf &chip, float text_size, bool available);
+bool agent_engine_card_is_open();
+
+/** `MIXAR_OT_agent_model_card`, `MIXAR_OT_agent_engine_card` and the cards'
+ * QA targets. */
 void agent_model_card_register();
 
 }  // namespace blender

@@ -85,6 +85,17 @@ class TurnTransport:
                 payload['folder_context'] = folders.folder_context_for_send(scene, payload['session_id'])
             except Exception:  # noqa: BLE001 — a folder failure never blocks a send
                 pass
+        if method == 'chat':
+            # The game engine the composer's engine chip shows as connected
+            # (names only, never a path): the agent builds a game there
+            # without being told (backend context/engine.py).
+            try:
+                from .engine_connect import engine_context
+                context = engine_context()
+                if context:
+                    payload['engine_context'] = context
+            except Exception:  # noqa: BLE001 — the engine chip never blocks a send
+                pass
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
         self.last_command_id = command_id

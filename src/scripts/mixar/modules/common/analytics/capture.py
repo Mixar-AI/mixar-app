@@ -140,6 +140,11 @@ def capture(event: str, properties: dict | None = None, *, context=None) -> None
         logger.debug("Telemetry capture failed for %s: %s", event, exc)
 
 
+def app_session_id() -> str:
+    """This desktop process's telemetry session id (opaque UUID)."""
+    return _app_session_id
+
+
 def events_dropped() -> int:
     return _events_dropped
 
@@ -263,12 +268,26 @@ def _successful(result) -> bool:
 def _capture_operator_result(op_id, result, context):
     try:
         from .journey_events import operator_outcome
-        from .essential_events import cinema_operator_properties
+        from .essential_events import cinema_operator_properties, scene_tab_operator_properties
         operator_outcome(op_id, result, context)
         capture(EVENT_OPERATOR, {
             "operator": op_id, "success": _successful(result),
             **cinema_operator_properties(op_id, result, context),
+            **scene_tab_operator_properties(op_id, result, context),
         }, context=context)
+    except Exception:
+        pass
+
+
+def _report_operator_exception() -> None:
+    """Blender prints an operator's exception through PyErr_Display, which
+    skips sys.excepthook, so Mixar's own operators report it here (the crash
+    reporter dedupes, rate-limits, scrubs and gates it on consent)."""
+    try:
+        import sys
+
+        from mixar.modules.common.crash_reports import report_exception
+        report_exception(*sys.exc_info(), source="operator")
     except Exception:
         pass
 
@@ -290,6 +309,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context, event)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)
             return result
@@ -302,6 +322,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)
             return result

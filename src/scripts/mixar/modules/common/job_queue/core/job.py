@@ -140,6 +140,12 @@ class Job:
     download_total_bytes: int = 0   # 0 = host sent no Content-Length
     download_attempt: int = 0
     download_started_at: float = 0.0
+    # A downloaded result whose import waits for a render to end
+    # (queue_download._finish_import): when the current hold began (monotonic,
+    # 0 = not held) and the seconds earlier holds took. The watchdog bounds
+    # the transfer, not that wait (download_elapsed).
+    import_held_since: float = 0.0
+    import_held_s: float = 0.0
 
     # Result objects (populated by on_imported)
     imported_object_names: str = ""
@@ -350,6 +356,12 @@ class Job:
     # ------------------------------------------------------------------ #
     # UI helpers
     # ------------------------------------------------------------------ #
+
+    def download_elapsed(self, now: float) -> float:
+        """Seconds since the download began (monotonic ``now``), not counting
+        the time its import was held for a render."""
+        held = self.import_held_s + (now - self.import_held_since if self.import_held_since else 0.0)
+        return now - self.download_started_at - held
 
     def substate_text(self) -> str:
         """Human-readable secondary text for the queue UIList."""

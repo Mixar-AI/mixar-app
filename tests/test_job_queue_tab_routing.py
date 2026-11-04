@@ -63,7 +63,8 @@ def tabs(monkeypatch):
     a, b = _tab("A"), _tab("B")
     scenes = _Scenes(a, b)
     bpy = queue_download.bpy
-    window = SimpleNamespace(scene=b, screen=SimpleNamespace(areas=[]))
+    # The document window as _document_window() reads it: a non-temporary screen and a size.
+    window = SimpleNamespace(scene=b, screen=SimpleNamespace(areas=[], is_temporary=False), width=1, height=1)
     monkeypatch.setattr(bpy.data, "scenes", scenes, raising=False)
     monkeypatch.setattr(bpy.context, "scene", b, raising=False)
     monkeypatch.setattr(bpy.context, "window", window, raising=False)
@@ -263,7 +264,8 @@ class _CountingWindow:
     def __init__(self, scene):
         self._scene = scene
         self.switches = 0
-        self.screen = SimpleNamespace(areas=[])
+        self.screen = SimpleNamespace(areas=[], is_temporary=False)
+        self.width = self.height = 1
 
     @property
     def scene(self):

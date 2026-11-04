@@ -67,6 +67,20 @@ _execution_gate_until: float = 0.0
 # Lock-guarded because it crosses threads.
 _inflight_lock = threading.Lock()
 _inflight: Optional[dict] = None
+# >0 while this executor runs a script whose reply it can hold open
+# (``accepts_deferred_jobs``). Main thread only.
+_deferrable_depth = 0
+# That script's tool, and whether a call in it already handed its work to a
+# worker (``claim_deferred_job``). Main thread only.
+_deferrable_tool = ""
+_deferred_claimed = False
+#: Tools whose script returns the call's value as its final result (the
+#: backend's export_asset template: ``result = export_package(...)``), so a
+#: ``{"__deferred_job__": key}`` reaches the executor and is held open. Any
+#: other script may call it twice, read ``result["files"]`` or fail after it:
+#: the key would be dropped, the job never polled, the caller handed a
+#: KeyError. Such a call builds the package at once.
+DEFERRED_JOB_TOOLS = frozenset({"export_asset"})
 
 
 def _set_inflight(tool_name: str, request_id: str, session_id: str) -> None:
@@ -267,6 +281,14 @@ def _reject_stale_session(req: ExecutionRequest) -> None:
         logger.debug("lane scene sweep scheduling skipped", exc_info=True)
 
 
+def _request_save_point(reason: str) -> None:
+    try:
+        from mixar.modules.session_recovery.runtime import request_save_point
+        request_save_point(reason)
+    except Exception:  # noqa: BLE001 — never in the script path's way
+        pass
+
+
 def _note_output_landed() -> None:
     # Rejection-window tracking only — no event is emitted here (the backend
     # covers agent tool telemetry server-side).
@@ -317,6 +339,7 @@ def _process_one_request() -> Optional[float]:
 
 def _execute_dequeued_request(req, status, lane) -> Optional[float]:
     """Dispatch a taken request; execution failures never strand the next one."""
+    global _deferrable_depth, _deferrable_tool, _deferred_claimed
     previous = lanes.switch_to(lane)
     if previous is not None:
         from mixar.modules.common.scenes_log import slog
@@ -370,7 +393,13 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
                 result_dict = {"success": False, "error": "Previous script still executing"}
             else:
                 execution_started = True
-                result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                _deferrable_depth += 1
+                _deferrable_tool, _deferred_claimed = req.tool_name, False
+                try:
+                    result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                finally:
+                    _deferrable_depth -= 1
+                    _deferrable_tool, _deferred_claimed = "", False
     except Exception:
         logger.exception("Executor request failed (id: %s)", req.request_id)
         result_dict = {"success": False, "error": "Executor request failed",
@@ -388,8 +417,11 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
     # deferral's timer when the native job ends, and this queue keeps draining.
     from .preview_deferral import defer_response, deferred_preview_key
     deferred_key = deferred_preview_key(result_dict)
-    if deferred_key is None or not defer_response(req, deferred_key, scene=chat_scene,
-                                                  initial_result=result_dict):
+    if deferred_key is None:
+        held = _defer_worker_job(req, result_dict, chat_scene)
+    else:
+        held = defer_response(req, deferred_key, scene=chat_scene, initial_result=result_dict)
+    if not held:
         try:
             archive_history(req.tool_name, req.script, result_dict, chat_scene, req.request_id)
             if chat_scene:
@@ -399,6 +431,10 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
 
+    # Crash safety: the agent changed the scene, so a save point is due once
+    # its scripts pause (coalesced; never written while scripts are queued).
+    _request_save_point("agent_script")
+
     # Continue timer if more requests pending. The same tab back-to-back
     # keeps the 500 ms breather (safe for edit mode operations); another
     # tab's script gets the next tick — round-robin serves it first.
@@ -406,6 +442,43 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         return TIMER_INTERVAL if lanes.other_pending(lane) else 0.50
 
     return _stop_timer_if_idle()  # Stop timer when queue empty
+
+
+def _defer_worker_job(req, result_dict, chat_scene) -> bool:
+    """Hold the reply of a script that handed its work to a background worker
+    (``{"__deferred_job__": key}``); the job's owner answers it."""
+    from .preview_deferral import deferred_job_key, defer_job
+    key = deferred_job_key(result_dict)
+    if key is None:
+        return False
+    from . import export_package
+    return defer_job(req, key, poll=export_package.poll_job, cancel=export_package.cancel_job,
+                     max_s=export_package.WORKER_REPLY_MAX_S, scene=chat_scene,
+                     initial_result=result_dict)
+
+
+def accepts_deferred_jobs() -> bool:
+    """Whether the script running now may answer ``{"__deferred_job__": key}``:
+    only a script this GUI executor runs (it holds the reply open). The headless
+    sandbox pump and direct calls have no deferral, so they work in-process."""
+    return _deferrable_depth > 0
+
+
+def may_defer_job() -> bool:
+    """Whether a call may answer ``{"__deferred_job__": key}`` now: a script
+    this executor runs, sent by one of :data:`DEFERRED_JOB_TOOLS`, that has
+    not deferred a call yet."""
+    return accepts_deferred_jobs() and _deferrable_tool in DEFERRED_JOB_TOOLS \
+        and not _deferred_claimed
+
+
+def claim_deferred_job() -> bool:
+    """Take the script's one deferral (the call is about to return its key)."""
+    global _deferred_claimed
+    if not may_defer_job():
+        return False
+    _deferred_claimed = True
+    return True
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> bool:

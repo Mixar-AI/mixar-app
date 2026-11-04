@@ -9,9 +9,12 @@ import struct
 
 def glb_bytes(*, meshes=1, animations=(), materials=("Mat",), images=1, embedded=True,
               draco=False, bin_size=2048, size=(2.0, 1.0, 0.5), node_translations=None,
-              scenes=1, extra_nodes=()) -> bytes:
+              scenes=1, extra_nodes=(), skin=None) -> bytes:
     """A minimal glTF 2.0 binary: ``meshes`` cube-like primitives sharing one
-    POSITION accessor (min/max spanning ``size``) and one index accessor."""
+    POSITION accessor (min/max spanning ``size``) and one index accessor.
+    ``skin`` adds a skeleton bound to every mesh node: ``"weighted"`` gives
+    the primitives JOINTS_0 / WEIGHTS_0, ``"unweighted"`` leaves them out (a
+    skeleton the mesh does not follow)."""
     accessors = [
         {"bufferView": 0, "componentType": 5126, "count": 8, "type": "VEC3",
          "min": [0.0, 0.0, 0.0], "max": list(size)},
@@ -36,6 +39,13 @@ def glb_bytes(*, meshes=1, animations=(), materials=("Mat",), images=1, embedded
         ],
         "animations": [{"name": name, "channels": [], "samplers": []} for name in animations],
     }
+    if skin:
+        doc["skins"] = [{"name": "Rig", "joints": [len(doc["nodes"])]}]
+        doc["nodes"].append({"name": "Hip"})
+        for i in range(meshes):
+            doc["nodes"][i]["skin"] = 0
+            if skin == "weighted":
+                doc["meshes"][i]["primitives"][0]["attributes"].update({"JOINTS_0": 0, "WEIGHTS_0": 0})
     if draco:
         doc["extensionsUsed"] = ["KHR_draco_mesh_compression"]
     for mesh in doc["meshes"]:

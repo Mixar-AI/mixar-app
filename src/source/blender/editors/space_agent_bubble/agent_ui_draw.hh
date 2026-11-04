@@ -48,6 +48,9 @@ struct AgentIslandState {
   /* The primary button reads Stop instead of Send: busy AND nothing typed.
    * A non-empty composer always sends (an interjection joins the open run). */
   bool stop_visible;
+  /* The primary button reads Steer: the agent is working on something a
+   * typed message joins (a running turn, or an open run's workers). */
+  bool steer_visible;
   /* A conversation exists, so the panel splits: transcript above, input below.
    * Empty, the input takes the whole panel exactly as the artboard draws it. */
   bool has_transcript;
@@ -105,6 +108,14 @@ struct AgentIslandState {
   char model_source_label[32];
   char model_chip_name[96];
   char model_chip_state[16];
+
+  /* The engine chip (wm.mixar_engine_*; space_mixie_chat/core/engine_connect.py
+   * decides, the C++ only draws): its label ("Godot · Ruins", "Connect
+   * engine") and state "CONNECTED" | "OFF" | "BUSY" | "ERROR" (the dot's
+   * colour). Absent mirror = no chip. Read by `agent_ui_engine_gather`. */
+  bool engine_available;
+  char engine_chip_name[96];
+  char engine_state[16];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

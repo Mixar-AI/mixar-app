@@ -43,6 +43,7 @@ Follow the same structure used by the repo:
 - Keep reusable logic in the relevant module or `common`
 - Use the build scripts instead of building directly from generated `source/`
 - Keep environment variables in `.env` locally and never commit `.env`
+- When a change starts depending on backend code that is not yet in production (a new endpoint, a new field it requires, a new WebSocket method), raise the root `MIN_BACKEND_VERSION` to the backend version that ships it in the same PR. The backend offers a release only once it meets that version, which is what lets client and backend ship in any order.
 
 ## Branch Naming
 

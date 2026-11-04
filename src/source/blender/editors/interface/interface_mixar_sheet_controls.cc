@@ -248,6 +248,17 @@ void draw_provider_row(Button *but, const rcti *rect)
   rctf text = pill;
   text.xmin += px(row_text_x);
   text.xmax -= px(row_text_x);
+  /* A row that carries a preview icon (an engine's logo) leads with it, drawn
+   * from the full-size preview so it stays sharp at any UI scale. */
+  if (but->icon != ICON_NONE) {
+    const float size = std::min(px(row_icon), BLI_rctf_size_y(&pill) - px(8.0f));
+    const float x = pill.xmin + px(row_icon_x);
+    const float alpha = fade * (row_icon_rest_alpha + (1.0f - row_icon_rest_alpha) *
+                                                          std::max(motion.selected, hover_cue(motion)));
+    GPU_blend(GPU_BLEND_ALPHA);
+    icon_draw_preview(x, BLI_rctf_cent_y(&pill) - size * 0.5f, but->icon, 1.0f, alpha, int(size));
+    text.xmin = x + size + px(row_icon_gap);
+  }
   /* Python widens the pill to a long name (`byok_sheet.row_right`); only a
    * name too long even for that runs on towards the divider before it is
    * ellipsised. */
