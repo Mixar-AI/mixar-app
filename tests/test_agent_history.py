@@ -379,3 +379,54 @@ def test_archive_root_supports_explicit_qa_isolation(client_store, monkeypatch, 
     isolated = tmp_path / 'isolated-history'
     monkeypatch.setenv('MIXAR_AGENT_HISTORY_DIR', str(isolated))
     assert client_store._configured_root() == isolated
+
+
+def test_a_claimed_guests_archives_are_refiled_under_the_account(client_store):
+    """Oct 26: a chat begun as a guest, signed in mid-run, could no longer be
+    read (owner mismatch) — the agent lost its own earlier turns."""
+    client_store.write_batch('guest', packet(), 'scene')
+    other = packet(seq=1)
+    other['session_id'] = 'theirs'
+    client_store.write_batch('someone_else', other, 'scene')
+    assert client_store.reassign_owner('guest', 'account') == 1
+    read = client_store.read('account', 'session', message_id='message1')
+    assert read['status'] == 'available'
+    with pytest.raises(ValueError, match='owner'):
+        client_store.read('guest', 'session')
+    assert client_store.known_sessions('account') == ['session']
+    assert client_store.known_sessions('someone_else') == ['theirs']
+    # the account keeps writing to the same archive
+    assert client_store.write_batch('account', packet(seq=2, text='after sign-in'), 'scene')['seq'] == 2
+
+
+def test_a_filtered_read_lists_the_users_messages_oldest_first(client_store):
+    """The backend's role="user" query: human messages and question answers
+    of one task, from the first on, paged by offset (Oct 27: the plan was
+    the session's first message and newest-first reads never reached it)."""
+    def message(seq, role, text, tool=None):
+        payload = {'id': f'm{seq}', 'role': role, 'text': text}
+        if tool:
+            payload['tool'] = tool
+        record = {'version': 1, 'run_id': 'run', 'task_id': 'orchestrator', 'kind': 'message',
+                  'payload': payload}
+        return {'seq': seq, 'event_id': encode_record(record)['id'], 'record': record}
+    rows = [message(1, 'human', 'the plan'), message(2, 'ai', 'ok'),
+            message(3, 'tool', 'big script output', tool='execute_bpy_script'),
+            message(4, 'tool', 'Revise layout first', tool='request_user_input'),
+            message(5, 'human', 'go forward')]
+    client_store.write_batch('owner', {'session_id': 'session', 'epoch': 'a' * 32,
+                                       'status': 'available', 'records': rows})
+
+    def texts(**kw):
+        found = client_store.read('owner', 'session', task_id='orchestrator', roles=['human'],
+                                  tools=['request_user_input'], **kw)
+        return [json.loads(r['text'])['payload']['text'] for r in found['records']]
+    assert texts(oldest_first=True) == ['the plan', 'Revise layout first', 'go forward']
+    assert texts(oldest_first=True, offset=1, limit=1) == ['Revise layout first']
+    assert texts() == ['go forward', 'Revise layout first', 'the plan']
+    listed = client_store.read('owner', 'session', task_id=['triage', 'orchestrator'], roles=['human'])
+    assert len(listed['records']) == 2
+    # Unfiltered reads keep the model-facing budget; a filtered one may raise it.
+    assert client_store.read('owner', 'session', max_chars=10**9)['records']
+    big = client_store.read('owner', 'session', roles=['human'], oldest_first=True, max_chars=10**9)
+    assert len(big['records']) == 2

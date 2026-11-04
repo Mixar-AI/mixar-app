@@ -15,6 +15,7 @@
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_motion.hh"
+#include "agent_ui_engine.hh"
 #include "agent_ui_provider.hh"
 #include "agent_ui_theme.hh"
 #include "agent_ui_voice_paint.hh"
@@ -415,6 +416,8 @@ void agent_ui_draw_chip_row(ARegion *region,
   /* The model chip — who answers the agent and which model
    * (agent_ui_provider.cc). */
   agent_ui_draw_provider(region, layout, state);
+  /* The engine chip — the connected game engine (agent_ui_engine.cc). */
+  agent_ui_draw_engine(region, layout, state);
 
   agent_ui_draw_refine_controls(region, layout, state);
 
@@ -426,7 +429,13 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send"),
+  const char *primary = state->stop_visible ? IFACE_("Stop") :
+                        state->steer_visible ? IFACE_("Steer") :
+                                               IFACE_("Send");
+  /* A longer translation of Steer must not spill out of the button. */
+  const std::string primary_fit = ui::mixar_fit_text(
+      primary, std::max(0.0f, BLI_rctf_size_x(&layout->btn_generate) - pad), size);
+  label_centre(primary_fit.c_str(),
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,

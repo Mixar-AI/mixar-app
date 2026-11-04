@@ -43,6 +43,9 @@ _user_foreground_scene_name: str = ""
 _restore_scene_name: str = ""
 # The session whose pin the next restore undoes (its dossier gets the restore).
 _restore_session_id: str = ""
+# True between a pin that switched window.scene and its restore. Lets a native
+# render job put the window back BEFORE its thread starts (``release_pin``).
+_pin_active: bool = False
 # Read by the backend's render template: a window screenshot while the pin has
 # flipped window.scene without a redraw would show the previous scene's pixels.
 ROUTE_SWITCHED_KEY = "mixie_route_switched"
@@ -100,7 +103,8 @@ def route_request(
     switch happens) when a per-scene session matches no scene, matches more
     than one, or cannot be pinned because no window exists.
     """
-    global _user_foreground_scene_name, _restore_scene_name, _restore_session_id
+    global _user_foreground_scene_name, _restore_scene_name, _restore_session_id, _pin_active
+    _pin_active = False
     target_scene = None
     window, window_kind = _window()
     if not is_non_scene_routing_session(session_id):
@@ -139,6 +143,7 @@ def route_request(
             )
             _restore_session_id = session_id
             window.scene = target_scene
+            _pin_active = True
             logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
         # Every routed script leaves a dossier row, switched or not: the tab on
         # screen runs its own scripts without a flip, and that is worth seeing.
@@ -154,21 +159,58 @@ def restore_after(did_switch: bool) -> None:
     Falls back to the TRACKED user scene — never "whatever was active when
     this script started", which may itself be a throwaway lane scene.
     """
+    global _pin_active
     _set_route_switched(False)
+    _pin_active = False
     if not did_switch:
         return
     window, _ = _window()
     if window is None:
         return
-    restore_scene = bpy.data.scenes.get(_restore_scene_name) if _restore_scene_name else None
-    if restore_scene is None or is_lane_scene(restore_scene):
-        restore_scene = resolve_user_foreground_scene()
+    restore_scene = _restore_target()
     if restore_scene is not None and window.scene != restore_scene:
         try:
             window.scene = restore_scene
             slog("route.restore", None, session_id=_restore_session_id, to=restore_scene.name)
         except Exception:
             pass  # Scene may have been deleted by the script
+
+
+def _restore_target():
+    """The scene a restore puts the window back on (the pre-pin scene, else the
+    tracked user scene), or None."""
+    restore_scene = bpy.data.scenes.get(_restore_scene_name) if _restore_scene_name else None
+    if restore_scene is None or is_lane_scene(restore_scene):
+        restore_scene = resolve_user_foreground_scene()
+    return restore_scene
+
+
+def pin_restore_target():
+    """While a pin is live, the scene its restore will show; else None."""
+    return _restore_target() if _pin_active else None
+
+
+def release_pin(reason: str) -> bool:
+    """Restore the pinned window NOW, before the script ends; True if it did.
+
+    A script that starts a native render job (the agent preview) calls this
+    right before ``bpy.ops.render.render``. Switching ``window.scene`` runs
+    ``ED_scene_change_update`` → ``ED_render_engine_changed`` →
+    ``RE_FreePersistentData(nullptr)``, which frees every Render's engine that
+    is not yet flagged ``RE_ENGINE_RENDERING``. A job thread that has created
+    its engine but is still building the result (Cycles' Python
+    ``update_render_passes``, which waits for the GIL this script holds) is in
+    exactly that state, so the executor's restore after the script freed the
+    engine under the render thread (crashes in ``RE_engine_render`` and
+    ``DRW_render_check_grease_pencil``). Restored before the job exists, the
+    switch frees nothing; the executor's own restore then finds the window
+    already back and does nothing. See docs/render-job-contract.md.
+    """
+    if not _pin_active:
+        return False
+    restore_after(True)
+    slog("route.release", None, session_id=_restore_session_id, reason=reason)
+    return True
 
 
 def archive_history(

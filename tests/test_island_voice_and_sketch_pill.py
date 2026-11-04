@@ -118,7 +118,7 @@ def _fit_rows():
     return rows
 
 
-UPLOAD, SCRIBBLE, VOICE, AUTO, MODEL, READING, CLEAR = range(7)
+UPLOAD, SCRIBBLE, VOICE, AUTO, MODEL, ENGINE, READING, CLEAR = range(8)
 CORE = (SCRIBBLE, VOICE, AUTO, READING, CLEAR)
 
 
@@ -178,7 +178,7 @@ def test_narrowing_only_ever_takes_away():
     for case, rows in by_case.items():
         rows.sort(key=lambda r: r["window"])
         for narrow, wide in zip(rows, rows[1:]):
-            for slot in CORE + (MODEL,):
+            for slot in CORE + (MODEL, ENGINE):
                 if narrow["counts"][slot] == 0:
                     continue
                 assert wide["forms"][slot] <= narrow["forms"][slot], (case, slot, narrow, wide)
@@ -194,7 +194,22 @@ def test_core_chips_shed_words_only_after_the_model_chip_is_gone():
             continue
         shed_rows += 1
         assert row["widths"][MODEL] == 0.0, row
+        assert row["widths"][ENGINE] == 0.0, row
     assert shed_rows, "the sweep must reach the shedding regime"
+
+
+def test_the_engine_chip_goes_before_the_model_chip():
+    """The engine chip is bought after the model chip on what is left: while
+    it is placed, so is the model chip, at its widest form the row allows."""
+    engine_rows = [r for r in _fit_rows() if r["counts"][ENGINE]]
+    assert engine_rows, "the sweep must cover the engine chip"
+    placed = 0
+    for row in engine_rows:
+        if row["widths"][ENGINE] > 0.0:
+            placed += 1
+            assert row["widths"][MODEL] > 0.0, row
+    assert placed, "the engine chip must fit on a wide row"
+    assert any(r["widths"][ENGINE] == 0.0 for r in engine_rows), "a narrow row must drop it"
 
 
 def test_default_island_keeps_every_label_including_stop_and_its_trace():

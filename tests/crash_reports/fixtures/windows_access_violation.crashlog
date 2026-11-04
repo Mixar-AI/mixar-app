@@ -1,0 +1,31 @@
+# Blender 5.2.0, Commit date: 2026-07-13 15:20, Hash fbe6228777e7
+bpy.ops.wm.open_mainfile(filepath="C:\\Users\\Jane Smith\\Documents\\Client Work\\castle.blend")  # Operator
+bpy.context.scene.mixie_chat_input = "Make the castle for jane.smith@example.com"  # Property
+bpy.ops.mixie_chat.send_message()  # Operator
+bpy.ops.mixie_chat.agent_preview_render()  # Operator
+
+# backtrace
+Exception Record:
+
+ExceptionCode         : EXCEPTION_ACCESS_VIOLATION
+Exception Address     : 0x00007FF6A1D2C3D4
+Exception Module      : Mixar.exe
+Exception Flags       : 0x00000000
+Exception Parameters  : 0x2
+	Parameters[0] (action)  : 0x0000000000000000 (read)
+	Parameters[1] (address) : 0x0000000000000010
+
+
+Stack trace:
+Mixar.exe           :0x00007FF6A1D2C3D4  Symbols not available
+
+
+Loaded Modules :
+0x00007FF6A0000000          4.3.6.0             Mixar.exe 
+0x00007FFA6E5F0000          10.0.26100.2454     ntdll.dll  
+0x00007FFA59D30000          32.0.15.6094        nvoglv64.dll  
+0x00007FF9F1AA0000          3.13.1150.1013      python313.dll  
+
+# Python backtrace
+  File "\\fileserver\home$\Jane Smith\Mixar\scripts\mixar\modules\space_mixie_chat\core\preview_render.py", line 212 in render_preview
+  File "C:\Program Files\Mixar\4.3\scripts\mixar\modules\space_mixie_chat\core\executor.py", line 90 in _tick

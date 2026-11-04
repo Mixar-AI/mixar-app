@@ -21,7 +21,7 @@ from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 from mixar.modules.common.analytics.essential_events import capture_agent_message, capture_generate_message
 from mixar.modules.common.i18n import iface_, rpt_
 
-from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
+from ...constants import DEV_MODE, HINT_STEER, MAX_MESSAGE_LENGTH, SessionState
 from ...core.performance_metrics import get_metrics
 from ...core import (
     get_session_manager,
@@ -31,11 +31,14 @@ from ...core.attachment_names import resolve_attachment_names
 from ...core.attachment_pairing import legacy_attachment_names, pair_names_with_images
 from ...core.composer_send import (
     OutgoingMessage,
+    can_compose,
     can_send,
+    joins_running_task,
     model_change_pending,
     is_interjection,
     send_user_message,
 )
+from ...core import held_sends
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
 from ...core.message_helpers import add_turn_placeholder
@@ -98,9 +101,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
     @classmethod
     def poll(cls, context):
-        """Idle, modifying, awaiting input — or busy while the run is open
-        (the message joins the run). One predicate for every send surface."""
-        allowed, reason = can_send(context.scene)
+        """Idle, modifying, awaiting input — or busy: the message joins the
+        open run, or waits for it (core/held_sends.py). One predicate for
+        every send surface."""
+        allowed, reason = can_compose(context.scene)
         if not allowed:
             # Signed out while a refused guest session is retried: let the
             # send through so it can say why in the chat (`execute`).
@@ -146,6 +150,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # A turn is streaming and the run is open: this message joins it. The
         # streaming turn's loader and bubbles stay untouched.
         interjecting = is_interjection(scene)
+        # Sent into work already under way (an open run): the bubble says so.
+        steering = joins_running_task(scene)
+        held = held_sends.is_flushing()  # a queued message: text only, never the composer's media
+        plain = is_modify or is_awaiting_input or held
 
         # Scribble: handwriting still on the chat canvas, or still being
         # converted, belongs to THIS message. Flush the canvas and, if a
@@ -169,7 +177,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
         message_text = (self.message_override or scene.mixie_chat_input).strip()
         pending_attachments = scene.mixie_chat_pending_attachments
 
-        if not (is_modify or is_awaiting_input):
+        if not plain:
             try:
                 from mixar.modules.scribble_mark.core import chat_bridge
                 chat_bridge.flush_for_send(context)
@@ -253,10 +261,24 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
 
+        # The turn is streaming but its run is not open yet: nothing to join.
+        # Hold the words (a "Queued" bubble) and send them the moment the run
+        # opens or the turn ends. Attachments and marks stay in the composer
+        # and go with that send.
+        if not self.message_override and held_sends.should_hold(scene):
+            if not message_text:
+                self.report({'WARNING'}, "Add a message to send while Mixie works")
+                return {'CANCELLED'}
+            held_sends.hold(scene, message_text)
+            scene.mixie_chat_input = ""
+            redraw_chat_areas()
+            self.report({'INFO'}, "Message queued")
+            return {'FINISHED'}
+
         # Finalize the annotated previews after preflight. Clean companions
         # belong only to the outgoing encoding list, never the composer/history.
-        outgoing_attachments = list(pending_attachments)
-        if not (is_modify or is_awaiting_input):
+        outgoing_attachments = [] if held else list(pending_attachments)
+        if not plain:
             try:
                 from mixar.modules.scribble_mark.core import chat_bridge
                 mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
@@ -270,8 +292,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # The finalized outgoing payload determines usage, not merely opening
         # Sketch or keeping a previously sent drawing in the scene.
-        capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context,
-                              message_bytes=len(message_text.encode('utf-8')))
+        capture_agent_message(context, [] if held else pending_attachments, is_modify,
+                              is_awaiting_input, mark_context,
+                              message_bytes=len(message_text.encode('utf-8')),
+                              interjecting=steering, held=held)
 
         fresh_turn = not (is_modify or is_awaiting_input or interjecting)
         if fresh_turn:
@@ -299,8 +323,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
         user_index = len(scene.mixie_chat_messages) - 1
         user_msg.sender = 'USER'
         user_msg.text = message_text
+        if steering:
+            user_msg.delivery_hint = HINT_STEER
 
-        if not is_modify and not is_awaiting_input:
+        if not plain:
             # Copy attachments to message history (not for modify/input responses)
             for att in pending_attachments:
                 msg_att = user_msg.attachments.add()
@@ -394,7 +420,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
             from mixar.modules.moodboard.core.chat_sync import (
                 deselect_all_moodboard_origin_attachments,
             )
-            deselect_all_moodboard_origin_attachments(scene)
+            if not held:
+                deselect_all_moodboard_origin_attachments(scene)
         except Exception as e:  # noqa: BLE001
             # Moodboard module may not be loaded — never block the send.
             logger.debug(
@@ -407,7 +434,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # Unconditional: sending is the end of the gesture whether or not
         # anything was drawn. Gated on mark_context, arming and then sending
         # without marking left the viewport frozen with no marks to explain it.
-        if not is_modify and not is_awaiting_input:
+        if not plain:
             try:
                 from mixar.modules.scribble_mark.core import chat_bridge
                 chat_bridge.finish_send(scene)
@@ -415,7 +442,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 logger.debug("scribble mark settle skipped: %s", e, exc_info=True)
 
         # Clear pending attachments (input already cleared above for optimistic update)
-        pending_attachments.clear()
+        if not held:
+            pending_attachments.clear()
 
         # Final UI refresh (already did optimistic redraw above)
         metrics.start_timer('final_ui_redraw')

@@ -55,6 +55,22 @@ def set_pending_upgrade_url(url: Optional[str]) -> None:
         _pending_upgrade_url = url
 
 
+def push_is_for_this_instance(params: dict, scenes) -> bool:
+    """Whether this app shows a ``credit_upgrade`` push.
+
+    The backend publishes it to every connection of the user, so a second
+    open Mixar would get the blocking banner for a turn it never ran. A push
+    that names a ``session_id`` belongs to the one instance holding a tab
+    with that chat session; a push without one is shown everywhere (the
+    backend sends none today, so that is still every push).
+    """
+    session_id = str(params.get("session_id") or "")
+    if not session_id:
+        return True
+    return any(str(getattr(scene, "mixie_session_id", "") or "") == session_id
+               for scene in scenes)
+
+
 def push_credit_upgrade(params: dict) -> None:
     """Open the out-of-credits banner from a backend push payload.
 

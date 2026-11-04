@@ -130,6 +130,14 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     except ImportError:
         pass
 
+    # 4b. Kill the background render/export workers (common/render_worker) and
+    #     drop this session's snapshots: a worker holds a copy of the document.
+    try:
+        from mixar.modules.common.render_worker.supervisor import shutdown_all as stop_render_workers
+        _safe("kill_render_workers", stop_render_workers, remove_files=True)
+    except ImportError:
+        pass
+
     # 5. Kill the managed local llama-server — it holds gigabytes of RAM and
     #    must never outlive Blender (same contract as the sandbox children).
     try:

@@ -214,11 +214,23 @@ class EventProcessor:
             add_credit_upgrade_chat_message(scene=scene, body=message,
                                             action_url=actions.get('action_url'))
             self._redraw_ui()
+            self._continue_refused(scene, result)
         elif interjection:
             add_agent_message(scene, refusal_text(result))
             self._redraw_ui()
         else:
             self._handle_agent_error_internal(refusal_text(result), scene)
+            self._continue_refused(scene, result)
+
+    @staticmethod
+    def _continue_refused(scene, result) -> None:
+        """A refused crash-restore Continue gets its notice back (no resend
+        path exists for these refusals, unlike a key or sign-in card)."""
+        try:
+            from mixar.modules.session_recovery.runtime import continue_refused
+            continue_refused(scene, result.get('command_id') or '')
+        except Exception:  # noqa: BLE001
+            logger.debug("Continue notice restore skipped", exc_info=True)
 
     def _end_refused_turn(self, scene) -> None:
         """A command the backend never started: back to IDLE, no error bubble."""
@@ -385,7 +397,8 @@ class EventProcessor:
         """Handle agent stream completion (called from main thread timer)."""
         # The stream is over: end the executor's undo turn whether the session
         # settles to IDLE or pauses for input (the user's answer starts a new
-        # stream, and with it a new turn / fresh checkpoint budget).
+        # stream, and with it a new turn / fresh checkpoint budget). Ending it
+        # also asks for a crash-recovery save point, settled or paused.
         from .executor import get_executor
         get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
 

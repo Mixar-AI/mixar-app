@@ -157,3 +157,35 @@ def test_stale_add_action_cancels_without_changing_either_object():
     op = NS(object_name="Previous selection", report=Mock())
     assert namespace["execute"](op, ctx) == {"CANCELLED"}
     ctx.object.modifiers.new.assert_not_called()
+
+
+class _Layout:
+    """A UILayout stand-in: ``operator()`` of an unregistered idname returns a
+    pointer without the operator's properties, as Blender's does."""
+
+    def __init__(self, registered):
+        self.registered = registered
+        self.operators, self.labels = [], []
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: self
+
+    def operator(self, idname, **kwargs):
+        self.operators.append(idname)
+        return NS(show=None) if self.registered or idname != "mixar.zen_object_controls_show" else object()
+
+    def label(self, **kwargs):
+        self.labels.append(kwargs)
+
+
+@pytest.mark.parametrize("registered", [True, False])
+def test_object_controls_draw_before_the_operator_is_registered(monkeypatch, registered):
+    # Regression: after a crash-restore load the header drew before deferred UI
+    # registration, and ``.show = False`` on the unknown operator raised.
+    from mixar.modules.workflow.ui.headers import zen_object_controls as header
+    types = NS(MIXAR_OT_zen_object_controls_show=object()) if registered else NS()
+    monkeypatch.setattr(header, "bpy", NS(types=types))
+    layout = _Layout(registered)
+    header.draw_object_controls(layout, context())
+    assert ("mixar.zen_object_controls_show" in layout.operators) is registered
+    assert any(label.get("icon") == "X" for label in layout.labels) is not registered

@@ -41,6 +41,7 @@ set(SRC
   agent_ui_model_card_qa.cc
   agent_ui_provider.cc
   agent_ui_provider_chevron.cc
+  agent_ui_engine.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_layout.cc
@@ -86,6 +87,7 @@ set(SRC
   agent_ui_model_card.hh
   agent_ui_model_card_intern.hh
   agent_ui_provider.hh
+  agent_ui_engine.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh
