@@ -117,6 +117,15 @@ def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/steer-nudges'))
     out.mkdir(parents=True, exist_ok=True)
     local = str(Path(__file__).resolve().parent)
+    # A cold launch is still connecting the real agent socket (and refreshing
+    # the model) for a few seconds; its CONNECTING state would overwrite the
+    # probe's and grey Send out ("Disabled: Connecting..."). Start once the
+    # real app is connected and the composer could send.
+    qa.wait("__import__('mixar.modules.space_mixie_chat.core.connection_manager', fromlist=['c'])"
+            ".get_connection_manager().is_connected and "
+            f"{SCENE}.mixie_chat_state == 'IDLE' and "
+            "__import__('mixar.modules.space_mixie_chat.core.composer_send', fromlist=['c'])"
+            f".can_compose({SCENE})[0]", timeout=90)
     qa.eval(f'import sys; sys.path.insert(0, {local!r}); '
             'import chat_send_probe as p; p.install(); result=True')
     # Record the send events locally (consent/transport untouched), and start
@@ -128,10 +137,6 @@ def run(qa):
             "from mixar.config.config import get_config\n"
             "get_config()[T.CONFIG_KEY]={}; T._state.update(turns=0, current='')\n"
             "result=True")
-    # A fresh launch refreshes the model/key for a few seconds (Send refuses
-    # meanwhile); start once the composer could send.
-    qa.wait("__import__('mixar.modules.space_mixie_chat.core.composer_send', fromlist=['c'])"
-            ".can_compose(drv.main_window().scene)[0]", timeout=60)
     tabs_before = qa.eval('result=len(bpy.data.scenes)')
     try:
         if qa.find(**FIELD)['total']:
