@@ -52,10 +52,16 @@ def _mixar(data=None, error=None):
 class FakeUnreal(el.UnrealMcpClient):
     """Unreal's MCP server: Epic's toolsets and Mixar Link's, by toolset."""
 
-    def __init__(self, mode="plugin", playing=False, level="/Game/ThirdPerson/Lvl_ThirdPerson"):
+    def __init__(self, mode="plugin", playing=False, level="/Game/ThirdPerson/Lvl_ThirdPerson",
+                 dirty=False, open_world=False, timeout_on="", spawn_then_time_out=False):
         super().__init__(9880, "/mcp", "mixar_link.toolsets.MixarLinkTools")
         self.mode, self.playing, self.level = mode, playing, level
         self.calls, self.actors = [], []
+        # Package dirty flags (is_dirty), as Unreal keeps them; an Open World level keeps its actors outside.
+        self.dirty = {level.split(".", 1)[0]} if dirty else set()
+        self.open_world = open_world
+        # A call that does not answer in time (urllib's read timeout), after doing its work when asked.
+        self.timeout_on, self.spawn_then_time_out = timeout_on, spawn_then_time_out
 
     def initialize(self, timeout=10.0):
         self.session = "s"
@@ -66,6 +72,10 @@ class FakeUnreal(el.UnrealMcpClient):
         args = params["arguments"]
         toolset, tool, a = args["toolset_name"], args["tool_name"], args["arguments"]
         self.calls.append((toolset.rsplit(".", 1)[-1], tool, a))
+        if tool == self.timeout_on:
+            if self.spawn_then_time_out:
+                self._answer(toolset, tool, a)
+            raise el._unanswered(TimeoutError("timed out"))
         return 200, {}, {"result": self._answer(toolset, tool, a)}
 
     def _answer(self, toolset, tool, a):
@@ -84,7 +94,12 @@ class FakeUnreal(el.UnrealMcpClient):
         if tool == "get_asset_class":
             return _reply(REGISTRY.get(a["asset_path"]))
         if tool == "list_folders":
+            if "/__ExternalActors__/" in a["root_path"]:
+                return _reply([a["root_path"] + "/0/"] if self.open_world else [])
             return _reply(["/Game/Megaplant_Library/", "/Game/__ExternalActors__/", "/Game/ThirdPerson/"])
+        if tool == "is_dirty":
+            assert set(a) == {"asset_path"}
+            return _reply(a["asset_path"] in self.dirty)
         if tool == "exists":
             return _reply(a["path"] in REGISTRY)
         if tool == "get_current_level":
@@ -94,8 +109,11 @@ class FakeUnreal(el.UnrealMcpClient):
             return _reply([{"refPath": f"L:{n}"} for n in self.actors if a["name"].lower() in n.lower()])
         if tool == "add_to_scene_from_asset":
             self.actors.append(a["name"])
+            if not self.open_world:  # an Open World actor dirties its own package, not the level's
+                self.dirty.add(self.level.split(".", 1)[0])
             return _reply({"refPath": f"L:{a['name']}"})
         if tool == "save_assets":
+            self.dirty -= set(a["asset_paths"])
             return _reply(True)
         return _reply(error=f"unknown tool {tool}")
 
@@ -147,9 +165,78 @@ def test_place_spawns_in_unreals_frame_and_saves_in_plugin_mode():
     assert spawn["xform"]["location"] == {"x": 200.0, "y": -300.0, "z": 50.0}  # Blender m -> Unreal cm, Y flipped
     assert spawn["xform"]["rotation"]["yaw"] == -30.0 and spawn["xform"]["scale"]["x"] == 2.0
     assert spawn["name"] == "Tree_Goat_Willow_01_A" and spawn["snap_to_ground"] is True
-    # Mixar Link refuses to save the user's own level; Unreal's Save All does, and says so.
-    assert [c[1] for c in client.calls][-2:] == ["save_scene", "save_assets"]
-    assert out["data"]["saved"] and "other unsaved changes" in out["data"]["note"]
+    # Mixar Link refuses to save the user's own level; Epic's save_assets saves THAT level only,
+    # never the empty list (Unreal's Save All would write the user's other unsaved work too).
+    after_spawn = [c[1] for c in client.calls]
+    after_spawn = after_spawn[after_spawn.index("add_to_scene_from_asset") + 1:]
+    assert after_spawn == ["save_scene", "list_folders", "is_dirty", "save_assets"]
+    saves = [c[2]["asset_paths"] for c in client.calls if c[1] == "save_assets"]
+    assert saves == [["/Game/ThirdPerson/Lvl_ThirdPerson"]] and [] not in saves
+    assert out["data"]["saved"] and "Saved only the level" in out["data"]["note"]
+    # The level was clean before the place (read before the spawn) and the place dirtied it.
+    assert [c[1] for c in client.calls].index("is_dirty") < [c[1] for c in client.calls].index(
+        "add_to_scene_from_asset")
+
+
+def test_a_level_with_the_users_unsaved_changes_is_placed_into_but_never_saved():
+    client = FakeUnreal(mode="plugin", dirty=True)
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert out["success"] and client.actors == ["SM_Cube"]
+    assert out["data"]["saved"] is False and "unsaved changes of the user's" in out["data"]["note"]
+    assert "save_assets" not in [c[1] for c in client.calls]
+
+
+def test_without_a_readable_dirty_flag_plugin_mode_never_saves():
+    client = FakeUnreal(mode="plugin")
+    answer = client._answer
+    client._answer = lambda t, tool, a: _reply(error="Unknown tool is_dirty") if tool == "is_dirty" else \
+        answer(t, tool, a)
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert out["success"] and out["data"]["saved"] is False and "could not say" in out["data"]["note"]
+    assert "save_assets" not in [c[1] for c in client.calls]
+
+
+def test_an_open_world_level_is_not_claimed_saved():
+    client = FakeUnreal(mode="plugin", open_world=True)
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert out["success"] and out["data"]["saved"] is False and "Open World" in out["data"]["note"]
+    assert "save_assets" not in [c[1] for c in client.calls]
+    probe = next(c[2] for c in client.calls if c[1] == "list_folders")
+    assert probe["root_path"] == "/Game/__ExternalActors__/ThirdPerson/Lvl_ThirdPerson"
+
+
+@pytest.mark.parametrize("timeout_on", ["add_to_scene_from_asset", "save_scene", "save_assets"])
+def test_a_timeout_from_the_spawn_on_says_the_placement_may_have_completed(timeout_on):
+    client = FakeUnreal(mode="plugin", timeout_on=timeout_on, spawn_then_time_out=True)
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert client.actors == ["SM_Cube"]  # Unreal made the actor; the answer never came
+    assert out == {"success": False, "error": el.PLACE_TIMED_OUT}
+    assert "engine_scene_tree" in out["error"] and "may still have completed" in out["error"]
+
+
+@pytest.mark.parametrize("timeout_on", ["status", "exists", "find_actors", "is_dirty"])
+def test_a_timeout_before_the_spawn_is_a_plain_failure(timeout_on):
+    client = FakeUnreal(mode="plugin", timeout_on=timeout_on)
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert not out["success"] and out["error"] == "The engine did not answer (TimeoutError)."
+    assert client.actors == [] and "add_to_scene_from_asset" not in [c[1] for c in client.calls]
+
+
+def test_mixar_links_own_place_that_times_out_may_have_completed(monkeypatch):
+    client = FakeUnreal(timeout_on="place")
+    monkeypatch.setattr(el, "_connect", lambda engine: (INFO, client))
+    assert el.link_call.__wrapped__("place", {"scene": "/Game/Mixar/Crate"}) == \
+        {"success": False, "error": el.PLACE_TIMED_OUT}
+    client.timeout_on = "scene_tree"  # any other call's timeout stays a plain failure
+    assert el.link_call.__wrapped__("scene_tree", {})["error"] == "The engine did not answer (TimeoutError)."
+
+
+def test_an_object_path_level_is_saved_as_its_package():
+    client = FakeUnreal(level="/Game/ThirdPerson/Lvl_ThirdPerson.Lvl_ThirdPerson")
+    out = _call(client, "place", {"scene": "/Game/LevelPrototyping/Meshes/SM_Cube"})
+    assert out["data"]["saved"]
+    assert [c[2]["asset_paths"] for c in client.calls if c[1] == "save_assets"] == \
+        [["/Game/ThirdPerson/Lvl_ThirdPerson"]]
 
 
 def test_an_owned_project_saves_through_mixar_link_only():

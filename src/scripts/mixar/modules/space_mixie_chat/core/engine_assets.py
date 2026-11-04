@@ -17,8 +17,10 @@ desktop (`engine_link.link_call` routes them):
 - ``place`` of a project asset (an ``assets`` path) — Unreal: Epic's
   ``SceneTools.add_to_scene_from_asset`` at a Blender-frame position, yaw
   and scale, then the level is saved (also a user's own level in plugin mode:
-  the user chose place-and-save). Mixar packages (``/Game/Mixar/…``) and every
-  Godot scene still go to Mixar Link's own ``place``.
+  the user chose place-and-save, but only a level that had no unsaved changes
+  of theirs; see ``_save``). Mixar packages (``/Game/Mixar/…``) and every
+  Godot scene still go to Mixar Link's own ``place``. A timeout from the spawn
+  on is ``engine_link.PLACE_TIMED_OUT``: the actor may be in the level.
 
 Results use ``engine_link``'s shape (``{success, data | error}``); package
 paths (``/Game/…``, ``res://…``) name things in the project, never the disk.
@@ -345,6 +347,9 @@ def place_unreal(epic, client, args: dict, timeout: float) -> dict:
     scale = _vector(args.get("scale"), 1.0)
     yaw = float(args.get("yaw_deg") or 0.0)
     label = _unique_label(epic, str(args.get("name") or "").strip() or asset.rsplit("/", 1)[-1])
+    package = level.split(".", 1)[0]
+    # Plugin mode saves through Epic, and only a level the user had left clean: read it before the spawn dirties it.
+    was_dirty = _level_dirty(epic, package) if status.get("project_mode") != "owned" else False
     request = {"asset_path": asset, "name": label,
                # Blender's frame (Z up, metres, right-handed) -> Unreal's (cm, left-handed): see Mixar Link's frames.
                "xform": {"location": {"x": x * 100.0, "y": -y * 100.0, "z": z * 100.0},
@@ -358,11 +363,16 @@ def place_unreal(epic, client, args: dict, timeout: float) -> dict:
         if not refs:
             raise AssetError(f"No actor at {parent} (paths come from engine_scene_tree).")
         request["parent"] = refs[0]
-    actor = epic(EPIC_SCENE, "add_to_scene_from_asset", request)
-    if not actor:
-        raise AssetError(f"Unreal could not make an actor from {asset} (a {asset.rsplit('/', 1)[-1]} "
-                         "may not be placeable: place a mesh, a Blueprint, an effect or a sound).")
-    saved, note = _save(epic, client, timeout)
+    try:
+        actor = epic(EPIC_SCENE, "add_to_scene_from_asset", request)
+        if not actor:
+            raise AssetError(f"Unreal could not make an actor from {asset} (a {asset.rsplit('/', 1)[-1]} "
+                             "may not be placeable: place a mesh, a Blueprint, an effect or a sound).")
+        saved, note = _save(epic, client, package, timeout, was_dirty)
+    except engine_link.LinkError as err:
+        if err.timed_out:  # the editor may finish the spawn after the wait: never invite a second one
+            raise AssetError(engine_link.PLACE_TIMED_OUT) from None
+        raise
     out = {"node": label, "asset": asset, "position": [x, y, z], "yaw_deg": yaw, "scale": scale,
            "scene": level, "saved": saved}
     if note:
@@ -370,18 +380,62 @@ def place_unreal(epic, client, args: dict, timeout: float) -> dict:
     return engine_link.scrub(out)
 
 
-def _save(epic, client, timeout: float) -> tuple[bool, str]:
+NOT_SAVED = "Placed but not saved; the user can save with Ctrl+S."
+
+
+def _level_dirty(epic, level: str):
+    """Whether the level's package has unsaved changes (Epic's
+    ``AssetTools.is_dirty``), or None when Unreal cannot say. The argument's
+    name is not published; both of the toolset's path names are tried."""
+    for key in ("asset_path", "path"):
+        try:
+            value = epic(EPIC_ASSETS, "is_dirty", {key: level})
+        except AssetError:
+            continue
+        if isinstance(value, bool):
+            return value
+    return None
+
+
+def _external_actors(epic, level: str) -> bool:
+    """An Open World (World Partition) level: its actors live in their own
+    packages under ``__ExternalActors__``, which saving the level does not write."""
+    mount, _, rest = level.strip("/").partition("/")
+    try:
+        return bool(epic(EPIC_ASSETS, "list_folders", {"root_path": f"/{mount}/__ExternalActors__/{rest}",
+                                                       "recursive": False}))
+    except AssetError:
+        return False
+
+
+def _save(epic, client, level: str, timeout: float, was_dirty) -> tuple[bool, str]:
     """Save the level the asset went into: Mixar Link's save (the open level
-    and its actors) where it may; in a user's own project (plugin mode) it
-    refuses, and Unreal's save of every unsaved package does it instead."""
+    and its actors) where it may. In a user's own project (plugin mode) it
+    refuses, and Epic's ``save_assets`` saves that level's package ALONE
+    (``/Game/Maps/Foo``, never the empty list: Unreal's save of every dirty
+    package), and only when the level had no unsaved changes before the place
+    (``was_dirty`` False) and the place is what dirtied it: the user's own
+    edits are never written. An Open World level is not saved (each actor is
+    its own package)."""
     from . import engine_link
 
     saved = engine_link._result(client.call("save_scene", {}, min(float(timeout or CALL_S), 60.0)))
     if saved.get("success") and (saved.get("data") or {}).get("saved") is not False:
         return True, ""
+    if not level:
+        return False, NOT_SAVED
+    if was_dirty:
+        return False, ("Placed but not saved: the level already had unsaved changes of the user's, which Mixar "
+                       "never saves; the user can save with Ctrl+S.")
+    if _external_actors(epic, level):
+        return False, ("Placed but not saved: this Open World level keeps each actor in its own file, which only "
+                       "the user's save writes (Ctrl+S).")
+    if was_dirty is None or _level_dirty(epic, level) is not True:  # the place must be what dirtied it
+        return False, ("Placed but not saved: Unreal could not say whether the level had unsaved changes of the "
+                       "user's, so saving is left to them (Ctrl+S).")
     try:
-        if epic(EPIC_ASSETS, "save_assets", {"asset_paths": []}):
-            return True, "Saved with Unreal's Save All (this project's other unsaved changes were saved too)."
+        if epic(EPIC_ASSETS, "save_assets", {"asset_paths": [level]}):
+            return True, f"Saved only the level {level}; it had no unsaved changes of the user's before the place."
     except AssetError as err:
         return False, f"Placed but not saved ({err}); the user can save with Ctrl+S."
-    return False, "Placed but not saved; the user can save with Ctrl+S."
+    return False, NOT_SAVED

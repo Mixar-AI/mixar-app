@@ -89,8 +89,28 @@ _prefetch_lock = threading.Lock()
 PREFETCH_KEEP_S = 1800.0
 
 
+# A place that timed out may still have put the instance in the level (the
+# editor finishes the call after the HTTP wait ends): the agent checks before
+# placing again. The backend's own engine_place timeout says the same.
+PLACE_TIMED_OUT = ("The engine did not answer in time; the placement may still have completed. "
+                   "Check engine_scene_tree for it before calling engine_place again.")
+
+
 class LinkError(RuntimeError):
-    """A link failure the user can act on; its text is safe to show."""
+    """A link failure the user can act on; its text is safe to show.
+    ``timed_out``: a call was sent and its answer did not come in time."""
+
+    def __init__(self, message: str = "", timed_out: bool = False):
+        super().__init__(message)
+        self.timed_out = timed_out
+
+
+def _unanswered(err: OSError) -> LinkError:
+    """A request the engine did not answer. A timeout is told by its type: a
+    read timeout raises ``TimeoutError`` (``socket.timeout``), a connect
+    timeout wraps it in ``URLError.reason``."""
+    timed_out = isinstance(err, TimeoutError) or isinstance(getattr(err, "reason", None), TimeoutError)
+    return LinkError(f"The engine did not answer ({type(err).__name__}).", timed_out=timed_out)
 
 
 def scrub(value):
@@ -187,7 +207,7 @@ class McpClient:
         except urllib.error.HTTPError as err:
             return err.code, {}, None
         except (urllib.error.URLError, OSError) as err:
-            raise LinkError(f"The engine did not answer ({type(err).__name__}).") from None
+            raise _unanswered(err) from None
 
     def _rpc(self, method: str, params: dict, timeout: float):
         self._id += 1
@@ -195,14 +215,18 @@ class McpClient:
 
     def initialize(self, timeout: float = 10.0) -> dict:
         self.session = ""
-        status, headers, body = self._rpc("initialize", {"protocolVersion": PROTOCOL_VERSION,
-                                                         "capabilities": {}, "clientInfo": CLIENT_INFO}, timeout)
-        if status == 401:
-            raise LinkError("The engine refused Mixar's token; restart the engine's editor.")
-        if status != 200 or not isinstance(body, dict) or "result" not in body:
-            raise LinkError(f"The engine did not accept the connection (HTTP {status}).")
-        self.session = headers.get("mcp-session-id", "")
-        self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, timeout)
+        try:
+            status, headers, body = self._rpc("initialize", {"protocolVersion": PROTOCOL_VERSION,
+                                                             "capabilities": {}, "clientInfo": CLIENT_INFO}, timeout)
+            if status == 401:
+                raise LinkError("The engine refused Mixar's token; restart the engine's editor.")
+            if status != 200 or not isinstance(body, dict) or "result" not in body:
+                raise LinkError(f"The engine did not accept the connection (HTTP {status}).")
+            self.session = headers.get("mcp-session-id", "")
+            self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, timeout)
+        except LinkError as err:
+            err.timed_out = False  # the handshake: no tool call was sent, so nothing ran
+            raise
         return body["result"]
 
     def call(self, name: str, arguments: dict, timeout: float) -> dict:
@@ -419,6 +443,8 @@ def link_call(tool: str, arguments: dict | None = None, engine: str | None = Non
             return engine_assets.run(info, client, tool, arguments or {}, float(timeout))
         return _result(client.call(tool, engine_assets.adapter_args(tool, arguments), float(timeout)))
     except LinkError as err:
+        if tool == "place" and err.timed_out:  # Mixar Link's place may have finished after the wait
+            return {"success": False, "error": PLACE_TIMED_OUT}
         return _fail(err)
 
 
