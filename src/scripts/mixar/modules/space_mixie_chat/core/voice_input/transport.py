@@ -71,7 +71,7 @@ class Transport:
             self.token = current
         try:
             return websocket.create_connection(self.url, timeout=10,
-                                                header={'Authorization': 'Bearer ' + self.token})
+                                                header=self._upgrade_headers())
         except websocket.WebSocketBadStatusException as exc:
             # FastAPI rejects unauthenticated WebSocket upgrades with HTTP 403.
             # Retry only that handshake (or 401), before Start or any audio.
@@ -93,7 +93,18 @@ class Transport:
             self.token = token
             # A rejection here propagates: no refresh loop or audio replay.
             return websocket.create_connection(self.url, timeout=10,
-                                                header={'Authorization': 'Bearer ' + self.token})
+                                                header=self._upgrade_headers())
+
+    def _upgrade_headers(self):
+        """Bearer token plus the build's version: a backend deploy routes a
+        client version to its fleet by ``X-Client-Version``."""
+        headers = {'Authorization': 'Bearer ' + self.token}
+        try:
+            from mixar.modules.common.api.client_version import client_version_headers
+            headers.update(client_version_headers())
+        except Exception:
+            pass
+        return headers
 
     def run(self):
         ws = None

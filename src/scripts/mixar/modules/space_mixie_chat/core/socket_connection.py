@@ -173,6 +173,16 @@ class SocketConnection:
                 headers.append(f"X-Mixar-Locale: {ui_locale()}")
             except Exception:
                 pass
+            # The build's version on the upgrade itself (the handshake's
+            # addon_version comes later): during a backend blue/green deploy
+            # the load balancer routes a client version to the fleet built for
+            # it by this header, so the socket must land on the same fleet as
+            # the REST calls.
+            try:
+                from mixar.modules.common.api.client_version import client_version_headers
+                headers.extend(f"{k}: {v}" for k, v in client_version_headers().items())
+            except Exception:
+                pass
 
             if not token:
                 logger.warning("No auth token available - connection may fail")
