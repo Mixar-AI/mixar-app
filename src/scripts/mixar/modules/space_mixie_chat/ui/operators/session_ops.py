@@ -150,8 +150,9 @@ def start_new_chat(scene, report=None) -> None:
     to the account that just left; the next identity owns none of them).
     ``report`` is the operator's ``self.report`` when there is one.
     """
-    from ...core import voice
+    from ...core import held_sends, voice
     voice.cancel()
+    held_text = held_sends.release(scene)
     session = get_session_manager()
     scene_name = scene.name
     from ...core.export_destination import clear_destination
@@ -191,7 +192,7 @@ def start_new_chat(scene, report=None) -> None:
 
     # Clear messages and incremental markdown cache
     scene.mixie_chat_messages.clear()
-    scene.mixie_chat_input = ""
+    scene.mixie_chat_input = held_text
     # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
     if hasattr(scene, "mixie_chat_user_has_engaged"):
         scene.mixie_chat_user_has_engaged = False
@@ -230,6 +231,16 @@ class MIXIE_CHAT_OT_new_session(Operator):
     @classmethod
     def poll(cls, context):
         return context.scene is not None
+
+    def invoke(self, context, event):
+        # The "+" while a task runs: a new chat would cancel it, so offer a
+        # parallel scene tab first (agent_bubble/ui/menus/new_chat_menu.py).
+        session = get_session_manager()
+        scene = context.scene
+        if (session.get_state(scene) in session._ACTIVE_TURN_STATES
+                or session.run_open(scene)):
+            return bpy.ops.wm.call_menu(name="MIXIE_CHAT_MT_new_chat_busy")
+        return self.execute(context)
 
     def execute(self, context):
         start_new_chat(context.scene, report=self.report)
@@ -365,6 +376,9 @@ class MIXIE_CHAT_OT_abort_session(Operator):
                 if area.type == 'AGENT_BUBBLE':
                     area.tag_redraw()
 
+        # A message held behind the stopped turn goes back to the composer.
+        from ...core import held_sends
+        held_sends.restore(scene)
         logger.info("Session aborted by user")
         self.report({'INFO'}, "Session aborted")
         return {'FINISHED'}

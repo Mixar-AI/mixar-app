@@ -2168,14 +2168,14 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
      * placeholder path used to return before the was_editing reset. */
     state.scroll_offset = 0;
     state.previous_cursor = -1;
-    if (but->editstr) {
-      /* Editing an empty string — fall through to draw the cursor.
-       * We still need line height, scroll tracking, and cursor rendering
-       * so the caret is visible immediately on click. */
-    }
-    else {
+    /* The placeholder shows whether or not the empty field is being edited:
+     * the chat composer auto-focuses when it opens, so a placeholder drawn
+     * only while NOT editing was never seen. Editing then falls through to
+     * draw the caret over it. */
+    if (!but->editstr) {
       state.was_editing = false;
-      /* Not editing: draw placeholder if available, then return */
+    }
+    {
       if (ELEM(but->type, ButtonType::Text, ButtonType::SearchMenu)) {
         const char *placeholder = button_placeholder_get(but);
         if (placeholder && placeholder[0]) {
@@ -2203,7 +2203,9 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                nullptr);
         }
       }
-      return;
+      if (!but->editstr) {
+        return;
+      }
     }
   }
 

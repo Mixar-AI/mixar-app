@@ -629,6 +629,10 @@ msgid "Remove the brush texture, returning to solid color mode"
 msgstr "Remove the brush texture, returning to solid colour mode"
 
 # derived
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr "Describe where the layer should show; AI generates a greyscale mask for it"
+
+# derived
 msgid "Select Vertex Color"
 msgstr "Select Vertex Colour"
 

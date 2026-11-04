@@ -37,15 +37,24 @@ def model_change_pending(scene):
             and (mutation_pending() or bool(credential_state.pending())))
 
 
-def can_send(scene):
+def _blocked(scene):
+    """A refusal that holds whatever the agent is doing ('' when none)."""
     if pending_video_attachments(scene):
-        return False, VIDEO_ATTACHMENT_REJECTED
+        return VIDEO_ATTACHMENT_REJECTED
     if model_change_pending(scene):
         from mixar.modules.byok.core.preference_state import PENDING_MESSAGE
-        return False, PENDING_MESSAGE
+        return PENDING_MESSAGE
     from .turn_checkpoints import rewind_in_flight
     if rewind_in_flight():
-        return False, n_('Restoring a checkpoint…')
+        return n_('Restoring a checkpoint…')
+    return ''
+
+
+def can_send(scene):
+    """Whether a message can go on the wire NOW."""
+    reason = _blocked(scene)
+    if reason:
+        return False, reason
     session = get_session_manager()
     state = session.get_state(scene)
     if state in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT):
@@ -55,9 +64,29 @@ def can_send(scene):
     return False, STATE_LABELS.get(state, n_('Agent is not connected'))
 
 
+def can_compose(scene):
+    """The composer's Send: ``can_send``, plus a busy turn whose run is not
+    open yet, whose message is held until it can go (core/held_sends.py).
+    So Send never greys out just because the agent is working."""
+    allowed, reason = can_send(scene)
+    if not allowed and not _blocked(scene):
+        from .held_sends import should_hold
+        if should_hold(scene):
+            return True, ''
+    return allowed, reason
+
+
 def is_interjection(scene):
     session = get_session_manager()
     return session.get_state(scene) == SessionState.BUSY and session.run_open(scene)
+
+
+def joins_running_task(scene):
+    """The message joins work already under way: an interjection, or a send
+    while the turn is idle but the run's workers are still building."""
+    session = get_session_manager()
+    return session.run_open(scene) and session.get_state(scene) in (
+        SessionState.BUSY, SessionState.IDLE)
 
 
 def send_user_message(scene, msg):
