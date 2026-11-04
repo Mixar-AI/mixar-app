@@ -232,6 +232,28 @@ def test_the_push_chat_bubble_does_not_request_a_second_banner():
     assert "request_banner=False" in branch
 
 
+def test_a_push_naming_a_session_opens_only_where_that_tab_lives():
+    """Two open Mixars get every push (#1787): the banner is for the one whose
+    tab ran out; a push without a session id still opens everywhere."""
+    tabs = [SimpleNamespace(mixie_session_id="sess-a"), SimpleNamespace(mixie_session_id="")]
+    assert CU.push_is_for_this_instance({"session_id": "sess-a"}, tabs) is True
+    assert CU.push_is_for_this_instance({"session_id": "sess-b"}, tabs) is False
+    assert CU.push_is_for_this_instance({"session_id": "sess-b"}, []) is False
+    assert CU.push_is_for_this_instance({}, tabs) is True
+    assert CU.push_is_for_this_instance({"session_id": None}, []) is True
+
+
+def test_both_push_surfaces_sit_behind_the_instance_check():
+    source = (MODULES / "space_mixie_chat/core/connection_manager.py").read_text()
+    branch = source[source.index('if notif_type == "credit_upgrade":'):]
+    branch = branch[:branch.index("run_on_main_thread(_deliver)")]
+    gate = branch.index("if push_is_for_this_instance(p, bpy.data.scenes):")
+    assert gate < branch.index("push_credit_upgrade(p)")
+    assert gate < branch.index("add_credit_upgrade_chat_message(")
+    # Nothing is shown from the WebSocket thread before the check.
+    assert "push_credit_upgrade(params)" not in branch
+
+
 # No signup trial: a free account (no plan) hitting a credit feature is asked
 # to subscribe, not to "upgrade" a plan it never had.
 

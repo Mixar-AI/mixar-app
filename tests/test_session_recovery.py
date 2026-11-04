@@ -431,10 +431,92 @@ def test_modal_operator_names_match_the_native_passive_list(idname, expected):
 def test_the_passive_list_matches_the_native_autosave():
     import re
     src = open("src/source/blender/windowmanager/intern/wm_files.cc").read()
-    native = set(re.findall(r'"([A-Z_]+_OT_\w+)"', re.search(
+    native = set(re.findall(r'"([A-Z0-9_]+_OT_\w+)"', re.search(
         r"passive_idnames\[\] = \{(.*?)\};", src, re.S).group(1)))
     from mixar.modules.session_recovery import runtime
     assert native == set(runtime.PASSIVE_MODALS)
+
+
+# Every Mixar modal operator is classified: passive ones never defer a save,
+# editing ones (an edit or a stroke in flight) do. A new modal fails here
+# until someone decides which it is.
+EDITING_MODALS = {
+    # Drags and tools with an edit in flight.
+    "MIXAR_OT_director_drag_keys", "MIXAR_OT_director_pick_track_target",
+    "MIXAR_OT_director_drag_frame", "MIXAR_OT_director_drag_strip", "MIXAR_OT_director_scrub",
+    "MIXAR_OT_director_walk", "MIXAR_OT_director_place_camera", "MIXAR_OT_director_nudge_camera",
+    "MIXAR_OT_bubble_header_drag", "MIXAR_OT_scribble_mark_draw",
+    "MIXIE_OT_moodboard_add_textbox", "MIXIE_OT_moodboard_magic_select_tool",
+    "MIXIE_OT_moodboard_grab", "MIXIE_OT_moodboard_rotate", "MIXIE_OT_moodboard_scale",
+    "MIXIE_OT_moodboard_annotation_stroke", "MIXIE_OT_moodboard_annotation_erase",
+    "MIXIE_OT_moodboard_edit_textbox", "MIXIE_OT_moodboard_crop_tool",
+    "MIXIE_OT_moodboard_box_mask_tool", "MIXIE_OT_moodboard_lasso_tool",
+    "MIXIE_OT_moodboard_graph_select", "MIXIE_OT_moodboard_frame_select",
+    "MIXIE_OT_moodboard_box_select", "MIXIE_OT_moodboard_select_image",
+    "MIXIE_CHAT_OT_select_text", "VIEW3D_OT_scenes_drawer_edge", "VIEW3D_OT_scenes_drawer_click",
+    "VIEW3D_OT_moodboard_drawer_grip",
+}
+
+
+def _mixar_modal_idnames():
+    import ast
+    import re
+    from pathlib import Path
+    found = set()
+    for path in Path("src/scripts/mixar/modules").rglob("*.py"):
+        if "/tests/" in str(path) or "/testing/" in str(path):
+            continue
+        tree = ast.parse(path.read_text(errors="ignore"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not any(isinstance(n, ast.FunctionDef) and n.name == "modal" for n in node.body):
+                continue
+            for n in node.body:
+                if (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "bl_idname"
+                        and isinstance(n.value, ast.Constant)):
+                    prefix, name = n.value.value.split(".", 1)
+                    found.add(f"{prefix.upper()}_OT_{name}")
+    found.add("MIXAR_OT_onboarding_tour")  # bl_idname = config.OP_TOUR
+    for path in Path("src/source/blender/editors").rglob("*.cc"):
+        text = path.read_text(errors="ignore")
+        first = text.split("\n", 1)[0]
+        if "Adeveda" not in first and "Mixar" not in first:
+            continue  # an upstream file carried in the overlay: stock modals
+        for body in re.findall(r"\n(?:static )?void \w+\(wmOperatorType \*ot\)\n\{(.*?)\n\}", text, re.S):
+            if "ot->modal = " in body:
+                found |= set(re.findall(r'ot->idname = "(\w+)"', body))
+    return found
+
+
+def test_every_mixar_modal_operator_is_classified():
+    from mixar.modules.session_recovery import runtime
+    found = _mixar_modal_idnames()
+    assert "MIXAR_OT_credits_banner" in found and "MIXAR_OT_director_walk" in found
+    assert not set(runtime.PASSIVE_MODALS) & EDITING_MODALS
+    assert found - set(runtime.PASSIVE_MODALS) - EDITING_MODALS == set()
+
+
+@pytest.mark.parametrize("open_modals,busy", [
+    (["MIXAR_OT_credits_banner"], False),            # the banner of #1787
+    (["MIXAR_OT_onboarding_tour", "MIXAR_OT_agent_viewport_block"], False),
+    (["MIXAR_OT_credits_banner", "TRANSFORM_OT_translate"], True),   # a real drag
+])
+def test_popups_never_defer_a_save_point(monkeypatch, open_modals, busy):
+    from types import SimpleNamespace
+    from mixar.modules.session_recovery import runtime
+
+    window = SimpleNamespace(modal_operators=[SimpleNamespace(bl_idname=i) for i in open_modals])
+    monkeypatch.setitem(runtime._state, "restoring", False)
+    monkeypatch.setattr(runtime.bpy, "context", SimpleNamespace(
+        window_manager=SimpleNamespace(windows=[window])), raising=False)
+    monkeypatch.setattr(runtime.bpy.app, "is_job_running", lambda kind: False, raising=False)
+    import mixar.modules.space_mixie_chat.core.turn_checkpoints as tc
+    import mixar.modules.space_mixie_chat.core.main_thread_executor as mte
+    monkeypatch.setattr(tc, "is_restoring", lambda: False)
+    monkeypatch.setattr(mte, "has_pending_requests", lambda: False)
+    monkeypatch.setattr(mte, "get_inflight_script", lambda: None)
+    assert runtime._busy() is busy
 
 
 # =============================================================================
@@ -709,3 +791,350 @@ def test_runtime_notes_a_landed_job_and_never_raises(rt, monkeypatch):
     assert len(rt._state["journal"].data["landed_jobs"]) == 1
     monkeypatch.setitem(rt._state, "journal", None)
     rt.note_job_landed("abc")
+
+
+# =============================================================================
+# Every way a turn ends asks for a save point
+# =============================================================================
+
+def test_ending_one_sessions_turn_asks_for_a_save_point(monkeypatch):
+    from mixar.modules.session_recovery import runtime
+    from mixar.modules.space_mixie_chat.core import executor as executor_mod
+
+    asked = []
+    monkeypatch.setattr(runtime, "request_save_point", asked.append)
+    ex = executor_mod.ScriptExecutor()
+    ex._turns.clear()
+    ex.end_agent_turn("sess-a")                     # never started (a refusal) still asks
+    ex.begin_agent_turn("sess-b")
+    ex.end_agent_turn("sess-b", checkpoint=False)
+    assert asked == ["turn_end", "turn_end"]
+    ex.end_agent_turn(None)                         # file load / shutdown: nothing to save
+    assert asked == ["turn_end", "turn_end"]
+
+    def boom(reason):
+        raise RuntimeError("recovery off")
+    monkeypatch.setattr(runtime, "request_save_point", boom)
+    ex.begin_agent_turn("sess-c")
+    ex.end_agent_turn("sess-c")                     # never breaks the turn's end
+    assert "sess-c" not in ex._turns
+
+
+@pytest.mark.parametrize("path,function", [
+    ("queue_processor.py", "_handle_agent_complete_internal"),   # stream complete / turn_end
+    ("queue_processor.py", "_handle_inband_error"),
+    ("queue_processor.py", "_end_refused_turn"),
+    ("queue_processor.py", "_handle_agent_error_internal"),      # stream error
+    ("turn_events.py", "_replay_unavailable"),
+])
+def test_every_turn_ending_passes_through_end_agent_turn(path, function):
+    import ast
+    from pathlib import Path
+    source = Path("src/scripts/mixar/modules/space_mixie_chat/core", path).read_text()
+    node = next(n for n in ast.walk(ast.parse(source))
+                if isinstance(n, ast.FunctionDef) and n.name == function)
+    body = ast.get_source_segment(source, node)
+    assert "end_agent_turn(getattr(scene, \"mixie_session_id\", \"\") or \"\"" in body
+    # One convergence point: no turn ending asks for a save point itself.
+    assert "request_save_point" not in source
+
+
+# =============================================================================
+# Unsaved Work: every crashed session that can still be opened
+# =============================================================================
+
+def _crashed(tmp_path, name, at, **fields):
+    """A dead session on disk with one save point (manifest included)."""
+    extra = fields.pop("point", {})
+    session = _session(tmp_path, name, **fields)
+    session["save_points"] = [_point(tmp_path, name, 1, at, scenes=["Scene", "Scene.001"], **extra)]
+    journal.write_manifest(session["dir"], {k: v for k, v in session.items()
+                                            if k not in ("dir", "alive")})
+    return session
+
+
+def test_unsaved_work_lists_dismissed_and_superseded_but_never_live_clean_or_restored(tmp_path):
+    sessions = [
+        _crashed(tmp_path, "fresh", NOW - 100, point={"original_path": "/p/castle.mixar"}),
+        _crashed(tmp_path, "dismissed", NOW - 200, resolved="dismissed", resolved_at=NOW - 50),
+        _crashed(tmp_path, "superseded", NOW - 300, resolved="superseded", resolved_at=NOW - 50),
+        dict(_crashed(tmp_path, "live", NOW - 10), alive=True),       # another Mixar holds it
+        _crashed(tmp_path, "clean", NOW - 10, clean_exit=True),
+        _crashed(tmp_path, "restored", NOW - 10, resolved="restored"),
+        _crashed(tmp_path, "mine", NOW - 10),
+        _crashed(tmp_path, "source", NOW - 10),
+    ]
+    listed = decision.unsaved_sessions(sessions, own_session="mine", skip={"source"})
+    assert [e["session"] for e in listed] == ["fresh", "dismissed", "superseded"]
+    assert listed[0]["name"] == "castle" and listed[1]["name"] == ""
+    assert listed[1]["resolved"] == "dismissed" and listed[0]["older"] == []
+    # The same candidate rules as the startup offer: a point whose restore
+    # crashed is never listed.
+    loop = _crashed(tmp_path, "loop", NOW - 5)
+    died = _session(tmp_path, "died", restore_attempt={
+        "point": loop["save_points"][0]["file"], "confirmed": False})
+    assert "loop" not in [e["session"] for e in decision.unsaved_sessions([loop, died])]
+
+
+def test_start_fresh_only_stops_the_prompt_and_keeps_the_copy(rt, tmp_path, monkeypatch):
+    crashed = _crashed(tmp_path, "crashed", NOW - 60)
+    offer = decision.find_offer(journal.list_sessions(str(tmp_path / "recovery"), alive=lambda d: False),
+                                now=NOW)
+    monkeypatch.setitem(rt._state, "offer", offer)
+    rt.discard_offer()
+    assert rt.current_offer() is None
+    assert os.path.isfile(crashed["save_points"][0]["file"])          # nothing deleted
+    sessions = journal.list_sessions(str(tmp_path / "recovery"), alive=lambda d: False)
+    assert [e["session"] for e in decision.unsaved_sessions(sessions)] == ["crashed"]
+
+
+def test_an_unsaved_entry_restores_through_the_startup_flow(rt, tmp_path, monkeypatch):
+    newest = _crashed(tmp_path, "newest", NOW - 60)
+    older = _crashed(tmp_path, "older", NOW - 600, resolved="dismissed", resolved_at=NOW - 30)
+    sessions = journal.list_sessions(str(tmp_path / "recovery"), alive=lambda d: False)
+    sessions = [s for s in sessions if s["session"] in ("newest", "older")]
+    monkeypatch.setitem(rt._state, "offer", decision.find_offer(sessions, now=NOW))
+    entry = next(e for e in decision.unsaved_sessions(sessions) if e["session"] == "older")
+    read = []
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save",
+                        lambda filepath: read.append(filepath) or {'FINISHED'}, raising=False)
+    monkeypatch.setattr(rt.bpy.app.timers, "is_registered", lambda fn: False, raising=False)
+    import mixar.modules.space_mixie_chat.core.checkpoint_timeline as ct
+    monkeypatch.setattr(ct, "_retitle", lambda path: None)
+    monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
+    assert rt.restore_entry(entry)
+    assert rt.current_offer() is None             # the prompt is answered
+    rt._restore_now()
+    assert read == [older["save_points"][0]["file"]]
+    rt._confirm_restore()
+    assert journal.read_manifest(older["dir"])["resolved"] == "restored"
+    # The startup offer it replaced is superseded, not offered again; its files stay.
+    assert journal.read_manifest(newest["dir"])["resolved"] == "superseded"
+    assert os.path.isfile(newest["save_points"][0]["file"])
+
+
+def test_a_second_restore_waits_for_the_first(rt, monkeypatch):
+    monkeypatch.setattr(rt.bpy.app.timers, "is_registered", lambda fn: fn is rt._restore_now, raising=False)
+    assert rt.restore_entry({"session": "x", "target": {"kind": "save_point", "path": "p", "at": NOW}}) is False
+
+
+def test_a_session_another_mixar_holds_is_never_found(rt, tmp_path, monkeypatch):
+    from mixar.modules.session_recovery import prompt
+    _crashed(tmp_path, "dead", NOW - 60)
+    live = journal.Journal(str(tmp_path / "recovery"), pid=77, now=NOW)   # holds its lock
+    jr = journal.Journal(str(tmp_path / "recovery"), pid=4242, now=NOW, session="own")
+    live.add_save_point(_file(tmp_path / "l.mixar"), now=NOW, reason="t", cost_s=0.1, original_path="")
+    monkeypatch.setitem(rt._state, "journal", jr)
+    monkeypatch.setattr(rt, "recovery_root", lambda: str(tmp_path / "recovery"))
+    monkeypatch.setattr(rt, "tempdir_base", lambda: str(tmp_path / "T"))
+    assert [e["session"] for e in prompt.scan()] == ["dead"]
+    assert prompt.find(live.session) is None and prompt.find("own") is None
+    assert prompt.find("dead")["session"] == "dead"
+
+
+def test_an_unsaved_entry_reads_name_age_and_tabs(monkeypatch):
+    from mixar.modules.session_recovery import prompt
+    entry = {"name": "", "target": {"at": NOW - 7200, "scenes": ["A", "B"]}}
+    assert prompt.entry_text(entry, NOW) == "Untitled · 2 h ago · 2 tabs"
+    entry = {"name": "castle", "target": {"at": NOW - 30, "scenes": ["A"]}}
+    assert prompt.entry_text(entry, NOW) == "castle · just now · 1 tab"
+    assert prompt.age_text(NOW - 3 * 86400, NOW) == "3 days ago"
+    assert prompt.entry_text({"name": "x", "target": {"at": NOW - 600}}, NOW) == "x · 10 min ago"
+
+
+def test_recent_projects_skip_missing_and_non_project_files(tmp_path):
+    from mixar.modules.common.utils.recent_files import recent_project_paths
+    work = tmp_path / "work"
+    work.mkdir()
+    files = [work / f"p{i}.mixar" for i in range(7)]
+    for f in files:
+        f.write_bytes(b"BLENDER")
+    (work / "notes.txt").write_text("x")
+    history = [files[0], work / "gone.mixar", work / "notes.txt", files[0], *files[1:]]
+    (tmp_path / "recent-files.txt").write_text("\n".join(map(str, history)) + "\n")
+    assert recent_project_paths(str(tmp_path), 5) == files[:5]
+    assert recent_project_paths(str(tmp_path / "none"), 5) == []
+
+
+def test_the_splash_lists_recent_and_unsaved_work_and_never_the_last_session():
+    from pathlib import Path
+    splash = Path("src/scripts/mixar/bootstrap/splash_menu.py").read_text()
+    assert "recover_last_session" not in splash.split('"""', 2)[2]   # outside the docstring
+    assert "recent_project_paths(" in splash and "display_file_selector = False" in splash
+    draw = splash[splash.index("class WM_MT_splash"):]
+    # The restore block stays first; the lists come after the mode picker.
+    assert draw.index("draw_offer(") < draw.index('"mixar.set_ui_mode_ai"') < draw.index(
+        "_draw_recent_and_unsaved(")
+    # No journal read on an ordinary redraw: only a new opening re-reads.
+    lists = splash[splash.index("def _refresh_lists"):splash.index("def _draw_recent_and_unsaved")]
+    assert "if reopened:" in lists and "prompt.scan()" in lists
+
+
+def test_file_recover_gets_unsaved_work_from_mixar_code():
+    from pathlib import Path
+    boot = Path("src/scripts/mixar/bootstrap/session_recovery_module.py").read_text()
+    assert "recover_menu.append(_draw_recover_entry)" in boot
+    assert "recover_menu.remove(_draw_recover_entry)" in boot
+    stock = Path("src/scripts/startup/bl_ui/space_topbar.py").read_text()
+    assert "unsaved_work" not in stock
+
+
+# =============================================================================
+# Telemetry: opaque ids and enums only, never in the way
+# =============================================================================
+
+@pytest.fixture
+def sent(monkeypatch):
+    from mixar.modules.common.analytics import recovery_events as RE
+    events = []
+    monkeypatch.setattr(RE, "capture", lambda event, props=None, **kw: events.append((event, props)))
+    RE.reset()
+    yield events
+    RE.reset()
+
+
+def _secret_offer(tmp_path):
+    return {"session": "20261103T101010-42-abc123", "app_session_id": "app-uuid",
+            "dir": str(tmp_path / "recovery" / "x"), "failed_points": ["/Users/me/sp-2.mixar"],
+            "loop": True, "name": "secret-castle",
+            "target": {"kind": "snapshot", "path": "/Users/me/secret-castle.mixar", "at": NOW,
+                       "original_path": "/Users/me/secret-castle.mixar",
+                       "scenes": ["My Private Scene", "B"],
+                       "agent_scenes": [{"scene": "My Private Scene", "session_id": "chat-sid"}],
+                       "jobs": [{"label": "a prompt the user typed"}]}}
+
+
+def test_recovery_events_carry_only_allowlisted_opaque_properties(sent, tmp_path, monkeypatch):
+    from mixar.modules.common.analytics import recovery_events as RE
+    monkeypatch.setattr(RE.time, "time", lambda: NOW + 90)
+    RE.track("requested", _secret_offer(tmp_path), surface="splash")
+    RE.track("failed", {"session": "s"}, surface="somewhere", failure_category="/a/path")
+    RE.track("not_a_stage", _secret_offer(tmp_path))
+    (event, props), (event2, props2) = sent
+    assert event == "session_recovery.requested"
+    assert props == {"recovery_session_id": "20261103T101010-42-abc123",
+                     "crashed_app_session_id": "app-uuid", "candidate_kind": "turn_checkpoint",
+                     "snapshot_age_s": 90, "tabs_count": 2, "attempt": 2, "crash_loop": True,
+                     "surface": "splash"}
+    assert props2 == {"recovery_session_id": "s", "crashed_app_session_id": None,
+                      "surface": "other", "failure_category": "other"}
+    text = repr(sent)
+    for leak in ("/Users", "secret-castle", "Private", "chat-sid", "prompt"):
+        assert leak not in text
+
+
+def test_a_failing_save_point_is_reported_at_most_every_ten_minutes(sent, monkeypatch):
+    from mixar.modules.common.analytics import recovery_events as RE
+    clock = [1000.0]
+    monkeypatch.setattr(RE.time, "monotonic", lambda: clock[0])
+    RE.track("save_point_failed", failure_category="write_failed")
+    clock[0] += 60
+    RE.track("save_point_failed", failure_category="write_failed")
+    clock[0] += RE.SAVE_POINT_FAILED_INTERVAL_S
+    RE.track("save_point_failed", failure_category="not_filed")
+    assert [p["failure_category"] for _, p in sent] == ["write_failed", "not_filed"]
+
+
+def test_telemetry_that_raises_never_breaks_a_restore(rt, tmp_path, monkeypatch):
+    from mixar.modules.common.analytics import recovery_events as RE
+
+    def boom(*a, **kw):
+        raise RuntimeError("telemetry down")
+    monkeypatch.setattr(RE, "capture", boom)
+    monkeypatch.setattr(RE, "offer_properties", boom)
+    point = _file(tmp_path / "recovery" / "old" / "sp-1.mixar")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "old", "dir": "", "legacy": False, "failed_points": [], "older": [], "debris": [],
+        "target": {"kind": "save_point", "path": point, "at": NOW, "original_path": ""}})
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save", lambda filepath: {'FINISHED'}, raising=False)
+    import mixar.modules.space_mixie_chat.core.checkpoint_timeline as ct
+    monkeypatch.setattr(ct, "_retitle", lambda path: None)
+    monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
+    assert rt.restore_deferred("dialog")
+    rt._restore_now()
+    assert rt._state["restore_target"]["path"] == point
+    monkeypatch.setattr(rt.bpy.ops.wm, "save_auto_save", lambda: {'CANCELLED'}, raising=False)
+    assert rt.write_save_point(["timer"]) is None
+
+
+def _restore_flow(rt, tmp_path, monkeypatch, *, read, jobs_left=0):
+    point = _file(tmp_path / "recovery" / "old" / "sp-1.mixar")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "old", "app_session_id": "app-1", "dir": "", "legacy": False,
+        "failed_points": [], "older": [], "debris": [],
+        "target": {"kind": "save_point", "path": point, "at": NOW, "original_path": "",
+                   "scenes": ["A"], "agent_scenes": [], "jobs": []}})
+    monkeypatch.setattr(rt.bpy.ops.wm, "recover_auto_save", lambda filepath: read, raising=False)
+    import mixar.modules.space_mixie_chat.core.checkpoint_timeline as ct
+    monkeypatch.setattr(ct, "_retitle", lambda path: None)
+    monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
+    monkeypatch.setattr(rt, "_report", lambda text: None)
+    monkeypatch.setattr(rt, "_settle_restored_scenes", lambda: None)
+    monkeypatch.setattr(rt, "_adopt_jobs", lambda records: jobs_left)
+    from types import SimpleNamespace
+    monkeypatch.setattr(rt, "_session_manager", lambda: SimpleNamespace(is_connected=lambda s: False))
+    assert rt.restore_deferred("splash")
+    rt._restore_now()
+    if 'FINISHED' in read:
+        rt._after_restore()
+
+
+def test_a_restore_reports_requested_restored_and_completed(rt, sent, tmp_path, monkeypatch):
+    _restore_flow(rt, tmp_path, monkeypatch, read={'FINISHED'})
+    assert [e for e, _ in sent] == ["session_recovery.requested", "session_recovery.scene_restored",
+                                    "session_recovery.completed"]
+    assert all(p["surface"] == "splash" and p["recovery_session_id"] == "old"
+               and p["crashed_app_session_id"] == "app-1" for _, p in sent)
+
+
+def test_a_restore_that_leaves_generations_behind_is_partial(rt, sent, tmp_path, monkeypatch):
+    _restore_flow(rt, tmp_path, monkeypatch, read={'FINISHED'}, jobs_left=2)
+    assert sent[-1][0] == "session_recovery.partial"
+    assert sent[-1][1]["failure_category"] == "jobs_not_reattached"
+
+
+def test_a_read_that_fails_is_reported(rt, sent, tmp_path, monkeypatch):
+    _restore_flow(rt, tmp_path, monkeypatch, read={'CANCELLED'})
+    assert [e for e, _ in sent] == ["session_recovery.requested", "session_recovery.failed"]
+    assert sent[-1][1]["failure_category"] == "read_cancelled"
+
+
+def test_start_fresh_and_a_failed_save_point_are_reported(rt, sent, tmp_path, monkeypatch):
+    crashed = _session(tmp_path, "crashed")
+    monkeypatch.setitem(rt._state, "offer", {
+        "session": "crashed", "dir": crashed["dir"], "legacy": False, "failed_points": [],
+        "debris": [], "older": [], "target": {"kind": "autosave", "path": "p", "at": NOW}})
+    rt.discard_offer("dialog")
+    monkeypatch.setattr(rt.bpy.ops.wm, "save_auto_save", lambda: {'CANCELLED'}, raising=False)
+    rt.write_save_point(["timer"])
+    rt.write_save_point(["timer"])                  # rate limited
+    assert [(e, p.get("surface"), p.get("failure_category")) for e, p in sent] == [
+        ("session_recovery.dismissed", "dialog", None),
+        ("session_recovery.save_point_failed", None, "write_failed")]
+
+
+def test_each_crash_is_reported_once_and_the_offer_every_launch(sent, tmp_path):
+    from mixar.modules.session_recovery import telemetry
+    a = _crashed(tmp_path, "a", NOW - 60)
+    b = _crashed(tmp_path, "b", NOW - 600)
+    debris = _session(tmp_path, "debris")
+    sessions = journal.list_sessions(str(tmp_path / "recovery"), alive=lambda d: False)
+    offer = decision.find_offer(sessions, now=NOW)
+    assert offer["session"] == "a" and offer["debris"] == [debris["dir"]]
+    telemetry.report_startup(offer, offer)
+    telemetry.report_startup(offer, offer)          # the next launch, nothing answered
+    names = [(e, p["recovery_session_id"]) for e, p in sent]
+    assert names == [("session_recovery.unclean_exit_detected", "a"),
+                     ("session_recovery.unclean_exit_detected", "b"),
+                     ("session_recovery.unclean_exit_detected", "debris"),
+                     ("session_recovery.available", "a"),
+                     ("session_recovery.available", "a")]
+    assert journal.read_manifest(a["dir"])["unclean_exit_reported"] is True
+    assert journal.read_manifest(b["dir"])["unclean_exit_reported"] is True
+
+
+def test_the_journal_names_its_process_for_the_next_launch(tmp_path):
+    jr = journal.Journal(str(tmp_path / "recovery"), pid=1, now=NOW, app_session_id="app-9")
+    assert journal.read_manifest(jr.dir)["app_session_id"] == "app-9"
+    s = _crashed(tmp_path, "x", NOW - 5, app_session_id="app-7")
+    assert decision.find_offer([s], now=NOW)["app_session_id"] == "app-7"

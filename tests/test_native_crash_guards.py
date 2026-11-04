@@ -242,13 +242,18 @@ def test_autosave_runs_under_the_passive_agent_modals():
     body = _fn(WM_FILES.read_text(), "void wm_autosave_timer")
     assert "!wm_autosave_modal_op_is_passive(handler->op)" in body
     passive = re.search(r"passive_idnames\[\] = \{(.*?)\};", WM_FILES.read_text(), re.S).group(1)
-    idnames = re.findall(r'"([A-Z_]+)_OT_(\w+)"', passive)
-    assert len(idnames) == 3
+    idnames = re.findall(r'"([A-Z0-9_]+)_OT_(\w+)"', passive)
+    assert {"MIXAR_OT_agent_viewport_block", "MIXIE_CHAT_OT_undo_shield",
+            "MIXAR_OT_credits_banner"} <= {f"{p}_OT_{n}" for p, n in idnames}
     py = "\n".join(p.read_text() for p in MODULES.rglob("*.py"))
+    cc = "\n".join(p.read_text(errors="ignore") for p in WM_FILES.parents[2].rglob("*.cc"))
     for prefix, name in idnames:
         # A Python operator `mixar.agent_viewport_block` is `MIXAR_OT_agent_viewport_block`
         # in C++; a rename on either side would silently starve autosave again.
-        assert f'bl_idname = "{prefix.lower()}.{name}"' in py, (prefix, name)
+        # The tour's bl_idname is a constant (`OP_TOUR`); native ones are C idnames.
+        assert (f'bl_idname = "{prefix.lower()}.{name}"' in py
+                or f'"{prefix.lower()}.{name}"' in py
+                or f'ot->idname = "{prefix}_OT_{name}"' in cc), (prefix, name)
 
 
 def test_crash_log_gets_the_symbolication_block_after_the_backtrace():

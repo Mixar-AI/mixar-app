@@ -7,7 +7,8 @@
 Input: every session directory (``journal.list_sessions``), the native
 autosaves found in Blender's temp folder, and two filesystem probes. Output:
 one offer (the newest crashed session's best save point, with the older ones
-as fallbacks) or None.
+as fallbacks) or None; and, for Unsaved Work, every crashed session that can
+still be opened (``unsaved_sessions``), each shaped like an offer.
 
 Crash-loop guard: before a launch reads a save point it records
 ``restore_attempt`` in its OWN manifest, and marks it confirmed once the
@@ -142,6 +143,30 @@ def crashed_restores(sessions: list, own_session: str = "") -> set:
     return failed
 
 
+def _session_offer(session: dict, crashed: set, *, autosaves=(), exists=os.path.isfile,
+                   mtime=os.path.getmtime) -> dict | None:
+    """One dead session's restore: its best candidate that never crashed a
+    restore, the rest as fallbacks. None when nothing of it can be opened."""
+    failed = sorted(set(session.get("failed_points") or []) | crashed)
+    all_cands = candidates_for(session, autosaves=autosaves, exists=exists, mtime=mtime)
+    cands = [c for c in all_cands if c["path"] not in failed]
+    if not cands:
+        return None
+    failed = [p for p in failed if any(c["path"] == p for c in all_cands)]
+    return {
+        "session": session.get("session"),
+        "app_session_id": session.get("app_session_id", ""),
+        "dir": session.get("dir", ""),
+        "target": cands[0],
+        "fallbacks": cands[1:],
+        "failed_points": failed,
+        "loop": bool(failed),
+        "legacy": False,
+        "resolved": session.get("resolved") or "",
+        "name": _document_name(cands[0].get("original_path", "")),
+    }
+
+
 def find_offer(sessions: list, *, own_session: str = "", autosaves=(), quit_mtime: float = 0.0,
                now: float = 0.0, exists=os.path.isfile, mtime=os.path.getmtime,
                pid_alive=lambda pid: False) -> dict | None:
@@ -161,22 +186,11 @@ def find_offer(sessions: list, *, own_session: str = "", autosaves=(), quit_mtim
             continue
         if session.get("clean_exit") or session.get("resolved"):
             continue
-        failed = sorted(set(session.get("failed_points") or []) | crashed)
-        all_cands = candidates_for(session, autosaves=autosaves, exists=exists, mtime=mtime)
-        cands = [c for c in all_cands if c["path"] not in failed]
-        if not cands:
+        offer = _session_offer(session, crashed, autosaves=autosaves, exists=exists, mtime=mtime)
+        if offer is None:
             debris.append(session.get("dir", ""))
-            continue
-        failed = [p for p in failed if any(c["path"] == p for c in all_cands)]
-        offers.append({
-            "session": session.get("session"),
-            "dir": session.get("dir", ""),
-            "target": cands[0],
-            "fallbacks": cands[1:],
-            "failed_points": failed,
-            "loop": bool(failed),
-            "legacy": False,
-        })
+        else:
+            offers.append(offer)
     # Native autosaves no manifest claims (a build before this one, or a
     # session whose journal could not be written): the 702ab7e9f rule — the
     # owner is gone and the file is newer than the last clean quit.
@@ -190,6 +204,7 @@ def find_offer(sessions: list, *, own_session: str = "", autosaves=(), quit_mtim
             continue
         offers.append({
             "session": f"legacy-{auto['pid']}",
+            "app_session_id": "",
             "dir": "",
             "target": {"kind": "autosave", "path": auto["path"], "at": when,
                        "original_path": "", "name": auto.get("name", ""),
@@ -198,13 +213,41 @@ def find_offer(sessions: list, *, own_session: str = "", autosaves=(), quit_mtim
             "failed_points": [],
             "loop": False,
             "legacy": True,
+            "resolved": "",
+            "name": auto.get("name", ""),
         })
     if not offers:
         return {"debris": [d for d in debris if d]} if debris else None
     offers.sort(key=lambda o: -o["target"]["at"])
     offer = offers[0]
     offer["older"] = [o for o in offers[1:]]
-    offer["name"] = (_document_name(offer["target"].get("original_path", ""))
-                     or offer["target"].get("name", ""))
     offer["debris"] = [d for d in debris if d]
     return offer
+
+
+# Resolutions whose work is still worth opening: never prompted about again,
+# but kept (until ``journal.prune``) and listed under Unsaved Work.
+LISTED_RESOLUTIONS = ("", "dismissed", "superseded")
+
+
+def unsaved_sessions(sessions: list, *, own_session: str = "", skip=(), autosaves=(),
+                     exists=os.path.isfile, mtime=os.path.getmtime) -> list:
+    """Every crashed session whose work can still be opened, newest first.
+
+    Not live (a held lock is a running Mixar: never listed), not quit
+    cleanly, not already restored; dismissed and superseded ones stay until
+    the journal prunes them. Each entry is shaped like an offer, so the one
+    restore flow opens any of them. ``skip`` holds session ids to leave out
+    (the one this launch restored from)."""
+    crashed = crashed_restores(sessions, own_session)
+    found = []
+    for session in sessions:
+        if session.get("alive") or session.get("session") in (own_session, *skip):
+            continue
+        if session.get("clean_exit") or (session.get("resolved") or "") not in LISTED_RESOLUTIONS:
+            continue
+        offer = _session_offer(session, crashed, autosaves=autosaves, exists=exists, mtime=mtime)
+        if offer is not None:
+            found.append(dict(offer, older=[], debris=[]))
+    found.sort(key=lambda o: -o["target"]["at"])
+    return found

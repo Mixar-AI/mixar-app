@@ -17,31 +17,16 @@ from pathlib import Path
 import bpy
 
 from mixar.modules.common.ui_control.constants import UIError
+from mixar.modules.common.utils.recent_files import recent_project_paths
 from . import scene_tabs
 
-PROJECT_SUFFIXES = (".mixar", ".blend")
 MAX_PROJECTS = 20
 UNSAVED_CHOICES = ("refuse", "save", "discard")
 
 
 def _recent_paths() -> list:
     """Blender's recent-files history, newest first, existing project files only."""
-    history = Path(bpy.utils.user_resource('CONFIG')) / "recent-files.txt"
-    try:
-        lines = history.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
-    found, seen = [], set()
-    for line in (line.strip() for line in lines):
-        if not line or line in seen:
-            continue
-        seen.add(line)
-        path = Path(line)
-        if path.suffix.lower() in PROJECT_SUFFIXES and path.is_file():
-            found.append(path)
-            if len(found) == MAX_PROJECTS:
-                break
-    return found
+    return recent_project_paths(bpy.utils.user_resource('CONFIG'), MAX_PROJECTS)
 
 
 def _project_id(path) -> str:
