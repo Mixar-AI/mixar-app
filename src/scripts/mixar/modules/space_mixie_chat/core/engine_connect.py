@@ -422,6 +422,8 @@ def connect(project: str, *, engine: str = "godot", new_name: str | None = None,
     installed and enabled, the editor opened on it, its link awaited and
     selected."""
     say = progress or (lambda text: None)
+    if new_name:
+        _refuse_taken(engine, project)
     if engine == "unreal":
         return _connect_unreal(project, new_name, say)
     godot = find_godot() or download_godot(say)
@@ -431,6 +433,18 @@ def connect(project: str, *, engine: str = "godot", new_name: str | None = None,
     say("Opening Godot")
     proc = open_godot(godot["binary"], project)
     return _await_link(proc, "godot", CONNECT_TIMEOUT_S, version)
+
+
+def _refuse_taken(engine: str, project: str) -> None:
+    """A new project is made only in a missing or empty folder, or one that
+    already holds this engine's project (the same game again): never into
+    another engine's project or a folder of other files."""
+    from . import engine_projects
+
+    project = os.path.normpath(project)
+    check = engine_projects.check_new(engine, os.path.dirname(project), os.path.basename(project))
+    if check.status == engine_projects.TAKEN:
+        raise ValueError(check.text())
 
 
 def _connect_unreal(folder: str, new_name: str | None, say) -> dict:

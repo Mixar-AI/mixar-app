@@ -397,16 +397,10 @@ class EventProcessor:
         """Handle agent stream completion (called from main thread timer)."""
         # The stream is over: end the executor's undo turn whether the session
         # settles to IDLE or pauses for input (the user's answer starts a new
-        # stream, and with it a new turn / fresh checkpoint budget).
+        # stream, and with it a new turn / fresh checkpoint budget). Ending it
+        # also asks for a crash-recovery save point, settled or paused.
         from .executor import get_executor
         get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "", checkpoint=True)
-        # Crash safety: the turn's scene and transcript get a save point,
-        # whether it settles or pauses on a question.
-        try:
-            from mixar.modules.session_recovery.runtime import request_save_point
-            request_save_point("turn_end")
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"save point request on complete skipped: {e}")
 
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —

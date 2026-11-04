@@ -45,6 +45,8 @@ import time
 import urllib.error
 import urllib.request
 
+from . import engine_assets
+
 LINK_DIR = os.path.join(os.path.expanduser("~"), ".mixar", "engine-link")
 PROTOCOL_VERSION = "2025-06-18"
 CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
@@ -53,7 +55,7 @@ CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
 CALLABLE_TOOLS = ("status", "new_scene", "open_scene", "place", "scene_tree", "save_scene",
                   "play", "stop", "capture", "log", "playtest", "write_script", "add_node",
                   "set_property", "remove_node", "read_file", "list_files", "write_file",
-                  "delete_file", "project_setting", "build_web", "build_info", "blueprint")
+                  "delete_file", "project_setting", "build_web", "build_info", "blueprint", "assets")
 NO_ENGINE = ("No game engine is connected. Connect one from the engine chip in the chat composer "
              "(Godot 4.5+ or Unreal Engine 5.8+ with Mixar Link), then try again.")
 UNREAL_TRANSPORT = "unreal_mcp"
@@ -87,8 +89,28 @@ _prefetch_lock = threading.Lock()
 PREFETCH_KEEP_S = 1800.0
 
 
+# A place that timed out may still have put the instance in the level (the
+# editor finishes the call after the HTTP wait ends): the agent checks before
+# placing again. The backend's own engine_place timeout says the same.
+PLACE_TIMED_OUT = ("The engine did not answer in time; the placement may still have completed. "
+                   "Check engine_scene_tree for it before calling engine_place again.")
+
+
 class LinkError(RuntimeError):
-    """A link failure the user can act on; its text is safe to show."""
+    """A link failure the user can act on; its text is safe to show.
+    ``timed_out``: a call was sent and its answer did not come in time."""
+
+    def __init__(self, message: str = "", timed_out: bool = False):
+        super().__init__(message)
+        self.timed_out = timed_out
+
+
+def _unanswered(err: OSError) -> LinkError:
+    """A request the engine did not answer. A timeout is told by its type: a
+    read timeout raises ``TimeoutError`` (``socket.timeout``), a connect
+    timeout wraps it in ``URLError.reason``."""
+    timed_out = isinstance(err, TimeoutError) or isinstance(getattr(err, "reason", None), TimeoutError)
+    return LinkError(f"The engine did not answer ({type(err).__name__}).", timed_out=timed_out)
 
 
 def scrub(value):
@@ -185,7 +207,7 @@ class McpClient:
         except urllib.error.HTTPError as err:
             return err.code, {}, None
         except (urllib.error.URLError, OSError) as err:
-            raise LinkError(f"The engine did not answer ({type(err).__name__}).") from None
+            raise _unanswered(err) from None
 
     def _rpc(self, method: str, params: dict, timeout: float):
         self._id += 1
@@ -193,14 +215,18 @@ class McpClient:
 
     def initialize(self, timeout: float = 10.0) -> dict:
         self.session = ""
-        status, headers, body = self._rpc("initialize", {"protocolVersion": PROTOCOL_VERSION,
-                                                         "capabilities": {}, "clientInfo": CLIENT_INFO}, timeout)
-        if status == 401:
-            raise LinkError("The engine refused Mixar's token; restart the engine's editor.")
-        if status != 200 or not isinstance(body, dict) or "result" not in body:
-            raise LinkError(f"The engine did not accept the connection (HTTP {status}).")
-        self.session = headers.get("mcp-session-id", "")
-        self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, timeout)
+        try:
+            status, headers, body = self._rpc("initialize", {"protocolVersion": PROTOCOL_VERSION,
+                                                             "capabilities": {}, "clientInfo": CLIENT_INFO}, timeout)
+            if status == 401:
+                raise LinkError("The engine refused Mixar's token; restart the engine's editor.")
+            if status != 200 or not isinstance(body, dict) or "result" not in body:
+                raise LinkError(f"The engine did not accept the connection (HTTP {status}).")
+            self.session = headers.get("mcp-session-id", "")
+            self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, timeout)
+        except LinkError as err:
+            err.timed_out = False  # the handshake: no tool call was sent, so nothing ran
+            raise
         return body["result"]
 
     def call(self, name: str, arguments: dict, timeout: float) -> dict:
@@ -401,6 +427,8 @@ def link_status(engine: str | None = None) -> dict:
         return {**_fail(err), "adapters": [public(i) for i in found]}
     out["adapters"] = [public(i) for i in found]
     out["connected"] = public(info)
+    if out.get("success") and isinstance(out.get("data"), dict):  # the project's assets (engine_assets)
+        out["data"]["tools"] = engine_assets.tools_with_assets(out["data"].get("tools"))
     return out
 
 
@@ -410,9 +438,13 @@ def link_call(tool: str, arguments: dict | None = None, engine: str | None = Non
     if tool not in CALLABLE_TOOLS:
         return {"success": False, "error": f"{tool!r} is not an engine tool Mixar calls by name."}
     try:
-        _, client = _connect(engine)
-        return _result(client.call(tool, dict(arguments or {}), float(timeout)))
+        info, client = _connect(engine)
+        if engine_assets.handles(info, tool, arguments or {}):  # project assets: search, place
+            return engine_assets.run(info, client, tool, arguments or {}, float(timeout))
+        return _result(client.call(tool, engine_assets.adapter_args(tool, arguments), float(timeout)))
     except LinkError as err:
+        if tool == "place" and err.timed_out:  # Mixar Link's place may have finished after the wait
+            return {"success": False, "error": PLACE_TIMED_OUT}
         return _fail(err)
 
 

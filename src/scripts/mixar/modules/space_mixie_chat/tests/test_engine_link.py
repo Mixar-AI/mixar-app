@@ -184,7 +184,8 @@ def test_the_callable_tools_are_the_adapters_minus_import():
         "status", "new_scene", "open_scene", "place", "scene_tree", "save_scene", "play", "stop",
         "capture", "log", "playtest", "write_script", "add_node", "set_property", "remove_node",
         "read_file", "list_files", "write_file", "delete_file", "project_setting", "build_web",
-        "build_info", "blueprint"}
+        "build_info", "blueprint",
+        "assets"}  # answered on the desktop (engine_assets): the project's own assets
     assert "import_package" not in engine_link.CALLABLE_TOOLS
 
 
@@ -438,3 +439,23 @@ def test_an_engine_call_past_its_time_answers_with_a_timeout(unreal, monkeypatch
     time.sleep(0.1)
     assert engine_link.take_prefetched(handle.key) is None  # the late answer is not stored twice
     assert ep.parse(script) == ("link_status", {})
+
+
+@pytest.mark.parametrize("raised, timed_out", [
+    (TimeoutError("timed out"), True),  # the answer did not come (socket.timeout is TimeoutError)
+    (engine_link.urllib.error.URLError(TimeoutError("timed out")), True),  # urllib wraps a send timeout
+    (engine_link.urllib.error.URLError(ConnectionRefusedError()), False),
+])
+def test_a_timeout_is_told_by_its_type_not_its_text(monkeypatch, raised, timed_out):
+    def urlopen(req, timeout):
+        raise raised
+    monkeypatch.setattr(engine_link.urllib.request, "urlopen", urlopen)
+    client = engine_link.McpClient(1, TOKEN)
+    client.session = "s"
+    with pytest.raises(engine_link.LinkError) as call:
+        client.call("place", {}, 1.0)
+    assert call.value.timed_out is timed_out
+    client.session = ""  # a handshake that times out sent no call: never "may have completed"
+    with pytest.raises(engine_link.LinkError) as handshake:
+        client.call("place", {}, 1.0)
+    assert handshake.value.timed_out is False

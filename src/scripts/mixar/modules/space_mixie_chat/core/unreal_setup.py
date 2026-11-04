@@ -67,15 +67,6 @@ REQUIRED_PLUGINS = ("ModelContextProtocol", "AllToolsets", "PythonScriptPlugin",
                     "MixarLink")
 TEMPLATE = "TP_ThirdPersonBP"
 TEMPLATE_PACKS = ("Characters", "LevelPrototyping", "Input")
-# What Connect Unreal changes in the user's project, for the Connect dialog.
-PROJECT_CHANGES = (
-    "Mixar Link (open source) is installed into the project's Plugins folder.",
-    "It enables the Model Context Protocol, All Toolsets, Python Script and",
-    "Editor Scripting plugins, and turns on Unreal's MCP server at editor start",
-    f"(this computer only, port {MCP_PORT}; any program on this computer can use it",
-    "while the editor runs). The editor keeps full speed in the background.",
-    "Close the project in Unreal first.",
-)
 NOT_INSTALLED = ("Unreal Engine 5.8 or newer is not installed. Install it from the Epic Games Launcher "
                  "(Unreal Engine > Library > Engine Versions), then connect again.")
 

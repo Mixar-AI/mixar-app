@@ -31,20 +31,33 @@ import bpy
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import iface_, rpt_
 
-from . import decision, jobs, journal, liveness
+from . import decision, jobs, journal, liveness, telemetry
 from .scheduler import SavePointScheduler
 
 logger = get_logger(__name__)
 
 TICK_S = 1.0
 CONFIRM_AFTER_S = 20.0
-# Modal operators that run for a whole agent turn (or a background job) and
-# hold no half-applied edit; any other modal (a drag, a knife cut) defers the
-# save. Same list as the native autosave (wm_files.cc).
+# Modal operators that hold no half-applied edit: the agent-turn locks,
+# background waits, and overlays or pickers that only watch input (their
+# buttons run ordinary operators). Any other modal (a drag, a knife cut, a
+# tool with strokes in flight) defers the save. Same list as the native
+# autosave (wm_files.cc); tests/test_session_recovery.py keeps them equal.
 PASSIVE_MODALS = frozenset({
     "MIXAR_OT_agent_viewport_block",
     "MIXIE_CHAT_OT_undo_shield",
     "MIXIE_OT_train_asset_model",
+    "MIXIE_OT_search_assets",
+    "MIXIE_OT_refresh_asset_status",
+    "MIXIE_OT_delete_asset_embeddings",
+    "MIXIE_CHAT_OT_snip_image",
+    "MIXAR_OT_credits_banner",
+    "MIXAR_OT_onboarding_tour",
+    "MIXIE_CHAT_OT_lightbox",
+    "MIXAR_OT_agent_model_card",
+    "MIXAR_OT_agent_engine_card",
+    "VIEW3D_OT_workspace_viewer",
+    "MIXIE_OT_moodboard_video_player",
 })
 _BUSY_JOBS = ("RENDER", "OBJECT_BAKE", "COMPOSITE")
 _AGENT_WORKING = ("busy", "modifying", "awaiting_input")
@@ -66,6 +79,8 @@ _state = {
     "prompted": False,
     "restoring": False,
     "restore_target": None,
+    "surface": "",
+    "restore_problem": "",
 }
 
 
@@ -260,6 +275,7 @@ def write_save_point(reasons) -> dict | None:
     if not ok:
         if scheduler is not None:
             scheduler.record_save(_mono(), cost, False)
+        telemetry.track("save_point_failed", failure_category="write_failed")
         return None
     try:
         record = jr.add_save_point(
@@ -272,6 +288,7 @@ def write_save_point(reasons) -> dict | None:
         logger.warning(f"[RECOVERY] save point not filed: {e}")
         if scheduler is not None:
             scheduler.record_save(_mono(), cost, False)
+        telemetry.track("save_point_failed", failure_category="not_filed")
         return None
     if scheduler is not None:
         scheduler.record_save(_mono(), cost, True)
@@ -389,6 +406,31 @@ def _find_offer(root: str) -> dict | None:
     )
 
 
+def describe(offer: dict) -> dict:
+    """Text for the prompt."""
+    target = offer["target"]
+    name = offer.get("name") or iface_("Untitled")
+    stamp = time.strftime("%H:%M", time.localtime(target["at"]))
+    day = time.strftime("%b %d", time.localtime(target["at"]))
+    if day != time.strftime("%b %d"):
+        stamp = f"{day}, {stamp}"
+    details = [f"{name} · {stamp}"]
+    tabs = len(target.get("scenes") or [])
+    if tabs > 1:
+        details.append(iface_("{count} scene tabs").format(count=tabs))
+    working = [a.get("scene", "") for a in target.get("agent_scenes") or []]
+    if working:
+        details.append(iface_("the agent was working in {tabs}").format(tabs=", ".join(working)))
+    running = len(target.get("jobs") or [])
+    if running:
+        details.append(iface_("{count} generation(s) running").format(count=running))
+    if offer.get("loop"):
+        title = iface_("Mixar closed while restoring your work. Restore the previous save point?")
+    else:
+        title = iface_("Mixar closed unexpectedly. Restore your work?")
+    return {"title": title, "detail": " · ".join(details)}
+
+
 def current_offer() -> dict | None:
     offer = _state["offer"]
     if not offer or _state["decided"] or not offer.get("target"):
@@ -424,55 +466,6 @@ def _resolve_others(offer: dict, how: str) -> None:
     _retire_legacy([o["target"]["path"] for o in older if o.get("legacy")])
 
 
-def describe(offer: dict) -> dict:
-    """Text for the prompt."""
-    target = offer["target"]
-    name = offer.get("name") or iface_("Untitled")
-    stamp = time.strftime("%H:%M", time.localtime(target["at"]))
-    day = time.strftime("%b %d", time.localtime(target["at"]))
-    if day != time.strftime("%b %d"):
-        stamp = f"{day}, {stamp}"
-    details = [f"{name} · {stamp}"]
-    tabs = len(target.get("scenes") or [])
-    if tabs > 1:
-        details.append(iface_("{count} scene tabs").format(count=tabs))
-    working = [a.get("scene", "") for a in target.get("agent_scenes") or []]
-    if working:
-        details.append(iface_("the agent was working in {tabs}").format(tabs=", ".join(working)))
-    running = len(target.get("jobs") or [])
-    if running:
-        details.append(iface_("{count} generation(s) running").format(count=running))
-    if offer.get("loop"):
-        title = iface_("Mixar closed while restoring your work. Restore the previous save point?")
-    else:
-        title = iface_("Mixar closed unexpectedly. Restore your work?")
-    return {"title": title, "detail": " · ".join(details)}
-
-
-def draw_offer(layout, *, in_splash: bool) -> bool:
-    """The restore block (splash head or dialog body). False when nothing
-    is offered."""
-    offer = current_offer()
-    if offer is None:
-        return False
-    text = describe(offer)
-    box = layout.box() if in_splash else layout
-    if in_splash:
-        box.emboss = 'NORMAL'
-    col = box.column(align=False)
-    col.label(text=text["title"], icon='RECOVER_LAST')
-    col.label(text=text["detail"])
-    if in_splash:
-        row = col.row()
-        row.scale_y = 1.4
-        row.operator("mixar.restore_crashed_session", text=iface_("Restore"), icon='RECOVER_LAST')
-        row.operator("mixar.discard_crashed_session", text=iface_("Start fresh"))
-        layout.separator()
-    else:
-        col.operator("mixar.discard_crashed_session", text=iface_("Start fresh"), emboss=False)
-    return True
-
-
 def _prompt_tick():
     """Show the dialog once nothing else is on screen (the splash carries the
     same block while it is open)."""
@@ -500,12 +493,14 @@ def _prompt_tick():
 # Restore
 # =============================================================================
 
-def discard_offer() -> None:
-    """Start fresh: the crashed session is left alone (kept 7 days)."""
+def discard_offer(surface: str = "splash") -> None:
+    """Start fresh: only the prompt stops. The crashed session's files are
+    kept (listed under Unsaved Work until the journal prunes them)."""
     offer = current_offer()
     _state["decided"] = True
     if offer is None:
         return
+    telemetry.track("dismissed", offer, surface=surface)
     if offer.get("dir"):
         _resolve_dirs([offer["dir"]], "dismissed")
     if offer.get("legacy"):
@@ -514,14 +509,34 @@ def discard_offer() -> None:
     logger.info(f"[RECOVERY] user started fresh (crashed session {offer.get('session')})")
 
 
-def restore_deferred() -> bool:
+def restore_deferred(surface: str = "splash") -> bool:
     """Restore on the next tick: the splash or dialog that asked is closed
     by the file read, so it must not run on their call stack."""
     if current_offer() is None:
         return False
     _state["decided"] = True
+    _state["surface"] = surface
+    telemetry.track("requested", _state["offer"], surface=surface)
     bpy.app.timers.register(_restore_now, first_interval=0.05)
     return True
+
+
+def restore_entry(entry: dict, surface: str = "file_menu") -> bool:
+    """Restore one Unsaved Work entry (``decision.unsaved_sessions``) through
+    the same flow as the startup offer. An undecided startup offer for another
+    session rides along as ``older``: once this restore is confirmed it is
+    superseded, never prompted about again (and stays listed)."""
+    if not entry or not entry.get("target") or bpy.app.timers.is_registered(_restore_now):
+        return False
+    startup = current_offer()
+    if startup is None or startup.get("session") != entry.get("session"):
+        offer = dict(entry)
+        if startup is not None:
+            offer["older"] = [startup] + list(startup.get("older") or [])
+            offer["debris"] = list(startup.get("debris") or [])
+        _state["offer"] = offer
+        _state["decided"] = False
+    return restore_deferred(surface)
 
 
 def _restore_now():
@@ -546,7 +561,8 @@ def _restore_now():
     except Exception:  # noqa: BLE001
         pass
     _state["restoring"] = True
-    ok = False
+    _state["restore_problem"] = ""
+    ok, failure = False, "read_cancelled"
     try:
         window = _main_window()
         with bpy.context.temp_override(window=window):
@@ -556,9 +572,12 @@ def _restore_now():
                 result = bpy.ops.wm.recover_auto_save(filepath=target["path"])
         ok = 'FINISHED' in result
     except Exception as e:  # noqa: BLE001
+        failure = "read_error"
         logger.error(f"[RECOVERY] restore read failed: {e}", exc_info=True)
     finally:
         _state["restoring"] = False
+    telemetry.track("scene_restored" if ok else "failed", offer, surface=_state["surface"],
+                    failure_category="" if ok else failure)
     if not ok:
         if jr is not None:
             jr.set_fields(restore_attempt=None)
@@ -572,6 +591,7 @@ def _restore_now():
             _retitle(original)
             bpy.app.timers.register(_keep_modified(original), first_interval=0.05)
         except Exception as e:  # noqa: BLE001
+            _state["restore_problem"] = "retitle_failed"
             logger.warning(f"[RECOVERY] retitle skipped: {e}")
     if offer.get("legacy") and jr is not None:
         # Take the loose autosave into this launch's journal so it is a
@@ -650,9 +670,12 @@ def _after_restore():
     """After load_post handlers ran: generations, Continue notices, re-checks."""
     target = _state["restore_target"] or {}
     _settle_restored_scenes()
+    problem = _state["restore_problem"]
     try:
-        _adopt_jobs(target.get("jobs") or [])
+        if _adopt_jobs(target.get("jobs") or []):
+            problem = problem or "jobs_not_reattached"
     except Exception as e:  # noqa: BLE001
+        problem = problem or "adoption_failed"
         logger.warning(f"[RECOVERY] generation adoption skipped: {e}")
     for entry in target.get("agent_scenes") or []:
         scene = bpy.data.scenes.get(entry.get("scene", ""))
@@ -665,13 +688,16 @@ def _after_restore():
             check_orphaned_turns()
     except Exception as e:  # noqa: BLE001
         logger.debug(f"[RECOVERY] orphan check skipped: {e}")
+    telemetry.track("partial" if problem else "completed", _state["offer"],
+                    surface=_state["surface"], failure_category=problem)
     return None
 
 
-def _adopt_jobs(records: list) -> None:
+def _adopt_jobs(records: list) -> int:
+    """Re-attach the generic generations; returns how many could not be."""
     adoptable, other = jobs.split(records)
     if not adoptable and not other:
-        return
+        return 0
     from mixar.modules.common.job_queue.core import generic_jobs
     from mixar.modules.common.job_queue.core.queue_manager import get_queue
     classes = {name: getattr(generic_jobs, name) for name in jobs.GENERIC_CLASSES
@@ -687,6 +713,7 @@ def _adopt_jobs(records: list) -> None:
         names = ", ".join(sorted({r.get("label") or r.get("cls", "") for r in other}))[:200]
         _report(rpt_("These generations were running when Mixar closed and could not be "
                      "re-attached: {names}").format(names=names))
+    return len(other)
 
 
 def _report(text: str) -> None:
@@ -825,7 +852,8 @@ def register() -> None:
         _state["offer"] = None
     try:
         version = getattr(bpy.app, "version_string", "") or ""
-        _state["journal"] = journal.Journal(root, os.getpid(), app_version=version, now=_now())
+        _state["journal"] = journal.Journal(root, os.getpid(), app_version=version, now=_now(),
+                                            app_session_id=telemetry.app_session_id())
     except Exception as e:  # noqa: BLE001
         logger.warning(f"[RECOVERY] journal unavailable, save points off: {e}")
         return
@@ -842,6 +870,9 @@ def register() -> None:
     if not bpy.app.timers.is_registered(_tick):
         bpy.app.timers.register(_tick, first_interval=TICK_S, persistent=True)
     atexit.register(_on_exit)
+    if _state["offer"]:
+        startup = (_state["offer"], current_offer())
+        bpy.app.timers.register(lambda: telemetry.report_startup(*startup), first_interval=2.0)
     offer = current_offer()
     if offer is not None:
         logger.info(f"[RECOVERY] crashed session {offer.get('session')} offered: "

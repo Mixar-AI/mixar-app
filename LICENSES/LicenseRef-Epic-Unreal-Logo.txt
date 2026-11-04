@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: LicenseRef-Mixar-Brand
+
+Unreal Engine logo
+
+Unreal, Unreal Engine and the Unreal Engine logo are trademarks or registered
+trademarks of Epic Games, Inc. in the United States and elsewhere. The logo
+file is the "U" mark shipped with the Unreal Engine editor's own resources,
+rendered to a small PNG. Mixar shows it only to identify Unreal Engine as the
+game engine a user connects to; this implies no affiliation with or
+endorsement by Epic Games. No license to the mark is granted by Mixar's source
+license, and the file is not covered by GPL-3.0-or-later. Use of the mark is
+subject to Epic Games' trademark and brand guidelines.
