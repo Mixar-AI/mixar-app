@@ -11,15 +11,14 @@ Drives native events through the real send operator with only the transport
 boundary replaced (chat_send_probe). Proves, with state asserts and saved
 island frames (inspect every PNG):
 
-1. a fresh turn arms the busy placeholder (steer hint) and the empty composer
-   shows it with Stop;
+1. while a turn runs the empty composer reads "Mixie is working. Type here
+   to steer it..." with Stop;
 2. a message typed before the run opens is HELD ("Queued until Mixie is
    ready"), not refused, and goes out as an interjection the moment the run
    opens ("Added to the running task");
 3. a message typed while the run is open reads Steer and joins the run;
-4. agent.message_sent carries interjecting / held / tab counts / busy_hint;
-5. after two steers the steer hint retires and the next turn shows the
-   parallel-tabs hint;
+4. agent.message_sent carries interjecting / held / tab counts;
+5. a later fresh turn shows the same steer line;
 6. Stop hands a held message back to the composer;
 7. the header "+" while working offers a new scene tab first, which keeps the
    running task, and "Stop this task and start over" still starts fresh.
@@ -41,7 +40,6 @@ from mixie_open_type_send_e2e import (  # noqa: E402
     FIELD, SCENE, SEND, open_pill, press, type_draft, warp,
 )
 
-TIPS = 'mixar.modules.space_mixie_chat.core.agent_tips'
 NEW_CHAT = {'area_type': 'AGENT_BUBBLE', 'op': 'MIXIE_CHAT_OT_new_session'}
 STOP = {'area_type': 'AGENT_BUBBLE', 'op': 'MIXIE_CHAT_OT_abort_session'}
 
@@ -109,10 +107,6 @@ def set_run(qa, open_):
             f"{SCENE}, {'qa-run' if open_ else ''!r}, {open_}); result=True")
 
 
-def hint(qa):
-    return qa.eval('result=bpy.context.window_manager.mixie_chat_busy_hint')
-
-
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/steer-nudges'))
     out.mkdir(parents=True, exist_ok=True)
@@ -128,14 +122,10 @@ def run(qa):
             f".can_compose({SCENE})[0]", timeout=90)
     qa.eval(f'import sys; sys.path.insert(0, {local!r}); '
             'import chat_send_probe as p; p.install(); result=True')
-    # Record the send events locally (consent/transport untouched), and start
-    # the tip rotation and retire counts from zero for this replay.
+    # Record the send events locally (consent/transport untouched).
     qa.eval("import mixar.modules.common.analytics.essential_events as E\n"
             "E._qa_events=[]; E._qa_capture=E.capture\n"
             "E.capture=lambda name, props, **kw: E._qa_events.append((name, props))\n"
-            f"import {TIPS} as T\n"
-            "from mixar.config.config import get_config\n"
-            "get_config()[T.CONFIG_KEY]={}; T._state.update(turns=0, current='')\n"
             "result=True")
     tabs_before = qa.eval('result=len(bpy.data.scenes)')
     try:
@@ -145,13 +135,11 @@ def run(qa):
                 "scene.mixie_chat_pending_attachments.clear(); scene.mixie_chat_input=''; "
                 "bpy.context.window_manager.mixar_bubble_tab='AGENT'; result=True")
         open_pill(qa)
-        hints = qa.eval(f'import {TIPS} as T; result=T.BUSY_HINTS')
         capture(qa, out, '0-idle-composer')
 
         # 1. A fresh turn arms the steer hint; the empty composer shows it + Stop.
         send_draft(qa, 'Build a small wooden cabin')
         expect(len(calls(qa)) == 1, 'fresh turn not sent', calls(qa))
-        expect(hint(qa) == hints['steer'], 'first turn should arm the steer hint', hint(qa))
         open_pill(qa)
         qa.wait("bool(drv.find(**%r))" % STOP, timeout=5)
         capture(qa, out, '1-busy-placeholder-and-stop')
@@ -191,28 +179,25 @@ def run(qa):
         # 4. Telemetry: the three sends, content-free.
         ev = events(qa)
         expect(len(ev) == 3, 'one message_sent per wire send', ev)
-        expect((ev[0]['interjecting'], ev[0]['held'], ev[0]['busy_hint']) == (False, False, None),
+        expect((ev[0]['interjecting'], ev[0]['held']) == (False, False),
                'fresh turn event', ev[0])
-        expect((ev[1]['interjecting'], ev[1]['held'], ev[1]['busy_hint']) == (True, True, 'steer'),
+        expect((ev[1]['interjecting'], ev[1]['held']) == (True, True),
                'held send event', ev[1])
-        expect((ev[2]['interjecting'], ev[2]['held'], ev[2]['busy_hint']) == (True, False, 'steer'),
+        expect((ev[2]['interjecting'], ev[2]['held']) == (True, False),
                'steer event', ev[2])
         expect(all(isinstance(e['scene_tabs'], int) and e['other_tabs_working'] == 0 for e in ev),
                'tab counts', ev)
         expect('roof' not in repr(ev) and 'chimney' not in repr(ev), 'no message text in events', ev)
+        expect(all('busy_hint' not in e for e in ev), 'no hint id in events', ev)
 
-        # 5. Two steers retire the steer hint: the next turn shows the parallel one.
-        expect(qa.eval(f"import {TIPS} as T\nfrom mixar.config.config import get_config\n"
-                       "result=get_config()[T.CONFIG_KEY]") == {'steer': 2},
-               'steer uses counted', None)
+        # 5. A later fresh turn shows the same steer line (no rotation).
         set_run(qa, False)
         qa.eval(f'import chat_send_probe as p; p.settle({SCENE}); result=True')
         open_pill(qa)
         capture(qa, out, '5a-idle-again')
         send_draft(qa, 'Now a fence around it')
-        expect(hint(qa) == hints['parallel'], 'retired steer -> parallel hint', hint(qa))
         open_pill(qa)
-        capture(qa, out, '5b-parallel-placeholder')
+        capture(qa, out, '5b-steer-placeholder-again')
 
         # 6. Stop hands a held message back to the composer.
         send_draft(qa, 'Paint the fence white')

@@ -321,22 +321,12 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->prompt_empty = (r_state->input_text[0] == '\0');
     r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;
     /* Work under way that a message joins: Send reads Steer and the empty
-     * composer says so. Never MODIFYING / AWAITING_INPUT, where Send answers.
-     * The hint (core/agent_tips.py: steer / parallel tabs, per turn) is an
-     * English template in wm.mixie_chat_busy_hint, translated here. */
+     * composer says so. Never MODIFYING / AWAITING_INPUT, where Send answers. */
     const bool steerable = enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            r_state->status_active;
     r_state->steer_visible = steerable && !r_state->prompt_empty;
     if (steerable) {
-      static char busy_placeholder[192];
-      char hint[128] = "";
-      if (wm) {
-        PointerRNA wm_hint_ptr = RNA_id_pointer_create(&wm->id);
-        read_string_prop(&wm_hint_ptr, "mixie_chat_busy_hint", hint, sizeof(hint));
-      }
-      STRNCPY_UTF8(busy_placeholder,
-                   hint[0] ? IFACE_(hint) : IFACE_("Mixie is working. Type here to steer it..."));
-      r_state->placeholder = busy_placeholder;
+      r_state->placeholder = IFACE_("Mixie is working. Type here to steer it...");
     }
 
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");

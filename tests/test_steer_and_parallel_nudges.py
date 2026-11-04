@@ -14,7 +14,7 @@ import pytest
 from mixar.modules.common.analytics import essential_events as essential
 from mixar.modules.space_mixie_chat import constants
 from mixar.modules.space_mixie_chat.constants import SessionState
-from mixar.modules.space_mixie_chat.core import agent_tips, held_sends
+from mixar.modules.space_mixie_chat.core import held_sends, tab_activity
 
 composer_send = importlib.import_module('mixar.modules.space_mixie_chat.core.composer_send')
 
@@ -49,7 +49,6 @@ def fake_session():
 @pytest.fixture(autouse=True)
 def clean_state():
     held_sends._held.clear()
-    agent_tips._state.update(turns=0, current='')
     with patch('mixar.modules.space_mixie_chat.core.session.get_session_manager',
                return_value=fake_session()), \
             patch.object(composer_send, 'get_session_manager', return_value=fake_session()):
@@ -141,61 +140,26 @@ def test_joins_running_task_covers_open_runs_only():
     assert not composer_send.joins_running_task(scene(state=SessionState.AWAITING_INPUT, run_open=True))
 
 
-# ---- busy composer hints --------------------------------------------------
-
-def test_hints_alternate_then_retire_after_use():
-    config = {}
-    with patch('mixar.config.config.get_config', return_value=config):
-        picks = [agent_tips.pick_busy_hint() for _ in range(4)]
-        assert picks == ['steer', 'parallel', 'steer', 'parallel']
-        config[agent_tips.CONFIG_KEY] = {'steer': agent_tips.RETIRE_AFTER}
-        assert agent_tips.pick_busy_hint() == 'parallel'
-        config[agent_tips.CONFIG_KEY] = {'steer': 9, 'parallel': 9}
-        assert agent_tips.pick_busy_hint() == agent_tips.TIP_DEFAULT
-
-
-def test_arm_publishes_the_english_template_for_the_native_composer():
-    wm = NS(mixie_chat_busy_hint='')
-    with patch('mixar.config.config.get_config', return_value={}):
-        tip = agent_tips.arm_busy_hint(NS(window_manager=wm))
-    assert wm.mixie_chat_busy_hint == agent_tips.BUSY_HINTS[tip]
-    assert agent_tips.current_hint() == tip
-
-
-def test_note_used_counts_until_retired_and_writes_off_the_main_thread():
-    config = {}
-    threads = []
-    fake_thread = MagicMock(side_effect=lambda **kw: threads.append(kw) or NS(start=lambda: None))
-    with patch('mixar.config.config.get_config', return_value=config), \
-            patch.object(agent_tips.threading, 'Thread', fake_thread):
-        for _ in range(agent_tips.RETIRE_AFTER + 2):
-            agent_tips.note_used('steer')
-        agent_tips.note_used('bogus')
-    assert config[agent_tips.CONFIG_KEY] == {'steer': agent_tips.RETIRE_AFTER}
-    assert len(threads) == agent_tips.RETIRE_AFTER
-    assert all(t['daemon'] for t in threads)
-
-
 # ---- telemetry -------------------------------------------------------------
 
 def test_message_sent_carries_steering_and_tab_counts_only():
     ctx = NS(area=NS(type='VIEW_3D'), scene=NS(mixie_chat_mode='AGENT', name='/private/x'))
-    agent_tips._state['current'] = 'parallel'
     with patch.object(essential, 'capture') as emit, \
-            patch.object(agent_tips, 'tab_counts', return_value=(3, 2)):
+            patch.object(tab_activity, 'tab_counts', return_value=(3, 2)):
         essential.capture_agent_message(ctx, [], False, False, None, interjecting=True)
         essential.capture_agent_message(ctx, [], False, False, None)
     steered, plain = (c.args[1] for c in emit.call_args_list)
-    assert (steered['interjecting'], steered['held'], steered['busy_hint']) == (True, False, 'parallel')
+    assert (steered['interjecting'], steered['held']) == (True, False)
+    assert 'busy_hint' not in steered
     assert (steered['scene_tabs'], steered['other_tabs_working']) == (3, 2)
-    assert (plain['interjecting'], plain['busy_hint']) == (False, None)
+    assert plain['interjecting'] is False
     assert '/private' not in str([c.args[1] for c in emit.call_args_list])
 
 
 def test_new_scene_operator_reports_parallel_context():
-    with patch.object(agent_tips, 'tab_counts', return_value=(2, 1)):
+    with patch.object(tab_activity, 'tab_counts', return_value=(2, 1)):
         props = essential.scene_tab_operator_properties('mixie_chat.new_scene_tab', {'FINISHED'}, None)
-        assert props == {'other_tabs_working': 1, 'busy_hint': None}
+        assert props == {'other_tabs_working': 1}
         assert essential.scene_tab_operator_properties('mixie_chat.new_scene_tab', {'CANCELLED'}, None) == {}
         assert essential.scene_tab_operator_properties('mixie_chat.switch_scene_tab', {'FINISHED'}, None) == {}
 
@@ -209,7 +173,6 @@ def test_send_operator_polls_can_compose_and_holds_before_encoding():
     hold = src.index("held_sends.hold(scene, message_text)")
     assert src.index("ws_client.connection_id") < hold < src.index("encode_outgoing_attachments(")
     assert "user_msg.delivery_hint = HINT_STEER" in src
-    assert "agent_tips.arm_busy_hint(context)" in src
     assert "interjecting=steering, held=held" in src
 
 
@@ -232,7 +195,7 @@ def test_new_chat_while_working_offers_a_scene_tab_first():
 
 def test_native_island_reads_the_hint_and_labels_steer():
     state = read(BUBBLE / "agent_ui_state.cc")
-    assert '"mixie_chat_busy_hint"' in state and "steer_visible" in state
+    assert 'IFACE_("Mixie is working. Type here to steer it...")' in state and "steer_visible" in state
     assert 'enum_is(&scene_ptr, "mixie_chat_state", "BUSY")' in state
     assert 'IFACE_("Steer")' in read(BUBBLE / "agent_ui_controls_paint.cc")
     assert "steer_visible" in read(BUBBLE / "agent_bubble_references.cc")

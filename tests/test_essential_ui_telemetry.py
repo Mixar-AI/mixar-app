@@ -104,7 +104,7 @@ def test_scribble_signal_is_a_boolean_on_one_existing_send_event():
     assert set(emit.call_args.args[1]) == {
         'mode', 'has_attachments', 'is_modify', 'is_awaiting_input',
         'plan_enabled', 'auto_mode', 'model', 'has_scribble', 'length_bucket',
-        'interjecting', 'held', 'scene_tabs', 'other_tabs_working', 'busy_hint'}
+        'interjecting', 'held', 'scene_tabs', 'other_tabs_working'}
 
 
 def test_send_event_carries_a_coarse_length_bucket_not_a_length():

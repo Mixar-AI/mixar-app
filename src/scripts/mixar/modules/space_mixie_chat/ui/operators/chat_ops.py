@@ -38,7 +38,7 @@ from ...core.composer_send import (
     is_interjection,
     send_user_message,
 )
-from ...core import agent_tips, held_sends
+from ...core import held_sends
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
 from ...core.message_helpers import add_turn_placeholder
@@ -295,7 +295,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
         capture_agent_message(context, pending_attachments, is_modify, is_awaiting_input, mark_context,
                               message_bytes=len(message_text.encode('utf-8')),
                               interjecting=steering, held=held)
-        agent_tips.note_send(scene, steering or held)
 
         fresh_turn = not (is_modify or is_awaiting_input or interjecting)
         if fresh_turn:
@@ -344,8 +343,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # interjection answers inside the turn already streaming.
         if fresh_turn:
             add_turn_placeholder(scene)
-            # The composer's busy placeholder for this turn (steer / parallel).
-            agent_tips.arm_busy_hint(context)
             # A collection add() reallocates the IDProperty array: every item
             # reference taken before it points into freed memory (ASAN,
             # 2026-09-30: heap-use-after-free writing request_id through the

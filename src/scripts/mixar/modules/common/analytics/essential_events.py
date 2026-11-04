@@ -49,14 +49,12 @@ def cinema_operator_properties(operator, result, context):
 
 
 def scene_tab_operator_properties(operator, result, context):
-    """New Scene: was another tab's agent working, and which composer hint
-    did the turn show. Counts and a hint id only."""
+    """New Scene: how many tabs had an agent working. A count only."""
     try:
         if operator != 'mixie_chat.new_scene_tab' or 'FINISHED' not in result:
             return {}
-        from mixar.modules.space_mixie_chat.core import agent_tips
-        _tabs, working = agent_tips.tab_counts(None)
-        return {'other_tabs_working': working, 'busy_hint': agent_tips.current_hint() or None}
+        from mixar.modules.space_mixie_chat.core.tab_activity import tab_counts
+        return {'other_tabs_working': tab_counts(None)[1]}
     except Exception:
         return {}
 
@@ -101,18 +99,10 @@ def length_bucket(n_bytes):
 def _tab_activity(scene):
     """Counts only: user scene tabs and OTHER tabs whose agent is working."""
     try:
-        from mixar.modules.space_mixie_chat.core.agent_tips import tab_counts
+        from mixar.modules.space_mixie_chat.core.tab_activity import tab_counts
         return tab_counts(scene)
     except Exception:
         return None, None
-
-
-def _busy_hint():
-    try:
-        from mixar.modules.space_mixie_chat.core.agent_tips import current_hint
-        return current_hint() or None
-    except Exception:
-        return None
 
 
 def capture_agent_message(context, attachments, is_modify, is_awaiting_input,
@@ -125,7 +115,6 @@ def capture_agent_message(context, attachments, is_modify, is_awaiting_input,
     capture(EVENT_MESSAGE_SENT, {
         'interjecting': bool(interjecting), 'held': bool(held),
         'scene_tabs': scene_tabs, 'other_tabs_working': other_tabs_working,
-        'busy_hint': _busy_hint() if (interjecting or held) else None,
         'mode': 'addon_project' if scene.mixie_chat_mode == 'ADDON_PROJECT' else 'agent',
         'has_attachments': bool(len(attachments)),
         'is_modify': is_modify, 'is_awaiting_input': is_awaiting_input,

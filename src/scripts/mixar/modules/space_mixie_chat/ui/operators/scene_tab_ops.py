@@ -351,9 +351,6 @@ class MIXIE_CHAT_OT_new_scene_tab(Operator):
     name: StringProperty(name="Name", default="", options={'SKIP_SAVE'})
 
     def execute(self, context):
-        from ...core import agent_tips
-        if agent_tips.tab_counts(None)[1]:
-            agent_tips.note_used(agent_tips.TIP_PARALLEL)
         new_scene_tab(self.name)
         from ..properties.scene_tabs_props import refresh_scene_tabs
         refresh_scene_tabs()
