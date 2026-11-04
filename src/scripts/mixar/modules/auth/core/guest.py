@@ -21,6 +21,7 @@ import json
 import requests
 
 from ....config.config import add_config, get_config, get_server_url
+from .request_headers import auth_headers
 from ....config.logging_config import get_logger
 from ...common.network import classify_network_error, log_network_failure
 from ...common.utils import credential_store
@@ -137,7 +138,7 @@ def create_guest_session() -> dict:
     try:
         response = requests.post(
             url, data=json.dumps(payload),
-            headers={"Content-Type": "application/json", "accept": "application/json"},
+            headers=auth_headers(json_body=True),
             timeout=30,
         )
     except requests.exceptions.RequestException as e:
@@ -193,11 +194,7 @@ def claim_guest(guest_refresh_token: str) -> dict:
     try:
         response = requests.post(
             url, data=json.dumps({"guest_refresh_token": guest_refresh_token}),
-            headers={
-                "Content-Type": "application/json",
-                "accept": "application/json",
-                "Authorization": f"Bearer {get_access_token()}",
-            },
+            headers=auth_headers(json_body=True, bearer=get_access_token()),
             timeout=30,
         )
     except requests.exceptions.RequestException as e:

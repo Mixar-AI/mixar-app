@@ -37,6 +37,7 @@ import requests
 from mixar.modules.common.i18n import rpt_
 
 from ....config.config import get_frontend_url, get_server_url
+from .request_headers import auth_headers
 from ....config.logging_config import get_logger
 from ...common.network import classify_network_error, log_network_failure
 from ..utils.constants import (
@@ -186,7 +187,7 @@ def _exchange_code(code, verifier):
         response = requests.post(
             url,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json', 'accept': 'application/json'},
+            headers=auth_headers(json_body=True),
             timeout=30,
         )
     except requests.exceptions.RequestException as e:
