@@ -30,6 +30,9 @@ import sys
 import time
 from pathlib import Path
 
+# Run from a harness checkout's scenarios/ (winqa) the harness is the parent.
+if (Path(__file__).resolve().parent / 'lib.py').exists():
+    os.environ.setdefault('QA_HARNESS', str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import ScenarioFail, run_scenario  # noqa: E402
 
