@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 
 
 def _is_world_object(obj) -> bool:
-    """True if obj belongs to a World Labs world (splat / collider)."""
+    """True if obj belongs to a World Labs world (splat / collider / proxy)."""
     if obj.get("wl_role"):
         return True
     return any(c.name.startswith("WorldLabs_") for c in obj.users_collection)

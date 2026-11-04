@@ -29,7 +29,7 @@ def test_removing_a_scene_frees_its_render_unless_a_job_owns_it():
     body = body[:body.index("\n}\n")]
     free = body.index("RE_FreeRender(re)")
     assert body.index("GS(id->name) == ID_SCE") < free
-    assert body.index("!WM_jobs_progress_test(wm, id, WM_JOB_TYPE_ANY)") < free     # never under a running render
+    assert body.index("!WM_jobs_test(wm, id, WM_JOB_TYPE_ANY)") < free     # never under a running render
     assert body.index("RE_GetSceneRender(") < free
     assert free < body.index("BKE_id_delete(bmain, id)")                   # before the Scene's address is freed
 

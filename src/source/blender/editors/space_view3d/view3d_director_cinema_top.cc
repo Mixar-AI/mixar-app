@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <cstring>
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
 
 #include "BKE_context.hh"
 

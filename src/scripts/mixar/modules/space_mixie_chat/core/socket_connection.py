@@ -319,13 +319,9 @@ class SocketConnection:
         from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
         from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
-        from ...context_folder.constants import PDF_CAPABILITY as CONTEXT_FOLDER_PDF_CAPABILITY
-        from ...context_folder.core import pdf as context_folder_pdf
         from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
         from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
-        from ...common.agent_execution.script_time_limit import CAPABILITY as SCRIPT_TIME_LIMIT_CAPABILITY
         from .engine_connect import ENGINE_LINK_CAPABILITY
-        from .engine_mcp import ENGINE_MCP_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -357,9 +353,6 @@ class SocketConnection:
                 "forest_runtime_v1",
                 "terrain_raycast_v1",
                 "inspection_preview_v1",
-                # Splats are built-in objects: engine="splat" captures go
-                # through the ordinary native preview, never KIRI.
-                "native_splats_v1",
                 "notifications",
                 "local_llm",
                 # Client answers blender.liveness on the WS thread; the
@@ -371,8 +364,6 @@ class SocketConnection:
                 # engine.* tools through the composer's engine chip; the
                 # chip shows only when the server lists it back.
                 *([ENGINE_LINK_CAPABILITY] if not self._role else []),
-                # Unreal's editor toolsets passed through (engine_mcp).
-                *([ENGINE_MCP_CAPABILITY] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
@@ -380,9 +371,6 @@ class SocketConnection:
                 CONTEXT_FOLDER_CAPABILITY,
                 # context_folder.view_video: this build decodes folder videos.
                 CONTEXT_FOLDER_VIDEO_CAPABILITY,
-                # PDF text through context_folder.read/search, pages through
-                # context_folder.view_pdf_pages: only when pypdfium2 imports.
-                *([CONTEXT_FOLDER_PDF_CAPABILITY] if context_folder_pdf.available() else []),
                 # moodboard.view_video: the agent reviews board videos as frames.
                 MOODBOARD_VIDEO_CAPABILITY,
                 # mixar.scene_render_start accepts agent_ref_json and reports
@@ -392,8 +380,6 @@ class SocketConnection:
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.
                 "exec_envelope_v3",
-                # A raw script is stopped 10 s after its envelope deadline.
-                SCRIPT_TIME_LIMIT_CAPABILITY,
                 # Harness v3 execution protocol bundle (agent.execution.*):
                 # task bindings, operation receipts (SQLite journal), native
                 # artifact append, document epoch, runtime question routing.

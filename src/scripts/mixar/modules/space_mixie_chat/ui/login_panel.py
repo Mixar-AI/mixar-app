@@ -52,9 +52,8 @@ classes = (
 
 def draw_login_feedback(col, wm):
     """Existing session/error feedback shared by every sign-in surface."""
-    # A concrete failure (for example a locked keyring) takes precedence
-    # over the generic expiry prompt so retry instructions stay visible.
-    if getattr(wm, 'mixie_chat_session_expired', False) and not wm.mixie_chat_login_error:
+    # Session expired message
+    if getattr(wm, 'mixie_chat_session_expired', False):
         box = col.box()
         box.alert = True
         box.label(text="Session expired", icon='ERROR')
@@ -111,19 +110,6 @@ def draw_profile_sign_in(layout, wm):
     else:
         heading.label(text="You're using Mixar as a guest")
     layout.label(text="Sign in for Mixar models and generation.")
-    draw_login_feedback(layout, wm)
-    action = layout.column(align=True)
-    action.scale_y = CARD_ROW_CTA
-    draw_browser_sign_in(action, wm, card=True)
-    layout.separator()
-
-
-def draw_profile_reauth(layout, wm):
-    """An account whose session expired: the shared feedback ("Session
-    expired", or the failure) and the browser sign-in in flight or a retry,
-    above the native card that still names the account."""
-    from mixar.modules.common.ui.constants import CARD_ROW_CTA
-
     draw_login_feedback(layout, wm)
     action = layout.column(align=True)
     action.scale_y = CARD_ROW_CTA

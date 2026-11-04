@@ -19,9 +19,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
-#include "BKE_camera.h"
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 
@@ -98,8 +97,7 @@ bool cinema_camera_gate_rect(const bContext *C, const ARegion *region, rctf *r_r
   if (depsgraph == nullptr) {
     return false;
   }
-  *r_rect = BKE_camera_view_border(
-      scene, depsgraph, v3d, rv3d, region->winx, region->winy, false, false, false);
+  ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, r_rect);
   return BLI_rctf_size_x(r_rect) > 1.0f && BLI_rctf_size_y(r_rect) > 1.0f;
 }
 
@@ -176,8 +174,7 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
    * width between the columns is what the frame is sized to; the height
    * only bounds it (a portrait aspect must still end above the chat bar). */
   rctf border;
-  border = BKE_camera_view_border(
-      scene, depsgraph, v3d, rv3d, region->winx, region->winy, false, false, false);
+  ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, &border);
   const float border_w = BLI_rctf_size_x(&border);
   const float border_h = BLI_rctf_size_y(&border);
   if (border_w <= 1.0f || border_h <= 1.0f) {
@@ -193,10 +190,9 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
 
   /* Then place it: centred between the columns, TOP on the columns' top.
    * The view plane shifts by `winx * 2 * camdx * fac` (see
-   * the camera view-plane computation), which moves the
+   * BKE_camera_params_from_view3d / _compute_viewplane), which moves the
    * border the OTHER way by the same amount in region px. */
-  border = BKE_camera_view_border(
-      scene, depsgraph, v3d, rv3d, region->winx, region->winy, false, false, false);
+  ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, &border);
   const float dx = BLI_rctf_cent_x(&target) - BLI_rctf_cent_x(&border);
   const float dy = target.ymax - border.ymax;
   rv3d->camdx = std::clamp(rv3d->camdx - dx / (2.0f * fac_now * float(region->winx)), -1.0f, 1.0f);

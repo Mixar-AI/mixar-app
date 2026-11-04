@@ -10,7 +10,7 @@
  * Provides bubbles, sender labels and action button handling.
  */
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "mixie_chat_ui_types.hh"
 #include "mixie_chat_intern.hh"

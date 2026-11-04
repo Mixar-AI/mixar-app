@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "DNA_scene_types.h"
 

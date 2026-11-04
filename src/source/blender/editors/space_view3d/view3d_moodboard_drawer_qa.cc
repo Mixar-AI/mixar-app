@@ -3,7 +3,7 @@
 
 /** QA targets share the drawer's native input geometry. */
 #include <algorithm>
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "DNA_windowmanager_types.h"
 #include "WM_api.hh"
 #include "../interface/interface_qa_inspect.hh"

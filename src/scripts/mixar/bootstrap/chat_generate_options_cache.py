@@ -35,7 +35,6 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.utils.threads import start_daemon_thread
 from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
 
 logger = get_logger(__name__)
@@ -318,7 +317,11 @@ def refresh_chat_generate_options_cache() -> None:
             _refresh_pending = True  # re-run when the in-flight fetch lands
             return
 
-    start_daemon_thread(_fetch_data_sync, name="MixarChatGenerateOptionsRefresh")
+    threading.Thread(
+        target=_fetch_data_sync,
+        daemon=True,
+        name="MixarChatGenerateOptionsRefresh",
+    ).start()
 
 
 def _fetch_data_sync() -> None:
@@ -428,8 +431,10 @@ def _schedule_redraw() -> None:
 
 def _start_background_fetch() -> None:
     """Timer callback: kick off the background fetch thread (main thread)."""
-    start_daemon_thread(_fetch_data_sync, name="MixarChatGenerateOptionsCache")
-    return None  # Don\'t repeat
+    threading.Thread(
+        target=_fetch_data_sync, daemon=True, name="MixarChatGenerateOptionsCache"
+    ).start()
+    return None  # Don't repeat
 
 
 # Periodic revalidation cadence — same rationale as the catalog cache: an
@@ -445,9 +450,11 @@ def _periodic_revalidate() -> float:
             return _REVALIDATE_INTERVAL_S  # unregistered on shutdown anyway
         busy = _is_loading
     if not busy:
-        # A thread that cannot start is retried on the next tick; raising
-        # here would unregister this timer for the rest of the session.
-        start_daemon_thread(_fetch_data_sync, name="MixarChatGenerateOptionsRevalidate")
+        threading.Thread(
+            target=_fetch_data_sync,
+            daemon=True,
+            name="MixarChatGenerateOptionsRevalidate",
+        ).start()
     return _REVALIDATE_INTERVAL_S  # repeat
 
 

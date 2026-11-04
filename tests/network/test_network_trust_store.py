@@ -8,20 +8,14 @@
 ``ssl.SSLContext`` is never patched.
 """
 
-import os
-import ssl
 import sys
 import types
-from unittest import mock
 
 import pytest
 
 from mixar.modules.common.network import install_trust_store
 from mixar.modules.common.network.constants import (
     CA_BUNDLE_ENV_VARS,
-    ENV_CA_BUNDLE,
-    ENV_EXTRA_CA_CERTS,
-    SSL_KEYLOG_ENV_VAR,
     TRUST_MODE_BUNDLE,
     TRUST_MODE_CERTIFI,
     TRUST_MODE_OS,
@@ -132,48 +126,3 @@ def test_linux_with_system_bundle_uses_os_store(fake_truststore, monkeypatch):
     report = install_trust_store(None, env, force=True)
     assert report.mode == TRUST_MODE_OS
     assert "SSL_CERT_FILE" not in env
-
-
-def test_ssl_key_log_file_is_dropped_with_a_warning(fake_truststore, not_linux, monkeypatch):
-    log = mock.Mock()
-    monkeypatch.setattr(trust_mod, "logger", log)
-    env = {SSL_KEYLOG_ENV_VAR: "/keys.log"}
-    install_trust_store(None, env, force=True, search_dirs=())
-    assert SSL_KEYLOG_ENV_VAR not in env
-    log.warning.assert_called_once()
-
-    log.reset_mock()
-    install_trust_store(None, {}, force=True, search_dirs=())
-    log.warning.assert_not_called()
-
-    env = {SSL_KEYLOG_ENV_VAR: ""}  # set but empty: clients skip it, so no warning
-    install_trust_store(None, env, force=True, search_dirs=())
-    assert SSL_KEYLOG_ENV_VAR not in env
-    log.warning.assert_not_called()
-
-
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="chmod 000 does not deny reads on Windows")
-def test_unopenable_ssl_key_log_file_cannot_break_tls_contexts(fake_truststore, not_linux, monkeypatch, tmp_path):
-    # Mixar-AI/mixar-backend#1879: urllib3 opens SSLKEYLOGFILE on every context,
-    # so an unopenable path made ``import requests`` raise PermissionError.
-    urllib3_ssl = pytest.importorskip("urllib3.util.ssl_")
-    if os.geteuid() == 0:
-        pytest.skip("root can open a chmod 000 file")
-    # Runs against the real os.environ: hand every variable install_trust_store
-    # reads or exports to monkeypatch so a runner's own CA settings can't leak.
-    for name in (*CA_BUNDLE_ENV_VARS, ENV_CA_BUNDLE, ENV_EXTRA_CA_CERTS):
-        monkeypatch.delenv(name, raising=False)
-    key_log = tmp_path / "virtual_file.log"
-    key_log.write_text("")
-    key_log.chmod(0)
-    monkeypatch.setenv(SSL_KEYLOG_ENV_VAR, str(key_log))
-    original_class, original_new = ssl.SSLContext, ssl.SSLContext.__new__
-    try:
-        install_trust_store(None, force=True, search_dirs=())
-        urllib3_ssl.create_urllib3_context()
-        assert SSL_KEYLOG_ENV_VAR not in os.environ
-    finally:
-        trust_mod._uninstall_extra_certs()
-        key_log.chmod(0o600)
-    assert ssl.SSLContext is original_class
-    assert ssl.SSLContext.__new__ is original_new

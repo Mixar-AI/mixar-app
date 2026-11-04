@@ -98,7 +98,7 @@ def test_start_is_native_async_idempotent_and_reports_the_job(preview):
     assert first["status"] == "running"
     assert first["job_id"] == KEY and first["scene_session"] == "sess-1"
     render = first["render"]
-    assert (render["engine"], render["device"], render["samples"]) == ("CYCLES", "CPU", 32)
+    assert (render["engine"], render["device"], render["samples"]) == ("CYCLES", "GPU", 32)
     assert (render["width"], render["height"]) == (768, 576)
     assert render["elapsed_seconds"] is None
     preview.bpy.app.is_job_running.return_value = True
@@ -344,7 +344,7 @@ def test_script_executor_inherits_the_handler_cleanup():
 def test_native_render_stop_sets_the_pipeline_cancellation_flag():
     source = (ROOT / "src/source/blender/editors/interface/templates/"
               "interface_template_running_jobs.cc").read_text()
-    block = source.split("if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_RENDER)) {", 1)[1]
+    block = source.split("if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_RENDER)) {", 1)[1]
     block = block.split("icon = ICON_SCENE;", 1)[0]
     assert "G.is_break = true;" in block
     assert "WM_jobs_stop_all_from_owner(CTX_wm_manager(&C), &scene);" in block
@@ -518,50 +518,11 @@ def test_png_save_uses_fast_lossless_compression_and_restores_settings(preview, 
 
     preview.bpy.data.images.get.return_value = SimpleNamespace(has_data=True, save_render=save)
     if save_fails:
-        # Blender's own message (image name, path) never leaves: only the code.
-        with pytest.raises(RuntimeError, match="^missing_pixels$"):
+        with pytest.raises(RuntimeError, match="save failed"):
             preview._read_png(scene)
     else:
         assert preview._read_png(scene) == b"png"
     assert (settings.file_format, settings.compression) == ("JPEG", 77)
-
-
-def test_a_finished_render_is_read_although_has_data_says_no(preview):
-    """Blender 5.3: once the UI render job ends, the Render Result reports
-    has_data False and size [0, 0], yet save_render writes the render's pixels."""
-    preview.start(preview.bpy.context, KEY)
-    preview.bpy.data.images.get.return_value = SimpleNamespace(
-        has_data=False, size=[0, 0],
-        save_render=lambda path, scene: Path(path).write_bytes(b"pixels"))
-    preview._finish(KEY, True)
-    result = preview.poll(KEY)
-    assert result["status"] == "done"
-    assert result["image_url"] == "data:image/png;base64,cGl4ZWxz"
-
-
-def _no_pixels_save(path, scene):
-    raise RuntimeError(f"Image 'Render Result' does not have any image data: {path}")
-
-
-@pytest.mark.parametrize("render_result", [
-    None,                                                       # no Render Result at all
-    SimpleNamespace(has_data=False, save_render=_no_pixels_save),   # nothing to save
-    SimpleNamespace(has_data=False, save_render=lambda path, scene: None),  # no file
-    SimpleNamespace(has_data=False,
-                    save_render=lambda path, scene: Path(path).write_bytes(b"")),  # empty
-], ids=["missing", "save_raises", "no_file", "empty_file"])
-def test_a_render_without_pixels_is_missing_pixels(preview, render_result):
-    scene = preview.bpy.context.scene
-    preview.bpy.data.images.get.return_value = render_result
-    with pytest.raises(RuntimeError, match="^missing_pixels$"):
-        preview._read_png(scene)
-    assert scene.render.image_settings.file_format == "JPEG"
-    preview.bpy.data.images.get.side_effect = None
-    preview.start(preview.bpy.context, KEY)
-    preview._finish(KEY, True)
-    result = preview.poll(KEY)
-    assert result["status"] == "failed" and result["error"] == "preview_image_unavailable"
-    assert "Render Result" not in str(result) and "image_url" not in result
 
 
 def test_the_route_pin_is_released_and_the_scene_flushed_before_the_job_starts(preview, monkeypatch):

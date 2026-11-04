@@ -145,14 +145,11 @@ def _remove_render_handlers():
             handlers.remove(callback)
 
 
-def _read_png(scene) -> bytes:
+def _read_png(scene, require_loaded=True) -> bytes:
     image = bpy.data.images.get("Render Result")
-    # has_data is not a pixel check for the Render Result: it reports only an
-    # acquired image buffer. A --background worker never acquires one, and since
-    # Blender 5.3 neither does the UI process once the render job has ended
-    # (has_data False, size [0, 0]) although the render holds its pixels.
-    # save_render reads them; it failing or writing nothing is "no pixels".
-    if image is None:
+    # In a --background worker the Render Result holds pixels that has_data
+    # does not report (no image buffer is acquired); save_render reads them.
+    if image is None or (require_loaded and not image.has_data):
         raise RuntimeError("missing_pixels")
     with tempfile.TemporaryDirectory(prefix="mixar_preview_") as folder:
         path = folder + "/preview.png"
@@ -161,21 +158,12 @@ def _read_png(scene) -> bytes:
         try:
             settings.file_format = "PNG"
             settings.compression = PNG_COMPRESSION
-            try:
-                image.save_render(path, scene=scene)
-            except Exception as exc:
-                # Blender's message names the image and the path; keep the code.
-                raise RuntimeError("missing_pixels") from exc
+            image.save_render(path, scene=scene)
         finally:
             settings.file_format = fmt
             settings.compression = compression
-        try:
-            with open(path, "rb") as handle:
-                pixels = handle.read(MAX_PNG_BYTES + 1)
-        except OSError as exc:
-            raise RuntimeError("missing_pixels") from exc
-    if not pixels:
-        raise RuntimeError("missing_pixels")
+        with open(path, "rb") as handle:
+            pixels = handle.read(MAX_PNG_BYTES + 1)
     if len(pixels) > MAX_PNG_BYTES:
         raise RuntimeError("image_too_large")
     return pixels
@@ -427,10 +415,8 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
         # have changed the preference this session without saving it.
         gpu = (render_device.use_gpu() if use_gpu is None
                else bool(use_gpu) and render_device.gpu_enabled())
-        # The private scene can inherit GPU from startup or a saved file.
-        # An explicit CPU choice must override that value for this job too.
-        set_value(scene.cycles, "device", "GPU" if gpu else "CPU")
         if gpu:
+            set_value(scene.cycles, "device", "GPU")
             # Denoise where it renders: the CPU OpenImageDenoise kernel crashed
             # Mixar mid-preview (CPUInputProcessKernel_run_f32, Sky Temple QA
             # run, Oct 30) with the GPU rendering.
@@ -656,8 +642,7 @@ def _start_worker(context, key, source, session, args):
     view_layer = getattr(context, "view_layer", None)
     try:
         record = snapshot.write_or_reuse(
-            "preview", lambda: snapshot.fingerprint(source, _revision), _flush_view_layer,
-            background=True)
+            "preview", lambda: snapshot.fingerprint(source, _revision), _flush_view_layer)
     except Exception:
         # A snapshot that cannot be written (disk full, a save refused) leaves
         # the in-process job, exactly as before the worker existed.
@@ -668,8 +653,7 @@ def _start_worker(context, key, source, session, args):
         job_id = supervisor.submit("preview", {
             "kind": "preview", "snapshot": record["path"], "images": record["images"],
             "scene": source.name, "view_layer": getattr(view_layer, "name", ""),
-            "params": params, "out": out}, timeout_s=WORKER_TIMEOUT_S,
-            ready=lambda: snapshot.ready(record))
+            "params": params, "out": out}, timeout_s=WORKER_TIMEOUT_S)
     except Exception:
         snapshot.release(record)
         return None

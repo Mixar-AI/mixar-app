@@ -40,7 +40,7 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "UI_mixar_theme.hh"
 #include "UI_mixar_tokens.hh"
 

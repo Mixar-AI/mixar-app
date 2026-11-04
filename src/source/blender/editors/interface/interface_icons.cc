@@ -15,9 +15,9 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_math_color_c.hh"
-#include "BLI_math_vector_c.hh"
-#include "BLI_string.hh"
+#include "BLI_math_color.h"
+#include "BLI_math_vector.h"
+#include "BLI_string.h"
 
 #include "BLT_translation.hh"
 
@@ -432,7 +432,7 @@ static void icon_node_socket_draw(
 
 static void vicon_colorset_draw(int index, int x, int y, int w, int h, float /*alpha*/)
 {
-  const bTheme *btheme = theme::theme_get();
+  bTheme *btheme = theme::theme_get();
   const ThemeWireColor *cs = &btheme->tarm[index];
 
   /* Draw three bands of color: One per color
@@ -496,7 +496,7 @@ DEF_ICON_VECTOR_COLORSET_DRAW_NTH(20, 19)
 static void vicon_strip_color_draw(
     short color_tag, float x, float y, float w, float /*h*/, float /*alpha*/)
 {
-  const bTheme *btheme = theme::theme_get();
+  bTheme *btheme = theme::theme_get();
   const ThemeStripColor *strip_color = &btheme->strip_color[color_tag];
 
   const float aspect = float(ICON_DEFAULT_WIDTH) / w;
@@ -584,7 +584,7 @@ static void vicon_strip_color_draw_library_data_override_noneditable(
 static void vicon_layergroup_color_draw(
     short color_tag, float x, float y, float w, float /*h*/, float /*alpha*/)
 {
-  const bTheme *btheme = theme::theme_get();
+  bTheme *btheme = theme::theme_get();
   const ThemeCollectionColor *layergroup_color = &btheme->collection_color[color_tag];
 
   const float aspect = float(ICON_DEFAULT_WIDTH) / w;
@@ -1281,7 +1281,7 @@ void icon_ensure_deferred(const bContext *C, const int icon_id, const bool big)
                                       CTX_wm_window(C),
                                       icon,
                                       "Generating StudioLight icon...",
-                                      WM_JOB_BACKGROUND,
+                                      eWM_JobFlag(0),
                                       WM_JOB_TYPE_STUDIOLIGHT);
           Icon **tmp = MEM_new_zeroed<Icon *>(__func__);
           *tmp = icon;
@@ -1507,7 +1507,7 @@ static void svg_replace_color_attributes(std::string &svg,
                                          const size_t start,
                                          const size_t end)
 {
-  const bTheme *btheme = theme::theme_get();
+  bTheme *btheme = theme::theme_get();
 
   uchar white[] = {255, 255, 255, 255};
   uchar black[] = {0, 0, 0, 255};
@@ -1524,7 +1524,7 @@ static void svg_replace_color_attributes(std::string &svg,
 
   const struct ColorItem {
     const char *name;
-    const uchar *col = nullptr;
+    uchar *col = nullptr;
     int colorid = TH_UNDEFINED;
     int spacetype = SPACE_TYPE_ANY;
   } items[] = {
@@ -1722,7 +1722,7 @@ static void icon_draw_size(float x,
     return;
   }
 
-  const bTheme *btheme = theme::theme_get();
+  bTheme *btheme = theme::theme_get();
   const float fdraw_size = float(draw_size);
 
   Icon *icon = BKE_icon_get(icon_id);
@@ -1949,25 +1949,16 @@ static void icon_draw_size(float x,
   }
 }
 
-/**
- * \param id: The ID that owns `pi`, null when the preview isn't owned by an ID
- * (online assets for example).
- */
 static void id_preview_image_render_size(
     const bContext *C, Scene *scene, ID *id, PreviewImage *pi, int size, const bool use_job)
 {
-  BLI_assert((id == nullptr) || (BKE_previewimg_id_get(id) == pi));
-
   /* changed only ever set by dynamic icons */
   if ((pi->flag[size] & PRV_CHANGED) || (!pi->rect[size] && !BKE_previewimg_is_invalid(pi, size)))
   {
     /* create the rect if necessary */
     icon_set_image(C, scene, id, pi, eIconSizes(size), use_job);
 
-    if ((id == nullptr) || BKE_previewimg_id_get(id)) {
-      /* Only change the preview image flag if it hasn't been freed yet. */
-      pi->flag[size] &= ~PRV_CHANGED;
-    }
+    pi->flag[size] &= ~PRV_CHANGED;
   }
 }
 
@@ -2095,7 +2086,7 @@ int icon_from_rnaptr(const bContext *C, PointerRNA *ptr, int rnaicon, const bool
 {
   ID *id = nullptr;
 
-  if (!*ptr) {
+  if (!ptr->data) {
     return rnaicon;
   }
 

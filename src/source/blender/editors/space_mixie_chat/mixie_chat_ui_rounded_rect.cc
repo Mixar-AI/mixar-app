@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 

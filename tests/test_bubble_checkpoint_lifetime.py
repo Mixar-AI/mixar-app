@@ -40,7 +40,7 @@ def test_legacy_read_clears_active_and_inactive_regions_without_freeing_foreign_
     source = (BUBBLE / 'agent_ui_motion.cc').read_text()
     body = source.split('void agent_ui_motion_blend_read_after_liblink(', 1)[1]
     assert '&sl->regionbase' in body
-    assert 'area.spacedata.first() == sl' in body
+    assert 'area.spacedata.first == sl' in body
     assert '&area.regionbase' in body
     assert 'region.regiondata = nullptr' in body
     assert 'MEM_delete' not in body

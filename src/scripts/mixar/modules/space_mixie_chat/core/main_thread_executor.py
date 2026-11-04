@@ -351,12 +351,11 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""), req)
         return _stop_timer_if_idle()
 
-    from mixar.modules.mcp_bridge.core.lease import authorize_script, script_scope
+    from mixar.modules.mcp_bridge.core.lease import authorize_script
     refusal = authorize_script(req.session_id, req.agent_ctx)
     if refusal is not None:
         _send_error_response(req.request_id, refusal["error"], refusal["error_type"])
         return _stop_timer_if_idle()
-    scope = script_scope(req.session_id, req.agent_ctx)  # Its blocked job features.
 
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window).
@@ -397,8 +396,7 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
                 _deferrable_depth += 1
                 _deferrable_tool, _deferred_claimed = req.tool_name, False
                 try:
-                    with scope:
-                        result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                    result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
                 finally:
                     _deferrable_depth -= 1
                     _deferrable_tool, _deferred_claimed = "", False
@@ -432,12 +430,6 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
             logger.exception("Executor history failed (id: %s)", req.request_id)
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
-
-    # After the reply: an agent at work keeps the warm preview worker alive
-    # past its idle stop, so the turn's next render is not a cold process.
-    if execution_started:
-        from mixar.modules.common.render_worker import keep_warm
-        keep_warm.note_agent_activity()
 
     # Crash safety: the agent changed the scene, so a save point is due once
     # its scripts pause (coalesced; never written while scripts are queued).

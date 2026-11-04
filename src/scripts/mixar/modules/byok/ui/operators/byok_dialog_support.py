@@ -46,27 +46,6 @@ def turn_in_flight(context) -> bool:
         return False
 
 
-def wipe_form_secrets(wm):
-    """Remove transient API/token material from the live WindowManager."""
-    for attr in ('byok_form_api_key', 'byok_form_local_custom_key'):
-        try:
-            setattr(wm, attr, '')
-        except Exception:
-            pass
-
-
-def settle_stale_result(wm) -> None:
-    """A save / removal answered for an account the mirror no longer shows
-    (logout, a guest's sign-in, the chat card's removal). Release the dialog
-    it left busy (else the redraw pump spins on SAVING) and the key typed
-    for it — unless a newer request is counted: after a logout the next
-    account's own save holds the dialog, and its SAVING / form are its own."""
-    if (getattr(wm, 'byok_dialog_state', '') in ('SAVING', 'REMOVING')
-            and not byok_client.mutation_in_flight()):
-        wipe_form_secrets(wm)
-        wm.byok_dialog_state = 'IDLE'
-
-
 def saving(wm) -> bool:
     return getattr(wm, 'byok_dialog_state', '') == 'SAVING'
 
@@ -104,20 +83,6 @@ def toast_if_closed(dialog_open, title, err):
         pass
 
 
-def prefill_model(wm, provider, model):
-    """Select a saved ``model`` in the form. A Codex model the catalog names is
-    stored as the pick even when the account's list hides it
-    (`model_suggestions.codex_pick_storable`); anything else goes through the
-    enum, which refuses a model it does not list (kept as it was)."""
-    try:
-        if model_suggestions.codex_pick_storable(provider, model):
-            wm.byok_form_model_id = model
-        else:
-            wm.byok_form_model = model
-    except TypeError:
-        logger.debug("Could not prefill model %s — not in the catalog for this provider", model)
-
-
 def prefill_from_prompt(wm, prompt):
     """Apply a key-missing card's prefill (`core/key_prompt`), if any. A
     provider or model the catalog does not list yet is skipped — the row
@@ -131,7 +96,7 @@ def prefill_from_prompt(wm, prompt):
         if model and model_suggestions.is_openrouter(provider):
             wm.byok_form_openrouter_model = model
         elif model and not model_suggestions.is_local(provider):
-            prefill_model(wm, provider, model)
+            wm.byok_form_model = model
     except TypeError:
         logger.debug("Key prompt prefill skipped — provider or model not in the catalog yet")
 

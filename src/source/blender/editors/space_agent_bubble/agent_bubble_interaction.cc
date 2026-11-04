@@ -3,8 +3,8 @@
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"

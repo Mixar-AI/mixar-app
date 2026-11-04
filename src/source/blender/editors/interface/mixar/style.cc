@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #include "../interface_intern.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "RNA_access.hh"
 #include "UI_mixar.hh"
 #include <algorithm>

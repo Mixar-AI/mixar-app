@@ -217,24 +217,6 @@ class TestWin32LiquidGlass:
             "A 1×1 blur region is the old alpha-only trick — not glass."
         )
 
-    def test_vulkan_frost_survives_an_opaque_only_surface(self, win32: str) -> None:
-        body = _fn_body(
-            win32, 'extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
-        )
-        vulkan = body[body.index("GHOST_kDrawingContextTypeVulkan") :]
-        vulkan = vulkan[: vulkan.index("#endif")]
-        assert "Mixar_WindowHasAlphaChannel" not in vulkan, (
-            "Vulkan draws into an RGBA back-left texture whatever the swapchain "
-            "composites. Gating frost on composite alpha made the island and pill "
-            "opaque under Blender 5.3's default Vulkan backend on NVIDIA/Windows."
-        )
-        assert "mixar_supports_non_opaque_composite_alpha" in vulkan
-        assert "return dwm_ok;" in vulkan
-        head = body[: body.index("GHOST_kDrawingContextTypeVulkan")]
-        assert "Mixar_WindowHasAlphaChannel" not in head, (
-            "The WGL alpha probe must not run before the Vulkan branch."
-        )
-
     def test_vulkan_glass_selects_premultiplied_composite_alpha(self) -> None:
         vk = _read(WIN32_VK)
         helper = _fn_body(vk, "static VkCompositeAlphaFlagBitsKHR mixar_select_composite_alpha(")

@@ -24,13 +24,13 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_math_matrix_c.hh"
-#include "BLI_math_vector_c.hh"
+#include "BLI_listbase.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
-#include "BLI_rect.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
 #include "BLI_set.hh"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_global.hh"
@@ -38,7 +38,7 @@
 #include "BKE_layer.hh"
 #include "BKE_main.hh"
 #include "BKE_scene.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "BKE_screen.hh"
 
 #include "RNA_enum_types.hh"
@@ -51,7 +51,6 @@
 
 #include "ED_node.hh"
 #include "ED_screen.hh"
-#include "ED_space_api.hh"
 #include "ED_scenes_drawer.hh"
 #include "ED_view3d.hh"
 
@@ -71,7 +70,6 @@
 #include "RE_engine.h"
 
 #include "WM_api.hh"
-#include "WM_mixar.hh"
 #include "WM_stall_monitor.hh"
 #include "WM_toolsystem.hh"
 #include "WM_types.hh"
@@ -221,7 +219,7 @@ struct GrabState {
 
 static bool wm_software_cursor_needed()
 {
-  if (g_software_cursor.enabled == -1) [[unlikely]] {
+  if (UNLIKELY(g_software_cursor.enabled == -1)) {
     g_software_cursor.enabled = !(WM_capabilities_flag() & WM_CAPABILITY_CURSOR_WARP);
   }
   return g_software_cursor.enabled;
@@ -462,7 +460,7 @@ static bool wm_draw_region_stereo_set(Main *bmain,
   switch (area->spacetype) {
     case SPACE_IMAGE: {
       if (region->regiontype == RGN_TYPE_WINDOW) {
-        SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+        SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
         sima->iuser.multiview_eye = sview;
         return true;
       }
@@ -470,7 +468,7 @@ static bool wm_draw_region_stereo_set(Main *bmain,
     }
     case SPACE_VIEW3D: {
       if (region->regiontype == RGN_TYPE_WINDOW) {
-        View3D *v3d = area->spacedata.first_as<View3D>();
+        View3D *v3d = static_cast<View3D *>(area->spacedata.first);
         if (v3d->camera && v3d->camera->type == OB_CAMERA) {
           RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
           RenderEngine *engine = rv3d->view_render ? RE_view_engine_get(rv3d->view_render) :
@@ -480,7 +478,7 @@ static bool wm_draw_region_stereo_set(Main *bmain,
           }
 
           Camera *cam = id_cast<Camera *>(v3d->camera->data);
-          CameraBGImage *bgpic = cam->bg_images.first();
+          CameraBGImage *bgpic = static_cast<CameraBGImage *>(cam->bg_images.first);
           v3d->multiview_eye = sview;
           if (bgpic) {
             bgpic->iuser.multiview_eye = sview;
@@ -492,7 +490,7 @@ static bool wm_draw_region_stereo_set(Main *bmain,
     }
     case SPACE_NODE: {
       if (region->regiontype == RGN_TYPE_WINDOW) {
-        SpaceNode *snode = area->spacedata.first_as<SpaceNode>();
+        SpaceNode *snode = static_cast<SpaceNode *>(area->spacedata.first);
         if ((snode->flag & SNODE_BACKDRAW) && ED_node_is_compositor(snode)) {
           Image *ima = BKE_image_ensure_viewer(bmain, IMA_TYPE_COMPOSITE, "Viewer Node");
           ima->eye = sview;
@@ -502,7 +500,7 @@ static bool wm_draw_region_stereo_set(Main *bmain,
       break;
     }
     case SPACE_SEQ: {
-      SpaceSeq *sseq = area->spacedata.first_as<SpaceSeq>();
+      SpaceSeq *sseq = static_cast<SpaceSeq *>(area->spacedata.first);
       sseq->multiview_eye = sview;
 
       if (region->regiontype == RGN_TYPE_PREVIEW) {
@@ -564,7 +562,7 @@ static void wm_region_test_render_do_draw(const Scene *scene,
     GPUViewport *viewport = WM_draw_region_get_viewport(region);
 
     if (engine && (engine->flag & RE_ENGINE_DO_DRAW)) {
-      View3D *v3d = area->spacedata.first_as<View3D>();
+      View3D *v3d = static_cast<View3D *>(area->spacedata.first);
       rcti border_rect;
 
       /* Do partial redraw when possible. */
@@ -590,7 +588,7 @@ static void wm_region_test_xr_do_draw(const wmWindowManager *wm,
 {
   if ((area->spacetype == SPACE_VIEW3D) && (region->regiontype == RGN_TYPE_WINDOW)) {
     if (ED_view3d_is_region_xr_mirror_active(
-            wm, static_cast<const View3D *>(area->spacedata.first_), region))
+            wm, static_cast<const View3D *>(area->spacedata.first), region))
     {
       ED_region_tag_redraw_no_rebuild(region);
     }
@@ -633,7 +631,6 @@ static const char *wm_area_name(const ScrArea *area)
     SPACE_NAME(SPACE_NODE);
     SPACE_NAME(SPACE_CONSOLE);
     SPACE_NAME(SPACE_USERPREF);
-    SPACE_NAME(SPACE_PROJECT);
     SPACE_NAME(SPACE_CLIP);
     SPACE_NAME(SPACE_TOPBAR);
     SPACE_NAME(SPACE_STATUSBAR);
@@ -849,7 +846,7 @@ static void wm_draw_region_unbind(ARegion *region)
   }
 }
 
-static void wm_draw_region_blit(ARegion *region, int view, const bool preserve_alpha)
+static void wm_draw_region_blit(ARegion *region, int view)
 {
   if (!region->runtime->draw_buffer) {
     return;
@@ -866,19 +863,6 @@ static void wm_draw_region_blit(ARegion *region, int view, const bool preserve_a
     }
   }
 
-  /* Regions are copied in without blending, so without this, the region's own alpha would land in
-   * the window's frame-buffer. That matters for client-side-decorated windows for rounded corners:
-   * viewports are transparent where nothing was rendered, leading to un-wanted transparency.
-   *
-   * Everything else drawn into the window blends with #GPU_BLEND_ALPHA which leaves an opaque
-   * destination opaque, so masking here is enough to keep the window opaque for the whole frame,
-   * see #WM_window_csd_draw_corner_mask. */
-  /* Mixar's island and pill need the region alpha on every present: native
-   * frost uses it on macOS/Wayland, and the Windows/X11 host backdrop is
-   * composited UNDER these pixels. Masking alpha leaves the transparent clear
-   * on Metal (hiding the controls) or stale opaque coverage on other paths. */
-  GPU_color_mask(true, true, true, preserve_alpha);
-
   if (region->runtime->draw_buffer->viewport) {
     GPU_viewport_draw_to_screen(region->runtime->draw_buffer->viewport, view, &region->winrct);
   }
@@ -886,8 +870,6 @@ static void wm_draw_region_blit(ARegion *region, int view, const bool preserve_a
     GPU_offscreen_draw_to_screen(
         region->runtime->draw_buffer->offscreen, region->winrct.xmin, region->winrct.ymin);
   }
-
-  GPU_color_mask(true, true, true, true);
 }
 
 gpu::Texture *wm_draw_region_texture(ARegion *region, int view)
@@ -924,9 +906,6 @@ void wm_draw_region_blend(ARegion *region, int view, bool blend)
   const float halfy = GLA_PIXEL_OFS / (BLI_rcti_size_y(&region->winrct) + 1);
 
   rcti rect_geo = region->winrct;
-  if (blend) {
-    ED_region_blend_rect(region, &rect_geo);
-  }
   rect_geo.xmax += 1;
   rect_geo.ymax += 1;
 
@@ -936,17 +915,27 @@ void wm_draw_region_blend(ARegion *region, int view, bool blend)
   rect_tex.xmax = 1.0f + halfx;
   rect_tex.ymax = 1.0f + halfy;
 
+  /* Quadratic ease-out: 1 - (1 - alpha)^2 == alpha * (2 - alpha). */
+  float alpha_easing = alpha * (2.0f - alpha);
+
+  /* Slide panels. */
+  float ofs_x = BLI_rcti_size_x(&region->winrct) * (1.0f - alpha_easing);
+  float ofs_y = BLI_rcti_size_y(&region->winrct) * (1.0f - alpha_easing);
   if (RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT) {
-    rect_tex.xmax *= alpha;
+    rect_geo.xmin += ofs_x;
+    rect_tex.xmax *= alpha_easing;
   }
   else if (RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_LEFT) {
-    rect_tex.xmin += 1.0f - alpha;
+    rect_geo.xmax -= ofs_x;
+    rect_tex.xmin += 1.0f - alpha_easing;
   }
   else if (RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_TOP) {
-    rect_tex.ymax *= alpha;
+    rect_geo.ymin += ofs_y;
+    rect_tex.ymax *= alpha_easing;
   }
   else if (RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_BOTTOM) {
-    rect_tex.ymin += 1.0f - alpha;
+    rect_geo.ymax -= ofs_y;
+    rect_tex.ymin += 1.0f - alpha_easing;
   }
 
   /* Not the same layout as #rctf/#rcti. */
@@ -974,7 +963,8 @@ void wm_draw_region_blend(ARegion *region, int view, bool blend)
 
   GPU_shader_uniform_float_ex(shader, rect_tex_loc, 4, 1, rectt);
   GPU_shader_uniform_float_ex(shader, rect_geo_loc, 4, 1, rectg);
-  GPU_shader_uniform_float_ex(shader, color_loc, 4, 1, float4{alpha, alpha, alpha, alpha});
+  GPU_shader_uniform_float_ex(
+      shader, color_loc, 4, 1, float4{alpha_easing, alpha_easing, alpha_easing, alpha_easing});
 
   gpu::Batch *quad = GPU_batch_preset_quad();
   GPU_batch_set_shader(quad, shader);
@@ -1081,8 +1071,6 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
   CTX_wm_area_set(C, area);
   GPU_debug_group_begin(wm_area_name(area));
 
-  bool is_any_region_drawn = false;
-
   /* Compute UI layouts for dynamically size regions. */
   for (ARegion &region : area->regionbase) {
     if (region.flag & RGN_FLAG_POLL_FAILED) {
@@ -1098,14 +1086,6 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
     if ((region.runtime->visible || ignore_visibility) && region.runtime->do_draw &&
         region.runtime->type && region.runtime->type->layout)
     {
-      /* Call space-level pre-draw callback if this is the first region to be laid out. */
-      if (!is_any_region_drawn) {
-        if (area->type->draw_pre) {
-          area->type->draw_pre(C, area);
-        }
-        is_any_region_drawn = true;
-      }
-
       CTX_wm_region_set(C, &region);
       {
         char stall_name[64];
@@ -1131,15 +1111,6 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
   for (ARegion &region : area->regionbase) {
     if (!region.runtime->visible || !region.runtime->do_draw) {
       continue;
-    }
-
-    /* Call space-level pre-draw callback if it wasn't called yet, which can happen when none of
-     * the regions had a layout callback. */
-    if (!is_any_region_drawn) {
-      if (area->type->draw_pre) {
-        area->type->draw_pre(C, area);
-      }
-      is_any_region_drawn = true;
     }
 
     CTX_wm_region_set(C, &region);
@@ -1190,18 +1161,7 @@ static void wm_draw_area_offscreen(bContext *C, wmWindow *win, ScrArea *area, bo
     draw_locked |= wm_draw_region_draw_locked(region);
     wm_draw_note_lock_skipped(region, draw_locked);
     region.runtime->do_draw = 0;
-
-    region.runtime->post_block_layout_fns.clear();
-
-    /* Clear temporary update flag. */
-    region.flag &= ~RGN_FLAG_SEARCH_FILTER_UPDATE;
-
     CTX_wm_region_set(C, nullptr);
-  }
-
-  /* Call space-level post-draw callback, but only if there was at least one region drawn. */
-  if (is_any_region_drawn && area->type->draw_post) {
-    area->type->draw_post(C, area);
   }
 
   CTX_wm_area_set(C, nullptr);
@@ -1299,7 +1259,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 
       if (region.overlap == false) {
         /* Blit from off-screen buffer. */
-        wm_draw_region_blit(&region, view, area->spacetype == SPACE_AGENT_BUBBLE);
+        wm_draw_region_blit(&region, view);
       }
     }
   }
@@ -1310,7 +1270,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
       if (!region.runtime->visible) {
         continue;
       }
-      const bool do_paint_cursor = (wm->runtime->paintcursors.first() &&
+      const bool do_paint_cursor = (wm->runtime->paintcursors.first &&
                                     &region == screen->active_region);
       const bool do_draw_overlay = (region.runtime->type && region.runtime->type->draw_overlay);
       if (!(do_paint_cursor || do_draw_overlay)) {
@@ -1353,12 +1313,6 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   wm_draw_callbacks(win);
   wmWindowViewport(win);
 
-  /* Always draw, not only when screen tagged. */
-  if (win->runtime->gesture.first_) {
-    wm_gesture_draw(win);
-    wmWindowViewport(win);
-  }
-
   /* Blend in floating regions (menus). */
   for (ARegion &region : screen->regionbase) {
     if (!region.runtime->visible) {
@@ -1367,8 +1321,14 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
     wm_draw_region_blend(&region, 0, true);
   }
 
+  /* Always draw, not only when screen tagged. */
+  if (win->runtime->gesture.first) {
+    wm_gesture_draw(win);
+    wmWindowViewport(win);
+  }
+
   /* Needs pixel coords in screen. */
-  if (wm->runtime->drags.first_) {
+  if (wm->runtime->drags.first) {
     wm_drags_draw(C, win);
     wmWindowViewport(win);
   }
@@ -1398,16 +1358,9 @@ static void wm_draw_window(bContext *C, wmWindow *win)
   bool stereo = WM_stereo3d_enabled(win, false);
 
 #ifdef WITH_GHOST_CSD
-  if (WM_window_csd_is_active()) {
-    /* Title bar. */
-    if (WM_window_is_csd(win)) {
-      WM_window_csd_draw_titlebar(win);
-    }
-    else {
-      /* Full-screen windows draw no decorations, so nothing above clears the frame-buffer.
-       * Their alpha channel still has to be made opaque, see #WM_window_csd_clear_alpha. */
-      WM_window_csd_clear_alpha(win);
-    }
+  /* Title bar. */
+  if (WM_window_is_csd(win)) {
+    WM_window_csd_draw_titlebar(win);
   }
 #endif
 
@@ -1485,14 +1438,6 @@ static void wm_draw_window(bContext *C, wmWindow *win)
   /* Only real presents capture/composite frost; offscreen screenshots call
    * wm_draw_window_onscreen directly and must not replace the live host cache. */
   wm_draw_mixar_glass(CTX_wm_manager(C), win);
-
-#ifdef WITH_GHOST_CSD
-  /* Rounded corners, run last so the corners are cut away no matter what covered them
-   * (the title bar at the top, editor areas & the status bar at the bottom). */
-  if (WM_window_is_csd(win)) {
-    WM_window_csd_draw_corner_mask(win);
-  }
-#endif
 
   screen->do_draw = false;
 
@@ -1630,7 +1575,7 @@ uint8_t *WM_window_pixels_read_from_offscreen(bContext *C, wmWindow *win, int r_
                                                  GPU_TEXTURE_USAGE_SHADER_READ,
                                                  false,
                                                  nullptr);
-  if (!offscreen) [[unlikely]] {
+  if (UNLIKELY(!offscreen)) {
     return nullptr;
   }
 
@@ -1669,7 +1614,7 @@ bool WM_window_pixels_read_sample_from_offscreen(bContext *C,
                                                  GPU_TEXTURE_USAGE_SHADER_READ,
                                                  false,
                                                  nullptr);
-  if (!offscreen) [[unlikely]] {
+  if (UNLIKELY(!offscreen)) {
     return false;
   }
 
@@ -1683,24 +1628,9 @@ bool WM_window_pixels_read_sample_from_offscreen(bContext *C,
   return true;
 }
 
-/**
- * Return true when the front-buffer can be read reliably.
- */
-static bool wm_window_pixels_read_use_frontbuffer()
-{
-  if ((WM_capabilities_flag() & WM_CAPABILITY_GPU_FRONT_BUFFER_READ) == 0) {
-    return false;
-  }
-  /* Not part of #WM_capabilities_flag as it depends on the GPU driver, not GHOST. */
-  if (GPU_frontbuffer_read_workaround()) {
-    return false;
-  }
-  return true;
-}
-
 uint8_t *WM_window_pixels_read(bContext *C, wmWindow *win, int r_size[2])
 {
-  if (wm_window_pixels_read_use_frontbuffer()) {
+  if (WM_capabilities_flag() & WM_CAPABILITY_GPU_FRONT_BUFFER_READ) {
     return WM_window_pixels_read_from_frontbuffer(CTX_wm_manager(C), win, r_size);
   }
   return WM_window_pixels_read_from_offscreen(C, win, r_size);
@@ -1708,7 +1638,7 @@ uint8_t *WM_window_pixels_read(bContext *C, wmWindow *win, int r_size[2])
 
 bool WM_window_pixels_read_sample(bContext *C, wmWindow *win, const int pos[2], float r_col[3])
 {
-  if (wm_window_pixels_read_use_frontbuffer()) {
+  if (WM_capabilities_flag() & WM_CAPABILITY_GPU_FRONT_BUFFER_READ) {
     WM_window_pixels_read_sample_from_frontbuffer(CTX_wm_manager(C), win, pos, r_col);
     return true;
   }
@@ -1830,47 +1760,6 @@ void WM_paint_cursor_tag_redraw(wmWindow *win, ARegion * /*region*/)
   }
 }
 
-bool Mixar_window_draw_skipped(const wmWindow *win)
-{
-#ifdef WIN32
-  /* The QA/UI-control dump asks too, outside the draw loop (no GHOST window
-   * in background mode). */
-  const GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
-  if (ghost_window && ghost_window->getState() == GHOST_kWindowStateMinimized) {
-    /* Do not update minimized windows, gives issues on Intel (see #33223)
-     * and AMD (see #50856). it seems logical to skip update for invisible window anyway. */
-    return true;
-  }
-#endif
-
-#if defined(WIN32) || defined(__APPLE__)
-  /* Mixar: never draw or present a window that is natively hidden.
-   *
-   * The Agent Bubble overlay windows are hidden with ShowWindow(SW_HIDE) /
-   * orderOut: while the bubble is minimised to its pill or suppressed for a
-   * modal — they stay in `wm->windows` so upstream's loop keeps drawing
-   * them and calling SwapBuffers on their GL contexts. Upstream Blender
-   * never hides a GHOST window, so this present-into-a-hidden-window state
-   * is Mixar-only, and NVIDIA's GL driver intermittently crashes on it
-   * right after resume-from-sleep (access violation in DrvPresentBuffers,
-   * nvoglv64.dll). The minimized-state skip above doesn't catch it:
-   * SW_HIDE windows still report GHOST_kWindowStateNormal.
-   *
-   * The bubble restore paths force a refresh + redraw tag after re-showing
-   * the window, so skipping updates while hidden never leaves stale
-   * content on screen. */
-  /* The island releases its RNA UI before its native fade/hide. Keep the
-   * last framebuffer for that animation instead of rebuilding freed blocks. */
-  if (ED_agent_bubble_is_minimised_window(win) ||
-      (win->runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win->runtime->ghostwin)))
-  {
-    return true;
-  }
-#endif
-  UNUSED_VARS(win);
-  return false;
-}
-
 void wm_draw_update(bContext *C)
 {
   PRF_scope(ProfileCategory::Draw);
@@ -1889,6 +1778,8 @@ void wm_draw_update(bContext *C)
     GPU_render_step();
   }
 
+  BKE_image_free_unused_gpu_textures();
+
   wm_draw_mixar_glass_update(wm);
 
 #ifdef WITH_METAL_BACKEND
@@ -1899,9 +1790,37 @@ void wm_draw_update(bContext *C)
 #endif
 
   for (wmWindow &win : wm->windows) {
-    if (Mixar_window_draw_skipped(&win)) {
+#ifdef WIN32
+    const GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win.runtime->ghostwin);
+    const GHOST_TWindowState state = ghost_window->getState();
+
+    if (state == GHOST_kWindowStateMinimized) {
+      /* Do not update minimized windows, gives issues on Intel (see #33223)
+       * and AMD (see #50856). it seems logical to skip update for invisible window anyway. */
       continue;
     }
+#endif
+
+#if defined(WIN32) || defined(__APPLE__)
+    /* Mixar: never draw or present a window that is natively hidden.
+     *
+     * The Agent Bubble overlay windows are hidden with ShowWindow(SW_HIDE) /
+     * orderOut: while the bubble is minimised to its pill or suppressed for a
+     * modal — they stay in `wm->windows` so upstream's loop keeps drawing
+     * them and calling SwapBuffers on their GL contexts. Upstream Blender
+     * never hides a GHOST window, so this present-into-a-hidden-window state
+     * is Mixar-only, and NVIDIA's GL driver intermittently crashes on it
+     * right after resume-from-sleep (access violation in DrvPresentBuffers,
+     * nvoglv64.dll). The minimized-state skip above doesn't catch it:
+     * SW_HIDE windows still report GHOST_kWindowStateNormal.
+     *
+     * The bubble restore paths force a refresh + redraw tag after re-showing
+     * the window, so skipping updates while hidden never leaves stale
+     * content on screen. */
+    if (win.runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win.runtime->ghostwin)) {
+      continue;
+    }
+#endif
 
     CTX_wm_window_set(C, &win);
 

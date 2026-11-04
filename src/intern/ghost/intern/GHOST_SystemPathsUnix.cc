@@ -7,7 +7,6 @@
  * \ingroup GHOST
  */
 
-#include <mutex>
 #include <optional>
 #include <sstream>
 
@@ -119,7 +118,8 @@ const char *GHOST_SystemPathsUnix::getUserDir(int version, const char *versionst
   return user_path.c_str();
 }
 
-static std::optional<std::string> user_special_dir_query(GHOST_TUserSpecialDirTypes type)
+std::optional<std::string> GHOST_SystemPathsUnix::getUserSpecialDir(
+    GHOST_TUserSpecialDirTypes type) const
 {
   const char *type_str;
 
@@ -144,9 +144,7 @@ static std::optional<std::string> user_special_dir_query(GHOST_TUserSpecialDirTy
       break;
     case GHOST_kUserSpecialDirCaches: {
       const char *cache_dir = getenv("XDG_CACHE_HOME");
-      /* MIXAR: XDG spec: an empty or relative value is invalid and must be ignored (empty made
-       * the caches root the per-session temp directory, relative left Python no cache). */
-      if (cache_dir && cache_dir[0] == '/') {
+      if (cache_dir) {
         return cache_dir;
       }
 
@@ -187,23 +185,6 @@ static std::optional<std::string> user_special_dir_query(GHOST_TUserSpecialDirTy
 
   std::string path = path_stream.str();
   return path[0] ? std::optional(path) : std::nullopt;
-}
-
-std::optional<std::string> GHOST_SystemPathsUnix::getUserSpecialDir(
-    GHOST_TUserSpecialDirTypes type) const
-{
-  /* Cached result to avoid launching a process on every call. */
-  GHOST_ASSERT(uint(type) < uint(GHOST_kUserSpecialDirType_Num), "Invalid type");
-  UserSpecialDirCache &cached = user_special_dir_cache_[type];
-  if (!cached.resolved) {
-    static std::mutex mutex;
-    std::lock_guard lock(mutex);
-    if (!cached.resolved) {
-      cached.path = user_special_dir_query(type);
-      cached.resolved = true;
-    }
-  }
-  return cached.path;
 }
 
 const char *GHOST_SystemPathsUnix::getBinaryDir() const

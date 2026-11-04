@@ -18,11 +18,11 @@
 #include <string>
 #include <utility>
 
-#include "BLI_fileops.hh"
+#include "BLI_fileops.h"
 #include "BLI_path_utils.hh"
-#include "BLI_string.hh"
-#include "BLI_threads.hh"
-#include "BLI_time.hh"
+#include "BLI_string.h"
+#include "BLI_threads.h"
+#include "BLI_time.h"
 
 #include "BKE_appdir.hh"
 #include "BKE_context.hh"
@@ -218,7 +218,7 @@ void write_record(const bContext *C, double total_ms)
   strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%SZ", &utc);
 
   const wmWindowManager *wm = C ? CTX_wm_manager(C) : nullptr;
-  const bool job_running = wm ? WM_jobs_has_running(wm, nullptr, WM_JOB_TYPE_ANY) : false;
+  const bool job_running = wm ? WM_jobs_has_running(wm) : false;
 
   len += BLI_snprintf_rlen(line + len,
                            sizeof(line) - len,

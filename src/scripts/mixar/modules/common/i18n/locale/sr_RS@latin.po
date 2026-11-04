@@ -566,8 +566,9 @@ msgstr "Izabrano je „{name}“ na mudbordu"
 msgid "Select in Scene"
 msgstr "Izaberi u sceni"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+# derived
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "Bira pomoćnu ručku ovog sveta splata u prikazu"
 
 # derived
 msgid "Collection"
@@ -577,11 +578,9 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "Taj svet splata više nije u ovoj datoteci"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+# derived
+msgid "This splat world has no proxy handle"
+msgstr "Ovaj svet splata nema pomoćnu ručku"
 
 # derived
 msgid "Selected '{name}'"
@@ -662,10 +661,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-# derived
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora mehurića agenta nije uspelo"
 
 # derived
 msgid "Capture Viewport"
@@ -1829,9 +1824,6 @@ msgstr "Prijava je otkazana ili je isteklo vreme"
 msgid "Incomplete token pair in response"
 msgstr "Nepotpun par tokena u odgovoru"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 # derived
 msgid "Ready for input"
 msgstr "Spremno za unos"
@@ -2393,7 +2385,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 # derived
@@ -2444,9 +2436,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 # derived
@@ -3690,9 +3679,6 @@ msgstr "Nepodržana vrsta instalatora za {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Ova instalacija ne može da se ažurira na mestu"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 # derived
 msgid "Updated to Mixar {version}"
 msgstr "Ažurirano na Mixar {version}"
@@ -3701,10 +3687,13 @@ msgstr "Ažurirano na Mixar {version}"
 msgid "The update was installed successfully."
 msgstr "Ažuriranje je uspešno instalirano."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 # derived
@@ -3761,24 +3750,12 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 # derived
 msgid "The installer did not finish."
 msgstr "Instalator nije završio."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 # derived
 msgid "{percent}% — {transferred} of {total}"
@@ -3831,10 +3808,6 @@ msgstr "Mixar će se ponovo pokrenuti da ga primeni."
 # derived
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — koristite Preuzmi da ažurirate preko pregledača."
-
-# derived
-msgid "Retry"
-msgstr "Pokušaj ponovo"
 
 # derived
 msgid "Restart & Update"
@@ -3900,9 +3873,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 # derived
@@ -4015,23 +3985,12 @@ msgstr "Ponovo pokreni radi ažuriranja"
 msgid "Updating…"
 msgstr "Ažuriranje…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+# derived
+msgid "Downloading {percent}%"
+msgstr "Preuzimanje {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -4320,9 +4279,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -6885,9 +6841,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -8379,14 +8332,9 @@ msgstr "Nepodržana vrsta datoteke splata „{ext}“ (očekuje se .spz ili .ply
 msgid "File not found: {path}"
 msgstr "Datoteka nije pronađena: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+# derived
+msgid "No objects imported from {name}"
+msgstr "Nijedan objekat nije uvezen iz {name}"
 
 # derived
 msgid "Failed to read image: {error}"
@@ -8592,8 +8540,9 @@ msgstr "Rezultatu generisanja sveta nedostaje URL splata (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Rezultatu generisanja sveta nedostaje URL sudarača (GLB)"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+# derived
+msgid "Failed to download/convert world: {error}"
+msgstr "Preuzimanje/pretvaranje sveta nije uspelo: {error}"
 
 # derived
 msgid "World imported but produced no objects"
@@ -9690,12 +9639,6 @@ msgstr "Mudbord"
 # derived
 msgid "Right-click context menu for moodboard"
 msgstr "Kontekstni meni desnim klikom za mudbord"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 # derived
 msgid "Delete Connection"
@@ -12649,16 +12592,16 @@ msgid "Generation catalog module not available"
 msgstr "Modul kataloga generisanja nije dostupan"
 
 # derived
-msgid "A duplicate image generation is already queued"
-msgstr "Duplikat generisanja slike je već u redu"
-
-# derived
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generiši VI slike i dodaj ih na mudbord"
 
 # derived
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Molimo unesite prompt (pritisnite Enter da potvrdite tekst)"
+
+# derived
+msgid "A duplicate image generation is already queued"
+msgstr "Duplikat generisanja slike je već u redu"
 
 # derived
 msgid "No model specified and no default available"
@@ -13878,24 +13821,6 @@ msgstr "Pod na ishodište"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Pomeri splat tako da mu pod bude na Z=0, a središte osnove na ishodištu (isto postavljanje kao kod generisanih svetova)"
 
-msgid "Source"
-msgstr "Izvor"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "Uobičajeno"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 # derived
 msgid "No splat file selected"
 msgstr "Nije izabrana datoteka splata"
@@ -13904,8 +13829,9 @@ msgstr "Nije izabrana datoteka splata"
 msgid "Imported {count} splat(s): {names}"
 msgstr "Uvezeno splatova: {count}: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+# derived
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "Gausov splat (.spz/.ply)"
 
 # derived
 msgid "Add a text box to the moodboard ({shortcut})"
@@ -15898,6 +15824,9 @@ msgstr "Uključi sve uticaje kostiju"
 # derived
 msgid "Lighting Mode"
 msgstr "Režim osvetljenja"
+
+msgid "Standard"
+msgstr "Uobičajeno"
 
 # derived
 msgid "Physically-based glTF lighting units"
@@ -24002,6 +23931,9 @@ msgstr "Mešanje"
 msgid "No masks"
 msgstr "Nema maski"
 
+msgid "Source"
+msgstr "Izvor"
+
 # derived
 msgid "No node group loaded"
 msgstr "Nije učitana grupa čvorova"
@@ -25432,9 +25364,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -26015,6 +25944,12 @@ msgstr "Izmena..."
 # derived
 msgid "Awaiting Input..."
 msgstr "Čeka se unos..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -26711,9 +26646,6 @@ msgstr "Datoteka tačke vraćanja nedostaje"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Tekuće stanje nije moglo da se sačuva, pa ništa nije promenjeno"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 # derived
 msgid "Could not read the checkpoint"
 msgstr "Nije bilo moguće pročitati tačku vraćanja"
@@ -26924,6 +26856,10 @@ msgstr "Odjava"
 
 msgid "Sound on"
 msgstr ""
+
+# derived
+msgid "Retry"
+msgstr "Pokušaj ponovo"
 
 # derived
 msgid "Choose Export Location"
@@ -27533,17 +27469,6 @@ msgstr "Najviše priloga: {count}"
 msgid "Paste failed: {error}"
 msgstr "Nalepljivanje nije uspelo: {error}"
 
-# derived
-msgid "Cannot add {name}: {error}"
-msgstr "Nije moguće dodati {name}: {error}"
-
-# derived
-msgid "These references are already attached"
-msgstr "Ove reference su već priložene"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -27880,6 +27805,10 @@ msgid "Attach files: images become references, 3D models are imported, any other
 msgstr ""
 
 # derived
+msgid "Cannot add {name}: {error}"
+msgstr "Nije moguće dodati {name}: {error}"
+
+# derived
 msgid "Attachment limit ({count}) reached"
 msgstr "Dostignuta je granica priloga ({count})"
 
@@ -27888,8 +27817,15 @@ msgid "Skipped {name}: {error}"
 msgstr "Preskočeno {name}: {error}"
 
 # derived
+msgid "These references are already attached"
+msgstr "Ove reference su već priložene"
+
+# derived
 msgid "Added {count} image(s)"
 msgstr "Dodatih slika: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 # derived
 msgid "Add from Blend"
@@ -32135,30 +32071,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -33647,6 +33559,10 @@ msgid "Agent Bubble"
 msgstr "Mehurić agenta"
 
 # derived
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora mehurića agenta nije uspelo"
+
+# derived
 msgid "Agent Bubble Status"
 msgstr "Status mehurića agenta"
 
@@ -34233,9 +34149,6 @@ msgstr "Animiraj prilog mudborda"
 # derived
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Prikazuje novopriloženu referencu kako uleće u ćaskanje Mixie"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "Kašnjenje"
@@ -36067,6 +35980,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 # derived
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Crtanje kartice zahteva povratni poziv crtanja aktivnog regiona"
@@ -37703,9 +37619,6 @@ msgstr "Poluprečnik ugla zaobljenih elemenata interfejsa"
 msgid "Mixie Chat"
 msgstr "Mixie čet"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -37720,6 +37633,20 @@ msgstr "Putanje otpuštanja moraju biti neprazni nizovi"
 # derived
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje otpuštanja moraju biti neprazan JSON niz"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+# derived
+msgid "Global Areas"
+msgstr "Globalne oblasti"
+
+# derived
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "Oblasti globalne za prozor (gornja traka, statusna traka). Proširenje Mixar — izloženo da uvođenje može da adresira gornju traku za ponovno crtanje."
 
 # derived
 msgid "QA UI Dump"

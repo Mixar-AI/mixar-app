@@ -306,10 +306,15 @@ string std_filesystem_path_to_string(const std::filesystem::path &p)
 
 static char *path_specials(const string &sub)
 {
-  static char *const env_shader_path = getenv("CYCLES_SHADER_PATH");
-  /* NOTE: It is KERNEL in env variable for compatibility reasons. */
-  static char *const env_source_path = getenv("CYCLES_KERNEL_PATH");
-
+  static bool env_init = false;
+  static char *env_shader_path;
+  static char *env_source_path;
+  if (!env_init) {
+    env_shader_path = getenv("CYCLES_SHADER_PATH");
+    /* NOTE: It is KERNEL in env variable for compatibility reasons. */
+    env_source_path = getenv("CYCLES_KERNEL_PATH");
+    env_init = true;
+  }
   if (env_shader_path != nullptr && sub == "shader") {
     return env_shader_path;
   }
@@ -334,13 +339,6 @@ static string path_xdg_cache_get()
 }
 #endif
 
-/* Fallback for when #path_init was not called to initialize #cached_path. */
-static const string &path_program_dir()
-{
-  static const string program_dir = path_dirname(OIIO::Sysutil::this_program_path());
-  return program_dir;
-}
-
 void path_init(const string &path, const string &user_path)
 {
   cached_path = path;
@@ -361,17 +359,29 @@ string path_get(const string &sub)
     return special;
   }
 
-  return path_join(cached_path.empty() ? path_program_dir() : cached_path, sub);
+  if (cached_path.empty()) {
+    cached_path = path_dirname(OIIO::Sysutil::this_program_path());
+  }
+
+  return path_join(cached_path, sub);
 }
 
 string path_user_get(const string &sub)
 {
-  return path_join(cached_user_path.empty() ? path_program_dir() : cached_user_path, sub);
+  if (cached_user_path.empty()) {
+    cached_user_path = path_dirname(OIIO::Sysutil::this_program_path());
+  }
+
+  return path_join(cached_user_path, sub);
 }
 
 string path_cache_get(const string &sub)
 {
 #if defined(__linux__) || defined(__APPLE__)
+  /* Mixar: the first call per process comes from every Metal kernel compile thread at once, and
+   * the upstream lazy assignment to a file-scope `string` raced; a reader got a torn path,
+   * `@(path.c_str())` turned it into nil and `+[NSURL fileURLWithPath:]` aborted the app. A
+   * function-local static is initialised exactly once under the C++11 guarantee. */
   static const string xdg_cache_path = path_xdg_cache_get();
   const string result = path_join(xdg_cache_path, "cycles");
   return path_join(result, sub);
@@ -656,7 +666,7 @@ string path_files_md5_hash(const string &dir)
   return hash.get_hex();
 }
 
-static bool create_directories_recursively(const string &path)
+static bool create_directories_recursivey(const string &path)
 {
   if (path_exists(path)) {
     /* Either directory exists and there is nothing to do, or it's a file and we fail. */
@@ -665,7 +675,7 @@ static bool create_directories_recursively(const string &path)
 
   const string parent = path_dirname(path);
   if (!parent.empty() && parent != path) {
-    if (!create_directories_recursively(parent)) {
+    if (!create_directories_recursivey(parent)) {
       return false;
     }
   }
@@ -685,7 +695,7 @@ static bool create_directories_recursively(const string &path)
 bool path_create_directories(const string &filepath)
 {
   const string path = path_dirname(filepath);
-  return create_directories_recursively(path);
+  return create_directories_recursivey(path);
 }
 
 bool path_write_binary(const string &path, const vector<uint8_t> &binary)

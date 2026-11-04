@@ -26,14 +26,14 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_fileops.hh"
-#include "BLI_ghash.hh"
-#include "BLI_listbase.hh"
-#include "BLI_math_vector_c.hh"
+#include "BLI_fileops.h"
+#include "BLI_ghash.h"
+#include "BLI_listbase.h"
+#include "BLI_math_vector.h"
 #include "BLI_path_utils.hh"
-#include "BLI_string.hh"
-#include "BLI_task_c.hh"
-#include "BLI_threads.hh"
+#include "BLI_string.h"
+#include "BLI_task.h"
+#include "BLI_threads.h"
 
 #include "BKE_asset.hh"
 #include "BKE_blendfile.hh"
@@ -201,9 +201,7 @@ static bool filelist_compare_asset_libraries(const AssetLibraryReference *librar
   return true;
 }
 
-void filelist_setlibrary(FileList *filelist,
-                         const AssetLibraryReference *asset_library_ref,
-                         FunctionRef<void()> on_change)
+void filelist_setlibrary(FileList *filelist, const AssetLibraryReference *asset_library_ref)
 {
   /* Unset if needed. */
   if (!asset_library_ref) {
@@ -214,22 +212,15 @@ void filelist_setlibrary(FileList *filelist,
     return;
   }
 
-  bool changed = false;
   if (!filelist->asset_library_ref) {
     filelist->asset_library_ref = MEM_new<AssetLibraryReference>("filelist asset library");
     *filelist->asset_library_ref = *asset_library_ref;
 
     filelist->flags |= FL_FORCE_RESET;
-    changed = true;
   }
   else if (!filelist_compare_asset_libraries(filelist->asset_library_ref, asset_library_ref)) {
     *filelist->asset_library_ref = *asset_library_ref;
     filelist->flags |= FL_FORCE_RESET;
-    changed = true;
-  }
-
-  if (changed && on_change) {
-    on_change();
   }
 }
 
@@ -376,7 +367,7 @@ static int filelist_geticon_file_type_ex(const FileList *filelist,
     }
 
     if (file->attributes & FILE_ATTR_OFFLINE) {
-      return ICON_STATUS_ERROR;
+      return ICON_ERROR;
     }
     if (file->attributes & FILE_ATTR_TEMPORARY) {
       return ICON_FILE_CACHE;
@@ -1159,45 +1150,6 @@ void filelist_setrecursion(FileList *filelist, const int recursion_level)
   if (filelist->max_recursion != recursion_level) {
     filelist->max_recursion = recursion_level;
     filelist->flags |= FL_FORCE_RESET;
-  }
-}
-
-void filelist_entry_glob_tag(FileListInternEntry *entry, const char *filter_glob)
-{
-  entry->typeflag &= ~FILE_TYPE_OPERATOR;
-
-  if (entry->typeflag & (FILE_TYPE_DIR | FILE_TYPE_BLENDERLIB)) {
-    return;
-  }
-  if (filter_glob[0] == '\0') {
-    return;
-  }
-
-  /* Aliases & shortcuts match their target, its extension may differ from the link. */
-  const char *path = entry->redirection_path ? entry->redirection_path : entry->relpath;
-  if (BLI_path_extension_check_glob(path, filter_glob)) {
-    entry->typeflag |= FILE_TYPE_OPERATOR;
-  }
-}
-
-void filelist_reset_glob(FileList *filelist)
-{
-  for (FileListInternEntry &entry : filelist->filelist_intern.entries) {
-    filelist_entry_glob_tag(&entry, filelist->filter_glob);
-  }
-
-  filelist->flags &= ~FL_NEED_RESET_GLOB;
-}
-
-void filelist_setglob(FileList *filelist, const char *filter_glob)
-{
-  /* The glob is stored in #FileListInternEntry.typeflag, so filtering again isn't enough.
-   * Re-tag the entries, reading the directory again would be needlessly heavy. */
-
-  if (!STREQ(filelist->filter_glob, filter_glob)) {
-    STRNCPY(filelist->filter_glob, filter_glob);
-    filelist->flags |= FL_NEED_RESET_GLOB;
-    filelist_tag_needs_filtering(filelist);
   }
 }
 

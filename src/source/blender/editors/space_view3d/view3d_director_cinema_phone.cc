@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "BKE_context.hh"
 

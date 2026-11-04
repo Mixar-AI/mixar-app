@@ -6,7 +6,6 @@
 """Temporary image baking operators for preview purposes"""
 
 import bpy
-from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import BoolProperty, CollectionProperty, StringProperty
 
 from ....core.layer.layer_utils import get_active_layer, get_uv_layers
@@ -26,7 +25,7 @@ class MBakeTempImage(bpy.types.Operator, BaseBakeOperator):
     bl_options = {"REGISTER", "UNDO"}
 
     uv_map: StringProperty(default="")
-    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
+    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
 
     hdr: BoolProperty(name="32 bit Float", default=True)
 

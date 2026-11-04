@@ -10,6 +10,11 @@ see core/model_suggestions.py for the cache and fetch wiring. The only
 client-side enum left here is the dialog state machine.
 """
 
+# Explicitly allow long provider keys in the Blender RNA string backing
+# the password field. Some provider-issued keys can exceed Blender's
+# implicit/default text input storage.
+BYOK_API_KEY_MAX_LENGTH = 256
+
 # Dialog state machine — drives what the dialog renders on each draw.
 # The dialog owns its whole footer (the native OK/Cancel row is
 # suppressed — see ui/operators/byok_dialog_ui.py), so every state must
@@ -140,16 +145,6 @@ CODEX_REFRESH_MARGIN_S = 24 * 60 * 60
 # The ChatGPT account id claim inside Codex id/access tokens.
 CODEX_AUTH_CLAIM = "https://api.openai.com/auth"
 CODEX_ACCOUNT_ID_CLAIM = "chatgpt_account_id"
-# The models the signed-in ChatGPT account can run (core/codex_models.py): the
-# listing the Codex CLI fetches for its own model picker. Its answer depends on
-# the ChatGPT plan, so it is what the Codex model chips are narrowed to.
-CODEX_MODELS_URL = "https://chatgpt.com/backend-api/codex/models"
-CODEX_ORIGINATOR = "codex_cli_rs"
-# The listing also hides models newer than the asking CLI (each carries a
-# minimal client version; 0.20.0 gets an empty list). Mixar runs no CLI, so it
-# reports a version past every gate and only the plan narrows the answer.
-CODEX_CLIENT_VERSION = "999.0.0"
-CODEX_MODELS_TIMEOUT_S = 10
 
 # "Local (this computer)" — a client-side-only provider option: the agent's
 # LLM calls are relayed over the agent WebSocket to a model server running on

@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #include "BKE_context.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "BLT_translation.hh"
 #include "DNA_windowmanager_types.h"
 #include "RNA_access.hh"

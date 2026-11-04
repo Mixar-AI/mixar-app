@@ -40,12 +40,12 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_listbase_iterator.hh"
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "BKE_context.hh"
 #include "BKE_global.hh"
@@ -350,7 +350,7 @@ bool view3d_scenes_drawer_snapshot_capture(const bContext *C,
 
   /* The shown card's refresh: only after the tab changed, and not too often.
    * A forced capture (the tab is about to leave the screen) always runs. */
-  const ViewLayer *view_layer = scene->view_layers.first_as<const ViewLayer>();
+  const ViewLayer *view_layer = static_cast<const ViewLayer *>(scene->view_layers.first);
   const Depsgraph *deps = view_layer ? BKE_scene_get_depsgraph(scene, view_layer) : nullptr;
   const uint64_t update_count = deps ? DEG_get_update_count(deps) : 0;
   const double now = BLI_time_now_seconds();

@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
-#include "BLI_sys_types.hh"
+#include "BLI_rect.h"
+#include "BLI_sys_types.h"
 
 #include "UI_interface_c.hh"
 

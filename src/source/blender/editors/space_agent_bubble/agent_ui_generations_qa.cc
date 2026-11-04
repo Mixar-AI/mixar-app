@@ -6,7 +6,7 @@
 #include "BKE_global.hh"
 #include "BKE_main.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
@@ -24,7 +24,7 @@ void targets(const wmWindow * /*win*/,
       G_MAIN->wm.is_empty()) {
     return;
   }
-  PointerRNA wm = RNA_id_pointer_create(&G_MAIN->wm.first_as<wmWindowManager>()->id);
+  PointerRNA wm = RNA_id_pointer_create(&static_cast<wmWindowManager *>(G_MAIN->wm.first)->id);
   for (const ui::Block &block : region->runtime->uiblocks) {
     if (block.name != "agent_island_generations") {
       continue;

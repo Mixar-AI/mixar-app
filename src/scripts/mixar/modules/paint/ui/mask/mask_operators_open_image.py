@@ -12,7 +12,6 @@ import os
 import time
 
 import bpy
-from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -71,7 +70,7 @@ class MOpenImageAsMask(bpy.types.Operator, ImportHelper, OpenImage):
     )
 
     uv_map: StringProperty(default="")
-    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
+    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
 
     blend_type: EnumProperty(
         name="Blend", description="Blend type", items=mask_blend_type_items, default=3

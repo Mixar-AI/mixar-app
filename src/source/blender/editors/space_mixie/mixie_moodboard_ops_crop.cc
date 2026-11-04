@@ -8,8 +8,6 @@
  * \brief Moodboard crop operator - crops images with C++ acceleration
  */
 
-#include "IMB_partial_update.hh"
-
 #include "mixie_moodboard_ops_common.hh"
 
 namespace blender::ed::mixie {
@@ -163,7 +161,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
   }
 
   BKE_image_release_ibuf(src_image, src_ibuf, lock);
-  IMB_mark_dirty(crop_ibuf);
+  BKE_image_mark_dirty(crop_image, crop_ibuf);
   BKE_image_release_ibuf(crop_image, crop_ibuf, crop_lock);
 
   /* Read original item properties */

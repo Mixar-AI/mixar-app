@@ -39,7 +39,7 @@
 #include "UI_mixar_text.hh"
 #include "UI_mixar_theme.hh"
 
-#include "BLI_utildefines.hh"
+#include "BLI_utildefines.h"
 
 #include "UI_interface.hh"
 

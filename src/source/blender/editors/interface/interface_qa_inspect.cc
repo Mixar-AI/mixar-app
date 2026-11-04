@@ -15,10 +15,10 @@
 #include <string>
 #include <vector>
 
-#include "BLI_listbase.hh"
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
@@ -32,7 +32,6 @@
 #include "UI_interface_c.hh"
 
 #include "WM_api.hh"
-#include "WM_mixar.hh"
 #include "WM_types.hh"
 
 #include "interface_intern.hh"
@@ -235,7 +234,6 @@ void qa_emit_custom_targets(std::string &out,
 }
 
 void qa_dump_region(std::string &out,
-                    bool &pending,
                     bool &first_widget,
                     const wmWindow *win,
                     const ScrArea *area, /* may be null for screen-level popups */
@@ -248,17 +246,11 @@ void qa_dump_region(std::string &out,
   if (BLI_rcti_size_x(&region->winrct) <= 0 || BLI_rcti_size_y(&region->winrct) <= 0) {
     return;
   }
-  /* Timers can inspect between an edit and the redraw which replaces buttons.
-   * Their RNA targets may already be freed. Do not inspect a pending rebuild
-   * (or a re-entrant draw), including custom providers and panel tab blocks. */
-  if (region->runtime == nullptr ||
-      (region->runtime->do_draw & (RGN_DRAW | RGN_DRAW_PARTIAL | RGN_DRAWING | RGN_REFRESH_UI)))
-  {
-    pending = true;
-    return;
-  }
   if (area != nullptr) {
     qa_emit_custom_targets(out, first_widget, win, area, region);
+  }
+  if (region->runtime == nullptr) {
+    return;
   }
 
   for (const blender::ui::Block &block : region->runtime->uiblocks) {
@@ -266,12 +258,8 @@ void qa_dump_region(std::string &out,
      * "rebuilt during the current free-inactive pass", not "on screen": every
      * region that is not mid-redraw carries live blocks with it clear, and
      * filtering on it dropped ~95% of the UI (measured: 11 widgets instead of
-     * several hundred, the whole topbar and island missing). */
-    /* block_region_set retains the replaced block until free-inactive runs.
-     * The name map identifies the current block without relying on active. */
-    if (region->runtime->block_name_map.lookup_default(block.name, nullptr) != &block) {
-      continue;
-    }
+     * several hundred, the whole topbar and island missing). The stale-block
+     * problem it was meant to solve needs a real liveness stamp instead. */
     for (const std::unique_ptr<blender::ui::Button> &but_ptr : block.buttons_ptrs) {
       const blender::ui::Button *but = but_ptr.get();
       if (but->flag & blender::ui::UI_HIDDEN) {
@@ -417,46 +405,44 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
          ",\"awaiting_draw\":" + (cat_stats.awaiting_draw ? "true" : "false") +
          ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) +
          "},\"chat_animation\":{\"ticks\":" + std::to_string(chat_stats.ticks) +
-         ",\"scheduled\":" + (chat_stats.scheduled ? "true" : "false") + "},\n\"widgets\":[";
+         ",\"scheduled\":" + (chat_stats.scheduled ? "true" : "false") + "},\"windows\":[";
+  bool first_win = true;
+  for (const wmWindow &win_ref : wm->windows) {
+    const wmWindow *win = &win_ref;
+    if (!first_win) {
+      out += ',';
+    }
+    first_win = false;
+    out += "{\"ptr\":" + std::to_string(uintptr_t(win)) +
+           ",\"size\":[" + std::to_string(int(win->sizex)) + ',' +
+           std::to_string(int(win->sizey)) + "]}";
+  }
+  out += "],\n\"widgets\":[";
 
-  /* Per window: `skipped` (wm_draw_update does not draw it: not on screen, so
-   * no widgets and nothing to capture) and `pending` (one of its regions
-   * awaits a redraw, so its export is incomplete). */
-  std::string windows;
   bool first_widget = true;
-  bool pending = false;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;
     const bScreen *screen = WM_window_get_active_screen(win);
-    /* A skipped window never clears its redraw tags until shown again (the
-     * island resting as a pill), so it must not hold the dump pending. */
-    const bool skipped = screen == nullptr || Mixar_window_draw_skipped(win);
-    bool win_pending = false;
-    if (!skipped) {
-      for (const ScrArea &area : screen->areabase) {
-        for (const ARegion &region : area.regionbase) {
-          qa_dump_region(out, win_pending, first_widget, win, &area, &region, false);
-        }
-      }
-      /* Global areas: topbar / statusbar. */
-      for (const ScrArea &area : win->global_areas.areabase) {
-        for (const ARegion &region : area.regionbase) {
-          qa_dump_region(out, win_pending, first_widget, win, &area, &region, false);
-        }
-      }
-      /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
-      for (const ARegion &region : screen->regionbase) {
-        qa_dump_region(out, win_pending, first_widget, win, nullptr, &region, true);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (const ScrArea &area : screen->areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
       }
     }
-    pending |= win_pending;
-    windows += std::string(windows.empty() ? "" : ",") + "{\"ptr\":" +
-               std::to_string(uintptr_t(win)) + ",\"size\":[" + std::to_string(int(win->sizex)) +
-               ',' + std::to_string(int(win->sizey)) + "],\"skipped\":" +
-               (skipped ? "true" : "false") + ",\"pending\":" + (win_pending ? "true" : "false") +
-               '}';
+    /* Global areas: topbar / statusbar. */
+    for (const ScrArea &area : win->global_areas.areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
+      }
+    }
+    /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
+    for (const ARegion &region : screen->regionbase) {
+      qa_dump_region(out, first_widget, win, nullptr, &region, true);
+    }
   }
-  out += "\n],\"windows\":[" + windows + "],\"pending\":" + (pending ? "true" : "false") + '}';
+  out += "\n]}";
   return out;
 }
 

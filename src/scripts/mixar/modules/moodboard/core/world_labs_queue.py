@@ -5,10 +5,9 @@
 """World Labs (Marble) world-generation queue: concrete Job + enqueue helper.
 
 Genuinely-unique job (per CLAUDE.md): the backend returns a Gaussian-splat SPZ
-+ a GLB collider, which we download off the main thread and import with
-Blender's native SPZ importer as a built-in Gaussian splat -- not a standard GLB
-import -- so it has its own queue file with a custom ``handle_result``,
-modelled on ``lookdev360_queue``.
++ a GLB collider, which we convert (SPZ -> 3DGS PLY) locally and import via the
+bundled KIRI addon -- not a standard GLB import -- so it has its own queue file
+with a custom ``handle_result``, modelled on ``lookdev360_queue``.
 """
 
 import os
@@ -113,7 +112,7 @@ class WorldLabsJob(Job):
         return status, result_files
 
     def handle_result(self, result_files, on_done, on_error):
-        """Download SPZ+GLB off the main thread, then import on the main thread."""
+        """Download SPZ+GLB and convert+import on the main thread."""
         # Prefer cached URLs (set in parse_poll_response), but fall back to the
         # result_files passed in here so we don't depend on call ordering.
         if not self._spz_url:
@@ -144,11 +143,11 @@ class WorldLabsJob(Job):
         scene_name = self.scene_name
 
         def _bg_download():
-            spz_path = ""
+            ply_path = ""
             glb_path = ""
             pano_path = ""
             try:
-                spz_path = _download_spz(spz_url, label)
+                ply_path = _download_and_convert_spz(spz_url, label)
                 # The collider is required for placement. A download miss
                 # must fail the import rather than succeed as a splat-only
                 # world the user cannot sit objects on.
@@ -161,9 +160,9 @@ class WorldLabsJob(Job):
                     except Exception as e:  # noqa: BLE001
                         logger.warning("[WorldLabs] pano download failed: %s", e)
             except Exception as e:  # noqa: BLE001
-                err = rpt_("Failed to download world: {error}").format(error=e)
+                err = rpt_("Failed to download/convert world: {error}").format(error=e)
                 logger.error("[WorldLabs] %s", err)
-                _cleanup_temp_paths(spz_path, glb_path, pano_path)
+                _cleanup_temp_paths(ply_path, glb_path, pano_path)
                 bpy.app.timers.register(
                     lambda: (on_error(err), None)[1], first_interval=0.0
                 )
@@ -171,7 +170,7 @@ class WorldLabsJob(Job):
 
             def _import():
                 _import_on_main(
-                    spz_path, glb_path, pano_path, label, semantics, on_done, on_error,
+                    ply_path, glb_path, pano_path, label, semantics, on_done, on_error,
                     graph_node_id=graph_node_id, scene_name=scene_name,
                 )
                 return None
@@ -194,7 +193,7 @@ class WorldLabsJob(Job):
 
 
 def _import_on_main(
-    spz_path, glb_path, pano_path, label, semantics, on_done, on_error,
+    ply_path, glb_path, pano_path, label, semantics, on_done, on_error,
     graph_node_id="", scene_name="",
 ):
     """Run the import on the main thread, then clean up temp files."""
@@ -203,7 +202,7 @@ def _import_on_main(
             import_world_labs_world,
         )
         names = import_world_labs_world(
-            spz_path, glb_path, name=label or "World", semantics=semantics,
+            ply_path, glb_path, name=label or "World", semantics=semantics,
         )
         if not names:
             on_error(n_("World imported but produced no objects"))
@@ -224,7 +223,7 @@ def _import_on_main(
         logger.error("[WorldLabs] import failed: %s", e)
         on_error(rpt_("Failed to import world: {error}").format(error=e))
     finally:
-        _cleanup_temp_paths(spz_path, glb_path, pano_path)
+        _cleanup_temp_paths(ply_path, glb_path, pano_path)
 
 
 def _import_pano_to_moodboard(pano_path: str) -> None:
@@ -252,21 +251,24 @@ def _download_bytes(url: str) -> bytes:
         return resp.read()
 
 
-def _download_spz(url: str, label: str = "") -> str:
-    """Download the SPZ into a private temp folder and return its path.
+def _download_and_convert_spz(url: str, label: str = "") -> str:
+    """Download the SPZ, convert to 3DGS PLY, write to a temp file, return path.
 
-    The file keeps a human stem (the job label): the SPZ importer names the
-    created object after the file, so an mkstemp name leaks gibberish object
-    names like ``worldlabs_wy9cyeh9`` into the scene.
+    The temp PLY keeps a human stem (the job label): the KIRI importer names
+    the created object after the PLY file, so an mkstemp name leaks gibberish
+    object names like ``worldlabs_wy9cyeh9`` into the scene.
     """
     import re
 
+    from mixar.modules.moodboard.core.world_labs_spz import spz_to_ply
+
     spz_bytes = _download_bytes(url)
+    ply_bytes = spz_to_ply(spz_bytes)
     stem = re.sub(r"[^\w\- ]+", "", label).strip() or "world"
     temp_dir = tempfile.mkdtemp(prefix="worldlabs_")
-    path = os.path.join(temp_dir, f"{stem}.spz")
+    path = os.path.join(temp_dir, f"{stem}.ply")
     with open(path, "wb") as f:
-        f.write(spz_bytes)
+        f.write(ply_bytes)
     return path
 
 

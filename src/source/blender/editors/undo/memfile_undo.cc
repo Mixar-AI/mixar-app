@@ -10,10 +10,10 @@
 
 #include "CLG_log.h"
 
-#include "BLI_sys_types.hh"
+#include "BLI_sys_types.h"
 
-#include "BLI_ghash.hh"
-#include "BLI_listbase.hh"
+#include "BLI_ghash.h"
+#include "BLI_listbase.h"
 #include "BLI_set.hh"
 
 #include "DNA_ID.h"
@@ -24,7 +24,6 @@
 #include "DNA_scene_types.h"
 
 #include "BKE_blender_undo.hh"
-#include "BKE_compositor.hh"
 #include "BKE_context.hh"
 #include "BKE_lib_query.hh"
 #include "BKE_main.hh"
@@ -85,7 +84,7 @@ static bool memfile_undosys_step_encode(bContext * /*C*/, Main *bmain, UndoStep 
   UndoStack *ustack = ED_undo_stack_get();
 
   if (bmain->is_memfile_undo_flush_needed) {
-    ED_editors_flush_edits_ex(bmain, true);
+    ED_editors_flush_edits_ex(bmain, false, true);
   }
 
   /* can be null, use when set. */
@@ -121,11 +120,11 @@ static int memfile_undosys_step_id_reused_cb(LibraryIDLinkCallbackData *cb_data)
   ID *id = *id_pointer;
   if (id != nullptr && !ID_IS_LINKED(id) && (id->tag & ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED) == 0) {
     bool do_stop_iter = true;
-    if (self_id->id_type() == ID_OB) {
+    if (GS(self_id->name) == ID_OB) {
       Object *ob_self = id_cast<Object *>(self_id);
       if (ob_self->type == OB_ARMATURE) {
         if (ob_self->data == id) {
-          BLI_assert(id->id_type() == ID_AR);
+          BLI_assert(GS(id->name) == ID_AR);
           if (ob_self->pose != nullptr) {
             /* We have a changed/re-read armature used by an unchanged armature object: our beloved
              * Bone pointers from the object's pose need their usual special treatment. */
@@ -229,8 +228,7 @@ static void memfile_undosys_step_decode(
   const int kept_in_edit_mode = memfile_undosys_editors_exit(bmain);
   /* Ensure there's no preview job running. Unfinished previews will be scheduled for regeneration
    * via #PRV_TAG_RESTART_RENDERING in BKE_previewimg_blend_read. */
-  ED_preview_kill_jobs_for_undo(CTX_wm_manager(C), bmain);
-  const bool need_preview_render_restart = bmain->need_preview_render_restart;
+  ED_preview_kill_jobs(CTX_wm_manager(C), bmain);
 
   MemFileUndoStep *us = reinterpret_cast<MemFileUndoStep *>(us_p);
   BKE_memfile_undo_decode(us->data, undo_direction, use_old_bmain_data, C);
@@ -268,10 +266,6 @@ static void memfile_undosys_step_decode(
   }
   ED_editors_init_for_undo(bmain);
 
-  /* Cancelled preview jobs set this on the old bmain, carry it over to
-   * restart previews that were interrupted. */
-  bmain->need_preview_render_restart |= need_preview_render_restart;
-
   if (use_old_bmain_data) {
     /* Restore previous depsgraphs into current bmain. */
     BKE_scene_undo_depsgraphs_restore(bmain, depsgraphs);
@@ -285,13 +279,13 @@ static void memfile_undosys_step_decode(
             bmain, id, memfile_undosys_step_id_reused_cb, nullptr, IDWALK_READONLY);
       }
 
-      if (id->id_type() == ID_SCE) {
+      if (GS(id->name) == ID_SCE) {
         Scene *scene = reinterpret_cast<Scene *>(id);
         /* TODO: We should be able to restore these depsgraphs properly as part of
          * #BKE_scene_undo_depsgraphs_restore but this is currently only done for depsgraphs in the
          * scene.depsgraph_hash map. So the safest option is to just delete the following
          * depsgraphs for now. */
-        if (bke::compositor::is_enabled(*scene, bke::compositor::ExecutionMode::Preview)) {
+        if (scene->compositing_node_group) {
           /* Ensure undo calls from the UI update the interactive compositor preview depsgraph, see
            * #compo_initjob. */
           bke::CompositorRuntime &compositor_runtime = scene->runtime->compositor;
@@ -330,7 +324,7 @@ static void memfile_undosys_step_decode(
           DEG_id_tag_update_ex(bmain, &nodetree->id, recalc_flags);
         }
       }
-      if (id->id_type() == ID_SCE) {
+      if (GS(id->name) == ID_SCE) {
         Scene *scene = id_cast<Scene *>(id);
         if (scene->master_collection != nullptr) {
           recalc_flags = scene->master_collection->id.recalc;
@@ -358,10 +352,26 @@ static void memfile_undosys_step_decode(
       if (nodetree != nullptr) {
         nodetree->id.recalc_after_undo_push = 0;
       }
-      if (id->id_type() == ID_SCE) {
+      if (GS(id->name) == ID_SCE) {
         Scene *scene = id_cast<Scene *>(id);
         if (scene->master_collection != nullptr) {
           scene->master_collection->id.recalc_after_undo_push = 0;
+        }
+      }
+      else if (GS(id->name) == ID_OB) {
+        /* In some cases when using memfile undo in sculpt mode, the object but not the
+         * corresponding mesh will be tagged for an update, leading to invalid data and crashes.
+         *
+         * This is a band-aid mitigation for the 5.1 release, not a proper fix of the underlying
+         * problem.
+         *
+         * See #152087 for more details. */
+        Object *object = reinterpret_cast<Object *>(id);
+        if (object->type == OB_MESH) {
+          Mesh *mesh = id_cast<Mesh *>(object->data);
+          if (object->mode == OB_MODE_SCULPT && mesh) {
+            DEG_id_tag_update_ex(bmain, &mesh->id, ID_RECALC_GEOMETRY);
+          }
         }
       }
     }
@@ -428,7 +438,7 @@ static const MemFile *memfile_undosys_step_memfile(const UndoStep *us_p)
 void ED_memfile_undosys_type(UndoType *ut)
 {
   BKE_undo_tabs_memfile_getter_set(memfile_undosys_step_memfile);
-  ut->identifier = "GLOBAL_UNDO";
+  ut->name = "Global Undo";
   ut->poll = memfile_undosys_poll;
   ut->step_encode = memfile_undosys_step_encode;
   ut->step_decode = memfile_undosys_step_decode;

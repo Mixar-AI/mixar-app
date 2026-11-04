@@ -13,7 +13,6 @@ color ID, and procedural masks.
 import random
 
 import bpy
-from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -140,7 +139,7 @@ class MNewLayerMask(bpy.types.Operator):
     )
 
     uv_name: StringProperty(default="", update=update_new_mask_uv_map)
-    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
+    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
 
     use_udim: BoolProperty(
         name="Use UDIM Tiles", description="Use UDIM Tiles", default=False

@@ -234,8 +234,8 @@ class IMAGE_MT_image(Menu):
             del _ghost_backend
 
         if has_image_clipboard:
-            layout.operator("image.clipboard_copy", text="Copy", icon='COPYDOWN')
-            layout.operator("image.clipboard_paste", text="Paste", icon='PASTEDOWN')
+            layout.operator("image.clipboard_copy", text="Copy")
+            layout.operator("image.clipboard_paste", text="Paste")
             layout.separator()
 
         if ima:
@@ -498,8 +498,8 @@ class IMAGE_MT_uvs(Menu):
 
         layout.separator()
 
-        layout.operator("uv.copy", icon='COPYDOWN')
-        layout.operator("uv.paste", icon='PASTEDOWN')
+        layout.operator("uv.copy")
+        layout.operator("uv.paste")
 
         layout.separator()
 
@@ -1318,10 +1318,6 @@ class IMAGE_PT_paint_select(Panel, ImagePaintPanel, BrushSelectPanel):
     bl_context = ".paint_common_2d"
     bl_category = "Tool"
 
-    @classmethod
-    def poll(cls, context):
-        return cls.active_tool_uses_brushes(context) and cls.get_brush_mode(context) is not None
-
 
 class IMAGE_PT_paint_settings(Panel, ImagePaintPanel):
     bl_context = ".paint_common_2d"
@@ -1330,8 +1326,8 @@ class IMAGE_PT_paint_settings(Panel, ImagePaintPanel):
 
     @classmethod
     def poll(cls, context):
-        settings = cls.paint_settings_from_active_tool(context)
-        return cls.active_tool_uses_brushes(context) and settings and settings.brush is not None
+        settings = cls.paint_settings(context)
+        return settings and settings.brush is not None
 
     def draw(self, context):
         layout = self.layout
@@ -1339,7 +1335,7 @@ class IMAGE_PT_paint_settings(Panel, ImagePaintPanel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        settings = self.paint_settings_from_active_tool(context)
+        settings = self.paint_settings(context)
         brush = settings.brush
 
         if brush:
@@ -1355,7 +1351,7 @@ class IMAGE_PT_paint_settings_advanced(Panel, ImagePaintPanel):
 
     @classmethod
     def poll(cls, context):
-        settings = cls.paint_settings_from_active_tool(context)
+        settings = cls.paint_settings(context)
         return settings and settings.brush is not None
 
     def draw(self, context):
@@ -1364,7 +1360,7 @@ class IMAGE_PT_paint_settings_advanced(Panel, ImagePaintPanel):
         layout.use_property_split = True
         layout.use_property_decorate = False  # No animation.
 
-        settings = self.paint_settings_from_active_tool(context)
+        settings = self.paint_settings(context)
         brush = settings.brush
         if brush:
             brush_settings_advanced(layout.column(), context, settings, brush, self.is_popover)

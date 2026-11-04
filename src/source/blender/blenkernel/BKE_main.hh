@@ -27,17 +27,15 @@
 
 #include "DNA_listBase.h"
 
-#include "BLI_compiler_attrs.hh"
+#include "BLI_compiler_attrs.h"
 #include "BLI_map.hh"
 #include "BLI_math_matrix_types.hh"
 #include "BLI_set.hh"
-#include "BLI_sys_types.hh"
+#include "BLI_sys_types.h"
 #include "BLI_utility_mixins.hh"
 #include "BLI_vector_set.hh"
 
-#include "BKE_blender_project.hh"
 #include "BKE_lib_query.hh" /* For LibraryForeachIDCallbackFlag. */
-
 struct MainLock;
 namespace blender {
 
@@ -229,7 +227,7 @@ struct MainColorspace {
    * File working color-space for all scene linear colors.
    * The name is only for the user interface and is not a unique identifier, the matrix is
    * the XYZ color-space is the source of truth.
-   */
+   * */
   char scene_linear_name[64 /*MAX_COLORSPACE_NAME*/] = "";
   float3x3 scene_linear_to_xyz = float3x3::zero();
 
@@ -238,8 +236,6 @@ struct MainColorspace {
    * used to create this blend file is missing.
    */
   bool is_missing_opencolorio_config = false;
-  /** The OpenColorIO config failed to load. */
-  bool is_failed_opencolorio_config = false;
 };
 
 struct Main : NonCopyable, NonMovable {
@@ -278,8 +274,7 @@ struct Main : NonCopyable, NonMovable {
    * compatibility issues (data loss).
    *
    * \note In practice currently this is only based on the version numbers, in the future it
-   * could try to use more refined detection on load.
-   */
+   * could try to use more refined detection on load. */
   bool has_forward_compatibility_issues = false;
 
   /* See MIXAR_FILE_VERSION, MIXAR_FILE_SUBVERSION in BKE_blender_version.h. */
@@ -355,9 +350,6 @@ struct Main : NonCopyable, NonMovable {
    */
   bool need_preview_render_restart = false;
 
-  /** Protect from recursive node tree updates, see #BKE_ntree_update. */
-  bool is_updating_node_trees = false;
-
   /**
    * The blend-file thumbnail. If set, it will show as image preview of the blend-file in the
    * system's file-browser.
@@ -378,17 +370,6 @@ struct Main : NonCopyable, NonMovable {
    * Color-space information for this file.
    */
   MainColorspace colorspace;
-
-  /**
-   * Whether this bmain belongs to the global Blender Project or not.
-   *
-   * NOTE: this is currently always true, as we haven't yet determined which
-   * cases it should be false for, and at the moment it's unlikely to hurt much
-   * of anything to be erroneously true. However, in principle this can be false
-   * and likely will be false in some cases of temp mains in the future, so code
-   * should never assume that it's true.
-   */
-  bool is_part_of_project = true;
 
   /* List bases for all ID types, containing all IDs for the current #Main. */
 
@@ -485,11 +466,6 @@ struct Main : NonCopyable, NonMovable {
  */
 Main *BKE_main_new();
 /**
- * Initialize a new Main data-base, based on a reference for relative path and colorspace
- * conversions.
- */
-void BKE_main_init_from_reference(Main &bmain, const Main &reference);
-/**
  * Make given \a bmain empty again, and free all runtime mappings.
  *
  * This is similar to deleting and re-creating the Main, however the internal #Main::lock is kept
@@ -557,21 +533,6 @@ void BKE_main_merge(Main *bmain_dst,
                     MainMergeReport &reports);
 /** Simpler overload of the other #BKE_main_merge. */
 void BKE_main_merge(Main *bmain_dst, Main **r_bmain_src, MainMergeReport &reports);
-
-/**
- * Simplified merge that moves all non-Library IDs from `bmain_src` into `bmain_dst`, assigning
- * them all to `dst_external_library` as their owning library namespace.
- *
- * Unlike the general #BKE_main_merge, this overload skips deduplication and filepath rebasing.
- * It is intended for merging data imported from an external (non-blend) source that has already
- * been given a dedicated archive library in `bmain_dst`.
- *
- * The source Main is always freed and `*r_bmain_src` is set to nullptr on return.
- */
-void BKE_main_merge_as_archive_library(Main &bmain_dst,
-                                       Main *&r_bmain_src,
-                                       Library &dst_external_library,
-                                       MainMergeReport &reports);
 
 /**
  * Check whether given `bmain` is empty or contains some IDs.
@@ -705,7 +666,7 @@ void BKE_main_library_weak_reference_add(ID *local_id,
 
 #define FOREACH_MAIN_LISTBASE_ID_BEGIN(_lb, _id) \
   { \
-    ID *_id_next = static_cast<ID *>((_lb)->first_); \
+    ID *_id_next = static_cast<ID *>((_lb)->first); \
     for ((_id) = _id_next; (_id) != nullptr; (_id) = _id_next) { \
       _id_next = static_cast<ID *>((_id)->next);
 
@@ -733,8 +694,7 @@ void BKE_main_library_weak_reference_add(ID *local_id,
  * before objects, which will be processed before obdata types, etc.).
  *
  * WARNING: DO NOT use break statement with that macro, use #FOREACH_MAIN_LISTBASE and
- * #FOREACH_MAIN_LISTBASE_ID instead if you need that kind of control flow.
- */
+ * #FOREACH_MAIN_LISTBASE_ID instead if you need that kind of control flow. */
 #define FOREACH_MAIN_ID_BEGIN(_bmain, _id) \
   { \
     ListBaseT<ID> *_lb; \
@@ -820,15 +780,15 @@ MainListsArray BKE_main_lists_get(Main &bmain);
  * An iterator over all IDs in the given Main.
  *
  * As with the historic C-based APIs, order is defined by these rules:
- *   - ID types are iterated based on their #eID_Index, by default from higher index to lower one
- *     (for historical reasons). This can be inverted by using the #reverse_id_type_order option.
+ *   - ID types are iterated based on their #eID_Index, from lowest value to highest by default
+ *     (starting with libraries).
  *   - Within a same type, IDs are iterated based on their libraries (local IDs always iterated
  *     first) and names (alphanumeric sorting).
  *
  * This iterator will remain stable if the underlying Main is modified, as long as the current ID
  * pointed at by the iterator is not modified.
- *   - Renaming the current ID may shift its position in the underlying main, making the iterator
- *     unstable (some items may be skipped, or iterated over several times).
+ *   - Renaming the current ID may shift it position in the underlying main, making the iterator no
+ *     more stable (some items may be skipped, or iterated over several times).
  *   - Deleting the current ID will fully invalidate the iterator, attempt to use it in any way
  *     afterwards will result in invalid memory accesses.
  */
@@ -842,75 +802,30 @@ class MainAllIDsIterator {
 
  private:
   MainListsArray lbarray_;
-  bool reverse_id_type_order_ = false;
-  int64_t curr_lbarray_index_;
+  int64_t curr_lbarray_index_ = -1;
   ID *curr_id_ = nullptr;
 
  public:
   /* Note: default constructor is a requirement to make the iterator usable with std::ranges. */
   MainAllIDsIterator() : lbarray_{}
   {
-    curr_lbarray_index_ = lbarray_index_lower_bound();
     ++(*this);
   }
 
-  explicit MainAllIDsIterator(MainListsArray &lbarray, const bool reverse_id_type_order = false)
-      : lbarray_(lbarray), reverse_id_type_order_(reverse_id_type_order)
+  explicit MainAllIDsIterator(MainListsArray &lbarray) : lbarray_(lbarray)
   {
-    curr_lbarray_index_ = lbarray_index_lower_bound();
     ++(*this);
   }
 
-  explicit MainAllIDsIterator(Main &bmain, const bool reverse_id_type_order = false)
-      : lbarray_(BKE_main_lists_get(bmain)), reverse_id_type_order_(reverse_id_type_order)
+  explicit MainAllIDsIterator(Main &bmain) : lbarray_(BKE_main_lists_get(bmain))
   {
-    curr_lbarray_index_ = lbarray_index_lower_bound();
     ++(*this);
   }
 
- private:
-  /** Exclusive: Return the invalid index 'just before' the first valid one. */
-  int64_t lbarray_index_lower_bound() const
-  {
-    return reverse_id_type_order_ ? -1 : int64_t(lbarray_.size());
-  }
-
-  /** Exclusive: Return the invalid index 'just after' the last valid one. */
-  int64_t lbarray_index_upper_bound() const
-  {
-    return reverse_id_type_order_ ? int64_t(lbarray_.size()) : -1;
-  }
-
-  bool lbarray_index_is_valid() const
-  {
-    return (curr_lbarray_index_ >= -1 && curr_lbarray_index_ <= int64_t(lbarray_.size()));
-  }
-
-  void lbarray_index_step_next()
-  {
-    if (reverse_id_type_order_) {
-      curr_lbarray_index_++;
-    }
-    else {
-      curr_lbarray_index_--;
-    }
-  }
-
-  void lbarray_index_step_prev()
-  {
-    if (reverse_id_type_order_) {
-      curr_lbarray_index_--;
-    }
-    else {
-      curr_lbarray_index_++;
-    }
-  }
-
- public:
   MainAllIDsIterator begin() const
   {
     MainAllIDsIterator tmp = *this;
-    tmp.curr_lbarray_index_ = tmp.lbarray_index_lower_bound();
+    tmp.curr_lbarray_index_ = -1;
     tmp.curr_id_ = nullptr;
     return ++tmp;
   }
@@ -918,7 +833,7 @@ class MainAllIDsIterator {
   MainAllIDsIterator end() const
   {
     MainAllIDsIterator tmp = *this;
-    tmp.curr_lbarray_index_ = tmp.lbarray_index_upper_bound();
+    tmp.curr_lbarray_index_ = tmp.lbarray_.size();
     tmp.curr_id_ = nullptr;
     return tmp;
   }

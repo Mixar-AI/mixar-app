@@ -28,9 +28,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_global.hh"
@@ -258,10 +258,10 @@ static wmOperatorStatus lightbox_invoke(bContext *C, wmOperator *op, const wmEve
 {
   ScrArea *area = CTX_wm_area(C);
   wmWindow *win = CTX_wm_window(C);
-  if (!area || !win || !area->spacedata.first() || area->spacetype != SPACE_AGENT_BUBBLE) {
+  if (!area || !win || !area->spacedata.first || area->spacetype != SPACE_AGENT_BUBBLE) {
     return OPERATOR_CANCELLED;
   }
-  SpaceMixieChat *smixie = area->spacedata.first_as<SpaceMixieChat>();
+  SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
 
   char bubble_id[128] = "";
   RNA_string_get(op->ptr, "bubble_id", bubble_id);

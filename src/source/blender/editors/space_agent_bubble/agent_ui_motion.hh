@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "agent_ui_cat_activity.hh"
 
 namespace blender {

@@ -10,9 +10,9 @@
 #include "BKE_global.hh"
 #include "BKE_main.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.hh"
-#include "BLI_time.hh"
-#include "BLI_timer.hh"
+#include "BLI_listbase.h"
+#include "BLI_time.h"
+#include "BLI_timer.h"
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -76,7 +76,7 @@ struct WindowIdentity {
   }
 };
 struct Flight {
-  std::string image_name, context_file_id;
+  std::string image_name;
   uint32_t image_uid = 0, scene_uid = 0;
   WindowIdentity source_window, target_window;
   FlightQuad source{}, target{};
@@ -104,17 +104,13 @@ Image *live_image(const Flight &flight)
   /* Removal/send/deselection cancels immediately, including while waiting for
    * layout. */
   PointerRNA scene = RNA_id_pointer_create(&source->scene->id);
-  const bool video = !flight.context_file_id.empty();
-  const char *collection = video ? "mixie_context_files" : "mixie_chat_pending_attachments";
-  if (!RNA_struct_find_property(&scene, collection)) {
+  if (!RNA_struct_find_property(&scene, "mixie_chat_pending_attachments")) {
     return nullptr;
   }
   bool attached = false;
-  RNA_BEGIN (&scene, item, collection) {
-    if (video ? (RNA_string_get(&item, "file_id") == flight.context_file_id &&
-                 RNA_string_get(&item, "origin") == "moodboard") :
-                (RNA_string_get(&item, "image_path") == flight.image_name &&
-                 RNA_boolean_get(&item, "is_moodboard")))
+  RNA_BEGIN (&scene, item, "mixie_chat_pending_attachments") {
+    if (RNA_string_get(&item, "image_path") == flight.image_name &&
+        RNA_boolean_get(&item, "is_moodboard"))
     {
       attached = true;
       break;
@@ -172,10 +168,7 @@ void draw_flights(const wmWindow *win, void * /*data*/)
       continue;
     }
     const float alpha = attachment_flight_alpha(f.path, t);
-    ImageUser movie_user{};
-    movie_user.framenr = std::max(1, image->lastframe);
-    ImageUser *user = image->source == IMA_SRC_MOVIE ? &movie_user : nullptr;
-    gpu::Texture *texture = alpha > 0.0f ? mixie_moodboard_srgb_texture(image, user) : nullptr;
+    gpu::Texture *texture = alpha > 0.0f ? mixie_moodboard_srgb_texture(image, nullptr) : nullptr;
     if (!texture) {
       continue;
     }
@@ -319,8 +312,7 @@ wmOperatorStatus start_flight(bContext *C, wmOperator *op)
       break;
     }
   }
-  const std::string file_id = RNA_string_get(op->ptr, "context_file_id");
-  if (!image || (image->source == IMA_SRC_MOVIE && file_id.empty()) || flights.size() >= 5) {
+  if (!image || image->source == IMA_SRC_MOVIE || flights.size() >= 5) {
     return OPERATOR_CANCELLED;
   }
   for (const Flight &f : flights) {
@@ -337,7 +329,6 @@ wmOperatorStatus start_flight(bContext *C, wmOperator *op)
   f.image_uid = image->id.session_uid;
   f.scene_uid = CTX_data_scene(C)->id.session_uid;
   f.image_name = name;
-  f.context_file_id = file_id;
   f.queued = BLI_time_now_seconds();
   f.delay = RNA_float_get(op->ptr, "delay");
   flights.push_back(std::move(f));
@@ -387,8 +378,7 @@ void ED_moodboard_attachment_target(const bContext *C,
                                     const rctf &clip)
 {
   for (Flight &f : flights) {
-    const std::string &identity = f.context_file_id.empty() ? f.image_name : f.context_file_id;
-    if (f.start || identity != image_name || !CTX_data_scene(C) ||
+    if (f.start || f.image_name != image_name || !CTX_data_scene(C) ||
         CTX_data_scene(C)->id.session_uid != f.scene_uid)
     {
       continue;
@@ -411,7 +401,7 @@ void ED_moodboard_attachment_target(const bContext *C,
     BLI_rctf_translate(&visible, region->winrct.xmin, region->winrct.ymin);
     f.target = attachment_desktop_quad(win, visible);
     f.target_window = WindowIdentity(win);
-    f.landing = f.context_file_id.empty() ? FlightLanding::Handoff : FlightLanding::Dissolve;
+    f.landing = FlightLanding::Handoff;
   }
 }
 
@@ -435,8 +425,6 @@ void MIXIE_OT_moodboard_attachment_flight(wmOperatorType *ot)
   ot->exec = start_flight;
   ot->flag = OPTYPE_INTERNAL;
   RNA_def_property_flag(RNA_def_string(ot->srna, "image_name", nullptr, 0, "Image", ""),
-                        PROP_SKIP_SAVE);
-  RNA_def_property_flag(RNA_def_string(ot->srna, "context_file_id", nullptr, 0, "Context File", ""),
                         PROP_SKIP_SAVE);
   RNA_def_property_flag(RNA_def_float(ot->srna, "delay", 0, 0, 0.3, "Delay", "", 0, 0.3),
                         PROP_SKIP_SAVE);

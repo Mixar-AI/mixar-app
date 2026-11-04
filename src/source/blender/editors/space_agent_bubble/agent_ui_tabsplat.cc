@@ -23,9 +23,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.hh"
 
@@ -326,7 +326,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                              state.image_mode ?
                                  IFACE_("Describe your scene here... (optional)") :
                                  IFACE_("Describe your scene here..."));
-      ui::button_flag_enable(input_but, ui::BUT_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       /* TEXTEDIT_UPDATE is not just Enter-to-submit parity — it is one of the
        * multiline text gates (ui_but_is_multiline_text): without it a tall
        * Text button vertically centres its content and draws a rect-height

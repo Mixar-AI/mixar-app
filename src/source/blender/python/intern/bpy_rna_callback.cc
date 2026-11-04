@@ -134,16 +134,8 @@ PyObject *pyrna_callback_add(BPy_StructRNA *self, PyObject *args)
   char *cb_event_str = nullptr;
   int cb_event;
 
-  if (!PyArg_ParseTuple(args,
-                        "O" /* `callback` */
-                        "O!" /* `args` */
-                        "|" /* Optional arguments. */
-                        "s" /* `event` */
-                        ":bpy_struct.callback_add",
-                        &cb_func,
-                        &PyTuple_Type,
-                        &cb_args,
-                        &cb_event_str))
+  if (!PyArg_ParseTuple(
+          args, "OO!|s:bpy_struct.callback_add", &cb_func, &PyTuple_Type, &cb_args, &cb_event_str))
   {
     return nullptr;
   }
@@ -183,12 +175,7 @@ PyObject *pyrna_callback_remove(BPy_StructRNA *self, PyObject *args)
   void *handle;
   void *customdata;
 
-  if (!PyArg_ParseTuple(args,
-                        "O!" /* `handle` */
-                        ":callback_remove",
-                        &PyCapsule_Type,
-                        &py_handle))
-  {
+  if (!PyArg_ParseTuple(args, "O!:callback_remove", &PyCapsule_Type, &py_handle)) {
     return nullptr;
   }
 
@@ -298,9 +285,6 @@ static eSpace_Type rna_Space_refine_reverse(StructRNA *srna)
   if (srna == RNA_SpaceTextureSets) {
     return SPACE_TEXTURE_SETS;
   }
-  if (srna == RNA_SpaceProject) {
-    return SPACE_PROJECT;
-  }
   return SPACE_EMPTY;
 }
 
@@ -345,13 +329,7 @@ PyObject *pyrna_callback_classmethod_add(PyObject * /*self*/, PyObject *args)
     params.region_type_enum.value = RGN_TYPE_ANY;
 
     if (!PyArg_ParseTuple(args,
-                          "O"  /* `cls` */
-                          "O"  /* `callback` */
-                          "O!" /* `args` */
-                          "|"  /* Optional arguments. */
-                          "O&" /* `space_type` */
-                          "O&" /* `region_type` */
-                          ":WindowManager.draw_cursor_add",
+                          "OOO!|O&O&:WindowManager.draw_cursor_add",
                           &cls,
                           &cb_func, /* already assigned, no matter */
                           &PyTuple_Type,
@@ -379,12 +357,7 @@ PyObject *pyrna_callback_classmethod_add(PyObject * /*self*/, PyObject *args)
     params.event_enum.items = region_draw_mode_items;
 
     if (!PyArg_ParseTuple(args,
-                          "O"  /* `cls` */
-                          "O"  /* `callback` */
-                          "O!" /* `args` */
-                          "O&" /* `region_type` */
-                          "O&" /* `draw_type` */
-                          ":Space.draw_handler_add",
+                          "OOO!O&O&:Space.draw_handler_add",
                           &cls,
                           &cb_func, /* already assigned, no matter */
                           &PyTuple_Type,
@@ -423,8 +396,6 @@ PyObject *pyrna_callback_classmethod_add(PyObject * /*self*/, PyObject *args)
   Py_INCREF(args);
 
   PyObject *ret = PyCapsule_New(handle, rna_capsule_id, nullptr);
-  /* Failure to create `ret` means the system is likely out of memory. */
-  BLI_assert(ret != nullptr);
 
   /* Store 'args' in context as well for simple access. */
   PyCapsule_SetDestructor(ret, cb_rna_capsule_destructor);
@@ -461,13 +432,8 @@ PyObject *pyrna_callback_classmethod_remove(PyObject * /*self*/, PyObject *args)
   }
 
   if (srna == RNA_WindowManager) {
-    if (!PyArg_ParseTuple(args,
-                          "O"  /* `cls` */
-                          "O!" /* `handler` */
-                          ":WindowManager.draw_cursor_remove",
-                          &cls,
-                          &PyCapsule_Type,
-                          &py_handle))
+    if (!PyArg_ParseTuple(
+            args, "OO!:WindowManager.draw_cursor_remove", &cls, &PyCapsule_Type, &py_handle))
     {
       return nullptr;
     }
@@ -482,10 +448,7 @@ PyObject *pyrna_callback_classmethod_remove(PyObject * /*self*/, PyObject *args)
     params.region_type_enum.items = rna_enum_region_type_items;
 
     if (!PyArg_ParseTuple(args,
-                          "O"  /* `cls` */
-                          "O!" /* `handler` */
-                          "O&" /* `region_type` */
-                          ":Space.draw_handler_remove",
+                          "OO!O&:Space.draw_handler_remove",
                           &cls,
                           &PyCapsule_Type,
                           &py_handle, /* already assigned, no matter */
@@ -565,7 +528,8 @@ void BPY_callback_screen_free(ARegionType *art)
 
 void BPY_callback_wm_free(wmWindowManager *wm)
 {
-  WM_paint_cursor_remove_by_type(wm, cb_wm_cursor_draw, cb_customdata_free);
+  WM_paint_cursor_remove_by_type(
+      wm, reinterpret_cast<void *>(cb_wm_cursor_draw), cb_customdata_free);
 }
 
 /** \} */

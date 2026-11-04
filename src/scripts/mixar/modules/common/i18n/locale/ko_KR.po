@@ -465,8 +465,8 @@ msgstr "무드보드에서 '{name}'을(를) 선택했습니다"
 msgid "Select in Scene"
 msgstr "씬에서 선택"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "뷰포트에서 이 스플랫 월드의 프록시 핸들을 선택합니다"
 
 msgid "Collection"
 msgstr "컬렉션"
@@ -474,11 +474,8 @@ msgstr "컬렉션"
 msgid "That splat world is no longer in this file"
 msgstr "해당 스플랫 월드가 더 이상 이 파일에 없습니다"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "이 스플랫 월드에는 프록시 핸들이 없습니다"
 
 msgid "Selected '{name}'"
 msgstr "'{name}'을(를) 선택했습니다"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "에이전트 버블 창을 열지 못했습니다"
 
 msgid "Capture Viewport"
 msgstr "뷰포트 캡처"
@@ -1445,9 +1439,6 @@ msgstr "로그인이 취소되었거나 시간이 초과되었습니다"
 msgid "Incomplete token pair in response"
 msgstr "응답의 토큰 쌍이 불완전합니다"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "입력 준비 완료"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform}에서 지원되지 않는 설치 프로그램 유형: {instal
 msgid "This install can't be updated in place"
 msgstr "이 설치는 제자리에서 업데이트할 수 없습니다"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version}(으)로 업데이트되었습니다"
 
 msgid "The update was installed successfully."
 msgstr "업데이트가 성공적으로 설치되었습니다."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "설치 프로그램이 완료되지 않았습니다."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total} 중 {transferred}"
@@ -3124,9 +3100,6 @@ msgstr "업데이트를 적용하기 위해 Mixar가 다시 시작됩니다."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 다운로드를 사용하여 브라우저에서 업데이트하세요."
-
-msgid "Retry"
-msgstr "재시도"
 
 msgid "Restart & Update"
 msgstr "다시 시작 및 업데이트"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "다시 시작하여 업데이트"
 msgid "Updating…"
 msgstr "업데이트 중…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "다운로드 중 {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "지원되지 않는 스플랫 파일 유형 '{ext}' (.spz 또는 .ply �
 msgid "File not found: {path}"
 msgstr "파일을 찾을 수 없습니다: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "{name}에서 가져온 오브젝트가 없습니다"
 
 msgid "Failed to read image: {error}"
 msgstr "이미지를 읽지 못했습니다: {error}"
@@ -6923,8 +6869,8 @@ msgstr "월드 생성 결과에 스플랫(SPZ) URL이 없습니다"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "월드 생성 결과에 콜라이더(GLB) URL이 없습니다"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "월드를 다운로드/변환하지 못했습니다: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "월드를 가져왔지만 오브젝트가 생성되지 않았습니다"
@@ -7771,12 +7717,6 @@ msgstr "무드보드"
 
 msgid "Right-click context menu for moodboard"
 msgstr "무드보드용 오른쪽 클릭 컨텍스트 메뉴입니다"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "연결 삭제"
@@ -10048,14 +9988,14 @@ msgstr "모델 목록을 새로고침하는 중..."
 msgid "Generation catalog module not available"
 msgstr "생성 카탈로그 모듈을 사용할 수 없습니다"
 
-msgid "A duplicate image generation is already queued"
-msgstr "동일한 이미지 생성이 이미 대기열에 있습니다"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI 이미지를 생성하여 무드보드에 추가합니다"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "프롬프트를 입력하세요 (Enter 키를 눌러 텍스트를 확정하세요)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "동일한 이미지 생성이 이미 대기열에 있습니다"
 
 msgid "No model specified and no default available"
 msgstr "지정된 모델이 없으며 사용 가능한 기본값도 없습니다"
@@ -10975,32 +10915,14 @@ msgstr "원점에 접지"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "바닥이 Z=0에 놓이고 바닥 면적의 중심이 원점에 오도록 스플랫을 이동합니다 (생성된 월드와 동일한 접지 방식)"
 
-msgid "Source"
-msgstr "소스"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "표준"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "선택된 스플랫 파일이 없습니다"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "스플랫 {count}개를 가져왔습니다: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "가우시안 스플랫 (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12570,6 +12492,9 @@ msgstr "모든 뼈대 영향을 포함"
 
 msgid "Lighting Mode"
 msgstr "조명 모드"
+
+msgid "Standard"
+msgstr "표준"
 
 msgid "Physically-based glTF lighting units"
 msgstr "물리 기반 glTF 조명 단위"
@@ -18822,6 +18747,9 @@ msgstr "블렌딩"
 msgid "No masks"
 msgstr "마스크 없음"
 
+msgid "Source"
+msgstr "소스"
+
 msgid "No node group loaded"
 msgstr "로드된 노드 그룹 없음"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "수정 중..."
 
 msgid "Awaiting Input..."
 msgstr "입력 대기 중..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "체크포인트 파일이 없습니다"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "현재 상태를 보존할 수 없어 아무것도 변경하지 않았습니다"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "체크포인트를 읽을 수 없습니다"
 
@@ -21135,6 +21063,9 @@ msgstr "로그아웃"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "재시도"
 
 msgid "Choose Export Location"
 msgstr "내보내기 위치 선택"
@@ -21606,15 +21537,6 @@ msgstr "첨부 파일은 최대 {count}개"
 msgid "Paste failed: {error}"
 msgstr "붙여 넣기 실패: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}을(를) 추가할 수 없음: {error}"
-
-msgid "These references are already attached"
-msgstr "이 참조는 이미 첨부되어 있습니다"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}을(를) 추가할 수 없음: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "첨부 파일 한도({count}개)에 도달했습니다"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} 건너뜀: {error}"
 
+msgid "These references are already attached"
+msgstr "이 참조는 이미 첨부되어 있습니다"
+
 msgid "Added {count} image(s)"
 msgstr "이미지 {count}개를 추가했습니다"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend에서 추가"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "에이전트 버블 창을 열지 못했습니다"
+
 msgid "Agent Bubble Status"
 msgstr "에이전트 버블 상태"
 
@@ -27053,9 +26963,6 @@ msgstr "무드보드 첨부 애니메이션"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "새로 첨부한 참조가 Mixie 채팅으로 날아가는 모습을 표시합니다"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "지연"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "카드 그리기에는 활성 영역의 그리기 콜백이 필요합니다"
 
@@ -29793,9 +29703,6 @@ msgstr "둥근 UI 요소의 모서리 반경"
 msgid "Mixie Chat"
 msgstr "Mixie 채팅"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "드롭 경로는 비어 있지 않은 문자열이어야 합니다"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "드롭 경로는 비어 있지 않은 JSON 배열이어야 합니다"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "전역 영역"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "창 전역 영역(상단 바, 상태 표시줄)입니다. Mixar 확장 기능으로, 온보딩에서 다시 그리기를 위해 상단 바에 접근할 수 있도록 노출됩니다."
 
 msgid "QA UI Dump"
 msgstr "QA UI 덤프"

@@ -196,9 +196,8 @@ def _context(engine: str = "BLENDER_EEVEE", *, cycles_available: bool = True):
     context = SimpleNamespace(
         scene=SimpleNamespace(render=_Render(engine, cycles_available=cycles_available)),
         area=area,
-        window=SimpleNamespace(screen=SimpleNamespace(areas=[area])),
+        window=SimpleNamespace(),
     )
-    context.window_manager = SimpleNamespace(windows=[context.window])
     return context, shading, redraws
 
 

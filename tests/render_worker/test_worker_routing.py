@@ -193,14 +193,14 @@ def pkg(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "destination", lambda where, sub=None: str(tmp_path / "out"))
     record = {"folder": str(tmp_path / "snap"), "path": str(tmp_path / "snap" / "s.blend"),
               "images": "", "image_count": 0, "bytes": 10, "save_s": 0.1, "images_s": 0.0}
-    monkeypatch.setattr(snapshot, "write", lambda purpose, **_kwargs: dict(record))
+    monkeypatch.setattr(snapshot, "write", lambda purpose: dict(record))
     monkeypatch.setattr(snapshot, "acquire", lambda rec: None)
     monkeypatch.setattr(snapshot, "release", lambda rec: None)
     jobs = {}
     monkeypatch.setattr(supervisor, "root_dir", lambda: str(tmp_path))
     monkeypatch.setattr(supervisor, "available", lambda: True)
     monkeypatch.setattr(supervisor, "submit",
-                        lambda kind, message, timeout_s, **_kw: jobs.setdefault("j1", message) and "j1")
+                        lambda kind, message, timeout_s: jobs.setdefault("j1", message) and "j1")
     monkeypatch.setattr(supervisor, "forget", lambda job_id: None)
     state = {"value": {"state": "running"}}
     monkeypatch.setattr(supervisor, "poll", lambda job_id: dict(state["value"]))
@@ -540,16 +540,10 @@ def test_generated_and_painted_images_count_as_dirty(monkeypatch):
 
 
 def test_the_worker_reads_render_result_without_has_data():
-    """A --background worker's Render Result never reports has_data (nor, since
-    Blender 5.3, does the app's): the shared reader must not gate on it."""
-    import ast
     from pathlib import Path
     from mixar.modules.common.render_worker import worker_jobs
-    from mixar.modules.space_mixie_chat.core import preview_render
-    assert "pr._read_png(scene)" in Path(worker_jobs.__file__).read_text(encoding="utf-8")
-    tree = ast.parse(Path(preview_render.__file__).read_text(encoding="utf-8"))
-    reader = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_read_png")
-    assert not any(isinstance(n, ast.Attribute) and n.attr == "has_data" for n in ast.walk(reader))
+    src = Path(worker_jobs.__file__).read_text(encoding="utf-8")
+    assert "_read_png(scene, require_loaded=False)" in src
 
 
 def test_the_synchronous_render_lives_only_in_the_worker():

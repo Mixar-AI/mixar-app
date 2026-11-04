@@ -4,8 +4,8 @@
 /** Flat Zen scene-toolbar controls. Native layout, RNA and operators own input. */
 #include "../interface_intern.hh"
 #include "../interface_mixar_card_paint.hh"
-#include "BLI_math_vector_c.hh"
-#include "BLI_string.hh"
+#include "BLI_math_vector.h"
+#include "BLI_string.h"
 #include "RNA_access.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar.hh"

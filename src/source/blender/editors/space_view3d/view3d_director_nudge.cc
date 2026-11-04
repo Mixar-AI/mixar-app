@@ -31,8 +31,8 @@
 
 #include "BLI_math_matrix_types.hh"
 #include "BLI_math_vector.hh"
-#include "BLI_time.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_time.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_object.hh"

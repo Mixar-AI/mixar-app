@@ -23,10 +23,10 @@
 #include "BKE_global.hh"
 #include "BKE_main.hh"
 
-#include "BLI_listbase.hh"
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -74,7 +74,7 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area)
   if (G_MAIN == nullptr) {
     return false;
   }
-  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   if (wm == nullptr) {
     return false;
   }
@@ -96,7 +96,7 @@ static const ScrArea *mixar_area_of_region(const ARegion *region)
   if (region == nullptr || G_MAIN == nullptr) {
     return nullptr;
   }
-  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   if (wm == nullptr) {
     return nullptr;
   }
@@ -122,7 +122,7 @@ bool mixar_region_is_zen_floating_tools(const ARegion *region)
   if (G_MAIN == nullptr) {
     return false;
   }
-  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   if (wm == nullptr) {
     return false;
   }

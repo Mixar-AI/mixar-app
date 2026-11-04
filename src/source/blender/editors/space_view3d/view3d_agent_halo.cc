@@ -31,10 +31,10 @@
 #include "BKE_idprop.hh"
 #include "BKE_screen.hh"
 
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "BLI_listbase_iterator.hh"
-#include "BLI_math_base_c.hh"
-#include "BLI_time.hh"
+#include "BLI_math_base.h"
+#include "BLI_time.h"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"

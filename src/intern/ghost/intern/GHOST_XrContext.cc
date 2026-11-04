@@ -15,7 +15,7 @@
 #include <string>
 #include <string_view>
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "BLI_string_ref.hh"
 #include "BLI_vector.hh"
 
@@ -463,7 +463,6 @@ void GHOST_XrContext::getExtensionsToEnable(
 #ifdef XR_HTC_VIVE_FOCUS3_CONTROLLER_INTERACTION_EXTENSION_NAME
   try_ext.push_back(XR_HTC_VIVE_FOCUS3_CONTROLLER_INTERACTION_EXTENSION_NAME);
 #endif
-  try_ext.push_back(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
   try_ext.push_back(XR_HUAWEI_CONTROLLER_INTERACTION_EXTENSION_NAME);
 
   /* Controller model extension. */

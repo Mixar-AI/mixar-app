@@ -4,7 +4,7 @@
 #pragma once
 
 #include "BLF_api.hh"
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "GPU_state.hh"
 
 namespace blender {

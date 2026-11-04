@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "RNA_types.hh"
 
 #include "agent_ui_pane_kit.hh"

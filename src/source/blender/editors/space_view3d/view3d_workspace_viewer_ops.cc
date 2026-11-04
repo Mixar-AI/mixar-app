@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include "MEM_guardedalloc.h"
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "BKE_context.hh"
 #include "BKE_main.hh"
 #include "BKE_scene.hh"
@@ -84,7 +84,7 @@ void refresh(bContext *C, WorkspaceViewer &v)
     v.has_render = false;
     v.scene_uid = scene->id.session_uid;
   }
-  ViewLayer *layer = scene->view_layers.first_as<ViewLayer>();
+  ViewLayer *layer = static_cast<ViewLayer *>(scene->view_layers.first);
   if (!layer) { return; }
   Depsgraph *depsgraph = BKE_scene_ensure_depsgraph(bmain, scene, layer);
   bool visible_elsewhere = false;

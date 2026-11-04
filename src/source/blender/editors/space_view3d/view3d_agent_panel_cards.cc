@@ -15,12 +15,12 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "BLI_map.hh"
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "BLI_set.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"

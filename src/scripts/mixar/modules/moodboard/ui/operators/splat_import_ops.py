@@ -5,17 +5,14 @@
 """File > Import operator for local Gaussian splats (.spz / 3DGS .ply).
 
 Agent-drivable: ``bpy.ops.mixie.import_splat(filepath=...)`` imports without
-a file browser. ``source`` picks the SPZ frame: ``STANDARD`` (spec, default)
-or ``WORLD_LABS`` for a downloaded Marble file (``core/splat_import.py``). Multi-select in the browser imports each file into its own
+a file browser. Multi-select in the browser imports each file into its own
 ``Splat_*`` collection.
 """
 
 import os
 
 import bpy
-from bpy.props import (
-    BoolProperty, CollectionProperty, EnumProperty, StringProperty,
-)
+from bpy.props import BoolProperty, CollectionProperty, StringProperty
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
@@ -48,20 +45,6 @@ class MIXIE_OT_import_splat(Operator, ImportHelper):
         ),
         default=True,
     )
-    source: EnumProperty(
-        name="Source",
-        description="Who wrote the .spz file (decides which way is up; .ply ignores it)",
-        items=(
-            ('STANDARD', "Standard",
-             "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"),
-            ('WORLD_LABS', "World Labs",
-             "A world downloaded from World Labs Marble"),
-        ),
-        default='STANDARD',
-        # Never carried over from the last import: a remembered World Labs
-        # would silently flip the next spec file.
-        options={'SKIP_SAVE'},
-    )
 
     def execute(self, context):
         from mixar.modules.moodboard.core.splat_import import import_splat_file
@@ -79,9 +62,7 @@ class MIXIE_OT_import_splat(Operator, ImportHelper):
         imported, errors = [], []
         for path in paths:
             try:
-                imported += import_splat_file(
-                    path, recenter=self.recenter, source=self.source,
-                )
+                imported += import_splat_file(path, recenter=self.recenter)
             except Exception as e:  # noqa: BLE001 - surfaced to the user below
                 logger.error("[SplatImport] %s failed: %s", path, e)
                 errors.append(f"{os.path.basename(path)}: {e}")
@@ -104,7 +85,7 @@ class MIXIE_OT_import_splat(Operator, ImportHelper):
 
 def _menu_import(self, context):
     self.layout.operator(
-        MIXIE_OT_import_splat.bl_idname, text="Gaussian Splat, Grounded (.spz/.ply)",
+        MIXIE_OT_import_splat.bl_idname, text="Gaussian Splat (.spz/.ply)",
     )
 
 

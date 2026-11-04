@@ -26,10 +26,10 @@
 #include <cmath>
 #include <cstring>
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_global.hh"
@@ -187,7 +187,7 @@ bool mixie_chat_history_cursor(
   bool any_hovered = false;
   /* A locked checkpoints card (agent busy) dims its rows and ignores clicks;
    * the hand cursor must not promise otherwise. */
-  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   const bool locked = (mixie_chat_history_read_mode(wm) == HistoryMode::Checkpoints) &&
                       mixie_chat_history_read_locked(wm);
   const bool in_list = !locked && BLI_rctf_isect_pt(&rt->history_list_bounds, mouse_x, mouse_y);
@@ -342,12 +342,12 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
 {
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
-  if (!area || !region || !area->spacedata.first() ||
+  if (!area || !region || !area->spacedata.first ||
       (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return false;
   }
-  SpaceMixieChat *smixie = area->spacedata.first_as<SpaceMixieChat>();
+  SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
   if (!rt->history_overlay_active) {
     return false;

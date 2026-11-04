@@ -14,9 +14,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "BLI_string_ref.hh"
-#include "BLI_string_utf8.hh"
+#include "BLI_string_utf8.h"
 #include "BLI_vector.hh"
 
 #include "BLF_api.hh"
@@ -54,7 +54,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
    * (see DNA_space_types.h), so this cast is valid for both. */
   if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
-    return area->spacedata.first_as<SpaceMixieChat>();
+    return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
   return nullptr;
 }

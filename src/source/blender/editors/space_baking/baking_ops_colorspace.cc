@@ -16,7 +16,6 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
-#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -72,7 +71,7 @@ static wmOperatorStatus pixels_to_srgb_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Notify. */
@@ -128,7 +127,7 @@ static wmOperatorStatus pixels_to_linear_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Notify. */
@@ -188,7 +187,7 @@ static wmOperatorStatus batch_srgb_to_linear_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Notify. */
@@ -248,7 +247,7 @@ static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Notify. */

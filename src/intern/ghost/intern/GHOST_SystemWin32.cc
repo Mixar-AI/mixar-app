@@ -315,7 +315,7 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext(GHOST_GPUSettings gpu_
 #ifdef WITH_VULKAN_BACKEND
     case GHOST_kDrawingContextTypeVulkan: {
       GHOST_Context *context = new GHOST_ContextVK(
-          context_params_offscreen, (HWND)0, 1, 1, gpu_settings.preferred_device);
+          context_params_offscreen, (HWND)0, 1, 2, gpu_settings.preferred_device);
       if (context->initializeDrawingContext()) {
         return context;
       }
@@ -3653,35 +3653,31 @@ extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
   if (!hwnd) {
     return false;
   }
-#ifdef WITH_VULKAN_BACKEND
-  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
-  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
-    GHOST_Context *context = win32->getContext();
-    if (context == nullptr) {
-      Mixar_Win32GlassSetEnabled(hwnd, false);
-      return !enable;
-    }
-    /* Vulkan windows draw into Blender's RGBA back-left texture, not the
-     * swapchain, so wm_draw_mixar_glass always has destination alpha to put
-     * the frost under. That frost presents opaque interior pixels clipped by
-     * the rounded HWND region: it never needs the swapchain to hand alpha to
-     * DWM. Windows drivers commonly offer only an opaque surface (NVIDIA
-     * does), and Blender 5.3 made Vulkan the Windows x64 default, so gating
-     * frost on premultiplied composite alpha turned the island and pill
-     * opaque. Premultiply only where the surface supports it. */
-    const bool dwm_ok = Mixar_Win32GlassSetEnabled(hwnd, enable);
-    GHOST_ContextVK *vk = static_cast<GHOST_ContextVK *>(context);
-    const bool premul = enable && dwm_ok && vk->mixar_supports_non_opaque_composite_alpha();
-    /* A failed switch leaves the swapchain opaque, which the frost tolerates. */
-    vk->mixar_set_premultiplied_composite_alpha(premul);
-    return dwm_ok;
-  }
-#endif
   if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
     Mixar_Win32GlassSetEnabled(hwnd, false);
     return false;
   }
-  return Mixar_Win32GlassSetEnabled(hwnd, enable);
+  const bool dwm_ok = Mixar_Win32GlassSetEnabled(hwnd, enable);
+#ifdef WITH_VULKAN_BACKEND
+  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
+  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
+    GHOST_Context *context = win32->getContext();
+    if (context != nullptr) {
+      GHOST_ContextVK *vk = static_cast<GHOST_ContextVK *>(context);
+      if (!vk->mixar_set_premultiplied_composite_alpha(enable && dwm_ok)) {
+        if (enable && dwm_ok) {
+          Mixar_Win32GlassSetEnabled(hwnd, false);
+          return false;
+        }
+      }
+    }
+    else if (enable && dwm_ok) {
+      Mixar_Win32GlassSetEnabled(hwnd, false);
+      return false;
+    }
+  }
+#endif
+  return dwm_ok;
 }
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle)

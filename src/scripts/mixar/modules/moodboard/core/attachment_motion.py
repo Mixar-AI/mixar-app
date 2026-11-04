@@ -7,14 +7,13 @@ from mixar.config.logging_config import get_logger
 _logger = get_logger(__name__)
 
 
-def animate_attachments(scene, names, *, context_file_ids=None):
+def animate_attachments(scene, names):
     if bpy.app.background or bpy.context.scene != scene:
         return
     for index, name in enumerate(names):
         try:
-            kwargs = {"context_file_id": context_file_ids[name]} if context_file_ids else {}
             bpy.ops.mixie.moodboard_attachment_flight(
-                image_name=name, delay=index * 0.055, **kwargs,
+                image_name=name, delay=index * 0.055,
             )
         except (AttributeError, RuntimeError):
             # An older binary or a disappearing UI cannot block the attachment.

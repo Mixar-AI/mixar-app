@@ -465,8 +465,8 @@ msgstr "已在情绪板上选中“{name}”"
 msgid "Select in Scene"
 msgstr "在场景中选择"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "在视图中选择此泼溅世界的代理控制柄"
 
 msgid "Collection"
 msgstr "集合"
@@ -474,11 +474,8 @@ msgstr "集合"
 msgid "That splat world is no longer in this file"
 msgstr "该泼溅世界已不在此文件中"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "此泼溅世界没有代理控制柄"
 
 msgid "Selected '{name}'"
 msgstr "已选中“{name}”"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "打开智能体气泡窗口失败"
 
 msgid "Capture Viewport"
 msgstr "捕获视图"
@@ -1445,9 +1439,6 @@ msgstr "登录已取消或超时"
 msgid "Incomplete token pair in response"
 msgstr "响应中的令牌对不完整"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "准备就绪，可以输入"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform} 不支持的安装程序类型：{installer_type}"
 msgid "This install can't be updated in place"
 msgstr "此安装无法原位更新"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "已更新到 Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "更新已成功安装。"
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "安装程序未完成。"
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}%——{transferred} / {total}"
@@ -3124,9 +3100,6 @@ msgstr "Mixar 将重新启动以应用更新。"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error}——请使用“下载”通过浏览器更新。"
-
-msgid "Retry"
-msgstr "重试"
 
 msgid "Restart & Update"
 msgstr "重启并更新"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "重启以更新"
 msgid "Updating…"
 msgstr "正在更新…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "正在下载 {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "不支持的泼溅文件类型“{ext}”（应为 .spz 或 .ply）"
 msgid "File not found: {path}"
 msgstr "未找到文件：{path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "未从 {name} 导入任何物体"
 
 msgid "Failed to read image: {error}"
 msgstr "无法读取图像：{error}"
@@ -6923,8 +6869,8 @@ msgstr "世界生成结果缺少泼溅（SPZ）URL"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "世界生成结果缺少碰撞体（GLB）URL"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "无法下载/转换世界：{error}"
 
 msgid "World imported but produced no objects"
 msgstr "世界已导入，但未生成任何物体"
@@ -7771,12 +7717,6 @@ msgstr "情绪板"
 
 msgid "Right-click context menu for moodboard"
 msgstr "情绪板的右键上下文菜单"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "删除连接"
@@ -10048,14 +9988,14 @@ msgstr "正在刷新模型列表..."
 msgid "Generation catalog module not available"
 msgstr "生成目录模块不可用"
 
-msgid "A duplicate image generation is already queued"
-msgstr "相同的图像生成已在队列中"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "生成 AI 图像并将其添加到情绪板"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "请输入提示词（按 Enter 确认文本）"
+
+msgid "A duplicate image generation is already queued"
+msgstr "相同的图像生成已在队列中"
 
 msgid "No model specified and no default available"
 msgstr "未指定模型，且没有可用的默认模型"
@@ -10975,32 +10915,14 @@ msgstr "落地到原点"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "移动泼溅，使其地面位于 Z=0 且占地中心位于原点（与生成的世界落地方式相同）"
 
-msgid "Source"
-msgstr "源"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "标准"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "未选择泼溅文件"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "已导入 {count} 个泼溅：{names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "高斯泼溅 (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12570,6 +12492,9 @@ msgstr "包含全部骨骼影响"
 
 msgid "Lighting Mode"
 msgstr "光照模式"
+
+msgid "Standard"
+msgstr "标准"
 
 msgid "Physically-based glTF lighting units"
 msgstr "基于物理的 glTF 光照单位"
@@ -18822,6 +18747,9 @@ msgstr "混合"
 msgid "No masks"
 msgstr "无遮罩"
 
+msgid "Source"
+msgstr "源"
+
 msgid "No node group loaded"
 msgstr "未加载节点组"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "修改中..."
 
 msgid "Awaiting Input..."
 msgstr "等待输入..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "检查点文件缺失"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "无法保留当前状态，因此未做任何更改"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "无法读取检查点"
 
@@ -21135,6 +21063,9 @@ msgstr "退出登录"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "重试"
 
 msgid "Choose Export Location"
 msgstr "选择导出位置"
@@ -21606,15 +21537,6 @@ msgstr "最多 {count} 个附件"
 msgid "Paste failed: {error}"
 msgstr "粘贴失败：{error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "无法添加 {name}：{error}"
-
-msgid "These references are already attached"
-msgstr "这些参考图已附加"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "无法添加 {name}：{error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "已达到附件数量上限（{count}）"
 
 msgid "Skipped {name}: {error}"
 msgstr "已跳过 {name}：{error}"
 
+msgid "These references are already attached"
+msgstr "这些参考图已附加"
+
 msgid "Added {count} image(s)"
 msgstr "已添加 {count} 张图像"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "从 Blend 添加"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "自动模式：智能体会自行决定待定选项而不询问您，并
 msgid "Agent Bubble"
 msgstr "智能体气泡"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "打开智能体气泡窗口失败"
+
 msgid "Agent Bubble Status"
 msgstr "智能体气泡状态"
 
@@ -27053,9 +26963,6 @@ msgstr "情绪板附件动画"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "显示新附加的参考飞入 Mixie 聊天的动画"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "延迟"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "绘制卡片需要活动区域的绘制回调"
 
@@ -29793,9 +29703,6 @@ msgstr "圆角界面元素的圆角半径"
 msgid "Mixie Chat"
 msgstr "Mixie 聊天"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "拖放路径必须为非空字符串"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "拖放路径必须为非空 JSON 数组"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "全局区域"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "窗口全局区域（顶栏、状态栏）。Mixar 扩展——公开此项以便新手引导可以定位顶栏并重绘。"
 
 msgid "QA UI Dump"
 msgstr "QA 界面转储"

@@ -14,7 +14,6 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
-from mixar.modules.common.utils.generation_dispatch import record_reason
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.model_gen_inputs import selected_input_images
 
@@ -132,13 +131,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image, extra_images = selected[0], selected[1:]
                 else:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
             else:
                 image = getattr(sidebar_tab, 'reference_image', None)
                 if not image:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please add an input image")
                     return {"CANCELLED"}
         else:
@@ -147,13 +144,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image, extra_images = selected[0], selected[1:]
                 else:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
             elif hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "No input image selected")
                     return {"CANCELLED"}
             else:
@@ -203,7 +198,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             try:
                 image_bytes = compress_for_service(image, "image_to_3d")
             except Exception as e:
-                record_reason("image_processing_failed")
                 self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return None
 
@@ -249,11 +243,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 scene_flag="mixie_image_to_3d_is_generating",
             )
             if not job:
-                record_reason("duplicate_job")
                 self.report({"ERROR"}, "A duplicate generation is already queued")
                 return None
         except Exception as e:
-            record_reason("enqueue_failed")
             self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return None
 

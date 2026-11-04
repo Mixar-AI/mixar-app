@@ -44,7 +44,7 @@ static void RNA_def_mixar_popup_query(BlenderRNA *brna, StructRNA *window)
   PropertyRNA *parm = RNA_def_boolean(func, "open", false, "", "");
   RNA_def_function_return(func, parm);
 
-  StructRNA *wm = brna->structs_map.lookup_default("WindowManager"_ustr, nullptr);
+  StructRNA *wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (wm == nullptr) {
     return;
   }

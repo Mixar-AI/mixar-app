@@ -144,7 +144,7 @@ def test_the_render_job_still_writes_no_preference():
     assert "preferences.addons" not in preview
     assert "compute_device_type" not in preview
     assert "render_device.use_gpu()" in preview
-    assert 'set_value(scene.cycles, "device", "GPU" if gpu else "CPU")' in preview
+    assert 'set_value(scene.cycles, "device", "GPU")' in preview
 
     startup = BOOTSTRAP.read_text()
     assert "enable_gpu_device" in startup

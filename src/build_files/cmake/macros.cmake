@@ -97,10 +97,7 @@ function(file_suffix
   get_filename_component(_file_name_PATH ${file_name} PATH)
   get_filename_component(_file_name_NAME_WE ${file_name} NAME_WE)
   get_filename_component(_file_name_EXT ${file_name} EXT)
-  set(${file_name_new}
-    "${_file_name_PATH}/${_file_name_NAME_WE}${file_suffix}${_file_name_EXT}"
-    PARENT_SCOPE
-  )
+  set(${file_name_new} "${_file_name_PATH}/${_file_name_NAME_WE}${file_suffix}${_file_name_EXT}" PARENT_SCOPE)
 endfunction()
 
 # useful for adding debug suffix to library lists:
@@ -273,8 +270,8 @@ function(blender_source_group
   if(IDE_GROUP_SOURCES_IN_FOLDERS)
     foreach(_SRC ${sources})
       # remove ../'s
-      cmake_path(ABSOLUTE_PATH _SRC NORMALIZE OUTPUT_VARIABLE _SRC_DIR)
-      cmake_path(GET _SRC_DIR PARENT_PATH _SRC_DIR)
+      get_filename_component(_SRC_DIR ${_SRC} REALPATH)
+      get_filename_component(_SRC_DIR ${_SRC_DIR} DIRECTORY)
       string(FIND "${_SRC_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/" _pos)
       if(NOT _pos EQUAL -1)
         string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" GROUP_ID ${_SRC_DIR})
@@ -428,21 +425,6 @@ function(blender_link_libraries
   target_link_libraries(${target} ${dependency_libraries})
 endfunction()
 
-function(is_c_or_cxx_source file variable)
-  set(result FALSE)
-  cmake_path(GET file EXTENSION LAST_ONLY _ext)
-  # Files without an extension are not sources.
-  if(_ext)
-    # Strip the leading dot.
-    string(SUBSTRING "${_ext}" 1 -1 _ext)
-    if(("${_ext}" IN_LIST CMAKE_C_SOURCE_FILE_EXTENSIONS) OR
-       ("${_ext}" IN_LIST CMAKE_CXX_SOURCE_FILE_EXTENSIONS))
-      set(result TRUE)
-    endif()
-  endif()
-  set(${variable} ${result} PARENT_SCOPE)
-endfunction()
-
 function(blender_add_lib__impl
   name
   sources
@@ -453,25 +435,7 @@ function(blender_add_lib__impl
 
   # message(STATUS "Configuring library ${name}")
 
-  # Check if all sources are header-only (not C/C++ sources).
-  set(_all_headers TRUE)
-  foreach(_src ${sources})
-    is_c_or_cxx_source("${_src}" _is_source)
-    if(_is_source)
-      set(_all_headers FALSE)
-      break()
-    endif()
-  endforeach()
-  unset(_src)
-  unset(_is_source)
-
-  if(_all_headers)
-    add_library(${name} INTERFACE)
-    target_sources(${name} PRIVATE ${sources})
-  else()
-    add_library(${name} ${sources})
-  endif()
-  unset(_all_headers)
+  add_library(${name} ${sources})
 
   # On windows vcpkg goes out of its way to make its libs the preferred
   # libs, and needs to be explicitly be told not to do that.
@@ -1051,6 +1015,49 @@ function(get_blender_version)
 endfunction()
 
 
+# hacks to override initial project settings
+# these macros must be called directly before/after project(Blender)
+#
+# NOTE: must be a macro pair, `_pre` sets `_reset_standard_c*flags_rel`
+# variables that `_post` reads from the same scope, and `_post` modifies
+# `CMAKE_C/CXX_FLAGS_RELEASE` cache entries.
+macro(blender_project_hack_pre)
+  # ------------------
+  # GCC -O3 HACK START
+  # needed because O3 can cause problems but
+  # allow the builder to set O3 manually after.
+  if(DEFINED CMAKE_C_FLAGS_RELEASE)
+    set(_reset_standard_cflags_rel OFF)
+  else()
+    set(_reset_standard_cflags_rel ON)
+  endif()
+  if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
+    set(_reset_standard_cxxflags_rel OFF)
+  else()
+    set(_reset_standard_cxxflags_rel ON)
+  endif()
+endmacro()
+
+
+macro(blender_project_hack_post)
+  # ----------------
+  # GCC -O3 HACK END
+  if(_reset_standard_cflags_rel)
+    string(REGEX REPLACE "-O3" "-O2" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}" CACHE STRING "" FORCE)
+    mark_as_advanced(CMAKE_C_FLAGS_RELEASE)
+  endif()
+
+  if(_reset_standard_cxxflags_rel)
+    string(REGEX REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}" CACHE STRING "" FORCE)
+    mark_as_advanced(CMAKE_CXX_FLAGS_RELEASE)
+  endif()
+
+  unset(_reset_standard_cflags_rel)
+  unset(_reset_standard_cxxflags_rel)
+endmacro()
+
 # pair of macros to allow libraries to be specify files to install, but to
 # only install them at the end so the directories don't get cleared with
 # the files in them. used by cycles to install addon.
@@ -1123,8 +1130,8 @@ function(data_to_c_simple
   )
 
   # remove ../'s
-  cmake_path(SET _file_from NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/${file_from}")
-  cmake_path(SET _file_to   NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.c")
+  get_filename_component(_file_from ${CMAKE_CURRENT_SOURCE_DIR}/${file_from}   REALPATH)
+  get_filename_component(_file_to   ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.c REALPATH)
 
   list(APPEND ${list_to_add} ${_file_to})
   source_group(Generated FILES ${_file_to})
@@ -1148,17 +1155,17 @@ function(glsl_to_c
   )
 
   # remove ../'s
-  cmake_path(SET _file_from NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/${file_from}")
-  cmake_path(SET _file_tmp  NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.tmp")
-  cmake_path(SET _file_meta NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.hh")
-  cmake_path(SET _file_info NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.info")
-  cmake_path(SET _file_to   NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.c")
-  cmake_path(SET _file_dep  NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${file_from}.d")
+  get_filename_component(_file_from ${CMAKE_CURRENT_SOURCE_DIR}/${file_from}    REALPATH)
+  get_filename_component(_file_tmp  ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.tmp   REALPATH)
+  get_filename_component(_file_meta ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.hh REALPATH)
+  get_filename_component(_file_info ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.info  REALPATH)
+  get_filename_component(_file_to   ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.c  REALPATH)
+  get_filename_component(_file_dep  ${CMAKE_CURRENT_BINARY_DIR}/${file_from}.d  REALPATH)
 
   # Turn include directories into absolute paths
   set(_inc_list "")
   foreach(path IN LISTS ${include_list})
-    cmake_path(SET _inc_path NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
+    get_filename_component(_inc_path ${CMAKE_CURRENT_SOURCE_DIR}/${path} REALPATH)
     list(APPEND _inc_list ${_inc_path})
   endforeach()
 
@@ -1170,9 +1177,7 @@ function(glsl_to_c
   add_custom_command(
     OUTPUT  ${_file_tmp} ${_file_meta} ${_file_info} ${_file_dep}
     DEPFILE ${_file_dep}
-    COMMAND
-      "$<TARGET_FILE:shader_tool>"
-      ${_file_from} ${_file_tmp} ${_file_meta} ${_file_info} ${_file_dep} ${_inc_list}
+    COMMAND "$<TARGET_FILE:shader_tool>" ${_file_from} ${_file_tmp} ${_file_meta} ${_file_info} ${_file_dep} ${_inc_list}
     DEPENDS ${_file_from} shader_tool)
 
   add_custom_command(
@@ -1195,8 +1200,8 @@ function(msgfmt_simple
   # remove ../'s
   get_filename_component(_file_from_we ${file_from} NAME_WE)
 
-  cmake_path(ABSOLUTE_PATH file_from NORMALIZE OUTPUT_VARIABLE _file_from)
-  cmake_path(SET _file_to NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${_file_from_we}.mo")
+  get_filename_component(_file_from ${file_from} REALPATH)
+  get_filename_component(_file_to ${CMAKE_CURRENT_BINARY_DIR}/${_file_from_we}.mo REALPATH)
 
   list(APPEND ${list_to_add} ${_file_to})
   set(${list_to_add} ${${list_to_add}} PARENT_SCOPE)
@@ -1359,12 +1364,7 @@ function(find_python_module_file
   endif()
 
   path_strip_trailing_slash(_python_root "${PYTHON_LIBPATH}")
-  if(WIN32)
-    # MS-Windows has no `python${PYTHON_VERSION}` directory, `site-packages` is directly in `lib`.
-    set(_python_base "${_python_root}")
-  else()
-    set(_python_base "${_python_root}/python${PYTHON_VERSION}")
-  endif()
+  set(_python_base "${_python_root}/python${PYTHON_VERSION}")
   # This always moves up one level (even if there is a trailing slash).
   get_filename_component(_python_root "${_python_root}" DIRECTORY)
   path_ensure_trailing_slash(_python_root "${_python_root}")
@@ -1643,13 +1643,9 @@ function(compile_sources_as_cpp
 
   if(WIN32)
     foreach(glsl_file ${sources})
-      get_filename_component(_glsl_file_dir "${glsl_file}" DIRECTORY)
-      get_filename_component(_glsl_file_name "${glsl_file}" NAME)
-      cmake_path(APPEND _glsl_file_dir "${library}_${_glsl_file_name}.cc" OUTPUT_VARIABLE _glsl_file_cc)
-
-      cmake_path(SET _file_from NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/${glsl_file}")
-      cmake_path(SET _file_to   NORMALIZE "${CMAKE_CURRENT_BINARY_DIR}/${_glsl_file_cc}")
-      file(GENERATE OUTPUT "${_file_to}" CONTENT "#include \"${_file_from}\"\n")
+      get_filename_component(_file_from ${CMAKE_CURRENT_SOURCE_DIR}/${glsl_file}   REALPATH)
+      get_filename_component(_file_to   ${CMAKE_CURRENT_BINARY_DIR}/${glsl_file}.cc REALPATH)
+      file(WRITE "${_file_to}" "#include \"${_file_from}\"\n")
       list(APPEND sources ${_file_to})
       # Mark the original file as header only, so no attempt will be made at compiling it
       # regardless of extention.

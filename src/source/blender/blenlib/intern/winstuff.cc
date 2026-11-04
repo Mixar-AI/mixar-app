@@ -22,11 +22,11 @@
 #  include "MEM_guardedalloc.h"
 
 #  define WIN32_SKIP_HKEY_PROTECTION /* Need to use HKEY. */
-#  include "BLI_fileops.hh"
+#  include "BLI_fileops.h"
 #  include "BLI_path_utils.hh"
-#  include "BLI_string.hh"
-#  include "BLI_utildefines.hh"
-#  include "BLI_winstuff.hh"
+#  include "BLI_string.h"
+#  include "BLI_utildefines.h"
+#  include "BLI_winstuff.h"
 
 #  include "utf_winfunc.hh"
 #  include "utfconv.hh"
@@ -147,8 +147,8 @@ static bool register_blender_prog_id(const char *prog_id,
                            &dwd);
 
   if (lresult == ERROR_SUCCESS) {
-    const size_t buffer_len = SNPRINTF_RLEN(buffer, "\"%s\" \"%%1\"", executable);
-    lresult = RegSetValueEx(hkey_progid, nullptr, 0, REG_SZ, (BYTE *)buffer, buffer_len + 1);
+    SNPRINTF(buffer, "\"%s\" \"%%1\"", executable);
+    lresult = RegSetValueEx(hkey_progid, nullptr, 0, REG_SZ, (BYTE *)buffer, strlen(buffer) + 1);
     RegCloseKey(hkey_progid);
   }
   if (lresult != ERROR_SUCCESS) {
@@ -168,8 +168,8 @@ static bool register_blender_prog_id(const char *prog_id,
                            &dwd);
 
   if (lresult == ERROR_SUCCESS) {
-    const size_t buffer_len = SNPRINTF_RLEN(buffer, "\"%s\", 1", executable);
-    lresult = RegSetValueEx(hkey_progid, nullptr, 0, REG_SZ, (BYTE *)buffer, buffer_len + 1);
+    SNPRINTF(buffer, "\"%s\", 1", executable);
+    lresult = RegSetValueEx(hkey_progid, nullptr, 0, REG_SZ, (BYTE *)buffer, strlen(buffer) + 1);
     RegCloseKey(hkey_progid);
   }
   if (lresult != ERROR_SUCCESS) {
@@ -505,41 +505,6 @@ bool BLI_windows_get_directx_driver_version(const wchar_t *deviceSubString,
         if (pAdapter->GetDesc(&desc) == S_OK) {
           if (wcsstr(desc.Description, deviceSubString)) {
             *r_driverVersion = version.QuadPart;
-
-            pAdapter->Release();
-            pFactory->Release();
-            return true;
-          }
-        }
-      }
-
-      pAdapter->Release();
-    }
-    pFactory->Release();
-  }
-
-  return false;
-}
-
-bool BLI_windows_get_directx_intel_driver_info(uint64_t device_luid,
-                                               int *driver_version_minor,
-                                               int *driver_version_major,
-                                               uint32_t *device_id)
-{
-  IDXGIFactory *pFactory = nullptr;
-  IDXGIAdapter *pAdapter = nullptr;
-  if (CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory) == S_OK) {
-    for (UINT i = 0; pFactory->EnumAdapters(i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
-      LARGE_INTEGER version;
-      if (pAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &version) == S_OK) {
-        DXGI_ADAPTER_DESC desc;
-        if (pAdapter->GetDesc(&desc) == S_OK) {
-          uint64_t adapter_luid = (uint64_t(desc.AdapterLuid.HighPart) << uint64_t(32)) |
-                                  uint64_t(desc.AdapterLuid.LowPart);
-          if (device_luid == adapter_luid) {
-            *device_id = desc.DeviceId;
-            *driver_version_major = int((version.QuadPart >> 16) & 0xFFFF);
-            *driver_version_minor = int(version.QuadPart & 0xFFFF);
 
             pAdapter->Release();
             pFactory->Release();

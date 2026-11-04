@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include <string>
 #include <vector>
 

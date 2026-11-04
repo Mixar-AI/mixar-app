@@ -14,7 +14,7 @@
 
 /* path/file handling stuff */
 #ifdef WIN32
-#  include "BLI_winstuff.hh"
+#  include "BLI_winstuff.h"
 #  include <direct.h>
 #  include <io.h>
 #else
@@ -32,13 +32,13 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_fileops.hh"
-#include "BLI_fnmatch.hh"
-#include "BLI_math_base_c.hh"
+#include "BLI_fileops.h"
+#include "BLI_fnmatch.h"
+#include "BLI_math_base.h"
 #include "BLI_path_utils.hh"
-#include "BLI_string.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_date_string.hh"
 #include "BLT_lang.hh"
@@ -66,7 +66,6 @@
 #include "UI_interface_icons.hh"
 #include "UI_view2d.hh"
 
-#include "AS_asset_library.hh"
 #include "AS_essentials_library.hh"
 
 #include "file_banner.hh"
@@ -477,7 +476,8 @@ static void fileselect_refresh_asset_params(FileAssetSelectParams *asset_params)
       break;
     case ASSET_LIBRARY_CUSTOM:
       BLI_assert(user_library);
-      STRNCPY(base_params->dir, user_library->resolved_dirpath);
+      STRNCPY(base_params->dir, user_library->dirpath);
+      BLI_path_slash_native(base_params->dir);
       base_params->type = (user_library->flag & ASSET_LIBRARY_USE_REMOTE_URL) ?
                               FILE_ASSET_LIBRARY_REMOTE :
                               FILE_ASSET_LIBRARY;
@@ -556,20 +556,13 @@ int ED_fileselect_asset_import_method_get(const SpaceFile *sfile, const FileDirE
   }
 
   const FileAssetSelectParams *params = ED_fileselect_get_asset_params(sfile);
-  eFileAssetImportMethod import_method = eFileAssetImportMethod(params->import_method);
 
-  if (import_method == FILE_ASSET_IMPORT_LINK && file->asset->owner_asset_library().remote_url()) {
-    /* Remote library assets cannot be linked. Use #remote_url() here since All and
-     * Essentials libraries are already handled above. */
-    import_method = FILE_ASSET_IMPORT_FOLLOW_PREFS;
+  if (params->import_method == FILE_ASSET_IMPORT_FOLLOW_PREFS) {
+    std::optional import_method = file->asset->get_import_method();
+    return import_method ? *import_method : -1;
   }
 
-  if (import_method == FILE_ASSET_IMPORT_FOLLOW_PREFS) {
-    std::optional asset_import_method = file->asset->get_import_method();
-    return asset_import_method ? *asset_import_method : -1;
-  }
-
-  switch (import_method) {
+  switch (eFileAssetImportMethod(params->import_method)) {
     case FILE_ASSET_IMPORT_LINK:
       return ASSET_IMPORT_LINK;
     case FILE_ASSET_IMPORT_APPEND:
@@ -1208,10 +1201,10 @@ FileLayout *ED_fileselect_get_layout(SpaceFile *sfile, ARegion *region)
 void ED_file_change_dir_ex(bContext *C, ScrArea *area)
 {
   /* May happen when manipulating non-active spaces. */
-  if (area->spacetype != SPACE_FILE) [[unlikely]] {
+  if (UNLIKELY(area->spacetype != SPACE_FILE)) {
     return;
   }
-  SpaceFile *sfile = area->spacedata.first_as<SpaceFile>();
+  SpaceFile *sfile = static_cast<SpaceFile *>(area->spacedata.first);
   FileSelectParams *params = ED_fileselect_get_active_params(sfile);
   if (params) {
     wmWindowManager *wm = CTX_wm_manager(C);
@@ -1498,7 +1491,7 @@ ScrArea *ED_fileselect_handler_area_find(const wmWindow *win, const wmOperator *
 
   ED_screen_areas_iter (win, screen, area) {
     if (area->spacetype == SPACE_FILE) {
-      SpaceFile *sfile = area->spacedata.first_as<SpaceFile>();
+      SpaceFile *sfile = static_cast<SpaceFile *>(area->spacedata.first);
 
       if (sfile->op == file_operator) {
         return area;
@@ -1518,7 +1511,7 @@ ScrArea *ED_fileselect_handler_area_find_any_with_op(const wmWindow *win)
       continue;
     }
 
-    const SpaceFile *sfile = area->spacedata.first_as<SpaceFile>();
+    const SpaceFile *sfile = static_cast<SpaceFile *>(area->spacedata.first);
     if (sfile->op) {
       return area;
     }

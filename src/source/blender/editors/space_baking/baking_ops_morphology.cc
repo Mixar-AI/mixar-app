@@ -20,7 +20,6 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
-#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -89,7 +88,7 @@ static wmOperatorStatus dilate_exec(bContext *C, wmOperator *op)
     }
   }
 
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -157,7 +156,7 @@ static wmOperatorStatus erode_exec(bContext *C, wmOperator *op)
     }
   }
 
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -236,7 +235,7 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
     }
   }
 
-  IMB_mark_dirty(ibuf);
+  BKE_image_mark_dirty(image, ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);

@@ -465,8 +465,8 @@ msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻰﻠﻋ «{name}» ﺪﻳﺪﺤﺗ 
 msgid "Select in Scene"
 msgstr "ﺪﻬﺸﻤﻟﺍ ﻲﻓ ﺩﺪّﺣ"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "ﺬﻔﻨﻤﻟﺍ ﻲﻓ ﺍﺬﻫ ﻊﻘﺒﻟﺍ ﻢﻟﺎﻌﻟ ﻞﻳﺪﺒﻟﺍ ﺾﺒﻘﻤﻟﺍ ﺩﺪّﺤﻳ"
 
 msgid "Collection"
 msgstr "ﺔﻋﻮﻤﺠﻣ"
@@ -474,11 +474,8 @@ msgstr "ﺔﻋﻮﻤﺠﻣ"
 msgid "That splat world is no longer in this file"
 msgstr "ﻒﻠﻤﻟﺍ ﺍﺬﻫ ﻲﻓ ﺍﺩًﻮﺟﻮﻣ ﻚﻟﺫ ﻊﻘﺒﻟﺍ ﻢﻟﺎﻋ ﺪﻌﻳ ﻢﻟ"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "ﺎﻠًﻳﺪﺑ ﺎﻀًﺒﻘﻣ ﺍﺬﻫ ﻊﻘﺒﻟﺍ ﻢﻟﺎﻋ ﻚﻠﻤﻳ ﻻ﻿"
 
 msgid "Selected '{name}'"
 msgstr "«{name}» ﺪﻳﺪﺤﺗ ﻢﺗ"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
 
 msgid "Capture Viewport"
 msgstr "ﺬﻔﻨﻤﻟﺍ ﻂﻘﺘﻟﺍ"
@@ -1445,9 +1439,6 @@ msgstr "ﻪﺘﻠﻬﻣ ﺖﻬﺘﻧﺍ ﻭﺃ ﻝﻮﺧﺪﻟﺍ ﻞﻴﺠﺴ�
 msgid "Incomplete token pair in response"
 msgstr "ﺔﺑﺎﺠﺘﺳﻻ﻿ﺍ ﻲﻓ ﻞﻤﺘﻜﻣ ﺮﻴﻏ ﺯﻮﻣﺮﻟﺍ ﺝﻭﺯ"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "ﻝﺎﺧﺩﻺ﻿ﻟ ﺰﻫﺎﺟ"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform}: {installer_type} ـﻟ ﻡﻮﻋﺪﻣ ﺮﻴﻏ ﺖﺒّﺜ
 msgid "This install can't be updated in place"
 msgstr "ﻪﻧﺎﻜﻣ ﻲﻓ ﺖﻴﺒﺜﺘﻟﺍ ﺍﺬﻫ ﺚﻳﺪﺤﺗ ﻦﻜﻤﻳ ﻻ﻿"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version} ﻰﻟﺇ ﺚﻳﺪﺤﺘﻟﺍ ﻢﺗ"
 
 msgid "The update was installed successfully."
 msgstr ".ﺡﺎﺠﻨﺑ ﺚﻳﺪﺤﺘﻟﺍ ﺖﻴﺒﺜﺗ ﻢﺗ"
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr ".ﺖﺒّﺜﻤﻟﺍ ﻞﻤﺘﻜﻳ ﻢﻟ"
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} ﻦﻣ {total}"
@@ -3124,9 +3100,6 @@ msgstr ".ﻪﻘﻴﺒﻄﺘﻟ Mixar ﻞﻴﻐﺸﺗ ﺩﺎﻌﻴُﺳ"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ﻚﺤﻔﺼﺘﻣ ﺮﺒﻋ ﺚﻳﺪﺤﺘﻠﻟ «ﻝﺰّﻧ» ﻡﺪﺨﺘﺳﺍ."
-
-msgid "Retry"
-msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
 
 msgid "Restart & Update"
 msgstr "ﺙﺪّﺣﻭ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻋﺃ"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "ﺚﻳﺪﺤﺘﻠﻟ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻋﺃ"
 msgid "Updating…"
 msgstr "…ﺚﻳﺪﺤﺘﻟﺍ ﺭٍﺎﺟ"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "%{percent} ﻞﻳﺰﻨﺘﻟﺍ ﺭٍﺎﺟ"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "(ply. ﻭﺃ spz. ﻊﻗﻮﺘﻤﻟﺍ) «{ext}» ﻡﻮﻋﺪﻣ ﺮ�
 msgid "File not found: {path}"
 msgstr "{path} :ﺩﻮﺟﻮﻣ ﺮﻴﻏ ﻒﻠﻤﻟﺍ"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "{name} ﻦﻣ ﺕﺎﻨﺋﺎﻛ ﻱﺃ ﺩﺭﻮﺘﺴﺗُ ﻢﻟ"
 
 msgid "Failed to read image: {error}"
 msgstr "{error} :ﺓﺭﻮﺼﻟﺍ ﺓءﺍﺮﻗ ﺖﻠﺸﻓ"
@@ -6923,8 +6869,8 @@ msgstr "(SPZ) ﻊﻘﺒﻟﺍ URL ﺪﻘﺘﻔﺗ ﻢﻟﺎﻌﻟﺍ ﺪﻴﻟ�
 msgid "World generation result missing collider (GLB) URL"
 msgstr "(GLB) ﻡﺩﺎﺼﺘﻟﺍ ﻢﺴﺟ URL ﺪﻘﺘﻔﺗ ﻢﻟﺎﻌﻟﺍ ﺪﻴﻟﻮﺗ ﺔﺠﻴﺘﻧ"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "{error} :ﻢﻟﺎﻌﻟﺍ ﻞﻳﻮﺤﺗ/ﻞﻳﺰﻨﺗ ﻞﺸﻓ"
 
 msgid "World imported but produced no objects"
 msgstr "ﺕﺎﻨﺋﺎﻛ ﻱﺃ ﺞﺘﻨﻳ ﻢﻟ ﻪﻨﻜﻟ ﻢﻟﺎﻌﻟﺍ ﺩﺍﺮﻴﺘﺳﺍ ﻢﺗ"
@@ -7771,12 +7717,6 @@ msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ"
 
 msgid "Right-click context menu for moodboard"
 msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻠﻟ ﻦﻤﻳﻷ﻿ﺍ ﺮﻘﻨﻟﺎﺑ ﻕﺎﻴﺴﻟﺍ ﺔﻤﺋﺎﻗ"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻑﺬﺣﺍ"
@@ -10048,14 +9988,14 @@ msgstr "...ﺝﺫﺎﻤﻨﻟﺍ ﺔﻤﺋﺎﻗ ﺚﻳﺪﺤﺗ ﺭٍﺎﺟ"
 msgid "Generation catalog module not available"
 msgstr "ﺓﺮﻓﻮﺘﻣ ﺮﻴﻏ ﺪﻴﻟﻮﺘﻟﺍ ﺝﻮﻟﺎﺘﻛ ﺓﺪﺣﻭ"
 
-msgid "A duplicate image generation is already queued"
-msgstr "ﻞﻌﻔﻟﺎﺑ ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﻲﻓ ﺭﺮﻜﻣ ﺓﺭﻮﺻ ﺪﻴﻟﻮﺗ ﺪﺟﻮﻳ"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻰﻟﺇ ﺎﻬﻔﻴﻀﻳﻭ ﻲﻋﺎﻨﻄﺻﻻ﻿ﺍ ءﺎﻛﺬﻟﺎﺑ ﺍﺭًﻮﺻ ﺪﻟّﻮﻳ"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "(ﺺﻨﻟﺍ ﺪﻴﻛﺄﺘﻟ Enter ﻂﻐﺿﺍ) ﻪﺟّﻮﻣ ﻝﺎﺧﺩﺇ ﻰﺟﺮﻳُ"
+
+msgid "A duplicate image generation is already queued"
+msgstr "ﻞﻌﻔﻟﺎﺑ ﺭﺎﻈﺘﻧﻻ﻿ﺍ ﺔﻤﺋﺎﻗ ﻲﻓ ﺭﺮﻜﻣ ﺓﺭﻮﺻ ﺪﻴﻟﻮﺗ ﺪﺟﻮﻳ"
 
 msgid "No model specified and no default available"
 msgstr "ﺡﺎﺘﻣ ﻲﺿﺍﺮﺘﻓﺍ ﺝﺫﻮﻤﻧ ﺪﺟﻮﻳ ﻻ﻿ﻭ ﺝﺫﻮﻤﻧ ﺪﻳﺪﺤﺗ ﻢﺘﻳ ﻢﻟ"
@@ -10975,32 +10915,14 @@ msgstr "ﻞﺻﻷ﻿ﺍ ﺔﻄﻘﻧ ﺪﻨﻋ ﺽﺭﻷ﻿ﺍ ﻰﻠﻋ ﺖﺒ�
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "(ﺓﺪﻟّﻮﻤﻟﺍ ﻢﻟﺍﻮﻌﻠﻟ ﻡﺪﺨﺘﺴﻤﻟﺍ ﺽﺭﻷ﻿ﺍ ﻰﻠﻋ ﺖﻴﺒﺜﺘﻟﺍ ﺲﻔﻧ) ﻞﺻﻷ﻿ﺍ ﺔﻄﻘﻧ ﺪﻨﻋ ﺎﻬﺘﺣﺎﺴﻣ ﺰﻛﺮﻣ ﻥﻮﻜﻳﻭ Z=0 ﻰﻠﻋ ﺎﻬﺘﻴﺿﺭﺃ ﺮﻘﺘﺴﺗ ﺚﻴﺤﺑ ﺔﻌﻘﺒﻟﺍ ﻞﻘﻨﻳ"
 
-msgid "Source"
-msgstr "ﺭﺪﺼﻣ"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "ﻲﺳﺎﻴﻗ"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "ﺔﻌﻘﺑ ﻒﻠﻣ ﺪﻳﺪﺤﺗ ﻢﺘﻳ ﻢﻟ"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count}): {names}) ﺓﺩﺭﻮﺘﺴﻤﻟﺍ ﻊﻘﺒﻟﺍ"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "(spz/.ply.) ﺔﻴﺳﻭﺎﻏ ﺔﻌﻘﺑ"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12570,6 +12492,9 @@ msgstr "ﻡﺎﻈﻌﻟﺍ ﺕﺍﺮﻴﺛﺄﺗ ﻊﻴﻤﺟ ﻦﻴﻤﻀﺗ"
 
 msgid "Lighting Mode"
 msgstr "ﺓءﺎﺿﻹ﻿ﺍ ﻊﺿﻭ"
+
+msgid "Standard"
+msgstr "ﻲﺳﺎﻴﻗ"
 
 msgid "Physically-based glTF lighting units"
 msgstr "ﺎﻴًﺋﺎﻳﺰﻴﻓ ﺔﻴﻨﺒﻤﻟﺍ glTF ﺓءﺎﺿﺇ ﺕﺍﺪﺣﻭ"
@@ -18822,6 +18747,9 @@ msgstr "ﺝﺰﻤﻟﺍ"
 msgid "No masks"
 msgstr "ﺔﻴﻄﻏﺃ ﺪﺟﻮﺗ ﻻ﻿"
 
+msgid "Source"
+msgstr "ﺭﺪﺼﻣ"
+
 msgid "No node group loaded"
 msgstr "ﺪﻘﻋ ﺔﻋﻮﻤﺠﻣ ﻞﻤَّﺤﺗُ ﻢﻟ"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "...ﻞﻳﺪﻌﺘﻟﺍ ﺭٍﺎﺟ"
 
 msgid "Awaiting Input..."
 msgstr "...ﻝﺎﺧﺩﻹ﻿ﺍ ﺭﺎﻈﺘﻧﺎﺑ"
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "ﺩﻮﻘﻔﻣ ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﻒﻠﻣ"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "ءﻲﺷ ﺮﻴﻐﺘﻳ ﻢﻟ ﺍﺬﻟ ،ﺔﻴﻟﺎﺤﻟﺍ ﺔﻟﺎﺤﻟﺎﺑ ﻅﺎﻔﺘﺣﻻ﻿ﺍ ﺭﺬﻌﺗ"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "ﺓﺩﺎﻌﺘﺳﻻ﻿ﺍ ﺔﻄﻘﻧ ﺓءﺍﺮﻗ ﺕﺭﺬﻌﺗ"
 
@@ -21135,6 +21063,9 @@ msgstr "ﺝﻭﺮﺨﻟﺍ ﻞﻴﺠﺴﺗ"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
 
 msgid "Choose Export Location"
 msgstr "ﺮﻳﺪﺼﺘﻟﺍ ﻊﻗﻮﻣ ﺮﺘﺧﺍ"
@@ -21606,15 +21537,6 @@ msgstr "ﺕﺎﻘﻓﺮﻣ {count} ﻰﺼﻗﻷ﻿ﺍ ﺪﺤﻟﺍ"
 msgid "Paste failed: {error}"
 msgstr "{error} :ﻖﺼﻠﻟﺍ ﻞﺸﻓ"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}: {error} ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
-
-msgid "These references are already attached"
-msgstr "ﻞﻌﻔﻟﺎﺑ ﺔﻘﻓﺮﻣ ﻊﺟﺍﺮﻤﻟﺍ ﻩﺬﻫ"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}: {error} ﺔﻓﺎﺿﺇ ﺕﺭﺬﻌﺗ"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "({count}) ﺕﺎﻘﻓﺮﻤﻟﺍ ﺪﺣ ﻍﻮﻠﺑ ﻢﺗ"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name}: {error} ﻲﻄﺨﺗ ﻢﺗ"
 
+msgid "These references are already attached"
+msgstr "ﻞﻌﻔﻟﺎﺑ ﺔﻘﻓﺮﻣ ﻊﺟﺍﺮﻤﻟﺍ ﻩﺬﻫ"
+
 msgid "Added {count} image(s)"
 msgstr "ﺓﺭﻮﺻ {count} ﺔﻓﺎﺿﺇ ﺖﻤﺗ"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend ﻒﻠﻣ ﻦﻣ ﻒﺿﺃ"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "ﺺﺨﻠﻤﻟﺍ ﻲﻓ ﻪﺗﺍﺭﺍﺮﻗ ﺩﺮﺴﻳﻭ ،ﻚﻟ
 msgid "Agent Bubble"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
+
 msgid "Agent Bubble Status"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺔﻟﺎﺣ"
 
@@ -27053,9 +26963,6 @@ msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻖﻓﺮﻣ ﻚﻳﺮﺤﺗ"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mixie ﺔﺛﺩﺎﺤﻣ ﻰﻟﺇ ﺮﻴﻄﻳ ﻮﻫﻭ ﺎﺜًﻳﺪﺣ ﺎﻘًﻓﺮﻣ ﺎﻌًﺟﺮﻣ ﺽﺮﻌﻳ"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "ﺮﻴﺧﺄﺘﻟﺍ"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ﺔﻟﺎﻌّﻔﻟﺍ ﺔﻘﻄﻨﻤﻠﻟ ﻢﺳﺮﻟﺍ ءﺍﺪﻧ ﺩﺭ ﺔﻟﺍﺩ ﺔﻗﺎﻄﺒﻟﺍ ﻢﺳﺭ ﺐﻠﻄﺘﻳ"
 
@@ -29793,9 +29703,6 @@ msgstr "ﺓﺮﻳﺪﺘﺴﻤﻟﺍ ﺔﻬﺟﺍﻮﻟﺍ ﺮﺻﺎﻨﻋ ﺎﻳ
 msgid "Mixie Chat"
 msgstr "Mixie ﺔﺛﺩﺎﺤﻣ"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "ﺔﻏﺭﺎﻓ ﺮﻴﻏ ﺔﻴﺼﻧ ﻞﺳﻼ﻿ﺳ ﺕﻼ﻿ﻓﻹ�
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ﺔﻏﺭﺎﻓ ﺮﻴﻏ JSON ﺔﻓﻮﻔﺼﻣ ﺕﻼ﻿ﻓﻹ﻿ﺍ ﺕﺍﺭﺎﺴﻣ ﻥﻮﻜﺗ ﻥﺃ ﺐﺠﻳ"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "ﺔﻣﺎﻌﻟﺍ ﻖﻃﺎﻨﻤﻟﺍ"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr ".ﻢﺳﺮﻟﺍ ﺓﺩﺎﻋﻹ﻿ ﻱﻮﻠﻌﻟﺍ ﻂﻳﺮﺸﻟﺍ ﻑﺍﺪﻬﺘﺳﺍ ﻦﻣ ﺞﻣﺎﻧﺮﺒﻟﺎﺑ ﻒﻳﺮﻌﺘﻟﺍ ﻦﻜﻤﺘﻴﻟ ﻑﻮﺸﻜﻣ — Mixar ﺩﺍﺪﺘﻣﺍ .(ﺔﻟﺎﺤﻟﺍ ﻂﻳﺮﺷ ،ﻱﻮﻠﻌﻟﺍ ﻂﻳﺮﺸﻟﺍ) ﺔﻣﺎﻌﻟﺍ ﺓﺬﻓﺎﻨﻟﺍ ﻖﻃﺎﻨﻣ"
 
 msgid "QA UI Dump"
 msgstr "QA ﺔﻬﺟﺍﻭ ﻎﻳﺮﻔﺗ"

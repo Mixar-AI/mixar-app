@@ -465,8 +465,8 @@ msgstr "Nuotaikų lentoje pasirinkta „{name}“"
 msgid "Select in Scene"
 msgstr "Pasirinkti scenoje"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "Pasirenka šio splato pasaulio pakaitalo rankenėlę peržiūros lange"
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,11 +474,8 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "To splato pasaulio šiame faile jau nebėra"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "Šis splato pasaulis neturi pakaitalo rankenėlės"
 
 msgid "Selected '{name}'"
 msgstr "Pasirinkta „{name}“"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Nepavyko atidaryti agento burbulo lango"
 
 msgid "Capture Viewport"
 msgstr "Užfiksuoti peržiūros langą"
@@ -1445,9 +1439,6 @@ msgstr "Prisijungimas atšauktas arba baigėsi skirtasis laikas"
 msgid "Incomplete token pair in response"
 msgstr "Atsakyme nepilna raktų pora"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "Paruošta įvesčiai"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "Nepalaikomas diegiklio tipas platformai {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Šio diegimo negalima atnaujinti vietoje"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Atnaujinta į Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "Atnaujinimas sėkmingai įdiegtas."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "Diegiklis nebaigė darbo."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} iš {total}"
@@ -3124,9 +3100,6 @@ msgstr "Mixar bus paleista iš naujo, kad jį pritaikytų."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — atnaujinkite per naršyklę mygtuku „Atsisiųsti“."
-
-msgid "Retry"
-msgstr "Bandyti dar kartą"
 
 msgid "Restart & Update"
 msgstr "Paleisti iš naujo ir atnaujinti"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "Paleisti iš naujo ir atnaujinti"
 msgid "Updating…"
 msgstr "Atnaujinama…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "Atsisiunčiama {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "Nepalaikomas splato failo tipas „{ext}“ (tikimasi .spz arba .ply)"
 msgid "File not found: {path}"
 msgstr "Failas nerastas: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "Iš {name} neimportuota objektų"
 
 msgid "Failed to read image: {error}"
 msgstr "Nepavyko perskaityti paveikslo: {error}"
@@ -6923,8 +6869,8 @@ msgstr "Pasaulio generavimo rezultate trūksta splato (SPZ) URL"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Pasaulio generavimo rezultate trūksta susidūrimo tūrio (GLB) URL"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "Nepavyko atsisiųsti arba konvertuoti pasaulio: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Pasaulis importuotas, bet objektų nesukūrė"
@@ -7771,12 +7717,6 @@ msgstr "Nuotaikų lenta"
 
 msgid "Right-click context menu for moodboard"
 msgstr "Dešiniojo spustelėjimo kontekstinis meniu nuotaikų lentai"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "Ištrinti ryšį"
@@ -10048,14 +9988,14 @@ msgstr "Atnaujinamas modelių sąrašas..."
 msgid "Generation catalog module not available"
 msgstr "Generavimo katalogo modulis nepasiekiamas"
 
-msgid "A duplicate image generation is already queued"
-msgstr "Toks pat paveikslo generavimas jau yra eilėje"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generuoja DI paveikslus ir prideda juos į nuotaikų lentą"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Įveskite raginimą (paspauskite Enter, kad patvirtintumėte tekstą)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "Toks pat paveikslo generavimas jau yra eilėje"
 
 msgid "No model specified and no default available"
 msgstr "Nenurodytas modelis ir nėra numatytojo"
@@ -10975,32 +10915,14 @@ msgstr "Pagrindas pradžioje"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Perkelia splatą taip, kad grindys būtų ties Z=0, o pėdsako centras – pradžios taške (tas pats pagrindimas kaip sugeneruotiems pasauliams)"
 
-msgid "Source"
-msgstr "Šaltinis"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "Standartinis"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "Nepasirinktas splato failas"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importuota splatų: {count}: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "Gauso splatas (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Prideda teksto lauką į nuotaikų lentą ({shortcut})"
@@ -12570,6 +12492,9 @@ msgstr "Įtraukti visas kaulų įtakas"
 
 msgid "Lighting Mode"
 msgstr "Apšvietimo veiksena"
+
+msgid "Standard"
+msgstr "Standartinis"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fiziniai glTF apšvietimo vienetai"
@@ -18822,6 +18747,9 @@ msgstr "Maišymas"
 msgid "No masks"
 msgstr "Nėra kaukių"
 
+msgid "Source"
+msgstr "Šaltinis"
+
 msgid "No node group loaded"
 msgstr "Mazgų grupė neįkelta"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "Keičiama..."
 
 msgid "Awaiting Input..."
 msgstr "Laukiama įvesties..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "Trūksta kontrolinio taško failo"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Nepavyko išlaikyti dabartinės būsenos, todėl niekas nepakeista"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "Nepavyko perskaityti kontrolinio taško"
 
@@ -21135,6 +21063,9 @@ msgstr "Atsijungti"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "Bandyti dar kartą"
 
 msgid "Choose Export Location"
 msgstr "Pasirinkti eksporto vietą"
@@ -21606,15 +21537,6 @@ msgstr "Daugiausia prisegtų failų: {count}"
 msgid "Paste failed: {error}"
 msgstr "Įdėti nepavyko: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Negalima pridėti {name}: {error}"
-
-msgid "These references are already attached"
-msgstr "Šie pavyzdžiai jau prisegti"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "Negalima pridėti {name}: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "Pasiekta prisegtų failų riba ({count})"
 
 msgid "Skipped {name}: {error}"
 msgstr "Praleista {name}: {error}"
 
+msgid "These references are already attached"
+msgstr "Šie pavyzdžiai jau prisegti"
+
 msgid "Added {count} image(s)"
 msgstr "Pridėta vaizdų: {count}"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Pridėti iš Blend"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "Automatinė veiksena: agentas atvirus pasirinkimus sprendžia pats, užu
 msgid "Agent Bubble"
 msgstr "Agento burbulas"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nepavyko atidaryti agento burbulo lango"
+
 msgid "Agent Bubble Status"
 msgstr "Agento burbulo būsena"
 
@@ -27053,9 +26963,6 @@ msgstr "Animuoti nuotaikų lentos prisegtą failą"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Rodo naujai prisegtą pavyzdį, įskrendantį į „Mixie“ pokalbį"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "Delsa"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortelės piešimui reikia aktyvios srities piešimo iškvietos"
 
@@ -29793,9 +29703,6 @@ msgstr "Suapvalintų sąsajos elementų kampų spindulys"
 msgid "Mixie Chat"
 msgstr "Mixie pokalbis"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "Numetimo keliai turi būti netuščios eilutės"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Numetimo keliai turi būti netuščias JSON masyvas"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "Visuotinės sritys"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "Lango visuotinės sritys (viršutinė juosta, būsenos juosta). „Mixar“ plėtinys — atvertas, kad supažindinimas galėtų kreiptis į viršutinę juostą perpiešimui."
 
 msgid "QA UI Dump"
 msgstr "QA sąsajos išrašas"

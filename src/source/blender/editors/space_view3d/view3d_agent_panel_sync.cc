@@ -13,8 +13,8 @@
 
 #include "BLI_map.hh"
 #include "BLI_set.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "BKE_context.hh"
 

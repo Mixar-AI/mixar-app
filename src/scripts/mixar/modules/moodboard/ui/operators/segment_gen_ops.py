@@ -19,7 +19,6 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
-from mixar.modules.common.utils.generation_dispatch import record_reason
 from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 logger = get_logger(__name__)
@@ -153,7 +152,6 @@ class MIXIE_OT_smart_segment_generate(Operator):
 
         image = _get_input_image(context, tab)
         if image is None:
-            record_reason("missing_image")
             self.report({"ERROR"}, "No input image selected")
             return {"CANCELLED"}
 

@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 namespace blender {
 

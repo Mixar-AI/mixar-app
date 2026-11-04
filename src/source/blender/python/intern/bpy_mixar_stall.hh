@@ -15,7 +15,7 @@
 
 #include <Python.h>
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 
 namespace blender {
 

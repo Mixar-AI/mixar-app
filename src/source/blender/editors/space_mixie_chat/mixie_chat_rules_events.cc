@@ -38,10 +38,10 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 
@@ -574,12 +574,12 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
 {
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
-  if (!area || !region || !area->spacedata.first() ||
+  if (!area || !region || !area->spacedata.first ||
       (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return false;
   }
-  SpaceMixieChat *smixie = area->spacedata.first_as<SpaceMixieChat>();
+  SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
   if (!rt->rules_overlay_active) {
     return false;

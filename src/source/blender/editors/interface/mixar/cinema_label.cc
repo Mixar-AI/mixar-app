@@ -5,8 +5,8 @@
 
 #include "../interface_mixar_card_paint.hh"
 #include "BKE_appdir.hh"
-#include "BLI_fileops.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_fileops.h"
+#include "BLI_utildefines.h"
 #include "BLI_path_utils.hh"
 #include "BLF_api.hh"
 #include "BLF_enums.hh"

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "BLI_assert.hh"
+#include "BLI_assert.h"
 #include "GPU_state.hh"
 
 namespace blender {
