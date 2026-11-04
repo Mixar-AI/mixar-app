@@ -174,7 +174,7 @@ def has_splash_ever_drawn() -> bool:
     return _splash_last_drawn_ts != 0.0
 
 
-RECENT_PROJECT_ROWS = 5
+RECENT_PROJECT_ROWS = 6  # three rows of the two-column grid
 # Read once per splash opening, never on every redraw: a draw after this
 # long without one is taken as a new opening (an idle splash stops redrawing,
 # so at worst an idle one re-reads a few small files once).
@@ -202,33 +202,31 @@ def _refresh_lists(reopened: bool) -> list:
 
 
 def _draw_recent_and_unsaved(layout, reopened: bool) -> None:
+    """Unsaved Work, then Recent Projects: each a full-width two-column grid."""
     recent = _refresh_lists(reopened)
     try:
         from mixar.modules.session_recovery import prompt
         unsaved = prompt.splash_entries()
     except Exception:  # noqa: BLE001
         prompt, unsaved = None, []
-    if not recent and not unsaved:
-        return
-    split = layout.split()
-    col1 = split.column()
-    if recent:
-        col1.label(text="Recent Projects")
-        rows = col1.column()
-        # Invoke: opening over unsaved changes asks first, like File > Open Recent.
-        rows.operator_context = 'INVOKE_DEFAULT'
-        for path in recent:
-            op = rows.operator("wm.open_mainfile", text=path.stem, icon='FILE_BLEND',
-                               translate=False)
-            op.filepath = str(path)
-            op.display_file_selector = False
-    col2 = split.column()
     if unsaved:
         try:
-            prompt.draw_splash_unsaved(col2, unsaved)
+            prompt.draw_splash_unsaved(layout.column(), unsaved)
         except Exception:  # noqa: BLE001
             pass
-    layout.separator()
+        layout.separator()
+    if recent:
+        from mixar.modules.common.utils.ui_utils import two_column_cells
+        layout.label(text="Recent Projects")
+        for cell, path in zip(two_column_cells(layout, len(recent)), recent):
+            row = cell.row()
+            # Invoke: opening over unsaved changes asks first, like File > Open Recent.
+            row.operator_context = 'INVOKE_DEFAULT'
+            op = row.operator("wm.open_mainfile", text=path.stem, icon='FILE_BLEND',
+                              translate=False)
+            op.filepath = str(path)
+            op.display_file_selector = False
+        layout.separator()
 
 
 class WM_MT_splash(Menu):
