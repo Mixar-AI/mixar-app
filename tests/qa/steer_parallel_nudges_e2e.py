@@ -83,7 +83,25 @@ def send_draft(qa, text):
             timeout=5)
     warp(qa, SEND)
     qa.click(**SEND)
-    qa.wait(f"{SCENE}.mixie_chat_input == ''", timeout=4)
+    try:
+        qa.wait(f"{SCENE}.mixie_chat_input == ''", timeout=4)
+    except Exception as exc:  # say what the click met, not just that it timed out
+        out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/steer-nudges'))
+        try:
+            capture(qa, out, 'send-failed')
+        except Exception:  # noqa: BLE001
+            pass
+        state = qa.eval(
+            "import chat_send_probe as p\n"
+            "from mixar.modules.space_mixie_chat.core import composer_send as c\n"
+            f"s={SCENE}\n"
+            "result={'draft': s.mixie_chat_input, 'state': s.mixie_chat_state, "
+            "'run_open': s.mixie_run_open, 'can_compose': list(c.can_compose(s)), "
+            "'wire_sends': len(p.calls), 'users': [(m.text, m.delivery_hint) for m in "
+            "s.mixie_chat_messages if m.sender == 'USER'], "
+            "'send_ops': len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')), "
+            "'stop_ops': len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_abort_session'))}")
+        raise ScenarioFail(f'send of {text!r} did not land: {state}') from exc
 
 
 def set_run(qa, open_):
