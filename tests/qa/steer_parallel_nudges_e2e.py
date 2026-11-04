@@ -107,6 +107,10 @@ def run(qa):
             "from mixar.config.config import get_config\n"
             "get_config()[T.CONFIG_KEY]={}; T._state.update(turns=0, current='')\n"
             "result=True")
+    # A fresh launch refreshes the model/key for a few seconds (Send refuses
+    # meanwhile); start once the composer could send.
+    qa.wait("__import__('mixar.modules.space_mixie_chat.core.composer_send', fromlist=['c'])"
+            ".can_compose(drv.main_window().scene)[0]", timeout=60)
     tabs_before = qa.eval('result=len(bpy.data.scenes)')
     try:
         if qa.find(**FIELD)['total']:
@@ -194,10 +198,15 @@ def run(qa):
         qa.wait(f"{SCENE}.mixie_chat_input == 'Paint the fence white'", timeout=4)
         expect(all(u[0] != 'Paint the fence white' for u in users(qa)), 'queued bubble removed', users(qa))
         expect(len(calls(qa)) == 4, 'Stop must not send the held message', calls(qa))
-        qa.eval(f"{SCENE}.mixie_chat_input=''; result=True")
+        # The restored draft sends as the next turn with one click.
+        qa.wait("len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')) == 1",
+                timeout=5)
+        warp(qa, SEND)
+        qa.click(**SEND)
+        qa.wait('len(__import__("chat_send_probe").calls) == 5', timeout=3)
+        expect('Paint the fence white' in calls(qa)[-1]['message'], 'restored draft sent', calls(qa)[-1])
 
         # 7. The header "+" while working: new scene tab first; the task keeps running.
-        send_draft(qa, 'Add a garden path')
         set_run(qa, True)
         original = qa.eval(f'result={SCENE}.name')
         open_pill(qa)
@@ -241,11 +250,13 @@ def run(qa):
                 "E.capture=getattr(E, '_qa_capture', E.capture); result=True")
         set_run(qa, False)
         qa.eval('import chat_send_probe as p; p.uninstall(); result=True')
-        # Remove the tab this replay opened.
-        qa.eval("from mixar.modules.space_mixie_chat.ui.operators.scene_tab_ops import real_scenes\n"
+        # Close the tab this replay opened the way the drawer does (windows
+        # showing it move first; a raw scenes.remove frees a shown scene).
+        qa.eval("from mixar.modules.space_mixie_chat.ui.operators.scene_tab_ops import "
+                "real_scenes, close_scene_tab\n"
                 f"extra=[s.name for s in real_scenes()][{tabs_before}:]\n"
                 "for n in extra:\n"
-                "    bpy.data.scenes.remove(bpy.data.scenes[n])\n"
+                "    close_scene_tab(bpy.data.scenes[n])\n"
                 "result=extra")
 
 

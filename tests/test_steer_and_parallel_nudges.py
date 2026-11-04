@@ -231,9 +231,17 @@ def test_new_chat_while_working_offers_a_scene_tab_first():
 
 
 def test_native_island_reads_the_hint_and_labels_steer():
-    state = read(BUSY := BUBBLE / "agent_ui_state.cc")
+    state = read(BUBBLE / "agent_ui_state.cc")
     assert '"mixie_chat_busy_hint"' in state and "steer_visible" in state
     assert 'enum_is(&scene_ptr, "mixie_chat_state", "BUSY")' in state
     assert 'IFACE_("Steer")' in read(BUBBLE / "agent_ui_controls_paint.cc")
     assert "steer_visible" in read(BUBBLE / "agent_bubble_references.cc")
-    assert BUSY.exists()
+
+
+def test_multiline_placeholder_shows_while_editing_an_empty_draft():
+    # The composer auto-focuses when the island opens; a placeholder drawn
+    # only while NOT editing was never seen (the busy hint included).
+    src = read(ROOT / "src/source/blender/editors/interface/interface_widgets.cc")
+    block = src[src.index("if (!drawstr || !drawstr[0]) {"):src.index("/* Calculate line height */")]
+    assert "button_placeholder_get(but)" in block
+    assert block.index("button_placeholder_get(but)") < block.index("if (!but->editstr) {\n        return;")
