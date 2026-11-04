@@ -116,3 +116,18 @@ def top_header_overlap_px(area, window_region,
         return max(0, min(int(inset), int(window_region.height)))
     except Exception:  # noqa: BLE001 — draw-time helper, never raise
         return 0
+
+
+def two_column_cells(layout, count):
+    """``count`` cell layouts laid out as a two-column grid, filled column-first.
+
+    Rows are ``ceil(count / 2)``: one item sits alone on the left, two share
+    one row, three take two rows (two left, one right). Both columns are always
+    half the width, so a lone item never stretches across the whole layout.
+    """
+    if count <= 0:
+        return []
+    split = layout.split(factor=0.5)
+    left, right = split.column(), split.column()
+    rows = -(-count // 2)
+    return [left if i < rows else right for i in range(count)]
