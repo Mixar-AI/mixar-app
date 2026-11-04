@@ -184,7 +184,8 @@ def test_the_callable_tools_are_the_adapters_minus_import():
         "status", "new_scene", "open_scene", "place", "scene_tree", "save_scene", "play", "stop",
         "capture", "log", "playtest", "write_script", "add_node", "set_property", "remove_node",
         "read_file", "list_files", "write_file", "delete_file", "project_setting", "build_web",
-        "build_info", "blueprint"}
+        "build_info", "blueprint",
+        "assets"}  # answered on the desktop (engine_assets): the project's own assets
     assert "import_package" not in engine_link.CALLABLE_TOOLS
 
 

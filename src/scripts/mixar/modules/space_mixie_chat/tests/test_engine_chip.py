@@ -142,4 +142,7 @@ def test_no_chip_until_the_server_lists_the_engine_tools():
     assert tick.index("server_supports()") < tick.index("refresh_async()")
     ops = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
                             "engine_ops.py"), encoding="utf-8").read()
-    assert ops.count("return engine_connect.server_supports() and not engine_connect.state().get(\"busy\")") == 2
+    allowed = ops[ops.index("def _connect_allowed"):ops.index("def _refresh_chip")]
+    assert 'return engine_connect.server_supports() and not engine_connect.state().get("busy")' in allowed
+    # The card's pick, the sheet's open and its Connect.
+    assert ops.count("return _connect_allowed()") == 3

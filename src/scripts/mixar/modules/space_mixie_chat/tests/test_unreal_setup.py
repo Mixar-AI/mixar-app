@@ -223,10 +223,14 @@ def test_the_listener_override_keeps_the_projects_own_entries(tmp_path):
 
 
 def test_the_connect_dialog_says_what_changes_in_the_project():
-    text = " ".join(us.PROJECT_CHANGES)
-    for said in ("Plugins folder", "Model Context Protocol", "All Toolsets", "Python", "MCP server",
-                 f"port {us.MCP_PORT}", "this computer only", "background", "Close the project"):
-        assert said in text, said
-    ops = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
-                            "engine_ops.py"), encoding="utf-8").read()
-    assert "unreal_setup.PROJECT_CHANGES" in ops
+    sheet = open(os.path.join(_SRC_SCRIPTS, "mixar", "modules", "space_mixie_chat", "ui", "operators",
+                              "engine_sheet_ui.py"), encoding="utf-8").read()
+    new = sheet[sheet.index("('UNREAL', 'NEW'): n_("):sheet.index("('UNREAL', 'EXISTING')")]
+    existing = sheet[sheet.index("('UNREAL', 'EXISTING'): n_("):sheet.index("}", sheet.index("('UNREAL', 'EXISTING')"))]
+    # One short line: what is installed, the server that turns on and for whom;
+    # closing the project first only for one that may already be open.
+    for text in (new, existing):
+        for said in ("open-source Mixar Link plugin", "MCP server", "this computer only"):
+            assert said in text, said
+    assert "Close the project" in existing and "Close the project" not in new
+    assert "iface_(WHAT_CHANGES[(self.engine, 'NEW' if self.new else 'EXISTING')])" in sheet

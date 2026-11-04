@@ -45,6 +45,8 @@ import time
 import urllib.error
 import urllib.request
 
+from . import engine_assets
+
 LINK_DIR = os.path.join(os.path.expanduser("~"), ".mixar", "engine-link")
 PROTOCOL_VERSION = "2025-06-18"
 CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
@@ -53,7 +55,7 @@ CLIENT_INFO = {"name": "mixar-desktop", "version": "1"}
 CALLABLE_TOOLS = ("status", "new_scene", "open_scene", "place", "scene_tree", "save_scene",
                   "play", "stop", "capture", "log", "playtest", "write_script", "add_node",
                   "set_property", "remove_node", "read_file", "list_files", "write_file",
-                  "delete_file", "project_setting", "build_web", "build_info", "blueprint")
+                  "delete_file", "project_setting", "build_web", "build_info", "blueprint", "assets")
 NO_ENGINE = ("No game engine is connected. Connect one from the engine chip in the chat composer "
              "(Godot 4.5+ or Unreal Engine 5.8+ with Mixar Link), then try again.")
 UNREAL_TRANSPORT = "unreal_mcp"
@@ -401,6 +403,8 @@ def link_status(engine: str | None = None) -> dict:
         return {**_fail(err), "adapters": [public(i) for i in found]}
     out["adapters"] = [public(i) for i in found]
     out["connected"] = public(info)
+    if out.get("success") and isinstance(out.get("data"), dict):  # the project's assets (engine_assets)
+        out["data"]["tools"] = engine_assets.tools_with_assets(out["data"].get("tools"))
     return out
 
 
@@ -410,8 +414,10 @@ def link_call(tool: str, arguments: dict | None = None, engine: str | None = Non
     if tool not in CALLABLE_TOOLS:
         return {"success": False, "error": f"{tool!r} is not an engine tool Mixar calls by name."}
     try:
-        _, client = _connect(engine)
-        return _result(client.call(tool, dict(arguments or {}), float(timeout)))
+        info, client = _connect(engine)
+        if engine_assets.handles(info, tool, arguments or {}):  # project assets: search, place
+            return engine_assets.run(info, client, tool, arguments or {}, float(timeout))
+        return _result(client.call(tool, engine_assets.adapter_args(tool, arguments), float(timeout)))
     except LinkError as err:
         return _fail(err)
 

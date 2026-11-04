@@ -179,3 +179,23 @@ SPDX-License-Identifier = "Apache-2.0"
 path = "src/release/datafiles/fonts/ClashGrotesk-Regular.otf"
 SPDX-FileCopyrightText = "Indian Type Foundry"
 SPDX-License-Identifier = "LicenseRef-ITF-FFL"
+
+# Game-engine logos on the Connect engine sheet's ENGINES rows, shown only to
+# name the engine Mixar connects to (nominative use; no endorsement).
+# Godot: the official icon (godotengine/godot misc/logo/icon.svg, rendered to
+# PNG), by Andrea Calabró under CC BY 4.0.
+[[annotations]]
+path = "src/scripts/mixar/modules/space_mixie_chat/assets/engines/godot.png"
+precedence = "override"
+SPDX-FileCopyrightText = "2017 Andrea Calabró"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# Unreal Engine: the "U" mark from the engine's own editor resources
+# (Engine/Content/Slate/Starship/Common/UELogo.svg, rendered to PNG). Unreal
+# and the Unreal Engine logo are trademarks of Epic Games, Inc.; not covered
+# by Mixar's source license.
+[[annotations]]
+path = "src/scripts/mixar/modules/space_mixie_chat/assets/engines/unreal.png"
+precedence = "override"
+SPDX-FileCopyrightText = "Epic Games, Inc."
+SPDX-License-Identifier = "LicenseRef-Epic-Unreal-Logo"
