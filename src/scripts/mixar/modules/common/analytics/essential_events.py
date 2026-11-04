@@ -48,6 +48,19 @@ def cinema_operator_properties(operator, result, context):
     return {}
 
 
+def scene_tab_operator_properties(operator, result, context):
+    """New Scene: was another tab's agent working, and which composer hint
+    did the turn show. Counts and a hint id only."""
+    try:
+        if operator != 'mixie_chat.new_scene_tab' or 'FINISHED' not in result:
+            return {}
+        from mixar.modules.space_mixie_chat.core import agent_tips
+        _tabs, working = agent_tips.tab_counts(None)
+        return {'other_tabs_working': working, 'busy_hint': agent_tips.current_hint() or None}
+    except Exception:
+        return {}
+
+
 def reset_cinema_sessions():
     """A different document must never inherit an old scene's clock."""
     _cinema_started.clear()
@@ -85,12 +98,34 @@ def length_bucket(n_bytes):
     return '32-64k' if n_bytes <= 65_536 else '>64k'
 
 
+def _tab_activity(scene):
+    """Counts only: user scene tabs and OTHER tabs whose agent is working."""
+    try:
+        from mixar.modules.space_mixie_chat.core.agent_tips import tab_counts
+        return tab_counts(scene)
+    except Exception:
+        return None, None
+
+
+def _busy_hint():
+    try:
+        from mixar.modules.space_mixie_chat.core.agent_tips import current_hint
+        return current_hint() or None
+    except Exception:
+        return None
+
+
 def capture_agent_message(context, attachments, is_modify, is_awaiting_input,
-                          mark_context=None, message_bytes=None):
-    """Keep the existing send event; add only actual outgoing Scribble use
-    and the message's size bucket."""
+                          mark_context=None, message_bytes=None, interjecting=False, held=False):
+    """Keep the existing send event; add only actual outgoing Scribble use,
+    the message's size bucket, whether it was sent into a running task (or
+    held until the turn could take it) and how many tabs were busy."""
     scene = context.scene
+    scene_tabs, other_tabs_working = _tab_activity(scene)
     capture(EVENT_MESSAGE_SENT, {
+        'interjecting': bool(interjecting), 'held': bool(held),
+        'scene_tabs': scene_tabs, 'other_tabs_working': other_tabs_working,
+        'busy_hint': _busy_hint() if (interjecting or held) else None,
         'mode': 'addon_project' if scene.mixie_chat_mode == 'ADDON_PROJECT' else 'agent',
         'has_attachments': bool(len(attachments)),
         'is_modify': is_modify, 'is_awaiting_input': is_awaiting_input,

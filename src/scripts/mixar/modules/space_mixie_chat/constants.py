@@ -109,6 +109,12 @@ STATE_LABELS = {
     SessionState.AWAITING_INPUT: n_("Awaiting Input..."),
 }
 
+# Delivery labels on a user bubble (ChatMessage.delivery_hint, drawn and
+# translated by the native renderer; maxlen 32). STEER: sent into a running
+# task. QUEUED: held until the turn can take it (core/held_sends.py).
+HINT_STEER = n_("Added to the running task")
+HINT_QUEUED = n_("Queued until Mixie is ready")
+
 
 # JSON-RPC 2.0 METHODS (WebSocket communication)
 

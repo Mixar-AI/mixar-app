@@ -1,0 +1,239 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Steering and parallel-tab discovery: held sends, busy composer hints,
+the New chat choice while a task runs, and the telemetry that measures them."""
+
+import importlib
+from pathlib import Path
+from types import SimpleNamespace as NS
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from mixar.modules.common.analytics import essential_events as essential
+from mixar.modules.space_mixie_chat import constants
+from mixar.modules.space_mixie_chat.constants import SessionState
+from mixar.modules.space_mixie_chat.core import agent_tips, held_sends
+
+composer_send = importlib.import_module('mixar.modules.space_mixie_chat.core.composer_send')
+
+ROOT = Path(__file__).resolve().parents[1]
+MOD = ROOT / "src/scripts/mixar/modules"
+BUBBLE = ROOT / "src/source/blender/editors/space_agent_bubble"
+
+
+def read(path):
+    return Path(path).read_text(encoding="utf-8")
+
+
+class FakeMessages(list):
+    def add(self):
+        msg = NS(sender='', text='', bubble_id='', delivery_hint='')
+        self.append(msg)
+        return msg
+
+    def remove(self, index):
+        del self[index]
+
+
+def scene(name='Tab', state=SessionState.BUSY, run_open=False):
+    return NS(name=name, mixie_chat_messages=FakeMessages(), mixie_chat_input='',
+              _state=state, mixie_run_open=run_open)
+
+
+def fake_session():
+    return NS(get_state=lambda s: s._state, run_open=lambda s: s.mixie_run_open)
+
+
+@pytest.fixture(autouse=True)
+def clean_state():
+    held_sends._held.clear()
+    agent_tips._state.update(turns=0, current='')
+    with patch('mixar.modules.space_mixie_chat.core.session.get_session_manager',
+               return_value=fake_session()), \
+            patch.object(composer_send, 'get_session_manager', return_value=fake_session()):
+        yield
+    held_sends._held.clear()
+
+
+# ---- delivery labels ----------------------------------------------------
+
+def test_delivery_labels_fit_the_bubble_property():
+    # ChatMessage.delivery_hint is maxlen=32; the native label buffer is 40.
+    for hint in (constants.HINT_STEER, constants.HINT_QUEUED):
+        assert 0 < len(hint) < 32
+
+
+# ---- held sends ---------------------------------------------------------
+
+def test_hold_only_while_busy_without_an_open_run():
+    assert held_sends.should_hold(scene(state=SessionState.BUSY, run_open=False))
+    assert not held_sends.should_hold(scene(state=SessionState.BUSY, run_open=True))
+    assert not held_sends.should_hold(scene(state=SessionState.IDLE))
+    assert not held_sends.should_hold(scene(state=SessionState.AWAITING_INPUT))
+
+
+def test_held_message_is_a_labelled_bubble_and_restores_to_the_composer():
+    s = scene()
+    held_sends.hold(s, "make it red")
+    held_sends.hold(s, "and taller")
+    assert [m.delivery_hint for m in s.mixie_chat_messages] == [constants.HINT_QUEUED] * 2
+    assert all(m.bubble_id.startswith(held_sends.HELD_PREFIX) for m in s.mixie_chat_messages)
+    s.mixie_chat_input = "draft"
+    held_sends.restore(s)
+    assert list(s.mixie_chat_messages) == []
+    assert s.mixie_chat_input == "make it red\nand taller\ndraft"
+    assert held_sends.held_count(s) == 0
+
+
+def test_tick_sends_one_held_message_once_the_turn_can_take_it():
+    s = scene()
+    held_sends.hold(s, "first")
+    held_sends.hold(s, "second")
+    sent = []
+    with patch.object(held_sends.bpy.data.scenes, 'get', return_value=s), \
+            patch.object(held_sends, '_ready', side_effect=[False, True, True]), \
+            patch.object(held_sends, '_send', side_effect=lambda sc, t: sent.append(t)):
+        assert held_sends._tick() == held_sends._INTERVAL   # not ready: both wait
+        assert sent == []
+        assert held_sends._tick() == held_sends._INTERVAL   # one per tick
+        assert sent == ["first"]
+        assert held_sends._tick() is None                   # drained: timer stops
+    assert sent == ["first", "second"]
+    assert list(s.mixie_chat_messages) == []
+
+
+def test_tick_drops_entries_whose_chat_was_cleared():
+    s = scene()
+    held_sends.hold(s, "lost")
+    s.mixie_chat_messages.clear()          # file load / history restore
+    with patch.object(held_sends.bpy.data.scenes, 'get', return_value=s), \
+            patch.object(held_sends, '_send') as send:
+        assert held_sends._tick() is None
+    send.assert_not_called()
+
+
+def test_ready_never_answers_a_question_or_a_plan_edit():
+    with patch.object(composer_send, 'can_send', return_value=(True, '')):
+        assert held_sends._ready(scene(state=SessionState.IDLE))
+        assert held_sends._ready(scene(state=SessionState.BUSY, run_open=True))
+        assert not held_sends._ready(scene(state=SessionState.BUSY, run_open=False))
+        assert not held_sends._ready(scene(state=SessionState.AWAITING_INPUT))
+        assert not held_sends._ready(scene(state=SessionState.MODIFYING))
+
+
+def test_can_compose_holds_instead_of_refusing_a_busy_turn():
+    s = scene(state=SessionState.BUSY, run_open=False)
+    with patch.object(composer_send, '_blocked', return_value=''), \
+            patch.object(composer_send, 'can_send', return_value=(False, 'Working...')):
+        assert composer_send.can_compose(s) == (True, '')
+    # A real refusal (video attachment, model switch, rewind) still refuses.
+    with patch.object(composer_send, '_blocked', return_value='Restoring'), \
+            patch.object(composer_send, 'can_send', return_value=(False, 'Restoring')):
+        assert composer_send.can_compose(s) == (False, 'Restoring')
+
+
+def test_joins_running_task_covers_open_runs_only():
+    assert composer_send.joins_running_task(scene(state=SessionState.BUSY, run_open=True))
+    assert composer_send.joins_running_task(scene(state=SessionState.IDLE, run_open=True))
+    assert not composer_send.joins_running_task(scene(state=SessionState.BUSY, run_open=False))
+    assert not composer_send.joins_running_task(scene(state=SessionState.AWAITING_INPUT, run_open=True))
+
+
+# ---- busy composer hints --------------------------------------------------
+
+def test_hints_alternate_then_retire_after_use():
+    config = {}
+    with patch('mixar.config.config.get_config', return_value=config):
+        picks = [agent_tips.pick_busy_hint() for _ in range(4)]
+        assert picks == ['steer', 'parallel', 'steer', 'parallel']
+        config[agent_tips.CONFIG_KEY] = {'steer': agent_tips.RETIRE_AFTER}
+        assert agent_tips.pick_busy_hint() == 'parallel'
+        config[agent_tips.CONFIG_KEY] = {'steer': 9, 'parallel': 9}
+        assert agent_tips.pick_busy_hint() == agent_tips.TIP_DEFAULT
+
+
+def test_arm_publishes_the_english_template_for_the_native_composer():
+    wm = NS(mixie_chat_busy_hint='')
+    with patch('mixar.config.config.get_config', return_value={}):
+        tip = agent_tips.arm_busy_hint(NS(window_manager=wm))
+    assert wm.mixie_chat_busy_hint == agent_tips.BUSY_HINTS[tip]
+    assert agent_tips.current_hint() == tip
+
+
+def test_note_used_counts_until_retired_and_writes_off_the_main_thread():
+    config = {}
+    threads = []
+    fake_thread = MagicMock(side_effect=lambda **kw: threads.append(kw) or NS(start=lambda: None))
+    with patch('mixar.config.config.get_config', return_value=config), \
+            patch.object(agent_tips.threading, 'Thread', fake_thread):
+        for _ in range(agent_tips.RETIRE_AFTER + 2):
+            agent_tips.note_used('steer')
+        agent_tips.note_used('bogus')
+    assert config[agent_tips.CONFIG_KEY] == {'steer': agent_tips.RETIRE_AFTER}
+    assert len(threads) == agent_tips.RETIRE_AFTER
+    assert all(t['daemon'] for t in threads)
+
+
+# ---- telemetry -------------------------------------------------------------
+
+def test_message_sent_carries_steering_and_tab_counts_only():
+    ctx = NS(area=NS(type='VIEW_3D'), scene=NS(mixie_chat_mode='AGENT', name='/private/x'))
+    agent_tips._state['current'] = 'parallel'
+    with patch.object(essential, 'capture') as emit, \
+            patch.object(agent_tips, 'tab_counts', return_value=(3, 2)):
+        essential.capture_agent_message(ctx, [], False, False, None, interjecting=True)
+        essential.capture_agent_message(ctx, [], False, False, None)
+    steered, plain = (c.args[1] for c in emit.call_args_list)
+    assert (steered['interjecting'], steered['held'], steered['busy_hint']) == (True, False, 'parallel')
+    assert (steered['scene_tabs'], steered['other_tabs_working']) == (3, 2)
+    assert (plain['interjecting'], plain['busy_hint']) == (False, None)
+    assert '/private' not in str([c.args[1] for c in emit.call_args_list])
+
+
+def test_new_scene_operator_reports_parallel_context():
+    with patch.object(agent_tips, 'tab_counts', return_value=(2, 1)):
+        props = essential.scene_tab_operator_properties('mixie_chat.new_scene_tab', {'FINISHED'}, None)
+        assert props == {'other_tabs_working': 1, 'busy_hint': None}
+        assert essential.scene_tab_operator_properties('mixie_chat.new_scene_tab', {'CANCELLED'}, None) == {}
+        assert essential.scene_tab_operator_properties('mixie_chat.switch_scene_tab', {'FINISHED'}, None) == {}
+
+
+# ---- wiring (operators are mocks under the stubbed bpy) ---------------------
+
+def test_send_operator_polls_can_compose_and_holds_before_encoding():
+    src = read(MOD / "space_mixie_chat/ui/operators/chat_ops.py")
+    poll = src[src.index("def poll(cls, context):"):src.index("def execute(self, context):")]
+    assert "can_compose(context.scene)" in poll
+    hold = src.index("held_sends.hold(scene, message_text)")
+    assert src.index("ws_client.connection_id") < hold < src.index("encode_outgoing_attachments(")
+    assert "user_msg.delivery_hint = HINT_STEER" in src
+    assert "agent_tips.arm_busy_hint(context)" in src
+    assert "interjecting=steering, held=held" in src
+
+
+def test_stop_and_new_chat_hand_held_text_back():
+    src = read(MOD / "space_mixie_chat/ui/operators/session_ops.py")
+    assert "held_sends.restore(scene)" in src
+    assert "held_text = held_sends.release(scene)" in src
+    assert "scene.mixie_chat_input = held_text" in src
+
+
+def test_new_chat_while_working_offers_a_scene_tab_first():
+    src = read(MOD / "space_mixie_chat/ui/operators/session_ops.py")
+    invoke = src[src.index("    def invoke(self, context, event):\n        # The \"+\""):]
+    assert 'call_menu(name="MIXIE_CHAT_MT_new_chat_busy")' in invoke
+    menu = read(MOD / "agent_bubble/ui/menus/new_chat_menu.py")
+    first, second = menu.index("mixie_chat.new_scene_tab"), menu.index("mixie_chat.new_session")
+    assert first < second
+    assert "operator_context = 'EXEC_DEFAULT'" in menu  # the second row must not re-open the menu
+
+
+def test_native_island_reads_the_hint_and_labels_steer():
+    state = read(BUSY := BUBBLE / "agent_ui_state.cc")
+    assert '"mixie_chat_busy_hint"' in state and "steer_visible" in state
+    assert 'enum_is(&scene_ptr, "mixie_chat_state", "BUSY")' in state
+    assert 'IFACE_("Steer")' in read(BUBBLE / "agent_ui_controls_paint.cc")
+    assert "steer_visible" in read(BUBBLE / "agent_bubble_references.cc")
+    assert BUSY.exists()

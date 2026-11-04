@@ -48,6 +48,9 @@ struct AgentIslandState {
   /* The primary button reads Stop instead of Send: busy AND nothing typed.
    * A non-empty composer always sends (an interjection joins the open run). */
   bool stop_visible;
+  /* The primary button reads Steer: the agent is working on something a
+   * typed message joins (a running turn, or an open run's workers). */
+  bool steer_visible;
   /* A conversation exists, so the panel splits: transcript above, input below.
    * Empty, the input takes the whole panel exactly as the artboard draws it. */
   bool has_transcript;
