@@ -235,7 +235,7 @@ class Journal:
     """The manifest of THIS launch, kept in step with what is on disk."""
 
     def __init__(self, root: str, pid: int, app_version: str = "", now: float | None = None,
-                 session: str = ""):
+                 session: str = "", app_session_id: str = ""):
         now = time.time() if now is None else now
         self.root = root
         self.session = session or new_session_id(now, pid)
@@ -248,6 +248,8 @@ class Journal:
             "pid": pid,
             "started_at": now,
             "app_version": app_version,
+            # The process's telemetry id, so the next launch can name it.
+            "app_session_id": app_session_id,
             "clean_exit": False,
             "document_path": "",
             "project_saved": None,

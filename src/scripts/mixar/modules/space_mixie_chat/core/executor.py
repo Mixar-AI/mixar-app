@@ -105,12 +105,21 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         load and the undo/redo handlers end turns WITHOUT a step: a push there
         records a closing tab as still working, or truncates the redo stack
         from inside the undo handler. The end-all (``None``) form never pushes.
+
+        Every way one session's turn ends passes here, so this is where it
+        asks for a crash-recovery save point (the end-all form is a file load
+        or shutdown: nothing of this document is left to save).
         """
         if session_id is None:
             if self._turns:
                 self._turns.clear()
                 logger.debug("Agent turns ended (all)")
             return
+        try:
+            from mixar.modules.session_recovery.runtime import request_save_point
+            request_save_point("turn_end")
+        except Exception:  # noqa: BLE001 - crash safety never breaks a turn
+            logger.debug("save point request on turn end skipped", exc_info=True)
         turn = self._turns.pop(session_id, None)
         if turn is not None:
             logger.debug("Agent turn ended (%s)", session_id[:8])

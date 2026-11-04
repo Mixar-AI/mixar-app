@@ -2656,7 +2656,11 @@ void WM_file_autosave_init(wmWindowManager *wm)
  * treating them like a mid-drag transform starved autosave for the whole turn:
  * the cs-go-3 run (28 Oct) crashed after 1 h 50 min with its last autosave from
  * the turn's first minute. Agent scripts run on the main thread between
- * events, so an autosave here never sees one half done.
+ * events, so an autosave here never sees one half done. Background waits and
+ * the overlays/pickers that only watch input (the out-of-credits banner, the
+ * tour, the lightbox, the model cards, the lane viewer, the video player) are
+ * passive too: the credits banner left open starved every save (#1787). Same
+ * list as session_recovery/runtime.py PASSIVE_MODALS (pinned by a test).
  */
 static bool wm_autosave_modal_op_is_passive(const wmOperator *op)
 {
@@ -2664,6 +2668,17 @@ static bool wm_autosave_modal_op_is_passive(const wmOperator *op)
       "MIXAR_OT_agent_viewport_block",
       "MIXIE_CHAT_OT_undo_shield",
       "MIXIE_OT_train_asset_model",
+      "MIXIE_OT_search_assets",
+      "MIXIE_OT_refresh_asset_status",
+      "MIXIE_OT_delete_asset_embeddings",
+      "MIXIE_CHAT_OT_snip_image",
+      "MIXAR_OT_credits_banner",
+      "MIXAR_OT_onboarding_tour",
+      "MIXIE_CHAT_OT_lightbox",
+      "MIXAR_OT_agent_model_card",
+      "MIXAR_OT_agent_engine_card",
+      "VIEW3D_OT_workspace_viewer",
+      "MIXIE_OT_moodboard_video_player",
   };
   for (const char *idname : passive_idnames) {
     if (STREQ(op->idname, idname)) {

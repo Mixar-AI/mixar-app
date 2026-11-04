@@ -35,6 +35,13 @@ ucupaint's license is GPL-3.0-or-later (see [LICENSES/GPL-3.0-or-later.txt](LICE
 
 We thank ucupumar for the open-source work that made Mixar's texture-painting module possible.
 
+### Game-engine logos
+
+The Connect engine dialog shows each engine's logo only to name the engine Mixar connects to; this implies no affiliation with or endorsement by either project.
+
+- **Godot** — `src/scripts/mixar/modules/space_mixie_chat/assets/engines/godot.png` is the Godot Engine logo by Andrea Calabró, licensed under [CC BY 4.0](LICENSES/CC-BY-4.0.txt).
+- **Unreal Engine** — `src/scripts/mixar/modules/space_mixie_chat/assets/engines/unreal.png`: Unreal, Unreal Engine and the Unreal Engine logo are trademarks or registered trademarks of Epic Games, Inc. ([LICENSES/LicenseRef-Epic-Unreal-Logo.txt](LICENSES/LicenseRef-Epic-Unreal-Logo.txt)).
+
 ### Clash Grotesk
 
 The Cinema Mode button uses Clash Grotesk Regular by Indian Type Foundry,

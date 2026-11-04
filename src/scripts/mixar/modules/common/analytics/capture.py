@@ -140,6 +140,11 @@ def capture(event: str, properties: dict | None = None, *, context=None) -> None
         logger.debug("Telemetry capture failed for %s: %s", event, exc)
 
 
+def app_session_id() -> str:
+    """This desktop process's telemetry session id (opaque UUID)."""
+    return _app_session_id
+
+
 def events_dropped() -> int:
     return _events_dropped
 
