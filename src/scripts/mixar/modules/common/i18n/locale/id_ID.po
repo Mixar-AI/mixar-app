@@ -55,6 +55,33 @@ msgstr "Tidak ada gaya"
 msgid "No styles available"
 msgstr "Tidak ada gaya yang tersedia"
 
+msgid "Restore"
+msgstr "Pulihkan"
+
+msgid "Open the work Mixar saved before it closed unexpectedly"
+msgstr ""
+
+msgid "Nothing to restore"
+msgstr ""
+
+msgid "Start fresh"
+msgstr "Mulai dari awal"
+
+msgid "Start with a new file; the saved work is kept for 7 days but not offered again"
+msgstr ""
+
+msgid "Restore your work"
+msgstr ""
+
+msgid "Mixar closed unexpectedly: restore the work it saved"
+msgstr ""
+
+msgid "Nothing is written to your project until you save."
+msgstr ""
+
+msgid "Start fresh instead"
+msgstr ""
+
 msgid "Splash"
 msgstr "Layar Pembuka"
 
@@ -291,6 +318,15 @@ msgstr "Isi popup gelembung agen yang mengambang."
 msgid "Send"
 msgstr "Kirim"
 
+msgid "Mixie is still working"
+msgstr ""
+
+msgid "Start in a new scene tab"
+msgstr ""
+
+msgid "Stop this task and start over"
+msgstr ""
+
 msgid "Scenes"
 msgstr ""
 
@@ -305,9 +341,6 @@ msgstr ""
 
 msgid "Minimise"
 msgstr "Minimalkan"
-
-msgid "Restore"
-msgstr "Pulihkan"
 
 msgid "Toggle Agent Bubble"
 msgstr "Alihkan Gelembung Agen"
@@ -1514,8 +1547,20 @@ msgstr "Gunakan kolom di bawah, atau Pindai Ulang"
 msgid "Choose a local model first."
 msgstr "Pilih model lokal terlebih dahulu."
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "Jalankan model lokal terlebih dahulu (model harus berjalan agar dapat disimpan)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "URL dasar dan nama model wajib diisi."
@@ -1671,6 +1716,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +1971,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2900,17 @@ msgstr "Mixar tidak berjalan dari bundel aplikasi"
 msgid "No permission to update {path}"
 msgstr "Tidak ada izin untuk memperbarui {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "Direktori instalasi tidak dapat ditentukan"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "Lokasi instalasi tidak dapat ditentukan"
@@ -2879,6 +2939,12 @@ msgstr "Tidak dapat memulai pembaru"
 msgid "Mixar didn't close"
 msgstr "Mixar tidak tertutup"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "Pembaruan dalam aplikasi tidak didukung di platform ini"
 
@@ -2893,6 +2959,72 @@ msgstr "Tipe penginstal tidak didukung untuk {platform}: {installer_type}"
 
 msgid "This install can't be updated in place"
 msgstr "Instalasi ini tidak dapat diperbarui di tempat"
+
+msgid "Updated to Mixar {version}"
+msgstr "Diperbarui ke Mixar {version}"
+
+msgid "The update was installed successfully."
+msgstr "Pembaruan berhasil dipasang."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "Pembaruan tidak berlaku"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Anda dapat mengunduh {version} dari halaman unduhan."
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Anda dapat mengunduh pembaruan dari halaman unduhan."
+
+msgid "Update was not installed"
+msgstr "Pembaruan tidak dipasang"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} telah dipasang tetapi versi {running} yang berjalan. Pasang ulang dari halaman unduhan."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar masih berjalan saat penginstal mencoba dimulai."
+
+msgid "The downloaded installer failed its signature check."
+msgstr "Penginstal yang diunduh gagal dalam pemeriksaan tanda tangan."
+
+msgid "The downloaded installer could not be opened."
+msgstr "Penginstal yang diunduh tidak dapat dibuka."
+
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar tidak dapat diganti di disk."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "Penginstal tidak selesai."
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} dari {total}"
@@ -2960,47 +3092,35 @@ msgstr "Tidak dapat memeriksa pembaruan"
 msgid "Check your internet connection and try again."
 msgstr "Periksa koneksi internet Anda dan coba lagi."
 
-msgid "Update didn't take effect"
-msgstr "Pembaruan tidak berlaku"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} telah dipasang tetapi versi {running} yang berjalan. Pasang ulang dari halaman unduhan."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Diperbarui ke Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "Pembaruan berhasil dipasang."
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Anda dapat mengunduh {version} dari halaman unduhan."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Anda dapat mengunduh pembaruan dari halaman unduhan."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "Pembaruan tidak dipasang"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar masih berjalan saat penginstal mencoba dimulai."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "Penginstal yang diunduh gagal dalam pemeriksaan tanda tangan."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "Penginstal yang diunduh tidak dapat dibuka."
-
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar tidak dapat diganti di disk."
-
-msgid "The installation was cancelled."
-msgstr "Instalasi dibatalkan."
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer melaporkan galat fatal."
-
-msgid "The installer did not finish."
-msgstr "Penginstal tidak selesai."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Memulai ulang Mixar dan memasang pembaruan yang diunduh"
@@ -3046,6 +3166,9 @@ msgstr "Menghentikan pengunduhan pembaruan"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "Pembaruan ini wajib dan tidak dapat dibatalkan"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "Membuka halaman unduhan Mixar di peramban bawaan"
@@ -4853,6 +4976,15 @@ msgstr "Gagal membaca gambar '{name}': {error}"
 msgid "Smart segmentation failed"
 msgstr "Segmentasi pintar gagal"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "Tipe Tampilan"
 
@@ -5705,6 +5837,9 @@ msgstr "Retopologi"
 msgid "Mesh Segmentation"
 msgstr "Segmentasi Jaring 3D"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "Rig Otomatis"
 
@@ -6141,6 +6276,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "Memasang bagian yang dihasilkan ke tubuh yang sudah di-rig atau polos, secara lokal"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9319,21 @@ msgstr "Teks bebas yang menyebutkan bagian yang dicari"
 msgid "Smart segmentation started..."
 msgstr "Segmentasi pintar dimulai..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11287,48 @@ msgstr "ID Riwayat Operasi Mixar"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "ID persisten per adegan yang menjadi kunci riwayat operasi adegan ini."
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "Campuran"
 
@@ -11361,9 +11556,6 @@ msgstr "Terseleksi untuk Kelompok"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "Menyeleksi lapis untuk operasi massal (pindahkan ke kelompok, dll.)"
-
-msgid "Higher quality"
-msgstr "Kualitas lebih tinggi"
 
 msgid "Expand Layers"
 msgstr "Perluas Lapis"
@@ -15171,6 +15363,12 @@ msgstr "Nama entri bpy.data.images yang digunakan sebagai referensi"
 msgid "Called from chat/agent context"
 msgstr "Dipanggil dari konteks obrolan/agen"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "Status UI tidak tersedia"
 
@@ -15179,6 +15377,9 @@ msgstr "Generasi tekstur kuas sedang berlangsung"
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "Silakan masukkan prompt untuk tekstur kuas"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "Gagal memasukkan generasi kuas ke antrean"
@@ -15284,6 +15485,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Daftar lapis bergaya Substance 3D Painter dengan mode campuran dan opasitas sebaris."
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "Penempatan"
+
+msgid "Object"
+msgstr "Benda"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "Pindahkan Masker Lapis"
@@ -16443,6 +16683,9 @@ msgstr "Masker Gambar Baru"
 msgid "Open Image as Mask..."
 msgstr "Buka Gambar sebagai Masker..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "Masker Warna Titik Sudut"
 
@@ -16562,6 +16805,12 @@ msgstr "Pipeline"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "Pipeline generasi: 'fast' atau 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "Tugas duplikat sudah ada di antrean"
@@ -17361,9 +17610,6 @@ msgstr "Garis Singgung"
 
 msgid "Tangent space"
 msgstr "Ruang tangen"
-
-msgid "Object"
-msgstr "Benda"
 
 msgid "Object space"
 msgstr "Ruang objek"
@@ -19527,6 +19773,45 @@ msgstr "Gunakan Gambar Untuk"
 msgid "Draw to build creates the shape you sketch. Point to edit uses circles and arrows to show where your instructions apply"
 msgstr "Gambar untuk membangun membuat bentuk yang Anda sketsa. Tunjuk untuk mengedit menggunakan lingkaran dan panah untuk menunjukkan tempat instruksi Anda berlaku"
 
+msgid "SyncImageJob"
+msgstr ""
+
+msgid "StreamingVideoJob"
+msgstr ""
+
+msgid "Untitled"
+msgstr ""
+
+msgid "{count} scene tabs"
+msgstr ""
+
+msgid "the agent was working in {tabs}"
+msgstr ""
+
+msgid "{count} generation(s) running"
+msgstr ""
+
+msgid "Mixar closed while restoring your work. Restore the previous save point?"
+msgstr ""
+
+msgid "Mixar closed unexpectedly. Restore your work?"
+msgstr ""
+
+msgid "Mixar could not open the saved work. It is kept for the next launch."
+msgstr ""
+
+msgid "These generations were running when Mixar closed and could not be re-attached: {names}"
+msgstr ""
+
+msgid "Mixar closed while the agent was working"
+msgstr ""
+
+msgid "Your scene is back from the save point at {time}. Continue lets the agent check the scene and pick the task up from there."
+msgstr ""
+
+msgid "The agent can continue once Mixar is connected and the chat is idle. Press Continue again then."
+msgstr ""
+
 msgid "Toolbar"
 msgstr "Bilah Alat"
 
@@ -19956,6 +20241,12 @@ msgstr "Mengubah..."
 msgid "Awaiting Input..."
 msgstr "Menunggu Masukan..."
 
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
+
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -19967,6 +20258,15 @@ msgstr "ID pengguna untuk masuk ke Mixie Chat"
 
 msgid "Agent expects: {formats}"
 msgstr "Agen mengharapkan: {formats}"
+
+msgid "Mixie is working. Type here to steer it..."
+msgstr ""
+
+msgid "Ctrl+` opens another scene with its own agent"
+msgstr ""
+
+msgid "Type here to steer Mixie..."
+msgstr ""
 
 msgid "Skipped slow image: {name}"
 msgstr "Gambar lambat dilewati: {name}"
@@ -20121,6 +20421,15 @@ msgstr ""
 msgid "Subscribe"
 msgstr ""
 
+msgid "Proximal"
+msgstr ""
+
+msgid "Distal"
+msgstr ""
+
+msgid "Intermediate"
+msgstr ""
+
 msgid "Feedback comment is empty"
 msgstr "Komentar umpan balik kosong"
 
@@ -20229,7 +20538,28 @@ msgstr "'{name}' tidak lagi ada di berkas aset."
 msgid "Could not add the asset to the scene."
 msgstr "Tidak dapat menambahkan aset ke adegan."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20613,6 @@ msgstr "Tidak dapat melanjutkan secara otomatis — tekan Enter pada \"continue\
 msgid "The request could not be completed."
 msgstr "Permintaan tidak dapat diselesaikan."
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Pesan Anda tidak sampai ke Mixie. Periksa koneksi Anda, lalu kirim ulang."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Tidak dapat menjangkau server. Periksa koneksi Anda dan coba lagi."
 
@@ -20330,6 +20651,15 @@ msgstr "Pengenalan tulisan tangan belum tersedia di server ini — ketik pesanny
 
 msgid "Handwriting conversion failed"
 msgstr "Konversi tulisan tangan gagal"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Pesan Anda tidak sampai ke Mixie. Periksa koneksi Anda, lalu kirim ulang."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20508,8 +20838,23 @@ msgstr "Tugas *masih berjalan* — melanjutkan akan memutar ulang apa yang Anda 
 msgid "Resume task"
 msgstr "Lanjutkan tugas"
 
-msgid "Start fresh"
-msgstr "Mulai dari awal"
+msgid "AllToolsets"
+msgstr ""
+
+msgid "PythonScriptPlugin"
+msgstr ""
+
+msgid "LevelPrototyping"
+msgstr ""
+
+msgid "Binaries"
+msgstr ""
+
+msgid "Win64"
+msgstr ""
+
+msgid "Linux"
+msgstr ""
 
 msgid "Voice input unavailable."
 msgstr "Masukan suara tidak tersedia."
@@ -20671,6 +21016,15 @@ msgstr "Pilih"
 msgid "That library pick is no longer offered"
 msgstr ""
 
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
+msgstr ""
+
 msgid "Session expired. {reason}"
 msgstr "Sesi kedaluwarsa. {reason}"
 
@@ -20829,6 +21183,12 @@ msgstr "Tidak terhubung ke server"
 
 msgid "WebSocket not ready — no connection ID"
 msgstr "WebSocket belum siap — tidak ada ID koneksi"
+
+msgid "Add a message to send while Mixie works"
+msgstr ""
+
+msgid "Message queued"
+msgstr ""
 
 msgid "Marks: {note}"
 msgstr "Tanda: {note}"
@@ -21085,6 +21445,42 @@ msgid "Paste failed: {error}"
 msgstr "Gagal menempel: {error}"
 
 msgid "Pasted image as reference"
+msgstr ""
+
+msgid "Use This Editor"
+msgstr ""
+
+msgid "Drive this game engine editor from the agent"
+msgstr ""
+
+msgid "Connect Engine"
+msgstr ""
+
+msgid "Install Mixar Link into a game project and open it in the engine, so the agent can build your game there"
+msgstr ""
+
+msgid "Project"
+msgstr "Proyek"
+
+msgid "New game project"
+msgstr ""
+
+msgid "Make a new project for this game"
+msgstr ""
+
+msgid "A project I already have"
+msgstr ""
+
+msgid "Use a project folder you already have"
+msgstr ""
+
+msgid "A third-person game from Unreal's own template."
+msgstr ""
+
+msgid "That folder is not a Godot project (it has no project.godot)."
+msgstr ""
+
+msgid "That folder is not an Unreal project (it has no .uproject)."
 msgstr ""
 
 msgid "Export .blend without chat history"
@@ -21761,6 +22157,12 @@ msgstr "Batalkan Dikte Kolom"
 
 msgid "Cancel only the native edit lifetime that owns this token."
 msgstr "Hanya membatalkan sesi edit native yang memiliki token ini."
+
+msgid "Busy Hint"
+msgstr ""
+
+msgid "Composer placeholder shown while the agent works (English template)"
+msgstr ""
 
 msgid "Cat Activity"
 msgstr "Aktivitas Kucing"
@@ -22465,6 +22867,12 @@ msgid "Call ID"
 msgstr ""
 
 msgid "Backend tool-call id (the LangChain run id). Sent on the script RPC as agent_ctx.call_id and on the backend's activity payload, so both views of one call share a row"
+msgstr ""
+
+msgid "Game Engine"
+msgstr ""
+
+msgid "The game engine the agent builds in"
 msgstr ""
 
 msgid "Archived session identifier"
@@ -23394,9 +23802,6 @@ msgstr "Annotasi Poligon"
 msgid "Annotate Eraser"
 msgstr "Annotasi Penghapus"
 
-msgid "Placement"
-msgstr "Penempatan"
-
 msgid "(none — draw to create)"
 msgstr "(tidak ada — gambar untuk membuat)"
 
@@ -23903,9 +24308,6 @@ msgstr "Menengahkan UV hasil proyeksi di ruang UV"
 
 msgid "No faces selected"
 msgstr "Tidak ada bidang yang terseleksi"
-
-msgid "Project"
-msgstr "Proyek"
 
 msgid "Project UVs using the type and properties shown in the Projection panel"
 msgstr "Memproyeksikan UV menggunakan tipe dan properti yang ditampilkan di panel Proyeksi"
@@ -25293,6 +25695,9 @@ msgstr "Properti"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25449,6 +25854,9 @@ msgstr "Memulai atau menghentikan dikte ke draf sketsa"
 msgid "Stop the running turn"
 msgstr "Menghentikan giliran yang sedang berjalan"
 
+msgid "Add this message to the task Mixie is working on"
+msgstr ""
+
 msgid ""
 "Revert\n"
 "\n"
@@ -25545,11 +25953,17 @@ msgstr "Menangkap"
 msgid "NEW"
 msgstr "BARU"
 
+msgid "Steer"
+msgstr ""
+
 msgid "Ask Mixie anything..."
 msgstr "Tanyakan apa saja kepada Mixie..."
 
 msgid "Write your prompt here..."
 msgstr "Tulis prompt Anda di sini..."
+
+msgid "The game engine the agent builds in. Click to switch or connect one"
+msgstr ""
 
 msgid "Everything Mixar has generated"
 msgstr "Semua yang telah dihasilkan Mixar"
@@ -25690,6 +26104,12 @@ msgid "Saving your change…"
 msgstr ""
 
 msgid "Finish or stop the current reply to change the model"
+msgstr ""
+
+msgid "Connecting…"
+msgstr ""
+
+msgid "Finish or stop the current reply to switch the engine"
 msgstr ""
 
 msgid "Generating (%d)"
@@ -25945,6 +26365,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +26868,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Pratinjau\n"
-"\n"
-"Membuka gambar atau video ini di jendelanya sendiri. Beberapa pratinjau dapat terbuka sekaligus."
 
 msgid ""
 "Rename\n"
@@ -26469,11 +26895,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"Pratinjau\n"
-"\n"
-"Membuka hasil ini di jendelanya sendiri. Beberapa pratinjau dapat terbuka sekaligus."
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27144,17 @@ msgstr "Item moodboard yang diseleksi bukan video"
 msgid "Cannot decode video: %s"
 msgstr "Tidak dapat mendekode video: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "Item papan ini tidak memiliki gambar atau video untuk dipratinjau"
 
 msgid "This node has no image or video to preview"
 msgstr "Simpul ini tidak memiliki gambar atau video untuk dipratinjau"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "Preview Gambar"
@@ -26739,8 +27168,8 @@ msgstr "Jendela pratinjau tidak membuka editor gambar"
 msgid "Preview Media"
 msgstr "Pratinjau Media"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "Membuka gambar atau video ini di jendela pratinjaunya sendiri. Beberapa jendela dapat terbuka sekaligus"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "Simpul yang hasilnya akan dibuka"
@@ -26837,6 +27266,18 @@ msgstr "Menempatkan simpul yang dapat diedit di tempat templat diletakkan"
 
 msgid "Template to place"
 msgstr "Templat yang akan ditempatkan"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Seleksi Pratinjau Mixie3D"
