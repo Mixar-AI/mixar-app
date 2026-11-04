@@ -19,14 +19,19 @@ island frames (inspect every PNG):
 3. a message typed while the run is open reads Steer and joins the run;
 4. agent.message_sent carries interjecting / held / tab counts;
 5. a later fresh turn shows the same steer line;
-6. Stop hands a held message back to the composer;
+6. Stop hands a held message back to the composer; so does a turn that
+   ends without a running task (nothing is sent for the user), and a held
+   send that cannot go out (no connection); a held message goes out as text
+   only, leaving images in the composer for the next message;
 7. the header "+" while working offers a new scene tab first, which keeps the
    running task, and "Stop this task and start over" still starts fresh.
 """
 
 import os
+import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 # Run from a harness checkout's scenarios/ (winqa) the harness is the parent.
@@ -73,8 +78,9 @@ def expect(cond, what, data=None):
 
 
 def send_draft(qa, text):
-    if not qa.find(**FIELD)['total']:
-        open_pill(qa)
+    # Always re-open: a folded island can stay in the widget dump with an
+    # unfocused composer, and typing would go nowhere.
+    open_pill(qa)
     type_draft(qa, text)
     qa.wait(f'{SCENE}.mixie_chat_input == {text!r}', timeout=4)
     qa.wait("len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')) == 1",
@@ -100,6 +106,33 @@ def send_draft(qa, text):
             "'send_ops': len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')), "
             "'stop_ops': len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_abort_session'))}")
         raise ScenarioFail(f'send of {text!r} did not land: {state}') from exc
+
+
+def png(path):
+    """A tiny valid PNG (no image library needed in the harness process)."""
+    raw = b''.join(b'\x00' + b'\x30\x80\xd0' * 8 for _ in range(8))
+    def chunk(kind, data):
+        return (struct.pack('>I', len(data)) + kind + data +
+                struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff))
+    Path(path).write_bytes(b'\x89PNG\r\n\x1a\n' +
+                           chunk(b'IHDR', struct.pack('>IIBBBBB', 8, 8, 8, 2, 0, 0, 0)) +
+                           chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
+    return str(path)
+
+
+def wait_draft(qa, text):
+    qa.wait(f"{SCENE}.mixie_chat_input == {text!r}", timeout=4)
+
+
+def send_restored(qa, text, count):
+    """Re-open the island on the restored draft and send it with one click."""
+    open_pill(qa)
+    qa.wait("len(drv.find(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_send_message')) == 1",
+            timeout=5)
+    warp(qa, SEND)
+    qa.click(**SEND)
+    qa.wait(f'len(__import__("chat_send_probe").calls) == {count}', timeout=4)
+    expect(text in calls(qa)[-1]['message'], 'restored draft sent', calls(qa)[-1])
 
 
 def set_run(qa, open_):
@@ -216,6 +249,45 @@ def run(qa):
         qa.click(**SEND)
         qa.wait('len(__import__("chat_send_probe").calls) == 5', timeout=3)
         expect('Paint the fence white' in calls(qa)[-1]['message'], 'restored draft sent', calls(qa)[-1])
+
+        # 6b. A turn that ends without a running task hands queued text back.
+        send_draft(qa, 'Queue me, then the turn ends')
+        expect(users(qa)[-1][1] == 'Queued until Mixie is ready', 'held', users(qa))
+        qa.eval(f'import chat_send_probe as p; p.settle({SCENE}); result=True')  # no run ever opened
+        wait_draft(qa, 'Queue me, then the turn ends')
+        expect(all(u[0] != 'Queue me, then the turn ends' for u in users(qa)), 'bubble gone', users(qa))
+        expect(len(calls(qa)) == 5, 'nothing sent for the user after the turn ended', calls(qa))
+        open_pill(qa)
+        capture(qa, out, '6b-restored-after-turn-ended')
+        send_restored(qa, 'Queue me, then the turn ends', 6)
+
+        # 6c. A queued message goes out as text only; a later image stays put.
+        send_draft(qa, 'Text only please')
+        image = png(out / 'reference.png')
+        qa.eval(f'result=list(bpy.ops.mixie_chat.add_image_from_file(filepath={image!r}))')
+        qa.wait(f'len({SCENE}.mixie_chat_pending_attachments) == 1', timeout=5)
+        set_run(qa, True)
+        qa.wait('len(__import__("chat_send_probe").calls) == 7', timeout=3)
+        sent = qa.eval("import chat_send_probe as p; c=p.calls[-1]\n"
+                       "result={'message': c.get('message', ''), 'images': len(c.get('image_attachments') or [])}")
+        expect('Text only please' in sent['message'] and sent['images'] == 0,
+               'queued message must not take the later image', sent)
+        expect(qa.eval(f'result=len({SCENE}.mixie_chat_pending_attachments)') == 1,
+               'the image stays in the composer', None)
+        open_pill(qa)
+        capture(qa, out, '6c-image-kept-for-next-message')
+        qa.eval(f'{SCENE}.mixie_chat_pending_attachments.clear(); result=True')
+
+        # 6d. A held send that cannot go out puts the words back.
+        set_run(qa, False)
+        send_draft(qa, 'Lost on the way')
+        qa.eval('import chat_send_probe as p; p.connected=False; result=True')
+        set_run(qa, True)
+        wait_draft(qa, 'Lost on the way')
+        expect(len(calls(qa)) == 7 and all(u[0] != 'Lost on the way' for u in users(qa)),
+               'nothing sent, bubble gone, words back', (calls(qa), users(qa)))
+        qa.eval('import chat_send_probe as p; p.connected=True; result=True')
+        send_restored(qa, 'Lost on the way', 8)
 
         # 7. The header "+" while working: new scene tab first; the task keeps running.
         set_run(qa, True)

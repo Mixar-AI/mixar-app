@@ -37,9 +37,12 @@ class FakeMessages(list):
         del self[index]
 
 
+_uids = iter(range(1000, 100000))
+
+
 def scene(name='Tab', state=SessionState.BUSY, run_open=False):
-    return NS(name=name, mixie_chat_messages=FakeMessages(), mixie_chat_input='',
-              _state=state, mixie_run_open=run_open)
+    return NS(name=name, session_uid=next(_uids), mixie_chat_messages=FakeMessages(),
+              mixie_chat_input='', _state=state, mixie_run_open=run_open)
 
 
 def fake_session():
@@ -86,15 +89,15 @@ def test_held_message_is_a_labelled_bubble_and_restores_to_the_composer():
     assert held_sends.held_count(s) == 0
 
 
-def test_tick_sends_one_held_message_once_the_turn_can_take_it():
+def test_tick_sends_into_a_running_task_one_message_per_tick():
     s = scene()
     held_sends.hold(s, "first")
     held_sends.hold(s, "second")
     sent = []
-    with patch.object(held_sends.bpy.data.scenes, 'get', return_value=s), \
-            patch.object(held_sends, '_ready', side_effect=[False, True, True]), \
+    with patch.object(held_sends, '_scene_for', return_value=s), \
+            patch.object(held_sends, '_decide', side_effect=['wait', 'send', 'send']), \
             patch.object(held_sends, '_send', side_effect=lambda sc, t: sent.append(t)):
-        assert held_sends._tick() == held_sends._INTERVAL   # not ready: both wait
+        assert held_sends._tick() == held_sends._INTERVAL   # no running task yet: both wait
         assert sent == []
         assert held_sends._tick() == held_sends._INTERVAL   # one per tick
         assert sent == ["first"]
@@ -103,23 +106,65 @@ def test_tick_sends_one_held_message_once_the_turn_can_take_it():
     assert list(s.mixie_chat_messages) == []
 
 
+def test_turn_ending_without_a_running_task_hands_the_text_back():
+    # A chat-only reply, a refusal, an error or a lost connection: nothing is
+    # sent for the user; the words return to the composer.
+    s = scene()
+    held_sends.hold(s, "also make it red")
+    s._state = SessionState.IDLE          # the turn settled, no run ever opened
+    with patch.object(held_sends, '_scene_for', return_value=s), \
+            patch.object(held_sends, '_send') as send:
+        assert held_sends._tick() is None
+    send.assert_not_called()
+    assert list(s.mixie_chat_messages) == []
+    assert s.mixie_chat_input == "also make it red"
+
+
+def test_decide_only_sends_into_an_open_run():
+    with patch.object(composer_send, 'can_send', return_value=(True, '')):
+        assert held_sends._decide(scene(state=SessionState.BUSY, run_open=True)) == 'send'
+        assert held_sends._decide(scene(state=SessionState.IDLE, run_open=True)) == 'send'
+        assert held_sends._decide(scene(state=SessionState.BUSY, run_open=False)) == 'wait'
+        assert held_sends._decide(scene(state=SessionState.AWAITING_INPUT, run_open=True)) == 'wait'
+        for ended in (SessionState.IDLE, SessionState.OFFLINE, SessionState.CONNECTING,
+                      SessionState.AWAITING_INPUT):
+            assert held_sends._decide(scene(state=ended, run_open=False)) == 'restore'
+
+
+def test_a_send_that_does_not_go_out_puts_the_text_back():
+    s = scene(state=SessionState.BUSY, run_open=True)
+    s.mixie_chat_input = "draft"
+    ops = MagicMock(return_value={'CANCELLED'})
+    with patch.object(held_sends.bpy.ops.mixie_chat, 'send_message', ops), \
+            patch.object(held_sends, '_window_for', return_value=None):
+        held_sends._send(s, "make it red")
+    assert s.mixie_chat_input == "make it red\ndraft"
+    assert not held_sends.is_flushing()
+
+
 def test_tick_drops_entries_whose_chat_was_cleared():
     s = scene()
     held_sends.hold(s, "lost")
     s.mixie_chat_messages.clear()          # file load / history restore
-    with patch.object(held_sends.bpy.data.scenes, 'get', return_value=s), \
+    with patch.object(held_sends, '_scene_for', return_value=s), \
             patch.object(held_sends, '_send') as send:
         assert held_sends._tick() is None
     send.assert_not_called()
 
 
-def test_ready_never_answers_a_question_or_a_plan_edit():
-    with patch.object(composer_send, 'can_send', return_value=(True, '')):
-        assert held_sends._ready(scene(state=SessionState.IDLE))
-        assert held_sends._ready(scene(state=SessionState.BUSY, run_open=True))
-        assert not held_sends._ready(scene(state=SessionState.BUSY, run_open=False))
-        assert not held_sends._ready(scene(state=SessionState.AWAITING_INPUT))
-        assert not held_sends._ready(scene(state=SessionState.MODIFYING))
+def test_held_entries_follow_the_tab_not_its_name():
+    s = scene()
+    held_sends.hold(s, "keep me")
+    s.name = "Renamed tab"
+    assert held_sends.held_count(s) == 1
+
+
+def test_queued_send_is_text_only():
+    src = read(MOD / "space_mixie_chat/ui/operators/chat_ops.py")
+    assert "plain = is_modify or is_awaiting_input or held" in src
+    assert "outgoing_attachments = [] if held else list(pending_attachments)" in src
+    assert "if not held:\n            pending_attachments.clear()" in src
+    assert "if not held:\n                deselect_all_moodboard_origin_attachments(scene)" in src
 
 
 def test_can_compose_holds_instead_of_refusing_a_busy_turn():
