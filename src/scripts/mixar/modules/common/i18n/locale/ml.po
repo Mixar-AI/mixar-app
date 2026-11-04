@@ -55,6 +55,15 @@ msgstr "ശൈലികളില്ല"
 msgid "No styles available"
 msgstr "ശൈലികൾ ലഭ്യമല്ല"
 
+msgid "Splash"
+msgstr "സ്പ്ലാഷ്"
+
+msgid "Dialog"
+msgstr ""
+
+msgid "File menu"
+msgstr ""
+
 msgid "Restore"
 msgstr "പുനഃസ്ഥാപിക്കുക"
 
@@ -82,11 +91,38 @@ msgstr ""
 msgid "Start fresh instead"
 msgstr ""
 
-msgid "Splash"
-msgstr "സ്പ്ലാഷ്"
+msgid "Restore Unsaved Work"
+msgstr ""
 
-msgid "Custom splash menu without Recent Files."
-msgstr "സമീപകാല ഫയലുകളില്ലാത്ത ഇഷ്ടാനുസൃത സ്പ്ലാഷ് മെനു."
+msgid "Open this work, saved before Mixar closed unexpectedly. Nothing is written to your project until you save"
+msgstr ""
+
+msgid "The open document has unsaved changes. They are lost if you restore now."
+msgstr ""
+
+msgid "Wait for the agent to finish, or stop it, before restoring other work"
+msgstr ""
+
+msgid "This work is no longer available. It may be open in another Mixar window"
+msgstr ""
+
+msgid "A restore is already running"
+msgstr ""
+
+msgid "Unsaved Work"
+msgstr ""
+
+msgid "Work Mixar saved before it closed unexpectedly: open any of it again"
+msgstr ""
+
+msgid "Unsaved Work..."
+msgstr ""
+
+msgid "Recent Projects"
+msgstr ""
+
+msgid "Mixar splash: restore question, mode picker, links, recent and unsaved work."
+msgstr ""
 
 msgid "Choose Your Mode"
 msgstr "നിങ്ങളുടെ മോഡ് തിരഞ്ഞെടുക്കുക"
@@ -19779,7 +19815,37 @@ msgstr ""
 msgid "StreamingVideoJob"
 msgstr ""
 
+msgid "just now"
+msgstr "ഇപ്പോൾ തന്നെ"
+
+msgid "{count} min ago"
+msgstr ""
+
+msgid "{count} h ago"
+msgstr ""
+
+msgid "{count} days ago"
+msgstr ""
+
 msgid "Untitled"
+msgstr ""
+
+msgid "1 tab"
+msgstr ""
+
+msgid "{count} tabs"
+msgstr ""
+
+msgid "More…"
+msgstr ""
+
+msgid "No unsaved work to recover"
+msgstr ""
+
+msgid "Work Mixar saved before it closed unexpectedly"
+msgstr ""
+
+msgid "Each copy is kept for up to 14 days."
 msgstr ""
 
 msgid "{count} scene tabs"
@@ -20259,15 +20325,6 @@ msgstr "Mixie ചാറ്റ് ലോഗിനുള്ള ഉപയോക്�
 msgid "Agent expects: {formats}"
 msgstr "ഏജന്റ് പ്രതീക്ഷിക്കുന്നത്: {formats}"
 
-msgid "Mixie is working. Type here to steer it..."
-msgstr ""
-
-msgid "Ctrl+` opens another scene with its own agent"
-msgstr ""
-
-msgid "Type here to steer Mixie..."
-msgstr ""
-
 msgid "Skipped slow image: {name}"
 msgstr "മന്ദഗതിയിലുള്ള ചിത്രം ഒഴിവാക്കി: {name}"
 
@@ -20346,9 +20403,6 @@ msgstr "*നിർത്തി*"
 msgid "now"
 msgstr "ഇപ്പോൾ"
 
-msgid "just now"
-msgstr "ഇപ്പോൾ തന്നെ"
-
 msgid "{count}m"
 msgstr "{count}മി"
 
@@ -20419,6 +20473,45 @@ msgid "This feature uses credits. Subscribe to a plan or buy credits to keep cre
 msgstr ""
 
 msgid "Subscribe"
+msgstr ""
+
+msgid "Give the project a name."
+msgstr ""
+
+msgid "Use letters or digits in the name."
+msgstr ""
+
+msgid "Choose where the project goes."
+msgstr ""
+
+msgid "The location must be a full folder path."
+msgstr ""
+
+msgid "The location is a file, not a folder."
+msgstr ""
+
+msgid "A file named “{name}” is already there. Pick another name."
+msgstr ""
+
+msgid "This {engine} project already exists. Connect opens it."
+msgstr ""
+
+msgid "“{name}” already holds a {engine} project. Pick another name or location."
+msgstr ""
+
+msgid "A folder named “{name}” is already there and is not empty. Pick another name or location."
+msgstr ""
+
+msgid "Choose the folder that holds your {engine} project."
+msgstr ""
+
+msgid "That folder does not exist."
+msgstr ""
+
+msgid "That folder is not a {engine} project (it has no {marker})."
+msgstr ""
+
+msgid "This folder also holds a {other} project; Mixar uses its {engine} project."
 msgstr ""
 
 msgid "Proximal"
@@ -21447,6 +21540,24 @@ msgstr "ഒട്ടിക്കൽ പരാജയപ്പെട്ടു: {er
 msgid "Pasted image as reference"
 msgstr ""
 
+msgid "Unreal Engine {version} found"
+msgstr ""
+
+msgid "Unreal Engine 5.8+ not found"
+msgstr ""
+
+msgid "Install Unreal Engine 5.8 or newer from the Epic Games Launcher, then open this again."
+msgstr ""
+
+msgid "Looking for Godot…"
+msgstr ""
+
+msgid "Godot {version} found"
+msgstr ""
+
+msgid "Downloads Godot {version} (about 150 MB)"
+msgstr ""
+
 msgid "Use This Editor"
 msgstr ""
 
@@ -21459,28 +21570,88 @@ msgstr ""
 msgid "Install Mixar Link into a game project and open it in the engine, so the agent can build your game there"
 msgstr ""
 
-msgid "Project"
-msgstr "പ്രൊജക്റ്റ് ചെയ്യുക"
-
-msgid "New game project"
+msgid "Show this engine or project choice"
 msgstr ""
 
-msgid "Make a new project for this game"
+msgid "Connect a project you already have"
 msgstr ""
 
-msgid "A project I already have"
+msgid "Make a new game project"
 msgstr ""
 
-msgid "Use a project folder you already have"
+msgid "Connect this game engine"
 msgstr ""
 
-msgid "A third-person game from Unreal's own template."
+msgid "Connect"
+msgstr "ബന്ധിപ്പിക്കുക"
+
+msgid "Connect this game project"
 msgstr ""
 
-msgid "That folder is not a Godot project (it has no project.godot)."
+msgid "This engine cannot be connected yet"
 msgstr ""
 
-msgid "That folder is not an Unreal project (it has no .uproject)."
+msgid "Choose Folder"
+msgstr ""
+
+msgid "Choose a folder in the file browser"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Unreal Engine"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "New project"
+msgstr ""
+
+msgid "Existing project"
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link add-on and opens the project in Godot."
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link plugin and turns on Unreal's MCP server for this computer only."
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link plugin and turns on Unreal's MCP server for this computer only. Close the project in Unreal first."
+msgstr ""
+
+msgid "Connect a game engine"
+msgstr ""
+
+msgid "Mixie builds your game in Godot or Unreal while you work in Mixar."
+msgstr ""
+
+msgid "ENGINES"
+msgstr ""
+
+msgid "CONNECTED"
+msgstr ""
+
+msgid "Browse"
+msgstr ""
+
+msgid "Creates a new folder “{name}” here."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Connecting…"
+msgstr ""
+
+msgid "Create and connect"
 msgstr ""
 
 msgid "Export .blend without chat history"
@@ -22020,9 +22191,6 @@ msgstr "മേഖല പിടിച്ചു"
 msgid "Stop could not be confirmed. Reconnect and try Stop again."
 msgstr "നിർത്തൽ സ്ഥിരീകരിക്കാനായില്ല. വീണ്ടും ബന്ധിപ്പിച്ച് നിർത്തുക വീണ്ടും ശ്രമിക്കുക."
 
-msgid "Connect"
-msgstr "ബന്ധിപ്പിക്കുക"
-
 msgid "Connect to the Mixie agent server"
 msgstr "Mixie ഏജന്റ് സെർവറുമായി ബന്ധിപ്പിക്കുക"
 
@@ -22157,12 +22325,6 @@ msgstr "ഫീൽഡ് ഡിക്റ്റേഷൻ റദ്ദാക്ക�
 
 msgid "Cancel only the native edit lifetime that owns this token."
 msgstr "ഈ ടോക്കൺ സ്വന്തമാക്കിയ നേറ്റീവ് എഡിറ്റ് ആയുസ്സ് മാത്രം റദ്ദാക്കുക."
-
-msgid "Busy Hint"
-msgstr ""
-
-msgid "Composer placeholder shown while the agent works (English template)"
-msgstr ""
 
 msgid "Cat Activity"
 msgstr "പൂച്ച പ്രവർത്തനം"
@@ -22873,6 +23035,24 @@ msgid "Game Engine"
 msgstr ""
 
 msgid "The game engine the agent builds in"
+msgstr ""
+
+msgid "Use a project you already have"
+msgstr ""
+
+msgid "Project"
+msgstr "പ്രൊജക്റ്റ് ചെയ്യുക"
+
+msgid "Project name"
+msgstr ""
+
+msgid "The new game's name; its folder is named after it"
+msgstr ""
+
+msgid "The folder the new project's folder is made in"
+msgstr ""
+
+msgid "The folder that holds your project"
 msgstr ""
 
 msgid "Archived session identifier"
@@ -26106,9 +26286,6 @@ msgstr ""
 msgid "Finish or stop the current reply to change the model"
 msgstr ""
 
-msgid "Connecting…"
-msgstr ""
-
 msgid "Finish or stop the current reply to switch the engine"
 msgstr ""
 
@@ -26195,6 +26372,9 @@ msgstr "ഐലൻഡ് ക്യൂവിലെ ജനറേഷൻ ജോലി
 
 msgid "Describe your scene here..."
 msgstr "സീൻ ഇവിടെ വിവരിക്കുക..."
+
+msgid "Mixie is working. Type here to steer it..."
+msgstr ""
 
 msgid "Draw or type instructions. Enter to send."
 msgstr "നിർദ്ദേശങ്ങൾ വരയ്ക്കുകയോ ടൈപ്പ് ചെയ്യുകയോ ചെയ്യുക. അയയ്ക്കാൻ Enter."
