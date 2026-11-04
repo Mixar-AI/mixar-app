@@ -140,13 +140,17 @@ def _restore_row(layout, entry: dict, now: float, surface: str) -> None:
 
 
 def draw_splash_unsaved(layout, items: list) -> None:
-    """The splash's compact Unsaved Work column (``items``: ``splash_entries``)."""
+    """The splash's full-width Unsaved Work grid (``items``: ``splash_entries``)."""
+    from mixar.modules.common.utils.ui_utils import two_column_cells
     layout.label(text="Unsaved Work")
     now = time.time()
-    for entry in items[:MAX_SPLASH]:
-        _restore_row(layout, entry, now, 'SPLASH')
-    if len(items) > MAX_SPLASH:
-        row = layout.row()
+    shown = items[:MAX_SPLASH]
+    more = len(items) > MAX_SPLASH
+    cells = two_column_cells(layout, len(shown) + more)
+    for cell, entry in zip(cells, shown):
+        _restore_row(cell, entry, now, 'SPLASH')
+    if more:
+        row = cells[-1].row()
         row.operator_context = 'INVOKE_DEFAULT'
         row.operator("mixar.unsaved_work", text=iface_("More…"), icon='VIEWZOOM')
 

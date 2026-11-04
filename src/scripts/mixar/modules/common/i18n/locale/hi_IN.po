@@ -58,8 +58,71 @@ msgstr "कोई शैली उपलब्ध नहीं"
 msgid "Splash"
 msgstr "स्प्लैश"
 
-msgid "Custom splash menu without Recent Files."
-msgstr "हालिया संचिकाओं के बिना कस्टम स्प्लैश मेनू।"
+msgid "Dialog"
+msgstr ""
+
+msgid "File menu"
+msgstr ""
+
+msgid "Restore"
+msgstr "पुनर्स्थापित करें"
+
+msgid "Open the work Mixar saved before it closed unexpectedly"
+msgstr ""
+
+msgid "Nothing to restore"
+msgstr ""
+
+msgid "Start fresh"
+msgstr "नए सिरे से शुरू करें"
+
+msgid "Start with a new file; the saved work is kept for 7 days but not offered again"
+msgstr ""
+
+msgid "Restore your work"
+msgstr ""
+
+msgid "Mixar closed unexpectedly: restore the work it saved"
+msgstr ""
+
+msgid "Nothing is written to your project until you save."
+msgstr ""
+
+msgid "Start fresh instead"
+msgstr ""
+
+msgid "Restore Unsaved Work"
+msgstr ""
+
+msgid "Open this work, saved before Mixar closed unexpectedly. Nothing is written to your project until you save"
+msgstr ""
+
+msgid "The open document has unsaved changes. They are lost if you restore now."
+msgstr ""
+
+msgid "Wait for the agent to finish, or stop it, before restoring other work"
+msgstr ""
+
+msgid "This work is no longer available. It may be open in another Mixar window"
+msgstr ""
+
+msgid "A restore is already running"
+msgstr ""
+
+msgid "Unsaved Work"
+msgstr ""
+
+msgid "Work Mixar saved before it closed unexpectedly: open any of it again"
+msgstr ""
+
+msgid "Unsaved Work..."
+msgstr ""
+
+msgid "Recent Projects"
+msgstr ""
+
+msgid "Mixar splash: restore question, mode picker, links, recent and unsaved work."
+msgstr ""
 
 msgid "Choose Your Mode"
 msgstr "अपना रूप चुनें"
@@ -291,6 +354,15 @@ msgstr "तैरते एजेंट बबल पॉपअप का मु�
 msgid "Send"
 msgstr "भेजें"
 
+msgid "Mixie is still working"
+msgstr ""
+
+msgid "Start in a new scene tab"
+msgstr ""
+
+msgid "Stop this task and start over"
+msgstr ""
+
 msgid "Scenes"
 msgstr ""
 
@@ -305,9 +377,6 @@ msgstr ""
 
 msgid "Minimise"
 msgstr "छोटा करें"
-
-msgid "Restore"
-msgstr "पुनर्स्थापित करें"
 
 msgid "Toggle Agent Bubble"
 msgstr "एजेंट बबल टॉगल करें"
@@ -1514,8 +1583,20 @@ msgstr "नीचे के फ़ील्ड का उपयोग करे�
 msgid "Choose a local model first."
 msgstr "पहले एक स्थानीय मॉडल चुनें।"
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "पहले स्थानीय मॉडल शुरू करें (सहेजने के लिए इसका चलना आवश्यक है)।"
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "आधार URL और मॉडल नाम आवश्यक हैं।"
@@ -1671,6 +1752,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2007,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2936,17 @@ msgstr "Mixar किसी एप्लिकेशन बंडल से न�
 msgid "No permission to update {path}"
 msgstr "{path} को अपडेट करने की अनुमति नहीं"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "इंस्टॉल निर्देशिका निर्धारित नहीं हो सकी"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "इंस्टॉल स्थान निर्धारित नहीं हो सका"
@@ -2879,6 +2975,12 @@ msgstr "अपडेटर शुरू नहीं हो सका"
 msgid "Mixar didn't close"
 msgstr "Mixar बंद नहीं हुआ"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "इस प्लेटफ़ॉर्म पर इन-ऐप अपडेट समर्थित नहीं हैं"
 
@@ -2893,6 +2995,72 @@ msgstr "{platform} के लिए असमर्थित इंस्टॉ�
 
 msgid "This install can't be updated in place"
 msgstr "इस इंस्टॉलेशन को यथास्थान अपडेट नहीं किया जा सकता"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version} में अपडेट किया गया"
+
+msgid "The update was installed successfully."
+msgstr "अपडेट सफलतापूर्वक इंस्टॉल हो गया।"
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "अपडेट प्रभावी नहीं हुआ"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} आप डाउनलोड पृष्ठ से {version} डाउनलोड कर सकते हैं।"
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} आप डाउनलोड पृष्ठ से अपडेट डाउनलोड कर सकते हैं।"
+
+msgid "Update was not installed"
+msgstr "अपडेट इंस्टॉल नहीं हुआ"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} इंस्टॉल हुआ, लेकिन संस्करण {running} शुरू हुआ। डाउनलोड पृष्ठ से फिर से इंस्टॉल करें।"
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "जब इंस्टॉलर ने शुरू होने का प्रयास किया, तब Mixar अभी भी चल रहा था।"
+
+msgid "The downloaded installer failed its signature check."
+msgstr "डाउनलोड किया गया इंस्टॉलर हस्ताक्षर जाँच में विफल रहा।"
+
+msgid "The downloaded installer could not be opened."
+msgstr "डाउनलोड किया गया इंस्टॉलर खोला नहीं जा सका।"
+
+msgid "Mixar could not be replaced on disk."
+msgstr "डिस्क पर Mixar को बदला नहीं जा सका।"
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "इंस्टॉलर पूरा नहीं हुआ।"
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total} में से {transferred}"
@@ -2960,47 +3128,35 @@ msgstr "अपडेट की जाँच नहीं हो सकी"
 msgid "Check your internet connection and try again."
 msgstr "अपना इंटरनेट कनेक्शन जाँचें और पुनः प्रयास करें।"
 
-msgid "Update didn't take effect"
-msgstr "अपडेट प्रभावी नहीं हुआ"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} इंस्टॉल हुआ, लेकिन संस्करण {running} शुरू हुआ। डाउनलोड पृष्ठ से फिर से इंस्टॉल करें।"
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version} में अपडेट किया गया"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "अपडेट सफलतापूर्वक इंस्टॉल हो गया।"
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} आप डाउनलोड पृष्ठ से {version} डाउनलोड कर सकते हैं।"
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} आप डाउनलोड पृष्ठ से अपडेट डाउनलोड कर सकते हैं।"
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "अपडेट इंस्टॉल नहीं हुआ"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "जब इंस्टॉलर ने शुरू होने का प्रयास किया, तब Mixar अभी भी चल रहा था।"
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "डाउनलोड किया गया इंस्टॉलर हस्ताक्षर जाँच में विफल रहा।"
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "डाउनलोड किया गया इंस्टॉलर खोला नहीं जा सका।"
-
-msgid "Mixar could not be replaced on disk."
-msgstr "डिस्क पर Mixar को बदला नहीं जा सका।"
-
-msgid "The installation was cancelled."
-msgstr "इंस्टॉलेशन रद्द कर दिया गया।"
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer ने एक गंभीर त्रुटि बताई।"
-
-msgid "The installer did not finish."
-msgstr "इंस्टॉलर पूरा नहीं हुआ।"
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Mixar को पुनः आरंभ करके डाउनलोड किया गया अपडेट इंस्टॉल करता है"
@@ -3046,6 +3202,9 @@ msgstr "अपडेट का डाउनलोड रोकता है"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "यह अपडेट आवश्यक है और रद्द नहीं किया जा सकता"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "मूलभूत ब्राउज़र में Mixar डाउनलोड पृष्ठ खोलता है"
@@ -4853,6 +5012,15 @@ msgstr "छवि '{name}' पढ़ने में विफल: {error}"
 msgid "Smart segmentation failed"
 msgstr "स्मार्ट विभाजन विफल"
 
+msgid "Smart UV takes at most {limit:,} triangles; this mesh has {count:,}. Retopologize it first to lower the polycount."
+msgstr ""
+
+msgid "The exported mesh is {size_mb:.1f} MB; Smart UV accepts up to {max_mb} MB."
+msgstr ""
+
+msgid "Smart UV failed"
+msgstr ""
+
 msgid "View Type"
 msgstr "दृश्य प्रकार"
 
@@ -5705,6 +5873,9 @@ msgstr "रीटोपोलॉजी"
 msgid "Mesh Segmentation"
 msgstr "जाल विभाजन"
 
+msgid "Smart UV"
+msgstr ""
+
 msgid "Auto Rig"
 msgstr "ऑटो रिग"
 
@@ -6141,6 +6312,9 @@ msgid "Attach generated parts to a rigged or plain body, locally"
 msgstr "उत्पन्न भागों को स्थानीय रूप से किसी रिग किए गए या साधारण शरीर से जोड़ता है"
 
 msgid "Apply preset animations to the connected rigged character"
+msgstr ""
+
+msgid "Re-unwrap the connected 3D mesh's UVs"
 msgstr ""
 
 msgid "Use Image Style Only"
@@ -9181,6 +9355,21 @@ msgstr "खोजे जाने वाले भागों के नाम 
 msgid "Smart segmentation started..."
 msgstr "स्मार्ट विभाजन शुरू हुआ..."
 
+msgid "Agent Smart UV"
+msgstr ""
+
+msgid "Re-unwrap the given mesh object's UVs using Tripo Smart UV"
+msgstr ""
+
+msgid "Name of the mesh object in the scene to unwrap"
+msgstr ""
+
+msgid "Bake the existing textures onto the new UV layout"
+msgstr ""
+
+msgid "Smart UV started..."
+msgstr ""
+
 msgid "Agent Video Generation"
 msgstr ""
 
@@ -11134,6 +11323,48 @@ msgstr "Mixar संक्रिया इतिहास ID"
 msgid "Persistent per-scene id keying this scene's operation history."
 msgstr "इस दृश्य के संक्रिया इतिहास की कुंजी बनने वाला स्थायी प्रति-दृश्य id।"
 
+msgid "Anywhere"
+msgstr ""
+
+msgid "Natural patches in worn, recessed and edge areas"
+msgstr ""
+
+msgid "Crevices"
+msgstr ""
+
+msgid "Inside cracks, crevices and recessed grooves"
+msgstr ""
+
+msgid "Corners"
+msgstr ""
+
+msgid "Occluded corners, seams and contact areas"
+msgstr ""
+
+msgid "Upward Faces"
+msgstr ""
+
+msgid "A thin layer on flat, upward-facing areas"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Worn onto raised edges, ridges and high points"
+msgstr ""
+
+msgid "The layer was deleted. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "It could not be added to the layer. The generated mask is on the moodboard."
+msgstr ""
+
+msgid "Mask not added to the layer"
+msgstr ""
+
+msgid "Mask generation failed"
+msgstr ""
+
 msgid "Blend"
 msgstr "मिश्रण"
 
@@ -11361,9 +11592,6 @@ msgstr "समूह के लिए चयनित"
 
 msgid "Select layer for batch operations (move to group, etc.)"
 msgstr "बैच संक्रियाओं (समूह में ले जाना आदि) के लिए परत चुनें"
-
-msgid "Higher quality"
-msgstr "उच्चतर गुणवत्ता"
 
 msgid "Expand Layers"
 msgstr "परतें विस्तृत करें"
@@ -15171,6 +15399,12 @@ msgstr "संदर्भ के रूप में उपयोग होन�
 msgid "Called from chat/agent context"
 msgstr "चैट/एजेंट संदर्भ से कॉल किया गया"
 
+msgid "Apply to Brush"
+msgstr ""
+
+msgid "Set the generated texture as the active brush's mask when it arrives"
+msgstr ""
+
 msgid "UI state not available"
 msgstr "UI स्थिति उपलब्ध नहीं"
 
@@ -15179,6 +15413,9 @@ msgstr "तूलिका बनावट जनरेशन पहले स�
 
 msgid "Please enter a prompt for the brush texture"
 msgstr "कृपया तूलिका बनावट के लिए प्रॉम्प्ट दर्ज करें"
+
+msgid "No brush generation model is available"
+msgstr ""
 
 msgid "Failed to enqueue brush generation"
 msgstr "तूलिका जनरेशन कतार में नहीं जुड़ सकी"
@@ -15284,6 +15521,45 @@ msgstr ""
 
 msgid "Substance 3D Painter-style layer list with inline blend mode and opacity."
 msgstr "Substance 3D Painter शैली की परत सूची, इनलाइन मिश्रण रूप और अपारदर्शिता के साथ।"
+
+msgid "Generate Mask with AI"
+msgstr ""
+
+msgid "Describe where the layer should show; AI generates a grayscale mask for it"
+msgstr ""
+
+msgid "Describe"
+msgstr ""
+
+msgid "What the mask shows, e.g. rust streaks, moss patches, chipped paint"
+msgstr ""
+
+msgid "Placement"
+msgstr "नियोजन"
+
+msgid "Object"
+msgstr "वस्तु"
+
+msgid "Select a mesh with a paint layer first"
+msgstr ""
+
+msgid "Describe the mask first"
+msgstr ""
+
+msgid "No mask generation model is available"
+msgstr ""
+
+msgid "Select a paint layer first"
+msgstr ""
+
+msgid "The object needs a UV map for an image mask"
+msgstr ""
+
+msgid "This mask is already being generated"
+msgstr ""
+
+msgid "Generating a mask for '{layer}'..."
+msgstr ""
 
 msgid "Move Layer Mask"
 msgstr "परत आवरण विचलन"
@@ -16443,6 +16719,9 @@ msgstr "नया छवि आवरण"
 msgid "Open Image as Mask..."
 msgstr "छवि को आवरण के रूप में खोलें..."
 
+msgid "Generate Mask with AI..."
+msgstr ""
+
 msgid "Vertex Color Masks"
 msgstr "शिरोबिन्दु रंग आवरण"
 
@@ -16562,6 +16841,12 @@ msgstr "पाइपलाइन"
 
 msgid "Generation pipeline: 'fast' or 'detailed'"
 msgstr "जनरेशन पाइपलाइन: 'fast' या 'detailed'"
+
+msgid "Apply to Objects"
+msgstr ""
+
+msgid "Comma-separated object names that get the material as a layer when it arrives"
+msgstr ""
 
 msgid "Duplicate job already in queue"
 msgstr "समान जॉब पहले से कतार में है"
@@ -17361,9 +17646,6 @@ msgstr "स्पर्शरेखा"
 
 msgid "Tangent space"
 msgstr "स्पर्शरेखा स्पेस"
-
-msgid "Object"
-msgstr "वस्तु"
 
 msgid "Object space"
 msgstr "वस्तु स्पेस"
@@ -19527,6 +19809,75 @@ msgstr "चित्रण का उपयोग"
 msgid "Draw to build creates the shape you sketch. Point to edit uses circles and arrows to show where your instructions apply"
 msgstr "“बनाने हेतु चित्रण करें” आपके स्केच की आकृति बनाता है। “संपादन हेतु इंगित करें” घेरों और तीरों से दिखाता है कि आपके निर्देश कहाँ लागू होते हैं"
 
+msgid "SyncImageJob"
+msgstr ""
+
+msgid "StreamingVideoJob"
+msgstr ""
+
+msgid "just now"
+msgstr "अभी-अभी"
+
+msgid "{count} min ago"
+msgstr ""
+
+msgid "{count} h ago"
+msgstr ""
+
+msgid "{count} days ago"
+msgstr ""
+
+msgid "Untitled"
+msgstr ""
+
+msgid "1 tab"
+msgstr ""
+
+msgid "{count} tabs"
+msgstr ""
+
+msgid "More…"
+msgstr ""
+
+msgid "No unsaved work to recover"
+msgstr ""
+
+msgid "Work Mixar saved before it closed unexpectedly"
+msgstr ""
+
+msgid "Each copy is kept for up to 14 days."
+msgstr ""
+
+msgid "{count} scene tabs"
+msgstr ""
+
+msgid "the agent was working in {tabs}"
+msgstr ""
+
+msgid "{count} generation(s) running"
+msgstr ""
+
+msgid "Mixar closed while restoring your work. Restore the previous save point?"
+msgstr ""
+
+msgid "Mixar closed unexpectedly. Restore your work?"
+msgstr ""
+
+msgid "Mixar could not open the saved work. It is kept for the next launch."
+msgstr ""
+
+msgid "These generations were running when Mixar closed and could not be re-attached: {names}"
+msgstr ""
+
+msgid "Mixar closed while the agent was working"
+msgstr ""
+
+msgid "Your scene is back from the save point at {time}. Continue lets the agent check the scene and pick the task up from there."
+msgstr ""
+
+msgid "The agent can continue once Mixar is connected and the chat is idle. Press Continue again then."
+msgstr ""
+
 msgid "Toolbar"
 msgstr "टूलबार"
 
@@ -19956,6 +20307,12 @@ msgstr "संशोधन जारी है..."
 msgid "Awaiting Input..."
 msgstr "निवेश की प्रतीक्षा..."
 
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
+
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -20046,9 +20403,6 @@ msgstr "*रोका गया*"
 msgid "now"
 msgstr "अभी"
 
-msgid "just now"
-msgstr "अभी-अभी"
-
 msgid "{count}m"
 msgstr "{count}मि"
 
@@ -20119,6 +20473,54 @@ msgid "This feature uses credits. Subscribe to a plan or buy credits to keep cre
 msgstr ""
 
 msgid "Subscribe"
+msgstr ""
+
+msgid "Give the project a name."
+msgstr ""
+
+msgid "Use letters or digits in the name."
+msgstr ""
+
+msgid "Choose where the project goes."
+msgstr ""
+
+msgid "The location must be a full folder path."
+msgstr ""
+
+msgid "The location is a file, not a folder."
+msgstr ""
+
+msgid "A file named “{name}” is already there. Pick another name."
+msgstr ""
+
+msgid "This {engine} project already exists. Connect opens it."
+msgstr ""
+
+msgid "“{name}” already holds a {engine} project. Pick another name or location."
+msgstr ""
+
+msgid "A folder named “{name}” is already there and is not empty. Pick another name or location."
+msgstr ""
+
+msgid "Choose the folder that holds your {engine} project."
+msgstr ""
+
+msgid "That folder does not exist."
+msgstr ""
+
+msgid "That folder is not a {engine} project (it has no {marker})."
+msgstr ""
+
+msgid "This folder also holds a {other} project; Mixar uses its {engine} project."
+msgstr ""
+
+msgid "Proximal"
+msgstr ""
+
+msgid "Distal"
+msgstr ""
+
+msgid "Intermediate"
 msgstr ""
 
 msgid "Feedback comment is empty"
@@ -20229,7 +20631,28 @@ msgstr "'{name}' अब एसेट संचिका में नहीं �
 msgid "Could not add the asset to the scene."
 msgstr "एसेट को दृश्य में नहीं जोड़ा जा सका।"
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20706,6 @@ msgstr "स्वचालित रूप से फिर शुरू नह�
 msgid "The request could not be completed."
 msgstr "अनुरोध पूरा नहीं हो सका।"
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "आपका संदेश Mixie तक नहीं पहुँचा। अपना कनेक्शन जाँचें, फिर इसे दोबारा भेजें।"
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "सर्वर तक नहीं पहुँचा जा सका। कृपया अपना कनेक्शन जाँचें और पुनः प्रयास करें।"
 
@@ -20330,6 +20744,15 @@ msgstr "इस सर्वर पर अभी हस्तलेखन पह�
 
 msgid "Handwriting conversion failed"
 msgstr "हस्तलेखन रूपांतरण विफल"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "आपका संदेश Mixie तक नहीं पहुँचा। अपना कनेक्शन जाँचें, फिर इसे दोबारा भेजें।"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20508,8 +20931,23 @@ msgstr "कार्य *अभी भी चल रहा है* — फिर
 msgid "Resume task"
 msgstr "कार्य फिर से शुरू करें"
 
-msgid "Start fresh"
-msgstr "नए सिरे से शुरू करें"
+msgid "AllToolsets"
+msgstr ""
+
+msgid "PythonScriptPlugin"
+msgstr ""
+
+msgid "LevelPrototyping"
+msgstr ""
+
+msgid "Binaries"
+msgstr ""
+
+msgid "Win64"
+msgstr ""
+
+msgid "Linux"
+msgstr ""
 
 msgid "Voice input unavailable."
 msgstr "आवाज़ निवेश उपलब्ध नहीं।"
@@ -20671,6 +21109,15 @@ msgstr "चुनें"
 msgid "That library pick is no longer offered"
 msgstr ""
 
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
+msgstr ""
+
 msgid "Session expired. {reason}"
 msgstr "सत्र समाप्त हो गया। {reason}"
 
@@ -20829,6 +21276,12 @@ msgstr "सर्वर से कनेक्ट नहीं है"
 
 msgid "WebSocket not ready — no connection ID"
 msgstr "WebSocket तैयार नहीं — कोई कनेक्शन ID नहीं"
+
+msgid "Add a message to send while Mixie works"
+msgstr ""
+
+msgid "Message queued"
+msgstr ""
 
 msgid "Marks: {note}"
 msgstr "चिह्न: {note}"
@@ -21085,6 +21538,120 @@ msgid "Paste failed: {error}"
 msgstr "चिपकाना विफल: {error}"
 
 msgid "Pasted image as reference"
+msgstr ""
+
+msgid "Unreal Engine {version} found"
+msgstr ""
+
+msgid "Unreal Engine 5.8+ not found"
+msgstr ""
+
+msgid "Install Unreal Engine 5.8 or newer from the Epic Games Launcher, then open this again."
+msgstr ""
+
+msgid "Looking for Godot…"
+msgstr ""
+
+msgid "Godot {version} found"
+msgstr ""
+
+msgid "Downloads Godot {version} (about 150 MB)"
+msgstr ""
+
+msgid "Use This Editor"
+msgstr ""
+
+msgid "Drive this game engine editor from the agent"
+msgstr ""
+
+msgid "Connect Engine"
+msgstr ""
+
+msgid "Install Mixar Link into a game project and open it in the engine, so the agent can build your game there"
+msgstr ""
+
+msgid "Show this engine or project choice"
+msgstr ""
+
+msgid "Connect a project you already have"
+msgstr ""
+
+msgid "Make a new game project"
+msgstr ""
+
+msgid "Connect this game engine"
+msgstr ""
+
+msgid "Connect"
+msgstr "कनेक्ट करें"
+
+msgid "Connect this game project"
+msgstr ""
+
+msgid "This engine cannot be connected yet"
+msgstr ""
+
+msgid "Choose Folder"
+msgstr ""
+
+msgid "Choose a folder in the file browser"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Unreal Engine"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "New project"
+msgstr ""
+
+msgid "Existing project"
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link add-on and opens the project in Godot."
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link plugin and turns on Unreal's MCP server for this computer only."
+msgstr ""
+
+msgid "Mixar adds its open-source Mixar Link plugin and turns on Unreal's MCP server for this computer only. Close the project in Unreal first."
+msgstr ""
+
+msgid "Connect a game engine"
+msgstr ""
+
+msgid "Mixie builds your game in Godot or Unreal while you work in Mixar."
+msgstr ""
+
+msgid "ENGINES"
+msgstr ""
+
+msgid "CONNECTED"
+msgstr ""
+
+msgid "Browse"
+msgstr ""
+
+msgid "Creates a new folder “{name}” here."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Connecting…"
+msgstr ""
+
+msgid "Create and connect"
 msgstr ""
 
 msgid "Export .blend without chat history"
@@ -21623,9 +22190,6 @@ msgstr "क्षेत्र कैप्चर किया गया"
 
 msgid "Stop could not be confirmed. Reconnect and try Stop again."
 msgstr "रोकने की पुष्टि नहीं हो सकी। फिर से कनेक्ट करें और दोबारा रोकें आज़माएँ।"
-
-msgid "Connect"
-msgstr "कनेक्ट करें"
 
 msgid "Connect to the Mixie agent server"
 msgstr "Mixie एजेंट सर्वर से कनेक्ट करता है"
@@ -22465,6 +23029,30 @@ msgid "Call ID"
 msgstr ""
 
 msgid "Backend tool-call id (the LangChain run id). Sent on the script RPC as agent_ctx.call_id and on the backend's activity payload, so both views of one call share a row"
+msgstr ""
+
+msgid "Game Engine"
+msgstr ""
+
+msgid "The game engine the agent builds in"
+msgstr ""
+
+msgid "Use a project you already have"
+msgstr ""
+
+msgid "Project"
+msgstr "प्रक्षेपित करें"
+
+msgid "Project name"
+msgstr ""
+
+msgid "The new game's name; its folder is named after it"
+msgstr ""
+
+msgid "The folder the new project's folder is made in"
+msgstr ""
+
+msgid "The folder that holds your project"
 msgstr ""
 
 msgid "Archived session identifier"
@@ -23394,9 +23982,6 @@ msgstr "एनोटेट बहुभुज"
 msgid "Annotate Eraser"
 msgstr "एनोटेट रबड़"
 
-msgid "Placement"
-msgstr "नियोजन"
-
 msgid "(none — draw to create)"
 msgstr "(कोई नहीं — बनाने के लिए चित्रण करें)"
 
@@ -23903,9 +24488,6 @@ msgstr "प्रक्षेपित UV को UV स्थान में �
 
 msgid "No faces selected"
 msgstr "कोई फलक चयनित नहीं"
-
-msgid "Project"
-msgstr "प्रक्षेपित करें"
 
 msgid "Project UVs using the type and properties shown in the Projection panel"
 msgstr "प्रक्षेपण पैनल में दिखाए गए प्रकार और गुणों का उपयोग करके UV प्रक्षेपित करता है"
@@ -25293,6 +25875,9 @@ msgstr "गुण"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25449,6 +26034,9 @@ msgstr "स्केच ड्राफ़्ट में श्रुतले
 msgid "Stop the running turn"
 msgstr "चल रहे टर्न को रोकता है"
 
+msgid "Add this message to the task Mixie is working on"
+msgstr ""
+
 msgid ""
 "Revert\n"
 "\n"
@@ -25545,11 +26133,17 @@ msgstr "पकड़ रहा है"
 msgid "NEW"
 msgstr "नया"
 
+msgid "Steer"
+msgstr ""
+
 msgid "Ask Mixie anything..."
 msgstr "Mixie से कुछ भी पूछें..."
 
 msgid "Write your prompt here..."
 msgstr "अपना प्रॉम्प्ट यहाँ लिखें..."
+
+msgid "The game engine the agent builds in. Click to switch or connect one"
+msgstr ""
 
 msgid "Everything Mixar has generated"
 msgstr "Mixar द्वारा उत्पन्न सब कुछ"
@@ -25692,6 +26286,9 @@ msgstr ""
 msgid "Finish or stop the current reply to change the model"
 msgstr ""
 
+msgid "Finish or stop the current reply to switch the engine"
+msgstr ""
+
 msgid "Generating (%d)"
 msgstr "उत्पन्न हो रहे (%d)"
 
@@ -25775,6 +26372,9 @@ msgstr "आइलैंड कतार में जनरेशन जॉब �
 
 msgid "Describe your scene here..."
 msgstr "अपने दृश्य का वर्णन यहाँ करें..."
+
+msgid "Mixie is working. Type here to steer it..."
+msgstr ""
 
 msgid "Draw or type instructions. Enter to send."
 msgstr "निर्देश चित्रित करें या टाइप करें। भेजने के लिए Enter।"
@@ -25945,6 +26545,15 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"
@@ -26439,11 +27048,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this image or video in its own window. Several previews can be open at once."
+"Open this image or video in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"पूर्वावलोकन\n"
-"\n"
-"इस छवि या वीडियो को उसकी अपनी खिड़की में खोलें। एक साथ कई पूर्वावलोकन खुले रह सकते हैं।"
 
 msgid ""
 "Rename\n"
@@ -26469,11 +27075,8 @@ msgstr ""
 msgid ""
 "Preview\n"
 "\n"
-"Open this result in its own window. Several previews can be open at once."
+"Open this result in the preview window. An open preview window is reused and shows this instead."
 msgstr ""
-"पूर्वावलोकन\n"
-"\n"
-"इस परिणाम को उसकी अपनी खिड़की में खोलें। एक साथ कई पूर्वावलोकन खुले रह सकते हैं।"
 
 msgid ""
 "Cancel edit\n"
@@ -26721,11 +27324,17 @@ msgstr "चयनित मूडबोर्ड आइटम वीडियो
 msgid "Cannot decode video: %s"
 msgstr "वीडियो डिकोड नहीं किया जा सकता: %s"
 
+msgid "Could not start the video player"
+msgstr ""
+
 msgid "This board item has no image or video to preview"
 msgstr "इस बोर्ड आइटम में पूर्वावलोकन के लिए कोई छवि या वीडियो नहीं है"
 
 msgid "This node has no image or video to preview"
 msgstr "इस ग्रन्थि में पूर्वावलोकन के लिए कोई छवि या वीडियो नहीं है"
+
+msgid "Video Preview"
+msgstr ""
 
 msgid "Image Preview"
 msgstr "छवि पूर्वावलोकन"
@@ -26739,8 +27348,8 @@ msgstr "पूर्वावलोकन खिड़की ने छवि �
 msgid "Preview Media"
 msgstr "मीडिया का पूर्वावलोकन करें"
 
-msgid "Open this image or video in its own preview window. Several can be open at once"
-msgstr "इस छवि या वीडियो को उसकी अपनी पूर्वावलोकन खिड़की में खोलता है। एक साथ कई खुली रह सकती हैं"
+msgid "Open this image or video in the preview window. An open preview window is reused and shows this instead"
+msgstr ""
 
 msgid "Node whose result to open"
 msgstr "वह ग्रन्थि जिसका परिणाम खोलना है"
@@ -26837,6 +27446,18 @@ msgstr "जहाँ टेम्पलेट छोड़ा गया है �
 
 msgid "Template to place"
 msgstr "रखने के लिए टेम्पलेट"
+
+msgid "Nothing to play: not a video"
+msgstr ""
+
+msgid "Video Player"
+msgstr ""
+
+msgid "Play a moodboard video in this preview window"
+msgstr ""
+
+msgid "Movie datablock to play"
+msgstr ""
 
 msgid "Select Mixie3D Preview"
 msgstr "Mixie3D पूर्वावलोकन चुनें"

@@ -268,11 +268,12 @@ def _successful(result) -> bool:
 def _capture_operator_result(op_id, result, context):
     try:
         from .journey_events import operator_outcome
-        from .essential_events import cinema_operator_properties
+        from .essential_events import cinema_operator_properties, scene_tab_operator_properties
         operator_outcome(op_id, result, context)
         capture(EVENT_OPERATOR, {
             "operator": op_id, "success": _successful(result),
             **cinema_operator_properties(op_id, result, context),
+            **scene_tab_operator_properties(op_id, result, context),
         }, context=context)
     except Exception:
         pass

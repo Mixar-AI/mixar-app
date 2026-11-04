@@ -429,7 +429,13 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send"),
+  const char *primary = state->stop_visible ? IFACE_("Stop") :
+                        state->steer_visible ? IFACE_("Steer") :
+                                               IFACE_("Send");
+  /* A longer translation of Steer must not spill out of the button. */
+  const std::string primary_fit = ui::mixar_fit_text(
+      primary, std::max(0.0f, BLI_rctf_size_x(&layout->btn_generate) - pad), size);
+  label_centre(primary_fit.c_str(),
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,
