@@ -19,7 +19,7 @@
 #include <string>
 
 #include "BLF_api.hh"
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "DNA_userdef_types.h"
 

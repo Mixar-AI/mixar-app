@@ -26,7 +26,7 @@
 #include "BKE_context.hh"
 #include "BKE_idprop.hh"
 
-#include "BLI_string_utf8.hh"
+#include "BLI_string_utf8.h"
 
 #include "DNA_scene_types.h"
 #include "DNA_windowmanager_types.h"

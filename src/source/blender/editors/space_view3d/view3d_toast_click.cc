@@ -19,7 +19,7 @@
 #include "BKE_idprop.hh"
 #include "BKE_screen.hh"
 
-#include "BLI_utildefines.hh"
+#include "BLI_utildefines.h"
 
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_enums.h"

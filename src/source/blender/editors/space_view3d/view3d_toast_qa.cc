@@ -29,7 +29,7 @@ void toast_targets(const wmWindow *win, const ScrArea *, const ARegion *region,
   }
   bContext *C = CTX_create();
   CTX_data_main_set(C, G_MAIN);
-  CTX_wm_manager_set(C, G_MAIN->wm.first_as<wmWindowManager>());
+  CTX_wm_manager_set(C, static_cast<wmWindowManager *>(G_MAIN->wm.first));
   CTX_wm_window_set(C, const_cast<wmWindow *>(win));
   const std::string expr =
       "__import__('mixar.modules.common.notifications.core.qa_targets', "

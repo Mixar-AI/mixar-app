@@ -12,9 +12,6 @@ _refreshing = False
 _identity = None
 _next_attempt = 0.0
 _reason = "starting"
-# A refused client retries this rarely: an update is the usual cure, but a rolled-back
-# release floor or a transient 409 must still recover without a restart.
-UPDATE_REQUIRED_RETRY_SECONDS = 900
 
 
 def valid():
@@ -30,9 +27,9 @@ def status():
 
 
 def invalidate():
-    global _deadline, _generation, _reason, _next_attempt
+    global _deadline, _generation, _reason
     with _lock:
-        _deadline = _next_attempt = 0.0
+        _deadline = 0.0
         _generation += 1
         _reason = "disabled"
 
@@ -40,10 +37,10 @@ def invalidate():
 def refresh(context):
     global _refreshing, _identity, _generation, _deadline, _next_attempt, _reason
     identity = (context.get("instance_id"), context.get("backend_url"), context.get("connected"),
-                context.get("signed_in"), context.get("ui_control"))
+                context.get("signed_in"))
     with _lock:
         if identity != _identity:
-            _identity, _deadline, _next_attempt = identity, 0.0, 0.0
+            _identity, _deadline = identity, 0.0
             _generation += 1
             _reason = "starting" if context.get("signed_in") else "signin_required"
         if (not context.get("connected") or not context.get("signed_in")
@@ -71,7 +68,7 @@ def _not_found_reason(response):
 
 
 def _fetch(context, generation):
-    global _refreshing, _deadline, _reason, _next_attempt
+    global _refreshing, _deadline, _reason
     import requests
     from mixar.modules.auth.core.auth import get_access_token, refresh_access_token
     from mixar.modules.common.network import classify_network_error, log_network_failure
@@ -113,6 +110,4 @@ def _fetch(context, generation):
             if generation == _generation:
                 _deadline = deadline
                 _reason = reason
-                if reason == "client_update_required":
-                    _next_attempt = time.monotonic()+UPDATE_REQUIRED_RETRY_SECONDS
             _refreshing = False

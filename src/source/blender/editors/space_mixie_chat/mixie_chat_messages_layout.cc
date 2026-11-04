@@ -17,7 +17,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "BLI_vector.hh"
 
 #include "BKE_main.hh"

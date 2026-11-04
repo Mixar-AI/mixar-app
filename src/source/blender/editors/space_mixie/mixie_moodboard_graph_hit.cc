@@ -9,7 +9,7 @@
 #include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_graph_geometry.hh"
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 
 namespace blender::ed::mixie {
 

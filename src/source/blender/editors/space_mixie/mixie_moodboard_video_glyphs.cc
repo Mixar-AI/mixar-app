@@ -15,7 +15,7 @@
 
 #include <cmath>
 
-#include "BLI_math_constants.hh"
+#include "BLI_math_constants.h"
 
 #include "GPU_immediate.hh"
 #include "GPU_immediate_util.hh"

@@ -16,7 +16,7 @@ if "%WITH_CLANG%"=="1" (
 )
 
 if "%WITH_ASAN%"=="1" (
-	set ASAN_CMAKE_ARGS=-DWITH_COMPILER_ASAN=On
+		set ASAN_CMAKE_ARGS=-DWITH_COMPILER_ASAN=On
 )
 
 if "%WITH_PYDEBUG%"=="1" (

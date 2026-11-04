@@ -465,8 +465,8 @@ msgstr "S'ha seleccionat '{name}' al moodboard"
 msgid "Select in Scene"
 msgstr "Seleccionar a l'escena"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "Selecciona la nansa intermediària d'aquest món de splats al mirador"
 
 msgid "Collection"
 msgstr "Col·lecció"
@@ -474,11 +474,8 @@ msgstr "Col·lecció"
 msgid "That splat world is no longer in this file"
 msgstr "Aquest món de splats ja no és en aquest document"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "Aquest món de splats no té cap nansa intermediària"
 
 msgid "Selected '{name}'"
 msgstr "S'ha seleccionat '{name}'"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
 
 msgid "Capture Viewport"
 msgstr "Capturar mirador"
@@ -1445,9 +1439,6 @@ msgstr "L'inici de sessió s'ha cancel·lat o ha esgotat el temps"
 msgid "Incomplete token pair in response"
 msgstr "Parell de testimonis incomplet a la resposta"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "A punt per a l'entrada"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "Tipus d'instal·lador no compatible per a {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Aquesta instal·lació no es pot actualitzar al lloc"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "S'ha actualitzat a Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "L'actualització s'ha instal·lat correctament."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "L'instal·lador no ha acabat."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} de {total}"
@@ -3124,9 +3100,6 @@ msgstr "Mixar es reiniciarà per aplicar-la."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — utilitzi Baixar per actualitzar amb el navegador."
-
-msgid "Retry"
-msgstr "Tornar-ho a provar"
 
 msgid "Restart & Update"
 msgstr "Reiniciar i actualitzar"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "Reiniciar per actualitzar"
 msgid "Updating…"
 msgstr "S'està actualitzant…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "S'està baixant {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "Tipus de fitxer de splat no compatible «{ext}» (s'esperava .spz o .ply
 msgid "File not found: {path}"
 msgstr "No s'ha trobat el fitxer: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "No s'ha importat cap objecte de {name}"
 
 msgid "Failed to read image: {error}"
 msgstr "No s'ha pogut llegir la imatge: {error}"
@@ -6923,8 +6869,8 @@ msgstr "Al resultat de la generació del món falta l'URL del splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Al resultat de la generació del món falta l'URL del col·lisionador (GLB)"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "No s'ha pogut baixar o convertir el món: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "S'ha importat el món, però no ha produït cap objecte"
@@ -7771,12 +7717,6 @@ msgstr "Moodboard"
 
 msgid "Right-click context menu for moodboard"
 msgstr "Menú contextual del clic dret per al Moodboard"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "Eliminar la connexió"
@@ -10048,14 +9988,14 @@ msgstr "Refrescant la llista de models..."
 msgid "Generation catalog module not available"
 msgstr "El mòdul del catàleg de generació no està disponible"
 
-msgid "A duplicate image generation is already queued"
-msgstr "Ja hi ha una generació d'imatge idèntica a la cua"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Genera imatges amb IA i les afegeix al moodboard"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Introduïu una indicació (pitgeu Enter per confirmar el text)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "Ja hi ha una generació d'imatge idèntica a la cua"
 
 msgid "No model specified and no default available"
 msgstr "No s'ha especificat cap model i no n'hi ha cap per defecte"
@@ -10975,32 +10915,14 @@ msgstr "Terra a l'origen"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Mou el splat perquè el terra quedi a Z=0 amb el centre de la petjada a l'origen (el mateix assentament que els mons generats)"
 
-msgid "Source"
-msgstr "Font"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "Estàndard"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "No s'ha seleccionat cap fitxer de splat"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Splats gaussians importats ({names}): {count}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "Splat gaussià (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Afegeix un quadre de text al Moodboard ({shortcut})"
@@ -12570,6 +12492,9 @@ msgstr "Incloure totes les influències òssies"
 
 msgid "Lighting Mode"
 msgstr "Mode il·luminació"
+
+msgid "Standard"
+msgstr "Estàndard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Unitats d'il·luminació glTF basades en la física"
@@ -18822,6 +18747,9 @@ msgstr "Fusió"
 msgid "No masks"
 msgstr "Sense màscares"
 
+msgid "Source"
+msgstr "Font"
+
 msgid "No node group loaded"
 msgstr "No s'ha carregat cap grup de nodes"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "S'està modificant..."
 
 msgid "Awaiting Input..."
 msgstr "S'espera una entrada..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "Falta el fitxer del punt de restauració"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "No s'ha pogut conservar l'estat actual, així que no s'ha canviat res"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "No s'ha pogut llegir el punt de restauració"
 
@@ -21135,6 +21063,9 @@ msgstr "Tancar la sessió"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "Tornar-ho a provar"
 
 msgid "Choose Export Location"
 msgstr "Triar la ubicació d'exportació"
@@ -21606,15 +21537,6 @@ msgstr "Màxim {count} adjunts"
 msgid "Paste failed: {error}"
 msgstr "L'enganxada ha fallat: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "No es pot afegir {name}: {error}"
-
-msgid "These references are already attached"
-msgstr "Aquestes referències ja estan adjuntades"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "No es pot afegir {name}: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "S'ha arribat al límit d'adjunts ({count})"
 
 msgid "Skipped {name}: {error}"
 msgstr "S'ha omès {name}: {error}"
 
+msgid "These references are already attached"
+msgstr "Aquestes referències ja estan adjuntades"
+
 msgid "Added {count} image(s)"
 msgstr "S'han afegit imatges ({count})"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Afegir des del document blend"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "Mode automàtic: l'agent decideix ell mateix les opcions obertes en lloc
 msgid "Agent Bubble"
 msgstr "Bombolla de l'agent"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
+
 msgid "Agent Bubble Status"
 msgstr "Estat de la bombolla de l'agent"
 
@@ -27053,9 +26963,6 @@ msgstr "Animar l'adjunt del Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mostrar una referència acabada d'adjuntar que vola cap al xat de Mixie"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "Retard"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "El dibuix de la targeta requereix el callback de dibuix de la regió activa"
 
@@ -29793,9 +29703,6 @@ msgstr "Radi de les cantonades dels elements arrodonits de la interfície"
 msgid "Mixie Chat"
 msgstr "Xat de Mixie"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "Els camins deixats anar han de ser cadenes no buides"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Els camins deixats anar han de ser una matriu JSON no buida"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "Àrees globals"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "Àrees globals de la finestra (barra superior, barra d'estat). Extensió de Mixar — exposada perquè l'acollida pugui adreçar la barra superior per redibuixar."
 
 msgid "QA UI Dump"
 msgstr "Bolcat de la interfície de QA"

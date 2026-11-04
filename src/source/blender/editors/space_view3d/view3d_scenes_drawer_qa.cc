@@ -5,7 +5,7 @@
  * cards the last draw pass laid out. The toolbar toggle is an ordinary button
  * (`view3d.scenes_drawer_toggle`), found by its operator. */
 #include <algorithm>
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "DNA_windowmanager_types.h"
 #include "WM_api.hh"
 #include "../interface/interface_qa_inspect.hh"

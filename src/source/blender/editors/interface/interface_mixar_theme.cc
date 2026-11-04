@@ -8,7 +8,7 @@
 
 #include <cstring>
 
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"
@@ -125,7 +125,7 @@ static const unsigned char *mixar_theme_stored(MixarThemeSlot slot)
   if (index < 0 || index >= int(MixarThemeSlot::Count)) {
     return nullptr;
   }
-  bTheme *theme = U.themes.first_as<bTheme>();
+  bTheme *theme = static_cast<bTheme *>(U.themes.first);
   if (theme == nullptr) {
     return nullptr;
   }
@@ -189,7 +189,7 @@ const unsigned char *mixar_theme_color_ptr(MixarThemeSlot slot)
 
 void mixar_moodboard_canvas_color(float out[4])
 {
-  const bTheme *theme = U.themes.first_as<const bTheme>();
+  const bTheme *theme = static_cast<const bTheme *>(U.themes.first);
   /* TH_BACK chooses sidebar colors in TOOL_PROPS; the drawer is a canvas. */
   for (int i = 0; i < 3; i++) {
     out[i] = theme ? float(theme->space_mixie.back[i]) / 255.0f : 38.0f / 255.0f;

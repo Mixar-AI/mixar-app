@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "BLI_listbase_iterator.hh"
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"

@@ -99,9 +99,9 @@ else()
   unset(_cltools_pkg_info_result)
 endif()
 
-# Require a relatively recent Xcode version, to support more C++20 features.
-if(${XCODE_VERSION} VERSION_LESS 16.3)
-  message(FATAL_ERROR "Only Xcode version 16.3 and newer is supported")
+# Require a relatively recent Xcode version.
+if(${XCODE_VERSION} VERSION_LESS 16.0)
+  message(FATAL_ERROR "Only Xcode version 16.0 and newer is supported")
 endif()
 
 # Collect list of OSX system versions which will be used to detect path to corresponding SDK.
@@ -158,7 +158,14 @@ unset(OSX_SDKROOT)
 
 # This is our minimum target, if you use higher sdk, weak linking happens
 # Mainly required because of Metal drivers.
-set(OSX_MIN_DEPLOYMENT_TARGET_DEFAULT 13.0)
+set(OSX_MIN_DEPLOYMENT_TARGET_DEFAULT 11.2)
+
+# Xcode 26 / macOS SDK 26 is incompatible with Blender's historical 11.2
+# deployment target in generated build metadata. Keep older SDKs on Blender's
+# default target, but raise the floor for current Apple toolchains.
+if(OSX_SYSTEM VERSION_GREATER_EQUAL 26.0)
+  set(OSX_MIN_DEPLOYMENT_TARGET_DEFAULT 12.0)
+endif()
 
 if(DEFINED ENV{OSX_MIN_DEPLOYMENT_TARGET} AND NOT "$ENV{OSX_MIN_DEPLOYMENT_TARGET}" STREQUAL "")
   set(OSX_MIN_DEPLOYMENT_TARGET_DEFAULT "$ENV{OSX_MIN_DEPLOYMENT_TARGET}")
@@ -170,12 +177,12 @@ set(OSX_MIN_DEPLOYMENT_TARGET "${OSX_MIN_DEPLOYMENT_TARGET_DEFAULT}" CACHE STRIN
   "Minimum macOS deployment target"
 )
 
-if(OSX_MIN_DEPLOYMENT_TARGET VERSION_LESS 13.0)
+if(OSX_SYSTEM VERSION_GREATER_EQUAL 26.0 AND OSX_MIN_DEPLOYMENT_TARGET VERSION_LESS 12.0)
   message(STATUS
-    "Raising macOS deployment target from ${OSX_MIN_DEPLOYMENT_TARGET} to 13.0 "
+    "Raising macOS deployment target from ${OSX_MIN_DEPLOYMENT_TARGET} to 12.0 "
     "for macOS SDK ${OSX_SYSTEM}"
   )
-  set(OSX_MIN_DEPLOYMENT_TARGET 13.0 CACHE STRING "Minimum macOS deployment target" FORCE)
+  set(OSX_MIN_DEPLOYMENT_TARGET 12.0 CACHE STRING "Minimum macOS deployment target" FORCE)
 endif()
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "${OSX_MIN_DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)

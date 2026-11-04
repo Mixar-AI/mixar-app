@@ -10,7 +10,6 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
-#include "BKE_image_gpu.hh"
 #include "GPU_immediate_util.hh"
 
 namespace blender::ed::mixie {
@@ -178,7 +177,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           gpu_tex = mixie_moodboard_srgb_texture(image, image_user);
         }
         else {
-          gpu_tex = BKE_image_acquire_gpu_texture(image, image_user);
+          gpu_tex = BKE_image_get_gpu_texture(image, image_user);
         }
 
         bool media_drawn = false;
@@ -238,9 +237,6 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           }
 
           GPU_matrix_pop();
-          if (!is_srgb_image && image->source != IMA_SRC_MOVIE) {
-            GPU_texture_free(gpu_tex);
-          }
           media_drawn = true;
         }
         else {
@@ -323,10 +319,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             }
 
             GPU_matrix_pop();
-            if (!is_srgb_image && image->source != IMA_SRC_MOVIE) {
-            GPU_texture_free(gpu_tex);
-          }
-          media_drawn = true;
+            media_drawn = true;
 
             BKE_image_release_ibuf(image, ibuf, lock);
           }

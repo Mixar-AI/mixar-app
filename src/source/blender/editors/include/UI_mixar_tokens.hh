@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #pragma once
-#include "BLI_sys_types.hh"
+#include "BLI_sys_types.h"
 #include "UI_mixar_types.hh"
 #include "UI_mixar_text.hh"
 #include "UI_mixar_density.hh"

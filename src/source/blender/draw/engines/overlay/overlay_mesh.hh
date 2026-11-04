@@ -13,7 +13,6 @@
 
 #include "BKE_customdata.hh"
 #include "BKE_editmesh.hh"
-#include "BKE_image_gpu.hh"
 #include "BKE_mask.hh"
 #include "BKE_mesh.hh"
 #include "BKE_mesh_types.hh"
@@ -222,8 +221,6 @@ class Meshes : Overlay {
       pass.state_set(DRW_STATE_WRITE_COLOR | DRW_STATE_DEPTH_LESS_EQUAL | DRW_STATE_BLEND_ALPHA,
                      state.clipping_plane_count);
       pass.shader_set(res.shaders->mesh_analysis.get());
-      pass.bind_ubo(OVERLAY_GLOBALS_SLOT, &res.globals_buf);
-      pass.bind_ubo(DRW_CLIPPING_UBO_SLOT, &res.clip_planes_buf);
       pass.bind_texture("weight_tx", res.weight_ramp_tx);
     }
 
@@ -416,7 +413,7 @@ class Meshes : Overlay {
     GPU_debug_group_end();
   }
 
-  void draw_line_only(Framebuffer &framebuffer, Manager &manager, View &view) final
+  void draw_color_only(Framebuffer &framebuffer, Manager &manager, View &view) final
   {
     if (!enabled_) {
       return;
@@ -434,7 +431,7 @@ class Meshes : Overlay {
       return;
     }
 
-    GPU_debug_group_begin("Mesh Edit Line Only");
+    GPU_debug_group_begin("Mesh Edit Color Only");
 
     GPU_framebuffer_bind(framebuffer);
     manager.submit(edit_mesh_normals_ps_, view);
@@ -476,14 +473,8 @@ class Meshes : Overlay {
   static bool mesh_has_skin_roots(const Object *ob)
   {
     Mesh &mesh = DRW_object_get_data_for_drawing<Mesh>(*ob);
-    if (const BMesh *bm = BKE_editmesh_bmesh_get(&mesh)) {
-      if (CustomData_get_offset_named(&bm->vdata, CD_PROP_FLOAT2, "skin_modifier_radius") == -1) {
-        return false;
-      }
-      if (CustomData_get_offset_named(&bm->vdata, CD_PROP_BOOL, "skin_modifier_root") == -1) {
-        return false;
-      }
-      return true;
+    if (BMEditMesh *em = mesh.runtime->edit_mesh.get()) {
+      return CustomData_get_offset(&em->bm->vdata, CD_MVERT_SKIN) != -1;
     }
     return false;
   }
@@ -826,7 +817,6 @@ class MeshUVs : Overlay {
 
     const Object *ob_orig = DEG_get_original(ob_ref.object);
     const Mesh &mesh_orig = ob_orig->type == OB_MESH ? *id_cast<Mesh *>(ob_orig->data) : mesh;
-    const BMesh *bm = BKE_editmesh_bmesh_get(&mesh_orig);
 
     const SpaceImage *space_image = reinterpret_cast<const SpaceImage *>(state.space_data);
     const bool is_edit_object = DRW_object_is_in_edit_mode(&ob);
@@ -842,9 +832,10 @@ class MeshUVs : Overlay {
         active_uv_map);
     const bool has_active_object_uvmap = bke::mesh::is_uv_map(meta_data);
 
-    const bool has_active_edit_uvmap = is_edit_object && CustomData_has_layer_named(&bm->ldata,
-                                                                                    CD_PROP_FLOAT2,
-                                                                                    active_uv_map);
+    const bool has_active_edit_uvmap = is_edit_object && CustomData_has_layer_named(
+                                                             &mesh.runtime->edit_mesh->bm->ldata,
+                                                             CD_PROP_FLOAT2,
+                                                             active_uv_map);
 
     ResourceHandleRange res_handle = manager.unique_handle(ob_ref);
 
@@ -1004,10 +995,8 @@ class MeshUVs : Overlay {
 
       const ImagePaintSettings &image_paint_settings = tool_setting->imapaint;
       blender::Image *stencil_image = image_paint_settings.clone;
-      gpu::Texture *stencil_gpu_texture = BKE_image_acquire_gpu_texture(stencil_image, nullptr);
-      DRW_manager_get()->hold_texture(stencil_gpu_texture);
       TextureRef stencil_texture;
-      stencil_texture.wrap(stencil_gpu_texture);
+      stencil_texture.wrap(BKE_image_get_gpu_texture(stencil_image, nullptr));
 
       if (stencil_texture.is_valid()) {
         float2 size_image;

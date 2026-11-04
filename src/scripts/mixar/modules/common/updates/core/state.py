@@ -67,7 +67,6 @@ class UpdateStateManager:
         self._install_state: InstallState = InstallState.IDLE
         self._installer_path: str = ""
         self._install_error: str = ""
-        self._install_retryable: bool = True
         self._blocked_reason: str = ""
         self._downloaded_bytes: int = 0
         self._total_bytes: int = 0
@@ -137,12 +136,6 @@ class UpdateStateManager:
             return self._install_error
 
     @property
-    def install_retryable(self) -> bool:
-        """A fresh download could fix the failure (offer Retry)."""
-        with self._lock:
-            return self._install_retryable
-
-    @property
     def blocked_reason(self) -> str:
         """Why this install can't self-update (empty when it can)."""
         with self._lock:
@@ -155,9 +148,8 @@ class UpdateStateManager:
 
     @property
     def signer_thumbprint(self) -> str:
-        """The verified signer the helper pins: the certificate thumbprint
-        on Windows, the running app's Team ID on macOS (empty when
-        unverified)."""
+        """Certificate thumbprint of the staged installer's verified signer
+        (Windows; empty when unverified). The helper pins it."""
         with self._lock:
             return self._signer_thumbprint
 
@@ -212,11 +204,10 @@ class UpdateStateManager:
         with self._lock:
             self._install_state = InstallState.INSTALLING
 
-    def set_install_failed(self, message: str, retryable: bool = True) -> None:
+    def set_install_failed(self, message: str) -> None:
         with self._lock:
             self._install_state = InstallState.FAILED
             self._install_error = message
-            self._install_retryable = retryable
             self._installer_path = ""
 
     def set_install_unsupported(self, reason: str) -> None:

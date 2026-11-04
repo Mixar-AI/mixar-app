@@ -77,7 +77,6 @@ from ..constants import (
     MACHINE_CERTS_DIRS_DARWIN,
     MACHINE_CERTS_DIRS_LINUX,
     MACHINE_CERTS_DIRS_WINDOWS_SUBPATH,
-    SSL_KEYLOG_ENV_VAR,
     STANDARD_CA_BUNDLE_ENV_VARS,
     TRUST_MODE_BUNDLE,
     TRUST_MODE_CERTIFI,
@@ -530,15 +529,11 @@ def install_trust_store(
     Idempotent: later calls return the first report unless ``force`` is set
     (tests only — ``truststore.inject_into_ssl`` itself is safe to repeat).
     *search_dirs* overrides the certificate drop folders (tests only).
-    It also removes ``SSLKEYLOGFILE`` from *environ*, because urllib3 and
-    httpx open that file for every context and an unopenable path breaks them.
     """
     global _report
     if _report is not None and not force:
         return _report
     environ = os.environ if environ is None else environ
-    if environ.pop(SSL_KEYLOG_ENV_VAR, None):
-        logger.warning("%s is set; ignoring it, Mixar does not write TLS session keys", SSL_KEYLOG_ENV_VAR)
 
     path, source = resolve_ca_bundle_override(config_getter, environ)
     report = None

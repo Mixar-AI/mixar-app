@@ -112,30 +112,14 @@ def test_uninstallable_update_falls_back_to_the_downloads_page():
     assert download.operator == "mixar.open_downloads_page"
 
 
-def test_failed_download_offers_retry_and_browser_fallback():
+def test_failed_download_falls_back_to_the_downloads_page():
     state = get_update_state()
     state.set_available(_info())
     state.set_install_failed("Download failed")
 
     toasts.push_update_available_toast(_info())
 
-    assert _labels() == ["Retry", "Download"]
-    assert _toast().actions[0].operator == "mixar.restart_to_update"
-
-
-def test_a_failure_retrying_cannot_fix_offers_only_the_browser():
-    """A rejected signature, bad checksum, full or read-only disk fails the
-    same way again: no Retry, and a forced update keeps its Download way out."""
-    state = get_update_state()
-    info = _info(force_update=True)
-    state.set_available(info)
-    state.set_install_failed("Update failed verification", retryable=False)
-
-    toasts.push_update_available_toast(info)
-
     assert _labels() == ["Download"]
-    assert _toast().actions[0].operator == "mixar.open_downloads_page"
-    assert _toast().dismissible is False
 
 
 def test_forced_update_is_not_dismissible():
@@ -343,9 +327,7 @@ def test_update_events_carry_versions_and_outcomes_only():
 
     payloads = [call.args[1] for call in captured.call_args_list]
     assert set(payloads[0]) == {"target_version", "outcome"}
-    assert set(payloads[1]) == {
-        "target_version", "signature_verified", "attempt_id", "trigger"}
-    assert payloads[1]["trigger"] == "click"  # the default: Restart & Update
+    assert set(payloads[1]) == {"target_version", "signature_verified", "attempt_id"}
     assert set(payloads[2]) == {"target_version", "outcome", "stage"}
 
 
@@ -444,7 +426,7 @@ def test_failed_download_toast_says_why():
 
     item = _toast()
     assert "Download failed (HTTP 404)" in item.body
-    assert [a.label for a in item.actions] == ["Retry", "Download"]
+    assert [a.label for a in item.actions] == ["Download"]
 
 
 # ---------------------------------------------------------------------------
@@ -495,18 +477,16 @@ def test_requested_download_shows_live_progress():
     assert _labels() == ["Cancel"]
 
 
-def test_badge_hides_the_background_download_and_shows_restart_when_ready():
-    """Percentages reach the user only in the toast they are waiting on."""
-    from mixar.modules.common.updates.ui.topbar_badge import badge_label, draw_update_badge
+def test_badge_shows_download_percentage():
+    from mixar.modules.common.updates.ui.topbar_badge import badge_label
 
     state = get_update_state()
     state.set_available(_info())
 
     state.set_downloading()
+    assert badge_label(state) == "Downloading…"
     state.set_download_progress(200 * 1024 * 1024, 400 * 1024 * 1024)
-    layout = MagicMock()
-    draw_update_badge(layout)
-    layout.row.assert_not_called()
+    assert badge_label(state) == "Downloading 50%"
 
     state.set_ready("/tmp/Mixar-3.4.0.msi", True)
     assert badge_label(state) == "Restart to Update"
@@ -626,11 +606,9 @@ def test_ready_announcement_is_skipped_while_still_downloading(monkeypatch):
 def test_progress_tick_only_repushes_the_toast_the_user_waits_on(monkeypatch):
     """A static toast must not be replaced once a second.
 
-    Re-pushing a notification whose text has not changed churns the store
-    under a user who may be reaching for its button, and the badge is
-    hidden during a background download, so an unrequested download
-    redraws nothing. The tick keeps running so a later Restart & Update
-    gets a live percentage.
+    The badge needs the redraw either way, but re-pushing a notification
+    whose text has not changed churns the store under a user who may be
+    reaching for its button.
     """
     from mixar.modules.common.updates.core import install_flow
 
@@ -639,19 +617,19 @@ def test_progress_tick_only_repushes_the_toast_the_user_waits_on(monkeypatch):
         install_flow, "_refresh_ui", lambda: calls.__setitem__("toast", calls["toast"] + 1),
     )
     monkeypatch.setattr(
-        toasts, "tag_topbar_redraw", lambda: calls.__setitem__("badge", calls["badge"] + 1),
+        install_flow, "_redraw_badge", lambda: calls.__setitem__("badge", calls["badge"] + 1),
     )
 
     state = get_update_state()
     state.set_available(_info())
     state.set_downloading()
 
-    assert install_flow._progress_tick() == install_flow._PROGRESS_TICK_S
-    assert calls == {"toast": 0, "badge": 0}
+    install_flow._progress_tick()
+    assert calls == {"toast": 0, "badge": 1}
 
     state.set_install_requested(True)
     install_flow._progress_tick()
-    assert calls == {"toast": 1, "badge": 0}
+    assert calls == {"toast": 1, "badge": 1}
 
 
 def test_progress_tick_stops_when_the_download_ends(monkeypatch):

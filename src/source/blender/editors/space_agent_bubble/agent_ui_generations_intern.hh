@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "agent_ui_generations_layout.hh"
 #include "agent_ui_pane_kit.hh"

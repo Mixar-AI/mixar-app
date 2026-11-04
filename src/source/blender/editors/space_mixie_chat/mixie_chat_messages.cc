@@ -21,10 +21,10 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_time.hh"
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
+#include "BLI_listbase.h"
+#include "BLI_time.h"
+#include "BLI_rect.h"
+#include "BLI_string.h"
 #include "BLI_vector.hh"
 
 #include "BKE_context.hh"
@@ -327,10 +327,10 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   SpaceMixieChat *smixie = nullptr;
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so the same cast is valid for both. */
-  if (area && area->spacedata.first() &&
+  if (area && area->spacedata.first &&
       (area->spacetype == SPACE_AGENT_BUBBLE))
   {
-    smixie = area->spacedata.first_as<SpaceMixieChat>();
+    smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
 
   Main *bmain = CTX_data_main(C);

@@ -1,6 +1,292 @@
 /* SPDX-FileCopyrightText: 2023 Blender Authors
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
+
+#ifdef __GNUC__
+#  ifdef __clang__
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wcast-function-type"
+#  else
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wcast-function-type"
+#  endif
+#endif
+
+static PyMethodDef BPy_IDGroup_methods[] = {
+    {"pop", reinterpret_cast<PyCFunction>(BPy_IDGroup_pop), METH_VARARGS, BPy_IDGroup_pop_doc},
+    {"keys", reinterpret_cast<PyCFunction>(BPy_IDGroup_keys), METH_NOARGS, BPy_IDGroup_keys_doc},
+    {"values",
+     reinterpret_cast<PyCFunction>(BPy_IDGroup_values),
+     METH_NOARGS,
+     BPy_IDGroup_values_doc},
+    {"items",
+     reinterpret_cast<PyCFunction>(BPy_IDGroup_items),
+     METH_NOARGS,
+     BPy_IDGroup_items_doc},
+    {"update", reinterpret_cast<PyCFunction>(BPy_IDGroup_update), METH_O, BPy_IDGroup_update_doc},
+    {"get", reinterpret_cast<PyCFunction>(BPy_IDGroup_get), METH_VARARGS, BPy_IDGroup_get_doc},
+    {"to_dict",
+     reinterpret_cast<PyCFunction>(BPy_IDGroup_to_dict),
+     METH_NOARGS,
+     BPy_IDGroup_to_dict_doc},
+    {"clear",
+     reinterpret_cast<PyCFunction>(BPy_IDGroup_clear),
+     METH_NOARGS,
+     BPy_IDGroup_clear_doc},
+    {nullptr, nullptr, 0, nullptr},
+};
+
+#ifdef __GNUC__
+#  ifdef __clang__
+#    pragma clang diagnostic pop
+#  else
+#    pragma GCC diagnostic pop
+#  endif
+#endif
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name ID-Property Group Type
+ * \{ */
+
+static PySequenceMethods BPy_IDGroup_Seq = {
+    /*sq_length*/ reinterpret_cast<lenfunc>(BPy_IDGroup_Map_Len),
+    /*sq_concat*/ nullptr,
+    /*sq_repeat*/ nullptr,
+    /* TODO: setting this will allow `PySequence_Check()` to return True. */
+    /*sq_item*/ nullptr,
+    /*was_sq_slice*/ nullptr, /* DEPRECATED. */
+    /*sq_ass_item*/ nullptr,
+    /*was_sq_ass_slice*/ nullptr, /* DEPRECATED. */
+    /*sq_contains*/ reinterpret_cast<objobjproc>(BPy_IDGroup_Contains),
+    /*sq_inplace_concat*/ nullptr,
+    /*sq_inplace_repeat*/ nullptr,
+};
+
+static PyMappingMethods BPy_IDGroup_Mapping = {
+    /*mp_length*/ reinterpret_cast<lenfunc>(BPy_IDGroup_Map_Len),
+    /*mp_subscript*/ reinterpret_cast<binaryfunc>(BPy_IDGroup_Map_GetItem),
+    /*mp_ass_subscript*/ reinterpret_cast<objobjargproc>(BPy_IDGroup_Map_SetItem),
+};
+
+PyDoc_STRVAR(
+    /* Wrap. */
+    BPy_IDGroup_Type_doc,
+    "A dictionary-like group of ID properties, "
+    "supporting key access, iteration, and membership testing.\n"
+    "\n"
+    ".. note::\n"
+    "\n"
+    "   Only supports a maximum of 1024 levels of nesting.");
+
+PyTypeObject BPy_IDGroup_Type = {
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
+    /* For printing, in format `<module>.<name>`. */
+    /*tp_name*/ "IDPropertyGroup",
+    /*tp_basicsize*/ sizeof(BPy_IDProperty),
+    /*tp_itemsize*/ 0,
+    /*tp_dealloc*/ nullptr,
+    /*tp_vectorcall_offset*/ 0,
+    /*tp_getattr*/ nullptr,
+    /*tp_setattr*/ nullptr,
+    /*tp_as_async*/ nullptr,
+    /*tp_repr*/ reinterpret_cast<reprfunc>(BPy_IDGroup_repr),
+    /*tp_as_number*/ nullptr,
+    /*tp_as_sequence*/ &BPy_IDGroup_Seq,
+    /*tp_as_mapping*/ &BPy_IDGroup_Mapping,
+    /*tp_hash*/ reinterpret_cast<hashfunc>(BPy_IDGroup_hash),
+    /*tp_call*/ nullptr,
+    /*tp_str*/ nullptr,
+    /*tp_getattro*/ nullptr,
+    /*tp_setattro*/ nullptr,
+    /*tp_as_buffer*/ nullptr,
+    /*tp_flags*/ Py_TPFLAGS_DEFAULT,
+    /*tp_doc*/ BPy_IDGroup_Type_doc,
+    /*tp_traverse*/ nullptr,
+    /*tp_clear*/ nullptr,
+    /*tp_richcompare*/ nullptr,
+    /*tp_weaklistoffset*/ 0,
+    /*tp_iter*/ reinterpret_cast<getiterfunc>(BPy_IDGroup_iter),
+    /*tp_iternext*/ nullptr,
+    /*tp_methods*/ BPy_IDGroup_methods,
+    /*tp_members*/ nullptr,
+    /*tp_getset*/ BPy_IDGroup_getseters,
+    /*tp_base*/ nullptr,
+    /*tp_dict*/ nullptr,
+    /*tp_descr_get*/ nullptr,
+    /*tp_descr_set*/ nullptr,
+    /*tp_dictoffset*/ 0,
+    /*tp_init*/ nullptr,
+    /*tp_alloc*/ nullptr,
+    /*tp_new*/ nullptr,
+    /*tp_free*/ nullptr,
+    /*tp_is_gc*/ nullptr,
+    /*tp_bases*/ nullptr,
+    /*tp_mro*/ nullptr,
+    /*tp_cache*/ nullptr,
+    /*tp_subclasses*/ nullptr,
+    /*tp_weaklist*/ nullptr,
+    /*tp_del*/ nullptr,
+    /*tp_version_tag*/ 0,
+    /*tp_finalize*/ nullptr,
+    /*tp_vectorcall*/ nullptr,
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name ID Array Methods
+ * \{ */
+
+static PyTypeObject *idp_array_py_type(BPy_IDArray *self, size_t *elem_size)
+{
+  switch (self->prop->subtype) {
+    case IDP_FLOAT:
+      *elem_size = sizeof(float);
+      return &PyFloat_Type;
+    case IDP_DOUBLE:
+      *elem_size = sizeof(double);
+      return &PyFloat_Type;
+    case IDP_BOOLEAN:
+      *elem_size = sizeof(int8_t);
+      return &PyBool_Type;
+    case IDP_INT:
+      *elem_size = sizeof(int);
+      return &PyLong_Type;
+    default:
+      *elem_size = 0;
+      return nullptr;
+  }
+}
+
+static PyObject *BPy_IDArray_repr(BPy_IDArray *self)
+{
+  return PyUnicode_FromFormat("<bpy id property array [%d]>", self->prop->len);
+}
+
+PyDoc_STRVAR(
+    /* Wrap. */
+    BPy_IDArray_get_typecode_doc,
+    "The type of the data in the array "
+    "{'f': float (32-bit), 'd': double (64-bit), 'i': int, 'b': bool}. "
+    "Both 'f' and 'd' use Python's :class:`float` type but differ in storage precision.\n"
+    "\n"
+    ":type: Literal['f', 'd', 'i', 'b']\n");
+static PyObject *BPy_IDArray_get_typecode(BPy_IDArray *self, void * /*closure*/)
+{
+  const char *typecode;
+  switch (self->prop->subtype) {
+    case IDP_FLOAT:
+      typecode = "f";
+      break;
+    case IDP_DOUBLE:
+      typecode = "d";
+      break;
+    case IDP_INT:
+      typecode = "i";
+      break;
+    case IDP_BOOLEAN:
+      typecode = "b";
+      break;
+    default: {
+      PyErr_Format(PyExc_RuntimeError,
+                   "%s: invalid/corrupt array type '%d'!",
+                   __func__,
+                   self->prop->subtype);
+
+      return nullptr;
+    }
+  }
+  return PyUnicode_FromString(typecode);
+}
+
+static PyGetSetDef BPy_IDArray_getseters[] = {
+    /* matches pythons array.typecode */
+    {"typecode",
+     reinterpret_cast<getter>(BPy_IDArray_get_typecode),
+     static_cast<setter>(nullptr),
+     BPy_IDArray_get_typecode_doc,
+     nullptr},
+    {nullptr, nullptr, nullptr, nullptr, nullptr},
+};
+
+PyDoc_STRVAR(
+    /* Wrap. */
+    BPy_IDArray_to_list_doc,
+    ".. method:: to_list()\n"
+    "\n"
+    "   Return the array as a list.\n"
+    "\n"
+    "   :return: The array as a list.\n"
+    "   :rtype: list[int] | list[float] | list[bool]\n");
+static PyObject *BPy_IDArray_to_list(BPy_IDArray *self)
+{
+  return BPy_IDGroup_MapDataToPy(self->prop);
+}
+
+#ifdef __GNUC__
+#  ifdef __clang__
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wcast-function-type"
+#  else
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wcast-function-type"
+#  endif
+#endif
+
+static PyMethodDef BPy_IDArray_methods[] = {
+    {"to_list",
+     reinterpret_cast<PyCFunction>(BPy_IDArray_to_list),
+     METH_NOARGS,
+     BPy_IDArray_to_list_doc},
+    {nullptr, nullptr, 0, nullptr},
+};
+
+#ifdef __GNUC__
+#  ifdef __clang__
+#    pragma clang diagnostic pop
+#  else
+#    pragma GCC diagnostic pop
+#  endif
+#endif
+
+static Py_ssize_t BPy_IDArray_Len(BPy_IDArray *self)
+{
+  return self->prop->len;
+}
+
+static PyObject *BPy_IDArray_GetItem(BPy_IDArray *self, Py_ssize_t index)
+{
+  if (index < 0 || index >= self->prop->len) {
+    PyErr_SetString(PyExc_IndexError, "index out of range!");
+    return nullptr;
+  }
+
+  switch (self->prop->subtype) {
+    case IDP_FLOAT:
+      return PyFloat_FromDouble(IDP_array_float_get(self->prop)[index]);
+    case IDP_DOUBLE:
+      return PyFloat_FromDouble(IDP_array_double_get(self->prop)[index]);
+    case IDP_INT:
+      return PyLong_FromLong(long(IDP_array_int_get(self->prop)[index]));
+    case IDP_BOOLEAN:
+      return PyBool_FromLong(long(IDP_array_bool_get(self->prop)[index]));
+  }
+
+  PyErr_Format(
+      PyExc_RuntimeError, "%s: invalid/corrupt array type '%d'!", __func__, self->prop->subtype);
+
+  return nullptr;
+}
+
+static int BPy_IDArray_SetItem(BPy_IDArray *self, Py_ssize_t index, PyObject *value)
+{
+  if (index < 0 || index >= self->prop->len) {
+    PyErr_SetString(PyExc_RuntimeError, "index out of range!");
+    return -1;
+  }
+
   switch (self->prop->subtype) {
     case IDP_FLOAT: {
       const float f = float(PyFloat_AsDouble(value));
@@ -172,267 +458,4 @@ static PyObject *BPy_IDArray_subscript(BPy_IDArray *self, PyObject *item)
                __func__,
                Py_TYPE(item)->tp_name);
   return nullptr;
-}
-
-static int BPy_IDArray_ass_subscript(BPy_IDArray *self, PyObject *item, PyObject *value)
-{
-  if (PyIndex_Check(item)) {
-    Py_ssize_t i = PyNumber_AsSsize_t(item, PyExc_IndexError);
-    if (i == -1 && PyErr_Occurred()) {
-      return -1;
-    }
-    if (i < 0) {
-      i += self->prop->len;
-    }
-    return BPy_IDArray_SetItem(self, i, value);
-  }
-  if (PySlice_Check(item)) {
-    Py_ssize_t start, stop, step, slicelength;
-
-    if (PySlice_GetIndicesEx(item, self->prop->len, &start, &stop, &step, &slicelength) < 0) {
-      return -1;
-    }
-
-    if (step == 1) {
-      return BPy_IDArray_ass_slice(self, start, stop, value);
-    }
-
-    PyErr_SetString(PyExc_TypeError, "slice steps not supported with vectors");
-    return -1;
-  }
-
-  PyErr_Format(
-      PyExc_TypeError, "vector indices must be integers, not %.200s", Py_TYPE(item)->tp_name);
-  return -1;
-}
-
-static PyMappingMethods BPy_IDArray_AsMapping = {
-    /*mp_length*/ reinterpret_cast<lenfunc>(BPy_IDArray_Len),
-    /*mp_subscript*/ reinterpret_cast<binaryfunc>(BPy_IDArray_subscript),
-    /*mp_ass_subscript*/ reinterpret_cast<objobjargproc>(BPy_IDArray_ass_subscript),
-};
-
-static int itemsize_by_idarray_type(int array_type)
-{
-  if (array_type == IDP_INT) {
-    return sizeof(int);
-  }
-  if (array_type == IDP_FLOAT) {
-    return sizeof(float);
-  }
-  if (array_type == IDP_DOUBLE) {
-    return sizeof(double);
-  }
-  if (array_type == IDP_BOOLEAN) {
-    return sizeof(bool);
-  }
-  return -1; /* should never happen */
-}
-
-static int BPy_IDArray_getbuffer(BPy_IDArray *self, Py_buffer *view, int flags)
-{
-  IDProperty *prop = self->prop;
-  const int itemsize = itemsize_by_idarray_type(prop->subtype);
-  const int length = itemsize * prop->len;
-
-  if (PyBuffer_FillInfo(view,
-                        reinterpret_cast<PyObject *>(self),
-                        IDP_array_voidp_get(prop),
-                        length,
-                        false,
-                        flags) == -1)
-  {
-    return -1;
-  }
-
-  view->itemsize = itemsize;
-  view->format = const_cast<char *>(idp_format_from_array_type(prop->subtype));
-
-  Py_ssize_t *shape = MEM_new_uninitialized<Py_ssize_t>(__func__);
-  shape[0] = prop->len;
-  view->shape = shape;
-
-  return 0;
-}
-
-static void BPy_IDArray_releasebuffer(BPy_IDArray * /*self*/, Py_buffer *view)
-{
-  MEM_delete(view->shape);
-}
-
-static PyBufferProcs BPy_IDArray_Buffer = {
-    /*bf_getbuffer*/ reinterpret_cast<getbufferproc>(BPy_IDArray_getbuffer),
-    /*bf_releasebuffer*/ reinterpret_cast<releasebufferproc>(BPy_IDArray_releasebuffer),
-};
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name ID Array Type
- * \{ */
-
-PyDoc_STRVAR(
-    /* Wrap. */
-    BPy_IDArray_Type_doc,
-    "An array of values with a fixed type, "
-    "supporting indexing and slicing.");
-
-PyTypeObject BPy_IDArray_Type = {
-    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
-    /* For printing, in format `<module>.<name>`. */
-    /*tp_name*/ "IDPropertyArray",
-    /*tp_basicsize*/ sizeof(BPy_IDArray),
-    /*tp_itemsize*/ 0,
-    /*tp_dealloc*/ nullptr,
-    /*tp_vectorcall_offset*/ 0,
-    /*tp_getattr*/ nullptr,
-    /*tp_setattr*/ nullptr,
-    /*tp_as_async*/ nullptr,
-    /*tp_repr*/ reinterpret_cast<reprfunc>(BPy_IDArray_repr),
-    /*tp_as_number*/ nullptr,
-    /*tp_as_sequence*/ &BPy_IDArray_Seq,
-    /*tp_as_mapping*/ &BPy_IDArray_AsMapping,
-    /*tp_hash*/ nullptr,
-    /*tp_call*/ nullptr,
-    /*tp_str*/ nullptr,
-    /*tp_getattro*/ nullptr,
-    /*tp_setattro*/ nullptr,
-    /*tp_as_buffer*/ &BPy_IDArray_Buffer,
-    /*tp_flags*/ Py_TPFLAGS_DEFAULT,
-    /*tp_doc*/ BPy_IDArray_Type_doc,
-    /*tp_traverse*/ nullptr,
-    /*tp_clear*/ nullptr,
-    /*tp_richcompare*/ nullptr,
-    /*tp_weaklistoffset*/ 0,
-    /*tp_iter*/ nullptr,
-    /*tp_iternext*/ nullptr,
-    /*tp_methods*/ BPy_IDArray_methods,
-    /*tp_members*/ nullptr,
-    /*tp_getset*/ BPy_IDArray_getseters,
-    /*tp_base*/ nullptr,
-    /*tp_dict*/ nullptr,
-    /*tp_descr_get*/ nullptr,
-    /*tp_descr_set*/ nullptr,
-    /*tp_dictoffset*/ 0,
-    /*tp_init*/ nullptr,
-    /*tp_alloc*/ nullptr,
-    /*tp_new*/ nullptr,
-    /*tp_free*/ nullptr,
-    /*tp_is_gc*/ nullptr,
-    /*tp_bases*/ nullptr,
-    /*tp_mro*/ nullptr,
-    /*tp_cache*/ nullptr,
-    /*tp_subclasses*/ nullptr,
-    /*tp_weaklist*/ nullptr,
-    /*tp_del*/ nullptr,
-    /*tp_version_tag*/ 0,
-    /*tp_finalize*/ nullptr,
-    /*tp_vectorcall*/ nullptr,
-};
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Initialize Types
- * \{ */
-
-void IDProp_Init_Types()
-{
-  IDGroup_Iter_init_type();
-  IDGroup_View_init_type();
-
-  PyType_Ready(&BPy_IDGroup_Type);
-  PyType_Ready(&BPy_IDArray_Type);
-
-  PyType_Ready(&BPy_IDGroup_IterKeys_Type);
-  PyType_Ready(&BPy_IDGroup_IterValues_Type);
-  PyType_Ready(&BPy_IDGroup_IterItems_Type);
-
-  PyType_Ready(&BPy_IDGroup_ViewKeys_Type);
-  PyType_Ready(&BPy_IDGroup_ViewValues_Type);
-  PyType_Ready(&BPy_IDGroup_ViewItems_Type);
-}
-
-/**
- * \note `group` may be nullptr, unlike most other uses of this argument.
- * This is supported so RNA keys/values/items methods returns an iterator with the expected type:
- * - Without having ID-properties.
- * - Without supporting #BPy_IDProperty.prop being nullptr, which would incur many more checks.
- * Python's own dictionary-views also works this way too.
- */
-static BPy_IDGroup_View *IDGroup_View_New_WithType(BPy_IDProperty *group, PyTypeObject *type)
-{
-  BLI_assert(group ? group->prop->type == IDP_GROUP : true);
-  BPy_IDGroup_View *iter = PyObject_GC_New(BPy_IDGroup_View, type);
-  iter->reversed = false;
-  iter->group = group;
-  if (group != nullptr) {
-    Py_INCREF(group);
-    BLI_assert(!PyObject_GC_IsTracked((PyObject *)iter));
-    PyObject_GC_Track(iter);
-  }
-  return iter;
-}
-
-static PyObject *BPy_IDGroup_ViewKeys_CreatePyObject(BPy_IDProperty *group)
-{
-  return reinterpret_cast<PyObject *>(
-      IDGroup_View_New_WithType(group, &BPy_IDGroup_ViewKeys_Type));
-}
-
-static PyObject *BPy_IDGroup_ViewValues_CreatePyObject(BPy_IDProperty *group)
-{
-  return reinterpret_cast<PyObject *>(
-      IDGroup_View_New_WithType(group, &BPy_IDGroup_ViewValues_Type));
-}
-
-static PyObject *BPy_IDGroup_ViewItems_CreatePyObject(BPy_IDProperty *group)
-{
-  return reinterpret_cast<PyObject *>(
-      IDGroup_View_New_WithType(group, &BPy_IDGroup_ViewItems_Type));
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Public Module 'idprop.types'
- * \{ */
-
-static PyModuleDef IDProp_types_module_def = {
-    /*m_base*/ PyModuleDef_HEAD_INIT,
-    /*m_name*/ "idprop.types",
-    /*m_doc*/ nullptr,
-    /*m_size*/ 0,
-    /*m_methods*/ nullptr,
-    /*m_slots*/ nullptr,
-    /*m_traverse*/ nullptr,
-    /*m_clear*/ nullptr,
-    /*m_free*/ nullptr,
-};
-
-static PyObject *BPyInit_idprop_types()
-{
-  PyObject *submodule;
-
-  submodule = PyModule_Create(&IDProp_types_module_def);
-
-  IDProp_Init_Types();
-  IDPropertyUIData_Init_Types();
-
-  /* `bmesh_py_types.cc` */
-  PyModule_AddType(submodule, &BPy_IDGroup_Type);
-
-  PyModule_AddType(submodule, &BPy_IDGroup_ViewKeys_Type);
-  PyModule_AddType(submodule, &BPy_IDGroup_ViewValues_Type);
-  PyModule_AddType(submodule, &BPy_IDGroup_ViewItems_Type);
-
-  PyModule_AddType(submodule, &BPy_IDGroup_IterKeys_Type);
-  PyModule_AddType(submodule, &BPy_IDGroup_IterValues_Type);
-  PyModule_AddType(submodule, &BPy_IDGroup_IterItems_Type);
-
-  PyModule_AddType(submodule, &BPy_IDArray_Type);
-
-  PyModule_AddType(submodule, &BPy_IDPropertyUIManager_Type);
-
-  return submodule;
 }

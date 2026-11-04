@@ -16,8 +16,8 @@
 #include <cstring>
 #include <string>
 
-#include "BLI_math_vector_c.hh"
-#include "BLI_rect.hh"
+#include "BLI_math_vector.h"
+#include "BLI_rect.h"
 
 #include "BLF_api.hh"
 

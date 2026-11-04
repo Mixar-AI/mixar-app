@@ -20,8 +20,6 @@ set(INC_SYS
 )
 
 set(SRC
-  buttons/interface_label.cc
-  buttons/interface_label_markdown.cc
   buttons/interface_textbox.cc
   eyedroppers/eyedropper_bone.cc
   eyedroppers/eyedropper_color.cc
@@ -116,7 +114,6 @@ set(SRC
   templates/interface_template_curve_mapping.cc
   templates/interface_template_curve_profile.cc
   templates/interface_template_event.cc
-  templates/interface_template_filepath.cc
   templates/interface_template_grease_pencil_layer_search.cc
   templates/interface_template_grease_pencil_layer_tree.cc
   templates/interface_template_icon.cc
@@ -131,11 +128,8 @@ set(SRC
   templates/interface_template_node_tree_interface.cc
   templates/interface_template_operator_property.cc
   templates/interface_template_preview.cc
-  templates/interface_template_project_asset_libraries_tree.cc
-  templates/interface_template_project_splash.cc
   templates/interface_template_recent_files.cc
   templates/interface_template_running_jobs.cc
-  templates/interface_template_scene_compositor_effects.cc
   templates/interface_template_scopes.cc
   templates/interface_template_search.cc
   templates/interface_template_search_menu.cc
@@ -159,8 +153,6 @@ set(SRC
   views/interface_view.cc
   views/tree_view.cc
 
-  buttons/interface_label.hh
-  buttons/interface_label_markdown.hh
   buttons/interface_textbox.hh
   eyedroppers/eyedropper_intern.hh
   interface_mixar_card_icons.hh
@@ -204,7 +196,6 @@ set(LIB
   PRIVATE bf::render
   PRIVATE bf::sequencer
   PRIVATE bf::windowmanager
-  PRIVATE bf::extern::md4c
 )
 
 if(WITH_INTERNATIONAL)

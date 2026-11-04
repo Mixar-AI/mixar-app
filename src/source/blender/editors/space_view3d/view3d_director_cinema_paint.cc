@@ -21,7 +21,7 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "BKE_image.hh"
 

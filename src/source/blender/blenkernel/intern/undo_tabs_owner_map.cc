@@ -15,13 +15,13 @@
 
 #include "CLG_log.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 #include "BLI_map.hh"
 #include "BLI_set.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
-#include "BLI_assert.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
+#include "BLI_assert.h"
 #include "BLI_vector.hh"
 
 #include "DNA_ID.h"

@@ -46,17 +46,9 @@ def deliver(job):
         from mixar.modules.moodboard.core.media_import import pack_still_image
         from mixar.modules.common.utils.image_utils import add_image_to_moodboard
         image = bpy.data.images.get('Render Result')
-        # Since Blender 5.3 the Render Result reports has_data False (size 0x0)
-        # after the UI render job ends although it holds the pixels; save_render
-        # reads them, so a missing or empty file is what "no output" means.
-        if image is None:
+        if image is None or not image.has_data:
             raise RuntimeError('output_unavailable')
-        try:
-            image.save_render(job['path'], scene=scene)
-        except Exception as exc:
-            raise RuntimeError('output_unavailable') from exc
-        if not os.path.isfile(job['path']) or os.path.getsize(job['path']) == 0:
-            raise RuntimeError('output_unavailable')
+        image.save_render(job['path'], scene=scene)
         packed = pack_still_image(job['path'], display_name=label)
         try:
             add_image_to_moodboard(packed, prompt=label, scene=scene, job_handle=job['key'])

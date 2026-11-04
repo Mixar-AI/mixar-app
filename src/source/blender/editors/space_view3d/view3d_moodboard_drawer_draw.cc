@@ -19,8 +19,8 @@
 #include <cmath>
 #include <cstring>
 
-#include "BLI_math_base_c.hh"
-#include "BLI_rect.hh"
+#include "BLI_math_base.h"
+#include "BLI_rect.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"

@@ -106,7 +106,6 @@ set(SRC
   bpy_rna_anim.hh
   bpy_rna_callback.hh
   bpy_mixar_stall.hh
-  bpy_mixar_pycache.hh
   bpy_rna_context.hh
   bpy_rna_data.hh
   bpy_rna_driver.hh
@@ -169,7 +168,8 @@ endif()
 # Without this, the absolute path on the builder is used, causing HTTPS access to fail.
 # For example `urllib.request.urlopen("https://projects.blender.org")` fails
 # (or any other HTTPS site). see: #102300 for details.
-if(WITH_PYTHON AND WITH_PYTHON_INSTALL AND WITH_INSTALL_PORTABLE)
+# NOTE: that this isn't necessary on WIN32.
+if(WITH_PYTHON AND WITH_PYTHON_INSTALL AND (APPLE OR WITH_INSTALL_PORTABLE) AND (NOT WIN32))
   # - `PYTHON_SSL_CERT_FILE` absolute path to the PEM file.
   find_python_module_file("certifi/cacert.pem" PYTHON_SSL_CERT_FILE _python_ssl_cert_file_relative)
   mark_as_advanced(PYTHON_SSL_CERT_FILE)
@@ -220,8 +220,8 @@ if(WITH_CYCLES_OSL)
   add_definitions(-DWITH_CYCLES_OSL)
 endif()
 
-if(WITH_EMBREE)
-  add_definitions(-DWITH_EMBREE)
+if(WITH_CYCLES_EMBREE)
+  add_definitions(-DWITH_CYCLES_EMBREE)
 endif()
 
 if(WITH_FREESTYLE)
@@ -304,10 +304,6 @@ if(WITH_IO_PLY)
   add_definitions(-DWITH_IO_PLY)
 endif()
 
-if(WITH_IO_SPZ)
-  add_definitions(-DWITH_IO_SPZ)
-endif()
-
 if(WITH_IO_STL)
   add_definitions(-DWITH_IO_STL)
 endif()
@@ -359,10 +355,6 @@ if(WITH_HYDRA)
     bf_render_hydra
   )
   add_definitions(-DWITH_HYDRA)
-endif()
-
-if(WITH_OPENTIMELINEIO)
-  add_definitions(-DWITH_OPENTIMELINEIO)
 endif()
 
 if(WITH_EXPERIMENTAL_FEATURES)

@@ -21,36 +21,25 @@ from .constants import (
 )
 
 
-def capture_update_download(version: str, outcome: str, *, details=None, context=None) -> None:
+def capture_update_download(version: str, outcome: str, *, context=None) -> None:
     """The installer finished staging (``ready``) or did not (``failed``)."""
-    properties = {"target_version": version, "outcome": outcome}
-    for key in ("reason_code", "error_detail", "stage"):
-        if key in (details or {}):
-            properties[key] = details[key]
     capture(
         EVENT_UPDATE_DOWNLOAD,
-        properties,
+        {"target_version": version, "outcome": outcome},
         context=context,
     )
 
 
 def capture_update_started(
-    version: str, verified: bool, *, attempt_id: str = "", trigger: str = "click",
-    context=None,
+    version: str, verified: bool, *, attempt_id: str = "", context=None,
 ) -> None:
-    """The helper was spawned and Mixar is quitting to install.
-
-    ``trigger`` says what started it: ``click`` (Restart & Update),
-    ``quit`` (the user quit Mixar) or ``launch`` (the launch after a
-    session that never quit normally).
-    """
+    """The helper was spawned and Mixar is quitting to install."""
     capture(
         EVENT_UPDATE_STARTED,
         {
             "target_version": version,
             "signature_verified": bool(verified),
             "attempt_id": attempt_id or None,
-            "trigger": trigger or "click",
         },
         context=context,
     )
@@ -68,9 +57,7 @@ RESULT_DETAIL_KEYS = (
     "from_version", "running_version", "exit_code", "msi_error",
     "failure_reason", "attempt_id", "helper_version", "install_kind",
     "installed_version", "relaunch_matched", "relaunch_kind",
-    "locking_processes", "wait_s", "trigger",
-    "install_scope", "moved_from_program_files", "msi_refusal", "elevation",
-    "install_decision", "install_decision_reason",
+    "locking_processes", "wait_s",
 )
 
 

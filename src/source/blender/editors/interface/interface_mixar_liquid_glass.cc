@@ -19,9 +19,9 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BLI_math_base_c.hh"
-#include "BLI_rect.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_math_base.h"
+#include "BLI_rect.h"
+#include "BLI_utildefines.h"
 
 #include "GPU_framebuffer.hh"
 #include "GPU_immediate.hh"

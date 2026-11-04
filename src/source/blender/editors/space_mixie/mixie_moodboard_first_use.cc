@@ -7,7 +7,7 @@
 #include "../interface/interface_intern.hh"
 
 #include "BKE_screen.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "GPU_immediate_util.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar.hh"

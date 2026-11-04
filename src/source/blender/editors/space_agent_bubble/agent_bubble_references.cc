@@ -10,7 +10,7 @@
 #include "BKE_lib_id.hh"
 #include "BKE_report.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 #include "BLT_translation.hh"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -262,9 +262,6 @@ void agent_bubble_references_draw(const bContext *C,
       const float cy = BLI_rctf_cent_y(&image);
       const rctf glyph = {image.xmin + 10 * u, image.xmin + 38 * u, cy - 14 * u, cy + 14 * u};
       const bool video = file && item.kind == "video";
-      if (video) {
-        ED_moodboard_attachment_target(C, region, path.c_str(), glyph, g.view);
-      }
       const AgentIcon icon = !file                 ? AGENT_ICON_FOLDER :
                                video                 ? AGENT_ICON_VIDEO :
                                item.kind == "image"  ? AGENT_ICON_IMAGE :
@@ -390,7 +387,7 @@ void qa_targets(const wmWindow *win,
   if (!G_MAIN || G_MAIN->wm.is_empty()) {
     return;
   }
-  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   const auto items = agent_bubble_reference_items(win->scene, wm);
   const auto g = agent_bubble_reference_geometry(
       win, region, items, agent_bubble_reference_fraction(wm));
@@ -448,7 +445,7 @@ static wmOperatorStatus preview_sketch_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
   ScrArea *area = CTX_wm_area(C);
-  SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+  SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
   ED_space_image_set(bmain, sima, image, false);
   ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
   CTX_wm_region_set(C, region);

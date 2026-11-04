@@ -13,9 +13,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_math_matrix_c.hh"
-#include "BLI_math_rotation_c.hh"
-#include "BLI_math_vector_c.hh"
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
+#include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
 
 #include "DNA_object_types.h"
@@ -81,7 +81,7 @@ static bool gizmo2d_generic_poll(const bContext *C, wmGizmoGroupType *gzgt)
    * If there are cases that need to check other flags - this function could be split. */
   switch (area->spacetype) {
     case SPACE_IMAGE: {
-      const SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+      const SpaceImage *sima = static_cast<const SpaceImage *>(area->spacedata.first);
       Object *obedit = CTX_data_edit_object(C);
       if (!(ED_space_image_show_uvedit(sima, obedit) || ED_space_image_show_mask(sima))) {
         return false;
@@ -89,7 +89,7 @@ static bool gizmo2d_generic_poll(const bContext *C, wmGizmoGroupType *gzgt)
       break;
     }
     case SPACE_SEQ: {
-      const SpaceSeq *sseq = area->spacedata.first_as<SpaceSeq>();
+      const SpaceSeq *sseq = static_cast<const SpaceSeq *>(area->spacedata.first);
       if (sseq->gizmo_flag & (SEQ_GIZMO_HIDE | SEQ_GIZMO_HIDE_TOOL)) {
         return false;
       }
@@ -121,7 +121,7 @@ static void gizmo2d_pivot_point_message_subscribe(wmGizmoGroup *gzgroup,
 
   switch (area->spacetype) {
     case SPACE_IMAGE: {
-      SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+      SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
       PointerRNA ptr = RNA_pointer_create_discrete(&screen->id, RNA_SpaceImageEditor, sima);
       {
         const PropertyRNA *props[] = {
@@ -143,7 +143,13 @@ static void gizmo2d_pivot_point_message_subscribe(wmGizmoGroup *gzgroup,
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name Arrow / Cage Gizmo Group Defines
+/** \name Arrow / Cage Gizmo Group
+ *
+ * Defines public functions, not the gizmo itself:
+ *
+ * - #ED_widgetgroup_gizmo2d_xform_callbacks_set
+ * - #ED_widgetgroup_gizmo2d_xform_no_cage_callbacks_set
+ *
  * \{ */
 
 /* Axes as index. */
@@ -167,11 +173,7 @@ struct GizmoGroup2D {
   bool no_cage;
 };
 
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Utilities
- * \{ */
+/* **************** Utilities **************** */
 
 static void gizmo2d_get_axis_color(const int axis_idx, float *r_col, float *r_col_hi)
 {
@@ -240,7 +242,7 @@ static bool gizmo2d_calc_bounds(const bContext *C, float *r_center, float *r_min
   ScrArea *area = CTX_wm_area(C);
   bool has_select = false;
   if (area->spacetype == SPACE_IMAGE) {
-    const SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+    const SpaceImage *sima = static_cast<const SpaceImage *>(area->spacedata.first);
     switch (sima->mode) {
       case SI_MODE_UV:
       case SI_MODE_MIXAR_UV: {
@@ -290,7 +292,7 @@ static bool gizmo2d_calc_bounds(const bContext *C, float *r_center, float *r_min
        */
       const int pivot_point = scene->toolsettings->sequencer_tool_settings->pivot_point;
       if (pivot_point == V3D_AROUND_CURSOR) {
-        SpaceSeq *sseq = area->spacedata.first_as<SpaceSeq>();
+        SpaceSeq *sseq = static_cast<SpaceSeq *>(area->spacedata.first);
         const float2 cursor_pixel = seq::image_preview_unit_to_px(scene, sseq->cursor);
         copy_v2_v2(r_center, cursor_pixel);
       }
@@ -392,7 +394,7 @@ static bool gizmo2d_calc_transform_pivot(const bContext *C,
   if (area->spacetype == SPACE_IMAGE) {
     const Main *bmain = CTX_data_main(C);
     Scene *scene = CTX_data_scene(C);
-    const SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
+    const SpaceImage *sima = static_cast<const SpaceImage *>(area->spacedata.first);
     ViewLayer *view_layer = CTX_data_view_layer(C);
     switch (sima->mode) {
       case SI_MODE_UV:
@@ -410,7 +412,7 @@ static bool gizmo2d_calc_transform_pivot(const bContext *C,
   }
   else if (area->spacetype == SPACE_SEQ) {
     Scene *scene = CTX_data_sequencer_scene(C);
-    SpaceSeq *sseq = area->spacedata.first_as<SpaceSeq>();
+    SpaceSeq *sseq = static_cast<SpaceSeq *>(area->spacedata.first);
     const int pivot_point = scene->toolsettings->sequencer_tool_settings->pivot_point;
 
     if (pivot_point == V3D_AROUND_CURSOR) {
@@ -464,17 +466,6 @@ static wmOperatorStatus gizmo2d_modal(bContext *C,
 
   return OPERATOR_RUNNING_MODAL;
 }
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Arrow / Cage Gizmo Group
- *
- * Defines public functions, not the gizmo itself:
- *
- * - #ED_widgetgroup_gizmo2d_xform_callbacks_set
- * - #ED_widgetgroup_gizmo2d_xform_no_cage_callbacks_set
- * \{ */
 
 static void gizmo2d_xform_setup(const bContext * /*C*/, wmGizmoGroup *gzgroup)
 {

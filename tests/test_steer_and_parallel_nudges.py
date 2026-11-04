@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mixar.modules.common.analytics import essential_events as essential
+from mixar.modules.space_mixie_chat import constants
 from mixar.modules.space_mixie_chat.constants import SessionState
 from mixar.modules.space_mixie_chat.core import held_sends, tab_activity
 
@@ -58,6 +59,14 @@ def clean_state():
     held_sends._held.clear()
 
 
+# ---- delivery labels ----------------------------------------------------
+
+def test_delivery_labels_fit_the_bubble_property():
+    # ChatMessage.delivery_hint is maxlen=32; the native label buffer is 40.
+    for hint in (constants.HINT_STEER, constants.HINT_QUEUED):
+        assert 0 < len(hint) < 32
+
+
 # ---- held sends ---------------------------------------------------------
 
 def test_hold_only_while_busy_without_an_open_run():
@@ -67,12 +76,11 @@ def test_hold_only_while_busy_without_an_open_run():
     assert not held_sends.should_hold(scene(state=SessionState.AWAITING_INPUT))
 
 
-def test_held_message_is_an_unlabelled_bubble_and_restores_to_the_composer():
+def test_held_message_is_a_labelled_bubble_and_restores_to_the_composer():
     s = scene()
     held_sends.hold(s, "make it red")
     held_sends.hold(s, "and taller")
-    assert [m.delivery_hint for m in s.mixie_chat_messages] == ['', '']
-    assert held_sends.held_count(s) == 2
+    assert [m.delivery_hint for m in s.mixie_chat_messages] == [constants.HINT_QUEUED] * 2
     assert all(m.bubble_id.startswith(held_sends.HELD_PREFIX) for m in s.mixie_chat_messages)
     s.mixie_chat_input = "draft"
     held_sends.restore(s)
@@ -209,27 +217,8 @@ def test_send_operator_polls_can_compose_and_holds_before_encoding():
     assert "can_compose(context.scene)" in poll
     hold = src.index("held_sends.hold(scene, message_text)")
     assert src.index("ws_client.connection_id") < hold < src.index("encode_outgoing_attachments(")
-    assert "delivery_hint" not in src  # a steer's bubble carries no label
+    assert "user_msg.delivery_hint = HINT_STEER" in src
     assert "interjecting=steering, held=held" in src
-
-
-@pytest.mark.parametrize('blocked, sends', [('', True), ('Restoring', False)])
-def test_enter_holds_a_busy_send_like_the_button(monkeypatch, blocked, sends):
-    """#1887: Enter refused with "Working..." while the Steer button held the
-    message. Enter now asks the operator's predicate: a busy turn with no open
-    run reaches send_message (which holds it); a real refusal still reports."""
-    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
-    from mixar.modules.space_mixie_chat.ui.properties import chat_props
-    monkeypatch.setattr(composer_send, 'can_send', lambda sc: (False, blocked or 'Working...'))
-    monkeypatch.setattr(composer_send, '_blocked', lambda sc: blocked)
-    monkeypatch.setattr(held_sends, 'should_hold', lambda sc: True)
-    monkeypatch.setattr(auth_ops, 'guest_seat_pending', lambda: False)
-    send, refused = MagicMock(), MagicMock()
-    monkeypatch.setattr(chat_props.bpy.ops.mixie_chat, 'send_message', send, raising=False)
-    monkeypatch.setattr(chat_props, '_report_send_refused', refused)
-    chat_props._execute_send_message()
-    assert send.called is sends
-    assert refused.call_args_list == ([] if sends else [((blocked,),)])
 
 
 def test_stop_and_new_chat_hand_held_text_back():

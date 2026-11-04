@@ -465,8 +465,8 @@ msgstr "மூட்போர்டில் '{name}' தேர்ந்தெ�
 msgid "Select in Scene"
 msgstr "காட்சியில் தேர்ந்தெடு"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "வியூபோர்ட்டில் இந்த ஸ்பிளாட் உலகின் பதிலி கைப்பிடியைத் தேர்ந்தெடுக்கிறது"
 
 msgid "Collection"
 msgstr "சேகரிப்பு"
@@ -474,11 +474,8 @@ msgstr "சேகரிப்பு"
 msgid "That splat world is no longer in this file"
 msgstr "அந்த ஸ்பிளாட் உலகம் இனி இந்தக் கோப்பில் இல்லை"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "இந்த ஸ்பிளாட் உலகத்துக்குப் பதிலி கைப்பிடி இல்லை"
 
 msgid "Selected '{name}'"
 msgstr "'{name}' தேர்ந்தெடுக்கப்பட்டது"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
 
 msgid "Capture Viewport"
 msgstr "வியூபோர்ட்டைப் பிடி"
@@ -1445,9 +1439,6 @@ msgstr "உள்நுழைவு ரத்துசெய்யப்பட�
 msgid "Incomplete token pair in response"
 msgstr "பதிலில் முழுமையற்ற டோக்கன் இணை"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "உள்ளீட்டுக்குத் தயார்"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform}-க்கு ஆதரிக்கப்படாத நி�
 msgid "This install can't be updated in place"
 msgstr "இந்த நிறுவலை இடத்திலேயே புதுப்பிக்க முடியாது"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version}-க்குப் புதுப்பிக்கப்பட்டது"
 
 msgid "The update was installed successfully."
 msgstr "புதுப்பிப்பு வெற்றிகரமாக நிறுவப்பட்டது."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "நிறுவி முடிக்கவில்லை."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total}-இல் {transferred}"
@@ -3124,9 +3100,6 @@ msgstr "அதைப் பயன்படுத்த Mixar மீண்டு�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — உலாவி வழியாகப் புதுப்பிக்க பதிவிறக்கு என்பதைப் பயன்படுத்துங்கள்."
-
-msgid "Retry"
-msgstr "மீண்டும் முயல்"
 
 msgid "Restart & Update"
 msgstr "மீண்டும் தொடங்கி புதுப்பி"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "புதுப்பிக்க மீண்டும் தொடங�
 msgid "Updating…"
 msgstr "புதுப்பிக்கிறது…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "பதிவிறக்குகிறது {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "ஆதரிக்கப்படாத ஸ்பிளாட் கோ�
 msgid "File not found: {path}"
 msgstr "கோப்பு இல்லை: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "{name}-இலிருந்து பொருள்கள் இறக்குமதி செய்யப்படவில்லை"
 
 msgid "Failed to read image: {error}"
 msgstr "படத்தைப் படிக்க முடியவில்லை: {error}"
@@ -6923,8 +6869,8 @@ msgstr "உலக உருவாக்க முடிவில் ஸ்பி
 msgid "World generation result missing collider (GLB) URL"
 msgstr "உலக உருவாக்க முடிவில் மோதல் வடிவ (GLB) URL இல்லை"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "உலகத்தைப் பதிவிறக்க/மாற்ற முடியவில்லை: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "உலகம் இறக்குமதி செய்யப்பட்டது ஆனால் பொருள்கள் எதுவும் வரவில்லை"
@@ -7771,12 +7717,6 @@ msgstr "மூட்போர்டு"
 
 msgid "Right-click context menu for moodboard"
 msgstr "மூட்போர்டுக்கான வலது-சொடுக்கு சூழல் பட்டி"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "இணைப்பை அழி"
@@ -10048,14 +9988,14 @@ msgstr "மாதிரிப் பட்டியல் புதுப்ப�
 msgid "Generation catalog module not available"
 msgstr "உருவாக்க அட்டவணை தொகுதி கிடைக்கவில்லை"
 
-msgid "A duplicate image generation is already queued"
-msgstr "நகல் பட உருவாக்கம் ஏற்கெனவே வரிசையில் உள்ளது"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI படங்களை உருவாக்கி மூட்போர்டில் சேர்க்கும்"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "ப்ராம்ப்டை உள்ளிடவும் (உரையை உறுதிப்படுத்த Enter அழுத்தவும்)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "நகல் பட உருவாக்கம் ஏற்கெனவே வரிசையில் உள்ளது"
 
 msgid "No model specified and no default available"
 msgstr "மாதிரி குறிப்பிடப்படவில்லை, இயல்புநிலையும் கிடைக்கவில்லை"
@@ -10975,32 +10915,14 @@ msgstr "தொடக்கத்தில் தரை"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "தளம் Z=0இல் அமரவும் அடிச்சுவட்டு நடு தொடக்கத்தில் இருக்கவும் ஸ்பிளாட்டை நகர்த்தும் (உருவாக்கிய உலகங்களின் அதே தரையமைப்பு)"
 
-msgid "Source"
-msgstr "சான்று"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "தரநிலை"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "ஸ்பிளாட் கோப்பு எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} ஸ்பிளாட் இறக்குமதி செய்யப்பட்டது: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "காசியன் ஸ்பிளாட் (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "மூட்போர்டில் உரைப் பெட்டியைச் சேர்க்கும் ({shortcut})"
@@ -12570,6 +12492,9 @@ msgstr "அனைத்து எலும்பு தாக்கங்கள�
 
 msgid "Lighting Mode"
 msgstr "லைட்டிங் பயன்முறை"
+
+msgid "Standard"
+msgstr "தரநிலை"
 
 msgid "Physically-based glTF lighting units"
 msgstr "இயற்பியல் அடிப்படையிலான glTF லைட்டிங் அலகுகள்"
@@ -18822,6 +18747,9 @@ msgstr "கலத்தல்"
 msgid "No masks"
 msgstr "முகமூடிகள் இல்லை"
 
+msgid "Source"
+msgstr "சான்று"
+
 msgid "No node group loaded"
 msgstr "முனைக் குழு ஏற்றப்படவில்லை"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "மாற்றுகிறது..."
 
 msgid "Awaiting Input..."
 msgstr "உள்ளீட்டிற்காகக் காத்திருக்கிறது..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "மீட்டெடுப்பு புள்ளிக் கோப�
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "நடப்பு நிலையை வைத்திருக்க முடியவில்லை, எனவே எதுவும் மாறவில்லை"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "மீட்டெடுப்பு புள்ளியைப் படிக்க முடியவில்லை"
 
@@ -21135,6 +21063,9 @@ msgstr "வெளியேறு"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "மீண்டும் முயல்"
 
 msgid "Choose Export Location"
 msgstr "ஏற்றுமதி இடத்தைத் தேர்ந்தெடு"
@@ -21606,15 +21537,6 @@ msgstr "அதிகபட்சம் {count} இணைப்புக் க�
 msgid "Paste failed: {error}"
 msgstr "ஒட்டுதல் தோல்வி: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
-
-msgid "These references are already attached"
-msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} தவிர்க்கப்பட்டது: {error}"
 
+msgid "These references are already attached"
+msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
+
 msgid "Added {count} image(s)"
 msgstr "{count} படம்(கள்) சேர்க்கப்பட்டன"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-இலிருந்து சேர்"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "தானி பயன்முறை: திறந்த தேர்�
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
+
 msgid "Agent Bubble Status"
 msgstr "முகவர் குமிழி நிலைமை"
 
@@ -27053,9 +26963,6 @@ msgstr "மூட்போர்டு இணைப்புக் கோப்�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "புதிதாக இணைத்த குறிப்பு Mixie அரட்டைக்குள் பறந்து வருவதைக் காட்டுகிறது"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "நேரந்தவறுகை"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "அட்டை வரைவுக்குச் செயலில் உள்ள பகுதியின் வரைவு அழைப்பு தேவை"
 
@@ -29793,9 +29703,6 @@ msgstr "வட்டமான இடைமுக உறுப்புகளு�
 msgid "Mixie Chat"
 msgstr "Mixie அரட்டை"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "உலகளாவிய பகுதிகள்"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "சாளர-உலகளாவிய பகுதிகள் (மேல்பட்டை, நிலைப்பட்டை). Mixar நீட்டிப்பு — தொடக்க வழிகாட்டல் மேல்பட்டையை மீண்டும் வரைவதற்கு அணுக இது வெளிப்படுத்தப்பட்டுள்ளது."
 
 msgid "QA UI Dump"
 msgstr "QA இடைமுக வெளியீடு"

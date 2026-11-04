@@ -20,13 +20,13 @@
 
 #include "CLG_log.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 #include "BLI_hash.hh"
 #include "BLI_map.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
-#include "BLI_assert.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
+#include "BLI_assert.h"
 #include "BLI_set.hh"
 #include "BLI_vector.hh"
 
@@ -111,7 +111,7 @@ static WalkRestored g_walk_restored;
 
 void BKE_undo_tabs_walk_restored_note(const UndoStep *source)
 {
-  if (!g_partial.active || source == nullptr || !STREQ(source->type->identifier, "GLOBAL_UNDO")) {
+  if (!g_partial.active || source == nullptr || !STREQ(source->type->name, "Global Undo")) {
     return;
   }
   if (g_partial.whole) {
@@ -173,7 +173,7 @@ void BKE_undo_tabs_memfile_getter_set(const UndoTabsMemfileGetFn fn)
 
 static bool step_is_memfile(const UndoStep *us)
 {
-  return us != nullptr && us->type != nullptr && STREQ(us->type->identifier, "GLOBAL_UNDO");
+  return us != nullptr && us->type != nullptr && STREQ(us->type->name, "Global Undo");
 }
 
 /** The chunks of each watched datablock in one memfile, in write order. */
@@ -369,7 +369,7 @@ static void ptr_layout_build(const SDNA *sdna, const int struct_index, PtrLayout
   for (int m = 0; m < st->members_num; m++) {
     const short type = st->members[m].type_index;
     const short member = st->members[m].member_index;
-    const StringRef name = sdna->members[member];
+    const char *name = sdna->members[member];
     const int64_t count = sdna->members_array_num[member];
     if (name[0] == '*' || (name[0] == '(' && name[1] == '*')) {
       for (int64_t k = 0; k < count; k++) {
@@ -396,10 +396,10 @@ static void ptr_layout_build(const SDNA *sdna, const int struct_index, PtrLayout
 }
 
 /** The top-level member of a DNA struct at a byte offset (for the debug log). */
-static StringRef dna_member_at(const int struct_index, const int64_t offset)
+static const char *dna_member_at(const int struct_index, const int64_t offset)
 {
   const SDNA *sdna = DNA_sdna_current_get();
-  if (sdna == nullptr || struct_index <= 0 || struct_index >= sdna->structs.size()) {
+  if (sdna == nullptr || struct_index <= 0 || struct_index >= sdna->structs_num) {
     return "?";
   }
   const SDNA_Struct *st = sdna->structs[struct_index];
@@ -420,7 +420,7 @@ static const PtrLayout &ptr_layout(const int struct_index)
   return cache.lookup_or_add_cb(struct_index, [&]() {
     PtrLayout layout;
     const SDNA *sdna = DNA_sdna_current_get();
-    if (sdna != nullptr && struct_index > 0 && struct_index < sdna->structs.size()) {
+    if (sdna != nullptr && struct_index > 0 && struct_index < sdna->structs_num) {
       ptr_layout_build(sdna, struct_index, layout, 0);
     }
     return layout;
@@ -530,12 +530,12 @@ static bool struct_is_id(const int struct_index)
   static Map<int, bool> cache;
   return cache.lookup_or_add_cb(struct_index, [&]() {
     const SDNA *sdna = DNA_sdna_current_get();
-    if (sdna == nullptr || struct_index <= 0 || struct_index >= sdna->structs.size()) {
+    if (sdna == nullptr || struct_index <= 0 || struct_index >= sdna->structs_num) {
       return false;
     }
     const SDNA_Struct *st = sdna->structs[struct_index];
-    return st->members_num > 0 && sdna->types[st->members[0].type_index] == "ID" &&
-           sdna->members[st->members[0].member_index] == "id";
+    return st->members_num > 0 && STREQ(sdna->types[st->members[0].type_index], "ID") &&
+           STREQ(sdna->members[st->members[0].member_index], "id");
   });
 }
 
@@ -744,8 +744,8 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
                        "%s changed: block %d (%s.%s) pointer: kind %d vs %d",
                        id_name,
                        int(i),
-                       std::string(DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna)).c_str(),
-                       std::string(dna_member_at(x.sdna, at % layout->size)).c_str(),
+                       DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna),
+                       dna_member_at(x.sdna, at % layout->size),
                        int(ptr_target(va, own_a, ids_a).kind),
                        int(ptr_target(vb, own_b, ids_b).kind));
             return false;
@@ -793,10 +793,9 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
                      "%s changed: block %d (%s.%s) differs at byte %lld",
                      id_name,
                      int(i),
-                     std::string(x.sdna > 0 ? DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna) :
-                                             StringRef("raw")).c_str(),
+                     x.sdna > 0 ? DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna) : "raw",
                      (layout != nullptr && layout->valid && layout->size > 0) ?
-                         std::string(dna_member_at(x.sdna, k % layout->size)).c_str() :
+                         dna_member_at(x.sdna, k % layout->size) :
                          "",
                      (long long)k);
           if (!written_back_by_eval || last_diff >= first_chunk) {
@@ -996,7 +995,7 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
     Vector<uint32_t> found;
   };
   int index = -1;
-  for (const UndoStep *us = ustack->steps.first_as<const UndoStep>(); us; us = us->next) {
+  for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.first); us; us = us->next) {
     index++;
     const MemFile *memfile = (step_is_memfile(us) && g_memfile_get != nullptr) ? g_memfile_get(us) :
                                                                                   nullptr;
@@ -1281,7 +1280,7 @@ static bool partial_validate(Main *bmain,
         continue;
       }
       int index = -1;
-      for (const UndoStep *us = ustack->steps.first_as<const UndoStep>(); us; us = us->next) {
+      for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.first); us; us = us->next) {
         index++;
         if (index <= target_index || us->mixar_owners == nullptr) {
           continue;
@@ -1622,7 +1621,7 @@ std::string BKE_undo_tabs_history_json(const wmWindowManager *wm)
   if (wm != nullptr) {
     const wmWindow *win = (wm->runtime != nullptr && wm->runtime->winactive != nullptr) ?
                               wm->runtime->winactive :
-                              wm->windows.first_as<const wmWindow>();
+                              static_cast<const wmWindow *>(wm->windows.first);
     if (win != nullptr && win->scene != nullptr) {
       current = BKE_undo_tab_uid_for_scene(G_MAIN, win->scene);
     }
@@ -1636,7 +1635,7 @@ std::string BKE_undo_tabs_history_json(const wmWindowManager *wm)
                                  nullptr;
     int index = BLI_listbase_count(&ustack->steps) - 1;
     bool first = true;
-    for (const UndoStep *us = ustack->steps.last_as<const UndoStep>(); us; us = us->prev) {
+    for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.last); us; us = us->prev) {
       if (!first) {
         out += ",";
       }
@@ -1645,13 +1644,13 @@ std::string BKE_undo_tabs_history_json(const wmWindowManager *wm)
       out += ",\"name\":\"";
       json_escape_into(out, us->name);
       out += "\",\"type\":\"";
-      json_escape_into(out, us->type != nullptr ? us->type->identifier : "");
+      json_escape_into(out, us->type != nullptr ? us->type->name : "");
       out += "\",\"tab_uid\":" + std::to_string(us->mixar_tab_uid);
       out += ",\"skip\":" + std::string(us->skip ? "true" : "false");
       out += ",\"active\":" + std::string(us == ustack->step_active ? "true" : "false");
       out += ",\"cursor\":" + std::string(us == cursor ? "true" : "false");
       out += ",\"memfile\":" +
-             std::string((us->type != nullptr && STREQ(us->type->identifier, "GLOBAL_UNDO")) ? "true" :
+             std::string((us->type != nullptr && STREQ(us->type->name, "Global Undo")) ? "true" :
                                                                                          "false");
       out += ",\"owners\":" + std::to_string(BKE_undo_owner_map_size(us->mixar_owners));
       out += ",\"shared\":" + std::to_string(BKE_undo_owner_map_shared_count(us->mixar_owners));

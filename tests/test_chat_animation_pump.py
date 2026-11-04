@@ -25,7 +25,7 @@ inline wmWindowManager *CTX_wm_manager(const bContext *c) { return c->manager; }
 inline wmWindow *CTX_wm_window(const bContext *c) { return c->window; }
 }
 ''')
-    (tmp_path / "BLI_time.hh").write_text(r'''
+    (tmp_path / "BLI_time.h").write_text(r'''
 #pragma once
 namespace blender {
 extern double test_time;

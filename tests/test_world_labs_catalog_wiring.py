@@ -81,4 +81,4 @@ def test_pano_network_download_stays_off_blender_main_thread():
     assert "pano_path = _download_pano(pano_url)" in source
     assert "load_image_from_file(pano_path" in source
     assert "load_image_from_url" not in source
-    assert "_cleanup_temp_paths(spz_path, glb_path, pano_path)" in source
+    assert "_cleanup_temp_paths(ply_path, glb_path, pano_path)" in source

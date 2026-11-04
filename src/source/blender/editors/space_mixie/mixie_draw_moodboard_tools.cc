@@ -8,7 +8,7 @@
  * \brief Moodboard edit tool overlay drawing (crop/mask/lasso/magic select) for Mixie space
  */
 
-#include "BLI_time.hh"
+#include "BLI_time.h"
 
 #include "GPU_immediate_util.hh"
 

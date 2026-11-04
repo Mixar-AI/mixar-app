@@ -8,11 +8,11 @@
  */
 
 #include "BLI_bounds.hh"
-#include "BLI_listbase.hh"
-#include "BLI_math_matrix_c.hh"
-#include "BLI_math_rotation_c.hh"
-#include "BLI_math_vector_c.hh"
-#include "BLI_time.hh"
+#include "BLI_listbase.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
+#include "BLI_math_vector.h"
+#include "BLI_time.h"
 
 #include "DNA_userdef_types.h"
 
@@ -20,6 +20,7 @@
 #include "GPU_matrix.hh"
 #include "GPU_state.hh"
 
+#include "BKE_editmesh.hh"
 #include "BKE_layer.hh"
 #include "BKE_object.hh"
 #include "BKE_scene.hh"
@@ -343,7 +344,7 @@ void drawSnapping(TransInfo *t)
     GPU_blend(GPU_BLEND_ALPHA);
     uint pos = GPU_vertformat_attr_add(immVertexFormat(), "pos", gpu::VertAttrType::SFLOAT_32_32);
     immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-    float pixelx = ui::view2d_pixel_size_get_x(&region->v2d);
+    float pixelx = BLI_rctf_size_x(&region->v2d.cur) / BLI_rcti_size_x(&region->v2d.mask);
 
     const float target_x = t->tsnap.snap_target[0];
     const float target_y = t->tsnap.snap_target[1];
@@ -588,7 +589,7 @@ static bool transform_snap_mixed_is_active(const TransInfo *t)
   return (t->tsnap.mode &
           (SCE_SNAP_TO_VERTEX | SCE_SNAP_TO_EDGE | SCE_SNAP_TO_FACE | SCE_SNAP_TO_FACE_MIDPOINT |
            SCE_SNAP_TO_VOLUME | SCE_SNAP_TO_EDGE_MIDPOINT | SCE_SNAP_TO_EDGE_PERPENDICULAR |
-           SCE_SNAP_TO_GRID | SCE_SNAP_TO_ORIGIN)) != 0;
+           SCE_SNAP_TO_GRID)) != 0;
 }
 
 void transform_snap_mixed_apply(TransInfo *t, float *vec)
@@ -650,6 +651,34 @@ bool validSnappingNormal(const TransInfo *t)
   return false;
 }
 
+static bool bm_edge_is_snap_target(BMEdge *e, void * /*user_data*/)
+{
+  if (BM_elem_flag_test(e, BM_ELEM_SELECT | BM_ELEM_HIDDEN) ||
+      BM_elem_flag_test(e->v1, BM_ELEM_SELECT) || BM_elem_flag_test(e->v2, BM_ELEM_SELECT))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+static bool bm_face_is_snap_target(BMFace *f, void * /*user_data*/)
+{
+  if (BM_elem_flag_test(f, BM_ELEM_SELECT | BM_ELEM_HIDDEN)) {
+    return false;
+  }
+
+  BMLoop *l_iter, *l_first;
+  l_iter = l_first = BM_FACE_FIRST_LOOP(f);
+  do {
+    if (BM_elem_flag_test(l_iter->v, BM_ELEM_SELECT)) {
+      return false;
+    }
+  } while ((l_iter = l_iter->next) != l_first);
+
+  return true;
+}
+
 eSnapFlag *transform_snap_flag_from_spacetype_ptr(TransInfo *t,
                                                   const PropertyRNA **r_prop = nullptr)
 {
@@ -682,7 +711,7 @@ eSnapFlag *transform_snap_flag_from_spacetype_ptr(TransInfo *t,
       }
       return &ts->snap_flag_anim;
     case SPACE_GRAPH: {
-      SpaceGraph *graph_editor = t->area->spacedata.first_as<SpaceGraph>();
+      SpaceGraph *graph_editor = static_cast<SpaceGraph *>(t->area->spacedata.first);
       switch (graph_editor->mode) {
         case SIPO_MODE_DRIVERS:
           /* The driver editor has a separate snapping flag so it can be kept disabled while
@@ -746,7 +775,7 @@ static eSnapMode snap_mode_from_spacetype(TransInfo *t)
   }
 
   if (t->spacetype == SPACE_GRAPH) {
-    SpaceGraph *graph_editor = t->area->spacedata.first_as<SpaceGraph>();
+    SpaceGraph *graph_editor = static_cast<SpaceGraph *>(t->area->spacedata.first);
     switch (graph_editor->mode) {
       case SIPO_MODE_DRIVERS:
         /* Snapping to full values is the only mode that currently makes
@@ -835,13 +864,24 @@ static eSnapTargetOP snap_target_select_from_spacetype_and_tool_settings(TransIn
 
 static void snap_object_context_init(TransInfo *t)
 {
-  /* When editing a mesh, the selected elements are the ones being transformed, so snapping to
-   * them is meaningless. */
-  ed::transform::snap_object_context_set_editmesh_target(
-      t->tsnap.object_context,
-      t->data_type == &TransConvertType_Mesh ?
-          ed::transform::SnapEditMeshTarget::VisibleUnselected :
-          ed::transform::SnapEditMeshTarget::Visible);
+  if (t->data_type == &TransConvertType_Mesh) {
+    /* Ignore elements being transformed. */
+    ed::transform::snap_object_context_set_editmesh_callbacks(
+        t->tsnap.object_context,
+        reinterpret_cast<bool (*)(BMVert *, void *)>(BM_elem_cb_check_hflag_disabled),
+        bm_edge_is_snap_target,
+        bm_face_is_snap_target,
+        POINTER_FROM_UINT(BM_ELEM_SELECT | BM_ELEM_HIDDEN));
+  }
+  else {
+    /* Ignore hidden geometry in the general case. */
+    ed::transform::snap_object_context_set_editmesh_callbacks(
+        t->tsnap.object_context,
+        reinterpret_cast<bool (*)(BMVert *, void *)>(BM_elem_cb_check_hflag_disabled),
+        reinterpret_cast<bool (*)(BMEdge *, void *)>(BM_elem_cb_check_hflag_disabled),
+        reinterpret_cast<bool (*)(BMFace *, void *)>(BM_elem_cb_check_hflag_disabled),
+        POINTER_FROM_UINT(BM_ELEM_HIDDEN));
+  }
 }
 
 static void initSnappingMode(TransInfo *t)
@@ -881,14 +921,14 @@ void transform_snap_grid_init(const TransInfo *t, float r_snap[3], float *r_snap
   if (t->spacetype == SPACE_VIEW3D) {
     /* Used by incremental snap. */
     if (t->region && t->region->regiontype == RGN_TYPE_WINDOW) {
-      View3D *v3d = t->area->spacedata.first_as<View3D>();
+      View3D *v3d = static_cast<View3D *>(t->area->spacedata.first);
       r_snap[0] = r_snap[1] = r_snap[2] = ED_view3d_grid_view_scale(
           t->scene, v3d, t->region, nullptr);
     }
   }
   else if (t->spacetype == SPACE_IMAGE) {
     if (t->region && t->region->regiontype == RGN_TYPE_WINDOW) {
-      SpaceImage *sima = t->area->spacedata.first_as<SpaceImage>();
+      SpaceImage *sima = static_cast<SpaceImage *>(t->area->spacedata.first);
       const View2D *v2d = &t->region->v2d;
       int grid_size = SI_GRID_STEPS_LEN;
       float zoom_factor = ED_space_image_zoom_level(v2d, grid_size);
@@ -1085,7 +1125,7 @@ static void setSnappingCallback(TransInfo *t)
     t->tsnap.snap_target_fn = snap_target_view3d_fn;
   }
   else if (t->spacetype == SPACE_IMAGE) {
-    SpaceImage *sima = t->area->spacedata.first_as<SpaceImage>();
+    SpaceImage *sima = static_cast<SpaceImage *>(t->area->spacedata.first);
     BKE_view_layer_synced_ensure(*t->bmain, t->scene, t->view_layer);
     Object *obact = BKE_view_layer_active_object_get(t->view_layer);
 
@@ -1223,13 +1263,13 @@ void removeSnapPoint(TransInfo *t)
 
 void getSnapPoint(const TransInfo *t, float vec[3])
 {
-  if (t->tsnap.points.first_) {
+  if (t->tsnap.points.first) {
     TransSnapPoint *p;
     int total = 0;
 
     vec[0] = vec[1] = vec[2] = 0;
 
-    for (p = t->tsnap.points.first(); p; p = p->next, total++) {
+    for (p = static_cast<TransSnapPoint *>(t->tsnap.points.first); p; p = p->next, total++) {
       add_v3_v3(vec, p->co);
     }
 
@@ -1313,7 +1353,7 @@ static void snap_target_view3d_fn(TransInfo *t, float * /*vec*/)
   eSnapMode snap_elem = SCE_SNAP_TO_NONE;
   float dist_px = SNAP_MIN_DISTANCE; /* Use a user defined value here. */
 
-  if (t->tsnap.mode & (SCE_SNAP_TO_GEOM | SCE_SNAP_TO_GRID | SCE_SNAP_TO_ORIGIN)) {
+  if (t->tsnap.mode & (SCE_SNAP_TO_GEOM | SCE_SNAP_TO_GRID)) {
     zero_v3(no); /* objects won't set this */
     snap_elem = snapObjectsTransform(t, t->mval, &dist_px, loc, no);
     found = (snap_elem != SCE_SNAP_TO_NONE);
@@ -1660,7 +1700,7 @@ bool peelObjectsTransform(TransInfo *t,
 
   if (!depths_peel.is_empty()) {
     /* At the moment we only use the hits of the first object. */
-    SnapObjectHitDepth *hit_min = depths_peel.first();
+    SnapObjectHitDepth *hit_min = static_cast<SnapObjectHitDepth *>(depths_peel.first);
     for (SnapObjectHitDepth *iter = hit_min->next; iter; iter = iter->next) {
       if (iter->depth < hit_min->depth) {
         hit_min = iter;

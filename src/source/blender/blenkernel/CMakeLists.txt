@@ -37,8 +37,6 @@ set(SRC
   intern/anim_path.cc
   intern/anim_sys.cc
   intern/anim_visualization.cc
-  intern/annotations.cc
-  intern/annotations_geom.cc
   intern/anonymous_attribute_id.cc
   intern/appdir.cc
   intern/armature.cc
@@ -64,8 +62,6 @@ set(SRC
   intern/blender.cc
   intern/blender_cli_command.cc
   intern/blender_copybuffer.cc
-  intern/blender_project.cc
-  intern/blender_project_config.cc
   intern/blender_undo.cc
   intern/blender_user_menu.cc
   intern/blendfile.cc
@@ -73,7 +69,6 @@ set(SRC
   intern/boids.cc
   intern/bpath.cc
   intern/brush.cc
-  intern/bvh.cc
   intern/bvhutils.cc
   intern/cachefile.cc
   intern/callbacks.cc
@@ -135,11 +130,13 @@ set(SRC
   intern/geometry_fields.cc
   intern/geometry_set.cc
   intern/geometry_set_instances.cc
+  intern/gpencil_geom_legacy.cc
+  intern/gpencil_legacy.cc
+  intern/gpencil_modifier_legacy.cc
   intern/grease_pencil.cc
   intern/grease_pencil_attributes.cc
   intern/grease_pencil_convert_legacy.cc
   intern/grease_pencil_fills.cc
-  intern/grease_pencil_modifiers.cc
   intern/grease_pencil_vertex_groups.cc
   intern/gtest_setup.cc
   intern/icons.cc
@@ -154,6 +151,7 @@ set(SRC
   intern/image_format.cc
   intern/image_gen.cc
   intern/image_gpu.cc
+  intern/image_partial_update.cc
   intern/image_save.cc
   intern/instances.cc
   intern/instances_attributes.cc
@@ -263,17 +261,14 @@ set(SRC
   intern/pose_backup.cc
   intern/preferences.cc
   intern/preview_image.cc
-  intern/recents.cc
   intern/report.cc
   intern/rigidbody.cc
   intern/scene.cc
-  intern/scene_context.cc
   intern/screen.cc
   intern/shader_fx.cc
   intern/shrinkwrap.cc
   intern/softbody.cc
   intern/sound.cc
-  intern/sound_reader_cache.cc
   intern/speaker.cc
   intern/studiolight.cc
   intern/subdiv.cc
@@ -328,9 +323,7 @@ set(SRC
   BKE_anim_data.hh
   BKE_anim_path.h
   BKE_anim_visualization.h
-  BKE_animsys.hh
-  BKE_annotations.h
-  BKE_annotations_geom.h
+  BKE_animsys.h
   BKE_anonymous_attribute_id.hh
   BKE_anonymous_attribute_make.hh
   BKE_appdir.hh
@@ -347,7 +340,6 @@ set(SRC
   BKE_attribute_storage.hh
   BKE_attribute_storage_blend_write.hh
   BKE_autoexec.hh
-  BKE_bake_attribute_field.hh
   BKE_bake_data_block_id.hh
   BKE_bake_data_block_map.hh
   BKE_bake_geometry_nodes_modifier.hh
@@ -358,7 +350,6 @@ set(SRC
   BKE_blender.hh
   BKE_blender_cli_command.hh
   BKE_blender_copybuffer.hh
-  BKE_blender_project.hh
   BKE_blender_undo.hh
   BKE_blender_user_menu.hh
   BKE_blender_version.h
@@ -367,7 +358,6 @@ set(SRC
   BKE_boids.h
   BKE_bpath.hh
   BKE_brush.hh
-  BKE_bvh.hh
   BKE_bvhutils.hh
   BKE_cachefile.hh
   BKE_callbacks.hh
@@ -420,11 +410,13 @@ set(SRC
   BKE_geometry_set.hh
   BKE_geometry_set_instances.hh
   BKE_global.hh
+  BKE_gpencil_geom_legacy.h
+  BKE_gpencil_legacy.h
+  BKE_gpencil_modifier_legacy.h
   BKE_grease_pencil.h
   BKE_grease_pencil.hh
   BKE_grease_pencil_fills.hh
   BKE_grease_pencil_legacy_convert.hh
-  BKE_grease_pencil_modifiers.h
   BKE_grease_pencil_vertex_groups.hh
   BKE_gtest_base.hh
   BKE_gtest_setup.hh
@@ -435,7 +427,7 @@ set(SRC
   BKE_idtype.hh
   BKE_image.hh
   BKE_image_format.hh
-  BKE_image_gpu.hh
+  BKE_image_partial_update.hh
   BKE_image_save.hh
   BKE_image_wrappers.hh
   BKE_instances.hh
@@ -511,11 +503,9 @@ set(SRC
   BKE_pose_backup.h
   BKE_preferences.h
   BKE_preview_image.hh
-  BKE_recents.hh
   BKE_report.hh
   BKE_rigidbody.h
   BKE_scene.hh
-  BKE_scene_context.hh
   BKE_scene_runtime.hh
   BKE_screen.hh
   BKE_shader_fx.hh
@@ -567,7 +557,6 @@ set(SRC
 
   intern/attribute_storage_access.hh
   intern/data_transfer_intern.hh
-  intern/image_intern.hh
   intern/lib_intern.hh
   intern/multires_inline.hh
   intern/multires_reshape.hh
@@ -575,15 +564,10 @@ set(SRC
   intern/ocean_intern.h
   intern/pbvh_intern.hh
   intern/pbvh_pixels_copy.hh
-  intern/pbvh_pixels_rasterize.hh
   intern/pbvh_uv_islands.hh
-  intern/sound_reader_cache.hh
   intern/subdiv_converter.hh
   intern/subdiv_inline.hh
   intern/tracking_private.hh
-
-  # Without these files listed, they aren't known to CMake.
-  ../../../extern/toml11/toml.hpp
 )
 
 set(LIB
@@ -620,7 +604,6 @@ set(LIB
   PRIVATE bf::sequencer
   bf_shader_fx
   bf_simulation
-  PRIVATE bf::extern::toml
   PRIVATE bf::extern::xxhash
   PRIVATE bf::intern::atomic
   PRIVATE bf::dependencies::zlib
@@ -636,13 +619,6 @@ if(WITH_BINRELOC)
     PRIVATE bf::extern::binreloc
   )
   add_definitions(-DWITH_BINRELOC)
-endif()
-
-if(WITH_EMBREE)
-  list(APPEND LIB
-    PRIVATE bf::dependencies::optional::embree
-  )
-  add_definitions(-DWITH_EMBREE)
 endif()
 
 
@@ -702,7 +678,7 @@ if(WITH_PYTHON)
 
 
   if(PYTHON_EXECUTABLE)
-    cmake_path(GET PYTHON_EXECUTABLE FILENAME _python_exe_name)
+    get_filename_component(_python_exe_name ${PYTHON_EXECUTABLE} NAME)
     add_definitions(-DPYTHON_EXECUTABLE_NAME=${_python_exe_name})
     unset(_python_exe_name)
   endif()
@@ -783,7 +759,6 @@ if(WITH_GTESTS)
     intern/asset_metadata_test.cc
     intern/attribute_storage_test.cc
     intern/bake_items_serialize_test.cc
-    intern/blender_project_test.cc
     intern/bpath_test.cc
     intern/brush_test.cc
     intern/cryptomatte_test.cc
@@ -794,6 +769,7 @@ if(WITH_GTESTS)
     intern/grease_pencil_test.cc
     intern/idprop_serialize_test.cc
     intern/idprop_test.cc
+    intern/image_partial_update_test.cc
     intern/image_test.cc
     intern/key_test.cc
     intern/lattice_deform_test.cc
@@ -802,15 +778,12 @@ if(WITH_GTESTS)
     intern/lib_id_test.cc
     intern/lib_query_test.cc
     intern/lib_remap_test.cc
-    intern/main_namemap_test.cc
     intern/main_test.cc
+    intern/main_namemap_test.cc
     intern/nla_test.cc
     intern/node_socket_value_iter_test.cc
-    intern/node_socket_value_test.cc
     intern/path_templates_test.cc
-    intern/recents_test.cc
     intern/scene_test.cc
-    intern/sound_reader_cache_test.cc
     intern/subdiv_ccg_test.cc
     intern/tracking_test.cc
     intern/volume_test.cc

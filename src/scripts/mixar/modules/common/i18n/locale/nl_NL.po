@@ -465,8 +465,8 @@ msgstr "'{name}' geselecteerd op het moodboard"
 msgid "Select in Scene"
 msgstr "Selecteren in scène"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "Selecteert de proxyhandgreep van deze splatwereld in de viewport"
 
 msgid "Collection"
 msgstr "Collectie"
@@ -474,11 +474,8 @@ msgstr "Collectie"
 msgid "That splat world is no longer in this file"
 msgstr "Die splatwereld staat niet meer in dit bestand"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "Deze splatwereld heeft geen proxyhandgreep"
 
 msgid "Selected '{name}'"
 msgstr "'{name}' geselecteerd"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Kan het venster van de Agentbubbel niet openen"
 
 msgid "Capture Viewport"
 msgstr "Viewport vastleggen"
@@ -1445,9 +1439,6 @@ msgstr "Inloggen is geannuleerd of verlopen"
 msgid "Incomplete token pair in response"
 msgstr "Onvolledig tokenpaar in antwoord"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "Klaar voor invoer"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "Niet-ondersteund type installatieprogramma voor {platform}: {installer_t
 msgid "This install can't be updated in place"
 msgstr "Deze installatie kan niet ter plekke worden bijgewerkt"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Bijgewerkt naar Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "De update is geïnstalleerd."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "Het installatieprogramma is niet voltooid."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} van {total}"
@@ -3124,9 +3100,6 @@ msgstr "Mixar wordt opnieuw gestart om deze toe te passen."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gebruik Downloaden om via uw browser bij te werken."
-
-msgid "Retry"
-msgstr "Opnieuw proberen"
 
 msgid "Restart & Update"
 msgstr "Herstarten en bijwerken"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "Herstarten om bij te werken"
 msgid "Updating…"
 msgstr "Bijwerken…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "Downloaden {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "Niet-ondersteund splatbestandstype '{ext}' (verwacht .spz of .ply)"
 msgid "File not found: {path}"
 msgstr "Bestand niet gevonden: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "Geen objecten geïmporteerd uit {name}"
 
 msgid "Failed to read image: {error}"
 msgstr "Kon afbeelding niet lezen: {error}"
@@ -6923,8 +6869,8 @@ msgstr "Splat-URL (SPZ) ontbreekt in resultaat van wereldgeneratie"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Collider-URL (GLB) ontbreekt in resultaat van wereldgeneratie"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "Kon wereld niet downloaden/converteren: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "Wereld geïmporteerd, maar er zijn geen objecten ontstaan"
@@ -7771,12 +7717,6 @@ msgstr "Moodboard"
 
 msgid "Right-click context menu for moodboard"
 msgstr "Contextmenu (rechtsklik) voor het moodboard"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "Verbinding verwijderen"
@@ -10048,14 +9988,14 @@ msgstr "Modellenlijst verversen..."
 msgid "Generation catalog module not available"
 msgstr "Module voor generatiecatalogus niet beschikbaar"
 
-msgid "A duplicate image generation is already queued"
-msgstr "Er staat al een identieke afbeeldingsgeneratie in de wachtrij"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Genereert AI-afbeeldingen en voegt ze toe aan het moodboard"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Voer een prompt in (druk op Enter om uw tekst te bevestigen)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "Er staat al een identieke afbeeldingsgeneratie in de wachtrij"
 
 msgid "No model specified and no default available"
 msgstr "Geen model opgegeven en geen standaard beschikbaar"
@@ -10975,32 +10915,14 @@ msgstr "Op oorsprong neerzetten"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Verplaatst de splat zodat de vloer op Z=0 ligt met het midden van de voetafdruk in de oorsprong (dezelfde plaatsing als gegenereerde werelden)"
 
-msgid "Source"
-msgstr "Bron"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "Standaard"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "Geen splatbestand geselecteerd"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} splat(s) geïmporteerd: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "Gaussian splat (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12570,6 +12492,9 @@ msgstr "Alle botinvloeden opnemen"
 
 msgid "Lighting Mode"
 msgstr "Belichtingsmodus"
+
+msgid "Standard"
+msgstr "Standaard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fysiek gebaseerde glTF-belichtingseenheden"
@@ -18822,6 +18747,9 @@ msgstr "Menging"
 msgid "No masks"
 msgstr "Geen maskers"
 
+msgid "Source"
+msgstr "Bron"
+
 msgid "No node group loaded"
 msgstr "Geen nodegroep geladen"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "Wijzigen..."
 
 msgid "Awaiting Input..."
 msgstr "Wacht op invoer..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "Checkpointbestand ontbreekt"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Kon de huidige toestand niet bewaren, dus er is niets gewijzigd"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "Kon het checkpoint niet lezen"
 
@@ -21135,6 +21063,9 @@ msgstr "Uitloggen"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "Opnieuw proberen"
 
 msgid "Choose Export Location"
 msgstr "Exportlocatie kiezen"
@@ -21606,15 +21537,6 @@ msgstr "Max. {count} bijlagen"
 msgid "Paste failed: {error}"
 msgstr "Plakken mislukt: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "Kan {name} niet toevoegen: {error}"
-
-msgid "These references are already attached"
-msgstr "Deze referenties zijn al bijgevoegd"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "Kan {name} niet toevoegen: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "Bijlagelimiet ({count}) bereikt"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} overgeslagen: {error}"
 
+msgid "These references are already attached"
+msgstr "Deze referenties zijn al bijgevoegd"
+
 msgid "Added {count} image(s)"
 msgstr "{count} afbeelding(en) toegevoegd"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Toevoegen uit blend"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "Automatische modus: de agent neemt open keuzes zelf in plaats van het u 
 msgid "Agent Bubble"
 msgstr "Agentbubbel"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kan het venster van de Agentbubbel niet openen"
+
 msgid "Agent Bubble Status"
 msgstr "Status Agentbubbel"
 
@@ -27053,9 +26963,6 @@ msgstr "Moodboardbijlage animeren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Toont een nieuw bijgevoegde referentie die Mixie Chat in vliegt"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "Vertraging"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Het tekenen van kaarten vereist de tekencallback van het actieve gebied"
 
@@ -29793,9 +29703,6 @@ msgstr "Hoekradius voor afgeronde UI-elementen"
 msgid "Mixie Chat"
 msgstr ""
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "Neerzetpaden moeten niet-lege strings zijn"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Neerzetpaden moeten een niet-lege JSON-array zijn"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "Globale gebieden"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "Vensterglobale gebieden (bovenbalk, statusbalk). Mixar-uitbreiding — beschikbaar gemaakt zodat de onboarding de bovenbalk kan aanspreken om opnieuw te tekenen."
 
 msgid "QA UI Dump"
 msgstr "QA-UI-dump"

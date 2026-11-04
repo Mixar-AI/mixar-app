@@ -465,8 +465,8 @@ msgstr "മൂഡ്ബോർഡിൽ '{name}' തിരഞ്ഞെടുത�
 msgid "Select in Scene"
 msgstr "സീനിൽ തിരഞ്ഞെടുക്കുക"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന്റെ പ്രോക്സി ഹാൻഡിൽ വ്യൂപോർട്ടിൽ തിരഞ്ഞെടുക്കുക"
 
 msgid "Collection"
 msgstr "കളക്ഷൻ"
@@ -474,11 +474,8 @@ msgstr "കളക്ഷൻ"
 msgid "That splat world is no longer in this file"
 msgstr "ആ സ്പ്ലാറ്റ് ലോകം ഈ ഫയലിൽ ഇനിയില്ല"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന് പ്രോക്സി ഹാൻഡിലില്ല"
 
 msgid "Selected '{name}'"
 msgstr "'{name}' തിരഞ്ഞെടുത്തു"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
 
 msgid "Capture Viewport"
 msgstr "വ്യൂപോർട്ട് പകർത്തുക"
@@ -1445,9 +1439,6 @@ msgstr "ലോഗിൻ റദ്ദാക്കി അല്ലെങ്കി�
 msgid "Incomplete token pair in response"
 msgstr "പ്രതികരണത്തിൽ അപൂർണ ടോക്കൺ ജോഡി"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "ഇൻപുട്ടിന് തയ്യാർ"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform}-ന് പിന്തുണയില്ലാത്ത ഇ�
 msgid "This install can't be updated in place"
 msgstr "ഈ ഇൻസ്റ്റാൾ സ്ഥലത്ത് അപ്ഡേറ്റ് ചെയ്യാനാകില്ല"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version} ആയി അപ്ഡേറ്റ് ചെയ്തു"
 
 msgid "The update was installed successfully."
 msgstr "അപ്ഡേറ്റ് വിജയകരമായി ഇൻസ്റ്റാൾ ചെയ്തു."
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "ഇൻസ്റ്റാളർ പൂർത്തിയാക്കിയില്ല."
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total}-ൽ {transferred}"
@@ -3124,9 +3100,6 @@ msgstr "അത് പ്രയോഗിക്കാൻ Mixar പുനരാര�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ബ്രൗസർ വഴി അപ്ഡേറ്റ് ചെയ്യാൻ ഡൗൺലോഡ് ഉപയോഗിക്കുക."
-
-msgid "Retry"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
 
 msgid "Restart & Update"
 msgstr "പുനരാരംഭിച്ച് അപ്ഡേറ്റ് ചെയ്യുക"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "അപ്ഡേറ്റ് ചെയ്യാൻ പുനരാരം�
 msgid "Updating…"
 msgstr "അപ്ഡേറ്റ് ചെയ്യുന്നു…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "{percent}% ഡൗൺലോഡ് ചെയ്യുന്നു"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "പിന്തുണയില്ലാത്ത സ്പ്ലാറ�
 msgid "File not found: {path}"
 msgstr "ഫയൽ കണ്ടെത്തിയില്ല: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "{name}-ൽ നിന്ന് ഒബ്ജക്റ്റുകൾ ഇമ്പോർട്ട് ചെയ്തില്ല"
 
 msgid "Failed to read image: {error}"
 msgstr "ചിത്രം വായിക്കാനായില്ല: {error}"
@@ -6923,8 +6869,8 @@ msgstr "ലോക ജനറേഷൻ ഫലത്തിൽ സ്പ്ലാറ
 msgid "World generation result missing collider (GLB) URL"
 msgstr "ലോക ജനറേഷൻ ഫലത്തിൽ കൊളൈഡർ (GLB) URL കാണുന്നില്ല"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "ലോകം ഡൗൺലോഡ്/പരിവർത്തനം ചെയ്യാനായില്ല: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "ലോകം ഇമ്പോർട്ട് ചെയ്തു, പക്ഷേ ഒബ്ജക്റ്റുകൾ ഉണ്ടായില്ല"
@@ -7771,12 +7717,6 @@ msgstr "മൂഡ്ബോർഡ്"
 
 msgid "Right-click context menu for moodboard"
 msgstr "മൂഡ്ബോർഡിനുള്ള വലത്-ക്ലിക്ക് സന്ദർഭ മെനു"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "ബന്ധം ഇല്ലാതാക്കുക"
@@ -10048,14 +9988,14 @@ msgstr "മോഡൽ പട്ടിക പുതുക്കുന്നു..."
 msgid "Generation catalog module not available"
 msgstr "ജനറേഷൻ കാറ്റലോഗ് മൊഡ്യൂൾ ലഭ്യമല്ല"
 
-msgid "A duplicate image generation is already queued"
-msgstr "ഒരു തനിപ്പകർപ്പ് ചിത്ര ജനറേഷൻ ഇതിനകം ക്യൂവിലുണ്ട്"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI ചിത്രങ്ങൾ ജനറേറ്റ് ചെയ്ത് മൂഡ്ബോർഡിലേക്ക് ചേർക്കുക"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "ദയവായി ഒരു പ്രോംപ്റ്റ് നൽകുക (നിങ്ങളുടെ ടെക്സ്റ്റ് സ്ഥിരീകരിക്കാൻ Enter അമർത്തുക)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "ഒരു തനിപ്പകർപ്പ് ചിത്ര ജനറേഷൻ ഇതിനകം ക്യൂവിലുണ്ട്"
 
 msgid "No model specified and no default available"
 msgstr "മോഡലൊന്നും വ്യക്തമാക്കിയിട്ടില്ല, സ്ഥിരവും ലഭ്യമല്ല"
@@ -10975,32 +10915,14 @@ msgstr "ഒറിജിനിൽ ഗ്രൗണ്ട് ചെയ്യുക"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "സ്പ്ലാറ്റിന്റെ തറ Z=0-ൽ വരികയും അടിസ്ഥാന മധ്യം ഒറിജിനിൽ വരികയും ചെയ്യുന്ന വിധം അത് നീക്കുക (ജനറേറ്റ് ചെയ്ത ലോകങ്ങളുടെ അതേ ഗ്രൗണ്ടിങ്)"
 
-msgid "Source"
-msgstr "ഉറവിടം"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "സ്റ്റാൻഡേർഡ്"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "സ്പ്ലാറ്റ് ഫയലൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} സ്പ്ലാറ്റ് ഇംപോർട്ട് ചെയ്തു: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "ഗോസിയൻ സ്പ്ലാറ്റ് (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "മൂഡ്ബോർഡിലേക്ക് ഒരു ടെക്സ്റ്റ് ബോക്സ് ചേർക്കുക ({shortcut})"
@@ -12570,6 +12492,9 @@ msgstr "എല്ലാ ബോൺ സ്വാധീനങ്ങളും ഉൾ
 
 msgid "Lighting Mode"
 msgstr "ലൈറ്റിങ് മോഡ്"
+
+msgid "Standard"
+msgstr "സ്റ്റാൻഡേർഡ്"
 
 msgid "Physically-based glTF lighting units"
 msgstr "ഫിസിക്കലി-ബേസ്ഡ് glTF ലൈറ്റിങ് യൂണിറ്റുകൾ"
@@ -18822,6 +18747,9 @@ msgstr "ബ്ലെൻഡിങ്"
 msgid "No masks"
 msgstr "മാസ്കുകളില്ല"
 
+msgid "Source"
+msgstr "ഉറവിടം"
+
 msgid "No node group loaded"
 msgstr "നോഡ് ഗ്രൂപ്പ് ലോഡ് ചെയ്തിട്ടില്ല"
 
@@ -19935,9 +19863,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20381,6 +20306,12 @@ msgstr "മാറ്റം വരുത്തുന്നു..."
 
 msgid "Awaiting Input..."
 msgstr "ഇൻപുട്ടിനായി കാത്തിരിക്കുന്നു..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20964,9 +20895,6 @@ msgstr "ചെക്ക്പോയിന്റ് ഫയൽ കാണുന്�
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "നിലവിലെ നില സൂക്ഷിക്കാനായില്ല, അതിനാൽ ഒന്നും മാറ്റിയില്ല"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "ചെക്ക്പോയിന്റ് വായിക്കാനായില്ല"
 
@@ -21135,6 +21063,9 @@ msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
 
 msgid "Choose Export Location"
 msgstr "എക്സ്പോർട്ട് സ്ഥലം തിരഞ്ഞെടുക്കുക"
@@ -21606,15 +21537,6 @@ msgstr "പരമാവധി {count} അറ്റാച്ച്മെന്റ
 msgid "Paste failed: {error}"
 msgstr "ഒട്ടിക്കൽ പരാജയപ്പെട്ടു: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} ചേർക്കാനാവില്ല: {error}"
-
-msgid "These references are already attached"
-msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21900,14 +21822,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} ചേർക്കാനാവില്ല: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) എത്തി"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} ഒഴിവാക്കി: {error}"
 
+msgid "These references are already attached"
+msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
+
 msgid "Added {count} image(s)"
 msgstr "{count} ചിത്രം ചേർത്തു"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "ബ്ലെൻഡിൽ നിന്ന് ചേർക്കുക"
@@ -25260,30 +25191,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26604,6 +26511,9 @@ msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദി�
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
+
 msgid "Agent Bubble Status"
 msgstr "ഏജന്റ് ബബിൾ നില"
 
@@ -27053,9 +26963,6 @@ msgstr "മൂഡ്ബോർഡ് അറ്റാച്ച്മെന്റ�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "പുതുതായി അറ്റാച്ച് ചെയ്ത റഫറൻസ് Mixie ചാറ്റിലേക്ക് പറന്നുവരുന്നത് കാണിക്കുക"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "കാലതാമസം"
@@ -28524,6 +28431,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "കാർഡ് വരയ്ക്കാൻ സജീവ മേഖലയുടെ ഡ്രോ കോൾബാക്ക് വേണം"
 
@@ -29793,9 +29703,6 @@ msgstr "വൃത്താകൃതി UI ഘടകങ്ങളുടെ കോ�
 msgid "Mixie Chat"
 msgstr "Mixie ചാറ്റ്"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29807,6 +29714,18 @@ msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാ�
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാത്ത JSON അറേ ആയിരിക്കണം"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "ആഗോള ഏരിയകൾ"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "വിൻഡോ-ആഗോള ഏരിയകൾ (ടോപ്പ്ബാർ, സ്റ്റാറ്റസ്ബാർ). Mixar വിപുലീകരണം — ഓൺബോർഡിങിന് റീഡ്രോയ്ക്കായി ടോപ്പ്ബാർ അഭിസംബോധന ചെയ്യാൻ തുറന്നുവച്ചത്."
 
 msgid "QA UI Dump"
 msgstr "QA UI ഡമ്പ്"

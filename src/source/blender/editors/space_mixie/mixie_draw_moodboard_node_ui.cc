@@ -21,9 +21,9 @@
 #include <array>
 #include <cmath>
 
-#include "BLI_math_geom_c.hh"
+#include "BLI_math_geom.h"
 #include "BLI_math_vector_types.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "../interface/interface_intern.hh"
 #include "BLI_vector.hh"
 

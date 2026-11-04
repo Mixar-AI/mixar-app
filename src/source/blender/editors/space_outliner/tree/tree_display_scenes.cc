@@ -9,7 +9,7 @@
 #include "DNA_space_types.h"
 
 #include "BLI_listbase_wrapper.hh"
-#include "BLI_mempool.hh"
+#include "BLI_mempool.h"
 
 #include "BKE_main.hh"
 
@@ -61,7 +61,7 @@ ListBaseT<TreeElement> TreeDisplayScenes::build_tree(const TreeSourceData &sourc
     if (mixar_scene_is_agent_lane(scene)) {
       continue;
     }
-    TreeElement *te = add_id_element({.lb = &tree}, id);
+    TreeElement *te = add_element(&tree, id, nullptr, nullptr, TSE_SOME_ID, 0);
     TreeStoreElem *tselem = TREESTORE(te);
 
     /* New scene elements open by default */

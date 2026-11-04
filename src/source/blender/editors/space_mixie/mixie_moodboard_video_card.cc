@@ -32,8 +32,8 @@
 #include "BKE_wm_runtime.hh"
 
 #include "BLI_listbase_iterator.hh"
-#include "BLI_rect.hh"
-#include "BLI_timer.hh"
+#include "BLI_rect.h"
+#include "BLI_timer.h"
 
 #include "GPU_immediate.hh"
 #include "GPU_immediate_util.hh"
@@ -136,7 +136,7 @@ bool moodboard_video_card_register(const ARegion *region, const char *key, const
 /** The region still exists in some open window (it may have been freed). */
 static bool region_is_live(const ARegion *region, wmWindow **r_win)
 {
-  wmWindowManager *wm = G_MAIN ? G_MAIN->wm.first_as<wmWindowManager>() : nullptr;
+  wmWindowManager *wm = G_MAIN ? static_cast<wmWindowManager *>(G_MAIN->wm.first) : nullptr;
   if (!wm) {
     return false;
   }

@@ -15,7 +15,7 @@
 
 #include "BKE_context.hh"
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 
 #include "BLT_translation.hh"
 

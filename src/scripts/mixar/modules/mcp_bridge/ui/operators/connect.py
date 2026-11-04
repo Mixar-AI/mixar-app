@@ -17,16 +17,13 @@ from bpy.props import BoolProperty, EnumProperty
 from bpy.types import Operator
 
 from mixar.config.config import add_config
-from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
 from ...constants import OTHER_APP, PRODUCT_NAMES
-from ...core import app_add, app_configs, connect_state, installation, runtime
+from ...core import app_add, app_configs, connect_state, runtime
 from ...core.setup import connection_config, launch
 from . import connect_sheet_ui
 
 APP_ITEMS = [(key, name, "") for key, name, _how in app_configs.APPS]
-
-logger = get_logger(__name__)
 
 
 def _signed_in(context):
@@ -54,16 +51,6 @@ def _enable(op):
     if not add_config("mcp_enabled", True):
         op.report({'WARNING'}, "MCP is enabled for this session; saving the preference failed")
     _save_tools_now()
-
-
-def _launcher_failed(op):
-    """Writing the per-user launcher failed: name its folder, copy or add
-    nothing; the app's own provisioning retries on its timer."""
-    logger.warning("MCP launcher could not be written", exc_info=True)
-    op.report({'ERROR'}, rpt_("Could not write Mixar's MCP launcher in {folder}. Check that files there can be "
-                              "created and are not open in another program, then try again"
-                              ).format(folder=installation.directory()))
-    return {'CANCELLED'}
 
 
 def _ready(context):
@@ -182,11 +169,8 @@ class MIXAR_OT_copy_mcp_setup(Operator):
         if _refuse_signed_out(self, context):
             return {'CANCELLED'}
         _enable(self)
-        try:
-            snippet = connection_config(self.client, bpy.utils.resource_path('LOCAL'), bpy.app.binary_path)
-        except OSError:
-            return _launcher_failed(self)
-        context.window_manager.clipboard = snippet
+        context.window_manager.clipboard = connection_config(
+            self.client, bpy.utils.resource_path('LOCAL'), bpy.app.binary_path)
         self.report({'INFO'}, "MCP setup copied. Paste it into your AI app where the dialog says")
         return {'FINISHED'}
 
@@ -203,10 +187,7 @@ class MIXAR_OT_mcp_add_to_app(Operator):
         if _refuse_signed_out(self, context):
             return {'CANCELLED'}
         _enable(self)
-        try:
-            command, args = launch(bpy.utils.resource_path('LOCAL'), bpy.app.binary_path, True)
-        except OSError:
-            return _launcher_failed(self)
+        command, args = launch(bpy.utils.resource_path('LOCAL'), bpy.app.binary_path, True)
         if not app_add.start(self.app, command, args):
             self.report({'INFO'}, "Already adding Mixar to this app")
             return {'CANCELLED'}

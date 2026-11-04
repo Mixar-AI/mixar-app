@@ -22,7 +22,7 @@
 
 #include <cmath>
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 
 #include "BKE_context.hh"
 

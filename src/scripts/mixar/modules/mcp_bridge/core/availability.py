@@ -33,10 +33,8 @@ NEXT_STEPS = {
 
 
 async def fetch_tools(connector):
-    """(backend tools or None, readiness): live when Mixar is ready, else the saved
-    copy (the media-free one when this launcher hides media generation)."""
+    """(backend tools or None, readiness): live when Mixar is ready, else the saved copy."""
     check = getattr(connector, "readiness", lambda: ("ready", ""))
-    no_media = getattr(connector, "hide_media", False)
     state, _ = await asyncio.to_thread(check)
     if state == "ready":
         try:
@@ -44,9 +42,9 @@ async def fetch_tools(connector):
         except (OSError, ValueError, KeyError, RuntimeError, TimeoutError):
             state = "connecting"
         else:
-            await asyncio.to_thread(tool_snapshot.save, tools, no_media)  # The freshest list for the next session.
+            await asyncio.to_thread(tool_snapshot.save, tools)  # The freshest list for the next session.
             return tools, state
-    return await asyncio.to_thread(tool_snapshot.load, no_media), state
+    return await asyncio.to_thread(tool_snapshot.load), state
 
 
 def scene_tools(listed, readiness, health):

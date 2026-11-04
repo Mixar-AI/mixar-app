@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -46,7 +46,6 @@ void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region);
 
 void agent_bubble_composer_focus_request(bContext *C, void *ghost_window);
-void agent_bubble_composer_deactivate(bContext *C, void *ghost_window);
 void agent_bubble_composer_focus_tick(bContext *C, void *ghost_window, bool minimised);
 void agent_bubble_composer_focus_if_pending(bContext *C);
 bool agent_bubble_composer_has_focused_draft(const bContext *C, void *ghost_window);
@@ -121,12 +120,6 @@ void MIXAR_OT_bubble_pill_voice(wmOperatorType *ot);
 /* Make the host window key again (macOS/Windows; no-op elsewhere), so typing
  * over a frozen Sketch viewport continues after a pill control is clicked. */
 void agent_bubble_return_key_to_host();
-
-/* `window` is the minimised island's resting pill (macOS/Windows: the pill
- * window; Linux: the island window itself while collapsed). The open
- * island's small status pill is excluded. */
-struct wmWindow;
-bool agent_bubble_is_resting_pill_window(const wmWindow *window);
 
 /** \} */
 

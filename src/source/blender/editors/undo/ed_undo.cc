@@ -6,19 +6,15 @@
  * \ingroup edundo
  */
 
-#include <atomic>
 #include <cstring>
 
 #include "CLG_log.h"
 
-#include "DNA_key_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_task_c.hh"
-#include "BLI_utildefines.hh"
-#include "BLI_vector.hh"
+#include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_blender_undo.hh"
 #include "BKE_callbacks.hh"
@@ -26,7 +22,6 @@
 #include "BKE_global.hh"
 #include "BKE_layer.hh"
 #include "BKE_main.hh"
-#include "BKE_object.hh"
 #include "BKE_paint.hh"
 #include "BKE_report.hh"
 #include "BKE_scene.hh"
@@ -64,7 +59,6 @@
 #include "RNA_access.hh"
 #include "RNA_define.hh"
 #include "RNA_enum_types.hh"
-#include "RNA_prototypes.hh"
 
 namespace blender {
 
@@ -114,7 +108,7 @@ void ED_undo_group_end(bContext *C)
 
 /* Mixar: `type` forces the step type (a tab checkpoint is a memfile step
  * whatever the context is in), nullptr keeps the context's choice. */
-static eUndoPushReturn ed_undo_push_ex(bContext *C, const char *str, UndoEncodeHints hints, const UndoType *type)
+static eUndoPushReturn ed_undo_push_ex(bContext *C, const char *str, const UndoType *type)
 {
   CLOG_INFO(&LOG, "Push '%s'", str);
   WM_file_tag_modified();
@@ -157,8 +151,8 @@ static eUndoPushReturn ed_undo_push_ex(bContext *C, const char *str, UndoEncodeH
 
   /* A step a mode initialised (sculpt, paint) keeps its own type. */
   push_retval = (type != nullptr && wm->runtime->undo_stack->step_init == nullptr) ?
-                    BKE_undosys_step_push_with_type(wm->runtime->undo_stack, C, str, hints, type) :
-                    BKE_undosys_step_push(wm->runtime->undo_stack, C, str, hints);
+                    BKE_undosys_step_push_with_type(wm->runtime->undo_stack, C, str, type) :
+                    BKE_undosys_step_push(wm->runtime->undo_stack, C, str);
 
   if (U.undomemory != 0) {
     const size_t memory_limit = size_t(U.undomemory) * 1024 * 1024;
@@ -175,14 +169,14 @@ static eUndoPushReturn ed_undo_push_ex(bContext *C, const char *str, UndoEncodeH
   return push_retval;
 }
 
-void ED_undo_push(bContext *C, const char *str, UndoEncodeHints hints)
+void ED_undo_push(bContext *C, const char *str)
 {
-  ed_undo_push_ex(C, str, hints, nullptr);
+  ed_undo_push_ex(C, str, nullptr);
 }
 
 bool ED_undo_push_memfile(bContext *C, const char *str)
 {
-  return (ed_undo_push_ex(C, str, UndoEncodeHints::None, BKE_UNDOSYS_TYPE_MEMFILE) & UNDO_PUSH_RET_SUCCESS) != 0;
+  return (ed_undo_push_ex(C, str, BKE_UNDOSYS_TYPE_MEMFILE) & UNDO_PUSH_RET_SUCCESS) != 0;
 }
 
 /**
@@ -200,7 +194,6 @@ static void ed_undo_step_pre(bContext *C,
 
   /* undo during jobs are running can easily lead to freeing data using by jobs,
    * or they can just lead to freezing job in some other cases */
-  ED_preview_kill_jobs_for_undo(wm, bmain);
   WM_jobs_kill_all(wm);
 
   if (G.debug & G_DEBUG_IO) {
@@ -262,7 +255,7 @@ static bool ed_undo_tab_walk_refused(bContext *C,
   Main *bmain = CTX_data_main(C);
   for (Scene &scene : bmain->scenes) {
     const uint32_t owner = BKE_undo_tab_uid_for_scene(bmain, &scene);
-    if (owner == tab || !WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_ANY)) {
+    if (owner == tab || !WM_jobs_test(wm, &scene, WM_JOB_TYPE_ANY)) {
       continue;
     }
     /* The preview's private scene is scrubbed of the tab it copies; its name
@@ -596,16 +589,7 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
   return OPERATOR_FINISHED;
 }
 
-static bool ed_undo_grouped_check_by_name(const UndoStack *ustack, const char *str)
-{
-  const UndoStep *us = ustack->step_active;
-  if (us && STREQ(str, us->name)) {
-    return true;
-  }
-  return false;
-}
-
-void ED_undo_grouped_push(bContext *C, const char *str, UndoEncodeHints hints)
+void ED_undo_grouped_push(bContext *C, const char *str)
 {
   /* do nothing if previous undo task is the same as this one (or from the same undo group) */
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -635,7 +619,7 @@ void ED_undo_grouped_push(bContext *C, const char *str, UndoEncodeHints hints)
   }
 
   /* push as usual */
-  ED_undo_push(C, str, hints);
+  ED_undo_push(C, str);
 }
 
 void ED_undo_pop(bContext *C)
@@ -647,187 +631,20 @@ void ED_undo_redo(bContext *C)
   ed_undo_step_direction(C, STEP_REDO, nullptr);
 }
 
-/**
- * Check if any ID was modified (requiring a global undo step),
- * setting `modified` as true and exiting as early as possible.
- *
- * NOTE(@ideasman42):
- * - Run in parallel to prevent many ID's of one type preventing an early exit for another.
- * - Regarding performance, in my tests with heavy files the overhead was minimal (see !161566).
- *   If we wanted we could track if any ID's have #ID::recalc_after_undo_push enabled,
- *   it's simple in principle but adds extra state to keep track of.
- */
-static void ed_undo_push_check_id_changes_fn(TaskPool *__restrict pool, void *taskdata)
-{
-  const ID *id_first = static_cast<const ID *>(taskdata);
-  std::atomic<bool> &modified = *static_cast<std::atomic<bool> *>(BLI_task_pool_user_data(pool));
-
-  /* The #ID_KE & edit-mode id-types are typically only hit when Python scripts modify ID
-   * (keys or object-data) while inside edit-mode that is not itself edit-mode data.
-   * While this isn't common it's not an error and should be supported. */
-
-  const ID_Type id_type = GS(id_first->name);
-  if (id_type == ID_OB) {
-    /* Object (particle system edit-mode only). */
-    for (const ID *id = id_first; id && !modified.load(); id = static_cast<ID *>(id->next)) {
-      if (id->recalc_after_undo_push == false) {
-        continue;
-      }
-
-      /* - Every particle-edit stroke tags the underlying object.
-       * - This doesn't give us a convenient way to differentiate
-       *   between particle system & other object data.
-       * - Resolve by checking #ID_RECALC_PSYS_ALL
-       *
-       * Not ideal but the alternative would be not to support particle-editing at all. */
-      const Object *ob = reinterpret_cast<const Object *>(id);
-      if (ob->mode & OB_MODE_PARTICLE_EDIT) {
-        if ((id->recalc_after_undo_push & ~(ID_RECALC_PSYS_ALL)) == 0) {
-          continue;
-        }
-      }
-      modified.store(true); /* Breaks. */
-    }
-  }
-  else if (id_type == ID_KE) {
-    /* Key-blocks (check for edit-mode). */
-    for (const ID *id = id_first; id && !modified.load(); id = static_cast<ID *>(id->next)) {
-      if (id->recalc_after_undo_push == false) {
-        continue;
-      }
-      /* Skip shape-keys on data in edit-mode for the same reason
-       * as the #OB_DATA_SUPPORT_EDITMODE below. */
-      const ID *key_from = reinterpret_cast<const ID *>(reinterpret_cast<const Key *>(id)->from);
-      if (key_from && OB_DATA_SUPPORT_EDITMODE(GS(key_from->name)) &&
-          BKE_object_data_is_in_editmode(nullptr, key_from))
-      {
-        continue;
-      }
-      modified.store(true); /* Breaks. */
-    }
-  }
-  else if (OB_DATA_SUPPORT_EDITMODE(id_type)) {
-    /* Object data (check for edit-mode). */
-    for (const ID *id = id_first; id && !modified.load(); id = static_cast<ID *>(id->next)) {
-      if (id->recalc_after_undo_push == false) {
-        continue;
-      }
-
-      /* Skip data in edit-mode: changes are stored by the modes own undo system and
-       * practically all edit-mode operations tag the data being edited. */
-      if (BKE_object_data_is_in_editmode(nullptr, id)) {
-        continue;
-      }
-      modified.store(true); /* Breaks. */
-    }
-  }
-  else {
-    /* Any ID types. */
-    for (const ID *id = id_first; id && !modified.load(); id = static_cast<ID *>(id->next)) {
-      if (id->recalc_after_undo_push == false) {
-        continue;
-      }
-      modified.store(true); /* Breaks. */
-    }
-  }
-}
-
-/**
- * Check if any ID's have changes only the `memfile` undo system would store.
- *
- * Note that #Main::is_memfile_undo_written only detects adding/removing/renaming ID's,
- * modifying existing ID's in-place (e.g. adding a modifier to an object) is detected
- * by scanning for ID's tagged since the last `memfile` undo step,
- * using the same tag the `memfile` undo system uses to replay changes.
- */
-static bool ed_undo_push_check_id_changes_outside_mode(Main *bmain)
-{
-  /* ID's added/removed/renamed. */
-  if (bmain->is_memfile_undo_written == false) {
-    return true;
-  }
-
-  /* Gather modified ID's, skipping ID types that are not stored by undo. */
-  Vector<const ID *> ids;
-  const MainListsArray lbarray = BKE_main_lists_get(*bmain);
-  for (const ListBaseT<ID> *lb : lbarray) {
-    const ID *id_first = lb->first();
-    if ((id_first == nullptr) || !ID_CHECK_UNDO(id_first)) {
-      continue;
-    }
-    ids.append(id_first);
-  }
-
-  /* Check the gathered ID's in parallel, one task per ID type.
-   *
-   * NOTE(@ideasman42): This may create some tasks without much work:
-   * Something we typically want to avoid. We could optimize this by doing
-   * a single threaded pass on the first N items in each list.
-   * However it adds code complexity without solving any real world problem.
-   * Accept the overhead in the case where there isn't much work to improve
-   * the worst when there are many ID's. */
-  std::atomic<bool> modified = false;
-  TaskPool *task_pool = BLI_task_pool_create(&modified, TASK_PRIORITY_HIGH);
-  for (const ID *id_first : ids) {
-    if (modified.load()) {
-      break;
-    }
-    BLI_task_pool_push(
-        task_pool, ed_undo_push_check_id_changes_fn, const_cast<ID *>(id_first), false, nullptr);
-  }
-  BLI_task_pool_work_and_wait(task_pool);
-  BLI_task_pool_free(task_pool);
-
-  return modified.load();
-}
-
-static UndoEncodeHints undo_encode_hints_from_context(bContext *C, const char *str)
-{
-  const UndoStack *ustack = CTX_wm_manager(C)->runtime->undo_stack;
-  UndoEncodeHints hints = UndoEncodeHints::None;
-
-  /* The undo stack may be null in background mode where undo pushes are a no-op,
-   * see matching check in #ED_undo_push. */
-  if (ustack == nullptr) {
-    return hints;
-  }
-
-  /* Match the undo type #BKE_undosys_step_push uses,
-   * the context is only a fallback when no undo step has been initialized. */
-  const UndoType *ut = ustack->step_init ? ustack->step_init->type :
-                                           BKE_undosys_type_from_context(C);
-
-  if (ELEM(ut, nullptr, BKE_UNDOSYS_TYPE_MEMFILE)) {
-    return hints;
-  }
-
-  if (ut->flags & UNDOTYPE_FLAG_ENCODE_PRE_MEMFILE_SUPPORTED) {
-    /* When the undo step for this operator is not stored in the memfile undo system,
-     * changes to ID's made by the operator would be excluded from the undo step.
-     * Request a memfile undo step before this operators step so they're included. */
-    Main *bmain = CTX_data_main(C);
-    if (ed_undo_push_check_id_changes_outside_mode(bmain)) {
-      CLOG_DEBUG(&LOG, "adding additional MEMFILE undo step: %s", str);
-      hints |= UndoEncodeHints::PreMemFileChanges;
-    }
-  }
-
-  return hints;
-}
-
 void ED_undo_push_op(bContext *C, wmOperator *op)
 {
-  UndoEncodeHints hints = undo_encode_hints_from_context(C, op->type->name);
-
   /* in future, get undo string info? */
-  ED_undo_push(C, op->type->name, hints);
+  ED_undo_push(C, op->type->name);
 }
 
 void ED_undo_grouped_push_op(bContext *C, wmOperator *op)
 {
-  const char *str = (op->type->undo_group[0] != '\0') ? op->type->undo_group : op->type->name;
-  UndoEncodeHints hints = undo_encode_hints_from_context(C, str);
-  ED_undo_grouped_push(C, str, hints);
+  if (op->type->undo_group[0] != '\0') {
+    ED_undo_grouped_push(C, op->type->undo_group);
+  }
+  else {
+    ED_undo_grouped_push(C, op->type->name);
+  }
 }
 
 void ED_undo_pop_op(bContext *C, wmOperator *op)
@@ -876,31 +693,17 @@ bool ED_undo_is_memfile_compatible(const bContext *C)
   return true;
 }
 
-std::optional<UndoEncodeHints> ED_undo_is_legacy_compatible_for_property(bContext *C,
-                                                                         ID *id,
-                                                                         const PointerRNA &ptr,
-                                                                         const PropertyRNA &prop)
+bool ED_undo_is_legacy_compatible_for_property(bContext *C, ID *id, PointerRNA &ptr)
 {
-  if (!RNA_property_undo_check(&prop, ptr.type)) {
-    return std::nullopt;
+  if (!RNA_struct_undo_check(ptr.type)) {
+    return false;
   }
   /* If the whole ID type doesn't support undo there is no need to check the current context. */
   if (id && !ID_CHECK_UNDO(id)) {
-    return std::nullopt;
+    return false;
   }
 
-  if (ELEM(&prop,
-           /* Exception for renaming ID data, we always need undo pushes in this case,
-            * because undo systems track data by their ID, see: #67002. */
-           &rna_ID_name,
-           /* Exception for active shape-key, since changing this in edit-mode updates
-            * the shape key from object mode data. */
-           &rna_Object_active_shape_key_index))
-  {
-    return UndoEncodeHints::None;
-  }
-
-  Main *bmain = CTX_data_main(C);
+  const Main *bmain = CTX_data_main(C);
   const Scene *scene = CTX_data_scene(C);
   ViewLayer *view_layer = CTX_data_view_layer(C);
   if (view_layer != nullptr) {
@@ -911,57 +714,25 @@ std::optional<UndoEncodeHints> ED_undo_is_legacy_compatible_for_property(bContex
         /* Changing properties while in sculpt mode is expensive due to the paint BVH rebuild.
          * Avoid pushing such undo steps for now. */
         CLOG_DEBUG(&LOG, "skipping undo for sculpt-mode");
-        return std::nullopt;
-      }
-      if (obact->mode & OB_MODE_PARTICLE_EDIT) {
-        /* Particle-edit undo steps only store point-cache data
-         * (see #particle_undosys_step_encode), never generic ID/property state,
-         * so redirect property changes to a `memfile` step. */
-        return UndoEncodeHints::PreMemFileChanges | UndoEncodeHints::HasMemFileChangesOnly;
+        return false;
       }
       if (obact->mode & OB_MODE_EDIT) {
-        /* Check if the `id` is covered by edit-mode undo. */
-
-        /* When the object is in edit-mode, returning None here is fine as the edit-mode
-         * data will track the undo state.
-         *
-         * Checking if the ID itself is in edit-mode ensures (for example),
-         * that a mesh pinned in the properties editor which is *not* in edit-mode
-         * has its undo data tracked even the active mesh is in edit-mode. */
-
-        const bool is_id_in_editmode = (id && obact->data &&
-                                        GS(id->name) == GS(((ID *)obact->data)->name) &&
-                                        /* Only object-data that stores it's own edit-mode
-                                         * data tracks it's own undo steps.
-                                         * So passing object as null is OK here. */
-                                        BKE_object_data_is_in_editmode(nullptr, id));
-
-        if (is_id_in_editmode == false) {
-          bool skip_undo = true;
-          /* Make a special exception for mesh and tool-settings
-           * because the undo steps store some tool-settings. */
-          if (obact->type == OB_MESH) {
-            if (RNA_struct_is_a(ptr.type, RNA_ToolSettings)) {
-              skip_undo = false;
-            }
-          }
-
-          if (skip_undo) {
-            /* The property isn't stored by edit-mode undo steps (id type mismatch),
-             * store the change in a memfile step, the edit-mode step has no changes itself. */
-            CLOG_DEBUG(&LOG, "memfile-only undo for edit-mode");
-            return UndoEncodeHints::PreMemFileChanges | UndoEncodeHints::HasMemFileChangesOnly;
-          }
+        if ((id == nullptr) || (obact->data == nullptr) ||
+            (GS(id->name) != GS(((ID *)obact->data)->name)))
+        {
+          /* No undo push on id type mismatch in edit-mode. */
+          CLOG_DEBUG(&LOG, "skipping undo for edit-mode");
+          return false;
         }
       }
     }
   }
-  return UndoEncodeHints::None;
+  return true;
 }
 
 UndoStack *ED_undo_stack_get()
 {
-  wmWindowManager *wm = G_MAIN->wm.first();
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   return wm->runtime->undo_stack;
 }
 
@@ -1222,7 +993,7 @@ bool ED_undo_operator_repeat(bContext *C, wmOperator *op)
          * (which copy their data), won't stop redo, see #29579.
          *
          * NOTE: WM_operator_check_ui_enabled() jobs test _must_ stay in sync with this. */
-        !WM_jobs_has_running(wm, scene, WM_JOB_TYPE_ANY, WM_JOB_BACKGROUND))
+        (WM_jobs_test(wm, scene, WM_JOB_TYPE_ANY) == 0))
     {
       if (G.debug & G_DEBUG) {
         printf("redo_cb: operator redo %s\n", op->type->name);
@@ -1468,8 +1239,7 @@ void ED_OT_undo_history(wmOperatorType *ot)
 {
   /* identifiers */
   ot->name = "Undo History";
-  ot->description =
-      "Undo or redo from the current active step until the specified action in history";
+  ot->description = "Undo or redo specific action in history";
   ot->idname = "ED_OT_undo_history";
 
   /* API callbacks. */
@@ -1585,7 +1355,8 @@ Vector<Object *> ED_undo_editmode_objects_from_view_layer(const Main &bmain,
   Vector<Object *> objects(object_data.size());
   /* Base iteration, starting with the active-base to ensure it's the first item in the array.
    * Looping over the active-base twice is OK as the tag check prevents it being handled twice. */
-  for (Base *base = baseact, *base_next = BKE_view_layer_object_bases_get(view_layer)->first();
+  for (Base *base = baseact,
+            *base_next = static_cast<Base *>(BKE_view_layer_object_bases_get(view_layer)->first);
        base;
        base = base_next, base_next = base_next ? base_next->next : nullptr)
   {
@@ -1616,7 +1387,7 @@ Vector<Base *> ED_undo_editmode_bases_from_view_layer(const Main &bmain,
   /* Base iteration, starting with the active-base to ensure it's the first item in the array.
    * Looping over the active-base twice is OK as the tag check prevents it being handled twice. */
   for (Base *base = BKE_view_layer_active_base_get(view_layer),
-            *base_next = BKE_view_layer_object_bases_get(view_layer)->first();
+            *base_next = static_cast<Base *>(BKE_view_layer_object_bases_get(view_layer)->first);
        base;
        base = base_next, base_next = base_next ? base_next->next : nullptr)
   {
@@ -1637,7 +1408,7 @@ size_t ED_undosys_total_memory_calc(UndoStack *ustack)
 {
   size_t total_memory = 0;
 
-  for (UndoStep *us = ustack->steps.first(); us != nullptr; us = us->next) {
+  for (UndoStep *us = static_cast<UndoStep *>(ustack->steps.first); us != nullptr; us = us->next) {
     if (us->type == BKE_UNDOSYS_TYPE_SCULPT) {
       total_memory += ed::sculpt_paint::undo::step_memory_size_get(us);
     }

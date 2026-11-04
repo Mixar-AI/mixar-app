@@ -27,9 +27,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_string_utf8.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.hh"
 
@@ -47,7 +47,7 @@
 #include "WM_keymap.hh"
 #include "WM_types.hh"
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "agent_ui_model_card.hh"
 #include "agent_ui_engine.hh"
@@ -70,8 +70,8 @@
 #include "GPU_immediate_util.hh"
 #include "GPU_matrix.hh"
 #include "UI_view2d.hh"
-#include "BLI_string.hh"
-#include "BLI_time.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "BLF_api.hh"
 
@@ -675,7 +675,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
        * the artboard's x while Blender drew the caret at the field's own text
        * origin — two places for one thing. */
       ui::button_placeholder_set(input_but, state->placeholder);
-      ui::button_flag_enable(input_but, ui::BUT_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
       /* Draft editing has its own native text undo. Committing even an
        * untouched auto-focused field must not push document undo: opening
@@ -844,27 +844,11 @@ bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
          window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
 }
 
-bool agent_bubble_is_resting_pill_window(const wmWindow *win)
-{
-  return g_bubble_minimised && win && g_pill_ghostwin &&
-         win->runtime->ghostwin == g_pill_ghostwin;
-}
-
 bool ED_agent_bubble_is_resting_pill(const bContext *C)
 {
-  return agent_bubble_is_resting_pill_window(CTX_wm_window(C));
-}
-
-bool ED_agent_bubble_is_minimised_window(const wmWindow *window)
-{
-#if defined(__APPLE__) || defined(_WIN32)
-  return g_bubble_minimised && window && window->runtime->ghostwin &&
-         window->runtime->ghostwin == g_bubble_ghostwin &&
-         window->runtime->ghostwin != g_pill_ghostwin;
-#else
-  (void)window;
-  return false;
-#endif
+  const wmWindow *win = CTX_wm_window(C);
+  return g_bubble_minimised && win && g_pill_ghostwin &&
+         win->runtime->ghostwin == g_pill_ghostwin;
 }
 
 void agent_bubble_return_key_to_host()
@@ -950,7 +934,7 @@ static void agent_bubble_clear_chat_layout_cache(const bContext *C)
   if (!area || area->spacetype != SPACE_AGENT_BUBBLE) {
     return;
   }
-  if (SpaceMixieChat *smixie = area->spacedata.first_as<SpaceMixieChat>()) {
+  if (SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first)) {
     mixie_chat_clear_layout_cache(smixie);
   }
 }
@@ -1361,7 +1345,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
                                      nullptr);
         if (input_but) {
           ui::button_placeholder_set(input_but, empty_probe.placeholder);
-          ui::button_flag_enable(input_but, ui::BUT_ACTIVATE_ON_INIT_NO_SELECT);
+          ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
           ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
           /* Drafts use native text undo, never the document's undo stack. */
           ui::button_flag_disable(input_but, ui::BUT_UNDO);
@@ -1686,7 +1670,7 @@ static void bubble_write_window_size(bContext *C,
     if (screen == nullptr) {
       return;
     }
-    ScrArea *area = screen->areabase.first_as<ScrArea>();
+    ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area == nullptr) {
       return;
     }
@@ -1931,7 +1915,7 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
     if (screen == nullptr) {
       break;
     }
-    ScrArea *area = screen->areabase.first_as<ScrArea>();
+    ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area == nullptr) {
       break;
     }
@@ -2419,7 +2403,7 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
       continue;
     }
 
-    ScrArea *area = screen->areabase.first_as<ScrArea>();
+    ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area == nullptr || area->spacetype != SPACE_AGENT_BUBBLE) {
       continue;
     }
@@ -2681,7 +2665,7 @@ static int agent_bubble_close_all_windows(bContext *C)
     }
     else {
       /* Fallback: pick the first remaining window. */
-      wmWindow *first = wm->windows.first_as<wmWindow>();
+      wmWindow *first = static_cast<wmWindow *>(wm->windows.first);
       if (first != nullptr && first->runtime->ghostwin != nullptr) {
         Mixar_WindowMakeKey(first->runtime->ghostwin);
       }
@@ -3302,7 +3286,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
         bScreen *pill_screen = WM_window_get_active_screen(pill_win);
         if (pill_screen != nullptr) {
           ScrArea *pill_area = static_cast<ScrArea *>(
-              pill_screen->areabase.first());
+              pill_screen->areabase.first);
           if (pill_area != nullptr) {
             /* DELETE (don't just hide) the WINDOW + TOOLS regions on
              * the pill area.
@@ -3321,7 +3305,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
              * sizey assignment below) covers the entire pill with a
              * single consistent background. */
             SpaceType *st = BKE_spacetype_from_id(SPACE_AGENT_BUBBLE);
-            ARegion *region = pill_area->regionbase.first_as<ARegion>();
+            ARegion *region = static_cast<ARegion *>(pill_area->regionbase.first);
             while (region != nullptr) {
               ARegion *next = region->next;
               if (region->regiontype == RGN_TYPE_WINDOW ||
@@ -3559,7 +3543,7 @@ static wmOperatorStatus mixar_activate_app_exec(bContext *C, wmOperator * /*op*/
   wmWindowManager *wm = CTX_wm_manager(C);
   wmWindow *win = CTX_wm_window(C);
   if (win == nullptr && wm != nullptr) {
-    win = wm->windows.first_as<wmWindow>();
+    win = static_cast<wmWindow *>(wm->windows.first);
   }
   /* Walk up to the top-level window: a timer may run with a bubble or
    * dialog window in context, and the foreground target is the main one. */
@@ -3718,7 +3702,7 @@ static void agent_bubble_force_redraw(bContext *C)
       break;
     }
     ED_screen_refresh(C, wm, w);
-    ScrArea *area = screen->areabase.first_as<ScrArea>();
+    ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area != nullptr) {
       ED_area_tag_redraw(area);
     }
@@ -4015,7 +3999,7 @@ static void minimise_anim_finish(void *user_data)
   if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
     /* Sketch minimises the island: arrive at the Sketch size, not a step later. */
     g_pill_rest_sketch = G_MAIN && pill_sketch_wanted(
-                                       G_MAIN->wm.first_as<wmWindowManager>());
+                                       static_cast<wmWindowManager *>(G_MAIN->wm.first));
 #ifdef _WIN32
     Mixar_WindowSetCornerRadius(g_pill_ghostwin, pill_rest_radius());
     if (g_pill_user_placed) {
@@ -4157,12 +4141,11 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
 /**
  * Nothing to maintain until the island has a window of its own.
  *
- * The Python pump (hover_ops.py) dispatches through
- * `WindowManager.mixar_bubble_hover_tick()`, whose `WM_operator_name_call`
- * runs this poll before exec; without it every tick would execute, ten times
- * a second for the whole session, bubble or no bubble. On a platform
+ * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
+ * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
+ * times a second for the whole session, bubble or no bubble. On a platform
  * outside the `Mixar_Window*` allowlist (see agent_bubble/constants.py) the
- * exec body above is a bare OPERATOR_CANCELLED, so the poll is simply false.
+ * exec body below is a bare OPERATOR_CANCELLED, so the poll is simply false.
  */
 static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
 {
@@ -4238,7 +4221,7 @@ static wmOperatorStatus linux_bubble_set_minimised(bContext *C, bool minimised)
     return OPERATOR_CANCELLED;
   }
   bScreen *screen = WM_window_get_active_screen(win);
-  ScrArea *area = screen ? screen->areabase.first_as<ScrArea>() : nullptr;
+  ScrArea *area = screen ? static_cast<ScrArea *>(screen->areabase.first) : nullptr;
   if (!area) {
     return OPERATOR_CANCELLED;
   }
@@ -4340,9 +4323,6 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
     g_pill_user_placed = false;
   }
   g_bubble_minimised = true;
-  /* Stop island drawing before releasing RNA blocks: native resize callbacks
-   * and the macOS fade can redraw before the window is actually hidden. */
-  agent_bubble_composer_deactivate(C, g_bubble_ghostwin);
   g_bubble_minimise_pending = true;
   const uintptr_t generation = ++g_bubble_motion_generation;
   /* A padded island that minimises leaves the pad: the restore path sizes
@@ -4831,7 +4811,7 @@ void ED_spacetype_agent_bubble()
    * Why this is safe (we previously had a crash from this exact
    * wiring): SpaceAgentBubble is now layout-identical to
    * SpaceMixieChat (see DNA_space_types.h), so the
-   * `reinterpret_cast<SpaceMixieChat *>(area->spacedata.first())`
+   * `reinterpret_cast<SpaceMixieChat *>(area->spacedata.first)`
    * inside mixie chat's callbacks reads valid memory and the
    * per-space MixieChatRuntime is allocated fresh on first
    * `mixie_chat_ensure_runtime` call.

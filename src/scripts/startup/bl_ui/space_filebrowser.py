@@ -507,7 +507,6 @@ class FILEBROWSER_MT_view(FileBrowserMenu, Menu):
 
         layout.prop(st, "show_region_toolbar", text="Source List")
         layout.prop(st, "show_region_ui", text="File Path")
-        layout.prop(params, "show_hidden")
         layout.operator("file.view_selected")
 
         layout.separator()
@@ -543,10 +542,10 @@ class FILEBROWSER_MT_context_menu(FileBrowserMenu, Menu):
         st = context.space_data
         params = st.params
 
-        layout.operator("file.previous", text="Back", icon='BACK')
-        layout.operator("file.next", text="Forward", icon='FORWARD')
-        layout.operator("file.parent", text="Go to Parent", icon='FILE_PARENT')
-        layout.operator("file.refresh", text="Refresh", icon='FILE_REFRESH')
+        layout.operator("file.previous", text="Back")
+        layout.operator("file.next", text="Forward")
+        layout.operator("file.parent", text="Go to Parent")
+        layout.operator("file.refresh", text="Refresh")
         layout.menu("FILEBROWSER_MT_operations_menu")
 
         layout.separator()
@@ -557,12 +556,15 @@ class FILEBROWSER_MT_context_menu(FileBrowserMenu, Menu):
         layout.separator()
 
         layout.operator("file.rename", text="Rename")
+        sub = layout.row()
+        sub.operator_context = 'EXEC_DEFAULT'
+        sub.operator("file.delete", text="Delete")
 
         layout.separator()
 
         sub = layout.row()
         sub.operator_context = 'EXEC_DEFAULT'
-        sub.operator("file.directory_new", text="New Folder", icon='NEWFOLDER').confirm = False
+        sub.operator("file.directory_new", text="New Folder").confirm = False
         layout.operator("file.bookmark_add", text="Add Bookmark")
 
         layout.separator()
@@ -572,12 +574,6 @@ class FILEBROWSER_MT_context_menu(FileBrowserMenu, Menu):
             layout.prop_menu_enum(params, "display_size_discrete")
         layout.prop_menu_enum(params, "recursion_level", text="Recursions")
         layout.prop_menu_enum(params, "sort_method")
-
-        layout.separator()
-
-        sub = layout.row()
-        sub.operator_context = 'EXEC_DEFAULT'
-        sub.operator("file.delete", text="Delete", icon='TRASH')
 
 
 class FILEBROWSER_MT_view_pie(Menu):
@@ -675,7 +671,6 @@ class ASSETBROWSER_MT_editor_menus(AssetBrowserMenu, Menu):
         layout.menu("ASSETBROWSER_MT_select")
         layout.menu("ASSETBROWSER_MT_library")
         layout.menu("ASSETBROWSER_MT_catalog")
-        layout.menu("ASSETBROWSER_MT_asset")
 
 
 class ASSETBROWSER_MT_view(AssetBrowserMenu, Menu):
@@ -720,7 +715,7 @@ class ASSETBROWSER_MT_library(AssetBrowserMenu, Menu):
     def draw(self, _context):
         layout = self.layout
 
-        layout.operator("asset.library_refresh", text="Refresh", icon='FILE_REFRESH')
+        layout.operator("asset.library_refresh", text="Refresh")
         layout.operator("asset.library_reload_listing", text="Refresh Remote Listing")
 
 
@@ -730,43 +725,12 @@ class ASSETBROWSER_MT_catalog(AssetBrowserMenu, Menu):
     def draw(self, _context):
         layout = self.layout
 
-        layout.operator("asset.catalog_undo", text="Undo", icon='LOOP_BACK')
-        layout.operator("asset.catalog_redo", text="Redo", icon='LOOP_FORWARDS')
+        layout.operator("asset.catalog_undo", text="Undo")
+        layout.operator("asset.catalog_redo", text="Redo")
 
         layout.separator()
-        layout.operator("asset.catalogs_save", icon='FILE_TICK')
+        layout.operator("asset.catalogs_save")
         layout.operator("asset.catalog_new").parent_path = ""
-
-
-class ASSETBROWSER_MT_asset(Menu):
-    bl_label = "Asset"
-
-    def draw(self, _context) -> None:
-        layout = self.layout
-
-        col = layout.column()
-        col.operator_context = 'EXEC_DEFAULT'
-        col.operator("asset.clear", text="Clear Asset").set_fake_user = False
-        col.operator("asset.clear", text="Clear Asset (Set Fake User)").set_fake_user = True
-
-        layout.separator()
-
-        col = layout.column()
-        col.operator_context = 'INVOKE_REGION_WIN'
-        col.operator("asset.external_asset_rename", text="Rename Asset...")
-
-        layout.separator()
-
-        layout.operator("asset.open_containing_blend_file", icon='FILE_BLEND')
-        layout.operator("asset.browse_containing_blend_file")
-
-
-class ASSETBROWSER_MT_asset_rename(Menu):
-    bl_label = "Rename Asset"
-
-    def draw(self, _context) -> None:
-        layout = self.layout
-        layout.operator("asset.external_asset_rename", text="Rename Asset...")
 
 
 class ASSETBROWSER_PT_import_settings(asset_utils.AssetBrowserPanel, Panel):
@@ -796,22 +760,13 @@ class ASSETBROWSER_PT_metadata(asset_utils.AssetBrowserPanel, Panel):
     bl_options = {'HIDE_HEADER'}
 
     @staticmethod
-    def metadata_prop(layout, asset_metadata, propname, initial_visible_lines: int = 1):
+    def metadata_prop(layout, asset_metadata, propname):
         """
         Only display properties that are either set or can be modified (i.e. the
         asset is in the current file). Empty, non-editable fields are not really useful.
         """
         if getattr(asset_metadata, propname) or not asset_metadata.is_property_readonly(propname):
-            ui_name = asset_metadata.rna_type.properties[propname].name
-            if asset_metadata.is_property_readonly(propname):
-                split = layout.split(factor=layout.property_split_factor)
-                sub = split.row()
-                sub.alignment = 'RIGHT'
-                sub.label(text=ui_name)
-                split.label_multiline(text=getattr(asset_metadata, propname))
-            else:
-                layout.textbox(asset_metadata, propname, placeholder=ui_name,
-                               initial_visible_lines=initial_visible_lines)
+            layout.prop(asset_metadata, propname)
 
     def draw(self, context):
         layout = self.layout
@@ -819,7 +774,7 @@ class ASSETBROWSER_PT_metadata(asset_utils.AssetBrowserPanel, Panel):
         asset = context.asset
 
         if asset is None:
-            layout.label(text="No active asset", icon='STATUS_INFO')
+            layout.label(text="No active asset", icon='INFO')
             return
 
         prefs = context.preferences
@@ -839,13 +794,7 @@ class ASSETBROWSER_PT_metadata(asset_utils.AssetBrowserPanel, Panel):
                 col.prop(asset.local_id.asset_data, "catalog_id", text="UUID")
                 col.prop(asset.local_id.asset_data, "catalog_simple_name", text="Simple Name")
         else:
-            if asset.is_online:
-                # Online assets cannot be renamed, so just show the read-only name field.
-                layout.prop(asset, "name")
-            else:
-                row = layout.row(align=True)
-                row.prop(asset, "name")
-                row.menu("ASSETBROWSER_MT_asset_rename", text="", icon='DOWNARROW_HLT')
+            layout.prop(asset, "name")
 
             if show_asset_debug_info:
                 col = layout.column(align=True)
@@ -860,7 +809,7 @@ class ASSETBROWSER_PT_metadata(asset_utils.AssetBrowserPanel, Panel):
             row.operator("asset.open_containing_blend_file", text="", icon='FILE_BLEND')
 
         metadata = asset.metadata
-        self.metadata_prop(layout, metadata, "description", initial_visible_lines=3)
+        self.metadata_prop(layout, metadata, "description")
         self.metadata_prop(layout, metadata, "license")
         self.metadata_prop(layout, metadata, "copyright")
         self.metadata_prop(layout, metadata, "author")
@@ -975,6 +924,11 @@ class ASSETBROWSER_MT_context_menu(AssetBrowserMenu, Menu):
             layout.operator("asset.assets_download", icon='DOWNLOAD')
             layout.separator()
 
+        layout.operator("asset.library_refresh", icon='FILE_REFRESH')
+        layout.operator("asset.library_reload_listing", text="Refresh Remote Listing")
+
+        layout.separator()
+
         sub = layout.column()
         sub.operator_context = 'EXEC_DEFAULT'
         sub.operator("asset.clear", text="Clear Asset").set_fake_user = False
@@ -984,24 +938,6 @@ class ASSETBROWSER_MT_context_menu(AssetBrowserMenu, Menu):
 
         layout.operator("asset.open_containing_blend_file", icon='FILE_BLEND')
         layout.operator("asset.browse_containing_blend_file")
-
-        layout.separator()
-
-        layout.operator("asset.library_refresh", icon='FILE_REFRESH')
-        layout.operator("asset.library_reload_listing", text="Refresh Remote Listing")
-
-        layout.separator()
-
-        active_asset = context.asset
-        user_library = active_asset.owner_asset_library.user_library if active_asset else None
-        extension_id = user_library.extension_id if user_library else ""
-        row = layout.row()
-        row.enabled = bool(extension_id)
-        row.operator(
-            "extensions.userpref_show_package",
-            text="View Extension...",
-            icon='EXTENSION',
-        ).extension_id = extension_id
 
         layout.separator()
 
@@ -1035,8 +971,6 @@ classes = (
     ASSETBROWSER_MT_select,
     ASSETBROWSER_MT_library,
     ASSETBROWSER_MT_catalog,
-    ASSETBROWSER_MT_asset,
-    ASSETBROWSER_MT_asset_rename,
     ASSETBROWSER_PT_import_settings,
     ASSETBROWSER_MT_metadata_preview_menu,
     ASSETBROWSER_PT_metadata,

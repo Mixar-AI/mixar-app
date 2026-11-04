@@ -18,7 +18,7 @@
 #include "BKE_callbacks.hh"
 #include "BKE_global.hh"
 
-#include "BLI_timer.hh"
+#include "BLI_timer.h"
 
 #include "mixie_moodboard_video_session.hh"
 

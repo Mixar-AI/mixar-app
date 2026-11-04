@@ -14,7 +14,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_time.hh"
+#include "BLI_time.h"
 
 #include "BLT_translation.hh"
 

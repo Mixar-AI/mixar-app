@@ -30,7 +30,7 @@
 		<key>CFBundleGetInfoString</key>
 		<string>${MACOSX_BUNDLE_LONG_VERSION_STRING}, Mixar</string>
 		<key>LSMinimumSystemVersion</key>
-		<string>13.0</string>
+		<string>10.15</string>
 		<key>NSExtension</key>
 		<dict>
 			<key>NSExtensionAttributes</key>

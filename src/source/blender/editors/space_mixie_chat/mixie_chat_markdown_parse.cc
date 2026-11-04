@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 
 #include "mixie_chat_markdown_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */

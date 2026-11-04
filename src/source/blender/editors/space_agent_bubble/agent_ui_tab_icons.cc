@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "GPU_immediate.hh"
 #include "UI_interface.hh"
 #include "agent_ui_icons.hh"

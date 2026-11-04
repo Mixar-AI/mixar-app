@@ -11,7 +11,7 @@
 
 #include "BLF_enums.hh"
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 
 #include "mixie_chat_anim_pump.hh"
 #include "mixie_chat_layout_data.hh"

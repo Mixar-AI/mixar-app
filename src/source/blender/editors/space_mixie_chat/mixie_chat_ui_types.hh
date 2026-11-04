@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 

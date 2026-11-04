@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "BLI_string_ref.hh"
 #include "BLI_vector.hh"
 
@@ -30,7 +30,7 @@
 #include "agent_ui_layout.hh"
 #include "agent_ui_provider.hh"
 #include "agent_ui_draw.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "agent_ui_text.hh"
 #include "agent_ui_theme.hh"
 

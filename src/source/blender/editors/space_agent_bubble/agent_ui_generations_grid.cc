@@ -40,9 +40,9 @@
 
 #include "agent_ui_generations_clip.hh"
 
-#include "BLI_rect.hh"
-#include "BLI_string.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.hh"
 #include "BKE_icons.hh"
@@ -211,8 +211,9 @@ void agent_ui_generations_thumb(const bContext *C,
       }
       break;
     case GEN_ITEM_SPLAT:
-      /* No preview image is stored for a splat world. The tab strip's own
-       * splat mark stands in for it. */
+      /* No preview exists for a splat world — what the viewport shows is
+       * KIRI's GPU draw pass, not geometry. The tab strip's own splat mark
+       * stands in for it. */
       draw_placeholder(box, AGENT_ICON_SPLAT);
       break;
     case GEN_ITEM_JOB:

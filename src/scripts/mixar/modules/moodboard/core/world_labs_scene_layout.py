@@ -301,7 +301,7 @@ def create_box_placeholders(collection_name: str = "", chain_ids=None) -> dict:
 def finalize_world_layout(collection_name: str = "") -> dict:
     """Re-hide the collider room mesh — call once placement looks right.
 
-    Leaves the clean look: the splat + the placed objects, with the bare
+    Leaves the clean look: the splat proxy + the placed objects, with the bare
     collider shell hidden again (it stays in the file for ray-casts / re-runs).
     """
     collider, _coll = _find_collider(collection_name)

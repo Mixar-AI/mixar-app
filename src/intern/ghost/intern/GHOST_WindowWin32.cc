@@ -131,19 +131,12 @@ GHOST_WindowWin32::GHOST_WindowWin32(GHOST_SystemWin32 *system,
   h_DC_ = ::GetDC(h_wnd_);
 
   if (!setDrawingContextType(type)) {
-    /* MIXAR: only the main window explains a failed GL context. A child window
-     * (the Agent Bubble) failing must not raise a modal "unsupported GPU" box
-     * while the main window runs; its caller reports the failure instead. */
-    if (type == GHOST_kDrawingContextTypeOpenGL && parent_window == nullptr) {
+    if (type == GHOST_kDrawingContextTypeOpenGL) {
       const char *title = "Mixar - Unsupported Graphics Card Configuration";
       const char *text = "";
 #if defined(WIN32)
-      /* MIXAR: the variable can be missing (a launcher with a trimmed
-       * environment); strncmp on its null value crashed this error path
-       * (prod 4.4.0, AMD, opening the Agent Bubble window). */
-      const char *processor = blender::BLI_getenv("PROCESSOR_IDENTIFIER");
-      if (processor != nullptr && strncmp(processor, "ARM", 3) == 0 &&
-          strstr(processor, "Qualcomm") != nullptr)
+      if (strncmp(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "ARM", 3) == 0 &&
+          strstr(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "Qualcomm") != NULL)
       {
         text =
             "A driver with support for OpenGL 4.3 or higher is required.\n\n"
@@ -639,7 +632,7 @@ GHOST_Context *GHOST_WindowWin32::newDrawingContext(GHOST_TDrawingContextType ty
 #ifdef WITH_VULKAN_BACKEND
     case GHOST_kDrawingContextTypeVulkan: {
       GHOST_Context *context = new GHOST_ContextVK(
-          want_context_params_, h_wnd_, 1, 1, preferred_device_, &hdr_info_);
+          want_context_params_, h_wnd_, 1, 2, preferred_device_, &hdr_info_);
       if (context->initializeDrawingContext()) {
         return context;
       }

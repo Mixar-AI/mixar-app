@@ -28,8 +28,7 @@ from typing import Any, Dict, Optional
 from mixar.config.logging_config import get_logger
 
 from ...common.api import get_agent_service
-from ...common.utils.threads import start_daemon_thread
-from . import codex_models, models_storage, model_suggestions
+from . import models_storage, model_suggestions
 
 logger = get_logger(__name__)
 
@@ -110,11 +109,10 @@ def refresh() -> None:
         epoch = _lifecycle_epoch
         etag = _etag
 
-    if not start_daemon_thread(_fetch_worker, args=(epoch, etag), name="MixarAgentModelsCatalog"):
-        # Nothing is in flight: leave the next refresh free to try again.
-        with _lock:
-            if _lifecycle_epoch == epoch:
-                _is_loading = False
+    threading.Thread(
+        target=_fetch_worker, args=(epoch, etag),
+        daemon=True, name="MixarAgentModelsCatalog",
+    ).start()
 
 
 def clear() -> None:
@@ -130,7 +128,6 @@ def clear() -> None:
         _etag = None
         _is_loading = False
     model_suggestions.clear()
-    codex_models.forget()  # a Codex model list still in flight must not land after logout
     with _persistence_lock:
         models_storage.delete()
 

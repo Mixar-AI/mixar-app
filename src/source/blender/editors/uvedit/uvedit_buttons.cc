@@ -16,10 +16,10 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 
-#include "BLI_listbase.hh"
-#include "BLI_math_vector_c.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_math_vector.h"
+#include "BLI_string_utf8.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.hh"
 
@@ -57,16 +57,16 @@ static int uvedit_center(Scene *scene, const Span<Object *> objects, float cente
   zero_v2(center);
 
   for (Object *obedit : objects) {
-    BMesh *bm = BKE_editmesh_bmesh_get_for_write(obedit);
-    const BMUVOffsets offsets = BM_uv_map_offsets_get(bm);
+    BMEditMesh *em = BKE_editmesh_from_object(obedit);
+    const BMUVOffsets offsets = BM_uv_map_offsets_get(em->bm);
 
-    BM_ITER_MESH (f, &iter, bm, BM_FACES_OF_MESH) {
+    BM_ITER_MESH (f, &iter, em->bm, BM_FACES_OF_MESH) {
       if (!uvedit_face_visible_test(scene, f)) {
         continue;
       }
 
       BM_ITER_ELEM (l, &liter, f, BM_LOOPS_OF_FACE) {
-        if (uvedit_uv_select_test(scene, bm, l, offsets)) {
+        if (uvedit_uv_select_test(scene, em->bm, l, offsets)) {
           luv = BM_ELEM_CD_GET_FLOAT_P(l, offsets.uv);
           add_v2_v2(center, luv);
           tot++;
@@ -91,16 +91,17 @@ static void uvedit_translate(Scene *scene, const Span<Object *> objects, const f
   float *luv;
 
   for (Object *obedit : objects) {
-    BMesh *bm = BKE_editmesh_bmesh_get_for_write(obedit);
-    const BMUVOffsets offsets = BM_uv_map_offsets_get(bm);
+    BMEditMesh *em = BKE_editmesh_from_object(obedit);
 
-    BM_ITER_MESH (f, &iter, bm, BM_FACES_OF_MESH) {
+    const BMUVOffsets offsets = BM_uv_map_offsets_get(em->bm);
+
+    BM_ITER_MESH (f, &iter, em->bm, BM_FACES_OF_MESH) {
       if (!uvedit_face_visible_test(scene, f)) {
         continue;
       }
 
       BM_ITER_ELEM (l, &liter, f, BM_LOOPS_OF_FACE) {
-        if (uvedit_uv_select_test(scene, bm, l, offsets)) {
+        if (uvedit_uv_select_test(scene, em->bm, l, offsets)) {
           luv = BM_ELEM_CD_GET_FLOAT_P(l, offsets.uv);
           add_v2_v2(luv, delta);
         }
@@ -112,8 +113,6 @@ static void uvedit_translate(Scene *scene, const Span<Object *> objects, const f
 /* Button Functions, using an evil static variable */
 
 static float uvedit_old_center[2];
-
-static void do_uvedit_vertex(bContext *C);
 
 static void uvedit_vertex_buttons(const bContext *C, ui::Block *block)
 {
@@ -172,7 +171,7 @@ static void uvedit_vertex_buttons(const bContext *C, ui::Block *block)
                     &uvedit_old_center[0],
                     UNPACK2(range_xy[0]),
                     "");
-    ui::button_func_set(but, [](bContext &C) { do_uvedit_vertex(&C); });
+    button_retval_set(but, B_UVEDIT_VERTEX);
     button_number_step_size_set(but, step);
     button_number_precision_set(but, digits);
     but = uiDefButV(block,
@@ -185,20 +184,24 @@ static void uvedit_vertex_buttons(const bContext *C, ui::Block *block)
                     &uvedit_old_center[1],
                     UNPACK2(range_xy[1]),
                     "");
-    ui::button_func_set(but, [](bContext &C) { do_uvedit_vertex(&C); });
+    button_retval_set(but, B_UVEDIT_VERTEX);
     button_number_step_size_set(but, step);
     button_number_precision_set(but, digits);
     block_align_end(block);
   }
 }
 
-static void do_uvedit_vertex(bContext *C)
+static void do_uvedit_vertex(bContext *C, void * /*arg*/, int event)
 {
   SpaceImage *sima = CTX_wm_space_image(C);
   const Main *bmain = CTX_data_main(C);
   Scene *scene = CTX_data_scene(C);
   float center[2], delta[2];
   int imx, imy;
+
+  if (event != B_UVEDIT_VERTEX) {
+    return;
+  }
 
   Vector<Object *> objects = BKE_view_layer_array_from_objects_in_edit_mode_unique_data_with_uvs(
       *bmain, scene, CTX_data_view_layer(C), CTX_wm_view3d(C));
@@ -238,6 +241,7 @@ static bool image_panel_uv_poll(const bContext *C, PanelType * /*pt*/)
 static void image_panel_uv(const bContext *C, Panel *panel)
 {
   ui::Block *block = panel->layout->absolute().block();
+  block_func_handle_set(block, do_uvedit_vertex, nullptr);
 
   uvedit_vertex_buttons(C, block);
 }

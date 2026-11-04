@@ -17,7 +17,7 @@ def test_single_use_fences_preserve_cross_context_dependencies(tmp_path):
     compiler = shutil.which('cl') or shutil.which('clang++') or shutil.which('g++')
     if compiler is None:
         pytest.skip('C++ compiler unavailable')
-    (tmp_path / 'BLI_assert.hh').write_text('#include <cassert>\n#define BLI_assert assert\n')
+    (tmp_path / 'BLI_assert.h').write_text('#include <cassert>\n#define BLI_assert assert\n')
     (tmp_path / 'GPU_state.hh').write_text('''#pragma once
 namespace blender {
 struct GPUFence;

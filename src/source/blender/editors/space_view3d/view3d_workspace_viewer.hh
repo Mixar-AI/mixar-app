@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #pragma once
 #include <string>
-#include "BLI_rect.hh"
+#include "BLI_rect.h"
 #include "BLI_vector.hh"
 namespace blender {
 struct bContext;

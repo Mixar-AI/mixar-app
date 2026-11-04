@@ -3,10 +3,6 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
-/** \file
- * \ingroup gpu
- */
-
 #pragma once
 
 #include "BLI_map.hh"
@@ -309,10 +305,6 @@ class MTLSafeFreeList {
   std::recursive_mutex lock_;
   /* Linked list of next MTLSafeFreeList chunk if current chunk is full. */
   std::atomic<MTLSafeFreeList *> next_;
-  /* The list created after this one. It holds a reference released by this list, so that lists
-   * are released in order: a command buffer referencing a list also protects the buffers freed
-   * into later lists while it is encoded or executed. */
-  std::atomic<MTLSafeFreeList *> next_list_ = nullptr;
 
   /* Lockless list. MAX_NUM_BUFFERS_ within a chunk based on considerations
    * for performance and memory. Higher chunk counts are preferable for efficiently
@@ -320,13 +312,10 @@ class MTLSafeFreeList {
    *
    * MIN_BUFFER_FLUSH_COUNT refers to the minimum count of buffers in the MTLSafeFreeList
    * before buffers are returned to global memory pool. This is set at a point to reduce
-   * overhead of small pool flushes, while ensuring floating memory overhead is not excessive.
-   * MIN_FLUSH_SIZE does the same for lists of few, but large buffers. */
+   * overhead of small pool flushes, while ensuring floating memory overhead is not excessive. */
   static const int MAX_NUM_BUFFERS_ = 8192;
   static const int MIN_BUFFER_FLUSH_COUNT = 120;
-  static const uint64_t MIN_FLUSH_SIZE = 256 * 1024 * 1024;
   std::atomic<int> current_list_index_;
-  std::atomic<uint64_t> freed_size_ = 0;
   gpu::MTLBuffer *safe_free_pool_[MAX_NUM_BUFFERS_];
 
  public:
@@ -453,14 +442,10 @@ class MTLBufferPool {
   /* Flush MTLSafeFreeList buffers, for completed lists in `completed_safelist_queue_`,
    * back to memory pools. */
   void update_memory_pools();
-  bool has_completed_safe_lists();
 
-  /* Access and control over active MTLSafeFreeList. The list can be released by other threads
-   * unless `safelist_lock_` is held, use #acquire_current_safe_list to keep using it. */
+  /* Access and control over active MTLSafeFreeList. */
   MTLSafeFreeList *get_current_safe_list();
-  /* Reference the current list, released with #MTLSafeFreeList::decrement_reference. */
-  MTLSafeFreeList *acquire_current_safe_list();
-  void begin_new_safe_list(bool only_if_should_flush = false);
+  void begin_new_safe_list();
 
   /* Add a completed MTLSafeFreeList to completed_safelist_queue_. */
   void push_completed_safe_list(MTLSafeFreeList *list);

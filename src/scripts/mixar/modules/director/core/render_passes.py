@@ -37,8 +37,6 @@ BEAUTY_EEVEE_SAMPLES = 32
 #: camera renders in nothing else (`core/panoramic.py`) — so the pass caps the
 #: sample count rather than inheriting a final-render one.
 BEAUTY_CYCLES_SAMPLES = 64
-#: Engines that draw Blender's built-in Gaussian splats.
-_SPLAT_ENGINES = ('BLENDER_EEVEE', 'CYCLES', 'BLENDER_WORKBENCH')
 
 
 def beauty_engine(scene_engine: str) -> str:
@@ -304,8 +302,8 @@ def _configure_common(scene, target, frame_start: int, frame_end: int, path: str
 
 
 def _scene_has_splats(scene) -> bool:
-    """True when the scene holds a Gaussian splat that renders."""
-    from mixar.modules.moodboard.core.splat_native import scene_has_splats
+    """True when any mesh carries the KIRI splat geometry-nodes modifier."""
+    from mixar.modules.moodboard.core.splat_render_camera import scene_has_splats
 
     return scene_has_splats(scene)
 
@@ -319,10 +317,11 @@ def _configure_beauty(scene, scene_engine: str) -> None:
     guide video does not need a final render's worth of.
     """
     engine = beauty_engine(scene_engine)
-    if engine not in _SPLAT_ENGINES and _scene_has_splats(scene):
-        # Built-in splats are drawn by Blender's own engines; any other engine
-        # the scene is parked on is not known to, so the Color pass would lose
-        # the splat world.
+    if engine != 'CYCLES' and _scene_has_splats(scene):
+        # Gaussians are the splat material's attribute-driven node tree, which
+        # only a real engine evaluates; the splat_render_camera handlers push
+        # per-frame camera matrices into the GN during the render and those
+        # scenes run with Lock Interface.
         engine = BEAUTY_FALLBACK_ENGINE
     scene.render.engine = engine
     if engine == 'CYCLES':

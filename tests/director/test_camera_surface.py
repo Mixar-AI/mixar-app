@@ -30,8 +30,7 @@ def _read_overlay() -> str:
 def test_camera_controls_are_anchored_to_the_live_camera_gate():
     overlay = _read_overlay()
 
-    assert "BKE_camera_view_border" in overlay
-    assert "region->winx" in overlay and "region->winy" in overlay
+    assert "ED_view3d_calc_camera_border" in overlay
     assert "border.xmin" in overlay
     assert "border.xmax" in overlay
     assert "border.ymin" in overlay

@@ -4,7 +4,7 @@
 #include "scenes_toggle.hh"
 #include "../interface_intern.hh"
 #include "../interface_mixar_card_paint.hh"
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "DNA_screen_types.h"
 #include "UI_mixar_motion.hh"
 #include "UI_mixar_theme.hh"

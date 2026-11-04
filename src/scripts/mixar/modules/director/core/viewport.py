@@ -44,8 +44,14 @@ def find_view3d_context(context):
     """Return ``(window, area, window_region, space)`` for a 3D viewport."""
     current_area = getattr(context, "area", None)
     current_window = getattr(context, "window", None)
-    # Fullscreen replaces ScrAreas. Only read areas enumerated from live
-    # window screens, never a potentially freed context.area wrapper.
+    if current_area is not None and current_area.type == 'VIEW_3D':
+        region = next(
+            (item for item in current_area.regions if item.type == 'WINDOW'),
+            None,
+        )
+        if region is not None:
+            return current_window, current_area, region, current_area.spaces.active
+
     best = None
     best_size = -1
     for window in getattr(context.window_manager, "windows", ()):
@@ -57,8 +63,6 @@ def find_view3d_context(context):
                 (item for item in area.regions if item.type == 'WINDOW'),
                 None,
             )
-            if region is not None and window == current_window and area == current_area:
-                return window, area, region, area.spaces.active
             size = area.width * area.height
             if region is not None and size > best_size:
                 best = (window, area, region, area.spaces.active)
@@ -303,7 +307,7 @@ def restore_view(context, scene) -> None:
     target = find_view3d_context(context)
     if state is None or target is None:
         return
-    window, area, region, space = target
+    _window, area, _region, space = target
     region_3d = space.region_3d
     space.lock_camera = state["lock_camera"]
     if hasattr(space, "camera"):
@@ -316,16 +320,13 @@ def restore_view(context, scene) -> None:
             # A dead reference must not strand the viewport half-restored:
             # the chrome and view restore below still have to run.
             pass
-    # Region setters initialize native areas using the RNA context. Bind
-    # that context to the live target too, not a pre-fullscreen override.
-    with context.temp_override(window=window, area=area, region=region):
-        for name, value in state.get("chrome", {}).items():
-            if hasattr(space, name) and getattr(space, name) != value:
-                setattr(space, name, value)
-        overlay = getattr(space, "overlay", None)
-        for name, value in state.get("overlay", {}).items():
-            if overlay is not None and hasattr(overlay, name) and getattr(overlay, name) != value:
-                setattr(overlay, name, value)
+    for name, value in state.get("chrome", {}).items():
+        if hasattr(space, name) and getattr(space, name) != value:
+            setattr(space, name, value)
+    overlay = getattr(space, "overlay", None)
+    for name, value in state.get("overlay", {}).items():
+        if overlay is not None and hasattr(overlay, name) and getattr(overlay, name) != value:
+            setattr(overlay, name, value)
     region_3d.view_perspective = state["view_perspective"]
     if state["view_perspective"] != 'CAMERA':
         region_3d.view_location = state["view_location"]

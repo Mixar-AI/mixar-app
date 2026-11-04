@@ -16,7 +16,6 @@ from bpy.types import Operator
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import rpt_
-from mixar.modules.common.utils.generation_dispatch import record_reason
 
 logger = get_logger(__name__)
 
@@ -52,7 +51,6 @@ class MIXIE_OT_lookdev_generate(Operator):
             prompt = getattr(scene, 'mixie_lookdev_prompt', '')
 
         if not prompt or not prompt.strip():
-            record_reason("missing_prompt")
             self.report({'ERROR'}, "Please enter a prompt (press Enter to confirm your text)")
             return {'CANCELLED'}
 

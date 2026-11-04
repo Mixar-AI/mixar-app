@@ -75,7 +75,7 @@ int main() {
 def test_platform_blending(tmp_path, windows):
     compiler = shutil.which('clang++') or shutil.which('c++')
     assert compiler, 'C++ compiler required for native painter regression'
-    for name in ('BLI_rect.hh', 'GPU_immediate.hh', 'GPU_state.hh'):
+    for name in ('BLI_rect.h', 'GPU_immediate.hh', 'GPU_state.hh'):
         (tmp_path / name).write_text('#include "stub.hh"\n', encoding='utf-8')
     (tmp_path / 'stub.hh').write_text(STUB, encoding='utf-8')
     source = tmp_path / 'probe.cc'

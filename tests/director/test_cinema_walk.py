@@ -199,7 +199,7 @@ def test_a_scaled_camera_is_aimed_not_reset():
     for axis in ("sx", "sy", "sz"):
         assert f"length3({'xyz'[('sx','sy','sz').index(axis)]}_axis)" in look
     # Through the accessors, not a flat `float *`: `float4x4::ptr()` yields
-    # `float[4][4]`. See docs/blender-porting.md.
+    # `float[4][4]`. See docs/blender-5.2-porting.md.
     assert "matrix.x_axis() = right * sx;" in look
     assert "matrix.y_axis() = up * sy;" in look
     assert "matrix.z_axis() = back * sz;" in look

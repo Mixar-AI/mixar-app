@@ -24,18 +24,18 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_array.hh"
-#include "BLI_listbase.hh"
-#include "BLI_string.hh"
-#include "BLI_string_utf8.hh"
-#include "BLI_string_utf8_symbols.hh"
+#include "BLI_listbase.h"
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
+#include "BLI_string_utf8_symbols.h"
 #include "BLI_string_utils.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_utildefines.h"
 
-#include "BLI_dynstr.hh"
+#include "BLI_dynstr.h"
 
 #include "DNA_listBase.h"
 
-#include "BLI_strict_flags.hh" /* IWYU pragma: keep. Keep last. */
+#include "BLI_strict_flags.h" /* IWYU pragma: keep. Keep last. */
 
 namespace blender {
 
@@ -156,7 +156,7 @@ size_t BLI_string_replace_range(
     /* Grow, first handle special cases. */
 
     /* Special case, the src_end is entirely clipped. */
-    if (int(string_maxncpy) <= src_beg + dst_len) [[unlikely]] {
+    if (UNLIKELY(int(string_maxncpy) <= src_beg + dst_len)) {
       /* There is only room for the destination. */
       dst_len = (int(string_maxncpy) - src_beg) - 1;
       string_len = src_end;
@@ -455,7 +455,7 @@ void BLI_uniquename_cb(FunctionRef<bool(StringRefNull)> unique_check,
 
       /* highly unlikely the string only has enough room for the number
        * but support anyway */
-      if ((len == 0) || (numlen + 1 >= name_maxncpy)) [[unlikely]] {
+      if (UNLIKELY((len == 0) || (numlen + 1 >= name_maxncpy))) {
         /* Number is known not to be UTF8. */
         BLI_strncpy(tempname, numstr, name_maxncpy);
       }
@@ -518,7 +518,7 @@ void BLI_uniquename(const ListBase *list,
 
   BLI_uniquename_cb(
       [&](const StringRefNull name) {
-        for (Link *link = static_cast<Link *>(list->first_); link; link = link->next) {
+        for (Link *link = static_cast<Link *>(list->first); link; link = link->next) {
           if (link != vlink) {
             const char *link_name = POINTER_OFFSET((const char *)link, name_offset);
             if (name == link_name) {
@@ -566,7 +566,7 @@ size_t BLI_string_join_array(char *result,
   for (uint i = 0; i < strings_num; i++) {
     const char *p = strings[i];
     while (*p) {
-      if (!(c < c_end)) [[unlikely]] {
+      if (UNLIKELY(!(c < c_end))) {
         i = strings_num; /* Break outer loop. */
         break;
       }
@@ -586,14 +586,14 @@ size_t BLI_string_join_array_by_sep_char(
   char *c_end = &result[result_maxncpy - 1];
   for (uint i = 0; i < strings_num; i++) {
     if (i != 0) {
-      if (!(c < c_end)) [[unlikely]] {
+      if (UNLIKELY(!(c < c_end))) {
         break;
       }
       *c++ = sep;
     }
     const char *p = strings[i];
     while (*p) {
-      if (!(c < c_end)) [[unlikely]] {
+      if (UNLIKELY(!(c < c_end))) {
         i = strings_num; /* Break outer loop. */
         break;
       }

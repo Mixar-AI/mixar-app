@@ -13,11 +13,11 @@
 #include <cmath>
 #include <cstring>
 
-#include "BLI_listbase.hh"
-#include "BLI_math_base_c.hh"
-#include "BLI_math_vector_c.hh"
-#include "BLI_rect.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_listbase.h"
+#include "BLI_math_base.h"
+#include "BLI_math_vector.h"
+#include "BLI_rect.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.hh"
 
@@ -28,7 +28,7 @@
 
 #include "BKE_screen.hh"
 
-#include "BLI_string.hh"
+#include "BLI_string.h"
 #include "BLI_vector.hh"
 
 #include "GPU_immediate.hh"
@@ -221,7 +221,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
   float fstyle_points = fstyle->points;
   const float aspect = BLI_listbase_is_empty(&region->runtime->uiblocks) ?
                             1.0f :
-                            ((Block *)region->runtime->uiblocks.first())->aspect;
+                            ((Block *)region->runtime->uiblocks.first)->aspect;
   const float zoom = 1.0f / aspect;
   const float dpi_fac = UI_SCALE_FAC;
   const int px = U.pixelsize;

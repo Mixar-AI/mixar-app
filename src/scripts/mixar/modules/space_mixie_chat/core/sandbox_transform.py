@@ -12,54 +12,45 @@ The one transform here — :func:`snapshot_collection_iterations` — defends ag
 a hard, uncatchable Blender crash: mutating a live ``bpy`` collection while
 iterating it.
 
-    objs = bpy.data.objects
-    for i, obj in enumerate(objs):
-        if i + 1 < len(objs):
-            objs.remove(objs[i + 1])  # the item right after the current one
+    for obj in bpy.context.scene.collection.all_objects:
+        bpy.data.objects.remove(obj)          # <-- frees the array the C-level
+                                              #     iterator is walking -> segfault
 
-``bpy.data.objects`` / ``collection.objects`` are live RNA collections that the
-C iterator walks link by link. Python's ``for`` fetches the next element before
-the body runs, so the iterator holds a raw pointer to exactly one link: the one
-right after the current item. Unlinking any other item updates its neighbours,
-so removing the current item or one further ahead is survivable; removing the
-item right after the current one (``.remove``, ``bpy.ops.object.delete`` or
-``join`` on a selection, ...) frees the link the iterator already holds, and
-the next iteration reads freed memory — a native segfault that no
-``try/except`` in the executor can catch, taking the user's unsaved work with
-it.
+``collection.all_objects`` / ``collection.objects`` / ``bpy.data.objects`` are
+live RNA collections backed by a C ``ListBase`` cache. Adding or removing an
+object (``.remove``/``.link``/``.unlink``, ``bpy.ops.object.delete``/``join``,
+any ``*_add`` operator, ...) invalidates and frees that cache. Because the
+Python ``for`` loop holds a raw pointer into it, the *next* iteration reads freed
+memory and Blender dies with a native segfault in ``Collection_all_objects_next``
+— which no ``try/except`` in the executor can catch, taking the user's unsaved
+work with it.
 
 The same mechanism is not specific to objects: any live RNA collection whose
 elements the loop body removes (``node_tree.nodes``/``.links`` clears in
 material scripts, ``bpy.data.materials``/``.images`` cleanup sweeps,
 ``bpy.data.scenes``/``.collections`` lane teardown, modifier/constraint stack
 removal) reads freed memory the same way. ``_LIVE_COLLECTION_ATTRS`` below
-lists the covered attributes. ``Collection.all_objects`` is worse: it walks a
-Base cache that any link, unlink or delete frees whole, so any membership
-change inside the loop is fatal; it is iterated as a native snapshot
-(MIXAR-1978, ``python/intern/bpy_rna.cc``), so the transform is defence in
-depth there.
+lists the covered attributes.
 
 Wrapping the iterable in ``list(...)`` drains the collection into a plain Python
 list up front, so the loop walks Python references instead of the live C array.
 Any mutation inside the body is then safe. This is body-agnostic: it fixes the
 crash no matter *how* the loop mutates, without having to enumerate every
-mutating call. ``list(bpy.data.objects)`` is semantically identical for the
+mutating call. ``list(coll.all_objects)`` is semantically identical for the
 common (read-only) case and matches the author's intent in the mutating case.
 
 Coverage — this handles the two dominant idioms, both purely syntactically (no
 dataflow analysis, which aliasing/reassignment would make unreliable):
 
     for obj in bpy.data.objects: ...              # inline attribute iterable
-    objs = coll.objects
+    objs = coll.all_objects
     for obj in objs: ...                          # bound then *immediately* iterated
 
 It does NOT catch a live collection bound to a variable and iterated later with
-other statements in between (``objs = coll.objects; print(...); for o in
-objs:``) — removing a not-yet-visited item there can still segfault; only
-``Collection.all_objects`` is safe in that form, through the native snapshot.
-The backend prompt guidance (``execute_bpy_script`` docstring) steers the model
-away from those forms; this transform is the in-plugin safety net for the
-common shapes.
+other statements in between (``objs = coll.all_objects; print(...); for o in
+objs:``) — that still segfaults if mutated. The backend prompt guidance
+(``execute_bpy_script`` docstring) steers the model away from those forms; this
+transform is the in-plugin safety net for the common shapes.
 """
 
 import ast

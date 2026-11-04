@@ -15,7 +15,6 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.i18n import rpt_
-from mixar.modules.common.utils.generation_dispatch import record_reason
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ...core.image_lifecycle import remove_image_safely
 from ...core.world_labs_enqueue import resolve_world_labs_catalog as _catalog_settings
@@ -169,13 +168,11 @@ class MIXIE_OT_world_labs_generate(Operator):
             try:
                 image_bytes = compress_for_service(image, "world_labs")
             except Exception as e:  # noqa: BLE001
-                record_reason("image_processing_failed")
                 self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
             image_b64 = _b64.b64encode(image_bytes).decode()
             label = image.name
         elif not prompt:
-            record_reason("missing_prompt")
             self.report({"ERROR"}, "Please enter a text prompt")
             return {"CANCELLED"}
 
@@ -189,12 +186,10 @@ class MIXIE_OT_world_labs_generate(Operator):
                 label=label,
             )
         except Exception as e:  # noqa: BLE001
-            record_reason("enqueue_failed")
             self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not job:
-            record_reason("duplicate_job")
             self.report({"ERROR"}, "A duplicate generation is already queued")
             return {"CANCELLED"}
 
@@ -281,14 +276,12 @@ class MIXIE_OT_world_labs_generate(Operator):
             image = first_selected_reference_still(context.scene)
             if not image:
                 if not quiet:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                 return None
             return image
         image = getattr(tab, "reference_image", None)
         if not image:
             if not quiet:
-                record_reason("missing_image")
                 self.report({"ERROR"}, "Please add an input image")
             return None
         return image

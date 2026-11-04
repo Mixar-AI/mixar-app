@@ -13,7 +13,7 @@
 
 #include "DNA_windowmanager_types.h"
 
-#include "BLI_listbase.hh"
+#include "BLI_listbase.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -85,7 +85,6 @@ void ED_spacetypes_init()
   ED_spacetype_console();
   ED_spacetype_userpref();
   ED_spacetype_clip();
-  ED_spacetype_project();
   ED_spacetype_statusbar();
   ED_spacetype_topbar();
   spreadsheet::register_spacetype();
@@ -102,8 +101,6 @@ void ED_spacetypes_init()
   ED_operatortypes_userpref();
   ED_operatortypes_workspace();
   ED_operatortypes_scene();
-  ED_operatortypes_scene_compositor();
-  ED_menutypes_scene_compositor();
   ED_operatortypes_screen();
   ED_operatortypes_anim();
   ED_operatortypes_animchannels();
@@ -232,6 +229,15 @@ void ED_spacetypes_keymap(wmKeyConfig *keyconf)
 }
 
 /* ********************** Custom Draw Call API ***************** */
+
+struct RegionDrawCB {
+  RegionDrawCB *next, *prev;
+
+  void (*draw)(const bContext *, ARegion *, void *);
+  void *customdata;
+
+  int type;
+};
 
 void *ED_region_draw_cb_activate(ARegionType *art,
                                  void (*draw)(const bContext *, ARegion *, void *),

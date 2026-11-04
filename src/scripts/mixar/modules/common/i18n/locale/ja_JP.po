@@ -465,8 +465,8 @@ msgstr "ムードボード上で「{name}」を選択しました"
 msgid "Select in Scene"
 msgstr "シーン内で選択"
 
-msgid "Select this splat world in the viewport"
-msgstr ""
+msgid "Select this splat world's proxy handle in the viewport"
+msgstr "このスプラットワールドのプロキシハンドルをビューポートで選択します"
 
 msgid "Collection"
 msgstr "コレクション"
@@ -474,11 +474,8 @@ msgstr "コレクション"
 msgid "That splat world is no longer in this file"
 msgstr "そのスプラットワールドはもうこのファイルにありません"
 
-msgid "This splat world has no splat left"
-msgstr ""
-
-msgid "This splat world is hidden or excluded from the view layer"
-msgstr ""
+msgid "This splat world has no proxy handle"
+msgstr "このスプラットワールドにはプロキシハンドルがありません"
 
 msgid "Selected '{name}'"
 msgstr "「{name}」を選択しました"
@@ -551,9 +548,6 @@ msgstr ""
 
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
-
-msgid "Failed to open Agent Bubble window"
-msgstr "エージェントバブルのウィンドウを開けませんでした"
 
 msgid "Capture Viewport"
 msgstr "ビューポートをキャプチャ"
@@ -1445,9 +1439,6 @@ msgstr "ログインがキャンセルされたか、タイムアウトしまし
 msgid "Incomplete token pair in response"
 msgstr "応答のトークンペアが不完全です"
 
-msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
-msgstr ""
-
 msgid "Ready for input"
 msgstr "入力可能です"
 
@@ -1943,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
+msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1992,9 +1983,6 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
-msgstr ""
-
-msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3008,19 +2996,19 @@ msgstr "{platform} ではサポートされていないインストーラーの�
 msgid "This install can't be updated in place"
 msgstr "このインストールはその場で更新できません"
 
-msgid "This update can't be installed from Mixar. Download it to see what to do"
-msgstr ""
-
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version} に更新しました"
 
 msgid "The update was installed successfully."
 msgstr "アップデートは正常にインストールされました。"
 
-msgid "Restart Windows to finish updating"
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3068,23 +3056,11 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "インストーラーが完了しませんでした。"
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} / {total}"
@@ -3124,9 +3100,6 @@ msgstr "適用するためにMixarが再起動します。"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 「ダウンロード」を使ってブラウザー経由で更新してください。"
-
-msgid "Retry"
-msgstr "再試行"
 
 msgid "Restart & Update"
 msgstr "再起動して更新"
@@ -3183,9 +3156,6 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3272,23 +3242,11 @@ msgstr "再起動して更新"
 msgid "Updating…"
 msgstr "更新中…"
 
-msgid "Updates"
+msgid "Verifying…"
 msgstr ""
 
-msgid "How Mixar installs the updates it downloads"
-msgstr ""
-
-msgid "Downloaded updates install as Mixar closes, without asking."
-msgstr ""
-
-msgid "Turn this off to update only with Restart to Update."
-msgstr ""
-
-msgid "Install updates when I quit Mixar"
-msgstr ""
-
-msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
-msgstr ""
+msgid "Downloading {percent}%"
+msgstr "ダウンロード中 {percent}%"
 
 msgid "{count} credit"
 msgstr ""
@@ -3528,9 +3486,6 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
-msgstr ""
-
-msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -5573,9 +5528,6 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
-msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
-msgstr ""
-
 msgid "Connect MCP"
 msgstr ""
 
@@ -6761,14 +6713,8 @@ msgstr "サポートされていないスプラットファイル形式「{ext}�
 msgid "File not found: {path}"
 msgstr "ファイルが見つかりません: {path}"
 
-msgid "Unknown splat source '{source}'"
-msgstr ""
-
-msgid "{name} is not a Gaussian splat file"
-msgstr ""
-
-msgid "This build has no SPZ importer"
-msgstr ""
+msgid "No objects imported from {name}"
+msgstr "{name} からインポートされたオブジェクトはありません"
 
 msgid "Failed to read image: {error}"
 msgstr "画像の読み込みに失敗しました: {error}"
@@ -6923,8 +6869,8 @@ msgstr "ワールド生成の結果にスプラット（SPZ）のURLがありま
 msgid "World generation result missing collider (GLB) URL"
 msgstr "ワールド生成の結果にコライダー（GLB）のURLがありません"
 
-msgid "Failed to download world: {error}"
-msgstr ""
+msgid "Failed to download/convert world: {error}"
+msgstr "ワールドのダウンロード/変換に失敗しました: {error}"
 
 msgid "World imported but produced no objects"
 msgstr "ワールドはインポートされましたが、オブジェクトが生成されませんでした"
@@ -7771,12 +7717,6 @@ msgstr "ムードボード"
 
 msgid "Right-click context menu for moodboard"
 msgstr "ムードボードの右クリックコンテクストメニュー"
-
-msgid "Added: {time}"
-msgstr ""
-
-msgid "Added: Unknown"
-msgstr ""
 
 msgid "Delete Connection"
 msgstr "接続を削除"
@@ -10048,14 +9988,14 @@ msgstr "モデルリストを更新中..."
 msgid "Generation catalog module not available"
 msgstr "生成カタログモジュールを利用できません"
 
-msgid "A duplicate image generation is already queued"
-msgstr "同じ画像生成が既にキューに入っています"
-
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI画像を生成してムードボードに追加します"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "プロンプトを入力してください (Enterでテキストを確定)"
+
+msgid "A duplicate image generation is already queued"
+msgstr "同じ画像生成が既にキューに入っています"
 
 msgid "No model specified and no default available"
 msgstr "モデルが指定されておらず、デフォルトもありません"
@@ -10975,32 +10915,14 @@ msgstr "原点に接地"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "床がZ=0に、フットプリントの中心が原点に来るようにスプラットを移動します (生成されたワールドと同じ接地方法)"
 
-msgid "Source"
-msgstr "ソース"
-
-msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
-msgstr ""
-
-msgid "Standard"
-msgstr "標準"
-
-msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
-msgstr ""
-
-msgid "World Labs"
-msgstr ""
-
-msgid "A world downloaded from World Labs Marble"
-msgstr ""
-
 msgid "No splat file selected"
 msgstr "スプラットファイルが選択されていません"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count}個のスプラットをインポートしました: {names}"
 
-msgid "Gaussian Splat, Grounded (.spz/.ply)"
-msgstr ""
+msgid "Gaussian Splat (.spz/.ply)"
+msgstr "ガウシアンスプラット (.spz/.ply)"
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12570,6 +12492,9 @@ msgstr "全ボーンの影響を含む"
 
 msgid "Lighting Mode"
 msgstr "照明モード"
+
+msgid "Standard"
+msgstr "標準"
 
 msgid "Physically-based glTF lighting units"
 msgstr "物理ベースのglTFライティング単位"
@@ -18826,6 +18751,9 @@ msgstr "ブレンド方法"
 msgid "No masks"
 msgstr "マスクなし"
 
+msgid "Source"
+msgstr "ソース"
+
 msgid "No node group loaded"
 msgstr "ノードグループが読み込まれていません"
 
@@ -19939,9 +19867,6 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
-msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
-msgstr ""
-
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20385,6 +20310,12 @@ msgstr "修正中..."
 
 msgid "Awaiting Input..."
 msgstr "入力待ち..."
+
+msgid "Added to the running task"
+msgstr ""
+
+msgid "Queued until Mixie is ready"
+msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20968,9 +20899,6 @@ msgstr "チェックポイントファイルが見つかりません"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "現在の状態を保持できなかったため、何も変更されませんでした"
 
-msgid "Close the Agent island, then restore the checkpoint again"
-msgstr ""
-
 msgid "Could not read the checkpoint"
 msgstr "チェックポイントを読み込めませんでした"
 
@@ -21139,6 +21067,9 @@ msgstr "ログアウト"
 
 msgid "Sound on"
 msgstr ""
+
+msgid "Retry"
+msgstr "再試行"
 
 msgid "Choose Export Location"
 msgstr "エクスポート先を選択"
@@ -21610,15 +21541,6 @@ msgstr "添付ファイルは最大 {count} 件です"
 msgid "Paste failed: {error}"
 msgstr "貼り付けに失敗しました: {error}"
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} を追加できません: {error}"
-
-msgid "These references are already attached"
-msgstr "これらの参照はすでに添付されています"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
-
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21904,14 +21826,23 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} を追加できません: {error}"
+
 msgid "Attachment limit ({count}) reached"
 msgstr "添付ファイルの上限（{count}）に達しました"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} をスキップしました: {error}"
 
+msgid "These references are already attached"
+msgstr "これらの参照はすでに添付されています"
+
 msgid "Added {count} image(s)"
 msgstr "{count} 枚の画像を追加しました"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend から追加"
@@ -25264,30 +25195,6 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
-msgid "Shader texture preparation timed out"
-msgstr ""
-
-msgid "Preparing shader textures ({done}/{total})…"
-msgstr ""
-
-msgid "Could not prepare shader textures; publication stopped"
-msgstr ""
-
-msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
-msgstr ""
-
-msgid "{material}: connect explicit UV coordinates before publishing {channel}"
-msgstr ""
-
-msgid "{material}: publishing this shader requires a non-tiled image"
-msgstr ""
-
-msgid "{material}: publishing {channel} requires a single UV map"
-msgstr ""
-
-msgid "{material}: required UV map is missing on {object}"
-msgstr ""
-
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26608,6 +26515,9 @@ msgstr "自動モード：エージェントはあなたに質問する代わり
 msgid "Agent Bubble"
 msgstr "エージェントバブル"
 
+msgid "Failed to open Agent Bubble window"
+msgstr "エージェントバブルのウィンドウを開けませんでした"
+
 msgid "Agent Bubble Status"
 msgstr "エージェントバブルの状態"
 
@@ -27057,9 +26967,6 @@ msgstr "ムードボード添付をアニメーション"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "新たに添付した参照がMixieチャットへ飛んでいく様子を表示します"
-
-msgid "Context File"
-msgstr ""
 
 msgid "Delay"
 msgstr "ディレイ"
@@ -28528,6 +28435,9 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
+msgid "Failed to load image texture '%s'"
+msgstr ""
+
 msgid "Card drawing requires the active region's draw callback"
 msgstr "カードの描画にはアクティブなリージョンの描画コールバックが必要です"
 
@@ -29797,9 +29707,6 @@ msgstr "丸みのあるUI要素の角の半径"
 msgid "Mixie Chat"
 msgstr "Mixieチャット"
 
-msgid "context \"window\" has no event state (popups need an interactive window)"
-msgstr ""
-
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29811,6 +29718,18 @@ msgstr "ドロップのパスは空でない文字列である必要がありま
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ドロップのパスは空でないJSON配列である必要があります"
+
+msgid "rna_iterator_listbase_end"
+msgstr ""
+
+msgid "rna_iterator_listbase_get"
+msgstr ""
+
+msgid "Global Areas"
+msgstr "グローバルエリア"
+
+msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
+msgstr "ウィンドウ全体のエリア（トップバー、ステータスバー）。Mixarの拡張機能で、オンボーディングがトップバーを再描画できるよう公開されています。"
 
 msgid "QA UI Dump"
 msgstr "QA UIダンプ"

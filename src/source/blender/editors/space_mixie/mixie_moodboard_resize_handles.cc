@@ -22,8 +22,8 @@
 
 #include <cmath>
 
-#include "BLI_rect.hh"
-#include "BLI_utildefines.hh" /* ELEM */
+#include "BLI_rect.h"
+#include "BLI_utildefines.h" /* ELEM */
 
 #include "mixie_intern.hh"
 

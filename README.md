@@ -3,11 +3,11 @@
 
 # Mixar
 
-Mixar is an AI-powered 3D content creation tool built as a custom fork of [Blender](https://www.blender.org) 5.3. It adds an AI chat agent that can drive Blender, a layered texture-painting system, AI-assisted 3D generation, and a set of Mixar-native editor spaces — while keeping everything you already use from Blender.
+Mixar is an AI-powered 3D content creation tool built as a custom fork of [Blender](https://www.blender.org) 5.2. It adds an AI chat agent that can drive Blender, a layered texture-painting system, AI-assisted 3D generation, and a set of Mixar-native editor spaces — while keeping everything you already use from Blender.
 
 This repository is the source for the **Mixar desktop app** (the Blender-side client). Mixar's hosted AI backend remains a separate, closed-source service; the app talks to it over the network.
 
-> **Project status:** v2.0.0 — first public source release. Built on Blender 5.3.
+> **Project status:** v2.0.0 — first public source release. Built on Blender 5.2.
 
 ---
 
@@ -43,16 +43,14 @@ Mixar is a Blender fork with a custom overlay, so building it = building Blender
 
 ### Prerequisites
 
-Blender 5.3 requires CMake 3.21 or newer. On macOS, use macOS 13 or newer and Xcode/Command Line Tools 16.3 or newer.
-
-You need everything required to build Blender 5.3 itself. Follow Blender's official build instructions for your platform first, and confirm a clean Blender build works before adding Mixar:
+You need everything required to build Blender 5.2 itself. Follow Blender's official build instructions for your platform first, and confirm a clean Blender build works before adding Mixar:
 
 - macOS / Linux / Windows — see <https://developer.blender.org/docs/handbook/building_blender/>
 
 Mixar additionally needs **Python 3.11+** and **rsync** on the build host (macOS and Linux ship these; on Windows, install via WSL or Cygwin if missing).
 
 The native Windows build (`scripts/windows/build.bat`) requires **Visual Studio
-2022 17.14.14 or newer** with the C++ workload. Blender 5.3 embeds **Python 3.13**
+2022 17.14.14 or newer** with the C++ workload. Blender 5.2 embeds **Python 3.13**
 from the pinned `upstream/lib/windows_x64` libraries; installing a newer host
 Python does not replace those libraries. Old Python cache entries are cleared
 automatically while compiled objects are kept.
@@ -150,7 +148,7 @@ make run                 # launch build/Dev
 make run Prod            # launch build/Prod
 
 # Standalone tests run outside Blender; conftest.py supplies bpy stubs.
-python -m pip install pytest Pillow numpy pypdfium2
+python -m pip install pytest Pillow numpy
 python -m pytest -q
 ```
 
@@ -184,7 +182,7 @@ copy, not the app under this checkout's `build/Prod/bin/`.
 Mixar uses an overlay pattern so version upgrades from upstream Blender stay clean:
 
 ```text
-upstream/               Blender 5.3 source (git submodule)
+upstream/               Blender 5.2 source (git submodule)
 src/                    Mixar's overlay source — Python addon + C++ additions
 source/                 Generated working tree: upstream/ copied here, then src/ rsync'd on top
 build/<env>/            CMake build directory

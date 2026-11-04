@@ -23,9 +23,9 @@
 #include <cstring>
 #include <string>
 
-#include "BLI_math_color_c.hh"
-#include "BLI_rect.hh"
-#include "BLI_utildefines.hh"
+#include "BLI_math_color.h"
+#include "BLI_rect.h"
+#include "BLI_utildefines.h"
 
 #include "DNA_userdef_types.h"
 
@@ -219,8 +219,6 @@ void draw_provider_row(Button *but, const rcti *rect)
   const float fade = but_disabled(but) ? 0.5f : 1.0f;
   rctf pill;
   BLI_rctf_rcti_copy(&pill, rect);
-  pill.ymin += px(row_inset_y);
-  pill.ymax -= px(row_inset_y);
   const float rad = std::min(px(row_radius), BLI_rctf_size_y(&pill) * 0.5f);
 
   /* A quiet wash on a hovered rest row; the graded slate on the live one. */
@@ -261,9 +259,9 @@ void draw_provider_row(Button *but, const rcti *rect)
     icon_draw_preview(x, BLI_rctf_cent_y(&pill) - size * 0.5f, but->icon, 1.0f, alpha, int(size));
     text.xmin = x + size + px(row_icon_gap);
   }
-  /* Python widens every plate to the column's longest name (`kit.row_right`);
-   * only a name too long even for that runs on towards the divider before it
-   * is ellipsised. */
+  /* Python widens the pill to a long name (`byok_sheet.row_right`); only a
+   * name too long even for that runs on towards the divider before it is
+   * ellipsised. */
   const int font_id = font(label_size, motion.selected > 0.5f ? weight_strong : weight_medium);
   if (text_width(font_id, but_label(but)) > BLI_rctf_size_x(&text)) {
     const float sidebar = but->block->mixar_sheet_sidebar;
@@ -284,8 +282,6 @@ void draw_footer_row(Button *but, const rcti *rect)
   const float fade = but_disabled(but) ? 0.5f : 1.0f;
   rctf pill;
   BLI_rctf_rcti_copy(&pill, rect);
-  pill.ymin += px(row_inset_y);
-  pill.ymax -= px(row_inset_y);
   const float rad = std::min(px(row_radius), BLI_rctf_size_y(&pill) * 0.5f);
   const float wash = std::max(hover_cue(motion) * (1.0f - motion.selected), 0.0f);
   /* At rest a faint plate, so the foot reads as a destination, not a label. */

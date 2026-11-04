@@ -43,11 +43,6 @@ CONFIG_EXTRA_CA_CERTS = "extra_ca_certs"
 CONFIG_PROXY_URL = "proxy_url"
 CONFIG_NO_PROXY = "no_proxy"
 
-# urllib3 and httpx open this file on every context they build (the stdlib
-# ignores it: Blender runs Python isolated), so an unopenable path breaks every
-# import of requests. Removed at startup; TLS session keys never reach disk.
-SSL_KEYLOG_ENV_VAR = "SSLKEYLOGFILE"
-
 # --- Standard variables honored by the bundled HTTP/WebSocket clients -------
 # requests reads REQUESTS_CA_BUNDLE; httpx, urllib and http.client read
 # SSL_CERT_FILE (via OpenSSL); websocket-client reads its own variable.
