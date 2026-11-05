@@ -45,7 +45,7 @@ from .export_preflight import (
     run_preflight,
 )
 from .export_presets import PRESETS, preset_kwargs, preset_report, stl_kwargs  # noqa: F401
-from .export_verify import file_clip_names, verify_export
+from .export_verify import file_clip_names, verify_export, writes_gltf_skin
 from .export_web import is_web_gltf, web_scene_objects
 
 EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
@@ -239,6 +239,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             pass
         verification = verify_export(filepath, fmt, {
             "mesh_count": len(meshes), "armature_count": len(armatures),
+            "skinned_meshes": 0 if stl else sum(1 for m in meshes if writes_gltf_skin(m)),
             "clips": clips if animations is not None and not stl else None,
             # STL has no objects: every mesh lands in the file as one solid.
             "joined": stl,

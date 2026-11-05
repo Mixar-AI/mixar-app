@@ -329,6 +329,17 @@ def _apply_guest_claim(claim: dict, account_email: str) -> None:
         chat_history.reassign_owner(claim.get("guest_email", ""), account_email)
     except Exception as e:  # noqa: BLE001 — history is best-effort
         logger.debug("Guest chat history reassign failed: %s", e)
+    if claim.get("guest_user_id"):
+        try:
+            # The agent's session archive is filed under the guest's user id;
+            # the account reads it back (read_agent_history) only once re-filed.
+            from mixar.modules.common.agent_history.core import store as agent_archive
+            from mixar.modules.auth.core.auth import get_access_token, user_id_from_token
+            account = user_id_from_token(get_access_token())
+            if account and account != claim["guest_user_id"]:
+                agent_archive.reassign_owner(claim["guest_user_id"], account)
+        except Exception as e:  # noqa: BLE001 — history is best-effort
+            logger.debug("Guest agent archive reassign failed: %s", e)
 
 
 def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:

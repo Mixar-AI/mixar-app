@@ -26,6 +26,10 @@ fails, the records before it are still archived and acknowledged, and the poll
 interval backs off (up to `BACKOFF_MAX_SECONDS`) instead of re-downloading every
 two seconds. Only image records are materialized, and only in reference mode. Known
 session IDs let a restarted app discover pending records under a new instance ID.
+With `agent_history_query_v1` a read also takes `roles`, `tools`, `oldest_first`,
+`offset`, `max_chars` (filtered reads only, capped by `MAX_QUERY_READ_CHARS`) and a
+list `task_id`: generic filters the backend uses to list the user's own messages from
+the first one on. The store knows nothing of prompt formats.
 Disk/sequence/owner failures never acknowledge or execute saved content. A changed
 epoch records a gap. A missing manifest beside an existing journal fails closed.
 

@@ -55,6 +55,8 @@ EVENT_UPDATE_BLOCKED = "update.blocked_mid_install"
 # chose (UPGRADE / REFER / CREATOR / DISMISS).
 EVENT_CREDITS_BANNER_SHOWN = "credits.banner_shown"
 EVENT_CREDITS_BANNER_ACTION = "credits.banner_action"
+# Crash recovery (analytics/recovery_events.py): session_recovery.<stage>.
+EVENT_SESSION_RECOVERY_PREFIX = "session_recovery."
 
 # generation.rejected only fires when an undo / delete lands within this
 # many seconds of a generation or agent output arriving in the scene.

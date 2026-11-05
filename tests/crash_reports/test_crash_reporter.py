@@ -1,0 +1,353 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""The reporter: harvest, consent/sign-in gate, never resend, never delete an
+app crash log (only our own render-worker copies, once handled)."""
+
+import json
+import os
+import shutil
+import time
+from pathlib import Path
+
+import pytest
+
+from mixar.modules.common.crash_reports.core import harvest
+from mixar.modules.common.crash_reports.core.reporter import LATER, REFUSED, SENT, Reporter
+from mixar.modules.common.crash_reports.core.store import Store
+
+FIXTURES = Path(__file__).parent / "fixtures"
+STATIC = {"platform": "darwin", "os_version": "macOS 26.2", "cpu_arch": "arm64", "cpu_count": 12, "ram_gb": 32}
+CURRENT = {"app_version": "4.3.7", "blender_version": "5.2.0", "gpu_vendor": "Apple", "open_tabs": 1}
+DEVICE = "0123456789abcdef0123456789abcdef"
+LEAKS = ("/Users/", "jdoe", "Jane", "@example", "Sample prompt", "Client Work", "fileserver", "castle",
+         "Personal", "Dropbox")
+
+
+@pytest.fixture
+def temp_dir(tmp_path):
+    folder = tmp_path / "T"
+    folder.mkdir()
+    for name in ("macos_render.crashlog", "upstream_blender.crashlog"):
+        shutil.copy(FIXTURES / name, folder / ("mixar.crash.txt" if name.startswith("macos") else "blender.crash.txt"))
+    shutil.copy(FIXTURES / "windows_access_violation.crashlog", folder / "castle.crash.txt")
+    return folder
+
+
+class FakeServer:
+    def __init__(self, outcomes=None):
+        self.outcomes = list(outcomes or [])
+        self.payloads = []
+
+    def __call__(self, payload):
+        self.payloads.append(payload)
+        return self.outcomes.pop(0) if self.outcomes else SENT
+
+
+def _reporter(tmp_path, temp_dir, *, gate=True, server=None, device=DEVICE):
+    reporter = Reporter(
+        state_dir=str(tmp_path / "state"), temp_dirs=[str(temp_dir)], static=STATIC, own_pid=4242,
+        gate=lambda: gate if not callable(gate) else gate(), send=server or FakeServer(), device_id=lambda: device,
+    )
+    reporter.heartbeat(CURRENT)
+    return reporter
+
+
+def test_reports_are_built_from_mixar_crash_files_only(tmp_path, temp_dir):
+    reports = harvest.build_reports(
+        temp_dirs=[str(temp_dir)], store=Store(str(tmp_path / "s")), own_pid=1,
+        device_id=DEVICE, static=STATIC, current=CURRENT,
+    )
+    sources = sorted(report["crash_type"] for report in reports)
+    assert sources == ["EXCEPTION_ACCESS_VIOLATION", "SIGSEGV"]  # the vanilla Blender log is skipped
+    for report in reports:
+        assert report["device_id"] == DEVICE and report["kind"] == "native" and report["source"] == "crash_txt"
+        assert len(report["report_id"]) == 32
+        assert report["context"]["reporter_app_version"] == "4.3.7"
+        assert report["context"]["context_source"] == "reporter"
+
+
+def test_nothing_personal_leaves_the_machine(tmp_path, temp_dir):
+    reports = harvest.build_reports(
+        temp_dirs=[str(temp_dir)], store=Store(str(tmp_path / "s")), own_pid=1,
+        device_id=DEVICE, static=STATIC, current=CURRENT,
+    )
+    wire = json.dumps(reports)
+    for leak in LEAKS:
+        assert leak not in wire, leak
+    assert "_ZN7blender22DEG_id_type_any_existsEPKNS_9DepsgraphEs" in wire
+
+
+def test_crash_inherits_the_crashed_sessions_breadcrumb(tmp_path, temp_dir):
+    store = Store(str(tmp_path / "s"))
+    crash_time = os.path.getmtime(temp_dir / "mixar.crash.txt")
+    store.write_session(777, {"pid": 777, "started_at": crash_time - 3600, "updated_at": crash_time - 20,
+                              "context": {"app_version": "4.3.5", "cycles_device": "METAL",
+                                          "agent_session_id": "sess-1", "agent_run_id": "run-9", "open_tabs": 3}})
+    reports = harvest.build_reports(temp_dirs=[str(temp_dir)], store=store, own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    mac = next(r for r in reports if r["crash_type"] == "SIGSEGV")
+    assert mac["app_version"] == "4.3.5"
+    assert mac["context"]["agent_run_id"] == "run-9" and mac["context"]["open_tabs"] == 3
+    assert mac["context"]["context_source"] == "session"
+
+
+def test_signed_out_or_opted_out_sends_nothing_and_keeps_files(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, gate=False, server=server)
+    reporter.tick()
+    assert server.payloads == []
+    assert reporter.harvest_done is False
+    assert sorted(os.listdir(temp_dir)) == ["blender.crash.txt", "castle.crash.txt", "mixar.crash.txt"]
+
+
+def test_sent_reports_are_never_resent(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    assert len(server.payloads) == 2 and reporter.harvest_done
+    again = _reporter(tmp_path, temp_dir, server=server)  # next launch
+    again.tick()
+    assert len(server.payloads) == 2
+    assert (temp_dir / "mixar.crash.txt").exists()  # sent, still not deleted
+
+
+def test_a_retryable_failure_is_sent_again_later(tmp_path, temp_dir):
+    server = FakeServer([LATER])
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    assert len(server.payloads) == 1 and not reporter.harvest_done
+    reporter.tick()
+    assert len(server.payloads) == 3 and reporter.harvest_done
+    assert server.payloads[0]["report_id"] == server.payloads[1]["report_id"]
+
+
+def test_a_refused_report_is_not_retried(tmp_path, temp_dir):
+    server = FakeServer([REFUSED, SENT])
+    _reporter(tmp_path, temp_dir, server=server).tick()
+    _reporter(tmp_path, temp_dir, server=server).tick()
+    assert len(server.payloads) == 2
+    ledger = Store(str(tmp_path / "state")).sent_ids()
+    assert sorted(entry["outcome"] for entry in ledger.values()) == ["refused", "sent"]
+
+
+def test_no_device_id_sends_nothing(tmp_path, temp_dir):
+    server = FakeServer()
+    _reporter(tmp_path, temp_dir, server=server, device=None).tick()
+    assert server.payloads == []
+
+
+def test_exceptions_wait_for_sign_in_then_send_once(tmp_path, temp_dir):
+    signed_in = {"value": False}
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, gate=lambda: signed_in["value"], server=server)
+    reporter.enqueue_exception({"report_id": "py-1", "device_id": "", "kind": "python",
+                                "source": "excepthook", "_dedup_key": "k"})
+    reporter.tick()
+    assert server.payloads == [] and len(reporter.store.pending()) == 1
+    signed_in["value"] = True
+    reporter.tick()
+    python = [p for p in server.payloads if p["kind"] == "python"]
+    assert len(python) == 1 and python[0]["device_id"] == DEVICE and "_dedup_key" not in python[0]
+    assert reporter.store.pending() == []
+    reporter.tick()
+    assert len([p for p in server.payloads if p["kind"] == "python"]) == 1
+
+
+def test_breadcrumb_is_written_and_removed_on_a_clean_quit(tmp_path, temp_dir):
+    reporter = _reporter(tmp_path, temp_dir, gate=False)
+    reporter.tick()
+    path = Path(reporter.store.session_path(4242))
+    data = json.loads(path.read_text())
+    assert data["pid"] == 4242 and data["context"]["app_version"] == "4.3.7"
+    assert data["context"]["platform"] == "darwin"
+    reporter.stop(clean=False)
+    assert path.exists()
+    reporter.stop(clean=True)
+    assert not path.exists()
+
+
+def test_stale_breadcrumbs_are_pruned(tmp_path):
+    store = Store(str(tmp_path / "s"))
+    store.write_session(1, {"pid": 1, "started_at": 0, "updated_at": time.time() - 30 * 86400})
+    store.write_session(2, {"pid": 2, "started_at": 0, "updated_at": time.time()})
+    assert [s["pid"] for s in store.sessions(own_pid=99)] == [2]
+    assert not os.path.exists(store.session_path(1))
+
+
+def test_macos_reports_are_read_from_the_given_folder(tmp_path, temp_dir):
+    reports_dir = tmp_path / "DiagnosticReports"
+    reports_dir.mkdir()
+    shutil.copy(FIXTURES / "macos_abort.ips.json", reports_dir / "Mixar-2026-10-23-152401.ips")
+    shutil.copy(FIXTURES / "macos_segv_handled.ips.json", reports_dir / "Mixar-2026-10-26-183129.ips")
+    reports = harvest.build_reports(temp_dirs=[], report_dirs=[str(reports_dir)], store=Store(str(tmp_path / "s")),
+                                    own_pid=1, device_id=DEVICE, static=STATIC, current=CURRENT)
+    assert [r["source"] for r in reports] == ["macos_ips"]  # the handled SIGSEGV is crash.txt's
+    assert reports[0]["crash_type"] == "SIGABRT" and reports[0]["app_version"] == "4.3.5"
+    assert "/Users/" not in json.dumps(reports)
+
+
+def test_old_crash_files_are_ignored(tmp_path, temp_dir):
+    old = time.time() - 40 * 86400
+    for name in os.listdir(temp_dir):
+        os.utime(temp_dir / name, (old, old))
+    assert harvest.candidate_files([str(temp_dir)], [str(temp_dir)]) == []
+
+
+def test_new_crash_logs_carry_build_images_and_addresses(tmp_path):
+    folder = tmp_path / "T"
+    folder.mkdir()
+    shutil.copy(FIXTURES / "macos_render_v1.crashlog", folder / "mixar.crash.txt")
+    reports = harvest.build_reports(temp_dirs=[str(folder)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    report = reports[0]
+    assert report["app_version"] == "4.3.8"  # from the crash log, not the reporting session
+    assert report["git_sha"] == "0123456789abcdef0123456789abcdef01234567" and report["arch"] == "arm64"
+    assert report["images"][0]["id"] == "8061b8de1ba9340fa6af312e3b71dbc5"
+    assert all("address" in frame for frame in report["frames"])
+    assert "# mixar symbolication v1" in report["raw_text"]
+
+
+def test_render_worker_crashes_are_reported_as_worker_crashes(tmp_path):
+    temp = tmp_path / "T"
+    worker_tmp = temp / "mixar_render_worker" / "4242" / "worker-render" / "tmp"
+    worker_tmp.mkdir(parents=True)
+    shutil.copy(FIXTURES / "macos_render_v1.crashlog", worker_tmp / "snapshot.crash.txt")
+    reports_dir = tmp_path / "DiagnosticReports"
+    reports_dir.mkdir()
+    shutil.copy(FIXTURES / "macos_worker_bad_access.ips.json", reports_dir / "Mixar-2026-10-31-111819.ips")
+    shutil.copy(FIXTURES / "macos_abort.ips.json", reports_dir / "Mixar-2026-10-23-152401.ips")
+    reports = harvest.build_reports(temp_dirs=[str(temp)], report_dirs=[str(reports_dir)],
+                                    store=Store(str(tmp_path / "s")), own_pid=1, device_id=DEVICE,
+                                    static=STATIC, current=CURRENT)
+    by_kind = sorted((r["kind"], r["source"]) for r in reports)
+    assert by_kind == [("native", "macos_ips"), ("worker_crash", "crash_txt"), ("worker_crash", "macos_ips")]
+    worker_txt = next(r for r in reports if r["kind"] == "worker_crash" and r["source"] == "crash_txt")
+    assert worker_txt["context"]["worker_kind"] == "render"
+    assert "/" not in json.dumps(worker_txt["context"])
+
+
+def test_app_crash_log_is_not_mistaken_for_a_worker_one(tmp_path, temp_dir):
+    reports = harvest.build_reports(temp_dirs=[str(temp_dir)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    assert {r["kind"] for r in reports} == {"native"}
+
+
+def test_ended_sessions_breadcrumbs_go_once_their_crash_files_are_handled(tmp_path, temp_dir):
+    reporter = _reporter(tmp_path, temp_dir)
+    store = reporter.store
+    store.write_session(777, {"pid": 777, "started_at": time.time() - 7200, "updated_at": time.time() - 3600})
+    store.write_session(778, {"pid": 778, "started_at": time.time() - 120, "updated_at": time.time() - 30})
+    reporter.tick()
+    assert reporter.harvest_done
+    assert not os.path.exists(store.session_path(777))
+    assert os.path.exists(store.session_path(778))  # a late macOS report may still match it
+    assert os.path.exists(store.session_path(4242))  # the running session's own
+
+
+def test_breadcrumbs_stay_while_crash_files_wait_for_consent(tmp_path, temp_dir):
+    reporter = _reporter(tmp_path, temp_dir, gate=False)
+    reporter.store.write_session(777, {"pid": 777, "started_at": time.time() - 7200, "updated_at": time.time() - 3600})
+    reporter.tick()
+    assert os.path.exists(reporter.store.session_path(777))
+
+
+# -- render-worker crash logs the supervisor moved into our own folder ---------
+
+def _worker_crash(temp: Path, name: str, salt: str = "") -> Path:
+    folder = temp / "mixar_render_worker_crashes"
+    folder.mkdir(exist_ok=True)
+    path = folder / name
+    path.write_text((FIXTURES / "macos_render_v1.crashlog").read_text(encoding="utf-8") + salt, encoding="utf-8")
+    return path
+
+
+def test_the_worker_crash_folder_is_harvested_as_worker_crashes(tmp_path):
+    temp = tmp_path / "T"
+    temp.mkdir()
+    _worker_crash(temp, "5150-preview-render-2.crash.txt")
+    reports = harvest.build_reports(temp_dirs=[str(temp)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    assert [(r["kind"], r["source"]) for r in reports] == [("worker_crash", "crash_txt")]
+    assert reports[0]["context"]["worker_kind"] == "preview-render"
+
+
+def test_a_worker_crash_mid_session_is_reported_in_that_session(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    assert len(server.payloads) == 2 and reporter.harvest_done
+    reporter.tick()  # nothing new: no harvest
+    assert len(server.payloads) == 2
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    reporter.tick()
+    assert len(server.payloads) == 3 and server.payloads[-1]["kind"] == "worker_crash"
+    assert reporter.harvest_done
+    assert not crash.exists()  # our copy goes once handled
+    assert (temp_dir / "mixar.crash.txt").exists()  # the app's own log never does
+    reporter.tick()
+    assert len(server.payloads) == 3
+
+
+def test_a_refused_worker_crash_is_deleted_and_a_retryable_one_kept(tmp_path, temp_dir):
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    server.outcomes = [LATER]
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    reporter.tick()
+    assert crash.exists() and not reporter.harvest_done
+    server.outcomes = [REFUSED]
+    reporter.tick()
+    assert not crash.exists() and reporter.harvest_done
+
+
+def test_worker_crashes_wait_for_consent_and_old_ones_are_pruned(tmp_path, temp_dir):
+    fresh = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    old = _worker_crash(temp_dir, "5151-render-1.crash.txt", salt="\n")
+    stale = time.time() - 40 * 86400
+    os.utime(old, (stale, stale))
+    os.utime(temp_dir / "castle.crash.txt", (stale, stale))
+    reporter = _reporter(tmp_path, temp_dir, gate=False)
+    reporter.tick()
+    assert fresh.exists() and not old.exists()
+    assert (temp_dir / "castle.crash.txt").exists()  # not ours: never deleted
+
+
+def test_a_worker_crash_sent_by_an_earlier_launch_is_deleted(tmp_path, temp_dir):
+    crash = _worker_crash(temp_dir, "5150-render-1.crash.txt")
+    store = Store(str(tmp_path / "state"))
+    store.mark_sent(harvest.report_id_for("crash_txt", crash.read_text(encoding="utf-8")))
+    server = FakeServer()
+    _reporter(tmp_path, temp_dir, server=server).tick()
+    assert not crash.exists()
+    assert all(p["kind"] == "native" for p in server.payloads)
+
+
+def test_crash_files_handled_per_launch_stay_capped(tmp_path, temp_dir, monkeypatch):
+    from mixar.modules.common.crash_reports.core import reporter as reporter_mod
+    monkeypatch.setattr(reporter_mod, "MAX_REPORTS_PER_LAUNCH", 3)
+    server = FakeServer()
+    reporter = _reporter(tmp_path, temp_dir, server=server)
+    reporter.tick()
+    for i in range(3):
+        _worker_crash(temp_dir, f"5150-render-{i}.crash.txt", salt="\n" * (i + 1))
+        reporter.tick()
+    assert len(server.payloads) == 3
+    assert len(os.listdir(temp_dir / "mixar_render_worker_crashes")) == 2  # left for the next launch
+
+
+def test_a_folder_name_with_parentheses_does_not_leak(tmp_path):
+    folder = tmp_path / "T"
+    folder.mkdir()
+    text = (FIXTURES / "macos_render_v1.crashlog").read_text(encoding="utf-8").replace(
+        "/Users/jdoe/Library/Application Support/Mixar/4.3/scripts/mixar/modules/space_mixie_chat/core/executor.py",
+        "/Users/jdoe/Dropbox (Personal)/Client Work/tools/helper.py")
+    assert "Dropbox (Personal)" in text
+    (folder / "mixar.crash.txt").write_text(text, encoding="utf-8")
+    reports = harvest.build_reports(temp_dirs=[str(folder)], store=Store(str(tmp_path / "s")), own_pid=1,
+                                    device_id=DEVICE, static=STATIC, current=CURRENT)
+    wire = json.dumps(reports)
+    assert "helper.py" in wire
+    for leak in LEAKS:
+        assert leak not in wire, leak

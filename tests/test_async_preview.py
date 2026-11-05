@@ -523,3 +523,59 @@ def test_png_save_uses_fast_lossless_compression_and_restores_settings(preview, 
     else:
         assert preview._read_png(scene) == b"png"
     assert (settings.file_format, settings.compression) == ("JPEG", 77)
+
+
+def test_the_route_pin_is_released_and_the_scene_flushed_before_the_job_starts(preview, monkeypatch):
+    """A scene switch frees every Render's engine that is not yet flagged
+    RE_ENGINE_RENDERING (``ED_render_engine_changed`` → ``RE_FreePersistentData``).
+    The routed window is restored BEFORE the invoke, while no job thread exists, and
+    nothing evaluates a depsgraph on the main thread after the job has started.
+    Released, the context is the window's own (just evaluated) scene."""
+    order = []
+    ctx = preview.bpy.context
+    monkeypatch.setattr(preview, "_release_route_pin",
+                        lambda source, scene: order.append("release") or True)
+    ctx.view_layer.update.side_effect = lambda: order.append("flush")
+
+    def invoke(*_args, **_kwargs):
+        order.append("invoke")
+        return {"RUNNING_MODAL"}
+
+    preview.bpy.ops.render.render.side_effect = invoke
+    assert preview.start(ctx, KEY)["status"] == "running"
+    assert order == ["flush", "release", "invoke"]
+    assert set(preview.bpy.context.temp_override.call_args.kwargs) == {"window"}
+
+
+def test_an_unreleased_job_keeps_the_source_as_its_context(preview, monkeypatch):
+    monkeypatch.setattr(preview, "_release_route_pin", lambda source, scene: False)
+    ctx = preview.bpy.context
+    assert preview.start(ctx, KEY)["status"] == "running"
+    assert preview.bpy.context.temp_override.call_args.kwargs["scene"] is ctx.scene
+
+
+def test_a_start_refused_before_the_invoke_keeps_the_pin(preview, monkeypatch):
+    released = []
+    monkeypatch.setattr(preview, "_release_route_pin", lambda *a: released.append(True))
+    preview.bpy.context.scene.camera = None
+    assert preview.start(preview.bpy.context, KEY)["error"] == "camera_and_window_required"
+    assert released == []
+
+
+@pytest.mark.parametrize("same_scene,target_frame,released", [
+    (True, 1, False),    # the job renders the source itself: old order
+    (False, 7, False),   # the restored tab is on another frame: old order
+    (False, 1, True),    # the private copy, same frame: released
+])
+def test_the_pin_is_released_only_for_the_private_copy_on_the_same_frame(
+        preview, monkeypatch, same_scene, target_frame, released):
+    from mixar.modules.space_mixie_chat.core import main_thread_routing as routing
+
+    calls = []
+    monkeypatch.setattr(routing, "pin_restore_target",
+                        lambda: SimpleNamespace(frame_current=target_frame))
+    monkeypatch.setattr(routing, "release_pin", lambda reason: calls.append(reason) or True)
+    source = SimpleNamespace(frame_current=1)
+    copy = source if same_scene else SimpleNamespace(frame_current=1)
+    assert preview._release_route_pin(source, copy) is released
+    assert calls == (["native_render"] if released else [])

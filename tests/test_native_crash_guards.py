@@ -209,4 +209,66 @@ def test_signals_overlay_tracks_the_pinned_upstream():
         count=1,
         flags=re.DOTALL,
     )
+    overlay = overlay.replace(
+        '#  include "mixar_crash_info.h" /* MIXAR: crash symbolication block. */\n', "", 1
+    )
+    overlay = re.sub(
+        r"  /\* MIXAR: images, debug ids.*?\*/\n  mixar_crash_info_write\(fp, os_info\);\n",
+        "",
+        overlay,
+        count=1,
+        flags=re.DOTALL,
+    )
     assert overlay == upstream
+
+
+ACTION_ITERATORS = ROOT / "src/source/blender/animrig/intern/action_iterators.cc"
+WM_FILES = ROOT / "src/source/blender/windowmanager/intern/wm_files.cc"
+MODULES = ROOT / "src/scripts/mixar/modules"
+
+
+def test_action_slot_iterators_skip_an_armature_with_no_pose():
+    """``NlaStrip.action_slot`` on a fresh ``bpy.data.objects.new()`` armature
+    walked ``object.pose->chanbase`` with no pose and segfaulted (cs-go-3 run,
+    28 Oct). Both iterators must check the pose first."""
+    src = ACTION_ITERATORS.read_text()
+    assert src.count("object.pose->chanbase") == 2
+    assert src.count("object.type == OB_ARMATURE && object.pose") == 2
+
+
+def test_autosave_runs_under_the_passive_agent_modals():
+    """The agent viewport lock and undo shield are modal for a whole turn; an
+    autosave that waits on every modal operator never ran during a turn."""
+    body = _fn(WM_FILES.read_text(), "void wm_autosave_timer")
+    assert "!wm_autosave_modal_op_is_passive(handler->op)" in body
+    passive = re.search(r"passive_idnames\[\] = \{(.*?)\};", WM_FILES.read_text(), re.S).group(1)
+    idnames = re.findall(r'"([A-Z0-9_]+)_OT_(\w+)"', passive)
+    assert {"MIXAR_OT_agent_viewport_block", "MIXIE_CHAT_OT_undo_shield",
+            "MIXAR_OT_credits_banner"} <= {f"{p}_OT_{n}" for p, n in idnames}
+    py = "\n".join(p.read_text() for p in MODULES.rglob("*.py"))
+    cc = "\n".join(p.read_text(errors="ignore") for p in WM_FILES.parents[2].rglob("*.cc"))
+    for prefix, name in idnames:
+        # A Python operator `mixar.agent_viewport_block` is `MIXAR_OT_agent_viewport_block`
+        # in C++; a rename on either side would silently starve autosave again.
+        # The tour's bl_idname is a constant (`OP_TOUR`); native ones are C idnames.
+        assert (f'bl_idname = "{prefix.lower()}.{name}"' in py
+                or f'"{prefix.lower()}.{name}"' in py
+                or f'ot->idname = "{prefix}_OT_{name}"' in cc), (prefix, name)
+
+
+def test_crash_log_gets_the_symbolication_block_after_the_backtrace():
+    """Every crash log carries images, debug ids and raw frame addresses.
+
+    The block goes after Blender's own backtrace and before the Python
+    backtrace, so older readers that stop at "# Python backtrace" still parse
+    the log, and it is written for every platform (``os_info`` is the
+    Windows exception context).
+    """
+    src = SIGNALS.read_text()
+    generate = _fn(src, "static void crashlog_file_generate")
+    backtrace = generate.index("BLI_system_backtrace_with_os_info(fp, os_info);")
+    block = generate.index("mixar_crash_info_write(fp, os_info);")
+    python = generate.index("BPY_python_backtrace(fp);")
+    assert backtrace < block < python
+    cmake = (ROOT / "src/source/creator/CMakeLists.txt").read_text()
+    assert "mixar_crash_info.cc" in cmake

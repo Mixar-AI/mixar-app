@@ -5,6 +5,12 @@
 #include "creator_startup.h"
 #include "mixar_env_config.h"
 
+/* X-Client-Version on the desktop token exchange: a backend blue/green deploy
+ * routes a client version to the fleet built for it by this header, and the
+ * sign-in must land on the same fleet as everything the Python side sends. */
+#include "BKE_blender_version.h"
+#define MIXAR_CLIENT_VERSION_HEADER_FMT "X-Client-Version: %d.%d.%d"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -476,7 +482,9 @@ static bool exchange_desktop_code(const char* code, const char* code_verifier) {
         return false;
     }
 
-    const wchar_t* headers = L"Content-Type: application/json\r\n";
+    wchar_t headers[128];
+    swprintf(headers, 128, L"Content-Type: application/json\r\nX-Client-Version: %d.%d.%d\r\n",
+             MIXAR_VERSION / 100, MIXAR_VERSION % 100, MIXAR_VERSION_PATCH);
     BOOL sent = WinHttpSendRequest(hRequest, headers, (DWORD)-1,
                                    (LPVOID)body, (DWORD)strlen(body),
                                    (DWORD)strlen(body), 0);
@@ -571,6 +579,10 @@ static bool exchange_desktop_code(const char* code, const char* code_verifier) {
 
     struct curl_slist* headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
+    char version_header[64];
+    snprintf(version_header, sizeof(version_header), MIXAR_CLIENT_VERSION_HEADER_FMT,
+             MIXAR_VERSION / 100, MIXAR_VERSION % 100, MIXAR_VERSION_PATCH);
+    headers = curl_slist_append(headers, version_header);
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);

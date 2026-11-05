@@ -7,8 +7,12 @@
 Splash Menu Replacement
 
 Replaces the native WM_MT_splash menu with a custom version that:
-- Hides the Recent Files section
-- Shows Donate to Blender and Support links in its place
+- Heads with the crash-restore question when there is one (session_recovery)
+- Picks the workspace mode and shows Mixar's links
+- Lists Recent Projects (File > Open Recent's history, missing files skipped)
+  and Unsaved Work from crashed sessions, when there are any
+- Never shows Blender's "Recover Last Session" (quit.blend); File > Recover
+  keeps it
 
 Also exposes `is_splash_visible()` so other modules (notably the
 agent bubble auto-show) can react to splash dismissal regardless of
@@ -170,14 +174,71 @@ def has_splash_ever_drawn() -> bool:
     return _splash_last_drawn_ts != 0.0
 
 
+RECENT_PROJECT_ROWS = 6  # three rows of the two-column grid
+# Read once per splash opening, never on every redraw: a draw after this
+# long without one is taken as a new opening (an idle splash stops redrawing,
+# so at worst an idle one re-reads a few small files once).
+_REOPEN_GAP_S = 30.0
+_recent_projects: list | None = None
+
+
+def _refresh_lists(reopened: bool) -> list:
+    """Recent project paths; re-reads them (and the unsaved work) on a new opening."""
+    global _recent_projects
+    if _recent_projects is None or reopened:
+        try:
+            from mixar.modules.common.utils.recent_files import recent_project_paths
+            _recent_projects = recent_project_paths(
+                bpy.utils.user_resource('CONFIG'), RECENT_PROJECT_ROWS)
+        except Exception:  # noqa: BLE001 — the splash must draw whatever happens
+            _recent_projects = []
+        if reopened:
+            try:
+                from mixar.modules.session_recovery import prompt
+                prompt.scan()
+            except Exception:  # noqa: BLE001
+                pass
+    return _recent_projects
+
+
+def _draw_recent_and_unsaved(layout, reopened: bool) -> None:
+    """Unsaved Work, then Recent Projects: each a full-width two-column grid."""
+    recent = _refresh_lists(reopened)
+    try:
+        from mixar.modules.session_recovery import prompt
+        unsaved = prompt.splash_entries()
+    except Exception:  # noqa: BLE001
+        prompt, unsaved = None, []
+    if unsaved:
+        try:
+            prompt.draw_splash_unsaved(layout.column(), unsaved)
+        except Exception:  # noqa: BLE001
+            pass
+        layout.separator()
+    if recent:
+        from mixar.modules.common.utils.ui_utils import two_column_cells
+        layout.label(text="Recent Projects")
+        for cell, path in zip(two_column_cells(layout, len(recent)), recent):
+            row = cell.row()
+            # Invoke: opening over unsaved changes asks first, like File > Open Recent.
+            row.operator_context = 'INVOKE_DEFAULT'
+            op = row.operator("wm.open_mainfile", text=path.stem, icon='FILE_BLEND',
+                              translate=False)
+            op.filepath = str(path)
+            op.display_file_selector = False
+        layout.separator()
+
+
 class WM_MT_splash(Menu):
-    """Custom splash menu without Recent Files."""
+    """Mixar splash: restore question, mode picker, links, recent and unsaved work."""
 
     bl_label = "Splash"
 
     def draw(self, context):
         global _splash_last_drawn_ts
-        _splash_last_drawn_ts = time.monotonic()
+        now = time.monotonic()
+        reopened = _splash_last_drawn_ts != 0.0 and now - _splash_last_drawn_ts > _REOPEN_GAP_S
+        _splash_last_drawn_ts = now
 
         # Native window-manager code suppresses Mixar floating dock
         # windows while the splash UI block is open. Do not minimise
@@ -187,6 +248,14 @@ class WM_MT_splash(Menu):
         layout.operator_context = 'EXEC_DEFAULT'
         layout.emboss = 'PULLDOWN_MENU'
         layout.scale_y = 1.3
+
+        # After a crash the splash opens with the restore question, so the
+        # first thing on screen is the way back (session_recovery).
+        try:
+            from mixar.modules.session_recovery import prompt as recovery
+            recovery.draw_offer(layout, in_splash=True)
+        except Exception:  # noqa: BLE001 — the splash must draw whatever happens
+            pass
 
         split = layout.split()
 
@@ -215,6 +284,7 @@ class WM_MT_splash(Menu):
         ).url = "https://discord.com/invite/YVqvkQx8rX"
 
         layout.separator()
+        _draw_recent_and_unsaved(layout, reopened)
 
 
 def register():

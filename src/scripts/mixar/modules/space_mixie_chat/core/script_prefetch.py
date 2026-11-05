@@ -163,6 +163,9 @@ def maybe_start_prefetch(script: str, tool_name: str) -> Optional[ScriptAssetPre
     that downloads overlap the time the script spends queued, instead of
     blocking the main thread during execution.
     """
+    if tool_name.startswith("engine_"):
+        from .engine_prefetch import maybe_start  # noqa: PLC0415 - imports engine_link
+        return maybe_start(script)
     if tool_name not in PREFETCH_TOOLS:
         return None
     terrain = tool_name == "import_terrain_asset"

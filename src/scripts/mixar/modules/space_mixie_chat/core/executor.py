@@ -48,6 +48,7 @@ from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
+from .sandbox_evaluated import NOTE as EVALUATED_NOTE, may_store_evaluated, restore_original_materials
 from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
 from .executor_scene_state import SceneStateMixin
 
@@ -104,12 +105,21 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         load and the undo/redo handlers end turns WITHOUT a step: a push there
         records a closing tab as still working, or truncates the redo stack
         from inside the undo handler. The end-all (``None``) form never pushes.
+
+        Every way one session's turn ends passes here, so this is where it
+        asks for a crash-recovery save point (the end-all form is a file load
+        or shutdown: nothing of this document is left to save).
         """
         if session_id is None:
             if self._turns:
                 self._turns.clear()
                 logger.debug("Agent turns ended (all)")
             return
+        try:
+            from mixar.modules.session_recovery.runtime import request_save_point
+            request_save_point("turn_end")
+        except Exception:  # noqa: BLE001 - crash safety never breaks a turn
+            logger.debug("save point request on turn end skipped", exc_info=True)
         turn = self._turns.pop(session_id, None)
         if turn is not None:
             logger.debug("Agent turn ended (%s)", session_id[:8])
@@ -478,6 +488,15 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
+            # Before anything else re-evaluates: a stored evaluated material is
+            # still alive now and dangles after (sandbox_evaluated.py). Only a
+            # script that handled evaluated data can have stored one.
+            evaluated_swapped = 0
+            try:
+                if may_store_evaluated(script):
+                    evaluated_swapped = restore_original_materials()
+            except Exception:  # noqa: BLE001 - never mask the script's own result
+                logger.exception("Restoring original materials after a script failed")
             # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
             # from `finalize_turn`), never between scripts: a script may leave
             # the tab in Edit / Sculpt / Texture Paint mode on purpose for the
@@ -496,6 +515,10 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             stderr_output = captured_stderr.getvalue()
             if stderr_output:
                 result.output += f"\nStderr:\n{stderr_output}"
+            if evaluated_swapped:
+                logger.warning("Agent script stored %d evaluated material(s); originals restored",
+                               evaluated_swapped)
+                result.output += "\n" + EVALUATED_NOTE.format(count=evaluated_swapped)
 
         # Capture scene state after execution and detect changes
         after_state = self._capture_scene_state()

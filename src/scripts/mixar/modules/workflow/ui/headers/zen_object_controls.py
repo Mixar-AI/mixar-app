@@ -65,7 +65,13 @@ def draw_object_controls(layout, context):
 
     close = row.row(align=True)
     close.ui_units_x = 1.4
-    close.operator('mixar.zen_object_controls_show', text='', icon='X').show = False
+    # Deferred UI registration can draw this before the operator exists (a
+    # crash-restore load): its properties are unknown then, so draw a placeholder.
+    if hasattr(bpy.types, "MIXAR_OT_zen_object_controls_show"):
+        close.operator('mixar.zen_object_controls_show', text='', icon='X').show = False
+    else:
+        close.enabled = False
+        close.label(text='', icon='X')
     close.mixar_style(component="TOOLBAR", variant="GHOST")
 
 

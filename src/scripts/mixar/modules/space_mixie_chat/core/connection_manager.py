@@ -51,27 +51,35 @@ def handle_server_notification(params: dict) -> None:
         return
 
     if notif_type == "credit_upgrade":
-        # Surface #1 — the whole-window out-of-credits banner (thread-safe).
-        from ...common.notifications.credit_upgrade import push_credit_upgrade
-        push_credit_upgrade(params)
-        # Surface #2 — a Mixie chat message with the same CTA. This
-        # mutates scene data, so marshal it onto the main thread.
+        # The banner and a chat message with the same CTA, both on the main
+        # thread (the tabs are read, the chat is scene data). The backend
+        # sends the push to every connection of the user: one naming a
+        # session opens them only in the instance that owns that tab.
         from .main_thread_executor import run_on_main_thread
 
-        def _add_chat_notice(p=params):
+        def _deliver(p=params):
+            import bpy
+
             from mixar.modules.common.agent_execution.document import scene_for_session
 
-            from .credits_notice import add_credit_upgrade_chat_message
-            # The notice belongs to the tab whose turn ran out of credits.
-            add_credit_upgrade_chat_message(
-                scene=scene_for_session(str(p.get("session_id") or "")),
-                title=p.get("title"),
-                body=p.get("body", p.get("message")),
-                action_url=p.get("action_url"),
-                request_banner=False,
+            from ...common.notifications.credit_upgrade import (
+                push_credit_upgrade,
+                push_is_for_this_instance,
             )
+            from .credits_notice import add_credit_upgrade_chat_message
+            if push_is_for_this_instance(p, bpy.data.scenes):
+                push_credit_upgrade(p)
+                add_credit_upgrade_chat_message(
+                    scene=scene_for_session(str(p.get("session_id") or "")),
+                    title=p.get("title"),
+                    body=p.get("body", p.get("message")),
+                    action_url=p.get("action_url"),
+                    request_banner=False,
+                )
+            else:
+                logger.info("credit_upgrade push for a tab of another instance: not shown")
 
-        run_on_main_thread(_add_chat_notice)
+        run_on_main_thread(_deliver)
         return
 
     from ...common.notifications import get_notification_store
