@@ -66,6 +66,16 @@ class MIXIE_OT_search_assets(Operator):
         self._result = None
         self._image_bytes = None
 
+        # An imported AxF material's packed scan sits in an Image datablock; it is
+        # never sent (the picker does not offer it, but a script can assign it).
+        from mixar.modules.axf.constants import is_source_archive
+
+        if state.search_image is not None and is_source_archive(state.search_image):
+            state.is_searching = False
+            self.report({'ERROR'}, f"'{state.search_image.name}' is an imported AxF scan, not "
+                        "a picture, and is never uploaded. Pick an image to search with.")
+            return {'CANCELLED'}
+
         # Extract image bytes on main thread (bpy.data access required)
         if state.search_image is not None:
             self._image_bytes = _extract_search_image_bytes(state.search_image)
