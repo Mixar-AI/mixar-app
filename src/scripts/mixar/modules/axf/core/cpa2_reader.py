@@ -147,6 +147,8 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         )
         if lobes.ndim != 2 or lobes.shape[1] != 3:
             raise AxfFormatError("Unexpected Cook-Torrance lobe layout")
+        # Compositing/DiffuseRoughnessThreshold is not read: X-Rite's previews of paints
+        # with active lobes wider than it reproduce per pixel without it.
         fresnel_variant = _text(ct["FresnelVariant"]) if "FresnelVariant" in ct else ""
         if fresnel_variant not in ("", "Schlick1994"):
             raise AxfFormatError(f"Unsupported Fresnel variant '{fresnel_variant}'")
@@ -158,7 +160,8 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
 
         # X-Rite's two decoder generations read the colour table half a texel apart:
         # TabulatedBrdf 1.2 (2016 SDK): texel i at i/N of 90 deg; 1.8 (Pantora 2026): at
-        # (i + 0.5)/N. Each reproduces its own files' embedded previews to float precision.
+        # (i + 0.5)/N. Each reproduces its own files' embedded previews to float precision;
+        # the instrument values in the files cannot tell the conventions apart (<= 0.1 dE).
         tab_version = tuple(int(v) for v in np.asarray(tab["Version"][()]).ravel()[:2]) if "Version" in tab else (1, 2)
         table_texel_offset = 0.5 if tab_version >= (1, 8) else 0.0
         table_res = _resource(material, tab["com.xrite.Resources/Data"])[0]
