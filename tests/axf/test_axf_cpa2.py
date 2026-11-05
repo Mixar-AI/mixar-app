@@ -165,7 +165,17 @@ def test_reader_refuses_virtual_theta_i_slices(tmp_path):
     with h5py.File(path, "a") as f:
         ds = f["com.xrite.Materials/mini/com.xrite.Representations/0/com.xrite.Input/com.xrite.Operands/0/NumThetaI"]
         ds[()] = 7
-    with pytest.raises(AxfFormatError):
+    with pytest.raises(AxfFormatError, match=r"NumThetaI 7 < NumThetaF \d+"):
+        read_cpa2(path)
+
+
+def test_reader_names_an_unknown_flake_parameterisation(tmp_path):
+    path = _write_mini_axf(str(tmp_path / "flaketype.axf"))
+    with h5py.File(path, "a") as f:
+        fl = f["com.xrite.Materials/mini/com.xrite.Representations/0/com.xrite.Input/com.xrite.Operands/0"]
+        del fl["Type"]
+        fl.create_dataset("Type", data=np.bytes_("ThetaHD"))
+    with pytest.raises(AxfFormatError, match="'ThetaHD' is not supported"):
         read_cpa2(path)
 
 

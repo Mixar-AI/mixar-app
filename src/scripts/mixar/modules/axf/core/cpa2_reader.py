@@ -240,13 +240,18 @@ def read_cpa2(path: str, *, load_flakes: bool = True) -> dict:
         }
 
         if flakes is not None:
-            if _text(flakes["Type"]) != "ThetaFI":
-                raise AxfFormatError("Unsupported flake BTF parameterisation")
+            flake_type = _text(flakes["Type"]) if "Type" in flakes else ""
+            if flake_type != "ThetaFI":
+                raise AxfFormatError(
+                    f"Flake BTF parameterisation '{flake_type or 'missing'}' is not supported "
+                    "(only 'ThetaFI', flakes indexed by thetaF and thetaI)")
             out["num_theta_f"] = int(flakes["NumThetaF"][()])
             out["num_theta_i"] = int(flakes["NumThetaI"][()])
             if out["num_theta_i"] < out["num_theta_f"]:
                 # X-Rite then synthesises "virtual" thetaI slices by shifting patches.
-                raise AxfFormatError("Flake BTFs with virtual thetaI slices are not supported yet")
+                raise AxfFormatError(
+                    f"Flake BTF with NumThetaI {out['num_theta_i']} < NumThetaF {out['num_theta_f']} "
+                    "(virtual thetaI slices) is not supported yet")
             out["lut"] = np.asarray(flakes["PatchesLookupTable"][()], np.int64)
             patch_groups = _resource(material, flakes["com.xrite.Resources/Data"])
             parent = patch_groups[0].parent

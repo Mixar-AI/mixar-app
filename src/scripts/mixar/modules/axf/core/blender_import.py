@@ -7,8 +7,9 @@
 Lossless by construction:
 - the native AxF Car Paint / AxF SVBRDF BSDFs evaluate X-Rite's models in Cycles;
 - its data images are float32 EXRs packed into the .blend (bit-exact);
-- the original .axf bytes are packed too, so export_axf() writes back the
-  identical file (same SHA-256).
+- the original .axf bytes are packed too (optional: Keep Original File), so
+  export_axf() writes back the identical file (same SHA-256). The packed copy
+  travels with the .blend; remove_archived_sources() strips it before sharing.
 """
 
 from __future__ import annotations
@@ -69,10 +70,31 @@ def _packed_data_image(name: str, image_rows: np.ndarray, tmpdir: str):
 def _archive_source(path: str, name: str):
     """Pack the original .axf bytes; never rendered, only kept for export."""
     archive = bpy.data.images.load(path, check_existing=False)
-    archive.name = f"AxF Source: {name}"
+    archive.name = f"{C.ARCHIVE_NAME_PREFIX}{name}"
     archive.pack()
     archive.use_fake_user = True
+    archive[C.PROP_IS_ARCHIVE] = True
     return archive
+
+
+def archived_sources() -> list:
+    """Every packed original .axf in the file, including ones whose material is gone
+    (the fake user keeps them saved). Files from before the marker match by name."""
+    return [img for img in bpy.data.images
+            if img.get(C.PROP_IS_ARCHIVE) or img.name.startswith(C.ARCHIVE_NAME_PREFIX)]
+
+
+def remove_archived_sources() -> int:
+    """Delete every packed original .axf from the file. The materials keep rendering
+    exactly (they read only their own data images); only export_axf() needs the
+    original, and it then refuses. Returns the number of files removed."""
+    for mat in bpy.data.materials:
+        if C.PROP_ARCHIVE in mat:
+            del mat[C.PROP_ARCHIVE]
+    images = archived_sources()
+    for img in images:
+        bpy.data.images.remove(img)
+    return len(images)
 
 
 def _link(nt, a, out, b, inp):
@@ -290,7 +312,10 @@ def export_axf(material: bpy.types.Material, filepath: str) -> str:
     """Write the packed original AxF back out; returns its SHA-256."""
     archive = material.get(C.PROP_ARCHIVE)
     if archive is None or archive.packed_file is None:
-        raise ValueError("This material has no packed AxF source")
+        raise ValueError(
+            "This material's original .axf is not in the file (imported with Keep Original "
+            "File off, or removed with File > Clean Up > Remove Embedded AxF Originals); "
+            "re-import the .axf to export it")
     data = bytes(archive.packed_file.data)
     with open(filepath, "wb") as f:
         f.write(data)

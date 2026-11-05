@@ -22,6 +22,9 @@ PROP_ATLAS = "axf_atlas"
 PROP_SOURCE_NAME = "axf_source_name"
 PROP_SOURCE_SHA256 = "axf_source_sha256"
 PROP_ARCHIVE = "axf_archive"
+# The packed original .axf: an Image datablock never used for rendering.
+PROP_IS_ARCHIVE = "axf_is_source_archive"
+ARCHIVE_NAME_PREFIX = "AxF Source: "
 
 # Flake atlas: patches per atlas row.
 ATLAS_COLUMNS = 5
