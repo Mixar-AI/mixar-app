@@ -322,6 +322,7 @@ class SocketConnection:
         from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
         from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
         from .engine_connect import ENGINE_LINK_CAPABILITY
+        from .engine_mcp import ENGINE_MCP_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -364,6 +365,8 @@ class SocketConnection:
                 # engine.* tools through the composer's engine chip; the
                 # chip shows only when the server lists it back.
                 *([ENGINE_LINK_CAPABILITY] if not self._role else []),
+                # Unreal's editor toolsets passed through (engine_mcp).
+                *([ENGINE_MCP_CAPABILITY] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
