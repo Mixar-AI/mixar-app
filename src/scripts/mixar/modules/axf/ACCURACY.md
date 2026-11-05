@@ -92,7 +92,10 @@ Ward or GGX lobe.
 
 ## Rendering
 
-Cycles. Checked against the reference on CPU (macOS) and Apple Metal. NVIDIA
+Cycles. Checked against the reference on CPU (macOS) and Apple Metal. Windows CPU
+renders match macOS CPU to float precision (direct light, per pixel); on textured
+materials the few pixels that differ are as many as moving the object by 1e-7 m on one
+platform changes (texel lookups at texel edges). NVIDIA
 CUDA/OptiX builds compile the same kernel code but have not been checked against the
 reference yet. OSL shows a neutral grey stand-in. EEVEE shows a preview, not the
 measured material.
