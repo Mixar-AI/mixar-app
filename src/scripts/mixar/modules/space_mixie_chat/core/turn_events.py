@@ -419,6 +419,11 @@ def _apply(scene, turn, payload):
         processor._handle_agent_complete_internal(scene)
         processor._clear_loader_bubbles(scene)
         turn.complete = True
+        try:
+            from mixar.modules.session_recovery.runtime import continue_turn_ended
+            continue_turn_ended(turn.turn_id, status)
+        except Exception:  # noqa: BLE001 - telemetry never breaks a turn
+            logger.debug("Continue outcome telemetry skipped", exc_info=True)
         return
     if payload.get('type') == 'run_status':
         turn.run_id = str(payload.get('run_id') or '')
