@@ -80,8 +80,7 @@ def _archive_source(path: str, name: str):
 def archived_sources() -> list:
     """Every packed original .axf in the file, including ones whose material is gone
     (the fake user keeps them saved). Files from before the marker match by name."""
-    return [img for img in bpy.data.images
-            if img.get(C.PROP_IS_ARCHIVE) or img.name.startswith(C.ARCHIVE_NAME_PREFIX)]
+    return [img for img in bpy.data.images if C.is_source_archive(img)]
 
 
 def remove_archived_sources() -> int:

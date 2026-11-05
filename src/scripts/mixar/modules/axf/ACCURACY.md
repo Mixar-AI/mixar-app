@@ -68,6 +68,28 @@ an index of refraction and a normal map, flake parameterisations other than `The
 and flake tables with virtual thetaI slices, and SVBRDF variants beyond Lambert plus one
 Ward or GGX lobe.
 
+## Your scan file
+
+- **In the `.blend`.** With Keep Original File on (the default) the importer packs the
+  original `.axf` into the `.blend`, so it can be exported back byte for byte; it then
+  travels with every copy of that `.blend`. With it off, the material renders the same
+  and cannot be exported to `.axf`. File ▸ Clean Up ▸ Remove Embedded AxF Originals
+  deletes the packed originals from a file you already have (save afterwards). Either
+  way the material's render data stays in the file: the colour table, flake and map
+  images the renderer reads are the scan's measurements in another form.
+- **What Mixar features send off your machine.** No feature uploads a `.blend` or the
+  packed `.axf`. Generation jobs upload a glTF/FBX of the selected meshes, which carries
+  neither the scan nor the AxF render data. Publish to Web uploads a GLB without the AxF
+  data or the material's AxF details (model, source file name and hash). Asset Search
+  never offers or sends the packed scan as a reference image. Crash reports are text.
+  Exports go to folders on your machine.
+- **The agent.** Mixie works by running scripts in your open scene. A script can read
+  anything in the scene, including packed files, and what it prints goes to the Mixar
+  service and the AI model provider. Mixie has no reason or instruction to read a scan,
+  but nothing technically prevents it. If a scan must never leave the machine, keep it
+  out of files you use with the agent: import with Keep Original File off, or remove the
+  originals first.
+
 ## Rendering
 
 Cycles. Checked against the reference on CPU (macOS) and Apple Metal. NVIDIA

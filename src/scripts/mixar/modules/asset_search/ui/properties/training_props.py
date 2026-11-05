@@ -20,6 +20,14 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 
+def _search_image_poll(self, image):
+    """The reference-image picker offers pictures only: an imported AxF material's
+    packed original .axf is a customer's scan held in an Image datablock, and the
+    search uploads the picked image's bytes."""
+    from mixar.modules.axf.constants import is_source_archive
+    return not is_source_archive(image)
+
+
 def _enrolled_update(self, context):
     """Persist a library tick to the per-user enrollment file, then auto-train.
 
@@ -105,7 +113,7 @@ class MixieAssetTrainingState(PropertyGroup):
     is_refreshing: BoolProperty(name="Is Refreshing", default=False)
     has_model: BoolProperty(name="Has Trained Model", default=False)
     auto_check_done: BoolProperty(name="Auto Check Done", default=False)
-    search_image: PointerProperty(type=bpy.types.Image, name="Search Image")
+    search_image: PointerProperty(type=bpy.types.Image, name="Search Image", poll=_search_image_poll)
     match_threshold: FloatProperty(
         name="Match Threshold",
         description=(

@@ -102,6 +102,17 @@ def test_prefix_rule_holds_without_rna(tmp_path):
     assert stripped == 7
 
 
+def test_axf_material_metadata_never_leaves():
+    """An imported AxF material's model, source name/hash and scan pointer stay home."""
+    doc = {"asset": {"version": "2.0"}, "materials": [{"name": "AxF Gold", "extras": {
+        "axf_model": "{\"kd\": 0.03}", "axf_source_name": "Gold.axf",
+        "axf_source_sha256": "ab" * 32, "axf_archive": {"name": "AxF Source: Gold.axf", "type": "Image"},
+        "finish": "studio"}}]}
+    assert ef.strip_document(doc, {}) == 4
+    assert doc["materials"][0]["extras"] == {"finish": "studio"}
+    assert "Gold.axf" not in json.dumps(doc)
+
+
 def test_animation_extras_get_the_prefix_rule_only():
     doc = {"animations": [{"name": "Walk", "extras": {
         "mixar_agent_clip": "x", "mixie_session_id": "s", "_RNA_UI": {},

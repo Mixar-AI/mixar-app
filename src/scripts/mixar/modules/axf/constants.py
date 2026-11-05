@@ -26,6 +26,13 @@ PROP_ARCHIVE = "axf_archive"
 PROP_IS_ARCHIVE = "axf_is_source_archive"
 ARCHIVE_NAME_PREFIX = "AxF Source: "
 
+
+def is_source_archive(image) -> bool:
+    """True for the Image datablock that holds a packed original .axf (a customer's
+    scan, not pixels): features that upload images must never offer or send it.
+    Files from before the marker match by name."""
+    return bool(image.get(PROP_IS_ARCHIVE)) or image.name.startswith(ARCHIVE_NAME_PREFIX)
+
 # Flake atlas: patches per atlas row.
 ATLAS_COLUMNS = 5
 

@@ -10,7 +10,10 @@ session id, moodboard and Director state. After the write, every ``extras``
 key that is a REGISTERED RNA property of the matching Blender type is
 dropped; user custom properties (never in ``bl_rna.properties``) survive.
 Belt and braces: ``mixie_*`` / ``mixar_*`` (and ``_``-prefixed) (except ``mixar_active_camera``,
-the viewer's home-camera tag) and ``_RNA_UI`` keys go too. Sections with no
+the viewer's home-camera tag) and ``_RNA_UI`` keys go too, and so do ``axf_*``
+keys: an imported X-Rite AxF material's model parameters, source file name and
+hash, and a pointer to the packed scan are the studio's measurement data and
+mean nothing outside Mixar's AxF closures. Sections with no
 single matching RNA type (``animations`` carry Action extras, plus
 ``skins``/``textures``/``images``) get the prefix rule only. A GLB is
 rewritten with its BIN chunk untouched, a ``.gltf`` JSON likewise; both go
@@ -27,7 +30,7 @@ import uuid
 
 JSON_CHUNK = 0x4E4F534A
 KEEP = frozenset({"mixar_active_camera"})
-PREFIXES = ("mixie_", "mixar_", "_mixie_", "_mixar_", "_RNA_UI")
+PREFIXES = ("mixie_", "mixar_", "_mixie_", "_mixar_", "_RNA_UI", "axf_")
 # glTF collection → Blender RNA type whose registered properties it may carry.
 SECTIONS = {"scenes": "Scene", "nodes": "Object", "meshes": "Mesh",
             "materials": "Material", "cameras": "Camera"}

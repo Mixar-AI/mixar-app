@@ -260,6 +260,12 @@ def _extract_search_image_bytes(img):
     import os
     import tempfile
 
+    from mixar.modules.axf.constants import is_source_archive
+
+    # A packed original .axf (a customer's scan) is not a picture: never upload it.
+    if is_source_archive(img):
+        return None
+
     # Try packed data first
     if img.packed_file and img.packed_file.data:
         return bytes(img.packed_file.data)
