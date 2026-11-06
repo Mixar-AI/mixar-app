@@ -253,6 +253,13 @@ static int rna_Window_mixar_refresh_popups(wmWindow *win)
   return Mixar_refresh_popups(win);
 }
 
+/* tour_menu.cc: mark every open menu / popover closed (freed on its next event). */
+int Mixar_close_popups(wmWindow *win);
+static int rna_Window_mixar_close_popups(wmWindow *win)
+{
+  return Mixar_close_popups(win);
+}
+
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
 bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
 
@@ -422,6 +429,14 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         srna, "mixar_refresh_popups", "rna_Window_mixar_refresh_popups");
     RNA_def_function_ui_description(
         func, "Rebuild every pop-up open in this window after async state changes");
+    PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
+    RNA_def_function_return(func, parm);
+  }
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_close_popups", "rna_Window_mixar_close_popups");
+    RNA_def_function_ui_description(
+        func, "Close every menu and popover open in this window (each is freed on its next event)");
     PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
     RNA_def_function_return(func, parm);
   }

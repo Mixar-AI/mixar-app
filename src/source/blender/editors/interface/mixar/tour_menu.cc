@@ -213,6 +213,37 @@ bool Mixar_tour_menu_close(wmWindow *win)
   return true;
 }
 
+/* Close every menu and popover open in `win` the same safe way: mark it, and
+ * its handler frees it on the next event (`Window.mixar_close_popups`). The
+ * Export sheet calls it when clicked inside the compact toolbar's popover,
+ * then opens once the popover is gone: opened at once, the sheet's handler
+ * would swallow the event the popover needs to finish closing, leaving it
+ * sharp on top of the blurred backdrop. Returns how many were closed. */
+int Mixar_close_popups(wmWindow *win)
+{
+  bScreen *screen = win ? WM_window_get_active_screen(win) : nullptr;
+  if (screen == nullptr) {
+    return 0;
+  }
+  int closed = 0;
+  for (ARegion &region : screen->regionbase) {
+    if (region.runtime == nullptr) {
+      continue;
+    }
+    for (ui::Block &block : region.runtime->uiblocks) {
+      if (block.handle != nullptr) {
+        ui::popup_menu_close(&block, true);
+        closed++;
+        break;
+      }
+    }
+  }
+  if (closed) {
+    WM_event_add_mousemove(win);
+  }
+  return closed;
+}
+
 /* A pop-up re-runs its layout only when its region carries RGN_REFRESH_UI.
  * The WM ID-property writes Python makes from an async callback notify a bare
  * NC_WINDOW, which pop-ups ignore (they refresh on NC_WINDOW | NA_EDITED, a
