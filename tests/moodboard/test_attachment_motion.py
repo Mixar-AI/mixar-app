@@ -151,7 +151,7 @@ def test_composer_hands_the_picture_over_on_landing():
     # retire repaints the island in the same pass -- no frame shows neither.
     assert 'std::min(t, 1.0f)' in flight and 't >= 2.0f' in flight
     assert 'redraw_destination(f);' in flight
-    assert 'f.landing = FlightLanding::Handoff;' in flight
+    assert 'f.context_file_id.empty() ? FlightLanding::Handoff : FlightLanding::Dissolve' in flight
     assert 'f.landing = FlightLanding::Dissolve;' in flight
     assert 'attachment_flight_path(f.source, f.target, f.landing)' in flight
 
@@ -195,7 +195,7 @@ def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
     monkeypatch.setattr(chat_sync, 'bpy', SimpleNamespace(context=SimpleNamespace(scene=scene)))
     monkeypatch.setattr(chat_sync, '_last_signatures', {})
     monkeypatch.setattr(chat_sync, '_ensure_graph_node_ids', lambda _: None)
-    signature = [0, ('a',)]
+    signature = [0, ('a',), ()]
     monkeypatch.setattr(chat_sync, '_compute_selection_signature', lambda _: tuple(signature))
     reconcile = Mock()
     monkeypatch.setattr(chat_sync, '_reconcile_attachments', reconcile)
@@ -210,3 +210,14 @@ def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
     chat_sync._on_file_load_post()
     chat_sync._poll_tick()
     reconcile.assert_called_with(scene, ('b',), animate=False)
+
+
+def test_video_flight_tracks_context_identity_and_lands_on_chip():
+    flight = (ROOT/'src/source/blender/editors/space_mixie/mixie_attachment_flight.cc').read_text()
+    painter = (ROOT/'src/source/blender/editors/space_agent_bubble/agent_bubble_references.cc').read_text()
+    assert 'image->source == IMA_SRC_MOVIE && file_id.empty()' in flight
+    assert 'RNA_string_get(&item, "file_id") == flight.context_file_id' in flight
+    assert 'RNA_string_get(&item, "origin") == "moodboard"' in flight
+    assert 'f.context_file_id.empty() ? FlightLanding::Handoff : FlightLanding::Dissolve' in flight
+    assert 'image->source == IMA_SRC_MOVIE ? &movie_user : nullptr' in flight
+    assert 'ED_moodboard_attachment_target(C, region, path.c_str(), glyph, g.view)' in painter

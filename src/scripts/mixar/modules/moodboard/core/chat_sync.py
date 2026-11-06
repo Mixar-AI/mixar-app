@@ -296,7 +296,9 @@ def _poll_tick():
         )
         # Videos: context-file chips that follow the board selection like the
         # pills do (attach on select, board-owned chips detach on deselect).
-        if any(sync_selected_videos(scene)):
+        if any(sync_selected_videos(
+            scene, animate=previous is not None and previous[2] != signature[2],
+        )):
             _redraw_chat_areas()
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)
