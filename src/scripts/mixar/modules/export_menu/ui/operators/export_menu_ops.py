@@ -23,6 +23,8 @@ from . import export_menu_sheet
 
 _open = False
 _WATCH_SECONDS = 0.3
+# The blurred backdrop; a QA A/B of the opening cost turns it off.
+BLUR = True
 
 
 def _logo_icon(use_case):
@@ -65,6 +67,7 @@ class MIXAR_OT_export_menu(Operator):
         if not props.file_name.strip():
             props.file_name = runner.default_stem(context)
         _load_logos()
+        runner.refresh(props, context)
         _open = True
         wm = context.window_manager
         width = export_menu_sheet.SHEET_WIDTH
@@ -72,7 +75,7 @@ class MIXAR_OT_export_menu(Operator):
             modal = getattr(wm, "mixar_invoke_modal_dialog", None)
             if modal is None:
                 return wm.invoke_props_dialog(self, width=width)
-            for kwargs in ({"sheet": True, "blur": True}, {"sheet": True}, {}):
+            for kwargs in ({"sheet": True, "blur": BLUR}, {"sheet": True}, {}):
                 try:
                     return modal(self, width=width, **kwargs)
                 except TypeError as exc:  # a binary predating `blur` / `sheet`
@@ -104,7 +107,9 @@ class MIXAR_OT_export_menu_pick(Operator):
     format: EnumProperty(items=FORMAT_ITEMS)  # type: ignore[valid-type]
 
     def execute(self, context):
-        context.window_manager.mixar_export_menu.format = self.format
+        props = context.window_manager.mixar_export_menu
+        props.format = self.format
+        runner.refresh(props, context)
         return {'FINISHED'}
 
 
@@ -133,6 +138,7 @@ class MIXAR_OT_export_menu_option(Operator):
             setattr(context.window_manager.mixar_export_menu, self.name, self.value)
         except TypeError:
             return {'CANCELLED'}
+        runner.refresh(context.window_manager.mixar_export_menu, context)
         return {'FINISHED'}
 
 
@@ -154,6 +160,7 @@ class MIXAR_OT_export_menu_toggle(Operator):
             return {'CANCELLED'}
         props = context.window_manager.mixar_export_menu
         setattr(props, self.name, not getattr(props, self.name))
+        runner.refresh(props, context)
         return {'FINISHED'}
 
 

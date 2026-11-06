@@ -126,6 +126,27 @@ def blocker(props, context) -> str:
     return ""
 
 
+# What the sheet shows between redraws. The folder lookup touches the disk
+# and the blocker walks the scene, so neither runs inside draw(): `refresh`
+# runs when the sheet opens and after every pick / option / toggle (the
+# modal sheet keeps selection and the scene still in between), and Export
+# re-checks the blocker before running.
+_view = {"folder": "Downloads", "blocker": ""}
+
+
+def refresh(props, context):
+    try:
+        _view["folder"] = os.path.basename(output_folder().rstrip("/\\")) or "Downloads"
+    except Exception:  # noqa: BLE001 - the label is cosmetic
+        _view["folder"] = "Downloads"
+    _view["blocker"] = blocker(props, context)
+
+
+def view():
+    """``{"folder": <name>, "blocker": <msgid or "">}`` as last refreshed."""
+    return dict(_view)
+
+
 # ---------------------------------------------------------------------------
 # Toasts and reveal
 # ---------------------------------------------------------------------------

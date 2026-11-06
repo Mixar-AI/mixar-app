@@ -36,7 +36,7 @@ FORMATS = (
     Format("FBX", ".fbx", "ARMATURE_DATA", KIND_MODEL),
     Format("OBJ", ".obj", "MESH_CUBE", KIND_MODEL),
     Format("UNREAL", "Unreal", "", KIND_MODEL, use_case="unreal"),
-    Format("UNITY", "Unity", "CUBE", KIND_MODEL, use_case="unity"),
+    Format("UNITY", "Unity", "GHOST_ENABLED", KIND_MODEL, use_case="unity"),
     Format("WEB", n_("Web"), "WORLD", KIND_WEB, translate=True),
     Format("PNG", ".png", "FILE_IMAGE", KIND_IMAGE),
     Format("MP4", ".mp4", "FILE_MOVIE", KIND_VIDEO),

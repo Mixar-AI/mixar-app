@@ -254,13 +254,14 @@ def _draw_export(col, context, props, height):
                           "the scene's full detail."))
     _draw_settings(top, context, props)
 
-    reason = runner.blocker(props, context)
+    cached = runner.view()
+    reason = cached["blocker"]
     line = S.row(col, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
     if reason:
         S.label(line, iface_(reason), S.DANGER_TEXT, translate=False)
     else:
         S.label(line, iface_("Saves to {folder} as {name}").format(
-            folder=_folder_name(), name=runner.stem(props, context) + runner.extension(props)),
+            folder=cached["folder"], name=runner.stem(props, context) + runner.extension(props)),
             S.NOTE, translate=False)
     S.sep(col, S.NOTE_TO_INPUT)
     foot = S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN, align='RIGHT')
@@ -269,11 +270,6 @@ def _draw_export(col, context, props, height):
     slot.enabled = not reason
     S.confirm(slot, OP_RUN, text, S.PRIMARY, default=True)
     S.sep(col, S.BOTTOM)
-
-
-def _folder_name():
-    import os
-    return os.path.basename(runner.output_folder().rstrip("/\\")) or "Downloads"
 
 
 # ---------------------------------------------------------------------------
