@@ -4937,6 +4937,594 @@ msgstr "เอาต์พุต Mixar"
 msgid "Output aspect ratio this camera frames for"
 msgstr "อัตราส่วนภาพเอาต์พุตที่กล้องนี้จัดเฟรม"
 
+msgid "Choose a folder to export to."
+msgstr ""
+
+msgid "Choose a full folder path."
+msgstr ""
+
+msgid "Type a file name."
+msgstr ""
+
+msgid "Windows does not allow this file name. Try another one."
+msgstr ""
+
+msgid "This folder's drive is not available."
+msgstr ""
+
+msgid "Mixar cannot write to this folder. Choose another one."
+msgstr ""
+
+msgid "Rotation and scale not applied"
+msgstr ""
+
+msgid "Modifiers not applied"
+msgstr ""
+
+msgid "Material images not packed"
+msgstr ""
+
+msgid "Paint layers not baked"
+msgstr ""
+
+msgid "Could not create the folder ({error})."
+msgstr ""
+
+msgid "The export stopped unexpectedly. Try again."
+msgstr ""
+
+msgid "Could not save the copy."
+msgstr ""
+
+msgid "The export did not finish."
+msgstr ""
+
+msgid "Another render is running. Try again when it finishes."
+msgstr ""
+
+msgid "Add a camera to the scene first."
+msgstr ""
+
+msgid "Set an end frame after the start frame."
+msgstr ""
+
+msgid "Check the size, frames and frame rate."
+msgstr ""
+
+msgid "The render could not start. Try again."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "3D MODEL"
+msgstr ""
+
+msgid "MEDIA & WEB"
+msgstr ""
+
+msgid "Mixar project"
+msgstr ""
+
+msgid "A copy of everything: scene, paint layers, moodboards and chat. Your open file stays as it is."
+msgstr ""
+
+msgid "Blender file"
+msgstr ""
+
+msgid "Opens in Blender 5.2 or newer. Mixar-only data is kept but ignored there."
+msgstr ""
+
+msgid "glTF / GLB"
+msgstr ""
+
+msgid "The open standard for the web and real-time engines."
+msgstr ""
+
+msgid "The game-engine workhorse, with rigs and animation."
+msgstr ""
+
+msgid "USD / USDZ"
+msgstr ""
+
+msgid "Pixar's scene format. USDZ opens in Quick Look on iPhone and Vision Pro."
+msgstr ""
+
+msgid "OBJ"
+msgstr ""
+
+msgid "Geometry and materials only. Rigs and animation are left out."
+msgstr ""
+
+msgid "3D printing"
+msgstr ""
+
+msgid "One solid STL for slicers like Cura, PrusaSlicer and Bambu Studio."
+msgstr ""
+
+msgid "A still render from a camera, made in the background."
+msgstr ""
+
+msgid "An animation render from a camera, made in the background."
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "An explorable three.js page of this scene, with a link you can share."
+msgstr ""
+
+msgid "Unreal"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "Unity"
+msgstr ""
+
+msgid "unity"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Apple AR"
+msgstr ""
+
+msgid "apple"
+msgstr ""
+
+msgid "Other"
+msgstr "อื่นๆ"
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "{name} is already in this folder. Replace it?"
+msgstr ""
+
+msgid "Replace"
+msgstr "แทนที่"
+
+msgid "Back to settings"
+msgstr ""
+
+msgid "Render image"
+msgstr ""
+
+msgid "Render video"
+msgstr ""
+
+msgid "Save copy"
+msgstr ""
+
+msgid "Export {format}"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
+
+msgid "{size} KB"
+msgstr ""
+
+msgid "Rendering {name} in the background."
+msgstr ""
+
+msgid "You can keep working. A notification says when it is saved."
+msgstr ""
+
+msgid "Saved {name} · {size}"
+msgstr ""
+
+msgid "Agent chat removed from the copy ({count} messages)."
+msgstr ""
+
+msgid "Not watertight: {count} open edges. A slicer may refuse it."
+msgstr ""
+
+msgid "Checked: Mixar opened the file again and it matches."
+msgstr ""
+
+msgid "Export again"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Off"
+msgstr "ปิด"
+
+msgid "On"
+msgstr "เปิด"
+
+msgid "Include"
+msgstr ""
+
+msgid "Leave out"
+msgstr ""
+
+msgid "Agent chat"
+msgstr "แชทเอเจนต์"
+
+msgid "Keep"
+msgstr ""
+
+msgid "Remove from the copy"
+msgstr ""
+
+msgid "Compress"
+msgstr ""
+
+msgid "What to export"
+msgstr ""
+
+msgid "Whole scene"
+msgstr ""
+
+msgid "Selected ({count})"
+msgstr ""
+
+msgid "File"
+msgstr "ไฟล์"
+
+msgid "Animation"
+msgstr "แอนิเมชัน"
+
+msgid "Cameras and lights"
+msgstr ""
+
+msgid "Textures"
+msgstr "พื้นผิว"
+
+msgid "Draco compression"
+msgstr ""
+
+msgid "Apply modifiers"
+msgstr ""
+
+msgid "Up axis"
+msgstr ""
+
+msgid "Y up"
+msgstr ""
+
+msgid "Z up"
+msgstr ""
+
+msgid "Embed in the file"
+msgstr ""
+
+msgid "Copy beside it"
+msgstr ""
+
+msgid "Scale"
+msgstr "ขนาด"
+
+msgid "Leaf bones"
+msgstr ""
+
+msgid "Smoothing"
+msgstr "การปรับเรียบ"
+
+msgid "Keep original paths"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "Binary"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "Made for"
+msgstr ""
+
+msgid "Hide advanced settings"
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "Check the meshes before you export."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check again"
+msgstr ""
+
+msgid "{count} things to fix before export"
+msgstr ""
+
+msgid "Fix in scene"
+msgstr ""
+
+msgid "Ready: {count} meshes pass every check."
+msgstr ""
+
+msgid " and {count} more"
+msgstr ""
+
+msgid "{problem}: {meshes}"
+msgstr ""
+
+msgid "Size"
+msgstr "ขนาด"
+
+msgid "Format"
+msgstr "รูปแบบ"
+
+msgid "Background"
+msgstr "พื้นหลัง"
+
+msgid "Scene"
+msgstr "ฉาก"
+
+msgid "Transparent"
+msgstr "โปร่งใส"
+
+msgid "Frame rate"
+msgstr ""
+
+msgid "Quality"
+msgstr "คุณภาพ"
+
+msgid "Renderer"
+msgstr ""
+
+msgid "Saved as an MP4 (H.264) video. It renders in the background while you work."
+msgstr ""
+
+msgid "It renders in the background while you work; a notification says when it is saved."
+msgstr ""
+
+msgid "Export"
+msgstr "ส่งออก"
+
+msgid "Export this scene as a project copy, a 3D file, an image or video, or a page on the web"
+msgstr ""
+
+msgid "Choose Export Format"
+msgstr ""
+
+msgid "Show this format's export settings"
+msgstr ""
+
+msgid "Made For"
+msgstr ""
+
+msgid "Use the axes, scale and texture settings this engine expects"
+msgstr ""
+
+msgid "Export Setting"
+msgstr ""
+
+msgid "Change this export setting"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Show or hide the exporter's advanced settings"
+msgstr ""
+
+msgid "Export with these settings"
+msgstr ""
+
+msgid "Check Before Export"
+msgstr ""
+
+msgid "Check the meshes for unapplied transforms, modifiers and unbaked paint"
+msgstr ""
+
+msgid "Fix in Scene"
+msgstr ""
+
+msgid "Apply transforms and modifiers, pack images and bake paint layers on the meshes that need it. This changes your scene"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Open the folder the file was saved to"
+msgstr ""
+
+msgid "Back to Settings"
+msgstr ""
+
+msgid "Go back to the export settings"
+msgstr ""
+
+msgid "Save your scene as a project, a 3D file, an image or video, or a page on the web."
+msgstr ""
+
+msgid "Exporting the scene…"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finishing…"
+msgstr ""
+
+msgid "Publish to Web is not available."
+msgstr ""
+
+msgid "Title"
+msgstr "ชื่อเรื่อง"
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Description"
+msgstr "คำอธิบาย"
+
+msgid "Optional"
+msgstr ""
+
+msgid "Who can open it"
+msgstr ""
+
+msgid "Anyone, listed in your gallery"
+msgstr ""
+
+msgid "Only people with the link"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled."
+msgstr ""
+
+msgid "Dismiss"
+msgstr "ปิด"
+
+msgid "Try again"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Uploads this scene and gives you a link to share. Needs a Mixar account."
+msgstr ""
+
+msgid "File Name"
+msgstr ""
+
+msgid "What to Export"
+msgstr ""
+
+msgid "All clips"
+msgstr ""
+
+msgid "GLB · one file"
+msgstr ""
+
+msgid "USDZ · packaged"
+msgstr ""
+
+msgid "USDC · binary"
+msgstr ""
+
+msgid "Cameras and Lights"
+msgstr ""
+
+msgid "Auto"
+msgstr "อัตโนมัติ"
+
+msgid "JPEG"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "Draco Compression"
+msgstr ""
+
+msgid "Apply Modifiers"
+msgstr "ใช้มอดิฟายเออร์"
+
+msgid "Y Up"
+msgstr "Y ขึ้น"
+
+msgid "Embed Textures"
+msgstr "ฝังพื้นผิว"
+
+msgid "Engine default"
+msgstr ""
+
+msgid "Apply units"
+msgstr ""
+
+msgid "Apply all"
+msgstr ""
+
+msgid "Leaf Bones"
+msgstr ""
+
+msgid "Face"
+msgstr "หน้า"
+
+msgid "Edge"
+msgstr "ขอบ"
+
+msgid "Normals only"
+msgstr ""
+
+msgid "Copy Textures"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Centimetres"
+msgstr ""
+
+msgid "Metres"
+msgstr ""
+
+msgid "Remove Agent Chat"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "JPG"
+msgstr ""
+
+msgid "EXR"
+msgstr ""
+
+msgid "Transparent Background"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "Final"
+msgstr ""
+
+msgid "EEVEE"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "ส่งออกเมชที่เลือกไม่สำเร็จ: {error}"
 
@@ -5114,9 +5702,6 @@ msgstr "เปิด: ใช้ภาพที่เลือกอยู่ใ�
 msgid "Result Format"
 msgstr "รูปแบบผลลัพธ์"
 
-msgid "OBJ"
-msgstr ""
-
 msgid "STL"
 msgstr ""
 
@@ -5290,9 +5875,6 @@ msgstr "ไม่สามารถเพิ่มวัตถุใดลงใ
 
 msgid "Cancel the running Hunyuan job"
 msgstr "ยกเลิกงาน Hunyuan ที่กำลังทำงาน"
-
-msgid "Dismiss"
-msgstr "ปิด"
 
 msgid "Dismiss the error and return to idle"
 msgstr "ปิดข้อผิดพลาดและกลับสู่สถานะว่าง"
@@ -5723,9 +6305,6 @@ msgstr ""
 msgid "Connect Dialog State"
 msgstr ""
 
-msgid "Format"
-msgstr "รูปแบบ"
-
 msgid "Processing..."
 msgstr "กำลังประมวลผล..."
 
@@ -6025,9 +6604,6 @@ msgstr "ลอยข้างมือขวา"
 
 msgid "Float by left hand"
 msgstr "ลอยข้างมือซ้าย"
-
-msgid "Auto"
-msgstr "อัตโนมัติ"
 
 msgid "Point forward"
 msgstr "ชี้ไปข้างหน้า"
@@ -6484,12 +7060,6 @@ msgstr "อ้างอิง {number}"
 
 msgid "This template needs an available generation model. Check your connection."
 msgstr "เทมเพลตนี้ต้องใช้โมเดลการสร้างที่พร้อมใช้งาน โปรดตรวจสอบการเชื่อมต่อของคุณ"
-
-msgid "On"
-msgstr "เปิด"
-
-msgid "Off"
-msgstr "ปิด"
 
 msgid "Choose one of the options supported by this model."
 msgstr "เลือกหนึ่งในตัวเลือกที่โมเดลนี้รองรับ"
@@ -7466,9 +8036,6 @@ msgstr "สร้างเสร็จแล้ว"
 msgid "Parameter ID"
 msgstr "ID พารามิเตอร์"
 
-msgid "Description"
-msgstr "คำอธิบาย"
-
 msgid "String value"
 msgstr "ค่าสตริง"
 
@@ -7643,9 +8210,6 @@ msgstr "ภาพตัวอย่างหน้ากาก"
 msgid "3D Preview"
 msgstr "ภาพตัวอย่าง 3D"
 
-msgid "Title"
-msgstr "ชื่อเรื่อง"
-
 msgid "Object Names"
 msgstr "ชื่อวัตถุ"
 
@@ -7802,9 +8366,6 @@ msgstr "ยกเลิกการเลือกทั้งหมด"
 msgid "Frame Selected (Numpad .)"
 msgstr "ดูที่เลือกให้พอดี (Numpad .)"
 
-msgid "Export"
-msgstr "ส่งออก"
-
 msgid "Delete"
 msgstr "ลบ"
 
@@ -7959,9 +8520,6 @@ msgstr "ตำแหน่ง X บนผืนผ้าใบมู้ดบอ
 
 msgid "Y position on the moodboard canvas"
 msgstr "ตำแหน่ง Y บนผืนผ้าใบมู้ดบอร์ด"
-
-msgid "Scale"
-msgstr "ขนาด"
 
 msgid "Scale factor for the image"
 msgstr "ตัวประกอบมาตราส่วนของภาพ"
@@ -12025,9 +12583,6 @@ msgstr "เขียนเฉพาะชื่อไฟล์"
 msgid "Copy textures to the destination path"
 msgstr "คัดลอกพื้นผิวไปยังเส้นทางปลายทาง"
 
-msgid "Embed Textures"
-msgstr "ฝังพื้นผิว"
-
 msgid "Embed textures in FBX binary file (only for \"Copy\" path mode)"
 msgstr "ฝังพื้นผิวในไฟล์ไบนารี FBX (เฉพาะโหมดเส้นทาง \"คัดลอก\")"
 
@@ -12036,9 +12591,6 @@ msgstr "โหมดแบตช์"
 
 msgid "Active scene to file"
 msgstr "ฉากที่ใช้งานเป็นไฟล์"
-
-msgid "Scene"
-msgstr "ฉาก"
 
 msgid "Each scene as a file"
 msgstr "แต่ละฉากเป็นหนึ่งไฟล์"
@@ -12094,9 +12646,6 @@ msgstr "แสงไฟ"
 msgid "Armature"
 msgstr "โครงร่าง"
 
-msgid "Other"
-msgstr "อื่นๆ"
-
 msgid "Other geometry types"
 msgstr "ชนิดเรขาคณิตอื่นๆ"
 
@@ -12148,9 +12697,6 @@ msgstr "ขึ้น"
 msgid "X Up"
 msgstr "X ขึ้น"
 
-msgid "Y Up"
-msgstr "Y ขึ้น"
-
 msgid "Z Up"
 msgstr "Z ขึ้น"
 
@@ -12172,23 +12718,14 @@ msgstr "ใช้การแปลง"
 msgid "Bake space transform into object data (experimental)"
 msgstr "อบการแปลงปริภูมิลงในข้อมูลวัตถุ (ทดลอง)"
 
-msgid "Smoothing"
-msgstr "การปรับเรียบ"
-
 msgid "Normals Only"
 msgstr "แนวฉากเท่านั้น"
 
 msgid "Export only normals"
 msgstr "ส่งออกเฉพาะแนวฉาก"
 
-msgid "Face"
-msgstr "หน้า"
-
 msgid "Write face smoothing"
 msgstr "เขียนการปรับเรียบหน้า"
-
-msgid "Edge"
-msgstr "ขอบ"
 
 msgid "Write edge smoothing"
 msgstr "เขียนการปรับเรียบขอบ"
@@ -12201,9 +12738,6 @@ msgstr "เขียนกลุ่มการปรับเรียบหน
 
 msgid "Export Subdivision Surface"
 msgstr "ส่งออกพื้นผิวแบ่งส่วนย่อย"
-
-msgid "Apply Modifiers"
-msgstr "ใช้มอดิฟายเออร์"
 
 msgid "Loose Edges"
 msgstr "ขอบลอย"
@@ -12718,17 +13252,11 @@ msgstr "จดจำการตั้งค่าส่งออก"
 msgid "Keep Original"
 msgstr "คงต้นฉบับ"
 
-msgid "Textures"
-msgstr "พื้นผิว"
-
 msgid "General"
 msgstr "ทั่วไป"
 
 msgid "Grouping"
 msgstr "การจัดกลุ่ม"
-
-msgid "Animation"
-msgstr "แอนิเมชัน"
 
 msgid "Export OBJ"
 msgstr "ส่งออก OBJ"
@@ -14149,9 +14677,6 @@ msgstr "ขาว"
 msgid "Black"
 msgstr "ดำ"
 
-msgid "Transparent"
-msgstr "โปร่งใส"
-
 msgid "Atlas Settings"
 msgstr "การตั้งค่าแอตลาส"
 
@@ -14204,12 +14729,6 @@ msgstr ""
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr ""
-
-msgid "JPEG"
-msgstr ""
-
 msgid "JPEG 2000"
 msgstr ""
 
@@ -14235,9 +14754,6 @@ msgid "Radiance HDR"
 msgstr ""
 
 msgid "TIFF"
-msgstr ""
-
-msgid "WebP"
 msgstr ""
 
 msgid "Copy Image Path To Clipboard"
@@ -14380,9 +14896,6 @@ msgstr ""
 
 msgid "J2K"
 msgstr ""
-
-msgid "Quality"
-msgstr "คุณภาพ"
 
 msgid "Cinema 48"
 msgstr ""
@@ -18615,9 +19128,6 @@ msgstr "การแมป"
 msgid "Offset"
 msgstr "ออฟเซต"
 
-msgid "Size"
-msgstr "ขนาด"
-
 msgid "Rake"
 msgstr "เรก"
 
@@ -19086,9 +19596,6 @@ msgstr "ปริภูมิโลกของ Blender"
 msgid "World space normal mapping, compatible with Blender render baking"
 msgstr "การแมปแนวฉากในปริภูมิโลก ใช้ร่วมกับการอบด้วยเรนเดอร์ของ Blender ได้"
 
-msgid "Replace"
-msgstr "แทนที่"
-
 msgid "Compare"
 msgstr "เปรียบเทียบ"
 
@@ -19187,9 +19694,6 @@ msgstr "การผสมแบบบวก"
 
 msgid "Musgrave"
 msgstr "มัสเกรฟ"
-
-msgid "Background"
-msgstr "พื้นหลัง"
 
 msgid "Procedural Material"
 msgstr "วัสดุเชิงกระบวนการ"
@@ -19560,20 +20064,29 @@ msgstr "โปรดตรวจสอบกล้องของฉากแล
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "ใช้ EEVEE เนื่องจากฉากนี้เกินงบหน่วยความจำของ Cycles"
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "ผลลัพธ์จะปรากฏในมู้ดบอร์ดเมื่อเสร็จ ใช้ตัวควบคุมความคืบหน้าการเรนเดอร์เพื่อยกเลิก"
 
-msgid "Rendering video"
-msgstr "กำลังเรนเดอร์วิดีโอ"
+msgid "Video saved"
+msgstr ""
 
-msgid "Rendering image"
-msgstr "กำลังเรนเดอร์ภาพ"
+msgid "Image saved"
+msgstr ""
 
 msgid "Video added to Moodboard"
 msgstr "เพิ่มวิดีโอลงในมู้ดบอร์ดแล้ว"
 
 msgid "Image added to Moodboard"
 msgstr "เพิ่มภาพลงในมู้ดบอร์ดแล้ว"
+
+msgid "Rendering video"
+msgstr "กำลังเรนเดอร์วิดีโอ"
+
+msgid "Rendering image"
+msgstr "กำลังเรนเดอร์ภาพ"
 
 msgid "Render cancelled"
 msgstr "ยกเลิกการเรนเดอร์แล้ว"
@@ -20386,9 +20899,6 @@ msgid "Your Codex sign-in file is not writable — fix its permissions or sign i
 msgstr ""
 
 msgid "Couldn't renew your Codex sign-in — check your connection"
-msgstr ""
-
-msgid "Try again"
 msgstr ""
 
 msgid "no Codex sign-in was found"
@@ -21597,16 +22107,7 @@ msgstr ""
 msgid "Choose a folder in the file browser"
 msgstr ""
 
-msgid "Godot"
-msgstr ""
-
-msgid "godot"
-msgstr ""
-
 msgid "Unreal Engine"
-msgstr ""
-
-msgid "unreal"
 msgstr ""
 
 msgid "New project"
@@ -21640,9 +22141,6 @@ msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."
-msgstr ""
-
-msgid "PROJECT"
 msgstr ""
 
 msgid "Location"
@@ -22080,9 +22578,6 @@ msgstr ""
 msgid "Stop selected agents, archive their chats and delete these scenes"
 msgstr ""
 
-msgid "Yes"
-msgstr ""
-
 msgid "New Scene"
 msgstr ""
 
@@ -22343,9 +22838,6 @@ msgstr "เส้นทางไฟล์หรือชื่อรูปภา
 
 msgid "Image Source"
 msgstr "แหล่งที่มาของรูปภาพ"
-
-msgid "File"
-msgstr "ไฟล์"
 
 msgid "Image from file system"
 msgstr "รูปภาพจากระบบไฟล์"
@@ -25227,9 +25719,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
 msgid "Publish this scene as an explorable 3D website with a shareable link"
 msgstr ""
 
@@ -25266,9 +25755,6 @@ msgstr ""
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
-msgid "Unpublish"
-msgstr ""
-
 msgid "Remove the published website and its stored files"
 msgstr ""
 
@@ -25276,48 +25762,6 @@ msgid "Scene unpublished"
 msgstr ""
 
 msgid "Dismiss the publish outcome"
-msgstr ""
-
-msgid "Uploading…"
-msgstr ""
-
-msgid "Finalizing…"
-msgstr ""
-
-msgid "Publish unavailable"
-msgstr ""
-
-msgid "Publishing another scene…"
-msgstr ""
-
-msgid "Scene title"
-msgstr ""
-
-msgid "Will publish as “{title}”"
-msgstr ""
-
-msgid "Access"
-msgstr ""
-
-msgid "Creates a shareable link to an"
-msgstr ""
-
-msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
-msgstr ""
-
-msgid "Publish failed"
-msgstr ""
-
-msgid "Live · v{revision}"
-msgstr ""
-
-msgid "Update"
-msgstr ""
-
-msgid "Publish New Version"
 msgstr ""
 
 msgid "Not publishing"
@@ -25344,10 +25788,19 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+msgid "Publish failed"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
 msgid "Public title of your 3D website"
 msgstr ""
 
 msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Access"
 msgstr ""
 
 msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
@@ -25873,6 +26326,9 @@ msgid "Properties"
 msgstr "คุณสมบัติ"
 
 msgid "Blend (.blend)"
+msgstr ""
+
+msgid "Export…"
 msgstr ""
 
 msgid "Publish to Web…"
@@ -26438,9 +26894,6 @@ msgstr "ไม่ได้เลือก"
 
 msgid "no image added"
 msgstr "ยังไม่ได้เพิ่มรูปภาพ"
-
-msgid "Agent chat"
-msgstr "แชทเอเจนต์"
 
 msgid "3D generation"
 msgstr "การสร้าง 3D"
@@ -28743,6 +29196,12 @@ msgstr ""
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
 msgstr ""
 
+msgid "Tile"
+msgstr ""
+
+msgid "App-icon square with the button's preview icon and its label under it; lit draws the focus ring"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "แถบเลื่อนโหมดซ้าย"
 
@@ -29891,9 +30350,6 @@ msgstr "กรองไฟล์ .mixar"
 
 msgid "Filter backup .mixar files"
 msgstr "กรองไฟล์สำรอง .mixar"
-
-msgid "No"
-msgstr ""
 
 msgctxt "WindowManager"
 msgid "Newer graphics drivers might be available with better Mixar compatibility."

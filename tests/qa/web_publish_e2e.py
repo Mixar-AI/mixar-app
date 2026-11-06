@@ -10,7 +10,7 @@ presigned storage. Uses only a small QA scene; no generation jobs.
     QA_HARNESS=/path/to/mixar-qa-harness QA_PORT=4777 \
         QA_SCENARIO_OUT=/tmp/web-publish-qa python3 tests/qa/web_publish_e2e.py
 
-Proves: Export opens a persistent Publish to Web popup; Publish runs the shared
+Proves: Export opens the Export card on Publish to Web; Publish runs the shared
 export lane (Draco/WebP) and progresses EXPORTING → UPLOADING → DONE in the
 WindowManager mirror; the result is filed on the published scene; Copy
 Link puts the share URL on the clipboard. Vision: snaps of the form,
@@ -87,23 +87,24 @@ def main():
         qa.cmd('wait_login', timeout=60)
         scene_name = qa.eval(FIXTURE)
         qa.click(text='Export', region_type='HEADER')
-        qa.wait("bool(drv.find(text='Publish to Web…'))", timeout=10)
-        snap(qa, '00-export-menu')
-        # Existing file exports remain alongside publishing.
-        assert qa.eval("result = bool(drv.find(text='Blend (.blend)'))")
-        qa.click(op='WM_OT_call_panel', text='Publish to Web…')
-        qa.wait("bool(drv.find(op='MIXAR_OT_web_publish'))", timeout=10)
+        qa.wait("bool(drv.find(op='MIXAR_OT_export_card_pick'))", timeout=10)
+        snap(qa, '00-export-card')
+        # File exports sit beside publishing on the card's tiles.
+        assert qa.eval("result = bool(drv.find(op='MIXAR_OT_export_card_pick', text='.blend'))")
+        qa.click(op='MIXAR_OT_export_card_pick', text='Web')
+        qa.wait("bool(drv.find(op='MIXAR_OT_export_card_run', text='Publish to Web'))", timeout=10)
         assert qa.eval(f"result = {PROPS}.is_published") is False
-        assert qa.eval("result = hasattr(bpy.types, 'MIXAR_PT_web_publish')")
+        # The Export menu popover is retired: the card is the only surface.
+        assert qa.eval("result = not hasattr(bpy.types, 'MIXAR_PT_web_publish')")
         snap(qa, '01-form')
-        verdict['steps'].append('Export menu opens publish popup with file exports preserved')
+        verdict['steps'].append('Export card opens Publish to Web with file exports beside it')
 
         # [BACKEND] sign-in: the operator refuses while signed out.
         qa.cmd('wait_login', timeout=60)
 
         # [BACKEND] Publish: export runs synchronously in the click; the
         # upload thread then advances the WindowManager mirror.
-        qa.click(op='MIXAR_OT_web_publish')
+        qa.click(op='MIXAR_OT_export_card_run', text='Publish to Web')
         qa.wait(f"{WM}.mixar_web_publish_scene == {scene_name!r}", timeout=30)
         qa.wait(f"{WM}.mixar_web_publish_status in ('UPLOADING', 'FINALIZING', 'DONE', 'ERROR', 'CANCELLED')",
                 timeout=60)
@@ -148,10 +149,10 @@ result = agent_api.publish_status(get_publish_state().publish_id)
         assert updated['slug'] == published['slug'] and updated['link'] == published['link'], updated
         snap(qa, '04-new-version')
         verdict['steps'].append('new version keeps share link')
-        # Closing the popup never loses publication state; Export reopens it.
+        # Closing the card never loses publication state; Export reopens it
+        # on the Web tile it was left on.
         qa.cmd('press', key='ESC')
         qa.click(text='Export', region_type='HEADER')
-        qa.click(op='WM_OT_call_panel', text='Publish to Web…')
         qa.wait("bool(drv.find(op='MIXAR_OT_web_publish_copy_link'))", timeout=10)
         assert qa.eval(f"result = {PROPS}.link") == updated['link']
         snap(qa, '05-reopened')

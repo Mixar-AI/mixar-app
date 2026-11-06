@@ -223,9 +223,14 @@ def draw_right(layout, context, *, tier):
 
 
 def draw_export(layout):
+    """The Export button: opens the Export card (`export_card`); Blender's
+    format menu stays under File ▸ Export."""
     export = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     export.ui_units_x = 4.2
-    export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
+    if hasattr(bpy.types, "MIXAR_OT_export_card"):
+        export.operator("mixar.export_card", text="Export", icon="EXPORT")
+    else:
+        export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
     style(export, "PRIMARY")
 
 

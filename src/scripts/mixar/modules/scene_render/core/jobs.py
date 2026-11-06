@@ -8,6 +8,7 @@ teardown, keeping the shared render reservation through persistence/restore.
 No chat lifetime, polling RPC, preview caps or synchronous fallback.
 """
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -22,7 +23,7 @@ from mixar.modules.common.render_coordinator import core as slot
 from ..constants import (RESULTS_NS, MAX_RESULTS, TICK_SECONDS, LOST_AFTER_SECONDS,
                          CALLBACK_FEATURE_KEY, CALLBACK_JOB_TYPES, CALLBACK_STATUSES)
 from .settings import Settings, render_info
-from .outputs import deliver, notify
+from .outputs import deliver, deliver_file, notify
 
 logger = get_logger(__name__)
 _job = None
@@ -131,13 +132,17 @@ def _tick(job):
                    render=job['render'])
     try:
         slot.phase(job['reservation'], 'finalizing')
-        if status == 'done':
+        if status == 'done' and job.get('destination'):
+            value['file_name'] = deliver_file(job)
+        elif status == 'done':
             value['moodboard_image_name'] = deliver(job)
         elif status == 'failed':
             value['error'] = 'render_completion_lost'
     except Exception:
         logger.exception('Scene render delivery failed')
-        value.update(success=False, status='failed', error='moodboard_delivery_failed')
+        value.update(success=False, status='failed',
+                     error='file_delivery_failed' if job.get('destination')
+                     else 'moodboard_delivery_failed')
     finally:
         try:
             last = (job['render']['frame_start'] + max(0, job['written'] - 1) *
@@ -150,14 +155,21 @@ def _tick(job):
             shutil.rmtree(job['folder'], ignore_errors=True)
     value['elapsed_seconds'] = round(time.monotonic() - job['started'], 2)
     _publish(job['key'], value)
+    to_file = bool(job.get('destination'))
+    done_body = (os.path.basename(job['destination']) if to_file
+                 else rpt_('Open Moodboard to view it.'))
     notify(job['key'], job['kind'], value['status'],
-           rpt_('Open Moodboard to view it.') if value['status'] == 'done' else
-           rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '')
+           done_body if value['status'] == 'done' else
+           rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '',
+           to_file=to_file)
     _report(job, value['status'], value.get('error', ''), value.get('moodboard_image_name', ''))
     return None
 
 
-def start(context, key, kind='image', label='', expected_session='', agent_ref_json='', **options):
+def start(context, key, kind='image', label='', expected_session='', agent_ref_json='',
+          destination='', **options):
+    """``destination`` (an absolute path, the Export card's) saves the render
+    to that file instead of adding it to Moodboard."""
     global _job
     if not isinstance(key, str) or not re.fullmatch('[a-f0-9]{32}', key):
         return _reply('', 'failed', error='invalid_job_id')
@@ -180,7 +192,10 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
     session = str(getattr(scene, 'mixie_session_id', '') or '')
     if expected_session and expected_session != session:
         return _reply(key, 'failed', error='wrong_scene')
-    if scene.camera is None or context.window is None or bpy.app.background:
+    camera_name = options.get('camera') or ''
+    chosen = scene.objects.get(camera_name) if camera_name else None
+    has_camera = scene.camera is not None or (chosen is not None and chosen.type == 'CAMERA')
+    if not has_camera or context.window is None or bpy.app.background:
         return _reply(key, 'failed', error='camera_and_window_required')
     engine = options.get('engine', '')
     width, height = options.get('width', 0), options.get('height', 0)
@@ -207,7 +222,7 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
         job = dict(key=key, kind=kind, scene=scene, session=session, settings=settings,
                    folder=folder, path=path, label=label[:200], started=time.monotonic(),
                    terminal=None, written=0, reservation=reservation, render={},
-                   agent_ref=_agent_ref(agent_ref_json))
+                   agent_ref=_agent_ref(agent_ref_json), destination=str(destination or ''))
         _job = job
         settings.apply(kind, path, **options)
         job['render'] = render_info(scene)
@@ -233,7 +248,10 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
                                      render=job['render']))
         notify(key, kind, 'started',
                (rpt_('Using EEVEE because this scene exceeds the Cycles memory budget.') + ' ' if settings.downgraded else '') +
-               rpt_('It will appear in Moodboard when finished. Use the render progress control to cancel.'))
+               (rpt_('It will be saved as {name} when finished. Use the render progress control to cancel.').format(
+                   name=os.path.basename(job['destination'])) if job['destination'] else
+                rpt_('It will appear in Moodboard when finished. Use the render progress control to cancel.')),
+               to_file=bool(job['destination']))
         return value
     except Exception:
         logger.exception('Could not start scene render')

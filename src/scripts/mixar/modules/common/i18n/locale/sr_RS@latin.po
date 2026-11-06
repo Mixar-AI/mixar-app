@@ -6117,6 +6117,599 @@ msgstr "Mixar izlaz"
 msgid "Output aspect ratio this camera frames for"
 msgstr "Izlazni odnos stranice za koji ova kamera ukadruje"
 
+msgid "Choose a folder to export to."
+msgstr ""
+
+msgid "Choose a full folder path."
+msgstr ""
+
+msgid "Type a file name."
+msgstr ""
+
+msgid "Windows does not allow this file name. Try another one."
+msgstr ""
+
+msgid "This folder's drive is not available."
+msgstr ""
+
+msgid "Mixar cannot write to this folder. Choose another one."
+msgstr ""
+
+msgid "Rotation and scale not applied"
+msgstr ""
+
+msgid "Modifiers not applied"
+msgstr ""
+
+msgid "Material images not packed"
+msgstr ""
+
+msgid "Paint layers not baked"
+msgstr ""
+
+msgid "Could not create the folder ({error})."
+msgstr ""
+
+msgid "The export stopped unexpectedly. Try again."
+msgstr ""
+
+msgid "Could not save the copy."
+msgstr ""
+
+msgid "The export did not finish."
+msgstr ""
+
+msgid "Another render is running. Try again when it finishes."
+msgstr ""
+
+msgid "Add a camera to the scene first."
+msgstr ""
+
+msgid "Set an end frame after the start frame."
+msgstr ""
+
+msgid "Check the size, frames and frame rate."
+msgstr ""
+
+msgid "The render could not start. Try again."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "3D MODEL"
+msgstr ""
+
+msgid "MEDIA & WEB"
+msgstr ""
+
+msgid "Mixar project"
+msgstr ""
+
+msgid "A copy of everything: scene, paint layers, moodboards and chat. Your open file stays as it is."
+msgstr ""
+
+msgid "Blender file"
+msgstr ""
+
+msgid "Opens in Blender 5.2 or newer. Mixar-only data is kept but ignored there."
+msgstr ""
+
+msgid "glTF / GLB"
+msgstr ""
+
+msgid "The open standard for the web and real-time engines."
+msgstr ""
+
+msgid "The game-engine workhorse, with rigs and animation."
+msgstr ""
+
+msgid "USD / USDZ"
+msgstr ""
+
+msgid "Pixar's scene format. USDZ opens in Quick Look on iPhone and Vision Pro."
+msgstr ""
+
+msgid "OBJ"
+msgstr ""
+
+msgid "Geometry and materials only. Rigs and animation are left out."
+msgstr ""
+
+msgid "3D printing"
+msgstr ""
+
+msgid "One solid STL for slicers like Cura, PrusaSlicer and Bambu Studio."
+msgstr ""
+
+msgid "A still render from a camera, made in the background."
+msgstr ""
+
+msgid "An animation render from a camera, made in the background."
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "An explorable three.js page of this scene, with a link you can share."
+msgstr ""
+
+msgid "Unreal"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "Unity"
+msgstr ""
+
+msgid "unity"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Apple AR"
+msgstr ""
+
+msgid "apple"
+msgstr ""
+
+msgid "Other"
+msgstr "Ostalo"
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "{name} is already in this folder. Replace it?"
+msgstr ""
+
+msgid "Replace"
+msgstr "Zameni"
+
+msgid "Back to settings"
+msgstr ""
+
+msgid "Render image"
+msgstr ""
+
+msgid "Render video"
+msgstr ""
+
+msgid "Save copy"
+msgstr ""
+
+msgid "Export {format}"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
+
+msgid "{size} KB"
+msgstr ""
+
+msgid "Rendering {name} in the background."
+msgstr ""
+
+msgid "You can keep working. A notification says when it is saved."
+msgstr ""
+
+msgid "Saved {name} · {size}"
+msgstr ""
+
+msgid "Agent chat removed from the copy ({count} messages)."
+msgstr ""
+
+msgid "Not watertight: {count} open edges. A slicer may refuse it."
+msgstr ""
+
+msgid "Checked: Mixar opened the file again and it matches."
+msgstr ""
+
+msgid "Export again"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Off"
+msgstr "Isključeno"
+
+# derived
+msgid "On"
+msgstr "Uključeno"
+
+msgid "Include"
+msgstr ""
+
+msgid "Leave out"
+msgstr ""
+
+# derived
+msgid "Agent chat"
+msgstr "Ćaskanje sa agentom"
+
+msgid "Keep"
+msgstr ""
+
+msgid "Remove from the copy"
+msgstr ""
+
+msgid "Compress"
+msgstr ""
+
+msgid "What to export"
+msgstr ""
+
+msgid "Whole scene"
+msgstr ""
+
+msgid "Selected ({count})"
+msgstr ""
+
+msgid "File"
+msgstr "Datoteka"
+
+msgid "Animation"
+msgstr "Animacija"
+
+msgid "Cameras and lights"
+msgstr ""
+
+msgid "Textures"
+msgstr "Teksture"
+
+msgid "Draco compression"
+msgstr ""
+
+msgid "Apply modifiers"
+msgstr ""
+
+msgid "Up axis"
+msgstr ""
+
+msgid "Y up"
+msgstr ""
+
+msgid "Z up"
+msgstr ""
+
+msgid "Embed in the file"
+msgstr ""
+
+msgid "Copy beside it"
+msgstr ""
+
+msgid "Scale"
+msgstr "Uvećanje"
+
+msgid "Leaf bones"
+msgstr ""
+
+msgid "Smoothing"
+msgstr "Umekšanje"
+
+msgid "Keep original paths"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "Binary"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "Made for"
+msgstr ""
+
+msgid "Hide advanced settings"
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "Check the meshes before you export."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check again"
+msgstr ""
+
+msgid "{count} things to fix before export"
+msgstr ""
+
+msgid "Fix in scene"
+msgstr ""
+
+msgid "Ready: {count} meshes pass every check."
+msgstr ""
+
+msgid " and {count} more"
+msgstr ""
+
+msgid "{problem}: {meshes}"
+msgstr ""
+
+msgid "Size"
+msgstr "Veličina"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Background"
+msgstr "Pozadina"
+
+msgid "Scene"
+msgstr "Scena"
+
+msgid "Transparent"
+msgstr "Providno"
+
+msgid "Frame rate"
+msgstr ""
+
+msgid "Quality"
+msgstr "Kvalitet"
+
+msgid "Renderer"
+msgstr ""
+
+msgid "Saved as an MP4 (H.264) video. It renders in the background while you work."
+msgstr ""
+
+msgid "It renders in the background while you work; a notification says when it is saved."
+msgstr ""
+
+msgid "Export"
+msgstr "Izvoz"
+
+msgid "Export this scene as a project copy, a 3D file, an image or video, or a page on the web"
+msgstr ""
+
+msgid "Choose Export Format"
+msgstr ""
+
+msgid "Show this format's export settings"
+msgstr ""
+
+msgid "Made For"
+msgstr ""
+
+msgid "Use the axes, scale and texture settings this engine expects"
+msgstr ""
+
+msgid "Export Setting"
+msgstr ""
+
+msgid "Change this export setting"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Show or hide the exporter's advanced settings"
+msgstr ""
+
+msgid "Export with these settings"
+msgstr ""
+
+msgid "Check Before Export"
+msgstr ""
+
+msgid "Check the meshes for unapplied transforms, modifiers and unbaked paint"
+msgstr ""
+
+msgid "Fix in Scene"
+msgstr ""
+
+msgid "Apply transforms and modifiers, pack images and bake paint layers on the meshes that need it. This changes your scene"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Open the folder the file was saved to"
+msgstr ""
+
+msgid "Back to Settings"
+msgstr ""
+
+msgid "Go back to the export settings"
+msgstr ""
+
+msgid "Save your scene as a project, a 3D file, an image or video, or a page on the web."
+msgstr ""
+
+msgid "Exporting the scene…"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finishing…"
+msgstr ""
+
+msgid "Publish to Web is not available."
+msgstr ""
+
+msgid "Title"
+msgstr "Naslov"
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Description"
+msgstr "Opis"
+
+msgid "Optional"
+msgstr ""
+
+msgid "Who can open it"
+msgstr ""
+
+msgid "Anyone, listed in your gallery"
+msgstr ""
+
+msgid "Only people with the link"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled."
+msgstr ""
+
+# derived
+msgid "Dismiss"
+msgstr "Odbaci"
+
+msgid "Try again"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Uploads this scene and gives you a link to share. Needs a Mixar account."
+msgstr ""
+
+msgid "File Name"
+msgstr ""
+
+msgid "What to Export"
+msgstr ""
+
+msgid "All clips"
+msgstr ""
+
+msgid "GLB · one file"
+msgstr ""
+
+msgid "USDZ · packaged"
+msgstr ""
+
+msgid "USDC · binary"
+msgstr ""
+
+msgid "Cameras and Lights"
+msgstr ""
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "JPEG"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "Draco Compression"
+msgstr ""
+
+# derived
+msgid "Apply Modifiers"
+msgstr "Primeni modifikatore"
+
+msgid "Y Up"
+msgstr "Gore po Y"
+
+# derived
+msgid "Embed Textures"
+msgstr "Ugradi teksture"
+
+msgid "Engine default"
+msgstr ""
+
+msgid "Apply units"
+msgstr ""
+
+msgid "Apply all"
+msgstr ""
+
+msgid "Leaf Bones"
+msgstr ""
+
+msgid "Face"
+msgstr "Stranica"
+
+msgid "Edge"
+msgstr "Ivica"
+
+msgid "Normals only"
+msgstr ""
+
+msgid "Copy Textures"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Centimetres"
+msgstr ""
+
+msgid "Metres"
+msgstr ""
+
+msgid "Remove Agent Chat"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "JPG"
+msgstr ""
+
+msgid "EXR"
+msgstr ""
+
+msgid "Transparent Background"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "Final"
+msgstr ""
+
+msgid "EEVEE"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
 # derived
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "Izvoz izabranih meševa nije uspeo: {error}"
@@ -6326,9 +6919,6 @@ msgstr "UKLJUČENO: koristi trenutno izabranu sliku mudborda. ISKLJUČENO: koris
 # derived
 msgid "Result Format"
 msgstr "Format rezultata"
-
-msgid "OBJ"
-msgstr ""
 
 msgid "STL"
 msgstr ""
@@ -6552,10 +7142,6 @@ msgstr "Nijedan objekat nije mogao da se stavi u red (svi su preskočeni ili izv
 # derived
 msgid "Cancel the running Hunyuan job"
 msgstr "Odustaje od tekućeg Hunyuan zadatka"
-
-# derived
-msgid "Dismiss"
-msgstr "Odbaci"
 
 # derived
 msgid "Dismiss the error and return to idle"
@@ -7037,9 +7623,6 @@ msgstr ""
 msgid "Connect Dialog State"
 msgstr ""
 
-msgid "Format"
-msgstr "Format"
-
 # derived
 msgid "Processing..."
 msgstr "Obrada…"
@@ -7427,9 +8010,6 @@ msgstr "Lebdi pored desne šake"
 # derived
 msgid "Float by left hand"
 msgstr "Lebdi pored leve šake"
-
-msgid "Auto"
-msgstr "Auto"
 
 # derived
 msgid "Point forward"
@@ -8030,13 +8610,6 @@ msgstr "Referenca {number}"
 # derived
 msgid "This template needs an available generation model. Check your connection."
 msgstr "Ovom šablonu treba dostupan model generisanja. Proverite vezu."
-
-# derived
-msgid "On"
-msgstr "Uključeno"
-
-msgid "Off"
-msgstr "Isključeno"
 
 # derived
 msgid "Choose one of the options supported by this model."
@@ -9314,9 +9887,6 @@ msgstr "Generisanje je završeno"
 msgid "Parameter ID"
 msgstr "ID parametra"
 
-msgid "Description"
-msgstr "Opis"
-
 # derived
 msgid "String value"
 msgstr "Tekstualna vrednost"
@@ -9541,9 +10111,6 @@ msgstr "Pregled maske"
 msgid "3D Preview"
 msgstr "3D pregled"
 
-msgid "Title"
-msgstr "Naslov"
-
 # derived
 msgid "Object Names"
 msgstr "Imena objekata"
@@ -9746,9 +10313,6 @@ msgstr "Poništi ceo izabor"
 msgid "Frame Selected (Numpad .)"
 msgstr "Uklopi izabrano (Numpad .)"
 
-msgid "Export"
-msgstr "Izvoz"
-
 # derived
 msgid "Delete"
 msgstr "Obriši"
@@ -9946,9 +10510,6 @@ msgstr "Pozicija X na platnu mudborda"
 # derived
 msgid "Y position on the moodboard canvas"
 msgstr "Pozicija Y na platnu mudborda"
-
-msgid "Scale"
-msgstr "Uvećanje"
 
 # derived
 msgid "Scale factor for the image"
@@ -15240,10 +15801,6 @@ msgid "Copy textures to the destination path"
 msgstr "Kopiraj teksture na odredišnu putanju"
 
 # derived
-msgid "Embed Textures"
-msgstr "Ugradi teksture"
-
-# derived
 msgid "Embed textures in FBX binary file (only for \"Copy\" path mode)"
 msgstr "Ugradi teksture u binarnu FBX datoteku (samo za režim putanje „Kopiraj“)"
 
@@ -15253,9 +15810,6 @@ msgstr "Paketni režim"
 
 msgid "Active scene to file"
 msgstr "Aktivna scena u datoteku"
-
-msgid "Scene"
-msgstr "Scena"
 
 msgid "Each scene as a file"
 msgstr "Svaka scena kao datoteka"
@@ -15323,9 +15877,6 @@ msgstr "Svetlo"
 msgid "Armature"
 msgstr "Kostur"
 
-msgid "Other"
-msgstr "Ostalo"
-
 # derived
 msgid "Other geometry types"
 msgstr "Druge vrste geometrije"
@@ -15391,9 +15942,6 @@ msgstr "Gore"
 msgid "X Up"
 msgstr "X gore"
 
-msgid "Y Up"
-msgstr "Gore po Y"
-
 msgid "Z Up"
 msgstr "Gore po Z"
 
@@ -15421,9 +15969,6 @@ msgstr "Primeni transformaciju"
 msgid "Bake space transform into object data (experimental)"
 msgstr "Ispeci prostornu transformaciju u podatke objekta (eksperimentalno)"
 
-msgid "Smoothing"
-msgstr "Umekšanje"
-
 # derived
 msgid "Normals Only"
 msgstr "Samo normale"
@@ -15432,14 +15977,8 @@ msgstr "Samo normale"
 msgid "Export only normals"
 msgstr "Izvezi samo normale"
 
-msgid "Face"
-msgstr "Stranica"
-
 msgid "Write face smoothing"
 msgstr "Upisuj umekšanje strana"
-
-msgid "Edge"
-msgstr "Ivica"
 
 msgid "Write edge smoothing"
 msgstr "Upisuj umekšanje ivica"
@@ -15455,10 +15994,6 @@ msgstr "Piši grupe umekšavanja stranica"
 # derived
 msgid "Export Subdivision Surface"
 msgstr "Izvezi površ podele"
-
-# derived
-msgid "Apply Modifiers"
-msgstr "Primeni modifikatore"
 
 # derived
 msgid "Loose Edges"
@@ -16118,9 +16653,6 @@ msgstr "Zapamti podešavanja izvoza"
 msgid "Keep Original"
 msgstr "Sačuvaj original"
 
-msgid "Textures"
-msgstr "Teksture"
-
 # derived
 msgid "General"
 msgstr "Opšte"
@@ -16128,9 +16660,6 @@ msgstr "Opšte"
 # derived
 msgid "Grouping"
 msgstr "Grupisanje"
-
-msgid "Animation"
-msgstr "Animacija"
 
 # derived
 msgid "Export OBJ"
@@ -17985,9 +18514,6 @@ msgstr "Bela"
 msgid "Black"
 msgstr "Crno"
 
-msgid "Transparent"
-msgstr "Providno"
-
 # derived
 msgid "Atlas Settings"
 msgstr "Podešavanja atlasa"
@@ -18051,12 +18577,6 @@ msgstr ""
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr ""
-
-msgid "JPEG"
-msgstr ""
-
 msgid "JPEG 2000"
 msgstr ""
 
@@ -18082,9 +18602,6 @@ msgid "Radiance HDR"
 msgstr ""
 
 msgid "TIFF"
-msgstr ""
-
-msgid "WebP"
 msgstr ""
 
 # derived
@@ -18260,9 +18777,6 @@ msgstr ""
 
 msgid "J2K"
 msgstr ""
-
-msgid "Quality"
-msgstr "Kvalitet"
 
 msgid "Cinema 48"
 msgstr ""
@@ -23775,9 +24289,6 @@ msgstr "Mapiranje"
 msgid "Offset"
 msgstr "Odstojanje"
 
-msgid "Size"
-msgstr "Veličina"
-
 msgid "Rake"
 msgstr "Grabulje"
 
@@ -24373,9 +24884,6 @@ msgstr "Prostor sveta Blender-a"
 msgid "World space normal mapping, compatible with Blender render baking"
 msgstr "Mapiranje normala u prostoru sveta, saglasno sa pečenjem renderinga Blender-a"
 
-msgid "Replace"
-msgstr "Zameni"
-
 msgid "Compare"
 msgstr "Uporedi"
 
@@ -24504,9 +25012,6 @@ msgstr "Aditivno mešanje"
 # derived
 msgid "Musgrave"
 msgstr "Masgrejv"
-
-msgid "Background"
-msgstr "Pozadina"
 
 # derived
 msgid "Procedural Material"
@@ -24979,17 +25484,18 @@ msgstr "Proverite kameru scene i podešavanja renderinga, pa pokušajte ponovo."
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "Koristi se EEVEE jer ova scena premašuje memorijski budžet Cycles-a."
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 # derived
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "Pojaviće se na mudbordu kada se završi. Otkažite kontrolom napretka renderinga."
 
-# derived
-msgid "Rendering video"
-msgstr "Renderovanje video-zapisa"
+msgid "Video saved"
+msgstr ""
 
-# derived
-msgid "Rendering image"
-msgstr "Renderovanje slike"
+msgid "Image saved"
+msgstr ""
 
 # derived
 msgid "Video added to Moodboard"
@@ -24998,6 +25504,14 @@ msgstr "Video-zapis je dodat na mudbord"
 # derived
 msgid "Image added to Moodboard"
 msgstr "Slika je dodata na mudbord"
+
+# derived
+msgid "Rendering video"
+msgstr "Renderovanje video-zapisa"
+
+# derived
+msgid "Rendering image"
+msgstr "Renderovanje slike"
 
 # derived
 msgid "Render cancelled"
@@ -26029,9 +26543,6 @@ msgid "Your Codex sign-in file is not writable — fix its permissions or sign i
 msgstr ""
 
 msgid "Couldn't renew your Codex sign-in — check your connection"
-msgstr ""
-
-msgid "Try again"
 msgstr ""
 
 msgid "no Codex sign-in was found"
@@ -27529,16 +28040,7 @@ msgstr ""
 msgid "Choose a folder in the file browser"
 msgstr ""
 
-msgid "Godot"
-msgstr ""
-
-msgid "godot"
-msgstr ""
-
 msgid "Unreal Engine"
-msgstr ""
-
-msgid "unreal"
 msgstr ""
 
 msgid "New project"
@@ -27572,9 +28074,6 @@ msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."
-msgstr ""
-
-msgid "PROJECT"
 msgstr ""
 
 msgid "Location"
@@ -28125,9 +28624,6 @@ msgstr ""
 msgid "Stop selected agents, archive their chats and delete these scenes"
 msgstr ""
 
-msgid "Yes"
-msgstr ""
-
 msgid "New Scene"
 msgstr ""
 
@@ -28446,9 +28942,6 @@ msgstr "Putanja datoteke ili ime slike blend-a"
 # derived
 msgid "Image Source"
 msgstr "Izvor slike"
-
-msgid "File"
-msgstr "Datoteka"
 
 # derived
 msgid "Image from file system"
@@ -32107,9 +32600,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
 msgid "Publish this scene as an explorable 3D website with a shareable link"
 msgstr ""
 
@@ -32147,9 +32637,6 @@ msgstr ""
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
-msgid "Unpublish"
-msgstr ""
-
 msgid "Remove the published website and its stored files"
 msgstr ""
 
@@ -32157,48 +32644,6 @@ msgid "Scene unpublished"
 msgstr ""
 
 msgid "Dismiss the publish outcome"
-msgstr ""
-
-msgid "Uploading…"
-msgstr ""
-
-msgid "Finalizing…"
-msgstr ""
-
-msgid "Publish unavailable"
-msgstr ""
-
-msgid "Publishing another scene…"
-msgstr ""
-
-msgid "Scene title"
-msgstr ""
-
-msgid "Will publish as “{title}”"
-msgstr ""
-
-msgid "Access"
-msgstr ""
-
-msgid "Creates a shareable link to an"
-msgstr ""
-
-msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
-msgstr ""
-
-msgid "Publish failed"
-msgstr ""
-
-msgid "Live · v{revision}"
-msgstr ""
-
-msgid "Update"
-msgstr ""
-
-msgid "Publish New Version"
 msgstr ""
 
 msgid "Not publishing"
@@ -32225,10 +32670,19 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+msgid "Publish failed"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
 msgid "Public title of your 3D website"
 msgstr ""
 
 msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Access"
 msgstr ""
 
 msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
@@ -32780,6 +33234,9 @@ msgid "Properties"
 msgstr "Osobine"
 
 msgid "Blend (.blend)"
+msgstr ""
+
+msgid "Export…"
 msgstr ""
 
 msgid "Publish to Web…"
@@ -33463,10 +33920,6 @@ msgstr "ništa nije izabrano"
 # derived
 msgid "no image added"
 msgstr "slika nije dodata"
-
-# derived
-msgid "Agent chat"
-msgstr "Ćaskanje sa agentom"
 
 # derived
 msgid "3D generation"
@@ -36365,6 +36818,12 @@ msgstr ""
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
 msgstr ""
 
+msgid "Tile"
+msgstr ""
+
+msgid "App-icon square with the button's preview icon and its label under it; lit draws the focus ring"
+msgstr ""
+
 # derived
 msgid "Mode Slider Left"
 msgstr "Levi klizač režima"
@@ -37850,9 +38309,6 @@ msgstr "Filtriraj .mixar datoteke"
 # derived
 msgid "Filter backup .mixar files"
 msgstr "Filtriraj rezervne .mixar datoteke"
-
-msgid "No"
-msgstr ""
 
 # derived
 msgctxt "WindowManager"

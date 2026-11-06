@@ -4937,6 +4937,594 @@ msgstr "Mixar kimenet"
 msgid "Output aspect ratio this camera frames for"
 msgstr "A kimeneti képarány, amelyre ez a kamera komponál"
 
+msgid "Choose a folder to export to."
+msgstr ""
+
+msgid "Choose a full folder path."
+msgstr ""
+
+msgid "Type a file name."
+msgstr ""
+
+msgid "Windows does not allow this file name. Try another one."
+msgstr ""
+
+msgid "This folder's drive is not available."
+msgstr ""
+
+msgid "Mixar cannot write to this folder. Choose another one."
+msgstr ""
+
+msgid "Rotation and scale not applied"
+msgstr ""
+
+msgid "Modifiers not applied"
+msgstr ""
+
+msgid "Material images not packed"
+msgstr ""
+
+msgid "Paint layers not baked"
+msgstr ""
+
+msgid "Could not create the folder ({error})."
+msgstr ""
+
+msgid "The export stopped unexpectedly. Try again."
+msgstr ""
+
+msgid "Could not save the copy."
+msgstr ""
+
+msgid "The export did not finish."
+msgstr ""
+
+msgid "Another render is running. Try again when it finishes."
+msgstr ""
+
+msgid "Add a camera to the scene first."
+msgstr ""
+
+msgid "Set an end frame after the start frame."
+msgstr ""
+
+msgid "Check the size, frames and frame rate."
+msgstr ""
+
+msgid "The render could not start. Try again."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "3D MODEL"
+msgstr ""
+
+msgid "MEDIA & WEB"
+msgstr ""
+
+msgid "Mixar project"
+msgstr ""
+
+msgid "A copy of everything: scene, paint layers, moodboards and chat. Your open file stays as it is."
+msgstr ""
+
+msgid "Blender file"
+msgstr ""
+
+msgid "Opens in Blender 5.2 or newer. Mixar-only data is kept but ignored there."
+msgstr ""
+
+msgid "glTF / GLB"
+msgstr ""
+
+msgid "The open standard for the web and real-time engines."
+msgstr ""
+
+msgid "The game-engine workhorse, with rigs and animation."
+msgstr ""
+
+msgid "USD / USDZ"
+msgstr ""
+
+msgid "Pixar's scene format. USDZ opens in Quick Look on iPhone and Vision Pro."
+msgstr ""
+
+msgid "OBJ"
+msgstr ""
+
+msgid "Geometry and materials only. Rigs and animation are left out."
+msgstr ""
+
+msgid "3D printing"
+msgstr ""
+
+msgid "One solid STL for slicers like Cura, PrusaSlicer and Bambu Studio."
+msgstr ""
+
+msgid "A still render from a camera, made in the background."
+msgstr ""
+
+msgid "An animation render from a camera, made in the background."
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "An explorable three.js page of this scene, with a link you can share."
+msgstr ""
+
+msgid "Unreal"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "Unity"
+msgstr ""
+
+msgid "unity"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Apple AR"
+msgstr ""
+
+msgid "apple"
+msgstr ""
+
+msgid "Other"
+msgstr "Egyéb"
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "{name} is already in this folder. Replace it?"
+msgstr ""
+
+msgid "Replace"
+msgstr "Lecserél"
+
+msgid "Back to settings"
+msgstr ""
+
+msgid "Render image"
+msgstr ""
+
+msgid "Render video"
+msgstr ""
+
+msgid "Save copy"
+msgstr ""
+
+msgid "Export {format}"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
+
+msgid "{size} KB"
+msgstr ""
+
+msgid "Rendering {name} in the background."
+msgstr ""
+
+msgid "You can keep working. A notification says when it is saved."
+msgstr ""
+
+msgid "Saved {name} · {size}"
+msgstr ""
+
+msgid "Agent chat removed from the copy ({count} messages)."
+msgstr ""
+
+msgid "Not watertight: {count} open edges. A slicer may refuse it."
+msgstr ""
+
+msgid "Checked: Mixar opened the file again and it matches."
+msgstr ""
+
+msgid "Export again"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Off"
+msgstr "Kikapcsol"
+
+msgid "On"
+msgstr "Be"
+
+msgid "Include"
+msgstr ""
+
+msgid "Leave out"
+msgstr ""
+
+msgid "Agent chat"
+msgstr "Ügynökcsevegés"
+
+msgid "Keep"
+msgstr ""
+
+msgid "Remove from the copy"
+msgstr ""
+
+msgid "Compress"
+msgstr ""
+
+msgid "What to export"
+msgstr ""
+
+msgid "Whole scene"
+msgstr ""
+
+msgid "Selected ({count})"
+msgstr ""
+
+msgid "File"
+msgstr "Fájl"
+
+msgid "Animation"
+msgstr "Animáció"
+
+msgid "Cameras and lights"
+msgstr ""
+
+msgid "Textures"
+msgstr "Textúrák"
+
+msgid "Draco compression"
+msgstr ""
+
+msgid "Apply modifiers"
+msgstr ""
+
+msgid "Up axis"
+msgstr ""
+
+msgid "Y up"
+msgstr ""
+
+msgid "Z up"
+msgstr ""
+
+msgid "Embed in the file"
+msgstr ""
+
+msgid "Copy beside it"
+msgstr ""
+
+msgid "Scale"
+msgstr "Átméretezés"
+
+msgid "Leaf bones"
+msgstr ""
+
+msgid "Smoothing"
+msgstr "Simítás"
+
+msgid "Keep original paths"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "Binary"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "Made for"
+msgstr ""
+
+msgid "Hide advanced settings"
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "Check the meshes before you export."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check again"
+msgstr ""
+
+msgid "{count} things to fix before export"
+msgstr ""
+
+msgid "Fix in scene"
+msgstr ""
+
+msgid "Ready: {count} meshes pass every check."
+msgstr ""
+
+msgid " and {count} more"
+msgstr ""
+
+msgid "{problem}: {meshes}"
+msgstr ""
+
+msgid "Size"
+msgstr "Méret"
+
+msgid "Format"
+msgstr "Formátum"
+
+msgid "Background"
+msgstr "Háttér"
+
+msgid "Scene"
+msgstr "Jelenet"
+
+msgid "Transparent"
+msgstr "Átlátszó"
+
+msgid "Frame rate"
+msgstr ""
+
+msgid "Quality"
+msgstr "Minőség"
+
+msgid "Renderer"
+msgstr ""
+
+msgid "Saved as an MP4 (H.264) video. It renders in the background while you work."
+msgstr ""
+
+msgid "It renders in the background while you work; a notification says when it is saved."
+msgstr ""
+
+msgid "Export"
+msgstr "Exportálás"
+
+msgid "Export this scene as a project copy, a 3D file, an image or video, or a page on the web"
+msgstr ""
+
+msgid "Choose Export Format"
+msgstr ""
+
+msgid "Show this format's export settings"
+msgstr ""
+
+msgid "Made For"
+msgstr ""
+
+msgid "Use the axes, scale and texture settings this engine expects"
+msgstr ""
+
+msgid "Export Setting"
+msgstr ""
+
+msgid "Change this export setting"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Show or hide the exporter's advanced settings"
+msgstr ""
+
+msgid "Export with these settings"
+msgstr ""
+
+msgid "Check Before Export"
+msgstr ""
+
+msgid "Check the meshes for unapplied transforms, modifiers and unbaked paint"
+msgstr ""
+
+msgid "Fix in Scene"
+msgstr ""
+
+msgid "Apply transforms and modifiers, pack images and bake paint layers on the meshes that need it. This changes your scene"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Open the folder the file was saved to"
+msgstr ""
+
+msgid "Back to Settings"
+msgstr ""
+
+msgid "Go back to the export settings"
+msgstr ""
+
+msgid "Save your scene as a project, a 3D file, an image or video, or a page on the web."
+msgstr ""
+
+msgid "Exporting the scene…"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finishing…"
+msgstr ""
+
+msgid "Publish to Web is not available."
+msgstr ""
+
+msgid "Title"
+msgstr "Cím"
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Description"
+msgstr "Leírás"
+
+msgid "Optional"
+msgstr ""
+
+msgid "Who can open it"
+msgstr ""
+
+msgid "Anyone, listed in your gallery"
+msgstr ""
+
+msgid "Only people with the link"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled."
+msgstr ""
+
+msgid "Dismiss"
+msgstr "Elvetés"
+
+msgid "Try again"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Uploads this scene and gives you a link to share. Needs a Mixar account."
+msgstr ""
+
+msgid "File Name"
+msgstr ""
+
+msgid "What to Export"
+msgstr ""
+
+msgid "All clips"
+msgstr ""
+
+msgid "GLB · one file"
+msgstr ""
+
+msgid "USDZ · packaged"
+msgstr ""
+
+msgid "USDC · binary"
+msgstr ""
+
+msgid "Cameras and Lights"
+msgstr ""
+
+msgid "Auto"
+msgstr "Automatikus"
+
+msgid "JPEG"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "Draco Compression"
+msgstr ""
+
+msgid "Apply Modifiers"
+msgstr "Módosítók elfogadása"
+
+msgid "Y Up"
+msgstr "Y fel"
+
+msgid "Embed Textures"
+msgstr "Textúrák beágyazása"
+
+msgid "Engine default"
+msgstr ""
+
+msgid "Apply units"
+msgstr ""
+
+msgid "Apply all"
+msgstr ""
+
+msgid "Leaf Bones"
+msgstr ""
+
+msgid "Face"
+msgstr "Oldallap"
+
+msgid "Edge"
+msgstr "Él"
+
+msgid "Normals only"
+msgstr ""
+
+msgid "Copy Textures"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Centimetres"
+msgstr ""
+
+msgid "Metres"
+msgstr ""
+
+msgid "Remove Agent Chat"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "JPG"
+msgstr ""
+
+msgid "EXR"
+msgstr ""
+
+msgid "Transparent Background"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "Final"
+msgstr ""
+
+msgid "EEVEE"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "A kijelölt térháló(k) exportálása sikertelen: {error}"
 
@@ -5114,9 +5702,6 @@ msgstr "BE: a jelenleg kijelölt moodboard-kép. KI: a feltöltött kép vagy a 
 msgid "Result Format"
 msgstr "Eredmény formátuma"
 
-msgid "OBJ"
-msgstr ""
-
 msgid "STL"
 msgstr ""
 
@@ -5290,9 +5875,6 @@ msgstr "Egy objektum sem került a várólistára (mind kihagyva, vagy az export
 
 msgid "Cancel the running Hunyuan job"
 msgstr "A futó Hunyuan-feladat megszakítása"
-
-msgid "Dismiss"
-msgstr "Elvetés"
 
 msgid "Dismiss the error and return to idle"
 msgstr "A hiba elvetése, és visszatérés üresjáratba"
@@ -5723,9 +6305,6 @@ msgstr ""
 msgid "Connect Dialog State"
 msgstr ""
 
-msgid "Format"
-msgstr "Formátum"
-
 msgid "Processing..."
 msgstr "Feldolgozás..."
 
@@ -6025,9 +6604,6 @@ msgstr "Lebeg a jobb kéz mellett"
 
 msgid "Float by left hand"
 msgstr "Lebeg a bal kéz mellett"
-
-msgid "Auto"
-msgstr "Automatikus"
 
 msgid "Point forward"
 msgstr "Előre mutat"
@@ -6484,12 +7060,6 @@ msgstr "Referencia {number}"
 
 msgid "This template needs an available generation model. Check your connection."
 msgstr "Ehhez a sablonhoz elérhető generálási modell kell. Ellenőrizze a kapcsolatot."
-
-msgid "On"
-msgstr "Be"
-
-msgid "Off"
-msgstr "Kikapcsol"
 
 msgid "Choose one of the options supported by this model."
 msgstr "Válasszon a modell által támogatott lehetőségek közül."
@@ -7466,9 +8036,6 @@ msgstr "A generálás befejeződött"
 msgid "Parameter ID"
 msgstr "Paraméterazonosító"
 
-msgid "Description"
-msgstr "Leírás"
-
 msgid "String value"
 msgstr "Szövegérték"
 
@@ -7643,9 +8210,6 @@ msgstr "Maszk előnézete"
 msgid "3D Preview"
 msgstr "3D előnézet"
 
-msgid "Title"
-msgstr "Cím"
-
 msgid "Object Names"
 msgstr "Objektumnevek"
 
@@ -7802,9 +8366,6 @@ msgstr "Összes elem kijelölése (megszüntetése)"
 msgid "Frame Selected (Numpad .)"
 msgstr "Kijelöltek a nézetbe (Numpad .)"
 
-msgid "Export"
-msgstr "Exportálás"
-
 msgid "Delete"
 msgstr "Törlés"
 
@@ -7959,9 +8520,6 @@ msgstr "X pozíció a Moodboard vásznán"
 
 msgid "Y position on the moodboard canvas"
 msgstr "Y pozíció a Moodboard vásznán"
-
-msgid "Scale"
-msgstr "Átméretezés"
 
 msgid "Scale factor for the image"
 msgstr "A kép méretaránya"
@@ -12025,9 +12583,6 @@ msgstr "Csak a fájlnév írása"
 msgid "Copy textures to the destination path"
 msgstr "Textúrák másolása a célútvonalra"
 
-msgid "Embed Textures"
-msgstr "Textúrák beágyazása"
-
 msgid "Embed textures in FBX binary file (only for \"Copy\" path mode)"
 msgstr "Textúrák beágyazása az FBX bináris fájlba (csak a „Copy” útvonalmódnál)"
 
@@ -12036,9 +12591,6 @@ msgstr "Köteg mód"
 
 msgid "Active scene to file"
 msgstr "Aktív jelenet a fájlba"
-
-msgid "Scene"
-msgstr "Jelenet"
 
 msgid "Each scene as a file"
 msgstr "Minden jelenet egy-egy fájlba"
@@ -12094,9 +12646,6 @@ msgstr "Fényforrás"
 msgid "Armature"
 msgstr "Csontváz"
 
-msgid "Other"
-msgstr "Egyéb"
-
 msgid "Other geometry types"
 msgstr "Egyéb geometriatípusok"
 
@@ -12148,9 +12697,6 @@ msgstr "Fel"
 msgid "X Up"
 msgstr "X fel"
 
-msgid "Y Up"
-msgstr "Y fel"
-
 msgid "Z Up"
 msgstr "Z fel"
 
@@ -12172,23 +12718,14 @@ msgstr "Transzformáció elfogadása"
 msgid "Bake space transform into object data (experimental)"
 msgstr "A tértranszformáció sütése az objektumadatokba (kísérleti)"
 
-msgid "Smoothing"
-msgstr "Simítás"
-
 msgid "Normals Only"
 msgstr "Csak normálisok"
 
 msgid "Export only normals"
 msgstr "Csak a normálisok exportálása"
 
-msgid "Face"
-msgstr "Oldallap"
-
 msgid "Write face smoothing"
 msgstr "Oldallap simítás kiírása"
-
-msgid "Edge"
-msgstr "Él"
 
 msgid "Write edge smoothing"
 msgstr "Él simítás kiírása"
@@ -12201,9 +12738,6 @@ msgstr "Oldallap-simítási csoportok írása"
 
 msgid "Export Subdivision Surface"
 msgstr "Felosztásos felület exportálása"
-
-msgid "Apply Modifiers"
-msgstr "Módosítók elfogadása"
 
 msgid "Loose Edges"
 msgstr "Szabad élek"
@@ -12718,17 +13252,11 @@ msgstr "Exportálási beállítások megjegyzése"
 msgid "Keep Original"
 msgstr "Eredeti megtartása"
 
-msgid "Textures"
-msgstr "Textúrák"
-
 msgid "General"
 msgstr "Általános"
 
 msgid "Grouping"
 msgstr "Csoportosítás"
-
-msgid "Animation"
-msgstr "Animáció"
 
 msgid "Export OBJ"
 msgstr "OBJ exportálása"
@@ -14149,9 +14677,6 @@ msgstr "Fehér"
 msgid "Black"
 msgstr "Fekete"
 
-msgid "Transparent"
-msgstr "Átlátszó"
-
 msgid "Atlas Settings"
 msgstr "Atlaszbeállítások"
 
@@ -14204,12 +14729,6 @@ msgstr ""
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr ""
-
-msgid "JPEG"
-msgstr ""
-
 msgid "JPEG 2000"
 msgstr ""
 
@@ -14235,9 +14754,6 @@ msgid "Radiance HDR"
 msgstr ""
 
 msgid "TIFF"
-msgstr ""
-
-msgid "WebP"
 msgstr ""
 
 msgid "Copy Image Path To Clipboard"
@@ -14380,9 +14896,6 @@ msgstr ""
 
 msgid "J2K"
 msgstr ""
-
-msgid "Quality"
-msgstr "Minőség"
 
 msgid "Cinema 48"
 msgstr ""
@@ -18615,9 +19128,6 @@ msgstr "Letérképezés"
 msgid "Offset"
 msgstr "Eltolás"
 
-msgid "Size"
-msgstr "Méret"
-
 msgid "Rake"
 msgstr "Gereblye"
 
@@ -19086,9 +19596,6 @@ msgstr "Blender-világtér"
 msgid "World space normal mapping, compatible with Blender render baking"
 msgstr "Világtérbeli normálletérképezés, a Blender rendersütésével kompatibilis"
 
-msgid "Replace"
-msgstr "Lecserél"
-
 msgid "Compare"
 msgstr "Összehasonlítás"
 
@@ -19187,9 +19694,6 @@ msgstr "Additív keverés"
 
 msgid "Musgrave"
 msgstr ""
-
-msgid "Background"
-msgstr "Háttér"
 
 msgid "Procedural Material"
 msgstr "Procedurális anyag"
@@ -19560,20 +20064,29 @@ msgstr "Ellenőrizze a jelenet kameráját és a renderbeállításokat, majd pr
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "EEVEE használata, mert ez a jelenet túllépi a Cycles memóriakeretét."
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "Elkészülte után megjelenik a Moodboardon. A megszakításhoz használja a render folyamatjelzőjét."
 
-msgid "Rendering video"
-msgstr "Videó renderelése"
+msgid "Video saved"
+msgstr ""
 
-msgid "Rendering image"
-msgstr "Kép renderelése"
+msgid "Image saved"
+msgstr ""
 
 msgid "Video added to Moodboard"
 msgstr "A videó a Moodboardra került"
 
 msgid "Image added to Moodboard"
 msgstr "A kép a Moodboardra került"
+
+msgid "Rendering video"
+msgstr "Videó renderelése"
+
+msgid "Rendering image"
+msgstr "Kép renderelése"
 
 msgid "Render cancelled"
 msgstr "A render megszakítva"
@@ -20386,9 +20899,6 @@ msgid "Your Codex sign-in file is not writable — fix its permissions or sign i
 msgstr ""
 
 msgid "Couldn't renew your Codex sign-in — check your connection"
-msgstr ""
-
-msgid "Try again"
 msgstr ""
 
 msgid "no Codex sign-in was found"
@@ -21597,16 +22107,7 @@ msgstr ""
 msgid "Choose a folder in the file browser"
 msgstr ""
 
-msgid "Godot"
-msgstr ""
-
-msgid "godot"
-msgstr ""
-
 msgid "Unreal Engine"
-msgstr ""
-
-msgid "unreal"
 msgstr ""
 
 msgid "New project"
@@ -21640,9 +22141,6 @@ msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."
-msgstr ""
-
-msgid "PROJECT"
 msgstr ""
 
 msgid "Location"
@@ -22080,9 +22578,6 @@ msgstr ""
 msgid "Stop selected agents, archive their chats and delete these scenes"
 msgstr ""
 
-msgid "Yes"
-msgstr ""
-
 msgid "New Scene"
 msgstr ""
 
@@ -22343,9 +22838,6 @@ msgstr "Fájlútvonal vagy blend-kép neve"
 
 msgid "Image Source"
 msgstr "Képforrás"
-
-msgid "File"
-msgstr "Fájl"
 
 msgid "Image from file system"
 msgstr "Kép a fájlrendszerből"
@@ -25227,9 +25719,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
 msgid "Publish this scene as an explorable 3D website with a shareable link"
 msgstr ""
 
@@ -25266,9 +25755,6 @@ msgstr ""
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
-msgid "Unpublish"
-msgstr ""
-
 msgid "Remove the published website and its stored files"
 msgstr ""
 
@@ -25276,48 +25762,6 @@ msgid "Scene unpublished"
 msgstr ""
 
 msgid "Dismiss the publish outcome"
-msgstr ""
-
-msgid "Uploading…"
-msgstr ""
-
-msgid "Finalizing…"
-msgstr ""
-
-msgid "Publish unavailable"
-msgstr ""
-
-msgid "Publishing another scene…"
-msgstr ""
-
-msgid "Scene title"
-msgstr ""
-
-msgid "Will publish as “{title}”"
-msgstr ""
-
-msgid "Access"
-msgstr ""
-
-msgid "Creates a shareable link to an"
-msgstr ""
-
-msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
-msgstr ""
-
-msgid "Publish failed"
-msgstr ""
-
-msgid "Live · v{revision}"
-msgstr ""
-
-msgid "Update"
-msgstr ""
-
-msgid "Publish New Version"
 msgstr ""
 
 msgid "Not publishing"
@@ -25344,10 +25788,19 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+msgid "Publish failed"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
 msgid "Public title of your 3D website"
 msgstr ""
 
 msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Access"
 msgstr ""
 
 msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
@@ -25873,6 +26326,9 @@ msgid "Properties"
 msgstr "Tulajdonságok"
 
 msgid "Blend (.blend)"
+msgstr ""
+
+msgid "Export…"
 msgstr ""
 
 msgid "Publish to Web…"
@@ -26438,9 +26894,6 @@ msgstr "nincs kijelölve"
 
 msgid "no image added"
 msgstr "nincs hozzáadott kép"
-
-msgid "Agent chat"
-msgstr "Ügynökcsevegés"
 
 msgid "3D generation"
 msgstr "3D-generálás"
@@ -28743,6 +29196,12 @@ msgstr ""
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
 msgstr ""
 
+msgid "Tile"
+msgstr ""
+
+msgid "App-icon square with the button's preview icon and its label under it; lit draws the focus ring"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "Módcsúszka bal"
 
@@ -29891,9 +30350,6 @@ msgstr ".mixar fájlok szűrése"
 
 msgid "Filter backup .mixar files"
 msgstr "Biztonsági .mixar fájlok szűrése"
-
-msgid "No"
-msgstr ""
 
 msgctxt "WindowManager"
 msgid "Newer graphics drivers might be available with better Mixar compatibility."

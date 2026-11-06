@@ -21,8 +21,16 @@ class Settings:
             setattr(owner, name, value)
 
     def apply(self, kind, path, engine="", samples=0, width=0, height=0,
-              frame_start=None, frame_end=None, fps=0, max_faces=0):
+              frame_start=None, frame_end=None, fps=0, max_faces=0,
+              image_format="PNG", transparent=False, camera=""):
+        """``image_format`` / ``transparent`` / ``camera`` come from the Export
+        card (a still saved to the user's file); every change is restored."""
         scene, r = self.scene, self.scene.render
+        camera_object = scene.objects.get(camera) if camera else None
+        if camera_object is not None and camera_object.type == 'CAMERA':
+            self.set(scene, "camera", camera_object)
+        if transparent and kind == 'image':
+            self.set(r, "film_transparent", True)
         if engine:
             self.set(r, "engine", {"eevee": "BLENDER_EEVEE", "cycles": "CYCLES"}[engine])
         from mixar.modules.common.render_coordinator.core.geometry_budget import downgrade_over_budget
@@ -39,9 +47,14 @@ class Settings:
         image = r.image_settings
         try:
             image.media_type = 'VIDEO' if kind == 'video' else 'IMAGE'
-            image.file_format = 'FFMPEG' if kind == 'video' else 'PNG'
+            still = image_format if image_format in ('PNG', 'JPEG', 'OPEN_EXR') else 'PNG'
+            image.file_format = 'FFMPEG' if kind == 'video' else still
             if kind == 'video':
                 image.color_mode, image.color_depth = 'RGB', '8'
+            elif still == 'JPEG':
+                image.color_mode = 'RGB'
+            elif transparent:
+                image.color_mode = 'RGBA'
         finally:
             self.image_applied = {k: getattr(image, k) for k in self.image_original}
         if kind == 'video':

@@ -42,6 +42,20 @@ The Connect engine dialog shows each engine's logo only to name the engine Mixar
 - **Godot** — `src/scripts/mixar/modules/space_mixie_chat/assets/engines/godot.png` is the Godot Engine logo by Andrea Calabró, licensed under [CC BY 4.0](LICENSES/CC-BY-4.0.txt).
 - **Unreal Engine** — `src/scripts/mixar/modules/space_mixie_chat/assets/engines/unreal.png`: Unreal, Unreal Engine and the Unreal Engine logo are trademarks or registered trademarks of Epic Games, Inc. ([LICENSES/LicenseRef-Epic-Unreal-Logo.txt](LICENSES/LicenseRef-Epic-Unreal-Logo.txt)).
 
+### File-format and platform logos
+
+The Export card (`src/scripts/mixar/modules/export_card/assets/logos/`) shows these marks only to name the file format or platform an export is written for; this implies no affiliation with or endorsement by their owners. The Godot and Unreal marks above are reused for its engine chips.
+
+- **Blender** — `blend.png`: the Blender logo is a trademark of the Blender Foundation, used to name the .blend format.
+- **glTF** — `gltf.png`: glTF and the glTF logo are trademarks of The Khronos Group Inc.
+- **OpenUSD** — `usd.png`: the OpenUSD logo, from openusd.org; Universal Scene Description was created by Pixar Animation Studios.
+- **FBX** — `fbx.png`: the Autodesk logo; Autodesk and FBX are registered trademarks of Autodesk, Inc.
+- **three.js** — `web.png`: the three.js logo, from the three.js project (MIT).
+- **Unity** — `unity.png`: Unity and the Unity logo are trademarks of Unity Technologies.
+- **Apple** — `apple.png`: Apple and the Apple logo are trademarks of Apple Inc., used to name Apple AR (USDZ).
+
+The Autodesk, three.js, Unity and Apple glyph outlines come from [Simple Icons](https://simpleicons.org) (CC0 1.0); the trademarks remain their owners'. The OBJ, STL, PNG and MP4 file-type icons are Mixar's own artwork.
+
 ### Clash Grotesk
 
 The Cinema Mode button uses Clash Grotesk Regular by Indian Type Foundry,

@@ -4937,6 +4937,594 @@ msgstr "Mixar வெளியீடு"
 msgid "Output aspect ratio this camera frames for"
 msgstr "இந்தக் கேமரா சட்டமிடும் வெளியீட்டுத் தோற்ற விகிதம்"
 
+msgid "Choose a folder to export to."
+msgstr ""
+
+msgid "Choose a full folder path."
+msgstr ""
+
+msgid "Type a file name."
+msgstr ""
+
+msgid "Windows does not allow this file name. Try another one."
+msgstr ""
+
+msgid "This folder's drive is not available."
+msgstr ""
+
+msgid "Mixar cannot write to this folder. Choose another one."
+msgstr ""
+
+msgid "Rotation and scale not applied"
+msgstr ""
+
+msgid "Modifiers not applied"
+msgstr ""
+
+msgid "Material images not packed"
+msgstr ""
+
+msgid "Paint layers not baked"
+msgstr ""
+
+msgid "Could not create the folder ({error})."
+msgstr ""
+
+msgid "The export stopped unexpectedly. Try again."
+msgstr ""
+
+msgid "Could not save the copy."
+msgstr ""
+
+msgid "The export did not finish."
+msgstr ""
+
+msgid "Another render is running. Try again when it finishes."
+msgstr ""
+
+msgid "Add a camera to the scene first."
+msgstr ""
+
+msgid "Set an end frame after the start frame."
+msgstr ""
+
+msgid "Check the size, frames and frame rate."
+msgstr ""
+
+msgid "The render could not start. Try again."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "3D MODEL"
+msgstr ""
+
+msgid "MEDIA & WEB"
+msgstr ""
+
+msgid "Mixar project"
+msgstr ""
+
+msgid "A copy of everything: scene, paint layers, moodboards and chat. Your open file stays as it is."
+msgstr ""
+
+msgid "Blender file"
+msgstr ""
+
+msgid "Opens in Blender 5.2 or newer. Mixar-only data is kept but ignored there."
+msgstr ""
+
+msgid "glTF / GLB"
+msgstr ""
+
+msgid "The open standard for the web and real-time engines."
+msgstr ""
+
+msgid "The game-engine workhorse, with rigs and animation."
+msgstr ""
+
+msgid "USD / USDZ"
+msgstr ""
+
+msgid "Pixar's scene format. USDZ opens in Quick Look on iPhone and Vision Pro."
+msgstr ""
+
+msgid "OBJ"
+msgstr ""
+
+msgid "Geometry and materials only. Rigs and animation are left out."
+msgstr ""
+
+msgid "3D printing"
+msgstr ""
+
+msgid "One solid STL for slicers like Cura, PrusaSlicer and Bambu Studio."
+msgstr ""
+
+msgid "A still render from a camera, made in the background."
+msgstr ""
+
+msgid "An animation render from a camera, made in the background."
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "An explorable three.js page of this scene, with a link you can share."
+msgstr ""
+
+msgid "Unreal"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "Unity"
+msgstr ""
+
+msgid "unity"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Apple AR"
+msgstr ""
+
+msgid "apple"
+msgstr ""
+
+msgid "Other"
+msgstr "மற்றொன்று"
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "{name} is already in this folder. Replace it?"
+msgstr ""
+
+msgid "Replace"
+msgstr "மாற்று"
+
+msgid "Back to settings"
+msgstr ""
+
+msgid "Render image"
+msgstr ""
+
+msgid "Render video"
+msgstr ""
+
+msgid "Save copy"
+msgstr ""
+
+msgid "Export {format}"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
+
+msgid "{size} KB"
+msgstr ""
+
+msgid "Rendering {name} in the background."
+msgstr ""
+
+msgid "You can keep working. A notification says when it is saved."
+msgstr ""
+
+msgid "Saved {name} · {size}"
+msgstr ""
+
+msgid "Agent chat removed from the copy ({count} messages)."
+msgstr ""
+
+msgid "Not watertight: {count} open edges. A slicer may refuse it."
+msgstr ""
+
+msgid "Checked: Mixar opened the file again and it matches."
+msgstr ""
+
+msgid "Export again"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Off"
+msgstr "அணை"
+
+msgid "On"
+msgstr "துவங்கு"
+
+msgid "Include"
+msgstr ""
+
+msgid "Leave out"
+msgstr ""
+
+msgid "Agent chat"
+msgstr "முகவர் அரட்டை"
+
+msgid "Keep"
+msgstr ""
+
+msgid "Remove from the copy"
+msgstr ""
+
+msgid "Compress"
+msgstr ""
+
+msgid "What to export"
+msgstr ""
+
+msgid "Whole scene"
+msgstr ""
+
+msgid "Selected ({count})"
+msgstr ""
+
+msgid "File"
+msgstr "கோப்பு"
+
+msgid "Animation"
+msgstr "இயங்குபடம்"
+
+msgid "Cameras and lights"
+msgstr ""
+
+msgid "Textures"
+msgstr "கட்டமைப்புகள்"
+
+msgid "Draco compression"
+msgstr ""
+
+msgid "Apply modifiers"
+msgstr ""
+
+msgid "Up axis"
+msgstr ""
+
+msgid "Y up"
+msgstr ""
+
+msgid "Z up"
+msgstr ""
+
+msgid "Embed in the file"
+msgstr ""
+
+msgid "Copy beside it"
+msgstr ""
+
+msgid "Scale"
+msgstr "அளவு"
+
+msgid "Leaf bones"
+msgstr ""
+
+msgid "Smoothing"
+msgstr "மென்மையான"
+
+msgid "Keep original paths"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "Binary"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "Made for"
+msgstr ""
+
+msgid "Hide advanced settings"
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "Check the meshes before you export."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check again"
+msgstr ""
+
+msgid "{count} things to fix before export"
+msgstr ""
+
+msgid "Fix in scene"
+msgstr ""
+
+msgid "Ready: {count} meshes pass every check."
+msgstr ""
+
+msgid " and {count} more"
+msgstr ""
+
+msgid "{problem}: {meshes}"
+msgstr ""
+
+msgid "Size"
+msgstr "அளவு"
+
+msgid "Format"
+msgstr "வடிவம்"
+
+msgid "Background"
+msgstr "பின்னணி"
+
+msgid "Scene"
+msgstr "காட்சி"
+
+msgid "Transparent"
+msgstr "ஒளி புகும்"
+
+msgid "Frame rate"
+msgstr ""
+
+msgid "Quality"
+msgstr "தகுதி"
+
+msgid "Renderer"
+msgstr ""
+
+msgid "Saved as an MP4 (H.264) video. It renders in the background while you work."
+msgstr ""
+
+msgid "It renders in the background while you work; a notification says when it is saved."
+msgstr ""
+
+msgid "Export"
+msgstr "ஏற்றுமதி"
+
+msgid "Export this scene as a project copy, a 3D file, an image or video, or a page on the web"
+msgstr ""
+
+msgid "Choose Export Format"
+msgstr ""
+
+msgid "Show this format's export settings"
+msgstr ""
+
+msgid "Made For"
+msgstr ""
+
+msgid "Use the axes, scale and texture settings this engine expects"
+msgstr ""
+
+msgid "Export Setting"
+msgstr ""
+
+msgid "Change this export setting"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Show or hide the exporter's advanced settings"
+msgstr ""
+
+msgid "Export with these settings"
+msgstr ""
+
+msgid "Check Before Export"
+msgstr ""
+
+msgid "Check the meshes for unapplied transforms, modifiers and unbaked paint"
+msgstr ""
+
+msgid "Fix in Scene"
+msgstr ""
+
+msgid "Apply transforms and modifiers, pack images and bake paint layers on the meshes that need it. This changes your scene"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Open the folder the file was saved to"
+msgstr ""
+
+msgid "Back to Settings"
+msgstr ""
+
+msgid "Go back to the export settings"
+msgstr ""
+
+msgid "Save your scene as a project, a 3D file, an image or video, or a page on the web."
+msgstr ""
+
+msgid "Exporting the scene…"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finishing…"
+msgstr ""
+
+msgid "Publish to Web is not available."
+msgstr ""
+
+msgid "Title"
+msgstr "தலைப்பு"
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Description"
+msgstr "விளக்கம்"
+
+msgid "Optional"
+msgstr ""
+
+msgid "Who can open it"
+msgstr ""
+
+msgid "Anyone, listed in your gallery"
+msgstr ""
+
+msgid "Only people with the link"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled."
+msgstr ""
+
+msgid "Dismiss"
+msgstr "விலக்கு"
+
+msgid "Try again"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Uploads this scene and gives you a link to share. Needs a Mixar account."
+msgstr ""
+
+msgid "File Name"
+msgstr ""
+
+msgid "What to Export"
+msgstr ""
+
+msgid "All clips"
+msgstr ""
+
+msgid "GLB · one file"
+msgstr ""
+
+msgid "USDZ · packaged"
+msgstr ""
+
+msgid "USDC · binary"
+msgstr ""
+
+msgid "Cameras and Lights"
+msgstr ""
+
+msgid "Auto"
+msgstr "தானி"
+
+msgid "JPEG"
+msgstr "jpeg"
+
+msgid "WebP"
+msgstr ""
+
+msgid "Draco Compression"
+msgstr ""
+
+msgid "Apply Modifiers"
+msgstr "மாற்றியமைப்பாளர்களைப் பயன்படுத்துங்கள்"
+
+msgid "Y Up"
+msgstr "ஆம்"
+
+msgid "Embed Textures"
+msgstr "அமைப்புகள் உட்பொதிக்கவும்"
+
+msgid "Engine default"
+msgstr ""
+
+msgid "Apply units"
+msgstr ""
+
+msgid "Apply all"
+msgstr ""
+
+msgid "Leaf Bones"
+msgstr ""
+
+msgid "Face"
+msgstr "முகப்பு"
+
+msgid "Edge"
+msgstr "விளிம்பு"
+
+msgid "Normals only"
+msgstr ""
+
+msgid "Copy Textures"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Centimetres"
+msgstr ""
+
+msgid "Metres"
+msgstr ""
+
+msgid "Remove Agent Chat"
+msgstr ""
+
+msgid "PNG"
+msgstr "பி.என்.சி."
+
+msgid "JPG"
+msgstr ""
+
+msgid "EXR"
+msgstr ""
+
+msgid "Transparent Background"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "Final"
+msgstr ""
+
+msgid "EEVEE"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "தேர்ந்தெடுத்த கண்ணி(களை) ஏற்றுமதி செய்ய முடியவில்லை: {error}"
 
@@ -5114,9 +5702,6 @@ msgstr "இயக்கம்: இப்போது தேர்ந்தெட
 msgid "Result Format"
 msgstr "முடிவு வடிவம்"
 
-msgid "OBJ"
-msgstr ""
-
 msgid "STL"
 msgstr ""
 
@@ -5290,9 +5875,6 @@ msgstr "எந்தப் பொருளையும் வரிசைப்�
 
 msgid "Cancel the running Hunyuan job"
 msgstr "இயங்கும் Hunyuan பணியை ரத்துசெய்"
-
-msgid "Dismiss"
-msgstr "விலக்கு"
 
 msgid "Dismiss the error and return to idle"
 msgstr "பிழையை விலக்கி செயலற்ற நிலைக்குத் திரும்புகிறது"
@@ -5723,9 +6305,6 @@ msgstr ""
 msgid "Connect Dialog State"
 msgstr ""
 
-msgid "Format"
-msgstr "வடிவம்"
-
 msgid "Processing..."
 msgstr "செயலாக்குகிறது..."
 
@@ -6025,9 +6604,6 @@ msgstr "வலது கையருகே மித"
 
 msgid "Float by left hand"
 msgstr "இடது கையருகே மித"
-
-msgid "Auto"
-msgstr "தானி"
 
 msgid "Point forward"
 msgstr "முன்னால் சுட்டு"
@@ -6484,12 +7060,6 @@ msgstr "குறிப்பு {number}"
 
 msgid "This template needs an available generation model. Check your connection."
 msgstr "இந்த வார்ப்புருவுக்குக் கிடைக்கும் உருவாக்க மாதிரி தேவை. உங்கள் இணைப்பைச் சரிபாருங்கள்."
-
-msgid "On"
-msgstr "துவங்கு"
-
-msgid "Off"
-msgstr "அணை"
 
 msgid "Choose one of the options supported by this model."
 msgstr "இந்த மாதிரி ஆதரிக்கும் விருப்பங்களில் ஒன்றைத் தேர்ந்தெடுங்கள்."
@@ -7466,9 +8036,6 @@ msgstr "உருவாக்கம் முடிந்தது"
 msgid "Parameter ID"
 msgstr "அளவுரு அடையாளம்"
 
-msgid "Description"
-msgstr "விளக்கம்"
-
 msgid "String value"
 msgstr "சரம் மதிப்பு"
 
@@ -7643,9 +8210,6 @@ msgstr "முகமூடி முன்னோட்டம்"
 msgid "3D Preview"
 msgstr "3D முன்னோட்டம்"
 
-msgid "Title"
-msgstr "தலைப்பு"
-
 msgid "Object Names"
 msgstr "பொருள் பெயர்கள்"
 
@@ -7802,9 +8366,6 @@ msgstr "அனைத்து தெரிவுகளையும் நிர�
 msgid "Frame Selected (Numpad .)"
 msgstr "தேர்வைச் சட்டகமிடு (Numpad .)"
 
-msgid "Export"
-msgstr "ஏற்றுமதி"
-
 msgid "Delete"
 msgstr "அழி"
 
@@ -7959,9 +8520,6 @@ msgstr "மூட்போர்டு கேன்வாசில் X நி�
 
 msgid "Y position on the moodboard canvas"
 msgstr "மூட்போர்டு கேன்வாசில் Y நிலை"
-
-msgid "Scale"
-msgstr "அளவு"
 
 msgid "Scale factor for the image"
 msgstr "படத்துக்கான அளவுக் காரணி"
@@ -12025,9 +12583,6 @@ msgstr "கோப்புப் பெயரை மட்டும் எழு
 msgid "Copy textures to the destination path"
 msgstr "அமைப்புகளை இலக்குப் பாதைக்கு நகலெடுக்கும்"
 
-msgid "Embed Textures"
-msgstr "அமைப்புகள் உட்பொதிக்கவும்"
-
 msgid "Embed textures in FBX binary file (only for \"Copy\" path mode)"
 msgstr "FBX இருமக் கோப்பில் அமைப்புகளை உட்பொதிக்கும் (\"Copy\" பாதைப் பயன்முறைக்கு மட்டும்)"
 
@@ -12036,9 +12591,6 @@ msgstr "தொகுப்பு முறை"
 
 msgid "Active scene to file"
 msgstr "தாக்கல் செய்ய செயலில் காட்சி"
-
-msgid "Scene"
-msgstr "காட்சி"
 
 msgid "Each scene as a file"
 msgstr "ஒவ்வொரு காட்சியும் ஒரு கோப்பாக"
@@ -12094,9 +12646,6 @@ msgstr "விளக்கு"
 msgid "Armature"
 msgstr "ஆர்மேச்சர்"
 
-msgid "Other"
-msgstr "மற்றொன்று"
-
 msgid "Other geometry types"
 msgstr "பிற வடிவியல் வகைகள்"
 
@@ -12148,9 +12697,6 @@ msgstr "மேலே"
 msgid "X Up"
 msgstr "ஃச் அப்"
 
-msgid "Y Up"
-msgstr "ஆம்"
-
 msgid "Z Up"
 msgstr "சட் up"
 
@@ -12172,23 +12718,14 @@ msgstr "உருமாற்றத்தைப் பயன்படுத்�
 msgid "Bake space transform into object data (experimental)"
 msgstr "வெளி உருமாற்றத்தைப் பொருள் தரவில் சுட்டுக்கொள்ளும் (சோதனை)"
 
-msgid "Smoothing"
-msgstr "மென்மையான"
-
 msgid "Normals Only"
 msgstr "இயல்பானவர்கள் மட்டுமே"
 
 msgid "Export only normals"
 msgstr "நார்மல்களை மட்டும் ஏற்றுமதி செய்யும்"
 
-msgid "Face"
-msgstr "முகப்பு"
-
 msgid "Write face smoothing"
 msgstr "முகம் மென்மையாக்குகிறது"
-
-msgid "Edge"
-msgstr "விளிம்பு"
 
 msgid "Write edge smoothing"
 msgstr "விளிம்பு மென்மையாக்குதல் எழுதுங்கள்"
@@ -12201,9 +12738,6 @@ msgstr "முகம் மென்மையான குழுக்களை 
 
 msgid "Export Subdivision Surface"
 msgstr "ஏற்றுமதி உட்பிரிவு மேற்பரப்பு"
-
-msgid "Apply Modifiers"
-msgstr "மாற்றியமைப்பாளர்களைப் பயன்படுத்துங்கள்"
 
 msgid "Loose Edges"
 msgstr "தளர்வான விளிம்புகள்"
@@ -12718,17 +13252,11 @@ msgstr "ஏற்றுமதி அமைப்புகளை நினைவ�
 msgid "Keep Original"
 msgstr "அசல் வைத்திருங்கள்"
 
-msgid "Textures"
-msgstr "கட்டமைப்புகள்"
-
 msgid "General"
 msgstr "பொது"
 
 msgid "Grouping"
 msgstr "தொகுத்தல்"
-
-msgid "Animation"
-msgstr "இயங்குபடம்"
 
 msgid "Export OBJ"
 msgstr "OBJ ஏற்றுமதி செய்"
@@ -14149,9 +14677,6 @@ msgstr "வெள்ளை"
 msgid "Black"
 msgstr "கருப்பு"
 
-msgid "Transparent"
-msgstr "ஒளி புகும்"
-
 msgid "Atlas Settings"
 msgstr "அட்லஸ் அமைப்புகள்"
 
@@ -14204,12 +14729,6 @@ msgstr "பிஎம்பி"
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr "பி.என்.சி."
-
-msgid "JPEG"
-msgstr "jpeg"
-
 msgid "JPEG 2000"
 msgstr ""
 
@@ -14236,9 +14755,6 @@ msgstr "Radiance HDR"
 
 msgid "TIFF"
 msgstr "டிஃப்"
-
-msgid "WebP"
-msgstr ""
 
 msgid "Copy Image Path To Clipboard"
 msgstr "படப் பாதையை இடைநிலைப் பலகைக்கு நகலெடு"
@@ -14380,9 +14896,6 @@ msgstr "jp2"
 
 msgid "J2K"
 msgstr "சே 2 கே"
-
-msgid "Quality"
-msgstr "தகுதி"
 
 msgid "Cinema 48"
 msgstr "Cinema 48"
@@ -18615,9 +19128,6 @@ msgstr "விவரணையாக்கம்"
 msgid "Offset"
 msgstr "ஈடுசெய்யும்"
 
-msgid "Size"
-msgstr "அளவு"
-
 msgid "Rake"
 msgstr "ரேக்"
 
@@ -19086,9 +19596,6 @@ msgstr "கலப்பான் உலக இடம்"
 msgid "World space normal mapping, compatible with Blender render baking"
 msgstr "உலக விண்வெளி இயல்பான மேப்பிங், கலப்பான் வழங்குதல் பேக்கிங்குடன் இணக்கமானது"
 
-msgid "Replace"
-msgstr "மாற்று"
-
 msgid "Compare"
 msgstr "ஒப்பிடுக"
 
@@ -19187,9 +19694,6 @@ msgstr "கூட்டல் கலத்தல்"
 
 msgid "Musgrave"
 msgstr "மச்கிரேவ்"
-
-msgid "Background"
-msgstr "பின்னணி"
 
 msgid "Procedural Material"
 msgstr "செயல்முறை மூலப்பொருள்"
@@ -19560,20 +20064,29 @@ msgstr "காட்சி புகைப்பட கருவியையு�
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "இந்தக் காட்சி Cycles நினைவக வரம்பை மீறுவதால் EEVEE பயன்படுத்தப்படுகிறது."
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "முடிந்ததும் அது மூட்போர்டில் தோன்றும். ரத்துசெய்ய வழங்கு முன்னேற்றக் கட்டுப்பாட்டைப் பயன்படுத்தவும்."
 
-msgid "Rendering video"
-msgstr "காணொளி வழங்கப்படுகிறது"
+msgid "Video saved"
+msgstr ""
 
-msgid "Rendering image"
-msgstr "படம் வழங்கப்படுகிறது"
+msgid "Image saved"
+msgstr ""
 
 msgid "Video added to Moodboard"
 msgstr "காணொளி மூட்போர்டில் சேர்க்கப்பட்டது"
 
 msgid "Image added to Moodboard"
 msgstr "படம் மூட்போர்டில் சேர்க்கப்பட்டது"
+
+msgid "Rendering video"
+msgstr "காணொளி வழங்கப்படுகிறது"
+
+msgid "Rendering image"
+msgstr "படம் வழங்கப்படுகிறது"
 
 msgid "Render cancelled"
 msgstr "வழங்கல் ரத்துசெய்யப்பட்டது"
@@ -20386,9 +20899,6 @@ msgid "Your Codex sign-in file is not writable — fix its permissions or sign i
 msgstr ""
 
 msgid "Couldn't renew your Codex sign-in — check your connection"
-msgstr ""
-
-msgid "Try again"
 msgstr ""
 
 msgid "no Codex sign-in was found"
@@ -21597,16 +22107,7 @@ msgstr ""
 msgid "Choose a folder in the file browser"
 msgstr ""
 
-msgid "Godot"
-msgstr ""
-
-msgid "godot"
-msgstr ""
-
 msgid "Unreal Engine"
-msgstr ""
-
-msgid "unreal"
 msgstr ""
 
 msgid "New project"
@@ -21640,9 +22141,6 @@ msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."
-msgstr ""
-
-msgid "PROJECT"
 msgstr ""
 
 msgid "Location"
@@ -22080,9 +22578,6 @@ msgstr ""
 msgid "Stop selected agents, archive their chats and delete these scenes"
 msgstr ""
 
-msgid "Yes"
-msgstr ""
-
 msgid "New Scene"
 msgstr ""
 
@@ -22343,9 +22838,6 @@ msgstr "கோப்புப் பாதை அல்லது blend படப
 
 msgid "Image Source"
 msgstr "பட மூலம்"
-
-msgid "File"
-msgstr "கோப்பு"
 
 msgid "Image from file system"
 msgstr "கோப்பு அமைப்பிலிருந்து படம்"
@@ -25227,9 +25719,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
 msgid "Publish this scene as an explorable 3D website with a shareable link"
 msgstr ""
 
@@ -25266,9 +25755,6 @@ msgstr ""
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
-msgid "Unpublish"
-msgstr ""
-
 msgid "Remove the published website and its stored files"
 msgstr ""
 
@@ -25276,48 +25762,6 @@ msgid "Scene unpublished"
 msgstr ""
 
 msgid "Dismiss the publish outcome"
-msgstr ""
-
-msgid "Uploading…"
-msgstr ""
-
-msgid "Finalizing…"
-msgstr ""
-
-msgid "Publish unavailable"
-msgstr ""
-
-msgid "Publishing another scene…"
-msgstr ""
-
-msgid "Scene title"
-msgstr ""
-
-msgid "Will publish as “{title}”"
-msgstr ""
-
-msgid "Access"
-msgstr ""
-
-msgid "Creates a shareable link to an"
-msgstr ""
-
-msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
-msgstr ""
-
-msgid "Publish failed"
-msgstr ""
-
-msgid "Live · v{revision}"
-msgstr ""
-
-msgid "Update"
-msgstr ""
-
-msgid "Publish New Version"
 msgstr ""
 
 msgid "Not publishing"
@@ -25344,10 +25788,19 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+msgid "Publish failed"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
 msgid "Public title of your 3D website"
 msgstr ""
 
 msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Access"
 msgstr ""
 
 msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
@@ -25874,6 +26327,9 @@ msgstr "பண்புகள்"
 
 msgid "Blend (.blend)"
 msgstr "Blend (.blend)"
+
+msgid "Export…"
+msgstr ""
 
 msgid "Publish to Web…"
 msgstr ""
@@ -26438,9 +26894,6 @@ msgstr "எதுவும் தேர்ந்தெடுக்கப்ப�
 
 msgid "no image added"
 msgstr "படம் சேர்க்கப்படவில்லை"
-
-msgid "Agent chat"
-msgstr "முகவர் அரட்டை"
 
 msgid "3D generation"
 msgstr "3D உருவாக்கம்"
@@ -28743,6 +29196,12 @@ msgstr ""
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
 msgstr ""
 
+msgid "Tile"
+msgstr ""
+
+msgid "App-icon square with the button's preview icon and its label under it; lit draws the focus ring"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "பயன்முறை சறுக்கி இடது"
 
@@ -29891,9 +30350,6 @@ msgstr ".mixar கோப்புகளை வடிகட்டு"
 
 msgid "Filter backup .mixar files"
 msgstr "காப்பு .mixar கோப்புகளை வடிகட்டு"
-
-msgid "No"
-msgstr ""
 
 msgctxt "WindowManager"
 msgid "Newer graphics drivers might be available with better Mixar compatibility."

@@ -236,3 +236,57 @@ def test_late_complete_does_not_promote_cancelled_pixels(jobs):
     jobs._tick(job)
     jobs.deliver.assert_not_called()
     assert jobs._records[KEY]['status'] == 'cancelled'
+
+
+def test_export_card_destination_saves_the_users_file_not_moodboard(jobs, monkeypatch):
+    """The Export card's renders: the finished file goes to the chosen path,
+    nothing is added to Moodboard, and the toasts say "saved"."""
+    deliver_file = MagicMock(return_value='nook.png')
+    monkeypatch.setattr(jobs, 'deliver_file', deliver_file)
+    assert jobs.start(jobs.bpy.context, KEY, destination='D:/exports/nook.png')['status'] == 'started'
+    assert jobs.notify.call_args.kwargs['to_file'] is True
+    job = jobs._job
+    jobs._complete(None)
+    assert jobs._tick(job) is None
+    deliver_file.assert_called_once_with(job)
+    jobs.deliver.assert_not_called()
+    assert jobs._records[KEY]['file_name'] == 'nook.png'
+    assert jobs.notify.call_args.args[2] == 'done'
+    assert jobs.notify.call_args.kwargs['to_file'] is True
+    assert not jobs.slot.busy()
+
+
+def test_export_card_delivery_failure_is_named_and_path_free(jobs, monkeypatch):
+    monkeypatch.setattr(jobs, 'deliver_file',
+                        MagicMock(side_effect=RuntimeError('D:/private/nook.png')))
+    jobs.start(jobs.bpy.context, KEY, destination='D:/private/nook.png')
+    job = jobs._job
+    jobs._complete(None)
+    jobs._tick(job)
+    record = jobs._records[KEY]
+    assert record['status'] == 'failed' and record['error'] == 'file_delivery_failed'
+    assert 'private' not in str({k: v for k, v in record.items() if k != 'render'})
+
+
+def test_still_format_camera_and_transparency_are_restored():
+    from mixar.modules.scene_render.core.settings import Settings
+    cam = NS(type='CAMERA', name='Cam2')
+    image = NS(media_type='IMAGE', file_format='PNG', color_mode='RGB', color_depth='8')
+    original_camera = NS(type='CAMERA', name='Camera')
+    scene = NS(camera=original_camera, objects={'Cam2': cam}, frame_current=1, frame_subframe=0.0,
+               render=NS(engine='BLENDER_EEVEE', film_transparent=False, image_settings=image))
+    settings = Settings(scene)
+    settings.downgraded = ''
+    import mixar.modules.common.render_coordinator.core.geometry_budget as budget
+    original = budget.downgrade_over_budget
+    budget.downgrade_over_budget = lambda *a: ''
+    try:
+        settings.apply('image', '/tmp/x.png', image_format='OPEN_EXR', transparent=True,
+                       camera='Cam2')
+    finally:
+        budget.downgrade_over_budget = original
+    assert scene.camera is cam and scene.render.film_transparent is True
+    assert image.file_format == 'OPEN_EXR' and image.color_mode == 'RGBA'
+    settings.restore()
+    assert scene.camera is original_camera and scene.render.film_transparent is False
+    assert (image.file_format, image.color_mode) == ('PNG', 'RGB')

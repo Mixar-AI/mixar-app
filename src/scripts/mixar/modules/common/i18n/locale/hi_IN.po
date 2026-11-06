@@ -4937,6 +4937,594 @@ msgstr "Mixar उत्पादन"
 msgid "Output aspect ratio this camera frames for"
 msgstr "वह उत्पादन पक्षानुपात जिसके लिए यह प्रतिबिंबक फ़्रेम करता है"
 
+msgid "Choose a folder to export to."
+msgstr ""
+
+msgid "Choose a full folder path."
+msgstr ""
+
+msgid "Type a file name."
+msgstr ""
+
+msgid "Windows does not allow this file name. Try another one."
+msgstr ""
+
+msgid "This folder's drive is not available."
+msgstr ""
+
+msgid "Mixar cannot write to this folder. Choose another one."
+msgstr ""
+
+msgid "Rotation and scale not applied"
+msgstr ""
+
+msgid "Modifiers not applied"
+msgstr ""
+
+msgid "Material images not packed"
+msgstr ""
+
+msgid "Paint layers not baked"
+msgstr ""
+
+msgid "Could not create the folder ({error})."
+msgstr ""
+
+msgid "The export stopped unexpectedly. Try again."
+msgstr ""
+
+msgid "Could not save the copy."
+msgstr ""
+
+msgid "The export did not finish."
+msgstr ""
+
+msgid "Another render is running. Try again when it finishes."
+msgstr ""
+
+msgid "Add a camera to the scene first."
+msgstr ""
+
+msgid "Set an end frame after the start frame."
+msgstr ""
+
+msgid "Check the size, frames and frame rate."
+msgstr ""
+
+msgid "The render could not start. Try again."
+msgstr ""
+
+msgid "PROJECT"
+msgstr ""
+
+msgid "3D MODEL"
+msgstr ""
+
+msgid "MEDIA & WEB"
+msgstr ""
+
+msgid "Mixar project"
+msgstr ""
+
+msgid "A copy of everything: scene, paint layers, moodboards and chat. Your open file stays as it is."
+msgstr ""
+
+msgid "Blender file"
+msgstr ""
+
+msgid "Opens in Blender 5.2 or newer. Mixar-only data is kept but ignored there."
+msgstr ""
+
+msgid "glTF / GLB"
+msgstr ""
+
+msgid "The open standard for the web and real-time engines."
+msgstr ""
+
+msgid "The game-engine workhorse, with rigs and animation."
+msgstr ""
+
+msgid "USD / USDZ"
+msgstr ""
+
+msgid "Pixar's scene format. USDZ opens in Quick Look on iPhone and Vision Pro."
+msgstr ""
+
+msgid "OBJ"
+msgstr ""
+
+msgid "Geometry and materials only. Rigs and animation are left out."
+msgstr ""
+
+msgid "3D printing"
+msgstr ""
+
+msgid "One solid STL for slicers like Cura, PrusaSlicer and Bambu Studio."
+msgstr ""
+
+msgid "A still render from a camera, made in the background."
+msgstr ""
+
+msgid "An animation render from a camera, made in the background."
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "An explorable three.js page of this scene, with a link you can share."
+msgstr ""
+
+msgid "Unreal"
+msgstr ""
+
+msgid "unreal"
+msgstr ""
+
+msgid "Unity"
+msgstr ""
+
+msgid "unity"
+msgstr ""
+
+msgid "Godot"
+msgstr ""
+
+msgid "godot"
+msgstr ""
+
+msgid "Apple AR"
+msgstr ""
+
+msgid "apple"
+msgstr ""
+
+msgid "Other"
+msgstr "अन्य"
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "{name} is already in this folder. Replace it?"
+msgstr ""
+
+msgid "Replace"
+msgstr "बदलें"
+
+msgid "Back to settings"
+msgstr ""
+
+msgid "Render image"
+msgstr ""
+
+msgid "Render video"
+msgstr ""
+
+msgid "Save copy"
+msgstr ""
+
+msgid "Export {format}"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "{size} MB"
+msgstr ""
+
+msgid "{size} KB"
+msgstr ""
+
+msgid "Rendering {name} in the background."
+msgstr ""
+
+msgid "You can keep working. A notification says when it is saved."
+msgstr ""
+
+msgid "Saved {name} · {size}"
+msgstr ""
+
+msgid "Agent chat removed from the copy ({count} messages)."
+msgstr ""
+
+msgid "Not watertight: {count} open edges. A slicer may refuse it."
+msgstr ""
+
+msgid "Checked: Mixar opened the file again and it matches."
+msgstr ""
+
+msgid "Export again"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Off"
+msgstr "बंद"
+
+msgid "On"
+msgstr "चालू"
+
+msgid "Include"
+msgstr ""
+
+msgid "Leave out"
+msgstr ""
+
+msgid "Agent chat"
+msgstr "एजेंट चैट"
+
+msgid "Keep"
+msgstr ""
+
+msgid "Remove from the copy"
+msgstr ""
+
+msgid "Compress"
+msgstr ""
+
+msgid "What to export"
+msgstr ""
+
+msgid "Whole scene"
+msgstr ""
+
+msgid "Selected ({count})"
+msgstr ""
+
+msgid "File"
+msgstr "संचिका"
+
+msgid "Animation"
+msgstr "अनुप्राणन"
+
+msgid "Cameras and lights"
+msgstr ""
+
+msgid "Textures"
+msgstr "बनावटें"
+
+msgid "Draco compression"
+msgstr ""
+
+msgid "Apply modifiers"
+msgstr ""
+
+msgid "Up axis"
+msgstr ""
+
+msgid "Y up"
+msgstr ""
+
+msgid "Z up"
+msgstr ""
+
+msgid "Embed in the file"
+msgstr ""
+
+msgid "Copy beside it"
+msgstr ""
+
+msgid "Scale"
+msgstr "प्रमाण"
+
+msgid "Leaf bones"
+msgstr ""
+
+msgid "Smoothing"
+msgstr "चिकनापन"
+
+msgid "Keep original paths"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "Binary"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "Made for"
+msgstr ""
+
+msgid "Hide advanced settings"
+msgstr ""
+
+msgid "Advanced settings"
+msgstr ""
+
+msgid "Check the meshes before you export."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check again"
+msgstr ""
+
+msgid "{count} things to fix before export"
+msgstr ""
+
+msgid "Fix in scene"
+msgstr ""
+
+msgid "Ready: {count} meshes pass every check."
+msgstr ""
+
+msgid " and {count} more"
+msgstr ""
+
+msgid "{problem}: {meshes}"
+msgstr ""
+
+msgid "Size"
+msgstr "आकार"
+
+msgid "Format"
+msgstr "स्वरूप"
+
+msgid "Background"
+msgstr "पृष्ठभूमि"
+
+msgid "Scene"
+msgstr "दृश्य"
+
+msgid "Transparent"
+msgstr "पारदर्शी"
+
+msgid "Frame rate"
+msgstr ""
+
+msgid "Quality"
+msgstr "गुणवत्ता"
+
+msgid "Renderer"
+msgstr ""
+
+msgid "Saved as an MP4 (H.264) video. It renders in the background while you work."
+msgstr ""
+
+msgid "It renders in the background while you work; a notification says when it is saved."
+msgstr ""
+
+msgid "Export"
+msgstr "निर्यात करें"
+
+msgid "Export this scene as a project copy, a 3D file, an image or video, or a page on the web"
+msgstr ""
+
+msgid "Choose Export Format"
+msgstr ""
+
+msgid "Show this format's export settings"
+msgstr ""
+
+msgid "Made For"
+msgstr ""
+
+msgid "Use the axes, scale and texture settings this engine expects"
+msgstr ""
+
+msgid "Export Setting"
+msgstr ""
+
+msgid "Change this export setting"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Show or hide the exporter's advanced settings"
+msgstr ""
+
+msgid "Export with these settings"
+msgstr ""
+
+msgid "Check Before Export"
+msgstr ""
+
+msgid "Check the meshes for unapplied transforms, modifiers and unbaked paint"
+msgstr ""
+
+msgid "Fix in Scene"
+msgstr ""
+
+msgid "Apply transforms and modifiers, pack images and bake paint layers on the meshes that need it. This changes your scene"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Open the folder the file was saved to"
+msgstr ""
+
+msgid "Back to Settings"
+msgstr ""
+
+msgid "Go back to the export settings"
+msgstr ""
+
+msgid "Save your scene as a project, a 3D file, an image or video, or a page on the web."
+msgstr ""
+
+msgid "Exporting the scene…"
+msgstr ""
+
+msgid "Uploading…"
+msgstr ""
+
+msgid "Finishing…"
+msgstr ""
+
+msgid "Publish to Web is not available."
+msgstr ""
+
+msgid "Title"
+msgstr "शीर्षक"
+
+msgid "Scene title"
+msgstr ""
+
+msgid "Description"
+msgstr "विवरण"
+
+msgid "Optional"
+msgstr ""
+
+msgid "Who can open it"
+msgstr ""
+
+msgid "Anyone, listed in your gallery"
+msgstr ""
+
+msgid "Only people with the link"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Publishing…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled."
+msgstr ""
+
+msgid "Dismiss"
+msgstr "ख़ारिज करें"
+
+msgid "Try again"
+msgstr ""
+
+msgid "Unpublish"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Uploads this scene and gives you a link to share. Needs a Mixar account."
+msgstr ""
+
+msgid "File Name"
+msgstr ""
+
+msgid "What to Export"
+msgstr ""
+
+msgid "All clips"
+msgstr ""
+
+msgid "GLB · one file"
+msgstr ""
+
+msgid "USDZ · packaged"
+msgstr ""
+
+msgid "USDC · binary"
+msgstr ""
+
+msgid "Cameras and Lights"
+msgstr ""
+
+msgid "Auto"
+msgstr "स्वचालित"
+
+msgid "JPEG"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "Draco Compression"
+msgstr ""
+
+msgid "Apply Modifiers"
+msgstr "संशोधक लागू करें"
+
+msgid "Y Up"
+msgstr "Y ऊर्ध्व"
+
+msgid "Embed Textures"
+msgstr "बनावटें अंतःस्थापित करें"
+
+msgid "Engine default"
+msgstr ""
+
+msgid "Apply units"
+msgstr ""
+
+msgid "Apply all"
+msgstr ""
+
+msgid "Leaf Bones"
+msgstr ""
+
+msgid "Face"
+msgstr "फलक"
+
+msgid "Edge"
+msgstr "किनारा"
+
+msgid "Normals only"
+msgstr ""
+
+msgid "Copy Textures"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Centimetres"
+msgstr ""
+
+msgid "Metres"
+msgstr ""
+
+msgid "Remove Agent Chat"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "JPG"
+msgstr ""
+
+msgid "EXR"
+msgstr ""
+
+msgid "Transparent Background"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "Final"
+msgstr ""
+
+msgid "EEVEE"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "चयनित जाल निर्यात करने में विफल: {error}"
 
@@ -5114,9 +5702,6 @@ msgstr "चालू: वर्तमान में चयनित मूड�
 msgid "Result Format"
 msgstr "परिणाम स्वरूप"
 
-msgid "OBJ"
-msgstr ""
-
 msgid "STL"
 msgstr ""
 
@@ -5290,9 +5875,6 @@ msgstr "कोई भी वस्तु कतार में नहीं ज
 
 msgid "Cancel the running Hunyuan job"
 msgstr "चल रहे Hunyuan जॉब को रद्द करता है"
-
-msgid "Dismiss"
-msgstr "ख़ारिज करें"
 
 msgid "Dismiss the error and return to idle"
 msgstr "त्रुटि ख़ारिज करके निष्क्रिय स्थिति में लौटता है"
@@ -5723,9 +6305,6 @@ msgstr ""
 msgid "Connect Dialog State"
 msgstr ""
 
-msgid "Format"
-msgstr "स्वरूप"
-
 msgid "Processing..."
 msgstr "प्रसंस्करण जारी..."
 
@@ -6025,9 +6604,6 @@ msgstr "दाएँ हाथ के पास तैरता"
 
 msgid "Float by left hand"
 msgstr "बाएँ हाथ के पास तैरता"
-
-msgid "Auto"
-msgstr "स्वचालित"
 
 msgid "Point forward"
 msgstr "आगे की ओर इंगित"
@@ -6484,12 +7060,6 @@ msgstr "संदर्भ {number}"
 
 msgid "This template needs an available generation model. Check your connection."
 msgstr "इस टेम्पलेट को एक उपलब्ध जनरेशन मॉडल चाहिए। अपना कनेक्शन जाँचें।"
-
-msgid "On"
-msgstr "चालू"
-
-msgid "Off"
-msgstr "बंद"
 
 msgid "Choose one of the options supported by this model."
 msgstr "इस मॉडल द्वारा समर्थित विकल्पों में से एक चुनें।"
@@ -7466,9 +8036,6 @@ msgstr "जनरेशन पूर्ण हुई"
 msgid "Parameter ID"
 msgstr "पैरामीटर ID"
 
-msgid "Description"
-msgstr "विवरण"
-
 msgid "String value"
 msgstr "स्ट्रिंग मान"
 
@@ -7643,9 +8210,6 @@ msgstr "आवरण पूर्वावलोकन"
 msgid "3D Preview"
 msgstr "3D पूर्वावलोकन"
 
-msgid "Title"
-msgstr "शीर्षक"
-
 msgid "Object Names"
 msgstr "वस्तु नाम"
 
@@ -7802,9 +8366,6 @@ msgstr "सभी का चयन हटाएँ"
 msgid "Frame Selected (Numpad .)"
 msgstr "चयन को गठन में लाएँ (Numpad .)"
 
-msgid "Export"
-msgstr "निर्यात करें"
-
 msgid "Delete"
 msgstr "मिटाएँ"
 
@@ -7959,9 +8520,6 @@ msgstr "मूडबोर्ड चित्रपटी पर X स्थि�
 
 msgid "Y position on the moodboard canvas"
 msgstr "मूडबोर्ड चित्रपटी पर Y स्थिति"
-
-msgid "Scale"
-msgstr "प्रमाण"
 
 msgid "Scale factor for the image"
 msgstr "छवि का प्रमाण कारक"
@@ -12025,9 +12583,6 @@ msgstr "केवल संचिका नाम लिखें"
 msgid "Copy textures to the destination path"
 msgstr "बनावटों को गंतव्य पथ पर कॉपी करें"
 
-msgid "Embed Textures"
-msgstr "बनावटें अंतःस्थापित करें"
-
 msgid "Embed textures in FBX binary file (only for \"Copy\" path mode)"
 msgstr "FBX बाइनरी संचिका में बनावटें अंतःस्थापित करें (केवल \"प्रतिलिपि\" पथ रूप के लिए)"
 
@@ -12036,9 +12591,6 @@ msgstr "बैच रूप"
 
 msgid "Active scene to file"
 msgstr "सक्रिय दृश्य एक संचिका में"
-
-msgid "Scene"
-msgstr "दृश्य"
 
 msgid "Each scene as a file"
 msgstr "प्रत्येक दृश्य एक संचिका के रूप में"
@@ -12094,9 +12646,6 @@ msgstr "प्रकाश श्रोत"
 msgid "Armature"
 msgstr "आर्मेचर"
 
-msgid "Other"
-msgstr "अन्य"
-
 msgid "Other geometry types"
 msgstr "अन्य ज्यामिति प्रकार"
 
@@ -12148,9 +12697,6 @@ msgstr "ऊपर"
 msgid "X Up"
 msgstr "X ऊर्ध्व"
 
-msgid "Y Up"
-msgstr "Y ऊर्ध्व"
-
 msgid "Z Up"
 msgstr "Z ऊर्ध्व"
 
@@ -12172,23 +12718,14 @@ msgstr "रूपांतरण लागू करें"
 msgid "Bake space transform into object data (experimental)"
 msgstr "स्थान रूपांतरण को वस्तु डेटा में भर्जित करें (प्रायोगिक)"
 
-msgid "Smoothing"
-msgstr "चिकनापन"
-
 msgid "Normals Only"
 msgstr "केवल अभिलंब"
 
 msgid "Export only normals"
 msgstr "केवल अभिलंब निर्यात करें"
 
-msgid "Face"
-msgstr "फलक"
-
 msgid "Write face smoothing"
 msgstr "फलक चिकनापन लिखें"
-
-msgid "Edge"
-msgstr "किनारा"
 
 msgid "Write edge smoothing"
 msgstr "किनारा चिकनापन लिखें"
@@ -12201,9 +12738,6 @@ msgstr "फलक चिकनापन समूह लिखें"
 
 msgid "Export Subdivision Surface"
 msgstr "उपविभाजन सतह निर्यात करें"
-
-msgid "Apply Modifiers"
-msgstr "संशोधक लागू करें"
 
 msgid "Loose Edges"
 msgstr "ढीले किनारे"
@@ -12718,17 +13252,11 @@ msgstr "निर्यात सेटिंग्स याद रखें"
 msgid "Keep Original"
 msgstr "मूल रखें"
 
-msgid "Textures"
-msgstr "बनावटें"
-
 msgid "General"
 msgstr "सामान्य"
 
 msgid "Grouping"
 msgstr "समूहन"
-
-msgid "Animation"
-msgstr "अनुप्राणन"
 
 msgid "Export OBJ"
 msgstr "OBJ निर्यात करें"
@@ -14149,9 +14677,6 @@ msgstr "श्वेत"
 msgid "Black"
 msgstr "कृष्ण"
 
-msgid "Transparent"
-msgstr "पारदर्शी"
-
 msgid "Atlas Settings"
 msgstr "एटलस सेटिंग्स"
 
@@ -14204,12 +14729,6 @@ msgstr ""
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr ""
-
-msgid "JPEG"
-msgstr ""
-
 msgid "JPEG 2000"
 msgstr ""
 
@@ -14235,9 +14754,6 @@ msgid "Radiance HDR"
 msgstr ""
 
 msgid "TIFF"
-msgstr ""
-
-msgid "WebP"
 msgstr ""
 
 msgid "Copy Image Path To Clipboard"
@@ -14380,9 +14896,6 @@ msgstr ""
 
 msgid "J2K"
 msgstr ""
-
-msgid "Quality"
-msgstr "गुणवत्ता"
 
 msgid "Cinema 48"
 msgstr ""
@@ -18615,9 +19128,6 @@ msgstr "मैपिंग"
 msgid "Offset"
 msgstr "ऑफ़सेट"
 
-msgid "Size"
-msgstr "आकार"
-
 msgid "Rake"
 msgstr "रेक"
 
@@ -19086,9 +19596,6 @@ msgstr "Blender जगत स्पेस"
 msgid "World space normal mapping, compatible with Blender render baking"
 msgstr "जगत स्पेस नॉर्मल मैपिंग, Blender प्रतिपादन भर्जन के साथ संगत"
 
-msgid "Replace"
-msgstr "बदलें"
-
 msgid "Compare"
 msgstr "तुलना"
 
@@ -19187,9 +19694,6 @@ msgstr "योगात्मक मिश्रण"
 
 msgid "Musgrave"
 msgstr "Musgrave"
-
-msgid "Background"
-msgstr "पृष्ठभूमि"
 
 msgid "Procedural Material"
 msgstr "प्रक्रियात्मक पदार्थ"
@@ -19560,20 +20064,29 @@ msgstr "दृश्य प्रतिबिंबक और प्रतिप
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "EEVEE का उपयोग हो रहा है क्योंकि यह दृश्य Cycles की मेमोरी सीमा से अधिक है।"
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "पूरा होने पर यह मूडबोर्ड में दिखाई देगा। रद्द करने के लिए प्रतिपादन प्रगति नियंत्रण का उपयोग करें।"
 
-msgid "Rendering video"
-msgstr "वीडियो का प्रतिपादन हो रहा है"
+msgid "Video saved"
+msgstr ""
 
-msgid "Rendering image"
-msgstr "छवि का प्रतिपादन हो रहा है"
+msgid "Image saved"
+msgstr ""
 
 msgid "Video added to Moodboard"
 msgstr "वीडियो मूडबोर्ड में जोड़ा गया"
 
 msgid "Image added to Moodboard"
 msgstr "छवि मूडबोर्ड में जोड़ी गई"
+
+msgid "Rendering video"
+msgstr "वीडियो का प्रतिपादन हो रहा है"
+
+msgid "Rendering image"
+msgstr "छवि का प्रतिपादन हो रहा है"
 
 msgid "Render cancelled"
 msgstr "प्रतिपादन रद्द किया गया"
@@ -20386,9 +20899,6 @@ msgid "Your Codex sign-in file is not writable — fix its permissions or sign i
 msgstr ""
 
 msgid "Couldn't renew your Codex sign-in — check your connection"
-msgstr ""
-
-msgid "Try again"
 msgstr ""
 
 msgid "no Codex sign-in was found"
@@ -21597,16 +22107,7 @@ msgstr ""
 msgid "Choose a folder in the file browser"
 msgstr ""
 
-msgid "Godot"
-msgstr ""
-
-msgid "godot"
-msgstr ""
-
 msgid "Unreal Engine"
-msgstr ""
-
-msgid "unreal"
 msgstr ""
 
 msgid "New project"
@@ -21640,9 +22141,6 @@ msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."
-msgstr ""
-
-msgid "PROJECT"
 msgstr ""
 
 msgid "Location"
@@ -22080,9 +22578,6 @@ msgstr ""
 msgid "Stop selected agents, archive their chats and delete these scenes"
 msgstr ""
 
-msgid "Yes"
-msgstr ""
-
 msgid "New Scene"
 msgstr ""
 
@@ -22343,9 +22838,6 @@ msgstr "संचिका पथ या blend छवि नाम"
 
 msgid "Image Source"
 msgstr "छवि स्रोत"
-
-msgid "File"
-msgstr "संचिका"
 
 msgid "Image from file system"
 msgstr "संचिका सिस्टम से छवि"
@@ -25227,9 +25719,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
 msgid "Publish this scene as an explorable 3D website with a shareable link"
 msgstr ""
 
@@ -25266,9 +25755,6 @@ msgstr ""
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
-msgid "Unpublish"
-msgstr ""
-
 msgid "Remove the published website and its stored files"
 msgstr ""
 
@@ -25276,48 +25762,6 @@ msgid "Scene unpublished"
 msgstr ""
 
 msgid "Dismiss the publish outcome"
-msgstr ""
-
-msgid "Uploading…"
-msgstr ""
-
-msgid "Finalizing…"
-msgstr ""
-
-msgid "Publish unavailable"
-msgstr ""
-
-msgid "Publishing another scene…"
-msgstr ""
-
-msgid "Scene title"
-msgstr ""
-
-msgid "Will publish as “{title}”"
-msgstr ""
-
-msgid "Access"
-msgstr ""
-
-msgid "Creates a shareable link to an"
-msgstr ""
-
-msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
-msgstr ""
-
-msgid "Publish failed"
-msgstr ""
-
-msgid "Live · v{revision}"
-msgstr ""
-
-msgid "Update"
-msgstr ""
-
-msgid "Publish New Version"
 msgstr ""
 
 msgid "Not publishing"
@@ -25344,10 +25788,19 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+msgid "Publish failed"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
 msgid "Public title of your 3D website"
 msgstr ""
 
 msgid "Shown under the title on your 3D website"
+msgstr ""
+
+msgid "Access"
 msgstr ""
 
 msgid "Public scenes can be discovered; unlisted scenes are reachable only by people you share the link with"
@@ -25873,6 +26326,9 @@ msgid "Properties"
 msgstr "गुण"
 
 msgid "Blend (.blend)"
+msgstr ""
+
+msgid "Export…"
 msgstr ""
 
 msgid "Publish to Web…"
@@ -26438,9 +26894,6 @@ msgstr "कोई चयनित नहीं"
 
 msgid "no image added"
 msgstr "कोई छवि नहीं जोड़ी गई"
-
-msgid "Agent chat"
-msgstr "एजेंट चैट"
 
 msgid "3D generation"
 msgstr "3D जनरेशन"
@@ -28743,6 +29196,12 @@ msgstr ""
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
 msgstr ""
 
+msgid "Tile"
+msgstr ""
+
+msgid "App-icon square with the button's preview icon and its label under it; lit draws the focus ring"
+msgstr ""
+
 msgid "Mode Slider Left"
 msgstr "रूप स्लाइडर बायाँ"
 
@@ -29891,9 +30350,6 @@ msgstr ".mixar संचिकाएँ निस्पादित करें
 
 msgid "Filter backup .mixar files"
 msgstr "बैकअप .mixar संचिकाएँ निस्पादित करें"
-
-msgid "No"
-msgstr ""
 
 msgctxt "WindowManager"
 msgid "Newer graphics drivers might be available with better Mixar compatibility."

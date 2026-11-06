@@ -1135,10 +1135,6 @@ msgid "Center view to cursor"
 msgstr "Centre view to cursor"
 
 # derived
-msgid "Finalizing…"
-msgstr "Finalising…"
-
-# derived
 msgid "Finalizing"
 msgstr "Finalising"
 

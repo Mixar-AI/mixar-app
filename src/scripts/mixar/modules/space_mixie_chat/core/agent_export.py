@@ -153,13 +153,17 @@ def run_export(session_id: str, spec: dict) -> dict:
 
 
 def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
-                   tool: str = "export_scene") -> dict:
+                   tool: str = "export_scene", overrides: dict | None = None) -> dict:
     """Export ``spec`` to ``filepath`` (whose extension must match the format)
     with the shared preset, clip, material-swap and verification pipeline.
 
     ``spec["profile"]`` names extra preset overrides (``export_presets.PROFILES``,
     e.g. ``web_publish``). Used by ``run_export`` and by callers that own
-    their destination (``web_publish``); ``via``/``tool`` tag telemetry."""
+    their destination (``web_publish``, the Export card); ``via``/``tool`` tag
+    telemetry. ``overrides`` are exporter kwargs a local caller pins on top of
+    the preset (the Export card's settings) — a keyword, never read from the
+    spec, so an agent request cannot inject exporter arguments. The lane's own
+    staging (OBJ texture paths, STL scale) still wins over them."""
     started = time.perf_counter()
     fmt = str(spec.get("format") or "").lower().lstrip(".")
     extension = EXTENSIONS.get(fmt)
@@ -219,11 +223,12 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
                 texture_ctx = (staged_obj_textures(meshes, filepath) if fmt == "obj"
                                else nullcontext((0, "")))
                 with texture_ctx as (staged, textures_folder):
-                    overrides = ({"path_mode": "RELATIVE"} if staged
-                                 else stl_kwargs(spec) if stl else None)
+                    pinned = dict(overrides or {})
+                    pinned.update({"path_mode": "RELATIVE"} if staged
+                                  else stl_kwargs(spec) if stl else {})
                     stage = "exporter"
                     status, kwargs, anim_mode, warning = _run_operator(
-                        fmt, filepath, use_case, animations, overrides,
+                        fmt, filepath, use_case, animations, pinned or None,
                         str(spec.get("profile") or ""),
                     )
                     if 'FINISHED' not in status:
