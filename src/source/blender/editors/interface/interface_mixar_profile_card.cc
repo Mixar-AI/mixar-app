@@ -353,17 +353,17 @@ void add_usage(Layout *layout, const AccountInfo &info)
   const char *cta_label = info.can_top_up ? IFACE_("Buy Credits") : IFACE_("See Plans");
   cta.ui_units_x_set(card_units_for_text(cta_label, 1.0f, 0, mixar_card_button_chrome(false)));
 
-  if (info.can_top_up) {
+  /* `open_billing` is a Python operator. Until it registers there is no CTA,
+   * as in #add_action: `op()` would draw a label reading its idname, and
+   * #mark_last would paint that as the accent button. */
+  if (WM_operatortype_find("MIXAR_OT_open_billing", true) != nullptr) {
+    /* Every signed-in account can top up — no subscription needed — so plans
+     * are only a fallback: the one page that never refuses. */
     PointerRNA props = cta.op("MIXAR_OT_open_billing", cta_label, ICON_NONE);
-    RNA_string_set(&props, "target", MIXAR_TARGET_BUY_CREDITS);
+    RNA_string_set(
+        &props, "target", info.can_top_up ? MIXAR_TARGET_BUY_CREDITS : MIXAR_TARGET_PRICING);
+    mark_last(&cta, MixarCardElement::AccentButton);
   }
-  else {
-    /* Every signed-in account can top up — no subscription needed — so
-     * this is only a fallback: plans are the one page that never refuses. */
-    PointerRNA props = cta.op("MIXAR_OT_open_billing", cta_label, ICON_NONE);
-    RNA_string_set(&props, "target", MIXAR_TARGET_PRICING);
-  }
-  mark_last(&cta, MixarCardElement::AccentButton);
 
   /* The card's only signal that the figures above it are old. */
   if (!info.stale) {

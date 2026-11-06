@@ -73,6 +73,13 @@ def _reply(key, status, **extra):
     return dict(job_id=key, status=status, success=status in ('started', 'done'), **extra)
 
 
+def _busy(key):
+    """``render_kind`` names what holds the render, so the backend can wait out
+    the agent's own bake instead of reporting "another render"."""
+    kind = slot.native_render_kind()
+    return _reply(key, 'busy', error='another_render_running', **({'render_kind': kind} if kind else {}))
+
+
 @persistent
 def _complete(_scene, _depsgraph=None):
     if _job is not None and _job['terminal'] != 'cancelled':
@@ -181,7 +188,7 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
                     scene_session=str(getattr(origin, 'mixie_session_id', '') or ''),
                     moodboard_image_name=item.image.name))
     if _job is not None or slot.busy():
-        return _reply(key, 'busy', error='another_render_running')
+        return _busy(key)
     scene = context.scene
     if scene is None:
         return _reply(key, 'failed', error='scene_unavailable')
@@ -210,7 +217,7 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
         return _reply(key, 'failed', error='animation_range_required')
     reservation = slot.acquire(f'scene-render:{kind}:{key}')
     if reservation is None:
-        return _reply(key, 'busy', error='another_render_running')
+        return _busy(key)
     job = None
     folder = ''
     try:

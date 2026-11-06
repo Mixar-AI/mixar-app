@@ -112,14 +112,30 @@ def test_uninstallable_update_falls_back_to_the_downloads_page():
     assert download.operator == "mixar.open_downloads_page"
 
 
-def test_failed_download_falls_back_to_the_downloads_page():
+def test_failed_download_offers_retry_and_browser_fallback():
     state = get_update_state()
     state.set_available(_info())
     state.set_install_failed("Download failed")
 
     toasts.push_update_available_toast(_info())
 
+    assert _labels() == ["Retry", "Download"]
+    assert _toast().actions[0].operator == "mixar.restart_to_update"
+
+
+def test_a_failure_retrying_cannot_fix_offers_only_the_browser():
+    """A rejected signature, bad checksum, full or read-only disk fails the
+    same way again: no Retry, and a forced update keeps its Download way out."""
+    state = get_update_state()
+    info = _info(force_update=True)
+    state.set_available(info)
+    state.set_install_failed("Update failed verification", retryable=False)
+
+    toasts.push_update_available_toast(info)
+
     assert _labels() == ["Download"]
+    assert _toast().actions[0].operator == "mixar.open_downloads_page"
+    assert _toast().dismissible is False
 
 
 def test_forced_update_is_not_dismissible():
@@ -426,7 +442,7 @@ def test_failed_download_toast_says_why():
 
     item = _toast()
     assert "Download failed (HTTP 404)" in item.body
-    assert [a.label for a in item.actions] == ["Download"]
+    assert [a.label for a in item.actions] == ["Retry", "Download"]
 
 
 # ---------------------------------------------------------------------------
