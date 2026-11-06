@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ajan Balonu penceresi açılamadı"
+
 msgid "Capture Viewport"
 msgstr "Görüş Alanını Yakala"
 
@@ -3103,6 +3106,9 @@ msgstr "Uygulamak için Mixar yeniden başlatılacak."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tarayıcınız üzerinden güncellemek için İndir'i kullanın."
+
+msgid "Retry"
+msgstr "Yeniden Dene"
 
 msgid "Restart & Update"
 msgstr "Yeniden Başlat ve Güncelle"
@@ -21310,9 +21316,6 @@ msgstr "Oturumu Kapat"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yeniden Dene"
-
 msgid "Choose Export Location"
 msgstr "Dışa Aktarma Konumunu Seç"
 
@@ -26762,9 +26765,6 @@ msgstr "Otomatik kip: ajan açık seçimlere size sormak yerine kendisi karar ve
 
 msgid "Agent Bubble"
 msgstr "Ajan Balonu"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Ajan Balonu penceresi açılamadı"
 
 msgid "Agent Bubble Status"
 msgstr "Ajan Balonu Durumu"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
+
 msgid "Capture Viewport"
 msgstr "הגוצתה ןולח תדיכל"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar ותוא ליחהל ידכ שדחמ לעפוי."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ןפדפדה ךרד ןכדעל ידכ הדרוהב שמתשהל שי."
+
+msgid "Retry"
+msgstr "רזוח ןויסינ"
 
 msgid "Restart & Update"
 msgstr "ןוכדעו שדחמ הלעפה"
@@ -21310,9 +21316,6 @@ msgstr "תוקתנתה"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "רזוח ןויסינ"
-
 msgid "Choose Export Location"
 msgstr "אוציי םוקימ תריחב"
 
@@ -26762,9 +26765,6 @@ msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תו�
 
 msgid "Agent Bubble"
 msgstr "ןכוסה תעוב"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
 
 msgid "Agent Bubble Status"
 msgstr "ןכוסה תעוב בצמ"

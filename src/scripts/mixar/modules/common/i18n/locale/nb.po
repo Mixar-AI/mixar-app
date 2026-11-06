@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunne ikke åpne agentboblevinduet"
+
 msgid "Capture Viewport"
 msgstr "Ta visningsportbilde"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar starter på nytt for å ta den i bruk."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — bruk Last ned for å oppdatere via nettleseren."
+
+msgid "Retry"
+msgstr "Prøv igjen"
 
 msgid "Restart & Update"
 msgstr "Start på nytt og oppdater"
@@ -21310,9 +21316,6 @@ msgstr "Logg ut"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Prøv igjen"
-
 msgid "Choose Export Location"
 msgstr "Velg eksportplassering"
 
@@ -26762,9 +26765,6 @@ msgstr "Automodus: agenten avgjør åpne valg selv i stedet for å spørre deg, 
 
 msgid "Agent Bubble"
 msgstr "Agentboble"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunne ikke åpne agentboblevinduet"
 
 msgid "Agent Bubble Status"
 msgstr "Agentboblestatus"

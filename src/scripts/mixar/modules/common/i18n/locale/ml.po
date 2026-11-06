@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
+
 msgid "Capture Viewport"
 msgstr "വ്യൂപോർട്ട് പകർത്തുക"
 
@@ -3103,6 +3106,9 @@ msgstr "അത് പ്രയോഗിക്കാൻ Mixar പുനരാര�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ബ്രൗസർ വഴി അപ്ഡേറ്റ് ചെയ്യാൻ ഡൗൺലോഡ് ഉപയോഗിക്കുക."
+
+msgid "Retry"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
 
 msgid "Restart & Update"
 msgstr "പുനരാരംഭിച്ച് അപ്ഡേറ്റ് ചെയ്യുക"
@@ -21310,9 +21316,6 @@ msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
-
 msgid "Choose Export Location"
 msgstr "എക്സ്പോർട്ട് സ്ഥലം തിരഞ്ഞെടുക്കുക"
 
@@ -26762,9 +26765,6 @@ msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദി�
 
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
 
 msgid "Agent Bubble Status"
 msgstr "ഏജന്റ് ബബിൾ നില"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
+
 msgid "Capture Viewport"
 msgstr "Kapti vidujon"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar relanĉiĝos por apliki ĝin."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — uzu Elŝuti por ĝisdatigi per via retumilo."
+
+msgid "Retry"
+msgstr "Reprovi"
 
 msgid "Restart & Update"
 msgstr "Relanĉi kaj ĝisdatigi"
@@ -21310,9 +21316,6 @@ msgstr "Elsaluti"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Reprovi"
-
 msgid "Choose Export Location"
 msgstr "Elekti elportan lokon"
 
@@ -26762,9 +26765,6 @@ msgstr "Aŭtomata modo: la agento mem decidas malfermajn elektojn anstataŭ dema
 
 msgid "Agent Bubble"
 msgstr "Agenta veziko"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
 
 msgid "Agent Bubble Status"
 msgstr "Stato de la Agenta veziko"

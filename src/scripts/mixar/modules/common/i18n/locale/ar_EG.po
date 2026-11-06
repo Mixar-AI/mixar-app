@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
+
 msgid "Capture Viewport"
 msgstr "ﺬﻔﻨﻤﻟﺍ ﻂﻘﺘﻟﺍ"
 
@@ -3103,6 +3106,9 @@ msgstr ".ﻪﻘﻴﺒﻄﺘﻟ Mixar ﻞﻴﻐﺸﺗ ﺩﺎﻌﻴُﺳ"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ﻚﺤﻔﺼﺘﻣ ﺮﺒﻋ ﺚﻳﺪﺤﺘﻠﻟ «ﻝﺰّﻧ» ﻡﺪﺨﺘﺳﺍ."
+
+msgid "Retry"
+msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
 
 msgid "Restart & Update"
 msgstr "ﺙﺪّﺣﻭ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻋﺃ"
@@ -21310,9 +21316,6 @@ msgstr "ﺝﻭﺮﺨﻟﺍ ﻞﻴﺠﺴﺗ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
-
 msgid "Choose Export Location"
 msgstr "ﺮﻳﺪﺼﺘﻟﺍ ﻊﻗﻮﻣ ﺮﺘﺧﺍ"
 
@@ -26762,9 +26765,6 @@ msgstr "ﺺﺨﻠﻤﻟﺍ ﻲﻓ ﻪﺗﺍﺭﺍﺮﻗ ﺩﺮﺴﻳﻭ ،ﻚﻟ
 
 msgid "Agent Bubble"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
 
 msgid "Agent Bubble Status"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺔﻟﺎﺣ"

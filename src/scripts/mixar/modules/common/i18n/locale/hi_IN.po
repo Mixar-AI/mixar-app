@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "एजेंट बबल खिड़की खोलने में विफल"
+
 msgid "Capture Viewport"
 msgstr "व्यूपोर्ट कैप्चर करें"
 
@@ -3103,6 +3106,9 @@ msgstr "इसे लागू करने के लिए Mixar पुनः 
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — अपने ब्राउज़र से अपडेट करने के लिए “डाउनलोड करें” का उपयोग करें।"
+
+msgid "Retry"
+msgstr "पुनः प्रयास करें"
 
 msgid "Restart & Update"
 msgstr "पुनः आरंभ और अपडेट"
@@ -21310,9 +21316,6 @@ msgstr "लॉगआउट"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "पुनः प्रयास करें"
-
 msgid "Choose Export Location"
 msgstr "निर्यात स्थान चुनें"
 
@@ -26762,9 +26765,6 @@ msgstr "स्वचालित रूप: एजेंट आपसे पू�
 
 msgid "Agent Bubble"
 msgstr "एजेंट बबल"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "एजेंट बबल खिड़की खोलने में विफल"
 
 msgid "Agent Bubble Status"
 msgstr "एजेंट बबल स्थिति"

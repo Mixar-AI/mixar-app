@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Агент Аԥенџьыр аԥенџьыр аартра алымшаӡеит"
+
 msgid "Capture Viewport"
 msgstr "3Д Аԥшра аҭыхра"
 
@@ -3103,6 +3106,9 @@ msgstr "Аларҵаразы Mixar еиҭа илагалоит."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — абраузер ала аиҭарҿыцразы Аҭыгара шәхы иашәырхәа."
+
+msgid "Retry"
+msgstr "Еиҭа"
 
 msgid "Restart & Update"
 msgstr "Еиҭа алагара & аиҭарҿыцра"
@@ -21310,9 +21316,6 @@ msgstr "Аҭыҵра"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Еиҭа"
-
 msgid "Choose Export Location"
 msgstr "Аҭыгара аҭыԥ алхра"
 
@@ -26762,9 +26765,6 @@ msgstr "Автоматла аиҿкаашьа: агент иаартны иҟо�
 
 msgid "Agent Bubble"
 msgstr "Агент Аԥенџьыр"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Агент Аԥенџьыр аԥенџьыр аартра алымшаӡеит"
 
 msgid "Agent Bubble Status"
 msgstr "Агент Аԥенџьыр Астатус"

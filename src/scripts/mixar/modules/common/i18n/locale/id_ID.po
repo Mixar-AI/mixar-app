@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Gagal membuka jendela Gelembung Agen"
+
 msgid "Capture Viewport"
 msgstr "Tangkap Jendela Tampilan"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar akan dimulai ulang untuk menerapkannya."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gunakan Unduh untuk memperbarui melalui peramban Anda."
+
+msgid "Retry"
+msgstr "Coba Lagi"
 
 msgid "Restart & Update"
 msgstr "Mulai Ulang & Perbarui"
@@ -21310,9 +21316,6 @@ msgstr "Keluar"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Coba Lagi"
-
 msgid "Choose Export Location"
 msgstr "Pilih Lokasi Ekspor"
 
@@ -26762,9 +26765,6 @@ msgstr "Mode otomatis: agen memutuskan sendiri pilihan terbuka alih-alih bertany
 
 msgid "Agent Bubble"
 msgstr "Gelembung Agen"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Gagal membuka jendela Gelembung Agen"
 
 msgid "Agent Bubble Status"
 msgstr "Status Gelembung Agen"

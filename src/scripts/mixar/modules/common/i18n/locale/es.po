@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "No se pudo abrir la ventana de la burbuja del agente"
+
 msgid "Capture Viewport"
 msgstr "Capturar vista"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar se reiniciará para aplicarla."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — use Descargar para actualizar mediante su navegador."
+
+msgid "Retry"
+msgstr "Reintentar"
 
 msgid "Restart & Update"
 msgstr "Reiniciar y actualizar"
@@ -21310,9 +21316,6 @@ msgstr "Cerrar sesión"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Reintentar"
-
 msgid "Choose Export Location"
 msgstr "Elegir ubicación de exportación"
 
@@ -26762,9 +26765,6 @@ msgstr "Modo automático: el agente toma por sí mismo las decisiones pendientes
 
 msgid "Agent Bubble"
 msgstr "Burbuja del agente"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "No se pudo abrir la ventana de la burbuja del agente"
 
 msgid "Agent Bubble Status"
 msgstr "Estado de la burbuja del agente"

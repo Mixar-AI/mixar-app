@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Okna mehurčka agenta ni bilo mogoče odpreti"
+
 msgid "Capture Viewport"
 msgstr "Zajemi 3D pogled"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar se bo znova zagnal, da jo uveljavi."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — za posodobitev prek brskalnika uporabite Prenesi."
+
+msgid "Retry"
+msgstr "Poskusi znova"
 
 msgid "Restart & Update"
 msgstr "Znova zaženi in posodobi"
@@ -21310,9 +21316,6 @@ msgstr "Odjava"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Poskusi znova"
-
 msgid "Choose Export Location"
 msgstr "Izberite mesto izvoza"
 
@@ -26762,9 +26765,6 @@ msgstr "Samodejni način: agent odprte izbire odloči sam, namesto da vas vpraš
 
 msgid "Agent Bubble"
 msgstr "Mehurček agenta"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Okna mehurčka agenta ni bilo mogoče odpreti"
 
 msgid "Agent Bubble Status"
 msgstr "Stanje mehurčka agenta"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nie udało się otworzyć okna dymka agenta"
+
 msgid "Capture Viewport"
 msgstr "Przechwyć rzutnię"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar uruchomi się ponownie, aby ją zastosować."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — użyj opcji Pobierz, aby zaktualizować przez przeglądarkę."
+
+msgid "Retry"
+msgstr "Ponów"
 
 msgid "Restart & Update"
 msgstr "Uruchom ponownie i zaktualizuj"
@@ -21310,9 +21316,6 @@ msgstr "Wyloguj się"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Ponów"
-
 msgid "Choose Export Location"
 msgstr "Wybierz lokalizację eksportu"
 
@@ -26763,9 +26766,6 @@ msgstr "Tryb automatyczny: agent sam podejmuje otwarte decyzje zamiast pytać u�
 
 msgid "Agent Bubble"
 msgstr "Dymek agenta"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Nie udało się otworzyć okna dymka agenta"
 
 msgid "Agent Bubble Status"
 msgstr "Stan dymka agenta"

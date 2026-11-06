@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunne ikke åbne agentboblevinduet"
+
 msgid "Capture Viewport"
 msgstr "Optag 3D-visning"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar genstarter for at anvende den."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — brug Download for at opdatere via din browser."
+
+msgid "Retry"
+msgstr "Prøv igen"
 
 msgid "Restart & Update"
 msgstr "Genstart og opdatér"
@@ -21310,9 +21316,6 @@ msgstr "Log ud"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Prøv igen"
-
 msgid "Choose Export Location"
 msgstr "Vælg eksportplacering"
 
@@ -26762,9 +26765,6 @@ msgstr "Autotilstand: agenten afgør selv åbne valg i stedet for at spørge dig
 
 msgid "Agent Bubble"
 msgstr "Agentboble"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunne ikke åbne agentboblevinduet"
 
 msgid "Agent Bubble Status"
 msgstr "Status for agentboble"

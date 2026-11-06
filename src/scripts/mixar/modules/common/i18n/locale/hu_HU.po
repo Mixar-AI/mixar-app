@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
+
 msgid "Capture Viewport"
 msgstr "Nézetablak rögzítése"
 
@@ -3103,6 +3106,9 @@ msgstr "A Mixar újraindul, hogy alkalmazza."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — a böngészős frissítéshez használja a Letöltés gombot."
+
+msgid "Retry"
+msgstr "Újra"
 
 msgid "Restart & Update"
 msgstr "Újraindítás és frissítés"
@@ -21310,9 +21316,6 @@ msgstr "Kijelentkezés"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Újra"
-
 msgid "Choose Export Location"
 msgstr "Exportálás helyének kiválasztása"
 
@@ -26762,9 +26765,6 @@ msgstr "Automata mód: az ügynök maga dönt a nyitott választásokról, ahely
 
 msgid "Agent Bubble"
 msgstr "Ügynökbuborék"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
 
 msgid "Agent Bubble Status"
 msgstr "Ügynökbuborék állapota"

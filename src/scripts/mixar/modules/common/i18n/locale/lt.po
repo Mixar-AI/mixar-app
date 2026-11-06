@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nepavyko atidaryti agento burbulo lango"
+
 msgid "Capture Viewport"
 msgstr "Užfiksuoti peržiūros langą"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar bus paleista iš naujo, kad jį pritaikytų."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — atnaujinkite per naršyklę mygtuku „Atsisiųsti“."
+
+msgid "Retry"
+msgstr "Bandyti dar kartą"
 
 msgid "Restart & Update"
 msgstr "Paleisti iš naujo ir atnaujinti"
@@ -21310,9 +21316,6 @@ msgstr "Atsijungti"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Bandyti dar kartą"
-
 msgid "Choose Export Location"
 msgstr "Pasirinkti eksporto vietą"
 
@@ -26762,9 +26765,6 @@ msgstr "Automatinė veiksena: agentas atvirus pasirinkimus sprendžia pats, užu
 
 msgid "Agent Bubble"
 msgstr "Agento burbulas"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Nepavyko atidaryti agento burbulo lango"
 
 msgid "Agent Bubble Status"
 msgstr "Agento burbulo būsena"

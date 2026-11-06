@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "აგენტის ბუშტის ფანჯრის გახსნა ვერ მოხერხდა"
+
 msgid "Capture Viewport"
 msgstr "სარკმლის დაფიქსირება"
 
@@ -3103,6 +3106,9 @@ msgstr "მის გამოსაყენებლად Mixar გადა�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — განახლებისთვის ბრაუზერით გამოიყენეთ ჩამოტვირთვა."
+
+msgid "Retry"
+msgstr "თავიდან ცდა"
 
 msgid "Restart & Update"
 msgstr "გადატვირთვა და განახლება"
@@ -21310,9 +21316,6 @@ msgstr "გასვლა"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "თავიდან ცდა"
-
 msgid "Choose Export Location"
 msgstr "ექსპორტის ადგილის არჩევა"
 
@@ -26762,9 +26765,6 @@ msgstr "ავტომატური რეჟიმი: აგენტი �
 
 msgid "Agent Bubble"
 msgstr "აგენტის ბუშტი"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "აგენტის ბუშტის ფანჯრის გახსნა ვერ მოხერხდა"
 
 msgid "Agent Bubble Status"
 msgstr "აგენტის ბუშტის სტატუსი"

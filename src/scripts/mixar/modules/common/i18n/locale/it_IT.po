@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Impossibile aprire la finestra della bolla dell'agente"
+
 msgid "Capture Viewport"
 msgstr "Cattura vista 3D"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar verrà riavviato per applicarlo."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — usi Scarica per aggiornare tramite il browser."
+
+msgid "Retry"
+msgstr "Riprova"
 
 msgid "Restart & Update"
 msgstr "Riavvia e aggiorna"
@@ -21310,9 +21316,6 @@ msgstr "Esci"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Riprova"
-
 msgid "Choose Export Location"
 msgstr "Scegli destinazione esportazione"
 
@@ -26762,9 +26765,6 @@ msgstr "Modalità automatica: l'agente decide da solo le scelte aperte invece di
 
 msgid "Agent Bubble"
 msgstr "Bolla dell'agente"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Impossibile aprire la finestra della bolla dell'agente"
 
 msgid "Agent Bubble Status"
 msgstr "Stato della bolla dell'agente"

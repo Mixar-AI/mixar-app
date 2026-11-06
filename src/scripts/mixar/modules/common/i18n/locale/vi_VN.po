@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
+
 msgid "Capture Viewport"
 msgstr "Chụp Cổng Nhìn"
 
@@ -3103,6 +3106,9 @@ msgstr "Mixar sẽ khởi động lại để áp dụng."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — hãy dùng Tải Xuống để cập nhật qua trình duyệt."
+
+msgid "Retry"
+msgstr "Thử Lại"
 
 msgid "Restart & Update"
 msgstr "Khởi Động Lại & Cập Nhật"
@@ -21310,9 +21316,6 @@ msgstr "Đăng Xuất"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Thử Lại"
-
 msgid "Choose Export Location"
 msgstr "Chọn Vị Trí Xuất Khẩu"
 
@@ -26762,9 +26765,6 @@ msgstr "Chế độ tự động: tác nhân tự quyết định các lựa ch�
 
 msgid "Agent Bubble"
 msgstr "Bong Bóng Tác Nhân"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
 
 msgid "Agent Bubble Status"
 msgstr "Trạng Thái Bong Bóng Tác Nhân"
