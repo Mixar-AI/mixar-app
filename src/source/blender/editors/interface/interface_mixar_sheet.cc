@@ -242,6 +242,8 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
       return MixarCardElement::SheetSwitch;
     case 18:
       return MixarCardElement::SheetStatusDot;
+    case 19:
+      return MixarCardElement::SheetTile;
     default:
       return MixarCardElement::None;
   }
@@ -249,7 +251,7 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
 
 bool UI_mixar_sheet_element_is(const MixarCardElement element)
 {
-  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetStatusDot;
+  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetTile;
 }
 
 void UI_layout_mixar_sheet_frame(Layout *layout, const float header_dp, const float sidebar_dp)
@@ -476,6 +478,9 @@ bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardE
       break;
     case MixarCardElement::SheetStatusDot:
       draw_status_dot(but, rect);
+      break;
+    case MixarCardElement::SheetTile:
+      draw_tile(but, rect);
       break;
     default:
       break;

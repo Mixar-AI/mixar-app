@@ -223,9 +223,14 @@ def draw_right(layout, context, *, tier):
 
 
 def draw_export(layout):
+    """The Export sheet (`export_menu`); the stock export list only on a
+    session where the sheet's operator is not registered."""
     export = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     export.ui_units_x = 4.2
-    export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
+    if hasattr(bpy.types, "MIXAR_OT_export_menu"):
+        export.operator("mixar.export_menu", text="Export", icon="EXPORT")
+    else:
+        export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
     style(export, "PRIMARY")
 
 

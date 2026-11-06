@@ -25,6 +25,7 @@ set(SRC
   intern/wm_cursors.cc
   intern/wm_dragdrop.cc
   intern/wm_draw.cc
+  intern/wm_draw_mixar_backdrop.cc
   intern/wm_draw_mixar_glass.cc
   intern/wm_event_query.cc
   intern/wm_event_system.cc
@@ -77,6 +78,7 @@ set(SRC
   wm.hh
   wm_cursors.hh
   wm_draw.hh
+  wm_draw_mixar_backdrop.hh
   wm_draw_mixar_glass.hh
   WM_stall_monitor.hh
   wm_draw_mixar_glass_sync.hh

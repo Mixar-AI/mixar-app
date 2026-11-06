@@ -178,6 +178,21 @@ inline constexpr uchar switch_track_off_hover[4] = {0x45, 0x46, 0x4A, 255};
 /* -- Status dot: the disc leading a status line (green / danger / dim) -- */
 inline constexpr float status_dot = 11.0f;
 
+/* -- Tile: a square format tile, icon over label (the Export sheet) ----- */
+inline constexpr float tile_radius = 16.0f;
+/** The icon's edge, as a fraction of the tile's shorter side. */
+inline constexpr float tile_icon = 0.36f;
+/** The icon's centre above the tile's middle, as a fraction of its height. */
+inline constexpr float tile_icon_lift = 0.12f;
+/** The label's baseline above the tile's bottom edge. */
+inline constexpr float tile_label_bottom = 22.0f;
+inline constexpr float tile_label_size = 0.86f; /* x body */
+inline constexpr float tile_icon_rest_alpha = 0.72f;
+inline constexpr uchar tile_fill[4] = {0x22, 0x23, 0x25, 255};
+inline constexpr uchar tile_fill_lit[4] = {0x2E, 0x2F, 0x32, 255};
+inline constexpr uchar tile_border[4] = {0x33, 0x34, 0x37, 255};
+inline constexpr uchar tile_border_lit[4] = {0xC8, 0xC8, 0xCC, 255};
+
 /* Private kit shared by the two painter files. */
 
 /** The island's face (or the monospace caption face) at \a ratio x the UI
@@ -227,6 +242,8 @@ void draw_snippet(Button *but, const rcti *rect);
 void draw_switch(Button *but, const rcti *rect);
 void draw_status_dot(Button *but, const rcti *rect);
 void draw_footer_glyph(Button *but, float x, float cy, const uchar col[4]);
+/* `interface_mixar_sheet_tiles.cc`. */
+void draw_tile(Button *but, const rcti *rect);
 
 }  // namespace mixar_sheet
 

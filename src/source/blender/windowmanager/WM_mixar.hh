@@ -83,4 +83,15 @@ wmWindow *Mixar_modal_dialog_host_window(wmWindowManager *wm, wmWindow *win);
 /** `win`'s active screen has an Agent Bubble area (the island or the pill). */
 bool Mixar_window_has_agent_bubble(const wmWindow *win);
 
+/**
+ * Blur and dim `win` behind a modal pop-up while it is open
+ * (`wm_draw_mixar_backdrop.cc`). Keyed by `owner` (the pop-up's data) like the
+ * dock holds: a second hold by one owner replaces the first, and a release
+ * only undoes a hold that exists, so every close path may release.
+ */
+void Mixar_backdrop_blur_hold(wmWindow *win, const void *owner);
+void Mixar_backdrop_blur_release(const void *owner);
+/** A pop-up holds `win`'s backdrop blurred. */
+bool Mixar_backdrop_blur_held(const wmWindow *win);
+
 }  // namespace blender

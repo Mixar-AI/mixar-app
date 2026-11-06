@@ -7,7 +7,8 @@
  *    window's events (editors/interface/mixar/popup_query.cc).
  *  - `WindowManager.mixar_invoke_modal_dialog(operator, width)`: a centred
  *    props dialog that hides the Agent island and pill while open, hosted in
- *    the main window when invoked from the island (wm_operators.cc). */
+ *    the main window when invoked from the island (wm_operators.cc); `blur`
+ *    blurs and dims that window behind it (wm_draw_mixar_backdrop.cc). */
 
 namespace blender {
 #ifdef RNA_RUNTIME
@@ -16,7 +17,8 @@ bool Mixar_window_popup_block_open(wmWindow *win);
 wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
                                                    wmOperator *op,
                                                    int width,
-                                                   bool sheet);
+                                                   bool sheet,
+                                                   bool blur);
 
 static bool rna_Window_mixar_popup_block_open(wmWindow *win)
 {
@@ -26,9 +28,10 @@ static bool rna_Window_mixar_popup_block_open(wmWindow *win)
 static int rna_WindowManager_mixar_invoke_modal_dialog(bContext *C,
                                                        wmOperator *op,
                                                        int width,
-                                                       bool sheet)
+                                                       bool sheet,
+                                                       bool blur)
 {
-  return Mixar_operator_modal_dialog_popup(C, op, width, sheet);
+  return Mixar_operator_modal_dialog_popup(C, op, width, sheet, blur);
 }
 
 #else
@@ -66,6 +69,11 @@ static void RNA_def_mixar_popup_query(BlenderRNA *brna, StructRNA *window)
                   "Sheet",
                   "Open as a Mixar sheet: no title row, no padding, the framed card backdrop "
                   "(the operator's draw() calls layout.mixar_sheet_frame)");
+  RNA_def_boolean(func,
+                  "blur",
+                  false,
+                  "Blur",
+                  "Blur and dim the window behind the dialog while it is open");
   parm = RNA_def_enum_flag(
       func, "result", rna_enum_operator_return_items, OPERATOR_FINISHED, "result", "");
   RNA_def_function_return(func, parm);

@@ -8,6 +8,7 @@ teardown, keeping the shared render reservation through persistence/restore.
 No chat lifetime, polling RPC, preview caps or synchronous fallback.
 """
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -132,7 +133,7 @@ def _tick(job):
     try:
         slot.phase(job['reservation'], 'finalizing')
         if status == 'done':
-            value['moodboard_image_name'] = deliver(job)
+            value['file_name' if job.get('destination') else 'moodboard_image_name'] = deliver(job)
         elif status == 'failed':
             value['error'] = 'render_completion_lost'
     except Exception:
@@ -151,13 +152,20 @@ def _tick(job):
     value['elapsed_seconds'] = round(time.monotonic() - job['started'], 2)
     _publish(job['key'], value)
     notify(job['key'], job['kind'], value['status'],
-           rpt_('Open Moodboard to view it.') if value['status'] == 'done' else
-           rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '')
+           (rpt_('Saved to {folder}').format(folder=os.path.basename(os.path.dirname(job['destination'])))
+            if job.get('destination') else rpt_('Open Moodboard to view it.'))
+           if value['status'] == 'done' else
+           rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '',
+           to_file=bool(job.get('destination')))
     _report(job, value['status'], value.get('error', ''), value.get('moodboard_image_name', ''))
     return None
 
 
-def start(context, key, kind='image', label='', expected_session='', agent_ref_json='', **options):
+def start(context, key, kind='image', label='', expected_session='', agent_ref_json='',
+          destination='', **options):
+    """Start a render. ``destination`` (an absolute file path whose folder
+    exists, the Export sheet's) writes the result there instead of adding it
+    to Moodboard; ``options['container']`` picks its format (Settings.apply)."""
     global _job
     if not isinstance(key, str) or not re.fullmatch('[a-f0-9]{32}', key):
         return _reply('', 'failed', error='invalid_job_id')
@@ -192,6 +200,11 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
             or (first is None) != (last is None)
             or (first is not None and first > last)):
         return _reply(key, 'failed', error='invalid_render_settings')
+    if destination and not (os.path.isabs(destination)
+                            and os.path.isdir(os.path.dirname(destination))):
+        return _reply(key, 'failed', error='invalid_destination')
+    if options.get('container', '') not in ('', 'PNG', 'WEBP', 'MPEG4', 'WEBM'):
+        return _reply(key, 'failed', error='invalid_render_settings')
     if kind == 'video' and (first if first is not None else scene.frame_start) >= (
             last if last is not None else scene.frame_end):
         return _reply(key, 'failed', error='animation_range_required')
@@ -202,12 +215,13 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
     folder = ''
     try:
         folder = tempfile.mkdtemp(prefix='mixar_scene_render_')
-        path = folder + ('/scene.mp4' if kind == 'video' else '/scene.png')
+        ext = {'WEBP': '.webp', 'WEBM': '.webm'}.get(options.get('container', ''), '')
+        path = folder + ('/scene' + (ext or ('.mp4' if kind == 'video' else '.png')))
         settings = Settings(scene)
         job = dict(key=key, kind=kind, scene=scene, session=session, settings=settings,
                    folder=folder, path=path, label=label[:200], started=time.monotonic(),
                    terminal=None, written=0, reservation=reservation, render={},
-                   agent_ref=_agent_ref(agent_ref_json))
+                   agent_ref=_agent_ref(agent_ref_json), destination=destination)
         _job = job
         settings.apply(kind, path, **options)
         job['render'] = render_info(scene)
@@ -233,7 +247,10 @@ def start(context, key, kind='image', label='', expected_session='', agent_ref_j
                                      render=job['render']))
         notify(key, kind, 'started',
                (rpt_('Using EEVEE because this scene exceeds the Cycles memory budget.') + ' ' if settings.downgraded else '') +
-               rpt_('It will appear in Moodboard when finished. Use the render progress control to cancel.'))
+               (rpt_('It will be saved as {name} when finished. Use the render progress control to cancel.').format(
+                   name=os.path.basename(destination)) if destination else
+                rpt_('It will appear in Moodboard when finished. Use the render progress control to cancel.')),
+               to_file=bool(destination))
         return value
     except Exception:
         logger.exception('Could not start scene render')

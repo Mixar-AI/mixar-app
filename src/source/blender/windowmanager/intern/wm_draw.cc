@@ -75,6 +75,7 @@
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
+#include "wm_draw_mixar_backdrop.hh"
 #include "wm_draw_mixar_glass.hh"
 #include "wm_event_system.hh"
 #include "wm_surface.hh"
@@ -1222,33 +1223,12 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
   }
 }
 
-static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
+/** Everything below the floating regions: the areas, their overlays and the
+ * screen edges. Mixar: split out so a blurred pop-up backdrop can draw it
+ * once into a capture and then skip it (wm_draw_mixar_backdrop.cc). */
+static void wm_draw_window_areas(bContext *C, wmWindow *win, bScreen *screen, int view)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
-  bScreen *screen = WM_window_get_active_screen(win);
-
-  /* Restore screen context after drawing. Especially important for when this is called for drawing
-   * to an offscreen buffer (see #WM_window_pixels_read_from_offscreen()) from operators or other
-   * handlers. */
-  ScrArea *restore_area = CTX_wm_area(C);
-  ARegion *restore_region = CTX_wm_region(C);
-  BLI_SCOPED_DEFER([&] {
-    CTX_wm_area_set(C, restore_area);
-    CTX_wm_region_set(C, restore_region);
-  });
-
-  GPU_debug_group_begin("Window Redraw");
-
-  /* Draw into the window frame-buffer, in full window coordinates. */
-  wmWindowViewport(win);
-
-/* We draw on all pixels of the windows so we don't need to clear them before.
- * Actually this is only a problem when resizing the window.
- * If it becomes a problem we should clear only when window size changes. */
-#if 0
-  GPU_clear_color(0, 0, 0, 0);
-#endif
-
   /* Blit non-overlapping area regions. */
   ED_screen_areas_iter (win, screen, area) {
     view3d_scenes_drawer_draw_background(area);
@@ -1312,6 +1292,42 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 
   wm_draw_callbacks(win);
   wmWindowViewport(win);
+}
+
+static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  bScreen *screen = WM_window_get_active_screen(win);
+
+  /* Restore screen context after drawing. Especially important for when this is called for drawing
+   * to an offscreen buffer (see #WM_window_pixels_read_from_offscreen()) from operators or other
+   * handlers. */
+  ScrArea *restore_area = CTX_wm_area(C);
+  ARegion *restore_region = CTX_wm_region(C);
+  BLI_SCOPED_DEFER([&] {
+    CTX_wm_area_set(C, restore_area);
+    CTX_wm_region_set(C, restore_region);
+  });
+
+  GPU_debug_group_begin("Window Redraw");
+
+  /* Draw into the window frame-buffer, in full window coordinates. */
+  wmWindowViewport(win);
+
+/* We draw on all pixels of the windows so we don't need to clear them before.
+ * Actually this is only a problem when resizing the window.
+ * If it becomes a problem we should clear only when window size changes. */
+#if 0
+  GPU_clear_color(0, 0, 0, 0);
+#endif
+
+  /* Mixar: under a blurred pop-up the areas draw once into a capture, then
+   * the kept blur stands in for them (wm_draw_mixar_backdrop.cc). */
+  const MixarBackdropPass backdrop = wm_draw_mixar_backdrop_begin(win, view);
+  if (backdrop != MixarBackdropPass::Cached) {
+    wm_draw_window_areas(C, win, screen, view);
+  }
+  wm_draw_mixar_backdrop_end(win, backdrop);
 
   /* Blend in floating regions (menus). */
   for (ARegion &region : screen->regionbase) {
