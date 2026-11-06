@@ -85,3 +85,29 @@ def test_connection_timeout_stops_capture_and_preserves_draft(rig):
     aud._mixar_capture_stop.assert_called_once()
     session.transport.cancel.assert_called_once()
     assert 'connect' in voice._toast.call_args.args[1]
+
+
+@pytest.mark.parametrize('guest,token', [(True, 'valid-guest-token'), (False, None)])
+@pytest.mark.parametrize('held', [False, True])
+def test_sign_in_required_before_capture_or_transport(rig, monkeypatch, guest, token, held):
+    voice, session, aud, _ = rig
+    voice._session = None
+    get_token = Mock(return_value=token)
+    monkeypatch.setitem(sys.modules, 'mixar.modules.auth.core.auth', NS(get_access_token=get_token))
+    monkeypatch.setitem(sys.modules, 'mixar.modules.auth.core.guest', NS(is_guest=lambda: guest))
+    transport = Mock()
+    monkeypatch.setitem(sys.modules, 'mixar.modules.space_mixie_chat.core.voice_input.transport',
+                        NS(Transport=transport))
+    monkeypatch.setitem(sys.modules, 'mixar.modules.space_mixie_chat.core.scribble',
+                        NS(is_busy=lambda: False, is_canvas_open=lambda _: False))
+    context = sys.modules['bpy'].context
+    outcome = voice.push_to_talk_begin(context) if held else voice.toggle(context)
+    assert outcome == 'login_required'
+    voice._toast.assert_called_once_with('warning', 'Sign in to use voice input.')
+    assert voice._session is None and not voice.push_to_talk_owned()
+    assert session.scene.mixie_chat_input == 'Keep draft'
+    transport.assert_not_called()
+    aud._mixar_capture_permission.assert_not_called()
+    aud._mixar_capture_open.assert_not_called()
+    if guest:
+        get_token.assert_not_called()
