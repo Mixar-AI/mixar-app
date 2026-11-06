@@ -292,3 +292,42 @@ def test_the_blur_is_held_by_the_popup_and_drawn_under_the_menus():
     backdrop = (WM / "intern/wm_draw_mixar_backdrop.cc").read_text()
     # The blur chain is rebuilt in the drawing window's context, then dropped.
     assert backdrop.count("ui::mixar_glass_free();") == 2
+
+
+def _web_props(**kw):
+    values = dict(title="", visibility="unlisted", include_animation=True, is_published=False,
+                  revision=0, link="")
+    values.update(kw)
+    return NS(**values)
+
+
+@pytest.fixture
+def publish_ui(monkeypatch):
+    from mixar.modules.export_menu.ui.operators import export_menu_ops
+    state = {"starting": False, "error": ""}
+    monkeypatch.setattr(export_menu_ops, "publish_ui", state)
+    return state
+
+
+def test_publish_shows_preparing_at_once_with_one_disabled_default(publish_ui):
+    publish_ui["starting"] = True
+    log = _draw(_props(format="WEB"), web=_web_props())
+    assert any("Preparing" in str(item.get("text")) for item in log)
+    (default,) = _defaults(log)
+    assert default["op"] == "mixar.web_publish_cancel" and not default["enabled"]
+
+
+def test_a_refused_publish_says_why_in_the_sheet(publish_ui):
+    publish_ui["error"] = "Sign in to Mixar to publish scenes"
+    log = _draw(_props(format="WEB"), web=_web_props())
+    assert any(item.get("kind") == "DANGER_TEXT" and "Sign in" in item["text"] for item in log)
+    (default,) = _defaults(log)
+    assert default["op"] == sheet.OP_PUBLISH and default["enabled"]
+
+
+def test_the_publish_click_defers_the_pipeline_so_the_sheet_draws_first():
+    ops = (SRC / "scripts/mixar/modules/export_menu/ui/operators/export_menu_ops.py").read_text()
+    execute = ops[ops.index('        """Show "Preparing…" now'):ops.index("classes = (")]
+    assert "publish_ui.update(starting=True" in execute
+    assert "bpy.app.timers.register(lambda: _start_publish(" in execute
+    assert "begin_publish" not in execute  # never inside the click
