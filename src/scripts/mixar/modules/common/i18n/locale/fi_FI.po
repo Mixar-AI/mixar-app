@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Agenttikuplan ikkunaa ei voitu avata"
+
 msgid "Capture Viewport"
 msgstr "Kaappaa näkymä"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar käynnistyy uudelleen sen ottamiseksi käyttöön."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — käyttäkää komentoa Lataa päivittääksenne selaimella."
+
+msgid "Retry"
+msgstr "Yritä uudelleen"
 
 msgid "Restart & Update"
 msgstr "Käynnistä uudelleen ja päivitä"
@@ -21313,9 +21319,6 @@ msgstr "Kirjaudu ulos"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yritä uudelleen"
-
 msgid "Choose Export Location"
 msgstr "Valitse vientisijainti"
 
@@ -26741,9 +26744,6 @@ msgstr "Automaattitila: agentti päättää avoimet valinnat itse sen sijaan, et
 
 msgid "Agent Bubble"
 msgstr "Agenttikupla"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Agenttikuplan ikkunaa ei voitu avata"
 
 msgid "Agent Bubble Status"
 msgstr "Agenttikuplan tila"

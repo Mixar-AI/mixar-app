@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "無法開啟智慧代理氣泡視窗"
+
 msgid "Capture Viewport"
 msgstr "擷取視圖區"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar 將重新啟動以套用更新。"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error}——請使用「下載」透過瀏覽器更新。"
+
+msgid "Retry"
+msgstr "重試"
 
 msgid "Restart & Update"
 msgstr "重新啟動並更新"
@@ -21313,9 +21319,6 @@ msgstr "登出"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "重試"
-
 msgid "Choose Export Location"
 msgstr "選擇匯出位置"
 
@@ -26741,9 +26744,6 @@ msgstr "自動模式：智慧代理會自行決定待定的選擇而不詢問你
 
 msgid "Agent Bubble"
 msgstr "智慧代理氣泡"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "無法開啟智慧代理氣泡視窗"
 
 msgid "Agent Bubble Status"
 msgstr "智慧代理氣泡狀態"

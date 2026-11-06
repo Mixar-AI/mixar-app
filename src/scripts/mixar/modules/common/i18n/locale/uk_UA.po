@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Не вдалося відкрити вікно бульбашки агента"
+
 msgid "Capture Viewport"
 msgstr "Захопити вікно огляду"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar перезапуститься, щоб застосувати йо
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — скористайтеся «Завантажити», щоб оновитися через браузер."
+
+msgid "Retry"
+msgstr "Повторити"
 
 msgid "Restart & Update"
 msgstr "Перезапустити й оновити"
@@ -21313,9 +21319,6 @@ msgstr "Вийти"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Повторити"
-
 msgid "Choose Export Location"
 msgstr "Вибрати місце експорту"
 
@@ -26741,9 +26744,6 @@ msgstr "Автоматичний режим: агент сам ухвалює в
 
 msgid "Agent Bubble"
 msgstr "Бульбашка агента"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Не вдалося відкрити вікно бульбашки агента"
 
 msgid "Agent Bubble Status"
 msgstr "Стан бульбашки агента"

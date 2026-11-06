@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﯽﮑﺳ ﻞﮭﮐ ﮟﯿﮩﻧ ﯽﮐﮍﮭﮐ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
+
 msgid "Capture Viewport"
 msgstr "ﮟﯾﺮﮐ ﺮﭽﭙﯿﮐ ﭦﺭﻮﭘ ﻮﯾﻭ"
 
@@ -3100,6 +3103,9 @@ msgstr "۔ﺎﮔﻮﮨ ﻉﻭﺮﺷ ﮦﺭﺎﺑﻭﺩ Mixar ﮯﯿﻟ ﮯﮐ �
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ۔ﮟﯾﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﮈﻮﻟ ﻥﺅﺍﮈ ﮯﯿﻟ ﮯﮐ ﭧﯾﮉﭘﺍ ﮯﺳ ﺭﺯﺅﺍﺮﺑ"
+
+msgid "Retry"
+msgstr "ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ"
 
 msgid "Restart & Update"
 msgstr "ﭧﯾﮉﭘﺍ ﺭﻭﺍ ﻉﻭﺮﺷ ﮦﺭﺎﺑﻭﺩ"
@@ -21313,9 +21319,6 @@ msgstr "ﭦﺅﺁ ﻦﺋﺎﺳ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ"
-
 msgid "Choose Export Location"
 msgstr "ﮟﯿﻨﭼ ﮧﮕﺟ ﯽﮐ ﺪﻣﺁﺮﺑ"
 
@@ -26741,9 +26744,6 @@ msgstr "ﮯﮨ ﺎﺘﮭﮑﻟ ﮟﯿﻣ ﮯﺻﻼ﻿ﺧ ﮯﻠﺼﯿﻓ ﮯﻨ�
 
 msgid "Agent Bubble"
 msgstr "ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "ﯽﮑﺳ ﻞﮭﮐ ﮟﯿﮩﻧ ﯽﮐﮍﮭﮐ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
 
 msgid "Agent Bubble Status"
 msgstr "ﺖﯿﺜﯿﺣ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"

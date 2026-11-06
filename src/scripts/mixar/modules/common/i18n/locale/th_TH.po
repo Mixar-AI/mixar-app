@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
+
 msgid "Capture Viewport"
 msgstr "จับภาพวิวพอร์ต"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar จะรีสตาร์ทเพื่อนำการอั
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ใช้ “ดาวน์โหลด” เพื่ออัปเดตผ่านเบราว์เซอร์ของคุณ"
+
+msgid "Retry"
+msgstr "ลองใหม่"
 
 msgid "Restart & Update"
 msgstr "รีสตาร์ทและอัปเดต"
@@ -21313,9 +21319,6 @@ msgstr "ออกจากระบบ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ลองใหม่"
-
 msgid "Choose Export Location"
 msgstr "เลือกตำแหน่งส่งออก"
 
@@ -26741,9 +26744,6 @@ msgstr "โหมดอัตโนมัติ: เอเจนต์ตัด�
 
 msgid "Agent Bubble"
 msgstr "บับเบิลเอเจนต์"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
 
 msgid "Agent Bubble Status"
 msgstr "สถานะบับเบิลเอเจนต์"

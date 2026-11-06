@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
+
 msgid "Capture Viewport"
 msgstr "Capturar mirador"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar es reiniciarà per aplicar-la."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — utilitzi Baixar per actualitzar amb el navegador."
+
+msgid "Retry"
+msgstr "Tornar-ho a provar"
 
 msgid "Restart & Update"
 msgstr "Reiniciar i actualitzar"
@@ -21313,9 +21319,6 @@ msgstr "Tancar la sessió"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Tornar-ho a provar"
-
 msgid "Choose Export Location"
 msgstr "Triar la ubicació d'exportació"
 
@@ -26741,9 +26744,6 @@ msgstr "Mode automàtic: l'agent decideix ell mateix les opcions obertes en lloc
 
 msgid "Agent Bubble"
 msgstr "Bombolla de l'agent"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
 
 msgid "Agent Bubble Status"
 msgstr "Estat de la bombolla de l'agent"

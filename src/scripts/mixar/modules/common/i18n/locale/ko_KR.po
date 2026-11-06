@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "에이전트 버블 창을 열지 못했습니다"
+
 msgid "Capture Viewport"
 msgstr "뷰포트 캡처"
 
@@ -3100,6 +3103,9 @@ msgstr "업데이트를 적용하기 위해 Mixar가 다시 시작됩니다."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 다운로드를 사용하여 브라우저에서 업데이트하세요."
+
+msgid "Retry"
+msgstr "재시도"
 
 msgid "Restart & Update"
 msgstr "다시 시작 및 업데이트"
@@ -21313,9 +21319,6 @@ msgstr "로그아웃"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "재시도"
-
 msgid "Choose Export Location"
 msgstr "내보내기 위치 선택"
 
@@ -26741,9 +26744,6 @@ msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 
 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "에이전트 버블 창을 열지 못했습니다"
 
 msgid "Agent Bubble Status"
 msgstr "에이전트 버블 상태"

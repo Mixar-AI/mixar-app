@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Агенттин көбүкчөсү терезеси ачылган жок"
+
 msgid "Capture Viewport"
 msgstr "Көрүү терезесин тартуу"
 
@@ -3100,6 +3103,9 @@ msgstr "Аны колдонуу үчүн Mixar кайра иштейт."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — браузер аркылуу жаңылоо үчүн Түшүрүүнү колдонуңуз."
+
+msgid "Retry"
+msgstr "Кайра аракет"
 
 msgid "Restart & Update"
 msgstr "Кайра иштетүү жана жаңылоо"
@@ -21313,9 +21319,6 @@ msgstr "Чыгуу"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Кайра аракет"
-
 msgid "Choose Export Location"
 msgstr "Экспорт ордун тандоо"
 
@@ -26741,9 +26744,6 @@ msgstr "Авто режим: агент ачык тандоолорду сизд
 
 msgid "Agent Bubble"
 msgstr "Агенттин көбүкчөсү"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Агенттин көбүкчөсү терезеси ачылган жок"
 
 msgid "Agent Bubble Status"
 msgstr "Агенттин көбүкчөсүнүн абалы"

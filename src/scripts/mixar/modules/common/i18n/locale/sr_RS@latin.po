@@ -663,6 +663,10 @@ msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
 # derived
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora mehurića agenta nije uspelo"
+
+# derived
 msgid "Capture Viewport"
 msgstr "Snimi prikaz"
 
@@ -3808,6 +3812,10 @@ msgstr "Mixar će se ponovo pokrenuti da ga primeni."
 # derived
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — koristite Preuzmi da ažurirate preko pregledača."
+
+# derived
+msgid "Retry"
+msgstr "Pokušaj ponovo"
 
 # derived
 msgid "Restart & Update"
@@ -27107,10 +27115,6 @@ msgid "Sound on"
 msgstr ""
 
 # derived
-msgid "Retry"
-msgstr "Pokušaj ponovo"
-
-# derived
 msgid "Choose Export Location"
 msgstr "Izaberi mesto izvoza"
 
@@ -33788,10 +33792,6 @@ msgstr "Automatski režim: agent sam odlučuje otvorene izbore umesto da vas pit
 # derived
 msgid "Agent Bubble"
 msgstr "Mehurić agenta"
-
-# derived
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora mehurića agenta nije uspelo"
 
 # derived
 msgid "Agent Bubble Status"

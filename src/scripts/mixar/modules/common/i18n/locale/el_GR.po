@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
+
 msgid "Capture Viewport"
 msgstr "Καταγραφή προβολής 3D"
 
@@ -3100,6 +3103,9 @@ msgstr "Το Mixar θα επανεκκινηθεί για να την εφαρμ
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — χρησιμοποιήστε τη Λήψη για ενημέρωση μέσω του προγράμματος περιήγησης."
+
+msgid "Retry"
+msgstr "Επανάληψη"
 
 msgid "Restart & Update"
 msgstr "Επανεκκίνηση και ενημέρωση"
@@ -21313,9 +21319,6 @@ msgstr "Αποσύνδεση"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Επανάληψη"
-
 msgid "Choose Export Location"
 msgstr "Επιλογή θέσης εξαγωγής"
 
@@ -26741,9 +26744,6 @@ msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασ�
 
 msgid "Agent Bubble"
 msgstr "Φούσκα πράκτορα"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
 
 msgid "Agent Bubble Status"
 msgstr "Κατάσταση φούσκας πράκτορα"

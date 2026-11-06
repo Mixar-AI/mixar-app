@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "打开智能体气泡窗口失败"
+
 msgid "Capture Viewport"
 msgstr "捕获视图"
 
@@ -3100,6 +3103,9 @@ msgstr "Mixar 将重新启动以应用更新。"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error}——请使用“下载”通过浏览器更新。"
+
+msgid "Retry"
+msgstr "重试"
 
 msgid "Restart & Update"
 msgstr "重启并更新"
@@ -21313,9 +21319,6 @@ msgstr "退出登录"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "重试"
-
 msgid "Choose Export Location"
 msgstr "选择导出位置"
 
@@ -26741,9 +26744,6 @@ msgstr "自动模式：智能体会自行决定待定选项而不询问您，并
 
 msgid "Agent Bubble"
 msgstr "智能体气泡"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "打开智能体气泡窗口失败"
 
 msgid "Agent Bubble Status"
 msgstr "智能体气泡状态"

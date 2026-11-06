@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
+
 msgid "Capture Viewport"
 msgstr "வியூபோர்ட்டைப் பிடி"
 
@@ -3100,6 +3103,9 @@ msgstr "அதைப் பயன்படுத்த Mixar மீண்டு�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — உலாவி வழியாகப் புதுப்பிக்க பதிவிறக்கு என்பதைப் பயன்படுத்துங்கள்."
+
+msgid "Retry"
+msgstr "மீண்டும் முயல்"
 
 msgid "Restart & Update"
 msgstr "மீண்டும் தொடங்கி புதுப்பி"
@@ -21313,9 +21319,6 @@ msgstr "வெளியேறு"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "மீண்டும் முயல்"
-
 msgid "Choose Export Location"
 msgstr "ஏற்றுமதி இடத்தைத் தேர்ந்தெடு"
 
@@ -26741,9 +26744,6 @@ msgstr "தானி பயன்முறை: திறந்த தேர்�
 
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"
-
-msgid "Failed to open Agent Bubble window"
-msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
 
 msgid "Agent Bubble Status"
 msgstr "முகவர் குமிழி நிலைமை"
