@@ -113,7 +113,7 @@ def test_unpublish_sends_the_canonical_id_and_keeps_the_record_on_failure():
 def test_new_version_with_a_crafted_id_is_refused_before_export(monkeypatch):
     exports = []
     monkeypatch.setattr(pipeline, "_signed_in", lambda: True)
-    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [object()])
+    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [SimpleNamespace(data=SimpleNamespace(materials=[]))])
     monkeypatch.setattr(pipeline.glb_export, "export_glb", lambda *a, **k: exports.append(a))
     props = _props(published_scene_id="../../asset-search/embeddings", slug="loft")
     context = SimpleNamespace(scene=SimpleNamespace(name="Loft", mixar_web_publish=props))
@@ -130,7 +130,7 @@ def _run_begin(monkeypatch, props, export=None, **kwargs):
     ``(outcome, job)`` where ``job`` is what reached the worker."""
     seen = {}
     monkeypatch.setattr(pipeline, "_signed_in", lambda: True)
-    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [object()])
+    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [SimpleNamespace(data=SimpleNamespace(materials=[]))])
     monkeypatch.setattr(pipeline.workspace, "make_export_workspace",
                         lambda: ("/tmp/mixar_web_publish_t", "/tmp/mixar_web_publish_t/s.glb"))
     monkeypatch.setattr(pipeline.workspace, "cleanup_workspace", lambda folder: None)
@@ -360,3 +360,47 @@ def test_ensure_handlers_registers_each_handler_once(monkeypatch):
     assert handlers.load_pre == [pipeline.on_load_pre]
     assert handlers.undo_post == [pipeline.on_undo_redo]
     assert handlers.redo_post == [pipeline.on_undo_redo]
+
+
+@pytest.mark.parametrize('outcome', [{'error': 'Could not prepare shader textures'},
+                                    {'cancelled': True}])
+def test_shader_preparation_failure_never_uploads(monkeypatch, outcome):
+    from mixar.modules.web_publish.core import shader_export, shader_textures
+
+    pending = {}
+    monkeypatch.setattr(shader_textures, 'plans_for_meshes', lambda _: [object()])
+    monkeypatch.setattr(shader_export, 'start',
+                        lambda *args: pending.setdefault('finished', args[-1]))
+    continuation = MagicMock()
+    monkeypatch.setattr(pipeline, '_continue_publish', continuation)
+    response, _ = _run_begin(monkeypatch, _props())
+    assert response['ok']
+    pending['finished'](outcome)
+    continuation.assert_not_called()
+    assert get_publish_state().snapshot()[0].status in {'ERROR', 'CANCELLED'}
+
+
+@pytest.mark.parametrize('change', ['cancel', 'load', 'new_claim'])
+def test_shader_completion_cannot_upload_after_cancel_load_or_new_claim(monkeypatch, change):
+    from mixar.modules.web_publish.core import shader_export, shader_textures
+
+    pending = {}
+    monkeypatch.setattr(shader_textures, 'plans_for_meshes', lambda _: [object()])
+    monkeypatch.setattr(shader_export, 'start',
+                        lambda *args: pending.setdefault('finished', args[-1]))
+    continuation = MagicMock()
+    monkeypatch.setattr(pipeline, '_continue_publish', continuation)
+    response, _ = _run_begin(monkeypatch, _props())
+    assert response['ok']
+    state = get_publish_state()
+    if change == 'cancel':
+        state.request_cancel()
+    elif change == 'load':
+        pipeline.on_load_pre()
+    else:
+        state.set_cancelled()
+        assert state.begin('next', 'Other', 'panel')
+    pending['finished']({'result': {'success': True}})
+    continuation.assert_not_called()
+    if change == 'new_claim':
+        assert state.publish_id == 'next' and state.busy

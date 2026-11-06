@@ -50,6 +50,7 @@ from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
 from .sandbox_evaluated import NOTE as EVALUATED_NOTE, may_store_evaluated, restore_original_materials
 from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
+from .sandbox_editmesh import may_edit_bmesh, refresh_edit_meshes
 from .executor_scene_state import SceneStateMixin
 
 
@@ -497,6 +498,14 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                     evaluated_swapped = restore_original_materials()
             except Exception:  # noqa: BLE001 - never mask the script's own result
                 logger.exception("Restoring original materials after a script failed")
+            # Before the next redraw: a script that changed an edit-mode BMesh
+            # without update_edit_mesh left stale loop triangles, and drawing
+            # them reads freed loops (sandbox_editmesh.py).
+            try:
+                if may_edit_bmesh(script):
+                    refresh_edit_meshes()
+            except Exception:  # noqa: BLE001 - never mask the script's own result
+                logger.exception("Refreshing edit meshes after a script failed")
             # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
             # from `finalize_turn`), never between scripts: a script may leave
             # the tab in Edit / Sculpt / Texture Paint mode on purpose for the

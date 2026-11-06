@@ -136,6 +136,9 @@ def reset_restored_bubbles_after_load():
         logger.info("agent_bubble: closed %d restored bubble window(s)", closed)
     pill_icons.refresh()
     _st.load_autoshow_attempts = 0
+    # A failed window may have been transient (locked or remote session,
+    # driver reset): each file load tries once more, without a dialog.
+    _st.window_unavailable = False
     if not bpy.app.timers.is_registered(load_autoshow_tick):
         bpy.app.timers.register(load_autoshow_tick, first_interval=0.1)
     return None
@@ -190,6 +193,11 @@ def _load_autoshow_tick_inner():
             "agent_bubble: shown after file load on attempt %d",
             _st.load_autoshow_attempts,
         )
+        _st.load_autoshow_attempts = 0
+        return None
+
+    if _st.window_unavailable:
+        # try_invoke_bubble logged why; nothing to retry.
         _st.load_autoshow_attempts = 0
         return None
 

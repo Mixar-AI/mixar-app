@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Actual registration with RNA readiness and late-allocation failure injection."""
 import importlib.util
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -102,3 +103,30 @@ def test_keymaps_register_after_every_operator_and_before_panels():
     assert 'space_mixie_chat/ui/keymap.py' in order
     assert keymaps and operators and panels
     assert max(operators) < min(keymaps) and max(keymaps) < min(panels)
+
+
+def test_profile_card_loads_after_every_operator_it_draws():
+    # Regression: space_mixie_chat/ui/topbar.py sorted as an operator file, ~380
+    # modules ahead of billing_ops.py, so the profile card drew
+    # MIXAR_OT_open_billing before it registered (native crash on Windows).
+    root = Path(__file__).parents[1]
+    bootstrap = _startup_bootstrap()
+    modules = root / 'src/scripts/mixar/modules'
+    order = [p.relative_to(modules).as_posix() for p in bootstrap._discover_ui_files(modules)]
+    topbar = order.index('space_mixie_chat/ui/topbar.py')
+    drawn = set()
+    for src in ('src/scripts/mixar/modules/space_mixie_chat/ui/topbar.py',
+                'src/source/blender/editors/interface/interface_mixar_profile_card.cc'):
+        text = (root / src).read_text(encoding='utf-8')
+        drawn |= {f'{a.lower()}.{b}' for a, b in re.findall(r'\b([A-Z][A-Z_]*)_OT_([a-z_]+)', text)}
+        drawn |= set(re.findall(r'operator\(\s*[\'"]([a-z_]+\.[a-z_]+)[\'"]', text))
+    assert 'mixar.open_billing' in drawn
+    definers = {}
+    for i, rel in enumerate(order):
+        text = (modules / rel).read_text(encoding='utf-8')
+        for idname in drawn:
+            if re.search(rf'bl_idname\s*=\s*[\'"]{re.escape(idname)}[\'"]', text):
+                definers[idname] = (i, rel)
+    assert 'mixar.open_billing' in definers
+    late = {k: rel for k, (i, rel) in definers.items() if i > topbar}
+    assert not late, f'topbar.py loads before the operators it draws: {late}'
