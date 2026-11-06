@@ -6,7 +6,8 @@
 
 ``begin_publish`` runs on Blender's main thread in the caller's context
 (the operator's scene, or the scene an agent script runs in): it claims the
-single publish slot, exports the GLB through the shared export lane, hashes
+single publish slot, prepares UV shaders in a background process when needed,
+exports the GLB through the shared export lane, hashes
 it, renders the thumbnail, and hands the upload to the worker thread. A
 persistent timer mirrors ``PublishState`` into WindowManager RNA (progress,
 for the panel and QA) and, once per outcome, writes the result onto the
@@ -136,19 +137,57 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
     folder = ""
     try:
         folder, glb_path = workspace.make_export_workspace()
+        from mixar.modules.web_publish.core.shader_textures import plans_for_meshes
+
+        plans = plans_for_meshes(meshes)
+        options = dict(title=title, description=description, visibility=visibility,
+                       existing_scene_id=existing_id,
+                       existing_slug=props.slug if update_existing else "")
+        if plans:
+            from mixar.modules.web_publish.core.shader_export import start
+
+            token = _load_generation
+
+            def finished(outcome):
+                if state.publish_id != publish_id:
+                    workspace.cleanup_workspace(folder)
+                    return
+                if token != _load_generation or state.cancel_requested or outcome.get("cancelled"):
+                    workspace.cleanup_workspace(folder)
+                    state.set_cancelled()
+                    ensure_timer()
+                    return
+                if outcome.get("error"):
+                    _fail(state, folder, outcome["error"])
+                    return
+                _continue_publish(state, folder, glb_path, scene, meshes,
+                                  outcome["result"], options)
+
+            start(folder, scene, meshes, plans, include_animation, state, finished)
+            ensure_timer()
+            return {"ok": True, "publish_id": publish_id}
         result = glb_export.export_glb(glb_path, meshes, include_animation, scene)
+    except Exception as exc:  # noqa: BLE001 - report export problems inline
+        _logger.warning("web_publish export failed: %s", exc)
+        return _fail(state, folder, "{message}", message=_error_text(exc))
+    return _continue_publish(state, folder, glb_path, scene, meshes, result, options)
+
+
+def _continue_publish(state, folder, glb_path, scene, meshes, result, options):
+    """Shared hand-off after either direct or background shader export."""
+    try:
         state.set_warning(result.get("warning") or "")
         sha256, size = compute_sha256(glb_path)
         if size > MAX_SCENE_BYTES:
             raise _TooLarge(size)
         thumb = thumbnail.render_thumbnail(scene, workspace.thumbnail_path(folder))
+        meta = result.get("_publish_scene_meta")
+        camera = result.get("_publish_camera_config")
         job = PublishJob(
-            title=title, description=description, visibility=visibility,
-            glb_path=glb_path, thumbnail_path=thumb or "", content_sha256=sha256,
-            scene_meta=glb_export.collect_scene_meta(scene, meshes),
-            viewer_config=viewer_config_block(glb_export.collect_camera_config(scene)),
-            existing_scene_id=existing_id,
-            existing_slug=props.slug if update_existing else "",
+            **options, glb_path=glb_path, thumbnail_path=thumb or "", content_sha256=sha256,
+            scene_meta=meta if meta is not None else glb_export.collect_scene_meta(scene, meshes),
+            viewer_config=viewer_config_block(camera if "_publish_camera_config" in result
+                                             else glb_export.collect_camera_config(scene)),
         )
         from mixar.modules.web_publish.core.publish_api import ScenePublishService
         from mixar.modules.web_publish.core.upload_worker import spawn
@@ -158,19 +197,17 @@ def begin_publish(context, *, title: Optional[str] = None, description: Optional
         return _fail(state, folder, n_("The scene is {size} MB; the publish limit is {limit} MB. "
                                        "Hide heavy objects or reduce texture resolution."),
                      size=exc.size // _MB, limit=MAX_SCENE_BYTES // _MB)
-    except Exception as exc:  # noqa: BLE001 - report export problems inline
-        _logger.warning("web_publish export failed: %s", exc)
+    except Exception as exc:  # noqa: BLE001
         return _fail(state, folder, "{message}", message=_error_text(exc))
-
     try:
         spawned = spawn(job, folder, service)
-    except Exception as exc:  # noqa: BLE001 - a thread that never starts frees the slot
+    except Exception as exc:  # noqa: BLE001
         return _fail(state, folder, n_("Publish failed ({kind})"), kind=exc.__class__.__name__)
-    if not spawned:  # reported in the state, never silent
+    if not spawned:
         ensure_timer()
         return _refusal(n_("The publish lost its claim before upload"))
     ensure_timer()
-    return {"ok": True, "publish_id": publish_id}
+    return {"ok": True, "publish_id": state.publish_id}
 
 
 class _TooLarge(Exception):
@@ -289,6 +326,9 @@ def unpublish(props, service=None):
 def on_load_pre(*_args) -> None:
     global _load_generation
     _load_generation += 1
+    state = get_publish_state()
+    if state.busy and state.snapshot()[0].status == "EXPORTING":
+        state.request_cancel()
     _last_applied.clear()
 
 
