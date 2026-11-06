@@ -253,3 +253,42 @@ def test_late_complete_does_not_promote_cancelled_pixels(jobs):
     jobs._tick(job)
     jobs.deliver.assert_not_called()
     assert jobs._records[KEY]['status'] == 'cancelled'
+
+
+def test_export_sheet_destination_writes_a_file_in_the_picked_container(jobs, tmp_path):
+    """The Export sheet's render: a WebM video to a user file, not Moodboard."""
+    destination = str(tmp_path / 'scene.webm')
+    result = jobs.start(jobs.bpy.context, KEY, kind='video', destination=destination,
+                        container='WEBM')
+    assert result['status'] == 'started'
+    job = jobs._job
+    assert job['destination'] == destination
+    assert job['path'].endswith('/scene.webm')
+    ffmpeg = jobs.bpy.context.scene.render.ffmpeg
+    assert (ffmpeg.format, ffmpeg.codec) == ('WEBM', 'WEBM')
+    assert jobs.notify.call_args.kwargs['to_file'] is True
+    jobs._complete(None)
+    assert jobs._tick(job) is None
+    jobs.deliver.assert_called_once_with(job)
+    assert jobs.start(jobs.bpy.context, KEY)['file_name'] == 'Render'
+    assert jobs.notify.call_args.kwargs['to_file'] is True
+    # The user's settings come back once the file is written.
+    assert (ffmpeg.format, ffmpeg.codec) == ('QUICKTIME', 'MPEG4')
+
+
+def test_export_sheet_image_container_picks_webp(jobs, tmp_path):
+    jobs.start(jobs.bpy.context, KEY, destination=str(tmp_path / 'still.webp'), container='WEBP')
+    assert jobs.bpy.context.scene.render.image_settings.file_format == 'WEBP'
+    assert jobs._job['path'].endswith('/scene.webp')
+
+
+@pytest.mark.parametrize('destination, container, error', [
+    ('relative/scene.png', '', 'invalid_destination'),
+    ('/no/such/folder/scene.png', '', 'invalid_destination'),
+    ('', 'GIF', 'invalid_render_settings'),
+])
+def test_export_sheet_refuses_a_bad_destination_or_container(jobs, destination, container, error):
+    result = jobs.start(jobs.bpy.context, KEY, destination=destination, container=container)
+    assert (result['status'], result['error']) == ('failed', error)
+    assert jobs._job is None
+    jobs.bpy.ops.render.render.assert_not_called()

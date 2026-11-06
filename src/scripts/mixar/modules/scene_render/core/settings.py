@@ -21,7 +21,9 @@ class Settings:
             setattr(owner, name, value)
 
     def apply(self, kind, path, engine="", samples=0, width=0, height=0,
-              frame_start=None, frame_end=None, fps=0, max_faces=0):
+              frame_start=None, frame_end=None, fps=0, max_faces=0, container=""):
+        """``container`` picks the file: PNG (default) or WEBP for an image,
+        MPEG4 (default, H.264) or WEBM (VP9) for a video."""
         scene, r = self.scene, self.scene.render
         if engine:
             self.set(r, "engine", {"eevee": "BLENDER_EEVEE", "cycles": "CYCLES"}[engine])
@@ -39,7 +41,8 @@ class Settings:
         image = r.image_settings
         try:
             image.media_type = 'VIDEO' if kind == 'video' else 'IMAGE'
-            image.file_format = 'FFMPEG' if kind == 'video' else 'PNG'
+            image.file_format = 'FFMPEG' if kind == 'video' else (
+                'WEBP' if container == 'WEBP' else 'PNG')
             if kind == 'video':
                 image.color_mode, image.color_depth = 'RGB', '8'
         finally:
@@ -47,8 +50,9 @@ class Settings:
         if kind == 'video':
             self.set(r, "filepath", path)
             self.set(r, "use_file_extension", True)
-            self.set(r.ffmpeg, "format", 'MPEG4')
-            self.set(r.ffmpeg, "codec", 'H264')
+            webm = container == 'WEBM'
+            self.set(r.ffmpeg, "format", 'WEBM' if webm else 'MPEG4')
+            self.set(r.ffmpeg, "codec", 'WEBM' if webm else 'H264')
             self.set(r.ffmpeg, "constant_rate_factor", 'MEDIUM')
             if frame_start is not None:
                 self.set(scene, "frame_start", frame_start)

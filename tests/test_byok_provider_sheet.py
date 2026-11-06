@@ -198,7 +198,7 @@ def test_the_dialog_opens_as_a_padding_free_sheet():
            / "byok_ops.py").read_text(encoding="utf-8")
     assert "sheet=True" in ops
     rna = RNA_WM_MIXAR_POPUP.read_text(encoding="utf-8")
-    assert '"sheet"' in rna and "Mixar_operator_modal_dialog_popup(C, op, width, sheet)" in rna
+    assert '"sheet"' in rna and "Mixar_operator_modal_dialog_popup(C, op, width, sheet, blur)" in rna
     wm = WM_OPERATORS.read_text(encoding="utf-8")
     assert "data->mixar_sheet = sheet;" in wm
     assert "data->mixar_sheet ? 0 :" in wm

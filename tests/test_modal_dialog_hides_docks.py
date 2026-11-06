@@ -189,7 +189,7 @@ def test_rna_function_mirrors_invoke_props_dialog():
     assert "rna_enum_operator_return_items" in rna
     assert "static int rna_WindowManager_mixar_invoke_modal_dialog(bContext *C," in rna
     assert 'RNA_def_boolean(func,\n                  "sheet",' in rna  # the AI Provider sheet
-    assert "return Mixar_operator_modal_dialog_popup(C, op, width, sheet);" in rna
+    assert "return Mixar_operator_modal_dialog_popup(C, op, width, sheet, blur);" in rna
     host = RNA_WM_MIXAR.read_text()
     assert "RNA_def_mixar_popup_query(brna, srna);" in host
     assert len(host.splitlines()) <= 500

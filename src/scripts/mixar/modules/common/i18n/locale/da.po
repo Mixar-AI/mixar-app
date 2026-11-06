@@ -4934,6 +4934,264 @@ msgstr "Mixar-output"
 msgid "Output aspect ratio this camera frames for"
 msgstr "Outputbilledformat, som dette kamera rammer ind til"
 
+msgid "Web"
+msgstr ""
+
+msgid "3D FILES"
+msgstr ""
+
+msgid "GAME ENGINES & WEB"
+msgstr ""
+
+msgid "IMAGE & VIDEO"
+msgstr ""
+
+msgid "Fast"
+msgstr ""
+
+msgid "EEVEE at half resolution: a quick preview"
+msgstr ""
+
+msgid "Good"
+msgstr ""
+
+msgid "EEVEE at full resolution"
+msgstr ""
+
+msgid "Awesome"
+msgstr ""
+
+msgid "Cycles at full resolution: slowest, best light"
+msgstr ""
+
+msgid "Single .glb"
+msgstr ""
+
+msgid "One binary file with textures inside"
+msgstr ""
+
+msgid "Separate .gltf"
+msgstr ""
+
+msgid "A .gltf with its buffers and textures beside it"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "MP4"
+msgstr ""
+
+msgid "WebM"
+msgstr ""
+
+msgid "Open a scene to export"
+msgstr ""
+
+msgid "Select the objects to export, or turn off Selected objects only"
+msgstr ""
+
+msgid "This scene has no meshes to export"
+msgstr ""
+
+msgid "Add a camera: images and videos render from the scene camera"
+msgstr ""
+
+msgid "Set an animation range of more than one frame to render a video"
+msgstr ""
+
+msgid "Another render is running; wait for it to finish"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Exported {name}"
+msgstr ""
+
+msgid "Saved to {folder}"
+msgstr ""
+
+msgid "Could not export {name}"
+msgstr ""
+
+msgid "Publish to Web runs from its own button"
+msgstr ""
+
+msgid "The Downloads folder is not writable"
+msgstr ""
+
+msgid "Exporting {name}…"
+msgstr ""
+
+msgid "Export"
+msgstr "Eksportér"
+
+msgid "Export this scene as a 3D file, a game-engine asset, an image, a video or a website"
+msgstr ""
+
+msgid "Pick Export Format"
+msgstr ""
+
+msgid "Export in this format"
+msgstr ""
+
+msgid "Set Export Option"
+msgstr ""
+
+msgid "Toggle Export Option"
+msgstr ""
+
+msgid "Export Scene"
+msgstr ""
+
+msgid "Export with the format and settings picked in the Export sheet"
+msgstr ""
+
+msgid "Export failed"
+msgstr ""
+
+msgid "Show the exported file in its folder"
+msgstr ""
+
+msgid "The exported file was moved or deleted"
+msgstr ""
+
+msgid "Publish to Web"
+msgstr ""
+
+msgid "Publish this scene as an explorable 3D website with a shareable link"
+msgstr ""
+
+msgid "Export scene!"
+msgstr ""
+
+msgid "Export your masterpiece!"
+msgstr ""
+
+msgid "Pick a format, name the file and export it."
+msgstr ""
+
+msgid "FILE NAME"
+msgstr ""
+
+msgid "SETTINGS"
+msgstr ""
+
+msgid "Leave out the agent chat"
+msgstr ""
+
+msgid ".mixar opens in Mixar; .blend also opens in Blender."
+msgstr ""
+
+msgid "A copy of this file; the scene you have open is not changed."
+msgstr ""
+
+msgid "Renders the scene camera at {width} × {height}."
+msgstr ""
+
+msgid "Frames {start}–{end} at {fps} fps, {width} × {height}."
+msgstr ""
+
+msgid "Selected objects only"
+msgstr ""
+
+msgid "OBJ is static: rigs and animation are left out."
+msgstr ""
+
+msgid "Include animation"
+msgstr ""
+
+msgid "Scale, axes and smoothing are set up for {engine}."
+msgstr ""
+
+msgid "QUALITY"
+msgstr ""
+
+msgid "Quality sets how images and videos render; files keep the scene's full detail."
+msgstr ""
+
+msgid "Saves to {folder} as {name}"
+msgstr ""
+
+msgid "PUBLISH TO WEB"
+msgstr ""
+
+msgid "Publish to Web is not available in this build."
+msgstr ""
+
+msgid "PUBLISHING"
+msgstr ""
+
+msgid "Exporting and uploading this scene…"
+msgstr ""
+
+msgid "Publishing another scene…"
+msgstr ""
+
+msgid "Publish cancelled"
+msgstr ""
+
+msgid "LIVE"
+msgstr ""
+
+msgid "Live · version {revision}"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Open in Browser"
+msgstr ""
+
+msgid "A shareable link to an explorable 3D website of this scene."
+msgstr ""
+
+msgid "TITLE"
+msgstr ""
+
+msgid "ACCESS"
+msgstr ""
+
+msgid "Publish new version"
+msgstr ""
+
+msgid "Format"
+msgstr "Format"
+
+msgid "File Name"
+msgstr ""
+
+msgid "Name of the exported file, without its extension"
+msgstr ""
+
+msgid "Quality"
+msgstr "Kvalitet"
+
+msgid "glTF File"
+msgstr ""
+
+msgid "Engine File"
+msgstr ""
+
+msgid "Image Format"
+msgstr ""
+
+msgid "Video Format"
+msgstr ""
+
+msgid "Selected Objects Only"
+msgstr ""
+
+msgid "Leave Out the Agent Chat"
+msgstr ""
+
+msgid "Include Animation"
+msgstr ""
+
 msgid "Failed to export selected mesh(es): {error}"
 msgstr "Kunne ikke eksportere valgte maske(r): {error}"
 
@@ -5118,9 +5376,6 @@ msgid "STL"
 msgstr ""
 
 msgid "USDZ"
-msgstr ""
-
-msgid "MP4"
 msgstr ""
 
 msgid "GIF"
@@ -5719,9 +5974,6 @@ msgstr ""
 
 msgid "Connect Dialog State"
 msgstr ""
-
-msgid "Format"
-msgstr "Format"
 
 msgid "Processing..."
 msgstr "Behandler..."
@@ -7798,9 +8050,6 @@ msgstr "Fravælg alle"
 
 msgid "Frame Selected (Numpad .)"
 msgstr "Indram valgte (Numpad .)"
-
-msgid "Export"
-msgstr "Eksportér"
 
 msgid "Delete"
 msgstr "Slet"
@@ -14201,9 +14450,6 @@ msgstr ""
 msgid "Iris"
 msgstr ""
 
-msgid "PNG"
-msgstr ""
-
 msgid "JPEG"
 msgstr ""
 
@@ -14232,9 +14478,6 @@ msgid "Radiance HDR"
 msgstr ""
 
 msgid "TIFF"
-msgstr ""
-
-msgid "WebP"
 msgstr ""
 
 msgid "Copy Image Path To Clipboard"
@@ -14377,9 +14620,6 @@ msgstr ""
 
 msgid "J2K"
 msgstr ""
-
-msgid "Quality"
-msgstr "Kvalitet"
 
 msgid "Cinema 48"
 msgstr "Cinema 48"
@@ -19557,20 +19797,29 @@ msgstr "Tjek scenekameraet og renderindstillingerne, og prøv igen."
 msgid "Using EEVEE because this scene exceeds the Cycles memory budget."
 msgstr "Bruger EEVEE, fordi denne scene overskrider Cycles' hukommelsesbudget."
 
+msgid "It will be saved as {name} when finished. Use the render progress control to cancel."
+msgstr ""
+
 msgid "It will appear in Moodboard when finished. Use the render progress control to cancel."
 msgstr "Det vises på Moodboard, når det er færdigt. Brug styringen for renderstatus til at annullere."
 
-msgid "Rendering video"
-msgstr "Renderer video"
+msgid "Video exported"
+msgstr ""
 
-msgid "Rendering image"
-msgstr "Renderer billede"
+msgid "Image exported"
+msgstr ""
 
 msgid "Video added to Moodboard"
 msgstr "Video føjet til Moodboard"
 
 msgid "Image added to Moodboard"
 msgstr "Billede føjet til Moodboard"
+
+msgid "Rendering video"
+msgstr "Renderer video"
+
+msgid "Rendering image"
+msgstr "Renderer billede"
 
 msgid "Render cancelled"
 msgstr "Render annulleret"
@@ -25248,12 +25497,6 @@ msgstr ""
 msgid "Upload failed after {attempts} attempts"
 msgstr ""
 
-msgid "Publish to Web"
-msgstr ""
-
-msgid "Publish this scene as an explorable 3D website with a shareable link"
-msgstr ""
-
 msgid "Update Existing"
 msgstr ""
 
@@ -25281,9 +25524,6 @@ msgstr ""
 msgid "Link copied to clipboard"
 msgstr ""
 
-msgid "Open in Browser"
-msgstr ""
-
 msgid "Open this scene's 3D website in your browser"
 msgstr ""
 
@@ -25308,9 +25548,6 @@ msgstr ""
 msgid "Publish unavailable"
 msgstr ""
 
-msgid "Publishing another scene…"
-msgstr ""
-
 msgid "Scene title"
 msgstr ""
 
@@ -25324,9 +25561,6 @@ msgid "Creates a shareable link to an"
 msgstr ""
 
 msgid "explorable 3D website of this scene."
-msgstr ""
-
-msgid "Publish cancelled"
 msgstr ""
 
 msgid "Publish failed"
@@ -25384,9 +25618,6 @@ msgid "Unlisted"
 msgstr ""
 
 msgid "Anyone with the link; never listed"
-msgstr ""
-
-msgid "Include Animation"
 msgstr ""
 
 msgid "Publish the scene's animation as a looping timeline"
@@ -28762,6 +28993,12 @@ msgid "Status Dot"
 msgstr ""
 
 msgid "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"
+msgstr ""
+
+msgid "Tile"
+msgstr ""
+
+msgid "Square format tile: the item's icon over its label; lit is picked"
 msgstr ""
 
 msgid "Mode Slider Left"

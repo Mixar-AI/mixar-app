@@ -1491,11 +1491,17 @@ struct wmOpPopUp {
    * and no title row, padding or spacer rows, so the operator's layout IS the
    * card and the sheet backdrop places its dividers from the layout's edges. */
   bool mixar_sheet = false;
+  /* Mixar: the window behind is blurred and dimmed while this pop-up is open
+   * (wm_draw_mixar_backdrop.cc); released on the same close paths as the docks. */
+  bool mixar_backdrop_blur = false;
 
   ~wmOpPopUp()
   {
     if (mixar_docks_held) {
       Mixar_floating_docks_release(this);
+    }
+    if (mixar_backdrop_blur) {
+      Mixar_backdrop_blur_release(this);
     }
   }
 };
@@ -1955,7 +1961,8 @@ wmOperatorStatus WM_operator_props_dialog_popup(bContext *C,
 wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
                                                    wmOperator *op,
                                                    int width,
-                                                   const bool sheet)
+                                                   const bool sheet,
+                                                   const bool blur)
 {
   wmWindow *win_ctx = CTX_wm_window(C);
   ScrArea *area_ctx = CTX_wm_area(C);
@@ -1984,6 +1991,10 @@ wmOperatorStatus Mixar_operator_modal_dialog_popup(bContext *C,
   data->mixar_sheet = sheet;
   data->mixar_docks_held = true;
   Mixar_floating_docks_hold(C, data);
+  if (blur) {
+    data->mixar_backdrop_blur = true;
+    Mixar_backdrop_blur_hold(win_dialog, data);
+  }
 
   popup_block_ex(
       C, wm_block_dialog_create, wm_operator_ui_popup_ok, wm_operator_ui_popup_cancel, data, op);

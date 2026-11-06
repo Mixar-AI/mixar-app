@@ -122,6 +122,9 @@ enum class MixarCardElement : uint8_t {
   /** The disc leading a status line: `lit` green, `progress` 1.0 danger,
    * otherwise dim. */
   SheetStatusDot,
+  /** A square format tile (the Export sheet): the button's icon over its
+   * label; `lit` is the picked format. */
+  SheetTile,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,

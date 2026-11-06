@@ -291,30 +291,27 @@ result=preview()
 
 
 def export_scene(qa):
-    path = OUT / f"zen-toolbar-export-{time.time_ns()}.obj"
-    qa.click(**HEADER, text="Export")
-    qa.click(popup=True, op="MIXAR_OT_export_native_obj")
-    qa.wait("bool(drv.find(area_type='FILE_BROWSER', prop='filename'))", timeout=10)
-    # Seed the fixture destination: Blender's live path autocomplete consumes
-    # batched slash-path keystrokes. Confirmation still uses the native button.
+    """Export opens the Export sheet: a real OBJ through it, then ✕ cancels.
+    The sheet writes to Downloads; point it at the artifact folder."""
+    stem = f"zen-toolbar-export-{time.time_ns()}"
+    path = OUT / f"{stem}.obj"
     qa.eval(f"""
-h=drv.find(area_type='FILE_BROWSER', prop='directory')[0]
-params=h['_area'].spaces.active.params
-params.directory={str(OUT).encode()!r}
-params.filename={path.name!r}
+import mixar.modules.export_menu.core.runner as runner
+runner.output_folder = lambda: {str(OUT)!r}
+bpy.context.window_manager.mixar_export_menu.file_name = {stem!r}
 result=True
 """)
-    qa.click(area_type="FILE_BROWSER", prop="directory")
-    window = qa.find(area_type="FILE_BROWSER", prop="directory")["widgets"][0]["window"]
-    qa.press("RET", window=window)
-    qa.click(area_type="FILE_BROWSER", op="FILE_OT_execute")
-    qa.wait("not any(a.type == 'FILE_BROWSER' for w in bpy.context.window_manager.windows for a in w.screen.areas)", timeout=12)
+    qa.click(**HEADER, text="Export")
+    qa.wait("bool(drv.find(op='MIXAR_OT_export_menu_pick', text='.obj'))", timeout=10)
+    qa.click(popup=True, op="MIXAR_OT_export_menu_pick", text=".obj")
+    qa.click(popup=True, op="MIXAR_OT_export_menu_run")
+    qa.wait(f"__import__('os').path.exists({str(path)!r})", timeout=20)
     data = path.read_text()
     assert "v " in data and "f " in data and "QA_Zen_Sphere" in data
     qa.click(**HEADER, text="Export")
-    qa.click(popup=True, op="MIXAR_OT_export_native_obj")
-    qa.wait("bool(drv.find(area_type='FILE_BROWSER', prop='filename'))", timeout=10)
-    qa.click(area_type="FILE_BROWSER", op="FILE_OT_cancel")
+    qa.wait("bool(drv.find(op='MIXAR_OT_export_menu_pick'))", timeout=10)
+    qa.click(popup=True, text="\u2715")
+    qa.wait("not drv.main_window().mixar_popup_block_open()", timeout=8)
     qa.wait("bool(drv.find(area_type='VIEW_3D', text='Add Objects'))", timeout=8)
     return {"file": str(path), "bytes": path.stat().st_size, "cancel": True}
 
