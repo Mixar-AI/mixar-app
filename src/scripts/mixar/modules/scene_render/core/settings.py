@@ -13,10 +13,17 @@ class Settings:
         self.image_original = {k: getattr(image, k) for k in
                                ("media_type", "file_format", "color_mode", "color_depth")}
         self.image_applied = None
+        # Switching the file format to FFMPEG makes Blender fill in a
+        # container and codec, so the user's own values are only readable
+        # before that switch.
+        ffmpeg = scene.render.ffmpeg
+        self.ffmpeg_original = {k: getattr(ffmpeg, k) for k in
+                                ("format", "codec", "constant_rate_factor")}
 
-    def set(self, owner, name, value):
-        original = getattr(owner, name)
-        if original != value:
+    def set(self, owner, name, value, original=None):
+        if original is None:
+            original = getattr(owner, name)
+        if getattr(owner, name) != value or original != value:
             self.values.append((owner, name, original, value))
             setattr(owner, name, value)
 
@@ -51,9 +58,10 @@ class Settings:
             self.set(r, "filepath", path)
             self.set(r, "use_file_extension", True)
             webm = container == 'WEBM'
-            self.set(r.ffmpeg, "format", 'WEBM' if webm else 'MPEG4')
-            self.set(r.ffmpeg, "codec", 'WEBM' if webm else 'H264')
-            self.set(r.ffmpeg, "constant_rate_factor", 'MEDIUM')
+            before = self.ffmpeg_original
+            self.set(r.ffmpeg, "format", 'WEBM' if webm else 'MPEG4', before["format"])
+            self.set(r.ffmpeg, "codec", 'WEBM' if webm else 'H264', before["codec"])
+            self.set(r.ffmpeg, "constant_rate_factor", 'MEDIUM', before["constant_rate_factor"])
             if frame_start is not None:
                 self.set(scene, "frame_start", frame_start)
                 self.set(scene, "frame_end", frame_end)

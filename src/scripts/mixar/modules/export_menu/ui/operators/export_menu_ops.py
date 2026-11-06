@@ -45,6 +45,27 @@ def _load_logos():
         pass
 
 
+def _open_later(window, attempts=25):
+    """Invoke the sheet from a timer once the window's pop-ups have closed."""
+    pointer = window.as_pointer()
+
+    def tick():
+        nonlocal attempts
+        win = next((w for w in bpy.context.window_manager.windows
+                    if w.as_pointer() == pointer), None)
+        if win is None:
+            return None
+        if win.mixar_popup_block_open():
+            attempts -= 1
+            return 0.02 if attempts > 0 else None
+        area = next((a for a in win.screen.areas if a.type == 'VIEW_3D'), None)
+        with bpy.context.temp_override(window=win, area=area):
+            bpy.ops.mixar.export_menu('INVOKE_DEFAULT')
+        return None
+
+    bpy.app.timers.register(tick, first_interval=0.0)
+
+
 def _set_closed():
     global _open
     _open = False
@@ -57,12 +78,21 @@ class MIXAR_OT_export_menu(Operator):
 
     def invoke(self, context, event):
         """Open the sheet. Single instance: a second invoke while it is open
-        does nothing (a stale flag left by a torn-down pop-up is cleared)."""
+        does nothing (a stale flag left by a torn-down pop-up is cleared).
+        Clicked inside a menu or popover (the compact toolbar's Scene
+        Controls), it closes that pop-up and opens on a later tick, once the
+        pop-up is gone; opened at once, the pop-up would stay up, unblurred,
+        on top of the sheet's backdrop."""
         global _open
         window = context.window
-        if _open and window is not None and getattr(window, "mixar_popup_block_open", None):
-            if window.mixar_popup_block_open():
+        popup_open = (window is not None and getattr(window, "mixar_popup_block_open", None)
+                      and window.mixar_popup_block_open())
+        if popup_open:
+            close = getattr(window, "mixar_close_popups", None)
+            if _open or close is None or not close():
                 return {'CANCELLED'}
+            _open_later(window)
+            return {'FINISHED'}
         props = context.window_manager.mixar_export_menu
         if not props.file_name.strip():
             props.file_name = runner.default_stem(context)

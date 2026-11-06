@@ -292,3 +292,24 @@ def test_export_sheet_refuses_a_bad_destination_or_container(jobs, destination, 
     assert (result['status'], result['error']) == ('failed', error)
     assert jobs._job is None
     jobs.bpy.ops.render.render.assert_not_called()
+
+
+def test_a_video_restores_the_ffmpeg_values_blender_rewrites_on_the_format_switch(jobs):
+    """Setting file_format to FFMPEG makes Blender pick a container and codec;
+    the user's own values (read before that) are what comes back."""
+    scene = jobs.bpy.context.scene
+    image = scene.render.image_settings
+    ffmpeg = scene.render.ffmpeg
+    ffmpeg.format, ffmpeg.codec = 'MPEG1', 'NONE'
+
+    class AutoFill(type(image)):
+        def __setattr__(self, name, value):
+            object.__setattr__(self, name, value)
+            if name == 'file_format' and value == 'FFMPEG':
+                ffmpeg.format, ffmpeg.codec = 'MKV', 'H264'
+    scene.render.image_settings = AutoFill(**vars(image))
+    jobs.start(jobs.bpy.context, KEY, kind='video')
+    assert (ffmpeg.format, ffmpeg.codec) == ('MPEG4', 'H264')
+    jobs._complete(None)
+    jobs._tick(jobs._job)
+    assert (ffmpeg.format, ffmpeg.codec) == ('MPEG1', 'NONE')

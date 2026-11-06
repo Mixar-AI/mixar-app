@@ -234,6 +234,14 @@ def test_the_zen_export_button_opens_the_sheet_and_file_export_is_untouched():
 def test_the_blur_is_held_by_the_popup_and_drawn_under_the_menus():
     operators = (WM / "intern/wm_operators.cc").read_text()
     assert "Mixar_backdrop_blur_hold(win_dialog, data);" in operators
+    # A popover the button sat in closes first; the sheet opens once it is gone.
+    ops = (SRC / "scripts/mixar/modules/export_menu/ui/operators/export_menu_ops.py").read_text()
+    assert "close()" in ops and "_open_later(window)" in ops
+    rna = (SRC / "source/blender/makesrna/intern/rna_wm_mixar.cc").read_text()
+    assert '"mixar_close_popups", "rna_Window_mixar_close_popups"' in rna
+    tour = (SRC / "source/blender/editors/interface/mixar/tour_menu.cc").read_text()
+    assert "int Mixar_close_popups(wmWindow *win)" in tour
+    assert "ui::popup_menu_close(&block, true);" in tour
     assert "Mixar_backdrop_blur_release(this);" in operators  # every close path frees `data`
     draw = (WM / "intern/wm_draw.cc").read_text()
     begin = draw.index("wm_draw_mixar_backdrop_begin(win, view)")
