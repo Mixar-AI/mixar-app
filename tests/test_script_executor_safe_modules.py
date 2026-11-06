@@ -230,3 +230,22 @@ def test_the_evaluated_material_scan_runs_only_after_scripts_that_touch_evaluate
     monkeypatch.setattr(module, "restore_original_materials", lambda: calls.append(1) or 0)
     executor.execute(script, push_undo=False)
     assert bool(calls) is scans
+
+
+@pytest.mark.parametrize("tail", ["raise RuntimeError('script failed mid-edit')",
+                                  "__RESULT__ = len(bm.faces)"])
+def test_edit_meshes_are_refreshed_even_after_a_bmesh_script_that_raised(executor, monkeypatch, tail):
+    # A script that grew the live edit BMesh and then raised never reached
+    # update_edit_mesh; the next redraw would read its stale loop triangles
+    # (extract_tris_bmesh). The refresh lives in the executor's `finally`.
+    module = sys.modules[executor.__class__.__module__]
+    calls = []
+    monkeypatch.setattr(module, "refresh_edit_meshes", lambda: calls.append(1) or 1)
+    result = executor.execute("\n".join((
+        "import bmesh",
+        "bm = bmesh.from_edit_mesh(bpy.context.object.data)",
+        "bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=4)",
+        tail,
+    )), push_undo=False)
+    assert result.success is tail.startswith("__RESULT__"), result.error
+    assert calls == [1]
