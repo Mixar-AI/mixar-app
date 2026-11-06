@@ -736,10 +736,11 @@ _notice_saved_at: dict = {}
 _continue_sent: dict = {}
 
 
-def add_continue_notice(scene, session_id: str, saved_at: float) -> None:
+def add_continue_notice(scene, session_id: str, saved_at: float, *, reshown: bool = False) -> None:
     """A notice bubble: the agent was working, Continue or Start fresh."""
     if scene is None or not session_id or not hasattr(scene, "mixie_chat_messages"):
         return
+    telemetry.track("continue_offered", _state.get("offer"), surface="chat", reshown=reshown)
     _notice_saved_at[scene.name] = saved_at
     stamp = time.strftime("%H:%M", time.localtime(saved_at or _now()))
     title = rpt_("Mixar closed while the agent was working")
@@ -780,6 +781,12 @@ def remove_notice(scene) -> None:
     _redraw()
 
 
+def dismiss_continue(scene) -> None:
+    """Start fresh on the notice: the agent is not asked to continue."""
+    telemetry.track("continue_dismissed", _state.get("offer"), surface="chat")
+    remove_notice(scene)
+
+
 def continue_deferred(scene_name: str) -> None:
     """Continue on the next tick (never inside the bubble's click handler)."""
     def _run():
@@ -792,9 +799,11 @@ def continue_deferred(scene_name: str) -> None:
                          if m.sender == "USER"), "")
             if sent:
                 _continue_sent[sent] = (getattr(scene, "mixie_session_id", "") or "",
-                                        _notice_saved_at.get(scene.name, 0.0))
+                                        _notice_saved_at.get(scene.name, 0.0), time.monotonic())
+            telemetry.track("continued", _state.get("offer"), surface="chat")
             remove_notice(scene)
         else:
+            telemetry.track("continue_blocked", _state.get("offer"), surface="chat")
             _report(rpt_("The agent can continue once Mixar is connected and the chat is idle. "
                          "Press Continue again then."))
         return None
@@ -807,8 +816,22 @@ def continue_refused(scene, command_id: str) -> None:
     notice again, below the refusal, so Continue is one click once it is fixed.
     A key or sign-in refusal never comes here: that card resends the message."""
     entry = _continue_sent.pop(command_id or "", None)
-    if entry is not None and scene is not None:
-        add_continue_notice(scene, entry[0], entry[1])
+    if entry is None:
+        return
+    telemetry.track("continue_refused", _state.get("offer"), surface="chat")
+    if scene is not None:
+        add_continue_notice(scene, entry[0], entry[1], reshown=True)
+
+
+def continue_turn_ended(command_id: str, status: str) -> None:
+    """The turn a Continue started ended (its journaled ``turn_end``): how,
+    and after how long. Turns that were not a crash Continue are ignored."""
+    entry = _continue_sent.pop(command_id or "", None)
+    if entry is None:
+        return
+    duration = time.monotonic() - entry[2] if len(entry) > 2 else None
+    telemetry.track("continue_finished", _state.get("offer"), surface="chat",
+                    outcome=str(status or "completed"), duration_s=duration)
 
 
 def _redraw() -> None:

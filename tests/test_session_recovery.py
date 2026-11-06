@@ -1138,3 +1138,35 @@ def test_the_journal_names_its_process_for_the_next_launch(tmp_path):
     assert journal.read_manifest(jr.dir)["app_session_id"] == "app-9"
     s = _crashed(tmp_path, "x", NOW - 5, app_session_id="app-7")
     assert decision.find_offer([s], now=NOW)["app_session_id"] == "app-7"
+
+
+def test_continue_events_carry_only_allowlisted_outcomes(sent):
+    from mixar.modules.common.analytics import recovery_events as RE
+    RE.track("continue_finished", {"session": "s"}, surface="chat", outcome="cancelled", duration_s=12.7)
+    RE.track("continue_finished", {"session": "s"}, surface="chat", outcome="/Users/me", duration_s=-3)
+    RE.track("continue_offered", {"session": "s"}, surface="chat", reshown=True)
+    (_, first), (_, second), (event, third) = sent
+    assert first["outcome"] == "cancelled" and first["duration_s"] == 12 and first["surface"] == "chat"
+    assert second["outcome"] == "other" and second["duration_s"] == 0
+    assert event == "session_recovery.continue_offered" and third["reshown"] is True
+
+
+def test_a_continued_turn_reports_how_it_ended(rt, sent, monkeypatch):
+    clock = [500.0]
+    monkeypatch.setattr(rt.time, "monotonic", lambda: clock[0])
+    monkeypatch.setitem(rt._state, "offer", {"session": "rec-1", "app_session_id": "app-1"})
+    monkeypatch.setitem(rt._continue_sent, "cmd-1", ("chat-sid", NOW, 500.0))
+    clock[0] = 666.0
+    rt.continue_turn_ended("cmd-1", "completed")
+    rt.continue_turn_ended("cmd-1", "completed")      # once per Continue
+    rt.continue_turn_ended("another-turn", "failed")  # not a crash Continue
+    assert [(e, p["outcome"], p["duration_s"], p["recovery_session_id"]) for e, p in sent] == [
+        ("session_recovery.continue_finished", "completed", 166, "rec-1")]
+
+
+def test_a_refused_continue_is_reported_and_never_finishes(rt, sent, monkeypatch):
+    monkeypatch.setitem(rt._state, "offer", {"session": "rec-1"})
+    monkeypatch.setitem(rt._continue_sent, "cmd-2", ("chat-sid", NOW, 1.0))
+    rt.continue_refused(None, "cmd-2")
+    rt.continue_turn_ended("cmd-2", "completed")
+    assert [e for e, _ in sent] == ["session_recovery.continue_refused"]
