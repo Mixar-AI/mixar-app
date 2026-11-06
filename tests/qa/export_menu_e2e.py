@@ -8,15 +8,17 @@ QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4791 \
 
 Proves: the Zen toolbar's Export opens the Export sheet over a blurred,
 dimmed window (the native hold is set while it is open and released after);
-every format tile is pickable and exactly one is lit; a real OBJ, a .blend
-copy and a Fast PNG render (scene render settings restored) are written
-into the artifact folder, never overwriting; Selected objects only with no
+every format tile is pickable and exactly one is lit; a real OBJ (twice:
+never overwriting), .blend, .mixar, GLB, Unreal FBX and Unity glTF, a Fast
+PNG and WebP still and a 12-frame WebM (scene render settings restored) are
+written into the artifact folder; Selected objects only with no
 selection disables Export; ✕ and Esc close it without writing. Vision: the
 sheet over the blur per format, and the window after closing.
 """
 
 import json
 import os
+import time
 from pathlib import Path
 import sys
 
@@ -32,7 +34,15 @@ TILES = (".blend", ".mixar", ".glb", ".fbx", ".obj", "Unreal", "Unity", "Web", "
 
 
 def snap(qa, name):
-    qa.cmd("snap", path=str(OUT / f"{name}.png"))
+    """Snap, then wait for the PNG: the capture lands a frame later, and a
+    click sent before it would show up in the picture."""
+    path = OUT / f"{name}.png"
+    path.unlink(missing_ok=True)
+    qa.cmd("snap", path=str(path))
+    deadline = time.monotonic() + 10
+    while not (path.exists() and path.stat().st_size > 0):
+        assert time.monotonic() < deadline, f"snap {name} never landed"
+        time.sleep(0.1)
 
 
 def open_sheet(qa):
@@ -115,6 +125,61 @@ def png(qa):
     return {"bytes": size, "settings_restored": True}
 
 
+RENDER_SETTINGS = ("r=drv.main_window().scene.render; result=[r.engine, "
+                   "r.image_settings.media_type, r.image_settings.file_format, "
+                   "r.ffmpeg.format, r.ffmpeg.codec, r.resolution_percentage, r.filepath]")
+
+
+def choose(qa, name, value):
+    qa.eval(f"{PROPS}.{name} = {value!r}\nresult=True")
+
+
+def models(qa):
+    """GLB, Unreal (FBX preset) and Unity (glTF), each a real file."""
+    sizes = {}
+    for label, option, file in ((".glb", None, "QA_Export.glb"),
+                                ("Unreal", None, "QA_Export.fbx"),
+                                ("Unity", ("engine_format", "GLB"), "QA_Export_2.glb")):
+        open_sheet(qa)
+        pick(qa, label)
+        if option:
+            choose(qa, *option)
+        sizes[label] = export_and_wait(qa, file)
+        assert sizes[label] > 0, label
+    head = (FILES / "QA_Export.fbx").read_bytes()[:20]
+    assert head.startswith(b"Kaydara FBX Binary"), head
+    assert (FILES / "QA_Export.glb").read_bytes()[:4] == b"glTF"
+    return sizes
+
+
+def project(qa):
+    open_sheet(qa)
+    pick(qa, ".mixar")
+    return {"bytes": export_and_wait(qa, "QA_Export.mixar")}
+
+
+def web_formats(qa):
+    """A Fast WebP still and a 12-frame WebM: the containers the tests fake."""
+    qa.eval("s=drv.main_window().scene; s.frame_start=1; s.frame_end=12; result=True")
+    before = qa.eval(RENDER_SETTINGS)
+    open_sheet(qa)
+    pick(qa, ".png")
+    choose(qa, "image_format", "WEBP")
+    webp = export_and_wait(qa, "QA_Export.webp", timeout=180)
+    qa.wait("not bpy.app.is_job_running('RENDER')", timeout=60)
+    assert (FILES / "QA_Export.webp").read_bytes()[8:12] == b"WEBP"
+    open_sheet(qa)
+    pick(qa, ".mp4")
+    choose(qa, "video_format", "WEBM")
+    snap(qa, "04b-webm-settings")
+    webm = export_and_wait(qa, "QA_Export.webm", timeout=300)
+    qa.wait("not bpy.app.is_job_running('RENDER')", timeout=60)
+    assert (FILES / "QA_Export.webm").read_bytes()[:4] == b"\x1a\x45\xdf\xa3"  # EBML
+    after = qa.eval(RENDER_SETTINGS)
+    assert after == before, (before, after)
+    return {"webp": webp, "webm": webm, "settings_restored": True}
+
+
 def blocked(qa):
     qa.eval(f"{PROPS}.selected_only = True\n"
             "for o in drv.main_window().scene.objects: o.select_set(False)\nresult=True")
@@ -144,6 +209,7 @@ def run(qa):
     setup(qa)
     checks = {}
     for name, fn in (("sheet", sheet), ("obj", obj), ("blend", blend), ("png", png),
+                     ("models", models), ("project", project), ("web-formats", web_formats),
                      ("blocked", blocked), ("cancel", cancel)):
         checks[name] = qa.step(name, fn, qa)
     verdict = {"checks": checks, "paid_requests": 0, "artifacts": str(OUT)}

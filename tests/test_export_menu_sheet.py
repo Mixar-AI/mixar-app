@@ -113,9 +113,24 @@ def _downloads(monkeypatch, tmp_path):
 
 
 def _draw(props, sheet_api=True, **ctx):
+    """Refresh as the operators do, then draw (draw itself only reads)."""
     log = []
-    sheet.draw_sheet(Layout(log, sheet_api), _context(props, **ctx), lambda _key: 0)
+    context = _context(props, **ctx)
+    runner.refresh(props, context)
+    sheet.draw_sheet(Layout(log, sheet_api), context, lambda _key: 0)
     return log
+
+
+def test_draw_never_touches_the_disk_or_walks_the_scene(monkeypatch):
+    props = _props(format="FBX")
+    context = _context(props)
+    runner.refresh(props, context)
+
+    def forbidden(*_a, **_kw):
+        raise AssertionError("draw-time work")
+    monkeypatch.setattr(runner, "output_folder", forbidden)
+    monkeypatch.setattr(runner, "blocker", forbidden)
+    sheet.draw_sheet(Layout([], True), context, lambda _key: 0)
 
 
 def _defaults(log):
@@ -213,7 +228,7 @@ def test_the_zen_export_button_opens_the_sheet_and_file_export_is_untouched():
     topbar = (SRC / "scripts/startup/bl_ui/space_topbar.py").read_text()
     assert 'props.name = "MIXAR_PT_web_publish"' in topbar  # File ▸ Export keeps Publish to Web
     ops = (SRC / "scripts/mixar/modules/export_menu/ui/operators/export_menu_ops.py").read_text()
-    assert '{"sheet": True, "blur": True}' in ops
+    assert '{"sheet": True, "blur": BLUR}' in ops and "\nBLUR = True\n" in ops
 
 
 def test_the_blur_is_held_by_the_popup_and_drawn_under_the_menus():
