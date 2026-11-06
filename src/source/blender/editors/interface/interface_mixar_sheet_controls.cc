@@ -331,6 +331,18 @@ void draw_chip(Button *but, const rcti *rect)
   const float pad = std::min(px(chip_pad), BLI_rctf_size_x(&chip) * 0.25f);
   text.xmin += pad;
   text.xmax -= pad;
+  /* A chip carrying a preview icon (an engine's logo, `kit.choice(icon_value=…)`)
+   * leads with it; Python added #chip_icon + #chip_icon_gap to its width. */
+  if (but->icon != ICON_NONE) {
+    const float size = std::min(px(chip_icon), BLI_rctf_size_y(&chip) - px(8.0f));
+    const float alpha = fade * (row_icon_rest_alpha +
+                                (1.0f - row_icon_rest_alpha) *
+                                    std::max(motion.selected, hover_cue(motion)));
+    GPU_blend(GPU_BLEND_ALPHA);
+    icon_draw_preview(
+        text.xmin, BLI_rctf_cent_y(&chip) - size * 0.5f, but->icon, 1.0f, alpha, int(size));
+    text.xmin += size + px(chip_icon_gap);
+  }
   /* One weight lit or not: Python sized the chip with this face, and the
    * fill already says which one is current. */
   text_in(font(label_size, weight_medium), text, but_label(but), col, true);

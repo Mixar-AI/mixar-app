@@ -2019,6 +2019,12 @@ void RNA_api_ui_layout(StructRNA *srna)
        0,
        "Status Dot",
        "Disc leading a status line: lit is green, extra 1.0 is danger, otherwise dim"},
+      {19,
+       "TILE",
+       0,
+       "Tile",
+       "App-icon square with the button's preview icon and its label under it; lit draws the "
+       "focus ring"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   func = RNA_def_function(srna, "mixar_sheet_frame", "rna_uiLayoutMixarSheetFrame");

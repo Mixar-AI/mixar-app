@@ -144,7 +144,8 @@ def test_rna_kinds_and_painter_cases_cover_the_new_primitives():
     for element, value in (("SheetSnippet", 16), ("SheetSwitch", 17), ("SheetStatusDot", 18)):
         assert f"case {value}:\n      return MixarCardElement::{element};" in sheet
         assert f"case MixarCardElement::{element}:" in sheet[sheet.index("bool UI_mixar_sheet_draw_element("):]
-    assert "element <= MixarCardElement::SheetStatusDot" in sheet
+    # The range check ends on the last sheet kind (the Export card's TILE).
+    assert "element <= MixarCardElement::SheetTile" in sheet
     types = (ROOT / "src" / "source" / "blender" / "editors" / "include" / "UI_mixar_types.hh").read_text()
     order = types[types.index("SheetDropdown,"):types.index("Count,")]
     assert order.index("SheetSnippet,") < order.index("SheetSwitch,") < order.index("SheetStatusDot,")

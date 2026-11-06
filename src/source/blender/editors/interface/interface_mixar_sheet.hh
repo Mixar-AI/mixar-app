@@ -178,6 +178,25 @@ inline constexpr uchar switch_track_off_hover[4] = {0x45, 0x46, 0x4A, 255};
 /* -- Status dot: the disc leading a status line (green / danger / dim) -- */
 inline constexpr float status_dot = 11.0f;
 
+/* -- Tile: an app-icon square with its label under it (Export card) ----- */
+inline constexpr float tile_radius = 28.0f;
+inline constexpr float tile_label_h = 40.0f;
+inline constexpr float tile_label_size = 0.86f; /* x body */
+inline constexpr float tile_icon_ratio = 0.6f;  /* logo side / plate side */
+inline constexpr float tile_icon_rest_alpha = 0.72f;
+/** Room kept around the plate for the ring: gap, then the ring's stroke. */
+inline constexpr float tile_ring_gap = 4.0f;
+inline constexpr float tile_ring_w = 4.0f;
+inline constexpr float tile_ring_out = tile_ring_gap + tile_ring_w + 2.0f;
+inline constexpr uchar tile_fill[4] = {0x2C, 0x2E, 0x2D, 255};
+inline constexpr uchar tile_fill_hover[4] = {0x36, 0x39, 0x38, 255};
+inline constexpr uchar tile_border[4] = {0x45, 0x49, 0x48, 255};
+/** Mixar Forest focus green. */
+inline constexpr uchar tile_ring[4] = {0x7F, 0x9B, 0x78, 255};
+/** A chip that carries a preview icon (an engine's logo) leads with it. */
+inline constexpr float chip_icon = 26.0f;
+inline constexpr float chip_icon_gap = 10.0f;
+
 /* Private kit shared by the two painter files. */
 
 /** The island's face (or the monospace caption face) at \a ratio x the UI
@@ -227,6 +246,8 @@ void draw_snippet(Button *but, const rcti *rect);
 void draw_switch(Button *but, const rcti *rect);
 void draw_status_dot(Button *but, const rcti *rect);
 void draw_footer_glyph(Button *but, float x, float cy, const uchar col[4]);
+/* `interface_mixar_sheet_tiles.cc`. */
+void draw_tile(Button *but, const rcti *rect);
 
 }  // namespace mixar_sheet
 

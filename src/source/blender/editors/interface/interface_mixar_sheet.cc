@@ -5,11 +5,12 @@
 /** \file
  * \ingroup edinterface
  *
- * The sheet dialogs (AI Provider settings, Connect MCP) — the text kit,
- * the framed backdrop and the tags. The painters (text elements, close,
- * rows, chips, pills) are in `interface_mixar_sheet_controls.cc`, the
- * snippet, switch, status dot and foot glyphs in
- * `interface_mixar_sheet_blocks.cc`; the design is described in
+ * The sheet dialogs (AI Provider settings, Connect MCP, the Export card) —
+ * the text kit and the tags. The painters (text elements, close, rows,
+ * chips, pills) are in `interface_mixar_sheet_controls.cc`, the snippet,
+ * switch, status dot, foot glyphs and the framed backdrop in
+ * `interface_mixar_sheet_blocks.cc`, the app-icon tile in
+ * `interface_mixar_sheet_tiles.cc`; the design is described in
  * `interface_mixar_sheet.hh`.
  *
  * Text is drawn straight through BLF rather than #fontstyle_draw: the sheet
@@ -35,6 +36,7 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
+#include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
 #include "UI_mixar.hh"
 #include "UI_mixar_motion.hh"
@@ -242,6 +244,8 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
       return MixarCardElement::SheetSwitch;
     case 18:
       return MixarCardElement::SheetStatusDot;
+    case 19:
+      return MixarCardElement::SheetTile;
     default:
       return MixarCardElement::None;
   }
@@ -249,7 +253,7 @@ MixarCardElement UI_mixar_sheet_element_from_kind(const int kind)
 
 bool UI_mixar_sheet_element_is(const MixarCardElement element)
 {
-  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetStatusDot;
+  return element >= MixarCardElement::SheetTitle && element <= MixarCardElement::SheetTile;
 }
 
 void UI_layout_mixar_sheet_frame(Layout *layout, const float header_dp, const float sidebar_dp)
@@ -309,6 +313,15 @@ void UI_layout_mixar_sheet_tag_last(Layout *layout,
     }
     return;
   }
+  if (but->icon != ICON_NONE &&
+      ELEM(element, MixarCardElement::SheetTile, MixarCardElement::SheetChip,
+           MixarCardElement::SheetProviderRow))
+  {
+    /* These painters draw the full-size preview (`icon_draw_preview`); a plain
+     * button only defers the small size, so request the big one on every build,
+     * as a #BUT_ICON_PREVIEW button would. */
+    icon_ensure_deferred(static_cast<const bContext *>(block->evil_C), but->icon, true);
+  }
   style.component = MixarComponent::LegacyCard;
   style.card = element;
   style.lit = lit;
@@ -366,6 +379,10 @@ float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text
        * sized for the wider face, picking a row never ellipsises its name. */
       weight = weight_strong;
       break;
+    case MixarCardElement::SheetTile:
+      size = tile_label_size;
+      weight = weight_strong;
+      break;
     default:
       break;
   }
@@ -374,50 +391,6 @@ float UI_mixar_sheet_text_width(const MixarCardElement element, const char *text
   const float w = text_width(font_id, text) * 20.0f / float(UI_UNIT_X);
   restore_weight(font_id);
   return w;
-}
-
-void UI_mixar_sheet_draw_back(const Block *block, const rcti *rect)
-{
-  rctf frame;
-  BLI_rctf_rcti_copy(&frame, rect);
-  const float rad = px(frame_radius);
-  const float line = std::max(float(U.pixelsize), px(frame_line));
-  float fill[4], border[4];
-  rgba_uchar_to_float(fill, frame_fill);
-  rgba_uchar_to_float(border, frame_border);
-
-  GPU_blend(GPU_BLEND_ALPHA);
-
-  /* The soft shadow every popup gets, under the card. */
-  rctf shadow = frame;
-  BLI_rctf_pad(&shadow, -float(U.pixelsize), -float(U.pixelsize));
-  draw_roundbox_corner_set(CNR_ALL);
-  draw_dropshadow(&shadow,
-                  rad,
-                  float(theme::get_menu_shadow_width()),
-                  1.0f,
-                  theme::theme_get()->tui.menu_shadow_fac);
-
-  draw_roundbox_corner_set(CNR_ALL);
-  draw_roundbox_4fv_ex(&frame, fill, fill, 0.0f, border, line, rad);
-
-  /* Header divider across the card, sidebar divider down to the foot. */
-  const float header = block->mixar_sheet_header;
-  const float sidebar = block->mixar_sheet_sidebar;
-  if (header > 0.0f) {
-    const rctf rule = {
-        frame.xmin + line, frame.xmax - line, frame.ymax - header - line * 0.5f, frame.ymax - header + line * 0.5f};
-    draw_roundbox_4fv(&rule, true, 0.0f, border);
-  }
-  if (sidebar > 0.0f) {
-    const rctf rule = {frame.xmin + sidebar - line * 0.5f,
-                       frame.xmin + sidebar + line * 0.5f,
-                       frame.ymin + line,
-                       header > 0.0f ? frame.ymax - header : frame.ymax - line};
-    draw_roundbox_4fv(&rule, true, 0.0f, border);
-  }
-
-  GPU_blend(GPU_BLEND_NONE);
 }
 
 bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardElement element)
@@ -476,6 +449,9 @@ bool UI_mixar_sheet_draw_element(Button *but, const rcti *rect, const MixarCardE
       break;
     case MixarCardElement::SheetStatusDot:
       draw_status_dot(but, rect);
+      break;
+    case MixarCardElement::SheetTile:
+      draw_tile(but, rect);
       break;
     default:
       break;

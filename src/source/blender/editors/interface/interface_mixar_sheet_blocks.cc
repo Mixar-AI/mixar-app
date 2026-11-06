@@ -8,7 +8,8 @@
  * The sheet's block painters (first drawn for the Connect MCP dialog):
  * the code snippet on the key field's backdrop, the track-and-knob switch,
  * the status line's dot, and the glyphs that lead the sidebar's foot row
- * (Local model's monitor, Other app's terminal). See
+ * (Local model's monitor, Other app's terminal), and the framed backdrop
+ * (fill, hairline, header and sidebar dividers). See
  * `interface_mixar_sheet.hh` for the artboard the numbers come from.
  */
 
@@ -21,10 +22,13 @@
 #include "BLI_rect.h"
 #include "BLI_utildefines.h"
 
+#include "DNA_userdef_types.h"
+
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
 #include "UI_mixar_motion.hh"
+#include "UI_resources.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
@@ -187,5 +191,53 @@ void draw_footer_glyph(Button *but, const float x, const float cy, const uchar c
 }
 
 }  // namespace mixar_sheet
+
+/* -- The framed backdrop (moved from interface_mixar_sheet.cc) ------------- */
+
+using namespace mixar_sheet;
+
+void UI_mixar_sheet_draw_back(const Block *block, const rcti *rect)
+{
+  rctf frame;
+  BLI_rctf_rcti_copy(&frame, rect);
+  const float rad = px(frame_radius);
+  const float line = std::max(float(U.pixelsize), px(frame_line));
+  float fill[4], border[4];
+  rgba_uchar_to_float(fill, frame_fill);
+  rgba_uchar_to_float(border, frame_border);
+
+  GPU_blend(GPU_BLEND_ALPHA);
+
+  /* The soft shadow every popup gets, under the card. */
+  rctf shadow = frame;
+  BLI_rctf_pad(&shadow, -float(U.pixelsize), -float(U.pixelsize));
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_dropshadow(&shadow,
+                  rad,
+                  float(theme::get_menu_shadow_width()),
+                  1.0f,
+                  theme::theme_get()->tui.menu_shadow_fac);
+
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv_ex(&frame, fill, fill, 0.0f, border, line, rad);
+
+  /* Header divider across the card, sidebar divider down to the foot. */
+  const float header = block->mixar_sheet_header;
+  const float sidebar = block->mixar_sheet_sidebar;
+  if (header > 0.0f) {
+    const rctf rule = {
+        frame.xmin + line, frame.xmax - line, frame.ymax - header - line * 0.5f, frame.ymax - header + line * 0.5f};
+    draw_roundbox_4fv(&rule, true, 0.0f, border);
+  }
+  if (sidebar > 0.0f) {
+    const rctf rule = {frame.xmin + sidebar - line * 0.5f,
+                       frame.xmin + sidebar + line * 0.5f,
+                       frame.ymin + line,
+                       header > 0.0f ? frame.ymax - header : frame.ymax - line};
+    draw_roundbox_4fv(&rule, true, 0.0f, border);
+  }
+
+  GPU_blend(GPU_BLEND_NONE);
+}
 
 }  // namespace blender::ui

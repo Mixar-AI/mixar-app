@@ -122,6 +122,9 @@ enum class MixarCardElement : uint8_t {
   /** The disc leading a status line: `lit` green, `progress` 1.0 danger,
    * otherwise dim. */
   SheetStatusDot,
+  /** App-icon tile (Export card): plate with the button's preview icon, the
+   * label under it, a focus ring while `lit`. */
+  SheetTile,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
