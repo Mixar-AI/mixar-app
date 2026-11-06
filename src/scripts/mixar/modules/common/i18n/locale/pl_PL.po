@@ -25450,6 +25450,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
