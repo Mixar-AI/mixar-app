@@ -262,19 +262,56 @@ class MIXAR_OT_export_menu_reveal(Operator):
         return {'FINISHED'}
 
 
+# The sheet's own publish state: ``starting`` from the click until the
+# pipeline has taken over (its export runs on the main thread, so the sheet
+# must have drawn "Preparing…" first), ``error`` a refusal to show in the
+# sheet (an operator report would land in the status bar under the blur).
+publish_ui = {"starting": False, "error": ""}
+
+
+def _refresh_sheets():
+    for window in bpy.context.window_manager.windows:
+        refresh = getattr(window, "mixar_refresh_popups", None)
+        if refresh is not None:
+            refresh()
+
+
 def _watch_publish():
     """Keep the open sheet's publish progress current (pop-ups only redraw on
     pointer movement), then stop once the publish has finished."""
     try:
         from mixar.modules.web_publish.core.publish_state import get_publish_state
         busy = get_publish_state().busy
-        for window in bpy.context.window_manager.windows:
-            refresh = getattr(window, "mixar_refresh_popups", None)
-            if refresh is not None:
-                refresh()
+        _refresh_sheets()
     except Exception:  # noqa: BLE001 - progress is cosmetic
         return None
     return _WATCH_SECONDS if busy and _open else None
+
+
+def _start_publish(window_pointer, update_existing):
+    """Timer body: the sheet already shows "Preparing…"; run the pipeline."""
+    from mixar.modules.common.i18n import rpt_
+    from mixar.modules.web_publish.core.pipeline import begin_publish
+    from mixar.modules.web_publish.core.publish_state import format_message
+    win = next((w for w in bpy.context.window_manager.windows
+                if w.as_pointer() == window_pointer), None)
+    try:
+        if win is None:
+            raise RuntimeError("window closed")
+        area = next((a for a in win.screen.areas if a.type == 'VIEW_3D'), None)
+        with bpy.context.temp_override(window=win, area=area):
+            outcome = begin_publish(bpy.context, update_existing=update_existing, via="panel")
+        if not outcome.get("ok"):
+            publish_ui["error"] = format_message(rpt_(outcome.get("error") or ""),
+                                                 outcome.get("error_args"))
+    except Exception as exc:  # noqa: BLE001 - shown in the sheet
+        publish_ui["error"] = rpt_("Publishing could not start: {error}").format(error=exc)
+    finally:
+        publish_ui["starting"] = False
+    if not bpy.app.timers.is_registered(_watch_publish):
+        bpy.app.timers.register(_watch_publish, first_interval=_WATCH_SECONDS)
+    _refresh_sheets()
+    return None
 
 
 class MIXAR_OT_export_menu_publish(Operator):
@@ -287,13 +324,25 @@ class MIXAR_OT_export_menu_publish(Operator):
 
     @classmethod
     def poll(cls, context):
-        return bpy.ops.mixar.web_publish.poll()
+        if publish_ui["starting"]:
+            return False
+        try:
+            from mixar.modules.web_publish.core.publish_state import get_publish_state
+            return not get_publish_state().busy
+        except Exception:  # noqa: BLE001
+            return False
 
     def execute(self, context):
-        result = bpy.ops.mixar.web_publish(update_existing=self.update_existing)
-        if 'FINISHED' in result and not bpy.app.timers.is_registered(_watch_publish):
-            bpy.app.timers.register(_watch_publish, first_interval=_WATCH_SECONDS)
-        return result
+        """Show "Preparing…" now and publish on the next tick: the scene
+        export runs on the main thread, and run inside this click it froze
+        the sheet with the button still pressed."""
+        if context.window is None:
+            return {'CANCELLED'}
+        publish_ui.update(starting=True, error="")
+        pointer, update = context.window.as_pointer(), self.update_existing
+        bpy.app.timers.register(lambda: _start_publish(pointer, update), first_interval=0.05)
+        _refresh_sheets()
+        return {'FINISHED'}
 
 
 classes = (

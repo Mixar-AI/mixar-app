@@ -6261,6 +6261,9 @@ msgstr ""
 msgid "The exported file was moved or deleted"
 msgstr ""
 
+msgid "Publishing could not start: {error}"
+msgstr ""
+
 msgid "Publish to Web"
 msgstr ""
 
@@ -6331,6 +6334,9 @@ msgid "Publish to Web is not available in this build."
 msgstr ""
 
 msgid "PUBLISHING"
+msgstr ""
+
+msgid "Preparing the scene for the web…"
 msgstr ""
 
 msgid "Exporting and uploading this scene…"

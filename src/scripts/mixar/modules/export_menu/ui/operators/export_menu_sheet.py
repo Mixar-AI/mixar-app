@@ -308,7 +308,17 @@ def _draw_web(col, context, height):
         _foot_button(col, OP_PUBLISH, iface_("Publish to Web"), enabled=False)
         S.sep(col, S.BOTTOM)
         return
+    from . import export_menu_ops
+    local = export_menu_ops.publish_ui
     state, progress, mine = _web_state(context)
+    if local["starting"]:
+        _caption(top, n_("PUBLISHING"), first=True)
+        _note(top, iface_("Preparing the scene for the web…"), S.BODY)
+        S.sep(col, S.NOTE_TO_INPUT)
+        _foot_button(col, "mixar.web_publish_cancel", iface_("Cancel"), S.SECONDARY,
+                     enabled=False)
+        S.sep(col, S.BOTTOM)
+        return
     if state.busy:
         _caption(top, n_("PUBLISHING"), first=True)
         _note(top, iface_("Exporting and uploading this scene…") if mine
@@ -342,6 +352,8 @@ def _draw_web(col, context, height):
         _caption(top, n_("PUBLISH TO WEB"), first=True)
         _note(top, iface_("A shareable link to an explorable 3D website of this scene."),
               S.BODY)
+    if local["error"]:
+        _note(top, local["error"], S.DANGER_TEXT)
     _caption(top, n_("TITLE"))
     S.input_field(S.row(top, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN),
                   web, "title")
