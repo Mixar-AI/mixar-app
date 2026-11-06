@@ -10,6 +10,7 @@ separators of the Mach-O LC_UUID, the GNU build-id, or the PDB GUID + age.
 
 import importlib.util
 import json
+import re
 import struct
 import uuid
 from pathlib import Path
@@ -116,3 +117,34 @@ def test_upload_dry_run_prints_both_copies(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "s3://bucket/crash-symbols/by-id" in out and "s3://bucket/crash-symbols/versions" in out
     assert (tmp_path / "versions" / "4.3.7" / "darwin-arm64.json").exists()
+
+
+def test_release_symbol_steps_fail_prod_and_only_warn_on_uat():
+    """4.4.0 shipped without Windows symbols behind a warning on a green step.
+    On Prod every miss must fail the job; UAT builds keep the warning."""
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    steps = re.findall(r"- name: Archive crash symbols .*?(?=\n      - name: )", workflow, re.S)
+    assert [s.splitlines()[0] for s in steps] == [
+        "- name: Archive crash symbols (dSYM)",
+        "- name: Archive crash symbols (PDB)",
+        "- name: Archive crash symbols (.debug)",
+    ]
+    for step in steps:
+        assert "continue-on-error: ${{ env.MIXAR_ENV != 'Prod' }}" in step
+    windows = steps[1]
+    assert "if ($env:MIXAR_ENV -eq 'Prod') { Write-Host \"::error::$msg\"; exit 1 }" in windows
+    # Both misses (PDB, bundled python.exe) go through Miss; no bare warn-and-succeed.
+    assert windows.count("::warning::") == 1 and windows.count("exit 0") == 1
+    assert windows.count("{ Miss ") == 2
+
+
+def test_release_archives_symbols_before_the_checkpoint_save():
+    """A failed attempt must leave no checkpoint: a re-run restores one and skips
+    the symbol step, so a Prod symbol failure would go green on re-run."""
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    order = re.findall(r"^      - name: ((?:Restore|Save) build checkpoint|Archive crash symbols .*)$", workflow, re.M)
+    assert order == [
+        "Restore build checkpoint", "Archive crash symbols (dSYM)", "Save build checkpoint",
+        "Restore build checkpoint", "Archive crash symbols (PDB)", "Save build checkpoint",
+        "Restore build checkpoint", "Archive crash symbols (.debug)", "Save build checkpoint",
+    ]
