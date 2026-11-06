@@ -74,7 +74,7 @@ win = drv.main_window()
 scene = win.scene
 assert scene.camera is not None and any(o.type == 'MESH' for o in scene.objects)
 props = {PROPS}
-props.file_name = 'QA_Export'
+props.file_path = {str(FILES / 'QA_Export.glb')!r}
 props.quality = 'FAST'
 props.selected_only = False
 bpy.context.preferences.view.show_tooltips = False
@@ -180,6 +180,42 @@ def web_formats(qa):
     return {"webp": webp, "webm": webm, "settings_restored": True}
 
 
+def browse(qa):
+    """Browse opens a file browser over the open sheet; confirming it fills
+    the File path (extension kept on the format's) and the sheet stays up."""
+    picked = OUT / "browsed"
+    picked.mkdir(exist_ok=True)
+    open_sheet(qa)
+    pick(qa, ".fbx")
+    qa.click(popup=True, op="MIXAR_OT_export_menu_browse")
+    qa.wait("bool(drv.find(area_type='FILE_BROWSER', prop='filename'))", timeout=10)
+    snap(qa, "05a-browse")
+    qa.eval(f"""
+h=drv.find(area_type='FILE_BROWSER', prop='directory')[0]
+params=h['_area'].spaces.active.params
+params.directory={str(picked).encode()!r}
+params.filename='Picked'
+result=True
+""")
+    qa.click(area_type="FILE_BROWSER", op="FILE_OT_execute")
+    qa.wait("not any(a.type == 'FILE_BROWSER' for w in bpy.context.window_manager.windows "
+            "for a in w.screen.areas)", timeout=12)
+    path = qa.eval(f"result={PROPS}.file_path")
+    assert path == str(picked / "Picked.fbx"), path
+    assert qa.eval(f"result={OPEN}") is True, "the sheet closed with the browser"
+    snap(qa, "05b-after-browse")
+    size = export_and_wait_path(qa, path)
+    qa.eval(f"{PROPS}.file_path = {str(FILES / 'QA_Export.fbx')!r}\nresult=True")
+    return {"path": path, "bytes": size}
+
+
+def export_and_wait_path(qa, path, timeout=30):
+    qa.click(popup=True, op="MIXAR_OT_export_menu_run")
+    qa.wait(f"__import__('os').path.exists({path!r})", timeout=timeout)
+    qa.wait(f"not {OPEN}", timeout=5)
+    return Path(path).stat().st_size
+
+
 def blocked(qa):
     qa.eval(f"{PROPS}.selected_only = True\n"
             "for o in drv.main_window().scene.objects: o.select_set(False)\nresult=True")
@@ -210,7 +246,7 @@ def run(qa):
     checks = {}
     for name, fn in (("sheet", sheet), ("obj", obj), ("blend", blend), ("png", png),
                      ("models", models), ("project", project), ("web-formats", web_formats),
-                     ("blocked", blocked), ("cancel", cancel)):
+                     ("browse", browse), ("blocked", blocked), ("cancel", cancel)):
         checks[name] = qa.step(name, fn, qa)
     verdict = {"checks": checks, "paid_requests": 0, "artifacts": str(OUT)}
     (OUT / "verdict.json").write_text(json.dumps(verdict, indent=2) + "\n")

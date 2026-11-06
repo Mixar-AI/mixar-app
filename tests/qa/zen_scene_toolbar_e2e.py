@@ -298,7 +298,7 @@ def export_scene(qa):
     qa.eval(f"""
 import mixar.modules.export_menu.core.runner as runner
 runner.output_folder = lambda: {str(OUT)!r}
-bpy.context.window_manager.mixar_export_menu.file_name = {stem!r}
+bpy.context.window_manager.mixar_export_menu.file_path = {str(path)!r}
 result=True
 """)
     qa.click(**HEADER, text="Export")

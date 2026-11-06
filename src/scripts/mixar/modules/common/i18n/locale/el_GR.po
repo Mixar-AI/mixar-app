@@ -5000,6 +5000,9 @@ msgstr ""
 msgid "Open a scene to export"
 msgstr ""
 
+msgid "That folder does not exist; pick one with Browse"
+msgstr ""
+
 msgid "Select the objects to export, or turn off Selected objects only"
 msgstr ""
 
@@ -5030,7 +5033,7 @@ msgstr ""
 msgid "Publish to Web runs from its own button"
 msgstr ""
 
-msgid "The Downloads folder is not writable"
+msgid "That folder is not writable; pick another with Browse"
 msgstr ""
 
 msgid "Exporting {name}…"
@@ -5063,6 +5066,12 @@ msgstr ""
 msgid "Export failed"
 msgstr ""
 
+msgid "Choose Export Location"
+msgstr "Επιλογή θέσης εξαγωγής"
+
+msgid "Pick where the export is written"
+msgstr ""
+
 msgid "Show the exported file in its folder"
 msgstr ""
 
@@ -5084,7 +5093,10 @@ msgstr ""
 msgid "Pick a format, name the file and export it."
 msgstr ""
 
-msgid "FILE NAME"
+msgid "FILE PATH"
+msgstr ""
+
+msgid "Browse"
 msgstr ""
 
 msgid "SETTINGS"
@@ -5123,7 +5135,10 @@ msgstr ""
 msgid "Quality sets how images and videos render; files keep the scene's full detail."
 msgstr ""
 
-msgid "Saves to {folder} as {name}"
+msgid "That file exists; this saves as {name}"
+msgstr ""
+
+msgid "Saves as {name}"
 msgstr ""
 
 msgid "PUBLISH TO WEB"
@@ -5171,10 +5186,10 @@ msgstr ""
 msgid "Format"
 msgstr "Μορφή"
 
-msgid "File Name"
-msgstr ""
+msgid "File Path"
+msgstr "Διαδρομή αρχείου"
 
-msgid "Name of the exported file, without its extension"
+msgid "Where the export is written; the extension follows the picked format"
 msgstr ""
 
 msgid "Quality"
@@ -9867,9 +9882,6 @@ msgstr "Εξαγωγή επιλεγμένων μέσων"
 
 msgid "Save selected images or copy selected videos to disk"
 msgstr "Αποθηκεύει τις επιλεγμένες εικόνες ή αντιγράφει τα επιλεγμένα βίντεο στον δίσκο"
-
-msgid "File Path"
-msgstr "Διαδρομή αρχείου"
 
 msgid "Export file path"
 msgstr "Διαδρομή αρχείου εξαγωγής"
@@ -21319,9 +21331,6 @@ msgstr "Αποσύνδεση"
 msgid "Sound on"
 msgstr ""
 
-msgid "Choose Export Location"
-msgstr "Επιλογή θέσης εξαγωγής"
-
 msgid "Choose an export destination without sending its path to the backend."
 msgstr "Επιλέγει προορισμό εξαγωγής χωρίς να στέλνει τη διαδρομή του στο σύστημα."
 
@@ -21886,9 +21895,6 @@ msgid "ENGINES"
 msgstr ""
 
 msgid "CONNECTED"
-msgstr ""
-
-msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."

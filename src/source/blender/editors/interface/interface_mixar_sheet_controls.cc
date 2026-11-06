@@ -321,7 +321,8 @@ void draw_chip(Button *but, const rcti *rect)
     mixar_card_fill_round(&chip, rad, text_bright, 0.08f * wash);
   }
   if (motion.selected > 0.0f) {
-    mixar_card_fill_round(&chip, rad, chip_fill, motion.selected * fade);
+    const bool green = but->mixar_style.progress >= chip_green;
+    mixar_card_fill_round(&chip, rad, green ? primary_fill : chip_fill, motion.selected * fade);
   }
 
   uchar col[4];

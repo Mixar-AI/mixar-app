@@ -66,6 +66,15 @@ def _open_later(window, attempts=25):
     bpy.app.timers.register(tick, first_interval=0.0)
 
 
+def _sync_extension(props):
+    """Keep the File path's extension on the picked format's."""
+    ext = runner.extension(props)
+    if ext and props.file_path.strip():
+        path = runner.with_extension(props.file_path, ext)
+        if path != props.file_path:
+            props.file_path = path
+
+
 def _set_closed():
     global _open
     _open = False
@@ -94,8 +103,9 @@ class MIXAR_OT_export_menu(Operator):
             _open_later(window)
             return {'FINISHED'}
         props = context.window_manager.mixar_export_menu
-        if not props.file_name.strip():
-            props.file_name = runner.default_stem(context)
+        if not props.file_path.strip():
+            props.file_path = runner.default_path(context, runner.extension(props))
+        _sync_extension(props)
         _load_logos()
         runner.refresh(props, context)
         _open = True
@@ -139,6 +149,7 @@ class MIXAR_OT_export_menu_pick(Operator):
     def execute(self, context):
         props = context.window_manager.mixar_export_menu
         props.format = self.format
+        _sync_extension(props)
         runner.refresh(props, context)
         return {'FINISHED'}
 
@@ -168,6 +179,7 @@ class MIXAR_OT_export_menu_option(Operator):
             setattr(context.window_manager.mixar_export_menu, self.name, self.value)
         except TypeError:
             return {'CANCELLED'}
+        _sync_extension(context.window_manager.mixar_export_menu)
         runner.refresh(context.window_manager.mixar_export_menu, context)
         return {'FINISHED'}
 
@@ -206,6 +218,34 @@ class MIXAR_OT_export_menu_run(Operator):
         if not ok:
             self.report({'WARNING'}, rpt_(message) if message else rpt_("Export failed"))
             return {'CANCELLED'}
+        return {'FINISHED'}
+
+
+class MIXAR_OT_export_menu_browse(Operator):
+    """Pick where the export is written"""
+
+    bl_idname = "mixar.export_menu_browse"
+    bl_label = "Choose Export Location"
+    bl_options = {'INTERNAL'}
+
+    filepath: StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})  # type: ignore[valid-type]
+    check_existing: BoolProperty(default=False, options={'HIDDEN', 'SKIP_SAVE'})  # type: ignore[valid-type]
+
+    def invoke(self, context, event):
+        props = context.window_manager.mixar_export_menu
+        self.filepath = props.file_path or runner.default_path(context, runner.extension(props))
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        props = context.window_manager.mixar_export_menu
+        props.file_path = runner.with_extension(self.filepath, runner.extension(props))
+        runner.refresh(props, context)
+        # The sheet is a pop-up: it re-lays only when told to.
+        for window in context.window_manager.windows:
+            refresh = getattr(window, "mixar_refresh_popups", None)
+            if refresh is not None:
+                refresh()
         return {'FINISHED'}
 
 
@@ -262,6 +302,7 @@ classes = (
     MIXAR_OT_export_menu_option,
     MIXAR_OT_export_menu_toggle,
     MIXAR_OT_export_menu_run,
+    MIXAR_OT_export_menu_browse,
     MIXAR_OT_export_menu_reveal,
     MIXAR_OT_export_menu_publish,
 )

@@ -189,9 +189,14 @@ inline constexpr float tile_label_bottom = 22.0f;
 inline constexpr float tile_label_size = 0.86f; /* x body */
 inline constexpr float tile_icon_rest_alpha = 0.72f;
 inline constexpr uchar tile_fill[4] = {0x22, 0x23, 0x25, 255};
-inline constexpr uchar tile_fill_lit[4] = {0x2E, 0x2F, 0x32, 255};
+inline constexpr uchar tile_fill_hover[4] = {0x2E, 0x2F, 0x32, 255};
+/** The picked tile: Mixar's selected green, a brighter green rim. */
+inline constexpr uchar tile_fill_lit[4] = {0x2F, 0x59, 0x2F, 255};
 inline constexpr uchar tile_border[4] = {0x33, 0x34, 0x37, 255};
-inline constexpr uchar tile_border_lit[4] = {0xC8, 0xC8, 0xCC, 255};
+inline constexpr uchar tile_border_lit[4] = {0x4F, 0xA8, 0x6A, 255};
+/** A chip whose payload (`extra`) is 1.0 lights green instead of slate
+ * (the Export sheet's segmented choices; provider sheets keep slate). */
+inline constexpr float chip_green = 0.5f;
 
 /* Private kit shared by the two painter files. */
 
