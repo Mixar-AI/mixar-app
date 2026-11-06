@@ -40,7 +40,9 @@ OP_OPTION = "mixar.export_menu_option"
 OP_TOGGLE = "mixar.export_menu_toggle"
 OP_RUN = "mixar.export_menu_run"
 OP_PUBLISH = "mixar.export_menu_publish"
+OP_BROWSE = "mixar.export_menu_browse"
 TILE_KIND = "TILE"
+CHIP_GREEN = 1.0  # a lit chip fills Mixar green (the painter's `chip_green`)
 
 # Geometry (design px, 2x): the kit's width with a wider sidebar for tiles.
 SHEET_WIDTH = S.WIDTH // 2
@@ -160,7 +162,8 @@ def _chips(col, name, items, current, enabled=True):
     for key, label, _tip in items:
         text = iface_(label)
         slot = S.sized(line, S.text_width(line, S.CHIP, text) + 2 * S.CHIP_PAD)
-        S.choice(slot, OP_OPTION, text, S.CHIP, lit=key == current, name=name, value=key)
+        S.choice(slot, OP_OPTION, text, S.CHIP, lit=key == current, extra=CHIP_GREEN,
+                 name=name, value=key)
 
 
 def _switch(col, name, text, on, enabled=True):
@@ -183,14 +186,14 @@ def _notes_height(col, text, kind=S.NOTE):
 # Right column: files, images and videos
 # ---------------------------------------------------------------------------
 
-def _draw_file_name(col, props):
-    _caption(col, n_("FILE NAME"), first=True)
+def _draw_file_path(col, props):
+    """The full path, editable, with Browse docked inside the field."""
+    _caption(col, n_("FILE PATH"), first=True)
     line = S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
-    ext = runner.extension(props)
-    ext_w = S.text_width(line, S.BODY, ext)
-    S.input_field(S.sized(line, TEXT_W - S.GAP - ext_w), props, "file_name")
-    S.gap(line, S.GAP)
-    S.label(line, ext, S.BODY, translate=False)
+    text = iface_("Browse")
+    browse_w = S.text_width(line, S.SECONDARY, text) + S.BUTTON_PAD + S.DOCK_INSET
+    S.input_field(S.sized(line, TEXT_W - browse_w), props, "file_path", docked_w=browse_w)
+    S.button(S.sized(line, browse_w), OP_BROWSE, text, S.SECONDARY, docked=True)
 
 
 def _resolution(context, props):
@@ -245,7 +248,7 @@ def _draw_settings(col, context, props):
 def _draw_export(col, context, props, height):
     kind = BY_KEY[props.format].kind
     top = S.fixed(col, height - FOOT)
-    _draw_file_name(top, props)
+    _draw_file_path(top, props)
     _caption(top, n_("QUALITY"))
     renders = kind in (KIND_IMAGE, KIND_VIDEO)
     _chips(top, "quality", QUALITY_ITEMS, props.quality, enabled=renders)
@@ -259,10 +262,12 @@ def _draw_export(col, context, props, height):
     line = S.row(col, S.NOTE_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)
     if reason:
         S.label(line, iface_(reason), S.DANGER_TEXT, translate=False)
+    elif cached["taken"]:
+        S.label(line, iface_("That file exists; this saves as {name}").format(
+            name=cached["name"]), S.NOTE, translate=False)
     else:
-        S.label(line, iface_("Saves to {folder} as {name}").format(
-            folder=cached["folder"], name=runner.stem(props, context) + runner.extension(props)),
-            S.NOTE, translate=False)
+        S.label(line, iface_("Saves as {name}").format(name=cached["name"]), S.NOTE,
+                translate=False)
     S.sep(col, S.NOTE_TO_INPUT)
     foot = S.row(col, S.INPUT_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN, align='RIGHT')
     text = iface_(EXPORT_TEXT)

@@ -6178,6 +6178,9 @@ msgstr ""
 msgid "Open a scene to export"
 msgstr ""
 
+msgid "That folder does not exist; pick one with Browse"
+msgstr ""
+
 msgid "Select the objects to export, or turn off Selected objects only"
 msgstr ""
 
@@ -6208,7 +6211,7 @@ msgstr ""
 msgid "Publish to Web runs from its own button"
 msgstr ""
 
-msgid "The Downloads folder is not writable"
+msgid "That folder is not writable; pick another with Browse"
 msgstr ""
 
 msgid "Exporting {name}…"
@@ -6241,6 +6244,13 @@ msgstr ""
 msgid "Export failed"
 msgstr ""
 
+# derived
+msgid "Choose Export Location"
+msgstr "Izaberi mesto izvoza"
+
+msgid "Pick where the export is written"
+msgstr ""
+
 msgid "Show the exported file in its folder"
 msgstr ""
 
@@ -6262,7 +6272,10 @@ msgstr ""
 msgid "Pick a format, name the file and export it."
 msgstr ""
 
-msgid "FILE NAME"
+msgid "FILE PATH"
+msgstr ""
+
+msgid "Browse"
 msgstr ""
 
 msgid "SETTINGS"
@@ -6301,7 +6314,10 @@ msgstr ""
 msgid "Quality sets how images and videos render; files keep the scene's full detail."
 msgstr ""
 
-msgid "Saves to {folder} as {name}"
+msgid "That file exists; this saves as {name}"
+msgstr ""
+
+msgid "Saves as {name}"
 msgstr ""
 
 msgid "PUBLISH TO WEB"
@@ -6349,10 +6365,10 @@ msgstr ""
 msgid "Format"
 msgstr "Format"
 
-msgid "File Name"
-msgstr ""
+msgid "File Path"
+msgstr "Putanja do datoteka"
 
-msgid "Name of the exported file, without its extension"
+msgid "Where the export is written; the extension follows the picked format"
 msgstr ""
 
 msgid "Quality"
@@ -12348,9 +12364,6 @@ msgstr "Izvezi izabrane medije"
 # derived
 msgid "Save selected images or copy selected videos to disk"
 msgstr "Sačuvaj izabrane slike ili kopiraj izabrane video-zapise na disk"
-
-msgid "File Path"
-msgstr "Putanja do datoteka"
 
 # derived
 msgid "Export file path"
@@ -27111,10 +27124,6 @@ msgid "Sound on"
 msgstr ""
 
 # derived
-msgid "Choose Export Location"
-msgstr "Izaberi mesto izvoza"
-
-# derived
 msgid "Choose an export destination without sending its path to the backend."
 msgstr "Bira odredište izvoza bez slanja njegove putanje pozadinskom sistemu."
 
@@ -27815,9 +27824,6 @@ msgid "ENGINES"
 msgstr ""
 
 msgid "CONNECTED"
-msgstr ""
-
-msgid "Browse"
 msgstr ""
 
 msgid "Creates a new folder “{name}” here."

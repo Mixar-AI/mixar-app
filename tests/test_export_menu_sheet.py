@@ -87,7 +87,7 @@ class Layout:
 
 
 def _props(**kw):
-    values = dict(format="GLB", file_name="Scooter", quality="GOOD", gltf_variant="GLB",
+    values = dict(format="GLB", file_path="", quality="GOOD", gltf_variant="GLB",
                   engine_format="FBX", image_format="PNG", video_format="MP4",
                   selected_only=False, strip_chat=True, include_animation=True)
     values.update(kw)
@@ -206,6 +206,43 @@ def test_an_older_binary_still_draws_every_format(key):
 ])
 def test_each_choice_writes_its_extension(props, expected):
     assert runner.extension(_props(**props)) == expected
+
+
+def test_the_file_path_names_the_folder_and_the_file(tmp_path):
+    props = _props(file_path=str(tmp_path / "Scooter.v2.fbx"))
+    folder, name = runner.resolve(props, _context(props))
+    assert (folder, name) == (str(tmp_path), "Scooter.v2")  # only the export extension goes
+    assert runner.with_extension(str(tmp_path / "Scooter.fbx"), ".glb") == str(tmp_path / "Scooter.glb")
+    assert runner.with_extension(str(tmp_path / "Scooter"), ".obj") == str(tmp_path / "Scooter.obj")
+
+
+def test_an_empty_path_defaults_to_downloads_and_a_missing_folder_blocks(tmp_path):
+    props = _props()
+    assert runner.resolve(props, _context(props))[0] == str(tmp_path)  # the patched Downloads
+    props.file_path = str(tmp_path / "missing" / "Scooter.glb")
+    assert runner.blocker(props, _context(props))
+    log = _draw(props)
+    (default,) = _defaults(log)
+    assert not default["enabled"]
+
+
+def test_the_status_line_names_the_file_it_will_write(tmp_path):
+    props = _props(file_path=str(tmp_path / "Scooter.glb"))
+    runner.refresh(props, _context(props))
+    assert runner.view()["name"] == "Scooter.glb" and not runner.view()["taken"]
+    (tmp_path / "Scooter.glb").write_bytes(b"x")
+    runner.refresh(props, _context(props))
+    assert runner.view() == {"name": "Scooter_2.glb", "taken": True, "blocker": ""}
+
+
+def test_the_path_field_has_browse_docked_and_lit_choices_are_green():
+    log = _draw(_props(format="PNG"))
+    field = next(i for i in log if i.get("prop") == "file_path")
+    assert field["kind"] == "INPUT" and field["extra"] > 0
+    browse = next(i for i in log if i.get("op") == sheet.OP_BROWSE)
+    assert browse["kind"] == "SECONDARY" and not browse.get("default")
+    chips = [i for i in log if i.get("kind") == "CHIP"]
+    assert chips and all(chip["extra"] == sheet.CHIP_GREEN for chip in chips)
 
 
 def test_exports_never_overwrite(tmp_path):

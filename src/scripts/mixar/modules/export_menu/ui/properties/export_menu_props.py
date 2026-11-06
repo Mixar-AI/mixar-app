@@ -21,12 +21,19 @@ from ...constants import (
 )
 
 
+def _path_edited(self, context):
+    # The status line ("Saves as …", a missing folder) follows a typed path.
+    from ...core import runner
+    runner.refresh(self, context)
+
+
 class MixarExportMenuProps(bpy.types.PropertyGroup):
     format: EnumProperty(  # type: ignore[valid-type]
         name="Format", items=FORMAT_ITEMS, default="GLB", options={'SKIP_SAVE'})
-    file_name: StringProperty(  # type: ignore[valid-type]
-        name="File Name", description="Name of the exported file, without its extension",
-        default="", maxlen=72, options={'SKIP_SAVE'})
+    file_path: StringProperty(  # type: ignore[valid-type]
+        name="File Path",
+        description="Where the export is written; the extension follows the picked format",
+        default="", maxlen=1024, options={'SKIP_SAVE'}, update=_path_edited)
     quality: EnumProperty(  # type: ignore[valid-type]
         name="Quality", items=QUALITY_ITEMS, default="GOOD", options={'SKIP_SAVE'})
     gltf_variant: EnumProperty(  # type: ignore[valid-type]

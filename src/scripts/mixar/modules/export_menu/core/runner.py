@@ -12,7 +12,8 @@
 * Image and video: a ``scene_render`` job (async native render, user
   settings restored afterwards) delivered to the file instead of Moodboard.
 
-Files go to the user's Downloads folder, never overwriting one that exists.
+Files go to the sheet's File path (Downloads/<file or scene name> until the
+user edits it or picks one with Browse), never overwriting one that exists.
 A model or project export is deferred to a timer so the sheet closes and a
 progress toast draws before the main thread is busy writing.
 """
@@ -82,9 +83,45 @@ def output_folder() -> str:
     return resolve_export_folder("downloads")
 
 
-def stem(props, context) -> str:
+_KNOWN_EXTENSIONS = tuple(sorted(set(EXTENSIONS.values()), key=len, reverse=True))
+
+
+def _split(raw: str):
+    """``raw`` → ``(folder, name)``: the name without an export extension the
+    user (or a format switch) left on it; any other dot stays in the name."""
+    folder, name = os.path.split(raw)
+    lower = name.lower()
+    for ext in _KNOWN_EXTENSIONS:
+        if lower.endswith(ext) and len(name) > len(ext):
+            return folder, name[: -len(ext)]
+    return folder, name
+
+
+def default_path(context, ext: str) -> str:
+    return os.path.join(output_folder(), default_stem(context) + ext)
+
+
+def with_extension(raw: str, ext: str) -> str:
+    """The path with its export extension swapped for ``ext`` (or added)."""
+    folder, name = _split(raw.strip())
+    return os.path.join(folder, name + ext) if name else raw
+
+
+def resolve(props, context):
+    """``(folder, stem)`` the File path field names: ``~`` and Blender's
+    ``//`` expanded, a bare name taken as a file in Downloads."""
     from mixar.modules.space_mixie_chat.core.agent_export import safe_stem
-    return safe_stem(props.file_name.strip() or default_stem(context), extension(props))
+    raw = props.file_path.strip() or default_path(context, extension(props))
+    if raw.startswith("//"):
+        raw = bpy.path.abspath(raw)
+    raw = os.path.expanduser(raw)
+    folder, name = _split(raw)
+    folder = os.path.abspath(folder) if folder else output_folder()
+    return folder, safe_stem(name or default_stem(context))
+
+
+def stem(props, context) -> str:
+    return resolve(props, context)[1]
 
 
 def unique_path(folder: str, name: str, ext: str) -> str:
@@ -106,6 +143,8 @@ def blocker(props, context) -> str:
     scene = getattr(context, "scene", None)
     if scene is None:
         return n_("Open a scene to export")
+    if kind != KIND_WEB and not os.path.isdir(resolve(props, context)[0]):
+        return n_("That folder does not exist; pick one with Browse")
     if kind == KIND_MODEL:
         if props.selected_only:
             if not context.selected_objects:
@@ -131,19 +170,25 @@ def blocker(props, context) -> str:
 # runs when the sheet opens and after every pick / option / toggle (the
 # modal sheet keeps selection and the scene still in between), and Export
 # re-checks the blocker before running.
-_view = {"folder": "Downloads", "blocker": ""}
+_view = {"name": "", "taken": False, "blocker": ""}
 
 
 def refresh(props, context):
-    try:
-        _view["folder"] = os.path.basename(output_folder().rstrip("/\\")) or "Downloads"
-    except Exception:  # noqa: BLE001 - the label is cosmetic
-        _view["folder"] = "Downloads"
+    """Recompute what the status line says: the name the file will get (a
+    ``_2`` suffix when that file exists) and anything blocking the export."""
     _view["blocker"] = blocker(props, context)
+    try:
+        folder, name = resolve(props, context)
+        ext = extension(props)
+        final = unique_path(folder, name, ext) if os.path.isdir(folder) else name + ext
+        _view["name"] = os.path.basename(final)
+        _view["taken"] = _view["name"] != name + ext
+    except Exception:  # noqa: BLE001 - the label is cosmetic
+        _view["name"], _view["taken"] = "", False
 
 
 def view():
-    """``{"folder": <name>, "blocker": <msgid or "">}`` as last refreshed."""
+    """``{"name", "taken", "blocker"}`` as last refreshed."""
     return dict(_view)
 
 
@@ -304,12 +349,10 @@ def start(props, context):
     reason = blocker(props, context)
     if reason:
         return False, reason
-    folder = output_folder()
-    try:
-        os.makedirs(folder, exist_ok=True)
-    except OSError:
-        return False, n_("The Downloads folder is not writable")
-    path = unique_path(folder, stem(props, context), extension(props))
+    folder, name = resolve(props, context)
+    if not os.access(folder, os.W_OK):
+        return False, n_("That folder is not writable; pick another with Browse")
+    path = unique_path(folder, name, extension(props))
     if kind in (KIND_IMAGE, KIND_VIDEO):
         ok, error = _start_render(props, context, path, kind)
         if not ok:

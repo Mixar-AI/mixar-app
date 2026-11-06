@@ -77,9 +77,10 @@ void draw_tile(Button *but, const rcti *rect)
   const float rad = std::min(px(tile_radius), side * 0.5f);
 
   /* Plate and hairline: a quiet slate at rest, lighter under the pointer,
-   * and the picked tile lifted with a bright rim (the artboard's ".Blend"). */
-  uchar fill[4], border[4];
-  lerp_col(fill, tile_fill, tile_fill_lit, std::max(motion.selected, 0.5f * cue));
+   * and the picked tile in Mixar's selected green with a green rim. */
+  uchar rest[4], fill[4], border[4];
+  lerp_col(rest, tile_fill, tile_fill_hover, 0.5f * cue);
+  lerp_col(fill, rest, tile_fill_lit, motion.selected);
   lerp_col(border, tile_border, tile_border_lit, motion.selected);
   float fill_f[4], border_f[4];
   rgba_uchar_to_float(fill_f, fill);
