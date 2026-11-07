@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 
 from .checks import _with_console, project_frames
+from .constants import TEST_REFUSED_MESSAGE, TEST_REFUSED_OPERATORS
+
 
 def _import_root(root: Path, entrypoint: str) -> Path:
     top_level = entrypoint.split(".", 1)[0]
@@ -140,6 +142,52 @@ def _fresh_scene(cleanup: dict | None = None):
             cleanup["removed"] = removed
 
 
+class _RefusedOperator:
+    """Stands in for an operator in ``TEST_REFUSED_OPERATORS``: calling it
+    raises and records the attempt, so a test that swallows the error still
+    fails the run."""
+
+    __slots__ = ("idname", "refused")
+
+    def __init__(self, idname: str, refused: list):
+        self.idname, self.refused = idname, refused
+
+    def __call__(self, *args, **kwargs):
+        self.refused.append(self.idname)
+        raise RuntimeError(TEST_REFUSED_MESSAGE.format(idname=self.idname))
+
+    def poll(self, *args, **kwargs):
+        return False
+
+
+@contextlib.contextmanager
+def _file_operators_refused(refused: list):
+    """While the tests run, ``bpy.ops`` hands out ``_RefusedOperator`` for
+    the operators that would load, reset, save or quit the user's file.
+    Every ``bpy.ops.<ns>.<name>`` lookup goes through the module global
+    ``bpy.ops._op_create_function`` (``bpy/ops.py``), so swapping it covers
+    every spelling of the call."""
+    try:
+        import bpy
+        ops = bpy.ops
+        create = ops._op_create_function
+    except Exception:
+        yield
+        return
+
+    def guarded(module, func):
+        idname = f"{str(module).lower()}.{func}"
+        if idname in TEST_REFUSED_OPERATORS:
+            return _RefusedOperator(idname, refused)
+        return create(module, func)
+
+    ops._op_create_function = guarded
+    try:
+        yield
+    finally:
+        ops._op_create_function = create
+
+
 def run_addon_tests(root: Path, entrypoint: str, *, pattern: str = "test*.py") -> dict:
     """unittest discovery over ``<entrypoint>/tests`` (a package, so a test can
     ``from .. import ops``), on Blender's main thread with bpy live. Every test
@@ -166,7 +214,9 @@ def run_addon_tests(root: Path, entrypoint: str, *, pattern: str = "test*.py") -
                 del sys.modules[name]
         importlib.invalidate_caches()
         result = _Result(root, entrypoint)
-        with contextlib.redirect_stdout(console), contextlib.redirect_stderr(console):
+        refused = []
+        with contextlib.redirect_stdout(console), contextlib.redirect_stderr(console), \
+                _file_operators_refused(refused):
             suite = unittest.TestLoader().discover(str(tests_dir), pattern=pattern, top_level_dir=str(import_root))
             cleanup = {}
             with _fresh_scene(cleanup):
@@ -175,13 +225,14 @@ def run_addon_tests(root: Path, entrypoint: str, *, pattern: str = "test*.py") -
                   for status in ("passed", "failed", "error", "skipped")}
         ran = result.testsRun
         response = {
-            "success": ran > 0 and result.wasSuccessful(),
+            "success": ran > 0 and result.wasSuccessful() and not refused,
             "check": "tests",
             "ran": ran,
             **counts,
             "tests": result.records,
             "cleaned_up": cleanup.get("removed", 0),
-            "message": (", ".join(f"{n} {status}" for status, n in counts.items() if n) if ran
+            "message": (TEST_REFUSED_MESSAGE.format(idname=refused[0]) if refused
+                        else ", ".join(f"{n} {status}" for status, n in counts.items() if n) if ran
                         else f"No tests found under {entrypoint}/tests matching {pattern}"),
         }
         _with_console(response, console)
