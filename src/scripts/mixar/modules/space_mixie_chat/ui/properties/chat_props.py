@@ -525,14 +525,14 @@ def _end_refine_draft(scene):
 def _execute_send_message():
     """Execute send_message (called from timer to avoid calling bpy.ops in property update).
 
-    Enter is never swallowed silently: when the send predicate refuses (a turn
-    is running and no run is open to join), the draft stays in the composer
-    and the reason is reported.
+    Enter asks the Send operator's own predicate (``can_compose``): a busy
+    turn holds the message (core/held_sends.py), never refuses it. When the
+    predicate does refuse, the draft stays and the reason is reported.
     """
     try:
-        from ...core.composer_send import can_send
+        from ...core.composer_send import can_compose
         from ..operators.auth_ops import guest_seat_pending
-        allowed, reason = can_send(bpy.context.scene)
+        allowed, reason = can_compose(bpy.context.scene)
         # Signed out while a refused guest session is retried: the operator
         # says why in the chat (its poll admits the same case).
         if not allowed and not guest_seat_pending():
