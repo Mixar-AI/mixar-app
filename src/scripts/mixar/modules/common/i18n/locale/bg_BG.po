@@ -3242,12 +3242,6 @@ msgstr "Рестартирай за актуализация"
 msgid "Updating…"
 msgstr "Актуализиране…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Изтегляне {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

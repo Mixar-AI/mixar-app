@@ -3242,12 +3242,6 @@ msgstr "Перазапусціць для абнаўлення"
 msgid "Updating…"
 msgstr "Абнаўленне…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Спампоўванне {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

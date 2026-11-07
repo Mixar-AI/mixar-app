@@ -3242,12 +3242,6 @@ msgstr "ﻉﻭﺮﺷ ﮦﺭﺎﺑﻭﺩ ﮯﯿﻟ ﮯﮐ ﭧﯾﮉﭘﺍ"
 msgid "Updating…"
 msgstr "…ﮯﮨ ﺎﮨﺭ ﻮﮨ ﭧﯾﮉﭘﺍ"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "%{percent} ﮈﻮﻟ ﻥﺅﺍﮈ"
-
 msgid "{count} credit"
 msgstr ""
 

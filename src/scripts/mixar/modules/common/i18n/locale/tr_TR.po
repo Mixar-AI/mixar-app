@@ -3242,12 +3242,6 @@ msgstr "Güncellemek için Yeniden Başlat"
 msgid "Updating…"
 msgstr "Güncelleniyor…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "İndiriliyor %{percent}"
-
 msgid "{count} credit"
 msgstr ""
 

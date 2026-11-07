@@ -3242,12 +3242,6 @@ msgstr "განახლებისთვის გადატვირთ�
 msgid "Updating…"
 msgstr "ახლდება…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "ჩამოტვირთვა {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

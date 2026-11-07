@@ -3242,12 +3242,6 @@ msgstr "Újraindítás a frissítéshez"
 msgid "Updating…"
 msgstr "Frissítés…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Letöltés: {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

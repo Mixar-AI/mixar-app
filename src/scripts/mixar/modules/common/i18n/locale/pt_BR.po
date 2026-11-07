@@ -3242,12 +3242,6 @@ msgstr "Reiniciar para atualizar"
 msgid "Updating…"
 msgstr "Atualizando…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Baixando {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

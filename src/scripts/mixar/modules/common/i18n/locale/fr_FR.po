@@ -3242,12 +3242,6 @@ msgstr "Redémarrer pour mettre à jour"
 msgid "Updating…"
 msgstr "Mise à jour…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Téléchargement {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

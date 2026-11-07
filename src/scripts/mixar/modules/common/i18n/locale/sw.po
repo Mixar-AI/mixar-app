@@ -3242,12 +3242,6 @@ msgstr "Washa upya ili kusasisha"
 msgid "Updating…"
 msgstr "Inasasisha…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Inapakua {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

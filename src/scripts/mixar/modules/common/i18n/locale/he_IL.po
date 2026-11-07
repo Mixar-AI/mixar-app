@@ -3242,12 +3242,6 @@ msgstr "ןוכדעל שדחמ הלעפה"
 msgid "Updating…"
 msgstr "…ןכדעמ"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "%{percent} דירומ"
-
 msgid "{count} credit"
 msgstr ""
 

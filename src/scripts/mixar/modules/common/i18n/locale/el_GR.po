@@ -3242,12 +3242,6 @@ msgstr "Επανεκκίνηση για ενημέρωση"
 msgid "Updating…"
 msgstr "Ενημέρωση…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Λήψη {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

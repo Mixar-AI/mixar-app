@@ -3242,12 +3242,6 @@ msgstr "ﺚﻳﺪﺤﺘﻠﻟ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻋﺃ"
 msgid "Updating…"
 msgstr "…ﺚﻳﺪﺤﺘﻟﺍ ﺭٍﺎﺟ"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "%{percent} ﻞﻳﺰﻨﺘﻟﺍ ﺭٍﺎﺟ"
-
 msgid "{count} credit"
 msgstr ""
 

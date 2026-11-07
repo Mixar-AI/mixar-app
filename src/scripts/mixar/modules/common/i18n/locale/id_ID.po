@@ -3242,12 +3242,6 @@ msgstr "Mulai Ulang untuk Memperbarui"
 msgid "Updating…"
 msgstr "Memperbarui…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Mengunduh {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

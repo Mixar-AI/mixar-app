@@ -3242,12 +3242,6 @@ msgstr "Relanĉi por ĝisdatigi"
 msgid "Updating…"
 msgstr "Ĝisdatigante…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Elŝutante {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

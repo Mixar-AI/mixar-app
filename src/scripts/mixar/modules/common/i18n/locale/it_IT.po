@@ -3242,12 +3242,6 @@ msgstr "Riavvia per aggiornare"
 msgid "Updating…"
 msgstr "Aggiornamento…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Download {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

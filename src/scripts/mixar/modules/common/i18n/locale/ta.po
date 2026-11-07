@@ -3242,12 +3242,6 @@ msgstr "புதுப்பிக்க மீண்டும் தொடங�
 msgid "Updating…"
 msgstr "புதுப்பிக்கிறது…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "பதிவிறக்குகிறது {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

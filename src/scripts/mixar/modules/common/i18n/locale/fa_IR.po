@@ -3242,12 +3242,6 @@ msgstr "ﯽﻧﺎﺳﺭﺯﻭﺭ‌ﻪﺑ ﯼﺍﺮﺑ ﻩﺭﺎﺑﻭﺩ ﯼﺯ
 msgid "Updating…"
 msgstr "…ﯽﻧﺎﺳﺭﺯﻭﺭ‌ﻪﺑ ﻝﺎﺣ ﺭﺩ"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "%{percent} ﯼﺮﯿﮔﺭﺎﺑ ﻝﺎﺣ ﺭﺩ"
-
 msgid "{count} credit"
 msgstr ""
 

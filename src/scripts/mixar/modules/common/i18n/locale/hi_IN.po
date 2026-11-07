@@ -3242,12 +3242,6 @@ msgstr "अपडेट के लिए पुनः आरंभ करें"
 msgid "Updating…"
 msgstr "अपडेट हो रहा है…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "डाउनलोड हो रहा है {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

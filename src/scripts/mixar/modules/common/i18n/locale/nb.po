@@ -3242,12 +3242,6 @@ msgstr "Start på nytt for å oppdatere"
 msgid "Updating…"
 msgstr "Oppdaterer…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Laster ned {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

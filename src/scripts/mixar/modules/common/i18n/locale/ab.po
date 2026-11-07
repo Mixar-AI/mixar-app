@@ -3242,12 +3242,6 @@ msgstr "Аиҭарҿыцразы еиҭа алагара"
 msgid "Updating…"
 msgstr "Аиҭарҿыцра…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Аҭыгара {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

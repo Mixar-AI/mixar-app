@@ -3242,12 +3242,6 @@ msgstr "Käynnistä uudelleen päivittääksesi"
 msgid "Updating…"
 msgstr "Päivitetään…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Ladataan {percent} %"
-
 msgid "{count} credit"
 msgstr ""
 

@@ -3242,12 +3242,6 @@ msgstr "Repornire pentru actualizare"
 msgid "Updating…"
 msgstr "Se actualizează…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Se descarcă {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

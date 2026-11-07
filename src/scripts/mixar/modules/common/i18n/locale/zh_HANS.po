@@ -3242,12 +3242,6 @@ msgstr "重启以更新"
 msgid "Updating…"
 msgstr "正在更新…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "正在下载 {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

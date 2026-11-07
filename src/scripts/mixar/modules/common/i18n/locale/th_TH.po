@@ -3242,12 +3242,6 @@ msgstr "รีสตาร์ทเพื่ออัปเดต"
 msgid "Updating…"
 msgstr "กำลังอัปเดต…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "กำลังดาวน์โหลด {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

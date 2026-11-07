@@ -3242,12 +3242,6 @@ msgstr "Berrabiarazi eguneratzeko"
 msgid "Updating…"
 msgstr "Eguneratzen…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "{percent}% deskargatzen"
-
 msgid "{count} credit"
 msgstr ""
 

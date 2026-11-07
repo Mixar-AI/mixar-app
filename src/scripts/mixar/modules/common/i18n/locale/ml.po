@@ -3242,12 +3242,6 @@ msgstr "അപ്ഡേറ്റ് ചെയ്യാൻ പുനരാരം�
 msgid "Updating…"
 msgstr "അപ്ഡേറ്റ് ചെയ്യുന്നു…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "{percent}% ഡൗൺലോഡ് ചെയ്യുന്നു"
-
 msgid "{count} credit"
 msgstr ""
 

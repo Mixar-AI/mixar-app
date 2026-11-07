@@ -3242,12 +3242,6 @@ msgstr "Paleisti iš naujo ir atnaujinti"
 msgid "Updating…"
 msgstr "Atnaujinama…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Atsisiunčiama {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

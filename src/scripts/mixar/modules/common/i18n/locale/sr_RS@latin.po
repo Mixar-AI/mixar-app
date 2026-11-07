@@ -3985,13 +3985,6 @@ msgstr "Ponovo pokreni radi ažuriranja"
 msgid "Updating…"
 msgstr "Ažuriranje…"
 
-msgid "Verifying…"
-msgstr ""
-
-# derived
-msgid "Downloading {percent}%"
-msgstr "Preuzimanje {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

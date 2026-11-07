@@ -3242,12 +3242,6 @@ msgstr "Перезапустити для оновлення"
 msgid "Updating…"
 msgstr "Оновлення…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Завантаження {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

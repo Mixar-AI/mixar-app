@@ -3242,12 +3242,6 @@ msgstr "다시 시작하여 업데이트"
 msgid "Updating…"
 msgstr "업데이트 중…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "다운로드 중 {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

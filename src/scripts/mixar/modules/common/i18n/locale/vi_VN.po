@@ -3242,12 +3242,6 @@ msgstr "Khởi Động Lại để Cập Nhật"
 msgid "Updating…"
 msgstr "Đang cập nhật…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Đang tải xuống {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

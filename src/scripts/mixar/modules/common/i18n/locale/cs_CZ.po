@@ -3242,12 +3242,6 @@ msgstr "Restartovat a aktualizovat"
 msgid "Updating…"
 msgstr "Aktualizace…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Stahování {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

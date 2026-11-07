@@ -3242,12 +3242,6 @@ msgstr "Reiniciar per actualitzar"
 msgid "Updating…"
 msgstr "S'està actualitzant…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "S'està baixant {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

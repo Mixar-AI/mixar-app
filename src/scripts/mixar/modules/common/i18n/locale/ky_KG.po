@@ -3242,12 +3242,6 @@ msgstr "Жаңылоо үчүн кайра иштетүү"
 msgid "Updating…"
 msgstr "Жаңыланууда…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Түшүрүлүүдө {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

@@ -3242,12 +3242,6 @@ msgstr "Genstart for at opdatere"
 msgid "Updating…"
 msgstr "Opdaterer…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Downloader {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 

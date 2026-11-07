@@ -3242,12 +3242,6 @@ msgstr "Herstarten om bij te werken"
 msgid "Updating…"
 msgstr "Bijwerken…"
 
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Downloaden {percent}%"
-
 msgid "{count} credit"
 msgstr ""
 
