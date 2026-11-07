@@ -68,12 +68,17 @@ struct ButtonItem;
 /**
  * \param _caller_fn_name: A friendly function name of the caller for tracing layout item operator
  * warnings, matching the RNA struct function name. For example `"UILayout.operator()"`
+ *
+ * MIXAR: an unknown operator returns an empty OperatorProperties pointer, not
+ * #PointerRNA_NULL, as #button_operator_ptr_ensure does. Draw code writes
+ * through the result unchecked (`RNA_string_set(&props, ...)`), and a Python
+ * operator not registered yet made that a null-type crash.
  */
 #define UI_OPERATOR_ERROR_RET(_ot, _opname, _caller_fn_name) \
   if (ot == nullptr) { \
     item_disabled(this, _opname); \
     RNA_warning_bare("%s: '%s' unknown operator", _caller_fn_name, _opname); \
-    return PointerRNA_NULL; \
+    return RNA_pointer_create_discrete(nullptr, RNA_OperatorProperties, nullptr); \
   } \
   (void)0
 

@@ -279,3 +279,63 @@ def test_subtest_failures_and_unexpected_successes_are_recorded(package):
     assert by_status["tests.test_sub.T.test_boom (part='x')"]["status"] == "error"
     assert by_status["tests.test_sub.T.test_surprise"]["status"] == "failed"
     assert (result["failed"], result["error"]) == (2, 1)
+
+
+def _fake_bpy_ops(calls):
+    """A ``bpy.ops`` shaped like Blender's ``bpy/ops.py``: every
+    ``bpy.ops.<ns>.<name>`` lookup calls the module global
+    ``_op_create_function`` at lookup time."""
+    import types
+
+    ops = types.ModuleType("bpy.ops")
+
+    def create(module, func):
+        return lambda *_a, **_k: calls.append(f"{module}.{func}") or {"FINISHED"}
+
+    class _Sub:
+        def __init__(self, module):
+            self.module = module
+
+        def __getattr__(self, func):
+            return ops._op_create_function(self.module, func)
+
+    ops._op_create_function = create
+    ops.__getattr__ = _Sub
+    return ops, create
+
+
+def test_tests_can_never_load_reset_save_or_quit_the_user_s_file(package, monkeypatch):
+    # #1822: a test's setUp ran bpy.ops.wm.read_factory_settings inside the
+    # user's file and emptied their scene, and the commit still passed.
+    calls = []
+    ops, create = _fake_bpy_ops(calls)
+    monkeypatch.setitem(sys.modules, "bpy", SimpleNamespace(ops=ops))
+    project = package("file_ops_sample", {
+        "__init__.py": "def register():\n    pass\ndef unregister():\n    pass\n",
+        "tests/__init__.py": "",
+        "tests/test_reset.py": (
+            "import unittest, bpy\n"
+            "class Reset(unittest.TestCase):\n"
+            "    def setUp(self):\n        bpy.ops.wm.read_factory_settings(use_empty=True)\n"
+            "    def test_cube(self):\n        bpy.ops.mesh.primitive_cube_add()\n"
+            "class Swallowed(unittest.TestCase):\n"
+            "    def test_open(self):\n"
+            "        try:\n            bpy.ops.WM.open_mainfile(filepath='other.blend')\n"
+            "        except RuntimeError:\n            pass\n"
+            "        self.assertFalse(bpy.ops.wm.quit_blender.poll())\n"
+            "        bpy.ops.mesh.primitive_cube_add()\n"
+        ),
+    })
+    result = run_addon_tests(project, "file_ops_sample")
+    # Only the harmless operator ever reached Blender.
+    assert calls == ["mesh.primitive_cube_add"]
+    assert ops._op_create_function is create
+    by_id = {t["id"]: t for t in result["tests"]}
+    reset = by_id["tests.test_reset.Reset.test_cube"]
+    assert reset["status"] == "error"
+    assert reset["message"].startswith("RuntimeError: bpy.ops.wm.read_factory_settings is not allowed in add-on tests")
+    # A test that swallows the refusal still fails the run, with the reason.
+    assert by_id["tests.test_reset.Swallowed.test_open"]["status"] == "passed"
+    assert result["success"] is False
+    assert result["message"].startswith("bpy.ops.wm.read_factory_settings is not allowed in add-on tests")
+    assert "never load, reset, save or quit" in result["message"]

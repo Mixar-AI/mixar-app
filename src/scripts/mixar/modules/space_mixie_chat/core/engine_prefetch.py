@@ -9,6 +9,11 @@ The backend's ``engine_*`` tools reach the engine through a two-line script
     from mixar.modules.space_mixie_chat.core.engine_link import link_call
     result = {'engine_link': link_call(**json.loads('{"tool": "playtest", ...}'))}
 
+Unreal's editor-toolset pass-through (``engine_list_toolsets`` /
+``engine_describe_toolset`` / ``engine_call_tool``) sends the same shape
+importing from ``engine_mcp`` instead; ``PREFETCHABLE`` names each
+function's module, and a script naming any other module is not prefetched.
+
 Run as it stands, that script would hold Blender's main thread for the whole
 engine call — a playtest is minutes — freezing Mixar's UI and every other
 scene tab's scripts (Sky Temple QA run, 2026-10-30). As with texture
@@ -33,18 +38,24 @@ from typing import Optional
 
 from mixar.config.logging_config import get_logger
 
-from . import engine_link
+from . import engine_link, engine_mcp
 from .script_prefetch import PENDING, READY
 
 logger = get_logger(__name__)
 
 _SCRIPT = re.compile(
-    r"^from mixar\.modules\.space_mixie_chat\.core\.engine_link import (\w+)\n"
-    r"result = \{'engine_link': (\w+)\(\*\*json\.loads\((.+)\)\)\}\n", re.MULTILINE)
-PREFETCHABLE = {"link_status", "link_call", "link_import", "link_build_manifest", "link_upload_build"}
-# Each call's own budget when it names none (engine_link's defaults), plus headroom.
+    r"^from mixar\.modules\.space_mixie_chat\.core\.(engine_link|engine_mcp) import (\w+)\n"
+    r"result = \{'(?:engine_link|engine_mcp)': (\w+)\(\*\*json\.loads\((.+)\)\)\}\n", re.MULTILINE)
+# Each prefetchable function, by the module that holds it (a script must name that module).
+PREFETCHABLE = {"link_status": "engine_link", "link_call": "engine_link", "link_import": "engine_link",
+                "link_build_manifest": "engine_link", "link_upload_build": "engine_link",
+                "link_mcp_list_toolsets": "engine_mcp", "link_mcp_describe": "engine_mcp",
+                "link_mcp_call": "engine_mcp"}
+# Each call's own budget when it names none (the functions' defaults), plus headroom;
+# link_mcp_call and link_call default to 60 s.
 DEFAULT_TIMEOUT_S = {"link_status": 10.0, "link_build_manifest": 10.0,
-                     "link_upload_build": engine_link.UPLOAD_TIMEOUT_S, "link_import": 180.0}
+                     "link_upload_build": engine_link.UPLOAD_TIMEOUT_S, "link_import": 180.0,
+                     "link_mcp_list_toolsets": 30.0, "link_mcp_describe": 30.0}
 HEADROOM_S = 30.0
 _engine_lock = threading.Lock()
 
@@ -52,13 +63,14 @@ _engine_lock = threading.Lock()
 def parse(script: str) -> Optional[tuple[str, dict]]:
     """(function, kwargs) of an engine-call script, or None."""
     match = _SCRIPT.search(script or "")
-    if not match or match.group(1) != match.group(2) or match.group(1) not in PREFETCHABLE:
+    if not match or match.group(2) != match.group(3) or PREFETCHABLE.get(match.group(2)) != match.group(1):
         return None
+    fn = match.group(2)
     try:
-        kwargs = json.loads(ast.literal_eval(match.group(3)))
+        kwargs = json.loads(ast.literal_eval(match.group(4)))
     except (ValueError, SyntaxError, TypeError):
         return None
-    return (match.group(1), kwargs) if isinstance(kwargs, dict) else None
+    return (fn, kwargs) if isinstance(kwargs, dict) else None
 
 
 class EngineCallPrefetch:
@@ -88,7 +100,8 @@ class EngineCallPrefetch:
         started = time.monotonic()
         try:
             with _engine_lock:
-                result = getattr(engine_link, self.fn).__wrapped__(**self.kwargs)
+                module = engine_mcp if PREFETCHABLE[self.fn] == "engine_mcp" else engine_link
+                result = getattr(module, self.fn).__wrapped__(**self.kwargs)
         except Exception as exc:  # noqa: BLE001 - the answer says what failed
             logger.warning("engine call %s failed: %s", self.fn, type(exc).__name__)
             result = {"success": False, "error": f"The engine call failed ({type(exc).__name__})."}

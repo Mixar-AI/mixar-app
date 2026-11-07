@@ -13,6 +13,9 @@ Main) frees the StructRNA underneath, and ``space.camera = dead_ref`` raised
 left the user stranded in the calm shell.
 """
 
+from contextlib import nullcontext
+from types import SimpleNamespace
+
 from pathlib import Path
 import sys
 
@@ -87,7 +90,7 @@ def test_restore_view_survives_a_deleted_local_camera(monkeypatch):
     monkeypatch.setattr(viewport.bpy.data.objects, "get", lambda _name: None)
     _seed_state(scene, camera=_DeadID(), camera_name="Ghost Camera")
 
-    viewport.restore_view(None, scene)
+    viewport.restore_view(SimpleNamespace(temp_override=lambda **kw: nullcontext()), scene)
 
     # The dead reference resolved to None instead of raising, and the WHOLE
     # restore ran: chrome and view state are back, the camera slot cleared.
@@ -117,6 +120,63 @@ def test_restore_view_recovers_local_camera_by_name(monkeypatch):
     )
     _seed_state(scene, camera=_DeadID(), camera_name="Ghost Camera")
 
-    viewport.restore_view(None, scene)
+    viewport.restore_view(SimpleNamespace(temp_override=lambda **kw: nullcontext()), scene)
 
     assert space.camera is recovered
+
+
+class _RemovedArea:
+    @property
+    def type(self):
+        raise ReferenceError("ScrArea has been removed")
+
+
+def _context(area, areas):
+    window = SimpleNamespace(screen=SimpleNamespace(areas=areas))
+    return SimpleNamespace(
+        area=area, window=window,
+        window_manager=SimpleNamespace(windows=[window]),
+        temp_override=lambda **kw: nullcontext(),
+    )
+
+
+def test_restore_removed_area_without_live_target_clears_saved_state():
+    scene = object()
+    _seed_state(scene, camera=None, camera_name="")
+    viewport.restore_view(_context(_RemovedArea(), []), scene)
+    assert viewport._scene_key(scene) not in viewport._VIEW_STATES
+
+
+def test_restore_uses_replacement_area_and_live_override():
+    scene = object()
+    space = _Space()
+    space.show_region_hud = False
+    space.overlay = SimpleNamespace(show_text=False)
+    region = SimpleNamespace(type='WINDOW')
+    area = SimpleNamespace(
+        type='VIEW_3D', regions=[region], spaces=SimpleNamespace(active=space),
+        width=800, height=600, tag_redraw=lambda: None,
+    )
+    context = _context(_RemovedArea(), [area])
+    overrides = []
+    def override(**kw):
+        overrides.append(kw)
+        return nullcontext()
+    context.temp_override = override
+    _seed_state(scene, camera=None, camera_name="")
+    saved = viewport._VIEW_STATES[viewport._scene_key(scene)]
+    saved['chrome']['show_region_hud'] = True
+    saved['overlay'] = {'show_text': True}
+
+    viewport.restore_view(context, scene)
+
+    assert space.show_region_hud and space.show_region_toolbar and space.show_region_ui
+    assert space.overlay.show_text
+    assert space.region_3d.view_perspective == 'PERSP'
+    assert overrides == [dict(window=context.window, area=area, region=region)]
+    assert viewport._scene_key(scene) not in viewport._VIEW_STATES
+
+
+def test_readable_but_detached_area_is_not_used():
+    stale = SimpleNamespace(type='VIEW_3D')  # No regions/spaces may be read.
+    assert viewport.find_view3d_context(_context(stale, [])) is None

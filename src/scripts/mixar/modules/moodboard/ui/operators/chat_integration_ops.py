@@ -86,7 +86,7 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
             _reconcile_attachments(scene, selected, animate=True)
             # Selected videos become context files (the chat has no video pill);
             # board-owned chips of deselected videos go.
-            attached_videos, _detached = sync_selected_videos(scene)
+            attached_videos, _detached = sync_selected_videos(scene, animate=True)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, rpt_("Sync failed: {error}").format(error=e))
             return {'CANCELLED'}

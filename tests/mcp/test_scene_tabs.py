@@ -210,6 +210,21 @@ def gate(monkeypatch):
     return window
 
 
+@pytest.mark.parametrize("kind, message", [("bake", "Wait for the bake to finish"),
+                                           ("composite", "Wait for the compositor job to finish"),
+                                           ("other", "Wait for the render to finish")])
+def test_a_running_job_is_named_in_the_refusal(gate, monkeypatch, kind, message):
+    """A bake (usually the agent's own) must not read as a render someone else runs."""
+    import importlib
+    slot = importlib.import_module("mixar.modules.common.render_coordinator.core")
+    monkeypatch.setattr(slot, "busy", lambda: True)
+    monkeypatch.setattr(slot, "native_render_kind", lambda: kind)
+    with pytest.raises(UIError) as refused:
+        scene_tabs._gate()
+    assert refused.value.result() == {"error_type": "render_in_progress", "error": message,
+                                      "render_kind": kind}
+
+
 def test_another_tabs_agent_does_not_block_a_new_tab(gate):
     """Mixie working in one tab holds the viewport lock and undo shield; a new
     tab is still allowed, as with the drawer's "+ New scene"."""

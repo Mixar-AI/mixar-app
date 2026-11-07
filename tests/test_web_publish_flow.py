@@ -306,7 +306,7 @@ def test_export_failure_reports_through_fail_and_releases(monkeypatch):
     monkeypatch.setattr(pipeline, "_signed_in", lambda: True)
     monkeypatch.setattr(pipeline, "ensure_timer", lambda: None)
     monkeypatch.setattr(pipeline, "_telemetry", lambda *a: None)
-    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [object()])
+    monkeypatch.setattr(pipeline.glb_export, "visible_meshes", lambda scene: [SimpleNamespace(data=SimpleNamespace(materials=[]))])
     monkeypatch.setattr(pipeline.glb_export, "export_glb", explode)
     props = SimpleNamespace(title="", description="", visibility="public",
                             include_animation=True, published_scene_id="", slug="")

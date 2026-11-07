@@ -92,7 +92,7 @@ class FakeLayout:
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE', translate=True):
+    def operator(self, op, text="", icon='NONE', translate=True, icon_value=0):
         self._log.append(f"op:{op}")
         log = self._log
 

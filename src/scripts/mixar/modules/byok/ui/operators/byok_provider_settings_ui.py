@@ -171,20 +171,22 @@ def draw_sidebar(col, wm, geo, enabled):
              "wm.url_open", text, S.SECONDARY).url = BYOK_GUIDE_URL
     S.sep(body, S.CAPTION_TO_ROWS)
     current = wm.byok_form_provider
-    for pid, label, _desc in sidebar_providers():
+    providers = sidebar_providers()
+    # Every plate (the foot's too) shares the longest name's margin.
+    right = S.row_right(body, [label for pid, label, _desc in providers if pid != 'NONE'])
+    for pid, label, _desc in providers:
         if pid == 'NONE':
             # Loading / empty sentinel: say so instead of offering a row.
             S.label(S.row(body, S.ROW_H, left=S.LEFT_INSET), label, S.NOTE)
             continue
-        text = label
-        S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=S.row_right(body, text)),
-                 OP_PICK, text, S.PROVIDER_ROW, lit=(pid == current), provider=pid)
+        S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=right),
+                 OP_PICK, label, S.PROVIDER_ROW, lit=(pid == current), provider=pid)
 
     # Local model: a row like the providers at the column's foot (its glyph
     # drawn by the painter), not a full-width slab.
     foot = S.fixed(col, S.FOOTER)
     foot.enabled = enabled
-    S.choice(S.row(foot, S.ROW_H, left=S.LEFT_INSET, right=S.ROW_RIGHT), OP_PICK,
+    S.choice(S.row(foot, S.ROW_H, left=S.LEFT_INSET, right=right), OP_PICK,
              iface_("Local model"), S.FOOTER_ROW,
              lit=model_suggestions.is_local(current), provider=LOCAL_PROVIDER_ID)
     # The rest of the foot is margin under the row, off the card's edge.

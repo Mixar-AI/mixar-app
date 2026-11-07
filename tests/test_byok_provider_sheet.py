@@ -45,18 +45,57 @@ def _with_catalog(monkeypatch):
     ])
 
 
-def test_a_long_provider_name_widens_its_pill_but_stops_short_of_the_divider():
+def test_the_longest_name_sets_one_margin_that_stops_short_of_the_divider():
     layout = FakeLayout([], card_api=True)
     S = byok_sheet
-    # A short name keeps the plate's design margin to the divider.
-    assert S.row_right(layout, "OpenAI") == S.ROW_RIGHT
-    # A name that needs more keeps ROW_TEXT_X of plate on both sides…
+    # Short names keep the plate's design margin to the divider.
+    assert S.row_right(layout, ["OpenAI", "Anthropic"]) == S.ROW_RIGHT
+    # A name that needs more keeps ROW_TEXT_X of plate on both sides, and the
+    # whole column takes its margin, whatever order the names come in…
     long_name = "Codex (ChatGPT s)"   # 17 chars at the fake's 14 dp = 238 dp, + slack
     expected = S.SIDEBAR - S.LEFT_INSET - (238 + S.TEXT_SLACK + 2 * S.ROW_TEXT_X)
     assert S.ROW_MIN_RIGHT < expected < S.ROW_RIGHT
-    assert S.row_right(layout, long_name) == expected
+    assert S.row_right(layout, ["OpenAI", long_name, "Anthropic"]) == expected
     # …until the plate would touch the divider; then the painter ellipsises.
-    assert S.row_right(layout, "X" * 80) == S.ROW_MIN_RIGHT
+    assert S.row_right(layout, ["OpenAI", "X" * 80]) == S.ROW_MIN_RIGHT
+
+
+def test_every_sidebar_plate_is_the_same_width(monkeypatch):
+    """Mixar-AI/mixar-backend#1826: a lit Codex plate was wider than the
+    hovered plates around it, each row sized to its own name. Every provider
+    row and the Local model foot now share one right margin."""
+    _with_catalog(monkeypatch)
+    S = byok_sheet
+    rights, real = [], S.row
+
+    def row(parent, h_dp, left=0.0, right=0.0, **kw):
+        if h_dp == S.ROW_H:
+            rights.append(right)
+        return real(parent, h_dp, left=left, right=right, **kw)
+
+    monkeypatch.setattr(S, "row", row)
+    log = _draw('IDLE', card_api=True, byok_form_provider='codex')
+    assert log.count("sheet:PROVIDER_ROW:True") == 1
+    # Four providers + the foot, all at the long Codex name's margin.
+    assert len(rights) == 5
+    assert len(set(rights)) == 1
+    assert rights[0] == S.row_right(FakeLayout([], card_api=True), ["Codex (ChatGPT sub)"])
+    assert rights[0] < S.ROW_RIGHT
+
+
+def test_row_plates_are_inset_so_stacked_rows_never_touch():
+    """The painters inset the plate inside its 46 dp slot (the hit rect stays
+    the slot), so a hovered row's wash never butts the lit row's plate."""
+    hh = SHEET_HH.read_text(encoding="utf-8")
+    inset = float(re.search(r"row_inset_y = ([\d.]+)f;", hh).group(1))
+    assert 2.0 <= inset <= 3.0
+    cc = (INTERFACE_DIR / "interface_mixar_sheet_controls.cc").read_text(encoding="utf-8")
+    for painter in ("void draw_provider_row(", "void draw_footer_row("):
+        start = cc.index(painter)
+        body = cc[start:cc.index("\n}\n", start)]
+        assert "pill.ymin += px(row_inset_y);" in body, painter
+        assert "pill.ymax -= px(row_inset_y);" in body, painter
+
 
 def test_rna_sheet_kinds_cover_every_kind_python_uses():
     """Every kind the Python sheet kit names is an RNA item, and every RNA

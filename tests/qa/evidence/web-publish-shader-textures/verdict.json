@@ -1,0 +1,36 @@
+{
+  "platform": "macOS",
+  "native_ui_replays": [
+    {
+      "passed": true,
+      "pixel": [
+        0.7372549176216125,
+        0.1882353127002716,
+        0.09803922474384308,
+        1.0
+      ],
+      "ui_ticks": 31,
+      "source_material_restored": true
+    },
+    {
+      "passed": true,
+      "pixel": [
+        0.7372549176216125,
+        0.1882353127002716,
+        0.09803922474384308,
+        1.0
+      ],
+      "ui_ticks": 27,
+      "source_material_restored": true
+    }
+  ],
+  "full_scene_export": {
+    "materials_prepared": 89,
+    "meshes": 399,
+    "embedded_images": 179,
+    "bytes": 9956752,
+    "source_material_assignments_unchanged": true
+  },
+  "targeted_tests_passed": 181,
+  "windows_qa": "not run"
+}

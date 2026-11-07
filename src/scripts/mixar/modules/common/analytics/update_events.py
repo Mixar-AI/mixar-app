@@ -21,11 +21,15 @@ from .constants import (
 )
 
 
-def capture_update_download(version: str, outcome: str, *, context=None) -> None:
+def capture_update_download(version: str, outcome: str, *, details=None, context=None) -> None:
     """The installer finished staging (``ready``) or did not (``failed``)."""
+    properties = {"target_version": version, "outcome": outcome}
+    for key in ("reason_code", "error_detail", "stage"):
+        if key in (details or {}):
+            properties[key] = details[key]
     capture(
         EVENT_UPDATE_DOWNLOAD,
-        {"target_version": version, "outcome": outcome},
+        properties,
         context=context,
     )
 
