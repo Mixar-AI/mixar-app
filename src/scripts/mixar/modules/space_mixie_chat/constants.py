@@ -485,8 +485,6 @@ CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 # Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
 
-# Timeout threshold for script execution warnings (seconds)
-SCRIPT_TIMEOUT_THRESHOLD = 30.0
 # Longest a render_viewport(quality="final") tool call is held open waiting for
 # its native preview job (core/preview_deferral.py); the job itself keeps going.
 PREVIEW_DEFERRED_MAX_S = 240.0
