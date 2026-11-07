@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
+
 msgid "Capture Viewport"
 msgstr "Καταγραφή προβολής 3D"
 
@@ -3101,6 +3104,9 @@ msgstr "Το Mixar θα επανεκκινηθεί για να την εφαρμ
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — χρησιμοποιήστε τη Λήψη για ενημέρωση μέσω του προγράμματος περιήγησης."
 
+msgid "Retry"
+msgstr "Επανάληψη"
+
 msgid "Restart & Update"
 msgstr "Επανεκκίνηση και ενημέρωση"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Αποσύνδεση"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Επανάληψη"
-
 msgid "Choose Export Location"
 msgstr "Επιλογή θέσης εξαγωγής"
 
@@ -26001,6 +26013,12 @@ msgstr "Καλώς ορίσατε, %s !"
 msgid "Welcome !"
 msgstr "Καλώς ορίσατε !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s πρόγραμμα"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s πιστώσεις"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασ�
 msgid "Agent Bubble"
 msgstr "Φούσκα πράκτορα"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
-
 msgid "Agent Bubble Status"
 msgstr "Κατάσταση φούσκας πράκτορα"
 
@@ -26987,6 +27005,9 @@ msgstr "Κίνηση συνημμένου Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Εμφανίζει μια νέα συνημμένη αναφορά να πετάει στη συνομιλία Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Καθυστέρηση"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunde inte öppna fönstret Agentbubbla"
+
 msgid "Capture Viewport"
 msgstr "Fånga visningsvy"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar startas om för att tillämpa den."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – använd Ladda ned för att uppdatera via webbläsaren."
 
+msgid "Retry"
+msgstr "Försök igen"
+
 msgid "Restart & Update"
 msgstr "Starta om och uppdatera"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Logga ut"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Försök igen"
-
 msgid "Choose Export Location"
 msgstr "Välj exportplats"
 
@@ -26001,6 +26013,12 @@ msgstr "Välkommen, %s!"
 msgid "Welcome !"
 msgstr "Välkommen!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s-plan"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s krediter"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Autoläge: agenten avgör öppna val själv i stället för att fråga d
 msgid "Agent Bubble"
 msgstr "Agentbubbla"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunde inte öppna fönstret Agentbubbla"
-
 msgid "Agent Bubble Status"
 msgstr "Agentbubblans status"
 
@@ -26987,6 +27005,9 @@ msgstr "Animera moodboard-bilaga"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Visar en nyss bifogad referens som flyger in i Mixie-chatten"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Fördröjning"

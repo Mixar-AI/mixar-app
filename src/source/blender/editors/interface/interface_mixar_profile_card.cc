@@ -141,6 +141,8 @@ struct AccountInfo {
   bool can_top_up = false;
   bool stale = false;
   bool has_allowance = false;
+  /* Annual billing: the plan bucket holds the whole year's credits. */
+  bool is_yearly = false;
   int credits_remaining = 0;
   int monthly_remaining = 0;
   int bonus_remaining = 0;
@@ -197,6 +199,7 @@ AccountInfo read_account(bContext *C)
     info.can_top_up = read_bool(&wm_ptr, "mixar_usage_can_top_up");
     info.stale = read_bool(&wm_ptr, "mixar_usage_stale");
     info.has_allowance = read_bool(&wm_ptr, "mixar_usage_has_allowance");
+    info.is_yearly = read_bool(&wm_ptr, "mixar_usage_is_yearly");
     info.credits_remaining = read_int(&wm_ptr, "mixar_usage_credits_remaining");
     info.monthly_remaining = read_int(&wm_ptr, "mixar_usage_monthly_remaining");
     info.bonus_remaining = read_int(&wm_ptr, "mixar_usage_bonus_remaining");
@@ -275,11 +278,19 @@ void add_header(Layout *layout, const AccountInfo &info)
    * the bare tier ("Pro"), which reads as a stray word on its own. */
   if (info.plan_name[0]) {
     char chip_text[80];
+    /* Annual subscribers see the interval too ("Pro Plan · Yearly"). */
     if (BLI_strcasestr(info.plan_name, "plan") != nullptr) {
-      BLI_strncpy(chip_text, info.plan_name, sizeof(chip_text));
+      if (info.is_yearly) {
+        SNPRINTF(chip_text, IFACE_("%s · Yearly"), info.plan_name);
+      }
+      else {
+        BLI_strncpy(chip_text, info.plan_name, sizeof(chip_text));
+      }
     }
     else {
-      SNPRINTF(chip_text, IFACE_("%s Plan"), info.plan_name);
+      SNPRINTF(chip_text,
+               info.is_yearly ? IFACE_("%s Plan · Yearly") : IFACE_("%s Plan"),
+               info.plan_name);
     }
     Layout &chip = row.row(false);
     chip.alignment_set(blender::ui::LayoutAlign::Right);
@@ -333,7 +344,10 @@ void add_usage(Layout *layout, const AccountInfo &info)
     char monthly[32], bonus[32], breakdown[96];
     format_credits(info.monthly_remaining, monthly, sizeof(monthly));
     format_credits(info.bonus_remaining, bonus, sizeof(bonus));
-    SNPRINTF(breakdown, IFACE_("%s monthly · %s bonus"), monthly, bonus);
+    SNPRINTF(breakdown,
+             info.is_yearly ? IFACE_("%s yearly · %s bonus") : IFACE_("%s monthly · %s bonus"),
+             monthly,
+             bonus);
     layout->label(breakdown, ICON_NONE);
     mark_last(layout, MixarCardElement::Muted);
   }

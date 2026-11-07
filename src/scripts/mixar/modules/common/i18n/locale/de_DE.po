@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
+
 msgid "Capture Viewport"
 msgstr "Ansichtsfenster erfassen"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar wird neu gestartet, um es anzuwenden."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – verwenden Sie „Herunterladen“, um über Ihren Browser zu aktualisieren."
 
+msgid "Retry"
+msgstr "Erneut versuchen"
+
 msgid "Restart & Update"
 msgstr "Neu starten & aktualisieren"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Abmelden"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Erneut versuchen"
-
 msgid "Choose Export Location"
 msgstr "Exportziel wählen"
 
@@ -26001,6 +26013,12 @@ msgstr "Willkommen, %s!"
 msgid "Welcome !"
 msgstr "Willkommen!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s-Tarif"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s Credits"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automatikmodus: Der Agent entscheidet offene Fragen selbst, statt Sie zu
 msgid "Agent Bubble"
 msgstr "Agentenblase"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
-
 msgid "Agent Bubble Status"
 msgstr "Status der Agentenblase"
 
@@ -26987,6 +27005,9 @@ msgstr "Moodboard-Anhang animieren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zeigt, wie eine neu angehängte Referenz in den Mixie-Chat fliegt"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Verzögerung"

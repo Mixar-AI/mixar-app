@@ -266,6 +266,26 @@ class TestFormatting:
         snap = state.snapshot_from_payload(_payload())
         assert state.format_breakdown_label(snap) == "4,800 monthly · 2,000 bonus"
 
+    def test_breakdown_says_yearly_for_annual_plans(self):
+        """An annual plan's bucket holds the whole year's credits — calling
+        it "monthly" would misstate what the user has for the month."""
+        snap = state.snapshot_from_payload(
+            _payload(billing_interval="yearly", credits_per_month=10000,
+                     credits_per_cycle=120000, monthly_credits_remaining=96000,
+                     balance_cents=98000)
+        )
+        assert snap.is_yearly
+        assert snap.has_allowance
+        assert state.format_breakdown_label(snap) == "96,000 yearly · 2,000 bonus"
+
+    def test_monthly_plan_is_not_yearly(self):
+        assert not state.snapshot_from_payload(_payload()).is_yearly
+
+    def test_card_labels_annual_plans(self):
+        card = CARD_CC.read_text(encoding="utf-8")
+        assert 'IFACE_("%s yearly · %s bonus")' in card
+        assert 'IFACE_("%s Plan · Yearly")' in card
+
     def test_breakdown_hidden_without_bonus(self):
         """With no bonus credits the headline is the monthly figure already."""
         snap = state.snapshot_from_payload(

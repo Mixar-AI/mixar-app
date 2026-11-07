@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ajan Balonu penceresi açılamadı"
+
 msgid "Capture Viewport"
 msgstr "Görüş Alanını Yakala"
 
@@ -3101,6 +3104,9 @@ msgstr "Uygulamak için Mixar yeniden başlatılacak."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tarayıcınız üzerinden güncellemek için İndir'i kullanın."
 
+msgid "Retry"
+msgstr "Yeniden Dene"
+
 msgid "Restart & Update"
 msgstr "Yeniden Başlat ve Güncelle"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Oturumu Kapat"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yeniden Dene"
-
 msgid "Choose Export Location"
 msgstr "Dışa Aktarma Konumunu Seç"
 
@@ -26001,6 +26013,12 @@ msgstr "Hoş geldiniz, %s!"
 msgid "Welcome !"
 msgstr "Hoş geldiniz!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s Planı"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kredi"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Otomatik kip: ajan açık seçimlere size sormak yerine kendisi karar ve
 msgid "Agent Bubble"
 msgstr "Ajan Balonu"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Ajan Balonu penceresi açılamadı"
-
 msgid "Agent Bubble Status"
 msgstr "Ajan Balonu Durumu"
 
@@ -26987,6 +27005,9 @@ msgstr "Moodboard Ekini Canlandır"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Yeni eklenen bir referansın Mixie sohbetine uçarak girişini gösterir"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Gecikme"

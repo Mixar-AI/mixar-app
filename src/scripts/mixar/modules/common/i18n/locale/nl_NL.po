@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kan het venster van de Agentbubbel niet openen"
+
 msgid "Capture Viewport"
 msgstr "Viewport vastleggen"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar wordt opnieuw gestart om deze toe te passen."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gebruik Downloaden om via uw browser bij te werken."
 
+msgid "Retry"
+msgstr "Opnieuw proberen"
+
 msgid "Restart & Update"
 msgstr "Herstarten en bijwerken"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Uitloggen"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Opnieuw proberen"
-
 msgid "Choose Export Location"
 msgstr "Exportlocatie kiezen"
 
@@ -26001,6 +26013,12 @@ msgstr "Welkom, %s!"
 msgid "Welcome !"
 msgstr "Welkom!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Abonnement %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s credits"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automatische modus: de agent neemt open keuzes zelf in plaats van het u 
 msgid "Agent Bubble"
 msgstr "Agentbubbel"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kan het venster van de Agentbubbel niet openen"
-
 msgid "Agent Bubble Status"
 msgstr "Status Agentbubbel"
 
@@ -26987,6 +27005,9 @@ msgstr "Moodboardbijlage animeren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Toont een nieuw bijgevoegde referentie die Mixie Chat in vliegt"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Vertraging"

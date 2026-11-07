@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
+
 msgid "Capture Viewport"
 msgstr "ﺬﻔﻨﻤﻟﺍ ﻂﻘﺘﻟﺍ"
 
@@ -3101,6 +3104,9 @@ msgstr ".ﻪﻘﻴﺒﻄﺘﻟ Mixar ﻞﻴﻐﺸﺗ ﺩﺎﻌﻴُﺳ"
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ﻚﺤﻔﺼﺘﻣ ﺮﺒﻋ ﺚﻳﺪﺤﺘﻠﻟ «ﻝﺰّﻧ» ﻡﺪﺨﺘﺳﺍ."
 
+msgid "Retry"
+msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
+
 msgid "Restart & Update"
 msgstr "ﺙﺪّﺣﻭ ﻞﻴﻐﺸﺘﻟﺍ ﺪﻋﺃ"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "ﺝﻭﺮﺨﻟﺍ ﻞﻴﺠﺴﺗ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ﺔﻟﻭﺎﺤﻤﻟﺍ ﺪﻋﺃ"
-
 msgid "Choose Export Location"
 msgstr "ﺮﻳﺪﺼﺘﻟﺍ ﻊﻗﻮﻣ ﺮﺘﺧﺍ"
 
@@ -26001,6 +26013,12 @@ msgstr "!%s ،ﺎﺒًﺣﺮﻣ"
 msgid "Welcome !"
 msgstr "!ﺎﺒًﺣﺮﻣ"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s ﺔﻄﺧ"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s ﺪﻴﺻﺭ"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "ﺺﺨﻠﻤﻟﺍ ﻲﻓ ﻪﺗﺍﺭﺍﺮﻗ ﺩﺮﺴﻳﻭ ،ﻚﻟ
 msgid "Agent Bubble"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺓﺬﻓﺎﻧ ﺢﺘﻓ ﻞﺸﻓ"
-
 msgid "Agent Bubble Status"
 msgstr "ﻞﻴﻛﻮﻟﺍ ﺔﻋﺎﻘﻓ ﺔﻟﺎﺣ"
 
@@ -26987,6 +27005,9 @@ msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻖﻓﺮﻣ ﻚﻳﺮﺤﺗ"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mixie ﺔﺛﺩﺎﺤﻣ ﻰﻟﺇ ﺮﻴﻄﻳ ﻮﻫﻭ ﺎﺜًﻳﺪﺣ ﺎﻘًﻓﺮﻣ ﺎﻌًﺟﺮﻣ ﺽﺮﻌﻳ"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "ﺮﻴﺧﺄﺘﻟﺍ"

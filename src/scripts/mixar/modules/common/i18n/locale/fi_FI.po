@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Agenttikuplan ikkunaa ei voitu avata"
+
 msgid "Capture Viewport"
 msgstr "Kaappaa näkymä"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar käynnistyy uudelleen sen ottamiseksi käyttöön."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — käyttäkää komentoa Lataa päivittääksenne selaimella."
 
+msgid "Retry"
+msgstr "Yritä uudelleen"
+
 msgid "Restart & Update"
 msgstr "Käynnistä uudelleen ja päivitä"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Kirjaudu ulos"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yritä uudelleen"
-
 msgid "Choose Export Location"
 msgstr "Valitse vientisijainti"
 
@@ -26001,6 +26013,12 @@ msgstr "Tervetuloa, %s!"
 msgid "Welcome !"
 msgstr "Tervetuloa!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s-paketti"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s krediittiä"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automaattitila: agentti päättää avoimet valinnat itse sen sijaan, et
 msgid "Agent Bubble"
 msgstr "Agenttikupla"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Agenttikuplan ikkunaa ei voitu avata"
-
 msgid "Agent Bubble Status"
 msgstr "Agenttikuplan tila"
 
@@ -26987,6 +27005,9 @@ msgstr "Animoi tunnelmataulun liite"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Näytä juuri liitetty referenssi lentämässä Mixie-chatiin"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Viive"

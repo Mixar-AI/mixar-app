@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "打开智能体气泡窗口失败"
+
 msgid "Capture Viewport"
 msgstr "捕获视图"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar 将重新启动以应用更新。"
 msgid "{error} — use Download to update via your browser."
 msgstr "{error}——请使用“下载”通过浏览器更新。"
 
+msgid "Retry"
+msgstr "重试"
+
 msgid "Restart & Update"
 msgstr "重启并更新"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "退出登录"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "重试"
-
 msgid "Choose Export Location"
 msgstr "选择导出位置"
 
@@ -26001,6 +26013,12 @@ msgstr "欢迎，%s！"
 msgid "Welcome !"
 msgstr "欢迎！"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s 套餐"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s 积分"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "自动模式：智能体会自行决定待定选项而不询问您，并
 msgid "Agent Bubble"
 msgstr "智能体气泡"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "打开智能体气泡窗口失败"
-
 msgid "Agent Bubble Status"
 msgstr "智能体气泡状态"
 
@@ -26987,6 +27005,9 @@ msgstr "情绪板附件动画"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "显示新附加的参考飞入 Mixie 聊天的动画"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "延迟"

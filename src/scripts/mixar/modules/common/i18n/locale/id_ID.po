@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Gagal membuka jendela Gelembung Agen"
+
 msgid "Capture Viewport"
 msgstr "Tangkap Jendela Tampilan"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar akan dimulai ulang untuk menerapkannya."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gunakan Unduh untuk memperbarui melalui peramban Anda."
 
+msgid "Retry"
+msgstr "Coba Lagi"
+
 msgid "Restart & Update"
 msgstr "Mulai Ulang & Perbarui"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Keluar"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Coba Lagi"
-
 msgid "Choose Export Location"
 msgstr "Pilih Lokasi Ekspor"
 
@@ -26001,6 +26013,12 @@ msgstr "Selamat datang, %s!"
 msgid "Welcome !"
 msgstr "Selamat datang!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Paket %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kredit"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Mode otomatis: agen memutuskan sendiri pilihan terbuka alih-alih bertany
 msgid "Agent Bubble"
 msgstr "Gelembung Agen"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Gagal membuka jendela Gelembung Agen"
-
 msgid "Agent Bubble Status"
 msgstr "Status Gelembung Agen"
 
@@ -26987,6 +27005,9 @@ msgstr "Animasikan Lampiran Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Menampilkan referensi yang baru dilampirkan terbang masuk ke Mixie Chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Tunda"

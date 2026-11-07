@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ezin izan da agentearen burbuilaren leihoa ireki"
+
 msgid "Capture Viewport"
 msgstr "Kapturatu 3D bista"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar berrabiaraziko da aplikatzeko."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — erabili Deskargatu arakatzailetik eguneratzeko."
 
+msgid "Retry"
+msgstr "Saiatu berriro"
+
 msgid "Restart & Update"
 msgstr "Berrabiarazi eta eguneratu"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Amaitu saioa"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Saiatu berriro"
-
 msgid "Choose Export Location"
 msgstr "Aukeratu esportazio-kokapena"
 
@@ -26001,6 +26013,12 @@ msgstr "Ongi etorri, %s !"
 msgid "Welcome !"
 msgstr "Ongi etorri !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s plana"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kreditu"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Modu automatikoa: agenteak berak erabakitzen ditu aukera irekiak zuri ga
 msgid "Agent Bubble"
 msgstr "Agentearen burbuila"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Ezin izan da agentearen burbuilaren leihoa ireki"
-
 msgid "Agent Bubble Status"
 msgstr "Agentearen burbuilaren egoera"
 
@@ -26987,6 +27005,9 @@ msgstr "Animatu moodboard eranskina"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Erakutsi erantsi berri den erreferentzia bat Mixie txatera hegan"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Atzerapena"

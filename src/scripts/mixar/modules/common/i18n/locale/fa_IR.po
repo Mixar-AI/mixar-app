@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﺪﺸﻧ ﺯﺎﺑ ﻞﻣﺎﻋ ﺏﺎﺒﺣ ﻩﺮﺠﻨﭘ"
+
 msgid "Capture Viewport"
 msgstr "ﯼﺪﻌﺑ ﻪﺳ ﯼﺎﻤﻧ ﺖﺒﺛ"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar ﺩﻮﺷ‌ﯽﻣ ﯼﺯﺍﺪﻧﺍ‌ﻩﺍﺭ ﻩﺭﺎﺑﻭ�
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ﺪﯿﻨﮐ ﻩﺩﺎﻔﺘﺳﺍ ﯼﺮﯿﮔﺭﺎﺑ ﺯﺍ ،ﺮﮔﺭﻭﺮﻣ ﻩﺍﺭ ﺯﺍ ﯽﻧﺎﺳﺭﺯﻭﺭ‌ﻪﺑ ﯼﺍﺮﺑ."
 
+msgid "Retry"
+msgstr "ﻩﺭﺎﺑﻭﺩ ﺵﻼ﻿ﺗ"
+
 msgid "Restart & Update"
 msgstr "ﯽﻧﺎﺳﺭﺯﻭﺭ‌ﻪﺑ ﻭ ﻩﺭﺎﺑﻭﺩ ﯼﺯﺍﺪﻧﺍ‌ﻩﺍﺭ"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "ﺝﻭﺮﺧ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ﻩﺭﺎﺑﻭﺩ ﺵﻼ﻿ﺗ"
-
 msgid "Choose Export Location"
 msgstr "ﻥﺩﺮﮐ ﺭﺩﺎﺻ ﻞﺤﻣ ﺏﺎﺨﺘﻧﺍ"
 
@@ -26001,6 +26013,12 @@ msgstr "! %s ،ﺪﯾﺪﻣﺁ ﺵﻮﺧ"
 msgid "Welcome !"
 msgstr "!ﺪﯾﺪﻣﺁ ﺵﻮﺧ"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s ﺡﺮﻃ"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s ﺭﺎﺒﺘﻋﺍ"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﺖﺳﺮﻬﻓ ﻪﺻﻼ﻿ﺧ ﺭﺩ ﺍﺭ ﺎﻫ�
 msgid "Agent Bubble"
 msgstr "ﻞﻣﺎﻋ ﺏﺎﺒﺣ"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "ﺪﺸﻧ ﺯﺎﺑ ﻞﻣﺎﻋ ﺏﺎﺒﺣ ﻩﺮﺠﻨﭘ"
-
 msgid "Agent Bubble Status"
 msgstr "ﻞﻣﺎﻋ ﺏﺎﺒﺣ ﺖﯿﻌﺿﻭ"
 
@@ -26987,6 +27005,9 @@ msgstr "ﺩﺭﻮﺑﺩﻮﻣ ﺖﺳﻮﯿﭘ ﯼﺯﺎﺳ‌ﮎﺮﺤﺘﻣ"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "ﺪﻫﺩ‌ﯽﻣ ﻥﺎﺸﻧ Mixie ﯼﻮﮕﺘﻔﮔ ﻪﺑ ﺯﺍﻭﺮﭘ ﻝﺎﺣ ﺭﺩ ﺍﺭ ﻩﺪﺷ‌ﺖﺳﻮﯿﭘ‌ﻩﺯﺎﺗ ﻊﺟﺮﻣ ﮏﯾ"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "ﺮﯿﺧﺄﺗ"

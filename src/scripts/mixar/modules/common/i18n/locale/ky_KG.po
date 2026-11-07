@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Агенттин көбүкчөсү терезеси ачылган жок"
+
 msgid "Capture Viewport"
 msgstr "Көрүү терезесин тартуу"
 
@@ -3101,6 +3104,9 @@ msgstr "Аны колдонуу үчүн Mixar кайра иштейт."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — браузер аркылуу жаңылоо үчүн Түшүрүүнү колдонуңуз."
 
+msgid "Retry"
+msgstr "Кайра аракет"
+
 msgid "Restart & Update"
 msgstr "Кайра иштетүү жана жаңылоо"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Чыгуу"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Кайра аракет"
-
 msgid "Choose Export Location"
 msgstr "Экспорт ордун тандоо"
 
@@ -26001,6 +26013,12 @@ msgstr "Кош келиңиз, %s !"
 msgid "Welcome !"
 msgstr "Кош келиңиз !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s тарифи"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s кредит"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Авто режим: агент ачык тандоолорду сизд
 msgid "Agent Bubble"
 msgstr "Агенттин көбүкчөсү"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Агенттин көбүкчөсү терезеси ачылган жок"
-
 msgid "Agent Bubble Status"
 msgstr "Агенттин көбүкчөсүнүн абалы"
 
@@ -26987,6 +27005,9 @@ msgstr "Мудборд тиркемесин анимациялоо"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Жаңы тиркелген үлгүнүн Mixie баарлашуусуна учуп киришин көрсөтөт."
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Кечигүү"

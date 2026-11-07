@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
+
 msgid "Capture Viewport"
 msgstr "Chụp Cổng Nhìn"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar sẽ khởi động lại để áp dụng."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — hãy dùng Tải Xuống để cập nhật qua trình duyệt."
 
+msgid "Retry"
+msgstr "Thử Lại"
+
 msgid "Restart & Update"
 msgstr "Khởi Động Lại & Cập Nhật"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Đăng Xuất"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Thử Lại"
-
 msgid "Choose Export Location"
 msgstr "Chọn Vị Trí Xuất Khẩu"
 
@@ -26001,6 +26013,12 @@ msgstr "Chào mừng, %s!"
 msgid "Welcome !"
 msgstr "Chào mừng!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Gói %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s tín dụng"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Chế độ tự động: tác nhân tự quyết định các lựa ch�
 msgid "Agent Bubble"
 msgstr "Bong Bóng Tác Nhân"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
-
 msgid "Agent Bubble Status"
 msgstr "Trạng Thái Bong Bóng Tác Nhân"
 
@@ -26987,6 +27005,9 @@ msgstr "Hoạt Họa Tệp Đính Kèm từ Bảng Cảm Hứng"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Hiển thị tham chiếu vừa đính kèm bay vào khung trò chuyện Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Trì Hoãn"

@@ -99,6 +99,7 @@ def _mirror_to_rna(snapshot: state.UsageSnapshot) -> None:
         wm.mixar_usage_monthly_remaining = snapshot.monthly_remaining
         wm.mixar_usage_bonus_remaining = snapshot.bonus_remaining
         wm.mixar_usage_has_allowance = snapshot.has_allowance
+        wm.mixar_usage_is_yearly = snapshot.is_yearly
         wm.mixar_usage_can_top_up = snapshot.can_top_up
         wm.mixar_usage_stale = bool(snapshot.error)
     except AttributeError:

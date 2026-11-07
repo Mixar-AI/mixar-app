@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Не удалось открыть окно пузыря агента"
+
 msgid "Capture Viewport"
 msgstr "Захват вьюпорта"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar перезапустится, чтобы применить его
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — нажмите «Скачать», чтобы обновиться через браузер."
 
+msgid "Retry"
+msgstr "Повторить"
+
 msgid "Restart & Update"
 msgstr "Перезапустить и обновить"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Выйти"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Повторить"
-
 msgid "Choose Export Location"
 msgstr "Выбрать место экспорта"
 
@@ -26001,6 +26013,12 @@ msgstr "Добро пожаловать, %s!"
 msgid "Welcome !"
 msgstr "Добро пожаловать!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Тариф %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "кредитов: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Автоматический режим: агент сам приним�
 msgid "Agent Bubble"
 msgstr "Пузырь агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Не удалось открыть окно пузыря агента"
-
 msgid "Agent Bubble Status"
 msgstr "Состояние пузыря агента"
 
@@ -26987,6 +27005,9 @@ msgstr "Анимировать вложение из мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Показать, как новый прикреплённый референс перелетает в чат Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Задержка"

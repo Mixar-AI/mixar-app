@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Отварање прозора мехурића агента није успело"
+
 msgid "Capture Viewport"
 msgstr "Сними приказ"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar ће се поново покренути да га примени
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — користите Преузми да ажурирате преко прегледача."
 
+msgid "Retry"
+msgstr "Покушај поново"
+
 msgid "Restart & Update"
 msgstr "Поново покрени и ажурирај"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Одјава"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Покушај поново"
-
 msgid "Choose Export Location"
 msgstr "Изабери место извоза"
 
@@ -26001,6 +26013,12 @@ msgstr "Добро дошли, %s !"
 msgid "Welcome !"
 msgstr "Добро дошли !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "План %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "кредити: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Аутоматски режим: агент сам одлучује от
 msgid "Agent Bubble"
 msgstr "Мехурић агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Отварање прозора мехурића агента није успело"
-
 msgid "Agent Bubble Status"
 msgstr "Статус мехурића агента"
 
@@ -26987,6 +27005,9 @@ msgstr "Анимирај прилог мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Приказује новоприложену референцу како улеће у ћаскање Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Кашњење"

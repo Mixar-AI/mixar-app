@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
+
 msgid "Capture Viewport"
 msgstr "จับภาพวิวพอร์ต"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar จะรีสตาร์ทเพื่อนำการอั
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ใช้ “ดาวน์โหลด” เพื่ออัปเดตผ่านเบราว์เซอร์ของคุณ"
 
+msgid "Retry"
+msgstr "ลองใหม่"
+
 msgid "Restart & Update"
 msgstr "รีสตาร์ทและอัปเดต"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "ออกจากระบบ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ลองใหม่"
-
 msgid "Choose Export Location"
 msgstr "เลือกตำแหน่งส่งออก"
 
@@ -26001,6 +26013,12 @@ msgstr "ยินดีต้อนรับ %s !"
 msgid "Welcome !"
 msgstr "ยินดีต้อนรับ !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "แผน %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s เครดิต"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "โหมดอัตโนมัติ: เอเจนต์ตัด�
 msgid "Agent Bubble"
 msgstr "บับเบิลเอเจนต์"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
-
 msgid "Agent Bubble Status"
 msgstr "สถานะบับเบิลเอเจนต์"
 
@@ -26987,6 +27005,9 @@ msgstr "ทำให้ไฟล์แนบมู้ดบอร์ดเคล
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "แสดงอ้างอิงที่เพิ่งแนบปลิวเข้าสู่แชต Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "หน่วงเวลา"

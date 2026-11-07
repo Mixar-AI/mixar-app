@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
+
 msgid "Capture Viewport"
 msgstr "Capturar mirador"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar es reiniciarà per aplicar-la."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — utilitzi Baixar per actualitzar amb el navegador."
 
+msgid "Retry"
+msgstr "Tornar-ho a provar"
+
 msgid "Restart & Update"
 msgstr "Reiniciar i actualitzar"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Tancar la sessió"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Tornar-ho a provar"
-
 msgid "Choose Export Location"
 msgstr "Triar la ubicació d'exportació"
 
@@ -26001,6 +26013,12 @@ msgstr "Li donem la benvinguda, %s !"
 msgid "Welcome !"
 msgstr "Li donem la benvinguda!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Pla %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s crèdits"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Mode automàtic: l'agent decideix ell mateix les opcions obertes en lloc
 msgid "Agent Bubble"
 msgstr "Bombolla de l'agent"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
-
 msgid "Agent Bubble Status"
 msgstr "Estat de la bombolla de l'agent"
 
@@ -26987,6 +27005,9 @@ msgstr "Animar l'adjunt del Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mostrar una referència acabada d'adjuntar que vola cap al xat de Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Retard"

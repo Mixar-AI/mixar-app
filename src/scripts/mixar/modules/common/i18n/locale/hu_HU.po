@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
+
 msgid "Capture Viewport"
 msgstr "Nézetablak rögzítése"
 
@@ -3101,6 +3104,9 @@ msgstr "A Mixar újraindul, hogy alkalmazza."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — a böngészős frissítéshez használja a Letöltés gombot."
 
+msgid "Retry"
+msgstr "Újra"
+
 msgid "Restart & Update"
 msgstr "Újraindítás és frissítés"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Kijelentkezés"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Újra"
-
 msgid "Choose Export Location"
 msgstr "Exportálás helyének kiválasztása"
 
@@ -26001,6 +26013,12 @@ msgstr "Üdvözöljük, %s !"
 msgid "Welcome !"
 msgstr "Üdvözöljük !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s csomag"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kredit"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automata mód: az ügynök maga dönt a nyitott választásokról, ahely
 msgid "Agent Bubble"
 msgstr "Ügynökbuborék"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
-
 msgid "Agent Bubble Status"
 msgstr "Ügynökbuborék állapota"
 
@@ -26987,6 +27005,9 @@ msgstr "Moodboard-melléklet animálása"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Egy frissen csatolt referencia berepülésének megjelenítése a Mixie csevegésébe"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Késleltetés"

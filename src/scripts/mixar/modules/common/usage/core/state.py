@@ -27,6 +27,7 @@ from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     FREE_BILLING_INTERVAL,
+    YEARLY_BILLING_INTERVAL,
     TRIAL_SLUG_PREFIX,
     USAGE_TTL_SECONDS,
 )
@@ -85,6 +86,12 @@ class UsageSnapshot:
         if self.fetched_at <= 0.0:
             return False
         return self.is_free or (not self.has_subscription and not self.error)
+
+    @property
+    def is_yearly(self) -> bool:
+        """Annual billing: each cycle grants the whole year's credits up
+        front, so the plan bucket holds a year, not a month."""
+        return self.billing_interval == YEARLY_BILLING_INTERVAL
 
     @property
     def has_allowance(self) -> bool:
@@ -303,6 +310,12 @@ def format_breakdown_label(snapshot: UsageSnapshot) -> str:
     """
     if not snapshot.has_allowance or snapshot.bonus_remaining <= 0:
         return ""
+    if snapshot.is_yearly:
+        # An annual plan's allowance is the year's, not the month's.
+        return iface_("{allowance} yearly · {bonus} bonus").format(
+            allowance=format_credits(snapshot.monthly_remaining),
+            bonus=format_credits(snapshot.bonus_remaining),
+        )
     return iface_("{monthly} monthly · {bonus} bonus").format(
         monthly=format_credits(snapshot.monthly_remaining),
         bonus=format_credits(snapshot.bonus_remaining),

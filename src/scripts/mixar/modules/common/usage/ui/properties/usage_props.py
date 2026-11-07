@@ -34,6 +34,7 @@ _PROP_NAMES = (
     "mixar_usage_monthly_remaining",
     "mixar_usage_bonus_remaining",
     "mixar_usage_has_allowance",
+    "mixar_usage_is_yearly",
     "mixar_usage_can_top_up",
     "mixar_usage_stale",
     "mixar_account_name",
@@ -90,6 +91,12 @@ def register() -> None:
         description="Whether a monthly plan allowance backs part of the balance",
         default=False,
         **session_value("mixar_usage_has_allowance", False),
+    )
+    wm.mixar_usage_is_yearly = BoolProperty(
+        name="Billed Yearly",
+        description="Whether the plan is billed annually (its allowance covers the year)",
+        default=False,
+        **session_value("mixar_usage_is_yearly", False),
     )
     wm.mixar_usage_can_top_up = BoolProperty(
         name="Can Top Up",

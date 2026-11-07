@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Прозорецът на балона на агента не можа да се отвори"
+
 msgid "Capture Viewport"
 msgstr "Заснеми 3D изгледа"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar ще се рестартира, за да я приложи."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — използвайте Изтегли, за да актуализирате през браузъра."
 
+msgid "Retry"
+msgstr "Опитай отново"
+
 msgid "Restart & Update"
 msgstr "Рестартиране и актуализация"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Изход"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Опитай отново"
-
 msgid "Choose Export Location"
 msgstr "Избери място за изнасяне"
 
@@ -26001,6 +26013,12 @@ msgstr "Добре дошли, %s !"
 msgid "Welcome !"
 msgstr "Добре дошли !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s план"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s кредити"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Автоматичен режим: агентът сам решава о
 msgid "Agent Bubble"
 msgstr "Балон на агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Прозорецът на балона на агента не можа да се отвори"
-
 msgid "Agent Bubble Status"
 msgstr "Състояние на балона на агента"
 
@@ -26987,6 +27005,9 @@ msgstr "Анимирай прикачения файл на мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Показва новоприкачена референция, която влита в чата на Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Забавяне"

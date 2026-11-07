@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "에이전트 버블 창을 열지 못했습니다"
+
 msgid "Capture Viewport"
 msgstr "뷰포트 캡처"
 
@@ -3101,6 +3104,9 @@ msgstr "업데이트를 적용하기 위해 Mixar가 다시 시작됩니다."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 다운로드를 사용하여 브라우저에서 업데이트하세요."
 
+msgid "Retry"
+msgstr "재시도"
+
 msgid "Restart & Update"
 msgstr "다시 시작 및 업데이트"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "로그아웃"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "재시도"
-
 msgid "Choose Export Location"
 msgstr "내보내기 위치 선택"
 
@@ -26001,6 +26013,12 @@ msgstr "%s 님, 환영합니다!"
 msgid "Welcome !"
 msgstr "환영합니다!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s 플랜"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s 크레딧"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "에이전트 버블 창을 열지 못했습니다"
-
 msgid "Agent Bubble Status"
 msgstr "에이전트 버블 상태"
 
@@ -26987,6 +27005,9 @@ msgstr "무드보드 첨부 애니메이션"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "새로 첨부한 참조가 Mixie 채팅으로 날아가는 모습을 표시합니다"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "지연"

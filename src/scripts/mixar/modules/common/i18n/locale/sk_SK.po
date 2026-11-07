@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
+
 msgid "Capture Viewport"
 msgstr "Zachytiť záber"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar sa reštartuje, aby ju použil."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — na aktualizáciu cez prehliadač použite Stiahnuť."
 
+msgid "Retry"
+msgstr "Skúsiť znova"
+
 msgid "Restart & Update"
 msgstr "Reštartovať a aktualizovať"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Odhlásiť sa"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Skúsiť znova"
-
 msgid "Choose Export Location"
 msgstr "Vybrať umiestnenie exportu"
 
@@ -26001,6 +26013,12 @@ msgstr "Vitajte, %s!"
 msgid "Welcome !"
 msgstr "Vitajte!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Plán %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "Kredity: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automatický režim: agent sa o otvorených voľbách rozhoduje sám nam
 msgid "Agent Bubble"
 msgstr "Bublina agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
-
 msgid "Agent Bubble Status"
 msgstr "Stav bubliny agenta"
 
@@ -26987,6 +27005,9 @@ msgstr "Animovať prílohu z moodboardu"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zobrazí novo priloženú referenciu letiacu do chatu Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Oneskorenie"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nu s-a putut deschide fereastra Bulei agentului"
+
 msgid "Capture Viewport"
 msgstr "Captură Fereastra de Vizualizare"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar va reporni ca să o aplice."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — folosiți Descărcare ca să actualizați prin browser."
 
+msgid "Retry"
+msgstr "Reîncercare"
+
 msgid "Restart & Update"
 msgstr "Repornire și actualizare"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Deconectare"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Reîncercare"
-
 msgid "Choose Export Location"
 msgstr "Alegere loc de export"
 
@@ -26001,6 +26013,12 @@ msgstr "Bun venit, %s !"
 msgid "Welcome !"
 msgstr "Bun venit !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Plan %s"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s credite"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Mod automat: agentul decide singur alegerile deschise în loc să vă î
 msgid "Agent Bubble"
 msgstr "Bula agentului"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Nu s-a putut deschide fereastra Bulei agentului"
-
 msgid "Agent Bubble Status"
 msgstr "Stare bula agentului"
 
@@ -26987,6 +27005,9 @@ msgstr "Animare atașament Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Arată o referință nou atașată zburând în chatul Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Întârziere"

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Не ўдалося адкрыць акно бурбалкі агента"
+
 msgid "Capture Viewport"
 msgstr "Зняць акно прагляду"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar перазапусціцца, каб ужыць яго."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — скарыстайцеся «Спампаваць», каб абнавіць праз браўзер."
 
+msgid "Retry"
+msgstr "Паўтарыць"
+
 msgid "Restart & Update"
 msgstr "Перазапусціць і абнавіць"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Выйсці"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Паўтарыць"
-
 msgid "Choose Export Location"
 msgstr "Выберыце месца экспарту"
 
@@ -26001,6 +26013,12 @@ msgstr "Вітаем, %s !"
 msgid "Welcome !"
 msgstr "Вітаем!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s план"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "Крэдытаў: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Рэжым аўта: агент сам вырашае адкрытыя �
 msgid "Agent Bubble"
 msgstr "Бурбалка агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Не ўдалося адкрыць акно бурбалкі агента"
-
 msgid "Agent Bubble Status"
 msgstr "Стан бурбалкі агента"
 
@@ -26987,6 +27005,9 @@ msgstr "Анімаваць далучэнне мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Паказвае, як толькі што далучаны рэферэнс ляціць у чат Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Затрымка"

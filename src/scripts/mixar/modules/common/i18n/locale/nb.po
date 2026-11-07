@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunne ikke åpne agentboblevinduet"
+
 msgid "Capture Viewport"
 msgstr "Ta visningsportbilde"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar starter på nytt for å ta den i bruk."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — bruk Last ned for å oppdatere via nettleseren."
 
+msgid "Retry"
+msgstr "Prøv igjen"
+
 msgid "Restart & Update"
 msgstr "Start på nytt og oppdater"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Logg ut"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Prøv igjen"
-
 msgid "Choose Export Location"
 msgstr "Velg eksportplassering"
 
@@ -26001,6 +26013,12 @@ msgstr "Velkommen, %s !"
 msgid "Welcome !"
 msgstr "Velkommen!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s-abonnement"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kreditter"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automodus: agenten avgjør åpne valg selv i stedet for å spørre deg, 
 msgid "Agent Bubble"
 msgstr "Agentboble"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunne ikke åpne agentboblevinduet"
-
 msgid "Agent Bubble Status"
 msgstr "Agentboblestatus"
 
@@ -26987,6 +27005,9 @@ msgstr "Animer moodboard-vedlegg"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Viser en nylig vedlagt referanse som flyr inn i Mixie-chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Forsinkelse"

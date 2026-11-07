@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nie udało się otworzyć okna dymka agenta"
+
 msgid "Capture Viewport"
 msgstr "Przechwyć rzutnię"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar uruchomi się ponownie, aby ją zastosować."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — użyj opcji Pobierz, aby zaktualizować przez przeglądarkę."
 
+msgid "Retry"
+msgstr "Ponów"
+
 msgid "Restart & Update"
 msgstr "Uruchom ponownie i zaktualizuj"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Wyloguj się"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Ponów"
-
 msgid "Choose Export Location"
 msgstr "Wybierz lokalizację eksportu"
 
@@ -26002,6 +26014,12 @@ msgstr "Witamy, %s!"
 msgid "Welcome !"
 msgstr "Witamy!"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "Plan %s"
 
@@ -26013,6 +26031,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "Kredyty: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26536,9 +26557,6 @@ msgstr "Tryb automatyczny: agent sam podejmuje otwarte decyzje zamiast pytać u�
 msgid "Agent Bubble"
 msgstr "Dymek agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Nie udało się otworzyć okna dymka agenta"
-
 msgid "Agent Bubble Status"
 msgstr "Stan dymka agenta"
 
@@ -26988,6 +27006,9 @@ msgstr "Animuj załącznik z moodboardu"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Pokazuje nowo załączone odniesienie wlatujące do czatu Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Opóźnienie"

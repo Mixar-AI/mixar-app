@@ -47,3 +47,5 @@ HANDOFF_TARGET_PRICING = "pricing"
 #: bonus credits (sign-up bonus, referral rewards, top-ups) and no monthly
 #: allowance.
 FREE_BILLING_INTERVAL = "free"
+#: ``billing_interval`` of an annual subscription (12 months of credits per cycle).
+YEARLY_BILLING_INTERVAL = "yearly"

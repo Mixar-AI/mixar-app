@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora oblačića agenta nije uspjelo"
+
 msgid "Capture Viewport"
 msgstr "Snimi prozor pogleda"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar će se ponovno pokrenuti da ga primijeni."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — upotrijebite Preuzmi za ažuriranje putem preglednika."
 
+msgid "Retry"
+msgstr "Pokušaj ponovno"
+
 msgid "Restart & Update"
 msgstr "Ponovno pokreni i ažuriraj"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Odjava"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Pokušaj ponovno"
-
 msgid "Choose Export Location"
 msgstr "Odaberite mjesto izvoza"
 
@@ -26001,6 +26013,12 @@ msgstr "Dobro došli, %s !"
 msgid "Welcome !"
 msgstr "Dobro došli !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s plan"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "%s kredita"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automatski način: agent sam odlučuje o otvorenim izborima umjesto da V
 msgid "Agent Bubble"
 msgstr "Oblačić agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora oblačića agenta nije uspjelo"
-
 msgid "Agent Bubble Status"
 msgstr "Status oblačića agenta"
 
@@ -26987,6 +27005,9 @@ msgstr "Animiraj privitak Moodboarda"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Prikazuje novopriključenu referencu kako ulijeće u Mixiejev razgovor"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Odgoda"

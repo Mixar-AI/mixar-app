@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nepavyko atidaryti agento burbulo lango"
+
 msgid "Capture Viewport"
 msgstr "Užfiksuoti peržiūros langą"
 
@@ -3101,6 +3104,9 @@ msgstr "Mixar bus paleista iš naujo, kad jį pritaikytų."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — atnaujinkite per naršyklę mygtuku „Atsisiųsti“."
 
+msgid "Retry"
+msgstr "Bandyti dar kartą"
+
 msgid "Restart & Update"
 msgstr "Paleisti iš naujo ir atnaujinti"
 
@@ -3254,6 +3260,9 @@ msgstr ""
 msgid "{count} credits"
 msgstr ""
 
+msgid "{allowance} yearly · {bonus} bonus"
+msgstr ""
+
 msgid "{monthly} monthly · {bonus} bonus"
 msgstr ""
 
@@ -3330,6 +3339,12 @@ msgid "Has Allowance"
 msgstr ""
 
 msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
+
+msgid "Billed Yearly"
+msgstr ""
+
+msgid "Whether the plan is billed annually (its allowance covers the year)"
 msgstr ""
 
 msgid "Can Top Up"
@@ -21064,9 +21079,6 @@ msgstr "Atsijungti"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Bandyti dar kartą"
-
 msgid "Choose Export Location"
 msgstr "Pasirinkti eksporto vietą"
 
@@ -26001,6 +26013,12 @@ msgstr "Sveiki, %s !"
 msgid "Welcome !"
 msgstr "Sveiki !"
 
+msgid "%s · Yearly"
+msgstr ""
+
+msgid "%s Plan · Yearly"
+msgstr ""
+
 msgid "%s Plan"
 msgstr "%s tarifas"
 
@@ -26012,6 +26030,9 @@ msgstr ""
 
 msgid "%s credits"
 msgstr "Kreditai: %s"
+
+msgid "%s yearly · %s bonus"
+msgstr ""
 
 msgid "%s monthly · %s bonus"
 msgstr ""
@@ -26535,9 +26556,6 @@ msgstr "Automatinė veiksena: agentas atvirus pasirinkimus sprendžia pats, užu
 msgid "Agent Bubble"
 msgstr "Agento burbulas"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Nepavyko atidaryti agento burbulo lango"
-
 msgid "Agent Bubble Status"
 msgstr "Agento burbulo būsena"
 
@@ -26987,6 +27005,9 @@ msgstr "Animuoti nuotaikų lentos prisegtą failą"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Rodo naujai prisegtą pavyzdį, įskrendantį į „Mixie“ pokalbį"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Delsa"
