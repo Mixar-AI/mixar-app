@@ -43,21 +43,28 @@ def _before_load(_unused, _extra=None):
     _active = None  # No RNA access: old callbacks cannot release a new token.
 
 
+# Job-thread work besides renders that evaluates a registered depsgraph. Prod
+# 4.4.0 crashed in graph_id_tag_update when an agent script appended a material
+# (DEG_relations_tag_update tags every registered graph) mid-bake.
+_JOBS = (("OBJECT_BAKE", "bake"), ("COMPOSITE", "composite"))
+
+
 def busy():
     _main_thread()
-    return _active is not None or bpy.app.is_job_running("RENDER")
+    return _active is not None or native_render_kind() is not None
 
 
 def native_render_kind():
-    """Who owns the render running on Blender's job thread, or None.
+    """Who owns the work running on Blender's job thread, or None.
 
     ``preview`` (agent verification, seconds), ``scene_image`` /
-    ``scene_video`` (scene_render deliverables) or ``other`` (the user's F12,
-    any unreserved render).
+    ``scene_video`` (scene_render deliverables), ``other`` (the user's F12,
+    any unreserved render), else ``bake`` / ``composite`` for an
+    ``INVOKE_DEFAULT`` bake or compositor job.
     """
     _main_thread()
     if not bpy.app.is_job_running("RENDER"):
-        return None
+        return next((kind for job, kind in _JOBS if bpy.app.is_job_running(job)), None)
     owner = _active.owner if _active is not None else ""
     if owner.startswith("agent-preview:"):
         return "preview"

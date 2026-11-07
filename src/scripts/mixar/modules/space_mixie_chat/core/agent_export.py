@@ -176,15 +176,18 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
     if animations is not None:
         animations = [str(name) for name in animations]
     counts = {}
+    stage = "prepare"
     try:
         if active and mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
         # The meshes the preflight resolved (names carried in the spec or
         # remembered client-side), never the live selection: operators run
         # since may have changed it.
+        stage = "resolve_targets"
         meshes = export_targets(spec)
         if not meshes:
             return {"success": False, "error": "No mesh objects match the export target"}
+        stage = "prepare"
         try:
             readiness_bypassed = not preflight_meshes(spec, meshes).get("ready", True)
         except Exception:
@@ -218,12 +221,15 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
                 with texture_ctx as (staged, textures_folder):
                     overrides = ({"path_mode": "RELATIVE"} if staged
                                  else stl_kwargs(spec) if stl else None)
+                    stage = "exporter"
                     status, kwargs, anim_mode, warning = _run_operator(
                         fmt, filepath, use_case, animations, overrides,
                         str(spec.get("profile") or ""),
                     )
-        if 'FINISHED' not in status:
-            raise RuntimeError(f"Blender exporter returned {sorted(status)}")
+                    if 'FINISHED' not in status:
+                        raise RuntimeError(f"Blender exporter returned {sorted(status)}")
+                    stage = "restore_staging"
+        stage = "sanitize"
         # Privacy: custom-property extras would carry Mixar's registered
         # scene state (chat draft, transcript…). A failed strip fails the export.
         extras_stripped = (strip_private_extras(filepath, fmt)
@@ -237,6 +243,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             size = os.path.getsize(filepath)
         except OSError:
             pass
+        stage = "verify"
         verification = verify_export(filepath, fmt, {
             "mesh_count": len(meshes), "armature_count": len(armatures),
             "skinned_meshes": 0 if stl else sum(1 for m in meshes if writes_gltf_skin(m)),
@@ -251,6 +258,7 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
             "lights": scene_objects["lights"] if scene_objects else None,
             "cameras": scene_objects["cameras"] if scene_objects else None,
         })
+        stage = "result"
         if verification.get("checked") and verification.get("animations"):
             # Names as the FILE holds them, mapped back to the scene clip names
             # (FBX re-imports them as "<armature>|<stack>|<clip>").
@@ -291,8 +299,12 @@ def export_to_path(filepath: str, spec: dict, *, via: str = "agent",
     except Exception as exc:
         _telemetry(context, fmt, spec, success=False, extension=extension, started=started,
                    via=via, tool=tool, extra={**counts, "verification_checked": False,
-                          "verification_passed": False, "issue_count": 0})
-        return {"success": False, "error": scrub_error(exc)}
+                          "verification_passed": False, "issue_count": 0,
+                          # Exception text can contain local paths and asset names.
+                          "failure_stage": stage, "error_type": type(exc).__name__,
+                          "error_errno": exc.errno if isinstance(exc, OSError) else None})
+        return {"success": False,
+                "error": f"Export failed during {stage} ({type(exc).__name__}): {scrub_error(exc)}"}
     finally:
         try:
             if bpy.ops.object.select_all.poll():

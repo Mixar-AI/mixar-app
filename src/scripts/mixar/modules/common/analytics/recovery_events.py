@@ -9,6 +9,13 @@ startup, a restore available and offered, the user's choice, the file read
 and the follow-up (generations re-attached, the document retitled). Plus a
 rate-limited signal when a save point could not be written.
 
+Then the agent's side, for a tab whose agent was working at the crash: the
+Continue notice shown (``continue_offered``, ``reshown`` after a refusal),
+Continue sent (``continued``) or not sendable yet (``continue_blocked``),
+refused by the backend (``continue_refused``), Start fresh
+(``continue_dismissed``), and how the continued turn ended
+(``continue_finished``: ``outcome`` and ``duration_s``).
+
 Opaque ids and enums only: the recovery journal's session id and the crashed
 process's ``app_session_id``; never a path, a file, document or scene name, a
 prompt or a credential. Every property passes an allowlist here. Fail-open:
@@ -25,13 +32,17 @@ from .constants import EVENT_SESSION_RECOVERY_PREFIX
 STAGES = frozenset({
     "unclean_exit_detected", "available", "offered", "requested", "scene_restored",
     "completed", "partial", "failed", "dismissed", "save_point_failed",
+    "continue_offered", "continued", "continue_blocked", "continue_refused",
+    "continue_dismissed", "continue_finished",
 })
 # The journal's candidate kinds, as analysis reads them.
 CANDIDATE_KINDS = {
     "save_point": "save_point", "inherited": "save_point", "autosave": "autosave",
     "project": "project", "snapshot": "turn_checkpoint",
 }
-SURFACES = frozenset({"splash", "dialog", "file_menu"})
+SURFACES = frozenset({"splash", "dialog", "file_menu", "chat"})
+# How a continued agent turn ended (the turn_end status).
+OUTCOMES = frozenset({"completed", "in_progress", "cancelled", "unavailable", "failed"})
 FAILURE_CATEGORIES = frozenset({
     "read_cancelled", "read_error", "unavailable",            # a restore
     "jobs_not_reattached", "adoption_failed", "retitle_failed",  # a partial one
@@ -63,7 +74,8 @@ def offer_properties(offer: dict | None) -> dict:
 
 
 def track(stage: str, offer: dict | None = None, *, surface: str = "",
-          failure_category: str = "") -> None:
+          failure_category: str = "", outcome: str = "", duration_s: float | None = None,
+          reshown: bool | None = None) -> None:
     """Emit ``session_recovery.<stage>``. Never raises."""
     global _last_save_point_failed
     try:
@@ -80,6 +92,12 @@ def track(stage: str, offer: dict | None = None, *, surface: str = "",
         if failure_category:
             props["failure_category"] = (failure_category if failure_category in FAILURE_CATEGORIES
                                          else "other")
+        if outcome:
+            props["outcome"] = outcome if outcome in OUTCOMES else "other"
+        if duration_s is not None:
+            props["duration_s"] = int(max(0.0, float(duration_s)))
+        if reshown is not None:
+            props["reshown"] = bool(reshown)
         capture(EVENT_SESSION_RECOVERY_PREFIX + stage, props)
     except Exception:  # noqa: BLE001 - telemetry never breaks recovery
         pass

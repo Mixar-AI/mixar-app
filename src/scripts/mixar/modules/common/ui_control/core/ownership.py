@@ -35,12 +35,23 @@ def active():
     return _owner is not None or _unsettled
 
 
+_RENDER_WAITS = {"bake": "Wait for the bake to finish",
+                 "composite": "Wait for the compositor job to finish"}
+
+
+def render_idle():
+    """Refuse while the render state is in use, naming a bake as a bake."""
+    from mixar.modules.common.render_coordinator import core as render_slot
+    if render_slot.busy():
+        kind = render_slot.native_render_kind()
+        raise UIError("render_in_progress", _RENDER_WAITS.get(kind, "Wait for the render to finish"),
+                      {"render_kind": kind} if kind else None)
+
+
 def available():
-    from mixar.modules.common.render_coordinator.core import busy
     from mixar.modules.space_mixie_chat.core.session import SessionManager as session
     from mixar.modules.space_mixie_chat.constants import SessionState
-    if busy():
-        raise UIError("render_in_progress", "Wait for the render to finish")
+    render_idle()
     if bpy.context.window_manager.mixar_window_resizing:
         raise UIError("ui_busy", "Wait for window resize to finish")
     scene = observe.main_window().scene

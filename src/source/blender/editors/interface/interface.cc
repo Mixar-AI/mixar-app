@@ -62,6 +62,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_enum_types.hh"
+#include "RNA_prototypes.hh"
 
 #ifdef WITH_PYTHON
 #  include "BPY_extern_run.hh"
@@ -5808,10 +5809,23 @@ int button_return_value_get(Button *but)
 
 PointerRNA *button_operator_ptr_ensure(Button *but)
 {
-  if (but->optype && !but->opptr) {
+  if (but->opptr) {
+    return but->opptr;
+  }
+  if (but->optype) {
     but->opptr = MEM_new<PointerRNA>(__func__, WM_operator_properties_create_ptr(but->optype));
   }
-
+  else {
+    /* MIXAR: a button whose operator is not registered (a Python operator that
+     * loads after the first draw, or failed to register) gets an empty
+     * OperatorProperties pointer, as #WM_operator_properties_create does for an
+     * unknown operator. Draw code sets properties through this pointer without
+     * a check (`RNA_boolean_set(button_operator_ptr_ensure(but), ...)`), and a
+     * null return crashed the app; now such a write only logs "not found".
+     * The button calls nothing: #optype stays null. */
+    but->opptr = MEM_new<PointerRNA>(
+        __func__, RNA_pointer_create_discrete(nullptr, RNA_OperatorProperties, nullptr));
+  }
   return but->opptr;
 }
 

@@ -128,7 +128,8 @@ def push_update_available_toast(info) -> None:
     can_self_install = install_state in (
         InstallState.READY, InstallState.DOWNLOADING, InstallState.INSTALLING,
     ) or (
-        install_state is InstallState.IDLE
+        (install_state is InstallState.IDLE
+         or (install_state is InstallState.FAILED and state.install_retryable))
         and not state.blocked_reason
         and bool(info.download_url and info.download_sha256)
     )
@@ -161,12 +162,18 @@ def push_update_available_toast(info) -> None:
     actions = []
     if can_self_install:
         actions.append(NotificationAction(
-            label=n_("Restart & Update"), operator="mixar.restart_to_update",
+            label=n_("Retry") if install_state is InstallState.FAILED else n_("Restart & Update"),
+            operator="mixar.restart_to_update",
             style="primary",
         ))
     else:
         actions.append(NotificationAction(
             label=n_("Download"), operator="mixar.open_downloads_page", style="primary",
+        ))
+
+    if install_state is InstallState.FAILED and can_self_install:
+        actions.append(NotificationAction(
+            label=n_("Download"), operator="mixar.open_downloads_page", style="secondary",
         ))
 
     get_notification_store().push(

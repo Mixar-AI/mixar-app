@@ -266,7 +266,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # Start fresh only removes the notice.
         from mixar.modules.session_recovery import runtime as recovery
         if self.action_value == recovery.DISMISS_ACTION:
-            recovery.remove_notice(context.scene)
+            recovery.dismiss_continue(context.scene)
             return {'FINISHED'}
         if self.action_value.startswith(recovery.CONTINUE_PREFIX):
             recovery.continue_deferred(context.scene.name)

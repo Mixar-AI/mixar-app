@@ -67,6 +67,7 @@ class UpdateStateManager:
         self._install_state: InstallState = InstallState.IDLE
         self._installer_path: str = ""
         self._install_error: str = ""
+        self._install_retryable: bool = True
         self._blocked_reason: str = ""
         self._downloaded_bytes: int = 0
         self._total_bytes: int = 0
@@ -134,6 +135,12 @@ class UpdateStateManager:
     def install_error(self) -> str:
         with self._lock:
             return self._install_error
+
+    @property
+    def install_retryable(self) -> bool:
+        """A fresh download could fix the failure (offer Retry)."""
+        with self._lock:
+            return self._install_retryable
 
     @property
     def blocked_reason(self) -> str:
@@ -204,10 +211,11 @@ class UpdateStateManager:
         with self._lock:
             self._install_state = InstallState.INSTALLING
 
-    def set_install_failed(self, message: str) -> None:
+    def set_install_failed(self, message: str, retryable: bool = True) -> None:
         with self._lock:
             self._install_state = InstallState.FAILED
             self._install_error = message
+            self._install_retryable = retryable
             self._installer_path = ""
 
     def set_install_unsupported(self, reason: str) -> None:

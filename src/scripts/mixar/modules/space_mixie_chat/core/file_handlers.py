@@ -9,10 +9,12 @@ Registers a bpy.app.handlers.load_pre handler that aborts any running
 agent session when a new file is opened. This prevents agent tasks from
 the previous file from continuing to execute in the new file context.
 
-Also registers a load_post handler that sanitizes persisted chat enums:
-.blend files saved by builds with since-removed enum items (e.g. the old
-ASK chat mode, stored as int 2) would otherwise spam
-"current value '2' matches no enum" bpy.rna warnings on every redraw.
+Also registers a load_post handler that settles every loaded tab's agent
+state (a file saved mid-turn stores BUSY and an open run; nothing of that
+turn runs in this process) and sanitizes persisted chat enums: .blend files
+saved by builds with since-removed enum items (e.g. the old ASK chat mode,
+stored as int 2) would otherwise spam "current value '2' matches no enum"
+bpy.rna warnings on every redraw.
 """
 
 import threading
@@ -114,9 +116,43 @@ def _on_load_pre(*_args) -> None:
     logger.info("All agent sessions aborted due to file load")
 
 
+def settle_loaded_scenes() -> None:
+    """Every tab of a freshly read file is idle when connected, offline otherwise.
+
+    The run and turn state are saved with the scene (``SKIP_SAVE`` does
+    nothing for a Scene property), so a file saved mid-turn reopens reading
+    BUSY with an open run. No turn of that file runs in this process: left
+    as is, the pill stays on "Responding…" (no connect event moves it while
+    the socket is up) and the reconnect checks treat the dead run as live.
+    The saved loader ("Executing workspace script…") stops too. The
+    transcript and the saved turn cursor are kept, so the reconnect checks
+    and a crash restore's Continue still adopt a turn the server kept
+    running. A crash restore reads its file through here too.
+    """
+    from .jsonrpc_client import get_jsonrpc_client
+    from .queue_processor import get_event_processor
+    from .session import get_session_manager
+
+    session = get_session_manager()
+    processor = get_event_processor()
+    client = get_jsonrpc_client()
+    online = bool(client is not None and getattr(client, "is_connected", False))
+    for scene in bpy.data.scenes:
+        try:
+            session.set_run(scene, "", False)
+            if online:
+                session.set_connected(scene)
+            else:
+                session.set_disconnected(scene)
+            processor._clear_loader_bubbles(scene)
+        except Exception as e:  # noqa: BLE001 — never break file load
+            logger.debug("agent state settle skipped on %r: %s",
+                         getattr(scene, "name", "?"), e)
+
+
 @persistent
 def _on_load_post(*_args) -> None:
-    """Sanitize persisted chat enums after a file loads.
+    """Settle the loaded tabs' agent state and sanitize persisted chat enums.
 
     mixie_chat_mode is saved in the .blend as an int. Files written by
     builds whose enum had items that no longer exist (the old ASK mode
@@ -140,6 +176,11 @@ def _on_load_post(*_args) -> None:
     # so resume consumption without requiring another connection or UI send.
     from .turn_events import arm
     arm()
+
+    try:
+        settle_loaded_scenes()
+    except Exception as e:  # noqa: BLE001 — never break file load
+        logger.debug("agent state settle skipped: %s", e)
 
     for scene in _bpy.data.scenes:
         try:
@@ -191,7 +232,7 @@ def _sanitize_once():
 
 
 def register():
-    """Install load handlers (session cleanup + enum sanitize)."""
+    """Install load handlers (session cleanup, state settle, enum sanitize)."""
     if _on_load_pre not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load_pre)
     if _on_load_post not in bpy.app.handlers.load_post:

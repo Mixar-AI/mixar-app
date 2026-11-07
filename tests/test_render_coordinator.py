@@ -296,6 +296,20 @@ def test_native_render_kind_names_the_owner_of_the_job_thread(renderer):
     assert slot.native_render_kind() is None  # finalizing: the job thread is gone
 
 
+def test_a_bake_or_compositor_job_makes_the_renderer_busy(renderer):
+    """Prod 4.4.0 crashed in graph_id_tag_update when the scene changed during
+    an INVOKE_DEFAULT bake. Every busy() caller (result imports, scene renders,
+    previews, archives) waits for bakes and compositor jobs like a render."""
+    for job, kind in (('OBJECT_BAKE', 'bake'), ('COMPOSITE', 'composite')):
+        renderer.app.is_job_running.side_effect = lambda name, job=job: name == job
+        assert slot.busy() and slot.native_render_kind() == kind
+        assert slot.acquire('scene-render:image:' + KEY) is None
+    renderer.app.is_job_running.side_effect = lambda name: name in ('RENDER', 'OBJECT_BAKE')
+    assert slot.native_render_kind() == 'other'  # a render names itself first
+    renderer.app.is_job_running.side_effect = lambda name: False
+    assert not slot.busy() and slot.acquire('thumbnail') is not None
+
+
 def test_scene_render_owner_carries_its_kind():
     from pathlib import Path
     src = (Path(__file__).resolve().parents[1]
