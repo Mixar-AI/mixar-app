@@ -660,35 +660,6 @@ def test_save_points_from_before_a_restore_are_dropped(rt, tmp_path, monkeypatch
     assert [p["path"] for p in jr.data["inherited_points"]] == [point]
 
 
-def test_restored_tabs_are_settled_idle_when_connected(rt, monkeypatch):
-    # QA 2026-10-31: a tab saved mid-turn came back BUSY and Continue was refused.
-    calls = []
-
-    class Session:
-        def set_run(self, scene, run_id, open_):
-            calls.append(("run", scene, open_))
-
-        def set_connected(self, scene):
-            calls.append(("idle", scene))
-
-        def set_disconnected(self, scene):
-            calls.append(("offline", scene))
-
-    class Client:
-        is_connected = True
-
-    import mixar.modules.space_mixie_chat.core.jsonrpc_client as jc
-    monkeypatch.setattr(jc, "get_jsonrpc_client", lambda: Client())
-    monkeypatch.setattr(rt, "_session_manager", lambda: Session())
-    monkeypatch.setattr(rt, "_tab_scenes", lambda: ["A", "B"])
-    rt._settle_restored_scenes()
-    assert calls == [("run", "A", False), ("idle", "A"), ("run", "B", False), ("idle", "B")]
-    Client.is_connected = False
-    calls.clear()
-    rt._settle_restored_scenes()
-    assert ("offline", "A") in calls and ("idle", "A") not in calls
-
-
 # -- the crashed session a restore came from ----------------------------------
 
 def _restored_journal(tmp_path, *, confirmed):
@@ -1069,7 +1040,6 @@ def _restore_flow(rt, tmp_path, monkeypatch, *, read, jobs_left=0):
     monkeypatch.setattr(ct, "_retitle", lambda path: None)
     monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
     monkeypatch.setattr(rt, "_report", lambda text: None)
-    monkeypatch.setattr(rt, "_settle_restored_scenes", lambda: None)
     monkeypatch.setattr(rt, "_adopt_jobs", lambda records: jobs_left)
     from types import SimpleNamespace
     monkeypatch.setattr(rt, "_session_manager", lambda: SimpleNamespace(is_connected=lambda s: False))
@@ -1138,3 +1108,35 @@ def test_the_journal_names_its_process_for_the_next_launch(tmp_path):
     assert journal.read_manifest(jr.dir)["app_session_id"] == "app-9"
     s = _crashed(tmp_path, "x", NOW - 5, app_session_id="app-7")
     assert decision.find_offer([s], now=NOW)["app_session_id"] == "app-7"
+
+
+def test_continue_events_carry_only_allowlisted_outcomes(sent):
+    from mixar.modules.common.analytics import recovery_events as RE
+    RE.track("continue_finished", {"session": "s"}, surface="chat", outcome="cancelled", duration_s=12.7)
+    RE.track("continue_finished", {"session": "s"}, surface="chat", outcome="/Users/me", duration_s=-3)
+    RE.track("continue_offered", {"session": "s"}, surface="chat", reshown=True)
+    (_, first), (_, second), (event, third) = sent
+    assert first["outcome"] == "cancelled" and first["duration_s"] == 12 and first["surface"] == "chat"
+    assert second["outcome"] == "other" and second["duration_s"] == 0
+    assert event == "session_recovery.continue_offered" and third["reshown"] is True
+
+
+def test_a_continued_turn_reports_how_it_ended(rt, sent, monkeypatch):
+    clock = [500.0]
+    monkeypatch.setattr(rt.time, "monotonic", lambda: clock[0])
+    monkeypatch.setitem(rt._state, "offer", {"session": "rec-1", "app_session_id": "app-1"})
+    monkeypatch.setitem(rt._continue_sent, "cmd-1", ("chat-sid", NOW, 500.0))
+    clock[0] = 666.0
+    rt.continue_turn_ended("cmd-1", "completed")
+    rt.continue_turn_ended("cmd-1", "completed")      # once per Continue
+    rt.continue_turn_ended("another-turn", "failed")  # not a crash Continue
+    assert [(e, p["outcome"], p["duration_s"], p["recovery_session_id"]) for e, p in sent] == [
+        ("session_recovery.continue_finished", "completed", 166, "rec-1")]
+
+
+def test_a_refused_continue_is_reported_and_never_finishes(rt, sent, monkeypatch):
+    monkeypatch.setitem(rt._state, "offer", {"session": "rec-1"})
+    monkeypatch.setitem(rt._continue_sent, "cmd-2", ("chat-sid", NOW, 1.0))
+    rt.continue_refused(None, "cmd-2")
+    rt.continue_turn_ended("cmd-2", "completed")
+    assert [e for e, _ in sent] == ["session_recovery.continue_refused"]

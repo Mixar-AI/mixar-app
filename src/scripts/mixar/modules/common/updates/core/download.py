@@ -41,8 +41,8 @@ logger = get_logger(__name__)
 class UpdateDownloadError(_shared.DownloadError):
     """A download or verification failure. ``user_message`` is UI-safe."""
 
-    def __init__(self, message, user_message="", retryable=False):
-        super().__init__(message, user_message or n_("Download failed"), retryable)
+    def __init__(self, message, user_message="", retryable=False, reason_code=""):
+        super().__init__(message, user_message or n_("Download failed"), retryable, reason_code)
 
 
 class UpdateDownloadCancelled(UpdateDownloadError):

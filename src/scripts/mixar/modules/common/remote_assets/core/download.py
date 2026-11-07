@@ -32,6 +32,7 @@ whose first call reads the static ``bpy.app.version_string`` (the same read
 the API's worker threads already make) and is cached from then on.
 """
 
+import errno
 import hashlib
 import os
 import time
@@ -51,10 +52,14 @@ _BACKOFF_SLICE_S = 0.25
 class DownloadError(Exception):
     """A download or verification failure. ``user_message`` is UI-safe."""
 
-    def __init__(self, message, user_message="", retryable=False):
+    # "finalize" when a verified file could not be moved into place.
+    stage = ""
+
+    def __init__(self, message, user_message="", retryable=False, reason_code=""):
         super().__init__(message)
         self.user_message = user_message or "Download failed"
         self.retryable = retryable
+        self.reason_code = reason_code
 
 
 class DownloadCancelled(DownloadError):
@@ -116,6 +121,10 @@ def classify(exc):
         # A 4xx will not start working: the URL points at a key that is
         # missing, forbidden or expired.
         return f"HTTP {exc.code}", 500 <= exc.code < 600
+    if isinstance(exc, OSError) and exc.errno in (errno.EACCES, errno.EPERM, errno.ENOSPC, errno.EROFS):
+        # A full or read-only disk stays that way. A permission error is
+        # often brief: on Windows, antivirus locks the fresh ``.part``.
+        return exc.strerror or exc.__class__.__name__, exc.errno not in (errno.ENOSPC, errno.EROFS)
     return str(exc) or exc.__class__.__name__, True
 
 
@@ -123,7 +132,7 @@ def _open(url, offset, deadline, policy):
     """Open *url*, optionally from *offset*. Returns (response, resumed)."""
     remaining = deadline - time.monotonic()
     if remaining <= 0:
-        raise policy.error_cls("Download deadline exceeded", retryable=False)
+        raise policy.error_cls("Download deadline exceeded", retryable=False, reason_code="timeout")
 
     request = urllib.request.Request(url, headers={"User-Agent": user_agent()})
     if offset:
@@ -192,18 +201,28 @@ def _attempt(url, part_path, digest, offset, deadline, ctx, policy):
         digest = hashlib.sha256()
 
     total = _expected_total(response, offset, resumed)
-    out, written = _open_part(part_path, offset if resumed else 0)
+    try:
+        out, written = _open_part(part_path, offset if resumed else 0)
+    except Exception:
+        try:
+            response.close()
+        except Exception:  # closing must not hide the filesystem failure
+            pass
+        raise
     ctx.verified = written
     last_report = 0.0
+    cancelled = False
 
     try:
         while True:
             if ctx.should_cancel and ctx.should_cancel():
+                cancelled = True
                 raise policy.cancelled_cls()
             if time.monotonic() > deadline:
                 raise policy.error_cls(
                     f"Download deadline exceeded after {written} bytes",
                     user_message="Download timed out",
+                    reason_code="timeout",
                     retryable=False,
                 )
             chunk = response.read(policy.chunk_bytes)
@@ -219,10 +238,19 @@ def _attempt(url, part_path, digest, offset, deadline, ctx, policy):
                 last_report = now
                 ctx.on_progress(written, total)
     finally:
-        for closeable in (out, response):
+        try:
+            # Buffered writes can fail only on close (notably ENOSPC).
+            # Never checksum/rename a file whose final flush failed.
+            out.close()
+        except Exception:
+            # The cancelled .part is discarded anyway: a failed close
+            # must not turn the user's cancel into a failure.
+            if not cancelled:
+                raise
+        finally:
             try:
-                closeable.close()
-            except Exception:  # noqa: BLE001 - closing a dead handle
+                response.close()
+            except Exception:  # noqa: BLE001 - closing a dead connection
                 pass
 
     if total and written != total:
@@ -230,6 +258,7 @@ def _attempt(url, part_path, digest, offset, deadline, ctx, policy):
         raise policy.error_cls(
             f"Truncated download: {written} of {total} bytes",
             user_message="Download interrupted",
+            reason_code="truncated_download",
             retryable=True,
         )
     if ctx.on_progress:
@@ -319,9 +348,10 @@ def download_file(
                     raise policy.error_cls(
                         f"Checksum mismatch (got {actual})",
                         user_message="Download failed verification",
+                        reason_code="checksum_mismatch",
                         retryable=False,
                     )
-                os.replace(part_path, final_path)
+                _finalize(part_path, final_path, deadline, should_cancel, policy)
                 logger.info("%s downloaded: %s (%d bytes)",
                             policy.what.capitalize(), final_path, written)
                 return final_path
@@ -341,6 +371,7 @@ def download_file(
                     user_message=f"Download failed ({message[:60]})",
                     retryable=retryable,
                 )
+                last_error.__cause__ = e
                 if not retryable or attempt >= policy.max_attempts:
                     break
 
@@ -364,6 +395,32 @@ def download_file(
     if discard:
         _discard(part_path)
     raise last_error or policy.error_cls(f"{policy.what.capitalize()} download failed")
+
+
+def _finalize(part_path, final_path, deadline, should_cancel, policy):
+    """Move the verified ``.part`` into place, retrying only the rename.
+
+    Windows antivirus scans a file as soon as it is closed, and a rename
+    meanwhile fails with a sharing violation (``PermissionError``). Waiting
+    in place is the retry that can work: another transfer attempt would
+    resume past the end of the file and get HTTP 416.
+    """
+    backoff = policy.retry_backoff_s
+    for attempt in range(1, policy.max_attempts + 1):
+        try:
+            os.replace(part_path, final_path)
+            return
+        except OSError as e:
+            if (not isinstance(e, PermissionError) or attempt >= policy.max_attempts
+                    or not _sleep_within(backoff, deadline, should_cancel, policy)):
+                message = classify(e)[0]
+                error = policy.error_cls(
+                    f"Could not move the verified {policy.what} into place: {message}",
+                    user_message=f"Download failed ({message[:60]})",
+                )
+                error.stage = "finalize"
+                raise error from e
+            backoff *= policy.retry_backoff_factor
 
 
 def _discard(path):

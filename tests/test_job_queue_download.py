@@ -658,6 +658,37 @@ def test_an_import_held_for_a_long_render_is_not_timed_out(queue, monkeypatch):
     os.remove(path)
 
 
+def test_an_import_waits_while_a_bake_runs(queue, monkeypatch):
+    """An INVOKE_DEFAULT bake evaluates a registered depsgraph on the job
+    thread like a render; prod 4.4.0 crashed in graph_id_tag_update when the
+    scene changed mid-bake. The shared busy() check holds results for it."""
+    from unittest.mock import MagicMock
+    from mixar.modules.common.render_coordinator import core as slot
+
+    running = {"OBJECT_BAKE"}
+    fake = MagicMock()
+    fake.app.is_job_running.side_effect = lambda job: job in running
+    monkeypatch.setattr(slot, "bpy", fake)
+    monkeypatch.setattr(slot, "_active", None)
+    monkeypatch.setattr(QD, "bpy", fake)
+    QM._queues["test_download"] = queue
+    job = _downloading_job(queue, monkeypatch, 1.0)
+    imported = []
+    monkeypatch.setattr(QD, "import_file", lambda *a, **k: imported.append(a) or ["Rig"])
+    monkeypatch.setattr(QD, "_pinned_scene", lambda *a, **k: __import__("contextlib").nullcontext())
+    monkeypatch.setattr(QD, "_record_output_landed", lambda *a, **k: None)
+    fd, path = DL.tempfile.mkstemp(suffix=".glb", prefix="mixar_result_")
+    os.close(fd)
+
+    assert queue._finish_import(job, path, "GLB") == QD.RENDER_RETRY_S
+    assert not imported and job.import_held_since
+    running.clear()  # the bake ends
+    queue._finish_import(job, path, "GLB")
+    assert imported and job.state == JobState.SUCCESS
+    if os.path.exists(path):
+        os.remove(path)
+
+
 def test_a_held_import_does_not_shield_a_stranded_download(queue, monkeypatch):
     """Only the hold is excluded: transfer time before it still counts."""
     QM._queues["test_download"] = queue

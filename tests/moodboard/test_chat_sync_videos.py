@@ -111,8 +111,8 @@ def test_video_chips_follow_the_board_selection_and_spare_picker_chips(tmp_path,
     assert chat_sync_videos.sync_selected_videos(SimpleNamespace()) == (0, 0)  # no prop: no-op
 
 
-def test_a_refused_attach_is_logged_not_raised(tmp_path, registry, monkeypatch, caplog):
-    import logging
+def test_a_refused_attach_is_logged_not_raised(tmp_path, registry, monkeypatch):
+    from unittest.mock import Mock
 
     from mixar.modules.context_folder import constants
 
@@ -125,10 +125,12 @@ def test_a_refused_attach_is_logged_not_raised(tmp_path, registry, monkeypatch, 
                             mixie_moodboard_images=[_item("a", str(tmp_path / "a.mp4")),
                                                     _item("b", str(tmp_path / "b.mp4"))],
                             mixie_moodboard_frames=[], mixie_moodboard_action_nodes=[])
-    with caplog.at_level(logging.INFO, logger=chat_sync_videos._logger.name):
-        assert chat_sync_videos.sync_selected_videos(scene) == (1, 0)
+    log = Mock()
+    monkeypatch.setattr(chat_sync_videos._logger, "info", log)
+    assert chat_sync_videos.sync_selected_videos(scene) == (1, 0)
     assert len(scene.mixie_context_files) == 1
-    assert any("not attached as context" in record.getMessage() for record in caplog.records)
+    log.assert_called_once()
+    assert "not attached as context" in log.call_args.args[0]
 
 
 def test_a_selected_video_node_result_is_a_selected_video_but_never_a_pill(tmp_path):
@@ -179,3 +181,73 @@ def test_a_video_node_chip_follows_the_node_selection(tmp_path, registry):
     node.selected = False
     assert chat_sync_videos.sync_selected_videos(scene) == (0, 1)
     assert list(scene.mixie_context_files) == []
+
+
+def test_only_new_committed_videos_animate(tmp_path, registry, monkeypatch):
+    from unittest.mock import Mock
+    from mixar.modules.moodboard.core import attachment_motion
+    _, sync = _modules()
+    animate = Mock()
+    monkeypatch.setattr(attachment_motion, 'animate_attachments', animate)
+    for name in ('a.mp4', 'b.mp4'):
+        (tmp_path / name).write_bytes(b'x')
+    items = [_item('a', str(tmp_path / 'a.mp4')),
+             _item('b', str(tmp_path / 'b.mp4'), selected=False),
+             _item('missing', str(tmp_path / 'missing.mp4'))]
+    scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id='',
+                            mixie_moodboard_images=items, mixie_moodboard_frames=[],
+                            mixie_moodboard_action_nodes=[])
+    assert sync.sync_selected_videos(scene) == (1, 0)  # startup is quiet
+    animate.assert_not_called()
+    items[1].selected = True
+    assert sync.sync_selected_videos(scene, animate=True) == (1, 0)
+    animate.assert_called_once_with(scene, ['b'], context_file_ids={
+        'b': scene.mixie_context_files[1].file_id})
+    animate.reset_mock()
+    assert sync.sync_selected_videos(scene, animate=True) == (0, 0)
+    items[1].selected = False
+    assert sync.sync_selected_videos(scene, animate=True) == (0, 1)
+    animate.assert_not_called()
+
+
+def test_refused_video_attach_does_not_animate(tmp_path, registry, monkeypatch):
+    from unittest.mock import Mock
+    from mixar.modules.moodboard.core import attachment_motion
+    _, sync = _modules()
+    animate = Mock()
+    monkeypatch.setattr(attachment_motion, 'animate_attachments', animate)
+    monkeypatch.setattr('mixar.modules.context_folder.core.files.MAX_CONTEXT_FILES', 0)
+    path = tmp_path / 'clip.mp4'
+    path.write_bytes(b'x')
+    scene = SimpleNamespace(mixie_context_files=_Rows(), mixie_context_files_id='',
+                            mixie_moodboard_images=[_item('clip', str(path))],
+                            mixie_moodboard_frames=[], mixie_moodboard_action_nodes=[])
+    assert sync.sync_selected_videos(scene, animate=True) == (0, 0)
+    animate.assert_not_called()
+
+
+def test_poll_animates_video_selection_changes_only(monkeypatch):
+    from unittest.mock import Mock
+    chat_sync, _ = _modules()
+    scene = SimpleNamespace(name='video motion')
+    monkeypatch.setattr(chat_sync, 'bpy', SimpleNamespace(context=SimpleNamespace(scene=scene)))
+    monkeypatch.setattr(chat_sync, '_last_signatures', {})
+    monkeypatch.setattr(chat_sync, '_ensure_graph_node_ids', lambda _: None)
+    monkeypatch.setattr(chat_sync, '_migrate_legacy_frames', lambda _: None)
+    monkeypatch.setattr(chat_sync, '_reconcile_attachments', Mock())
+    signature = [0, (), ()]
+    monkeypatch.setattr(chat_sync, '_compute_selection_signature', lambda _: tuple(signature))
+    sync = Mock(return_value=(0, 0))
+    monkeypatch.setattr(chat_sync, 'sync_selected_videos', sync)
+    chat_sync._poll_tick()
+    sync.assert_called_once_with(scene, animate=False)
+    sync.reset_mock()
+    signature[2] = ('movie',)
+    chat_sync._poll_tick()
+    sync.assert_called_once_with(scene, animate=True)
+    sync.reset_mock()
+    chat_sync._poll_tick()
+    sync.assert_not_called()
+    signature[0] = 1  # Attachment drift does not replay selection feedback.
+    chat_sync._poll_tick()
+    sync.assert_called_once_with(scene, animate=False)

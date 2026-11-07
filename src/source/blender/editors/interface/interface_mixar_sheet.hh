@@ -97,6 +97,10 @@ inline constexpr char caption_bright_mark = '\x1f';
 /* -- Provider row: 46 tall plate, text 20 in, dot 15.5 left of it ------- */
 inline constexpr float row_h = 46.0f;
 inline constexpr float row_radius = 14.0f;
+/** The plate is inset this much top and bottom inside its 46 tall slot, so
+ * stacked rows (a lit one under a hovered one) never touch; the hit rect
+ * stays the full slot. */
+inline constexpr float row_inset_y = 3.0f;
 inline constexpr float row_text_x = 20.0f;
 /** A long provider name may run to the pill's edge before it is ellipsised. */
 inline constexpr float row_text_right = 8.0f;

@@ -50,6 +50,8 @@ from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
 from .sandbox_evaluated import NOTE as EVALUATED_NOTE, may_store_evaluated, restore_original_materials
 from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
+from .sandbox_editmesh import may_edit_bmesh, refresh_edit_meshes
+from .sandbox_topology import NOTE as TOPOLOGY_NOTE, repair_changed_meshes, snapshot_mesh_sizes
 from .executor_scene_state import SceneStateMixin
 
 
@@ -321,6 +323,7 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         captured_stderr = StringIO()
 
         result = ExecutionResult(success=False)
+        mesh_sizes = None  # set just before exec; None = the script never ran
 
         try:
             # Redirect output
@@ -457,6 +460,10 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
 
             # Execute the script in the sandboxed namespace
             compiled = compile(tree, "<agent_script>", "exec")  # noqa: S102
+            try:
+                mesh_sizes = snapshot_mesh_sizes()
+            except Exception:  # noqa: BLE001 - the guard never blocks the script
+                logger.exception("Snapshotting mesh sizes before a script failed")
             exec_start = time.time()
             exec(compiled, exec_namespace)  # noqa: S102
             elapsed = time.time() - exec_start
@@ -497,6 +504,22 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                     evaluated_swapped = restore_original_materials()
             except Exception:  # noqa: BLE001 - never mask the script's own result
                 logger.exception("Restoring original materials after a script failed")
+            # Before anything evaluates or draws: a script that created or
+            # resized a mesh through the data API may have left out-of-range
+            # indices, a native crash on the next redraw (sandbox_topology.py).
+            topology_repaired = []
+            try:
+                topology_repaired = repair_changed_meshes(mesh_sizes)
+            except Exception:  # noqa: BLE001 - never mask the script's own result
+                logger.exception("Validating mesh topology after a script failed")
+            # Before the next redraw: a script that changed an edit-mode BMesh
+            # without update_edit_mesh left stale loop triangles, and drawing
+            # them reads freed loops (sandbox_editmesh.py).
+            try:
+                if may_edit_bmesh(script):
+                    refresh_edit_meshes()
+            except Exception:  # noqa: BLE001 - never mask the script's own result
+                logger.exception("Refreshing edit meshes after a script failed")
             # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
             # from `finalize_turn`), never between scripts: a script may leave
             # the tab in Edit / Sculpt / Texture Paint mode on purpose for the
@@ -519,6 +542,9 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 logger.warning("Agent script stored %d evaluated material(s); originals restored",
                                evaluated_swapped)
                 result.output += "\n" + EVALUATED_NOTE.format(count=evaluated_swapped)
+            if topology_repaired:
+                result.output += "\n" + TOPOLOGY_NOTE.format(
+                    names=", ".join(repr(n) for n in topology_repaired))
 
         # Capture scene state after execution and detect changes
         after_state = self._capture_scene_state()

@@ -47,7 +47,10 @@ _ui_loading_complete = False
 # modules in well under two seconds.  Configurable via config/mixar.json
 # performance.ui_batch_budget_ms.
 _UI_BATCH_BUDGET_MS = 4
-_DISPLAY_KEYWORDS = ('panel', 'header', 'toolbar', 'menu')
+# ``topbar``: space_mixie_chat/ui/topbar.py draws the profile card, whose
+# buttons are Python operators; sorted as an operator file it drew them
+# before they registered (a native crash on Windows).
+_DISPLAY_KEYWORDS = ('panel', 'header', 'toolbar', 'topbar', 'menu')
 
 
 def _get_mixar_path():

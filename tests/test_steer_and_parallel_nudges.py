@@ -221,6 +221,25 @@ def test_send_operator_polls_can_compose_and_holds_before_encoding():
     assert "interjecting=steering, held=held" in src
 
 
+@pytest.mark.parametrize('blocked, sends', [('', True), ('Restoring', False)])
+def test_enter_holds_a_busy_send_like_the_button(monkeypatch, blocked, sends):
+    """#1887: Enter refused with "Working..." while the Steer button held the
+    message. Enter now asks the operator's predicate: a busy turn with no open
+    run reaches send_message (which holds it); a real refusal still reports."""
+    from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+    from mixar.modules.space_mixie_chat.ui.properties import chat_props
+    monkeypatch.setattr(composer_send, 'can_send', lambda sc: (False, blocked or 'Working...'))
+    monkeypatch.setattr(composer_send, '_blocked', lambda sc: blocked)
+    monkeypatch.setattr(held_sends, 'should_hold', lambda sc: True)
+    monkeypatch.setattr(auth_ops, 'guest_seat_pending', lambda: False)
+    send, refused = MagicMock(), MagicMock()
+    monkeypatch.setattr(chat_props.bpy.ops.mixie_chat, 'send_message', send, raising=False)
+    monkeypatch.setattr(chat_props, '_report_send_refused', refused)
+    chat_props._execute_send_message()
+    assert send.called is sends
+    assert refused.call_args_list == ([] if sends else [((blocked,),)])
+
+
 def test_stop_and_new_chat_hand_held_text_back():
     src = read(MOD / "space_mixie_chat/ui/operators/session_ops.py")
     assert "held_sends.restore(scene)" in src

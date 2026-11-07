@@ -25,8 +25,9 @@ import bpy
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
-from ..constants import InstallState
+from ..constants import RETRYABLE_FAILURE_REASONS, InstallState
 from . import download, install_gate, install_marker, installer, staging, verify
+from .failure import capture_download_outcome, failure_details
 # apply_and_restart's messages when the Windows pre-quit gate stopped it
 # (the toast saying why is up); re-exported for the operator.
 from .install_gate import BLOCKED_BY_OTHER_APPS, WAITING_FOR_BACKGROUND  # noqa: F401
@@ -84,26 +85,6 @@ def _redraw_badge():
     tag_topbar_redraw()
 
 
-def _capture_download_outcome(state):
-    """Report staged/failed once the download thread has finished.
-
-    Telemetry runs here, on the main thread, rather than in the worker:
-    ``capture()`` reads Blender context for its common properties.
-    """
-    if state.install_state not in (InstallState.READY, InstallState.FAILED):
-        return
-    info = state.update_info
-    try:
-        from ...analytics.update_events import capture_update_download
-
-        capture_update_download(
-            info.latest_version if info else "",
-            "ready" if state.install_state is InstallState.READY else "failed",
-        )
-    except Exception:  # noqa: BLE001 - telemetry is fail-open
-        logger.debug("Update download telemetry failed", exc_info=True)
-
-
 def _progress_tick():
     """Repeating timer that keeps the visible percentage moving.
 
@@ -122,9 +103,7 @@ def _progress_tick():
     return _PROGRESS_TICK_S
 
 
-# ============================================================================
 # Download
-# ============================================================================
 
 
 def _prepare_staging(version, extension):
@@ -146,6 +125,7 @@ def _worker(info, eligibility, running_binary):
     """
     state = get_update_state()
     version = info.latest_version
+    stage, outcome, details = "staging", "ready", {}
     try:
         path = _prepare_staging(version, eligibility.extension)
 
@@ -156,6 +136,7 @@ def _worker(info, eligibility, running_binary):
             size = os.path.getsize(path)
             state.set_download_progress(size, size)
         else:
+            stage = "download"
             download.download_installer(
                 info.download_url,
                 path,
@@ -164,6 +145,7 @@ def _worker(info, eligibility, running_binary):
                 should_cancel=_cancel.is_set,
             )
 
+        stage = "signature"
         verdict, detail, signer = verify.verify_installer(
             path,
             bundle_path=eligibility.location.target if eligibility.location else "",
@@ -174,6 +156,7 @@ def _worker(info, eligibility, running_binary):
             raise download.UpdateDownloadError(
                 f"Installer rejected: {detail}",
                 user_message=n_("Update failed verification"),
+                reason_code="signature_mismatch",
             )
         if verdict == verify.UNVERIFIED:
             logger.warning("Installer signature not verified: %s", detail)
@@ -184,11 +167,15 @@ def _worker(info, eligibility, running_binary):
     except download.UpdateDownloadCancelled:
         logger.info("Update download cancelled by user")
         state.set_install_idle()
+        outcome = "cancelled"
     except Exception as e:  # noqa: BLE001 - the thread must never escape
         message = getattr(e, "user_message", "") or n_("Download failed")
         logger.error("Update download failed: %s", e, exc_info=True)
-        state.set_install_failed(message)
+        outcome, details = "failed", failure_details(e, stage)
+        state.set_install_failed(message, details["reason_code"] in RETRYABLE_FAILURE_REASONS)
 
+    if outcome != "cancelled":
+        _on_main_thread(lambda: capture_download_outcome(version, outcome, details))
     _on_main_thread(_after_download)
 
 
@@ -242,7 +229,6 @@ def _after_download():
     state = get_update_state()
     _refresh_ui()
     _announce_ready(state)
-    _capture_download_outcome(state)
 
     if state.install_state is InstallState.READY and state.install_requested:
         state.set_install_requested(False)
@@ -348,8 +334,9 @@ def plan_restart():
         state.set_install_requested(True)
         return "waiting"
 
-    if install_state is InstallState.IDLE and state.update_info is not None:
-        # auto_download is off, or a previous attempt was cancelled.
+    retry = install_state is InstallState.FAILED and state.install_retryable
+    if (install_state is InstallState.IDLE or retry) and state.update_info is not None:
+        # auto_download is off, or a cancelled/retryable earlier attempt.
         if start_download(state.update_info):
             state.set_install_requested(True)
             return "waiting"

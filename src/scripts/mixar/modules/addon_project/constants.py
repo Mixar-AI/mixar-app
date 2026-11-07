@@ -94,3 +94,30 @@ MAX_PROJECT_FILES = 2000
 MAX_PATCH_FILES = 50
 MAX_PATCH_BYTES = 2_000_000
 MAX_DIFF_CHARS = 40_000
+
+# Operators an add-on's tests may not run (``addon_tests.py``). Tests run on
+# the main thread INSIDE the user's open file, in a scratch scene: loading,
+# resetting, saving or quitting the file from a test would wipe or overwrite
+# the user's work (a test's ``read_factory_settings`` emptied their scene).
+# "namespace.name", the namespace matched in any case like Blender does.
+TEST_REFUSED_OPERATORS = frozenset({
+    "wm.read_factory_settings",
+    "wm.read_homefile",
+    "wm.open_mainfile",
+    "wm.revert_mainfile",
+    "wm.recover_last_session",
+    "wm.recover_auto_save",
+    "wm.read_userpref",
+    "wm.read_factory_userpref",
+    "wm.save_mainfile",
+    "wm.save_as_mainfile",
+    "wm.save_homefile",
+    "wm.save_userpref",
+    "wm.quit_blender",
+})
+TEST_REFUSED_MESSAGE = (
+    "bpy.ops.{idname} is not allowed in add-on tests: they run inside the "
+    "user's open file, so a test must never load, reset, save or quit it. "
+    "Each test run already gets its own empty scene, removed afterwards with "
+    "everything the tests created; build what the test needs there instead."
+)

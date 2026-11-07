@@ -305,28 +305,33 @@ class MSaveAllBakedImages(bpy.types.Operator):
             if image.is_dirty:
                 pack_image(image)
 
-            # Some images need to set to srgb when saving
             ori_colorspace = image.colorspace_settings.name
-            if not image.is_float and image.colorspace_settings.name != get_srgb_name():
-                image.colorspace_settings.name = get_srgb_name()
-
-            # Unpack image if image is packed (Only necessary for Blender 2.80 and lower)
+            # Byte color images need sRGB for saving, but EXR data maps must
+            # retain raw numeric values instead of undergoing sRGB decoding.
             unpacked_to_disk = False
+            try:
+                if (
+                    not image.is_float
+                    and image.colorspace_settings.name != get_srgb_name()
+                    and not (
+                        settings.file_format == "OPEN_EXR"
+                        and image.colorspace_settings.is_data
+                    )
+                ):
+                    image.colorspace_settings.name = get_srgb_name()
 
-            # Save image
-            image.save_render(path, scene=tmpscene)
+                image.save_render(path, scene=tmpscene)
 
-            # Set the filepath to the image
-            image.filepath = path
-            if bpy.data.filepath != "":
-                try:
-                    image.filepath = bpy.path.relpath(path)
-                except:
-                    pass
-
-            # Set back colorspace settings
-            if image.colorspace_settings.name != ori_colorspace:
-                image.colorspace_settings.name = ori_colorspace
+                # Set the filepath to the image
+                image.filepath = path
+                if bpy.data.filepath != "":
+                    try:
+                        image.filepath = bpy.path.relpath(path)
+                    except:
+                        pass
+            finally:
+                if image.colorspace_settings.name != ori_colorspace:
+                    image.colorspace_settings.name = ori_colorspace
 
             # Remove temporarily unpacked image
             if unpacked_to_disk:
