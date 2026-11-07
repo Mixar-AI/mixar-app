@@ -107,14 +107,16 @@ def draw_sidebar(col, wm, geo, enabled):
              "wm.url_open", text, S.SECONDARY).url = GUIDE_URL
     S.sep(body, S.CAPTION_TO_ROWS)
     current = wm.mixar_mcp_dialog_app
+    # Every plate (the foot's too) shares the longest name's margin.
+    right = S.row_right(body, [app_configs.label(key) for key in app_configs.SIDEBAR])
     for key in app_configs.SIDEBAR:
         name = app_configs.label(key)  # a product name: never translated
-        S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=S.row_right(body, name)),
+        S.choice(S.row(body, S.ROW_H, left=S.LEFT_INSET, right=right),
                  OP_PICK_APP, name, S.PROVIDER_ROW, lit=(key == current), app=key)
 
     foot = S.fixed(col, S.FOOTER)
     foot.enabled = enabled
-    S.choice(S.row(foot, S.ROW_H, left=S.LEFT_INSET, right=S.ROW_RIGHT), OP_PICK_APP,
+    S.choice(S.row(foot, S.ROW_H, left=S.LEFT_INSET, right=right), OP_PICK_APP,
              iface_("Other app"), S.FOOTER_ROW, lit=(current == OTHER_APP),
              extra=S.FOOT_TERMINAL, app=OTHER_APP)
     S.sep(foot, S.FOOTER - S.ROW_H)

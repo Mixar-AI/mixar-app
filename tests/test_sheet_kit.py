@@ -40,7 +40,7 @@ class Layout:
     def label(self, text="", icon='NONE', translate=True):
         self.log.append(("label", text, icon))
 
-    def operator(self, idname, text="", icon='NONE', translate=True, emboss=True):
+    def operator(self, idname, text="", icon='NONE', translate=True, emboss=True, icon_value=0):
         props = SimpleNamespace()
         self.log.append(("op", idname, text, icon, props))
         return props
