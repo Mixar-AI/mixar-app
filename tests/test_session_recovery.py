@@ -660,35 +660,6 @@ def test_save_points_from_before_a_restore_are_dropped(rt, tmp_path, monkeypatch
     assert [p["path"] for p in jr.data["inherited_points"]] == [point]
 
 
-def test_restored_tabs_are_settled_idle_when_connected(rt, monkeypatch):
-    # QA 2026-10-31: a tab saved mid-turn came back BUSY and Continue was refused.
-    calls = []
-
-    class Session:
-        def set_run(self, scene, run_id, open_):
-            calls.append(("run", scene, open_))
-
-        def set_connected(self, scene):
-            calls.append(("idle", scene))
-
-        def set_disconnected(self, scene):
-            calls.append(("offline", scene))
-
-    class Client:
-        is_connected = True
-
-    import mixar.modules.space_mixie_chat.core.jsonrpc_client as jc
-    monkeypatch.setattr(jc, "get_jsonrpc_client", lambda: Client())
-    monkeypatch.setattr(rt, "_session_manager", lambda: Session())
-    monkeypatch.setattr(rt, "_tab_scenes", lambda: ["A", "B"])
-    rt._settle_restored_scenes()
-    assert calls == [("run", "A", False), ("idle", "A"), ("run", "B", False), ("idle", "B")]
-    Client.is_connected = False
-    calls.clear()
-    rt._settle_restored_scenes()
-    assert ("offline", "A") in calls and ("idle", "A") not in calls
-
-
 # -- the crashed session a restore came from ----------------------------------
 
 def _restored_journal(tmp_path, *, confirmed):
@@ -1069,7 +1040,6 @@ def _restore_flow(rt, tmp_path, monkeypatch, *, read, jobs_left=0):
     monkeypatch.setattr(ct, "_retitle", lambda path: None)
     monkeypatch.setattr(ct, "_keep_modified", lambda path: (lambda: None))
     monkeypatch.setattr(rt, "_report", lambda text: None)
-    monkeypatch.setattr(rt, "_settle_restored_scenes", lambda: None)
     monkeypatch.setattr(rt, "_adopt_jobs", lambda records: jobs_left)
     from types import SimpleNamespace
     monkeypatch.setattr(rt, "_session_manager", lambda: SimpleNamespace(is_connected=lambda s: False))

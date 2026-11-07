@@ -962,7 +962,8 @@ def register():
         name="Mixie Is Busy",
         description="True when the agent is processing a request (BUSY state)",
         default=False,
-        options={'SKIP_SAVE'},  # Never persist — always False on startup
+        # Saved with the scene (SKIP_SAVE is an operator-property option and
+        # does nothing here); file_handlers settles it on every file load.
     )
 
     bpy.types.Scene.mixie_chat_layout_epoch = IntProperty(
@@ -992,7 +993,8 @@ def register():
         description="Current agent session state for this scene",
         items=SESSION_STATE_ITEMS,
         default='OFFLINE',
-        options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
+        # Saved with the scene; file_handlers.settle_loaded_scenes sets every
+        # loaded tab IDLE (connected) or OFFLINE, so no saved turn shows BUSY.
     )
 
     # A backend run spans turns: the orchestrator may answer "in progress"
@@ -1005,13 +1007,13 @@ def register():
         name="Agent Run Open",
         description="True while the backend run behind this chat is still open",
         default=False,
-        options={'SKIP_SAVE'},  # Never persist — runs don't survive a file load
+        # Saved with the scene; runs don't survive a file load, so
+        # file_handlers.settle_loaded_scenes closes it (and the id) on load.
     )
     bpy.types.Scene.mixie_run_id = StringProperty(
         name="Agent Run ID",
         description="Identifier of the open backend run (empty when closed)",
         default="",
-        options={'SKIP_SAVE'},
     )
 
     # Chat mode captured when the currently running turn started —
@@ -1025,7 +1027,8 @@ def register():
         name="Active Turn Mode",
         description="Chat mode the currently running turn was started in",
         default="",
-        options={'SKIP_SAVE'},  # Never persist — turns don't survive a file load
+        # Saved with the scene; cleared by the load-time settle (set_state
+        # clears it whenever the turn leaves an active state).
     )
 
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(
