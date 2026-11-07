@@ -39,6 +39,8 @@ class MIXAR_BYOK_OT_pick(Operator):
         try:
             if self.provider and wm.byok_form_provider != self.provider:
                 wm.byok_form_provider = self.provider
+                from ...core import codex_models
+                codex_models.refresh_for_form(wm)
             if self.model:
                 wm.byok_form_model = self.model
         except TypeError:

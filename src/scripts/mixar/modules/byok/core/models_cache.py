@@ -28,7 +28,7 @@ from typing import Any, Dict, Optional
 from mixar.config.logging_config import get_logger
 
 from ...common.api import get_agent_service
-from . import models_storage, model_suggestions
+from . import codex_models, models_storage, model_suggestions
 
 logger = get_logger(__name__)
 
@@ -128,6 +128,7 @@ def clear() -> None:
         _etag = None
         _is_loading = False
     model_suggestions.clear()
+    codex_models.forget()  # a Codex model list still in flight must not land after logout
     with _persistence_lock:
         models_storage.delete()
 

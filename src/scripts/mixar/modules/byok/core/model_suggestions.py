@@ -60,6 +60,11 @@ _MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai'}
 _provider_cache: list[tuple[str, str, str]] = []
 _model_cache: dict[str, list[tuple[str, str, str]]] = {}
 
+# The model ids the signed-in ChatGPT account can run through Codex
+# (`codex_models`, the account's own listing); None while unknown. Codex shows
+# only these, since a model its plan lacks fails Save (mixar-backend#1809).
+_codex_account_models: frozenset | None = None
+
 # Full per-model records, flattened across providers and held in SERVER ORDER
 # (providers as the backend sorted them, models by admin `display_order`).
 #
@@ -178,12 +183,32 @@ def get_model_items(provider: str) -> list[tuple[str, str, str]]:
     single sentinel item. Always returns a non-empty list — Blender
     renders a blank/broken dropdown when items is [].
 
-    Codex shows the "openai" group (see _MODEL_SOURCE_PROVIDER).
+    Codex shows the "openai" group (see _MODEL_SOURCE_PROVIDER), narrowed to
+    the models the signed-in ChatGPT account can run once they are known.
     """
-    cached = _model_cache.get(_MODEL_SOURCE_PROVIDER.get(provider, provider))
-    if cached:
-        return cached
-    return [MODEL_EMPTY_SENTINEL]
+    return _listed_models(provider) or [MODEL_EMPTY_SENTINEL]
+
+
+def catalog_models(provider: str) -> list[tuple[str, str, str]]:
+    """The catalog's whole model group for *provider* (Codex: "openai"), never
+    narrowed: labels of a model the account's list hides, a saved key's model."""
+    return _model_cache.get(_MODEL_SOURCE_PROVIDER.get(provider, provider)) or []
+
+
+def codex_pick_storable(provider: str, model: str) -> bool:
+    """A Codex model the form keeps as its pick even when the account's list
+    hides it: any model the catalog's whole group names. The enum would refuse
+    it (or read the first chip), and the chip lit, the pick and the model sent
+    must agree."""
+    return is_codex(provider) and any(item[0] == model for item in catalog_models(provider))
+
+
+def _listed_models(provider: str) -> list[tuple[str, str, str]]:
+    cached = catalog_models(provider)
+    if is_codex(provider) and _codex_account_models is not None:
+        # A list sharing no id with the catalog says nothing about it: unknown.
+        return [item for item in cached if item[0] in _codex_account_models] or cached
+    return cached
 
 
 def is_valid_model(provider: str, model: str) -> bool:
@@ -191,12 +216,23 @@ def is_valid_model(provider: str, model: str) -> bool:
 
     The ``NONE`` placeholder is intentionally never valid.  Save paths use
     this to reject a stale EnumProperty value left behind by a provider
-    switch or catalog refresh.
+    switch or catalog refresh, and a Codex model the account cannot run.
     """
     if not provider or not model or model == "NONE":
         return False
-    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
-    return any(item[0] == model for item in (_model_cache.get(source) or ()))
+    return any(item[0] == model for item in _listed_models(provider))
+
+
+def set_codex_account_models(models) -> None:
+    """The model ids the Codex sign-in can run (`codex_models`); None = unknown
+    (offline, no sign-in), which shows the whole "openai" group again."""
+    global _codex_account_models
+    _codex_account_models = frozenset(models) if models is not None else None
+
+
+def codex_models_hidden() -> bool:
+    """True when the account's list hides any catalog model from Codex."""
+    return len(_listed_models(CODEX_PROVIDER_ID)) < len(catalog_models(CODEX_PROVIDER_ID))
 
 
 def get_platform_models() -> list[dict]:
@@ -303,7 +339,7 @@ def clear() -> None:
     """Drop all cached data. Called on logout — resets the populated
     flag so the next login triggers a fresh fetch.
     """
-    global _populated_once
+    global _populated_once, _codex_account_models
     _retire_current()
     _provider_cache.clear()
     _model_cache.clear()
@@ -311,6 +347,7 @@ def clear() -> None:
     _short_providers.clear()
     _short_models.clear()
     _provider_order.clear()
+    _codex_account_models = None
     _populated_once = False
 
 

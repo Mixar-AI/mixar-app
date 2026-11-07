@@ -28,7 +28,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 from mixar.modules.common.i18n import n_
 
-from ...core import byok_client, credential_state, model_suggestions, models_cache
+from ...core import byok_client, codex_models, credential_state, model_suggestions, models_cache
 from ...core import key_prompt, preference_state, save_events
 from ...core.local_switch import (
     deregister_local_if_switched_away as _deregister_local_if_switched_away,
@@ -143,20 +143,13 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             elif model_suggestions.is_local(saved_provider):
                 pass  # prefilled below by byok_local_ops.prepare_dialog
             elif saved_model:
-                try:
-                    wm.byok_form_model = saved_model
-                except TypeError:
-                    logger.debug(
-                        "Could not prefill model %s — not in cache for this provider",
-                        saved_model,
-                    )
+                byok_dialog_support.prefill_model(wm, saved_provider, saved_model)
         # Opened from the chat's key-missing card: the refusal's provider and
         # model win over the mirror, and the form draws key-only with the
         # credential field focused (`core/key_prompt`).
         _prefill_from_prompt(wm, key_prompt.take())
-        # If the provider+model cache is empty, kick off a fetch so the
-        # dropdown becomes populated by the time the user picks. (Belt-
-        # and-suspenders — the auth login hook normally fires this already.)
+        # An empty provider+model cache: fetch it so the dropdown is filled by the
+        # time the user picks (the auth login hook normally fires this already).
         if not model_suggestions.is_loaded():
             models_cache.refresh()
         # Local provider: refresh the managed-model item cache and prefill
@@ -167,6 +160,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             byok_local_ops.prepare_dialog(wm)
         except Exception as e:
             logger.debug("Local provider dialog prep failed: %s", e)
+        codex_models.refresh_for_form(wm)  # Codex chips: only models the plan runs
         # A props dialog (not invoke_popup) redraws continuously, so the async
         # SAVING → IDLE / ERROR flips show without user input. The native
         # modal dialog opens it in the main window, centred, with the Agent
