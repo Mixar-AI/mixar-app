@@ -262,6 +262,9 @@ void agent_bubble_references_draw(const bContext *C,
       const float cy = BLI_rctf_cent_y(&image);
       const rctf glyph = {image.xmin + 10 * u, image.xmin + 38 * u, cy - 14 * u, cy + 14 * u};
       const bool video = file && item.kind == "video";
+      if (video) {
+        ED_moodboard_attachment_target(C, region, path.c_str(), glyph, g.view);
+      }
       const AgentIcon icon = !file                 ? AGENT_ICON_FOLDER :
                                video                 ? AGENT_ICON_VIDEO :
                                item.kind == "image"  ? AGENT_ICON_IMAGE :

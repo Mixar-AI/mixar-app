@@ -223,6 +223,7 @@ class McpClient:
             if status != 200 or not isinstance(body, dict) or "result" not in body:
                 raise LinkError(f"The engine did not accept the connection (HTTP {status}).")
             self.session = headers.get("mcp-session-id", "")
+            self.instructions = str(body["result"].get("instructions") or "") if isinstance(body["result"], dict) else ""
             self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, timeout)
         except LinkError as err:
             err.timed_out = False  # the handshake: no tool call was sent, so nothing ran
@@ -429,6 +430,8 @@ def link_status(engine: str | None = None) -> dict:
     out["connected"] = public(info)
     if out.get("success") and isinstance(out.get("data"), dict):  # the project's assets (engine_assets)
         out["data"]["tools"] = engine_assets.tools_with_assets(out["data"].get("tools"))
+        if info.get("transport") == UNREAL_TRANSPORT:  # Epic's toolsets too (engine_mcp)
+            out["data"]["editor_toolsets"] = True
     return out
 
 

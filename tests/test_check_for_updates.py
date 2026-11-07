@@ -260,3 +260,9 @@ def test_a_new_version_gets_its_own_stamp(monkeypatch, tmp_path):
 
     assert uc.get_announced_stage("3.9.0") == ""
     assert uc.get_announced_stage("4.0.0") == "available"
+
+
+def test_non_string_manifest_version_is_rejected_without_type_error():
+    from mixar.modules.common.updates.core.update_checker import parse_update_response
+    for version in (123, ['9.9.9'], {'version': '9.9.9'}):
+        assert parse_update_response({'update_available': True, 'latest_version': version}) is None

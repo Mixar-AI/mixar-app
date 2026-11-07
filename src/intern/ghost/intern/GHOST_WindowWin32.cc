@@ -131,12 +131,19 @@ GHOST_WindowWin32::GHOST_WindowWin32(GHOST_SystemWin32 *system,
   h_DC_ = ::GetDC(h_wnd_);
 
   if (!setDrawingContextType(type)) {
-    if (type == GHOST_kDrawingContextTypeOpenGL) {
+    /* MIXAR: only the main window explains a failed GL context. A child window
+     * (the Agent Bubble) failing must not raise a modal "unsupported GPU" box
+     * while the main window runs; its caller reports the failure instead. */
+    if (type == GHOST_kDrawingContextTypeOpenGL && parent_window == nullptr) {
       const char *title = "Mixar - Unsupported Graphics Card Configuration";
       const char *text = "";
 #if defined(WIN32)
-      if (strncmp(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "ARM", 3) == 0 &&
-          strstr(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "Qualcomm") != NULL)
+      /* MIXAR: the variable can be missing (a launcher with a trimmed
+       * environment); strncmp on its null value crashed this error path
+       * (prod 4.4.0, AMD, opening the Agent Bubble window). */
+      const char *processor = blender::BLI_getenv("PROCESSOR_IDENTIFIER");
+      if (processor != nullptr && strncmp(processor, "ARM", 3) == 0 &&
+          strstr(processor, "Qualcomm") != nullptr)
       {
         text =
             "A driver with support for OpenGL 4.3 or higher is required.\n\n"

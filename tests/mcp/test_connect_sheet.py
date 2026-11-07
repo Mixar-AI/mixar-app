@@ -48,7 +48,7 @@ class Layout:
     def label(self, text="", icon='NONE', translate=True):
         self._log.append({"type": "label", "text": text, "icon": icon, "enabled": self._live()})
 
-    def operator(self, idname, text="", icon='NONE', translate=True, emboss=True):
+    def operator(self, idname, text="", icon='NONE', translate=True, emboss=True, icon_value=0):
         props = SimpleNamespace()
         self._log.append({"type": "op", "op": idname, "text": text, "icon": icon,
                           "enabled": self._live(), "props": props})

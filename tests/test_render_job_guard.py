@@ -104,6 +104,41 @@ def _render(monkeypatch, kind):
     return gate
 
 
+def _jobs(monkeypatch, *running, owner=None):
+    """The real coordinator, with only the Blender job types in ``running``
+    alive (``owner``: an agent reservation)."""
+    import importlib
+    from unittest.mock import MagicMock
+
+    gate = importlib.import_module("mixar.modules.space_mixie_chat.core.render_gate")
+    fake = MagicMock()
+    fake.app.is_job_running.side_effect = lambda job: job in running
+    monkeypatch.setattr(gate.render_slot, "bpy", fake)
+    monkeypatch.setattr(gate.render_slot, "_active",
+                        owner and gate.render_slot.Reservation(owner))
+    return gate
+
+
+def test_a_bake_or_compositor_job_refuses_mutating_scripts(monkeypatch):
+    """Prod 4.4.0: a material append during the agent's own OBJECT_BAKE crashed
+    in graph_id_tag_update; bake and compositor jobs gate like renders."""
+    gate = _jobs(monkeypatch, "OBJECT_BAKE")
+    assert gate.refusal("execute_bpy_script") == {
+        "success": False,
+        "error": ("Blender is running a bake; scene scripts are refused "
+                  "until it finishes or is cancelled. Nothing was executed."),
+        "error_type": "render_in_progress",
+        "render_kind": "bake",
+    }
+    assert gate.refusal("list_scene_meshes") is None
+    gate = _jobs(monkeypatch, "COMPOSITE")
+    assert gate.refusal("execute_bpy_script")["render_kind"] == "composite"
+    gate = _jobs(monkeypatch, "RENDER", "OBJECT_BAKE", owner="agent-preview:x")
+    assert gate.refusal("execute_bpy_script")["render_kind"] == "preview"
+    gate = _jobs(monkeypatch)
+    assert gate.refusal("execute_bpy_script") is None
+
+
 def test_a_script_is_refused_at_once_while_a_render_job_is_alive(executor, monkeypatch):
     """Answered on the first tick with a typed refusal; nothing executes, and
     the lane is not parked, so the queue keeps draining."""

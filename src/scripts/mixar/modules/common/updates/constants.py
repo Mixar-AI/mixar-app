@@ -114,6 +114,14 @@ DOWNLOAD_PROGRESS_INTERVAL_S = 0.5
 # after the checksum matched, so a staged installer is always installable.
 PARTIAL_SUFFIX = ".part"
 
+# Staging failure reasons (``core/failure.py``) a fresh download can fix;
+# only these get a Retry button. A checksum or signature mismatch, a full
+# disk or a read-only one fails the same way again.
+RETRYABLE_FAILURE_REASONS = frozenset({
+    "http_error", "network_error", "timeout", "truncated_download",
+    "permission_denied", "filesystem_error", "unexpected_error",
+})
+
 # Extension per backend ``installer_type``.  An unknown type is refused
 # rather than saved as ``.bin`` — Windows will not run an installer whose
 # extension it does not recognise.

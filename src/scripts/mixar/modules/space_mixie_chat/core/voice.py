@@ -106,6 +106,7 @@ def start(context, field_token="", chat_target=False):
     import bpy
     from mixar.config.config import get_server_url
     from ...auth.core.auth import get_access_token
+    from ...auth.core.guest import is_guest
     from .voice_input.transport import Transport
     from . import scribble
     if not available():
@@ -116,10 +117,11 @@ def start(context, field_token="", chat_target=False):
     if scribble.is_busy() or scribble.is_canvas_open(context.window_manager):
         _toast('warning', rpt_('Finish handwriting before starting voice input.'))
         return 'unavailable'
-    token = get_access_token()
+    # Guests have valid tokens, but the dictation relay requires sign-in.
+    token = None if is_guest() else get_access_token()
     if not token:
         _toast('warning', rpt_('Sign in to use voice input.'))
-        return 'unavailable'
+        return 'login_required'
     if not field_token:
         scribble.release_composer()
     sid = str(uuid4())

@@ -20,6 +20,11 @@ LOAD_AUTOSHOW_RETRY_LIMIT = 40
 autoshow_attempts = 0
 load_autoshow_attempts = 0
 autoshow_start_minimised = False
+# Latched when the bubble window could not be created (no GL context for it,
+# e.g. an AMD integrated GPU on Windows): autoshow and the file-load retry
+# stop instead of re-failing. The next file load clears it (one attempt per
+# load); an explicit open still tries and clears it on success.
+window_unavailable = False
 
 # User-dismissal tracking
 user_explicitly_closed = False

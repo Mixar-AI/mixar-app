@@ -39,7 +39,8 @@ RENDER_RETRY_S = 0.5
 
 
 def _render_running() -> bool:
-    """A render on Blender's job thread (an agent preview, a scene render, F12)."""
+    """A render, bake or compositor job on Blender's job thread (an agent
+    preview, a scene render, F12, an ``INVOKE_DEFAULT`` bake)."""
     try:
         from mixar.modules.common.render_coordinator import core as render_slot  # noqa: PLC0415
         busy = render_slot.busy()

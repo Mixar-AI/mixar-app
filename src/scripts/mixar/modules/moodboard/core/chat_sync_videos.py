@@ -91,7 +91,7 @@ def _stale_moodboard_chips(scene, selected_paths: set, registry) -> list:
     return stale
 
 
-def sync_selected_videos(scene) -> tuple[int, int]:
+def sync_selected_videos(scene, *, animate=False) -> tuple[int, int]:
     """Mirror the board's video selection onto the context-file chips.
 
     Returns ``(attached, detached)``: how many chips are NEW (an already
@@ -108,6 +108,7 @@ def sync_selected_videos(scene) -> tuple[int, int]:
         _logger.debug("context files unavailable: %s", exc)
         return 0, 0
     attached, selected_paths = 0, set()
+    added = {}
     for item in selected_video_items(scene):
         try:
             described = describe_moodboard_media(item)
@@ -124,6 +125,7 @@ def sync_selected_videos(scene) -> tuple[int, int]:
                          result.get("error"), result.get("error_args") or "")
         elif not result.get("already"):
             attached += 1
+            added[item.image.name] = result["file_id"]
     detached = 0
     try:
         stale = _stale_moodboard_chips(scene, selected_paths, get_registry())
@@ -133,4 +135,7 @@ def sync_selected_videos(scene) -> tuple[int, int]:
     for file_id in stale:
         if detach_file(scene, file_id):
             detached += 1
+    if animate and added:
+        from .attachment_motion import animate_attachments
+        animate_attachments(scene, list(added), context_file_ids=added)
     return attached, detached

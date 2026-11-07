@@ -96,6 +96,8 @@ class MIXAR_OT_open_mixie(Operator):
             bpy.ops.mixar.agent_bubble_open_window()
         except Exception as exc:  # noqa: BLE001 — still claim the key
             _logger.warning("open_mixie: could not open the island: %s", exc)
+            # A status-bar report: the nested op's own report is swallowed.
+            self.report({'WARNING'}, "Failed to open Agent Bubble window")
         if not _tabs_locked(wm):
             try:
                 wm.mixar_bubble_tab = 'AGENT'

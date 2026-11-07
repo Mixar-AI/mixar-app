@@ -33,7 +33,6 @@ if "urllib3.util.retry" not in sys.modules:
 
 import bpy
 
-from mixar.modules.byok.constants import BYOK_API_KEY_MAX_LENGTH
 from mixar.modules.byok.core import model_suggestions
 from mixar.modules.byok.ui.operators import byok_ops
 from mixar.modules.byok.ui.properties import byok_props
@@ -49,16 +48,17 @@ def test_byok_api_key_property_allows_long_provider_keys():
     api_key_calls = [
         call.kwargs
         for call in byok_props.StringProperty.call_args_list
-        if call.kwargs.get("name") == "API Key"
+        if call.kwargs.get("name") in {"API Key", "API Key (optional)"}
     ]
-    assert api_key_calls
-    assert api_key_calls[-1]["maxlen"] == BYOK_API_KEY_MAX_LENGTH
-    assert BYOK_API_KEY_MAX_LENGTH == 256
+    assert len(api_key_calls) == 2
+    # No maxlen: RNA then stores the string dynamically. Any cap silently
+    # truncates a pasted key (#1809: a 617-char key was cut to 256).
+    assert all(call.get("maxlen", 0) == 0 for call in api_key_calls)
 
 
 def test_byok_save_passes_long_api_key_without_truncation(monkeypatch):
     saved = {}
-    long_key = "sk-proj-" + ("a" * 180) + "_tail"
+    long_key = "sk-proj-" + ("a" * 600) + "_tail"
     wm = SimpleNamespace(
         byok_dialog_state="IDLE",
         byok_form_provider="openai",

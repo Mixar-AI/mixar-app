@@ -525,14 +525,14 @@ def _end_refine_draft(scene):
 def _execute_send_message():
     """Execute send_message (called from timer to avoid calling bpy.ops in property update).
 
-    Enter is never swallowed silently: when the send predicate refuses (a turn
-    is running and no run is open to join), the draft stays in the composer
-    and the reason is reported.
+    Enter asks the Send operator's own predicate (``can_compose``): a busy
+    turn holds the message (core/held_sends.py), never refuses it. When the
+    predicate does refuse, the draft stays and the reason is reported.
     """
     try:
-        from ...core.composer_send import can_send
+        from ...core.composer_send import can_compose
         from ..operators.auth_ops import guest_seat_pending
-        allowed, reason = can_send(bpy.context.scene)
+        allowed, reason = can_compose(bpy.context.scene)
         # Signed out while a refused guest session is retried: the operator
         # says why in the chat (its poll admits the same case).
         if not allowed and not guest_seat_pending():
@@ -962,7 +962,8 @@ def register():
         name="Mixie Is Busy",
         description="True when the agent is processing a request (BUSY state)",
         default=False,
-        options={'SKIP_SAVE'},  # Never persist — always False on startup
+        # Saved with the scene (SKIP_SAVE is an operator-property option and
+        # does nothing here); file_handlers settles it on every file load.
     )
 
     bpy.types.Scene.mixie_chat_layout_epoch = IntProperty(
@@ -992,7 +993,8 @@ def register():
         description="Current agent session state for this scene",
         items=SESSION_STATE_ITEMS,
         default='OFFLINE',
-        options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
+        # Saved with the scene; file_handlers.settle_loaded_scenes sets every
+        # loaded tab IDLE (connected) or OFFLINE, so no saved turn shows BUSY.
     )
 
     # A backend run spans turns: the orchestrator may answer "in progress"
@@ -1005,13 +1007,13 @@ def register():
         name="Agent Run Open",
         description="True while the backend run behind this chat is still open",
         default=False,
-        options={'SKIP_SAVE'},  # Never persist — runs don't survive a file load
+        # Saved with the scene; runs don't survive a file load, so
+        # file_handlers.settle_loaded_scenes closes it (and the id) on load.
     )
     bpy.types.Scene.mixie_run_id = StringProperty(
         name="Agent Run ID",
         description="Identifier of the open backend run (empty when closed)",
         default="",
-        options={'SKIP_SAVE'},
     )
 
     # Chat mode captured when the currently running turn started —
@@ -1025,7 +1027,8 @@ def register():
         name="Active Turn Mode",
         description="Chat mode the currently running turn was started in",
         default="",
-        options={'SKIP_SAVE'},  # Never persist — turns don't survive a file load
+        # Saved with the scene; cleared by the load-time settle (set_state
+        # clears it whenever the turn leaves an active state).
     )
 
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(

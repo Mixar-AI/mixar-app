@@ -63,6 +63,23 @@ def test_receipt_is_immediate_idempotent_and_uses_scene_quality(jobs):
     assert jobs.bpy.context.preferences.view.render_display_type == 'WINDOW'
 
 
+@pytest.mark.parametrize('job, kind', [('OBJECT_BAKE', 'bake'), ('COMPOSITE', 'composite')])
+def test_busy_reply_names_a_bake_so_the_backend_can_wait_it_out(jobs, job, kind):
+    """The agent's own bake must not read as "another render" to the backend."""
+    jobs.bpy.app.is_job_running.side_effect = lambda name: name == job
+    result = jobs.start(jobs.bpy.context, KEY)
+    assert result == dict(job_id=KEY, status='busy', success=False,
+                          error='another_render_running', render_kind=kind)
+    jobs.bpy.ops.render.render.assert_not_called()
+
+
+def test_busy_reply_names_the_running_render(jobs):
+    jobs.start(jobs.bpy.context, KEY, kind='video', frame_start=1, frame_end=9)
+    jobs.bpy.app.is_job_running.return_value = True
+    busy = jobs.start(jobs.bpy.context, OTHER)
+    assert (busy['error'], busy['render_kind']) == ('another_render_running', 'scene_video')
+
+
 def test_completion_waits_for_native_teardown_and_delivers_once(jobs):
     jobs.start(jobs.bpy.context, KEY)
     job = jobs._job

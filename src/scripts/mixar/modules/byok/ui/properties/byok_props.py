@@ -20,7 +20,6 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 
 from ...constants import (
-    BYOK_API_KEY_MAX_LENGTH,
     DIALOG_STATE_ITEMS,
     LOCAL_MODE_ITEMS,
     OPENROUTER_DEFAULT_MODEL,
@@ -238,7 +237,6 @@ def register():
             "Your API key is stored encrypted and used only for Mixar agent requests. "
             "After saving, only a masked preview is shown."
         ),
-        maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
         subtype='PASSWORD',
         options={'SKIP_SAVE'},
@@ -298,7 +296,6 @@ def register():
     WM.byok_form_local_custom_key = StringProperty(
         name="API Key (optional)",
         description="Only if your local server requires one — most do not",
-        maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
         subtype='PASSWORD',
         options={'SKIP_SAVE'},
