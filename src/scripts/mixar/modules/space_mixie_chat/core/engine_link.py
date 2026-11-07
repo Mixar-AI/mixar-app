@@ -429,7 +429,7 @@ def link_status(engine: str | None = None) -> dict:
     out["adapters"] = [public(i) for i in found]
     out["connected"] = public(info)
     if out.get("success") and isinstance(out.get("data"), dict):  # the project's assets (engine_assets)
-        out["data"]["tools"] = engine_assets.tools_with_assets(out["data"].get("tools"))
+        engine_assets.add_assets_tool(out["data"])
         if info.get("transport") == UNREAL_TRANSPORT:  # Epic's toolsets too (engine_mcp)
             out["data"]["editor_toolsets"] = True
     return out

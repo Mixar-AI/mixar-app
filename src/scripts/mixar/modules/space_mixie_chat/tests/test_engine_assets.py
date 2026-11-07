@@ -271,7 +271,14 @@ def test_routing_keeps_mixar_packages_and_godot_on_mixar_link():
     assert not ea.handles({"engine": "godot"}, "place", {"scene": "res://Fab/tree.glb"})
     assert ea.adapter_args("place", {"scene": "/Game/Mixar/Crate", "scale": 2, "snap_to_ground": True}) == \
         {"scene": "/Game/Mixar/Crate"}
-    assert "assets" in el.CALLABLE_TOOLS and ea.tools_with_assets(["status"]) == ["status", "assets"]
+    assert "assets" in el.CALLABLE_TOOLS
+
+
+def test_assets_joins_a_listed_tool_list_and_never_invents_one():
+    unreal, godot = {"tools": ["status", "place"]}, {"engine": "godot"}
+    ea.add_assets_tool(unreal)
+    ea.add_assets_tool(godot)
+    assert unreal["tools"] == ["status", "place", "assets"] and "tools" not in godot
 
 
 def test_link_call_routes_through_engine_assets(monkeypatch):
@@ -288,12 +295,21 @@ def test_an_epic_toolset_that_is_off_says_to_reconnect():
 
 
 class FakeGodot:
+    """Mixar Link 0.4.0's list_files: ``dir`` loses one trailing "/", must
+    still start with res://, and lists everything under it."""
+
     def __init__(self, files):
-        self.files = files
+        self.files, self.dirs = files, []
 
     def call(self, name, arguments, timeout):
-        assert name == "list_files" and arguments["dir"] == "res://"
-        data = {"dir": "res://", "files": [{"path": p, "bytes": -1} for p in self.files], "truncated": False}
+        assert name == "list_files"
+        root = arguments["dir"][:-1] if arguments["dir"].endswith("/") else arguments["dir"]
+        self.dirs.append(arguments["dir"])
+        if not root.startswith("res://"):
+            return {"isError": True, "content": [{"type": "text", "text": "List a res:// folder."}]}
+        under = root if root.endswith("/") else root + "/"  # String.path_join
+        files = [{"path": p, "bytes": -1} for p in self.files if p.startswith(under)]
+        data = {"dir": root, "files": files, "truncated": False}
         return {"structuredContent": data}
 
 
@@ -304,3 +320,19 @@ def test_godot_searches_scenes_and_models_outside_its_own_addon():
     assert out["data"]["assets"] == [{"path": "res://Fab/Rocks/rock_big.glb", "name": "rock_big", "kind": "model"}]
     overview = _call(client, "assets", {}, info={"engine": "godot"})["data"]
     assert overview["folders"] == ["res://Fab", "res://addons", "res://levels"] and overview["total"] == 3
+    assert client.dirs == ["res:///", "res:///"]
+
+
+@pytest.mark.parametrize("folder", ["Fab", "res://Fab", "res://Fab/", "/Fab/"])
+def test_a_godot_subfolder_search_lists_only_that_folder(folder):
+    client = FakeGodot(["res://Fab/Rocks/rock_big.glb", "res://levels/Main.tscn"])
+    out = _call(client, "assets", {"folder": folder}, info={"engine": "godot"})["data"]
+    assert client.dirs == ["res://Fab"] and out["folder"] == "res://Fab" and out["folders"] == ["res://Fab/Rocks"]
+    assert [a["path"] for a in out["assets"]] == ["res://Fab/Rocks/rock_big.glb"]
+
+
+@pytest.mark.parametrize("folder", ["", "/", "res://", "res:///"])
+def test_the_godot_root_is_sent_so_mixar_link_keeps_it(folder):
+    client = FakeGodot(["res://levels/Main.tscn"])
+    out = _call(client, "assets", {"folder": folder}, info={"engine": "godot"})
+    assert out["success"] and out["data"]["folder"] == "res://" and client.dirs == ["res:///"]
