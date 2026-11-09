@@ -485,8 +485,6 @@ CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 # Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
 
-# Timeout threshold for script execution warnings (seconds)
-SCRIPT_TIMEOUT_THRESHOLD = 30.0
 # Longest a render_viewport(quality="final") tool call is held open waiting for
 # its native preview job (core/preview_deferral.py); the job itself keeps going.
 PREVIEW_DEFERRED_MAX_S = 240.0
@@ -528,6 +526,15 @@ AGENT_UNDO_NEUTRAL_TOOLS = frozenset({
     "list_scene_meshes", "list_rules", "list_moodboard_images",
     "get_paint_layer_stack", "get_paint_channels", "inspect_moodboard_image",
 })
+
+# The agent's verification render (``render_viewport``: the final render and
+# the inspection preview). It renders a snapshot in a background worker, or a
+# private scene copy whose temporary settings and rig are undone on every exit,
+# so the user's document is unchanged: no undo checkpoint, no turn mark, and no
+# before/after scene diff (two full walks of every object and its animation on
+# the main thread, which reported the in-process rig's ``_rv_*`` objects as
+# created). NOT render_gate.READ_ONLY_TOOLS: the native fallback adds a scene.
+AGENT_RENDER_TOOLS = frozenset({"render_viewport"})
 
 # Per-script checkpoints are capped per turn. Blender keeps U.undosteps
 # (32 by default) memfile steps, so an uncapped long turn would evict the

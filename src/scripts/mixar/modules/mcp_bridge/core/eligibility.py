@@ -40,7 +40,7 @@ def invalidate():
 def refresh(context):
     global _refreshing, _identity, _generation, _deadline, _next_attempt, _reason
     identity = (context.get("instance_id"), context.get("backend_url"), context.get("connected"),
-                context.get("signed_in"))
+                context.get("signed_in"), context.get("ui_control"))
     with _lock:
         if identity != _identity:
             _identity, _deadline, _next_attempt = identity, 0.0, 0.0

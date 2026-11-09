@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Topbar update badge: state -> colour and state -> label.
+"""Topbar update badge: state -> visibility, colour and label.
 
-Red (``row.alert``) reads as an error, so it is reserved for a forced
-update the user has not started on. A download in progress, a staged
+The badge is hidden while the installer stages in the background
+(DOWNLOADING, including the signature check after the last byte) and
+appears as "Restart to Update" once READY, the way Chrome / VS Code /
+Slack download silently. Red (``row.alert``) reads as an error, so it is
+reserved for a forced update the user has not started on; a staged
 installer and an install under way draw as the regular theme button.
-After the last byte arrives the worker still runs the signature check
-in DOWNLOADING, so the badge says "Verifying…" rather than sitting on
-"Downloading 100%".
 """
 
 import ast
@@ -117,28 +117,66 @@ def test_forced_update_is_red_only_while_nothing_is_in_progress(install_state, f
     assert badge_alert(state, info) is FORCED_ALERT[install_state]
 
 
-def test_forced_download_at_100_percent_is_not_red():
-    """The Slack report: a forced update's badge sat on red "Downloading 100%"."""
+def _drawn_label(layout):
+    """The badge text *layout* received, or None when nothing was drawn."""
+    if not layout.row.called:
+        return None
+    return layout.row.return_value.operator.call_args.kwargs["text"]
+
+
+# Mid-download, then every byte in and the worker still verifying.
+STAGING_PROGRESS = [(0, 0), (0, 400 * MB), (200 * MB, 400 * MB), (400 * MB, 400 * MB)]
+
+
+@pytest.mark.parametrize("flag", ["", "force_update", "unsupported"])
+@pytest.mark.parametrize("transferred,total", STAGING_PROGRESS)
+def test_badge_is_hidden_while_the_installer_stages(flag, transferred, total):
     state = get_update_state()
-    info = _info(force_update=True)
+    state.set_available(_info(**({flag: True} if flag else {})))
+    state.set_downloading()
+    state.set_download_progress(transferred, total)
+
+    layout = MagicMock()
+    draw_update_badge(layout)
+    layout.row.assert_not_called()
+    layout.operator.assert_not_called()
+
+
+@pytest.mark.parametrize("flag", ["", "force_update", "unsupported"])
+def test_badge_appears_as_restart_to_update_once_ready(flag):
+    state = get_update_state()
+    info = _info(**({flag: True} if flag else {}))
     state.set_available(info)
     state.set_downloading()
     state.set_download_progress(400 * MB, 400 * MB)
-    assert badge_alert(state, info) is False
-    assert badge_label(state) == "Verifying…"
+    layout = MagicMock()
+    draw_update_badge(layout)
+    assert _drawn_label(layout) is None
+
+    state.set_ready("/tmp/Mixar-4.1.3.dmg", True)
+    layout = MagicMock()
+    draw_update_badge(layout)
+    row = layout.row.return_value
+    assert _drawn_label(layout) == "Restart to Update"
+    assert row.operator.call_args.args == ("mixar.restart_to_update",)
+    assert row.alert is False  # under way: never the error red, forced or not
 
 
-def test_label_moves_from_percentage_to_verifying_to_restart():
+@pytest.mark.parametrize("install_state,label", [
+    (InstallState.IDLE, "Update Available"),
+    (InstallState.FAILED, "Update Available"),
+    (InstallState.UNSUPPORTED, "Update Available"),
+    (InstallState.READY, "Restart to Update"),
+    (InstallState.INSTALLING, "Updating…"),
+])
+def test_states_the_user_acts_on_keep_their_badge(install_state, label):
     state = get_update_state()
     state.set_available(_info())
-    state.set_downloading()
-    assert badge_label(state) == "Downloading…"
-    state.set_download_progress(399 * MB, 400 * MB)
-    assert badge_label(state) == "Downloading 99%"  # floored: never 100% early
-    state.set_download_progress(400 * MB, 400 * MB)
-    assert badge_label(state) == "Verifying…"
-    state.set_ready("/tmp/Mixar-4.1.3.dmg", True)
-    assert badge_label(state) == "Restart to Update"
+    _enter(state, install_state)
+    layout = MagicMock()
+    draw_update_badge(layout)
+    assert _drawn_label(layout) == label
+    assert badge_label(state) == label
 
 
 def test_downloading_toast_body_says_verifying_once_bytes_are_in():
@@ -155,14 +193,13 @@ def test_draw_update_badge_applies_badge_alert():
     state = get_update_state()
     info = _info(force_update=True)
     state.set_available(info)
-    state.set_downloading()
+    state.set_ready("/tmp/Mixar-4.1.3.dmg", True)
 
     layout = MagicMock()
     draw_update_badge(layout)
     row = layout.row.return_value
     assert row.alert is False
     row.operator.assert_called_once()
-    assert row.operator.call_args.kwargs["text"] == "Downloading…"
 
     state.set_install_failed("Download failed")
     layout = MagicMock()
@@ -171,7 +208,8 @@ def test_draw_update_badge_applies_badge_alert():
 
 
 def test_already_staged_installer_reports_full_progress_before_verifying():
-    """Skipping the download must still read "Verifying…", not "Downloading…"."""
+    """Skipping the download must read "Verifying download…" in the toast a
+    user waiting on Restart & Update sees, not "Starting download…"."""
     tree = ast.parse((UPDATES / "core" / "install_flow.py").read_text())
     worker = next(
         node for node in ast.walk(tree)
@@ -185,7 +223,10 @@ def test_already_staged_installer_reports_full_progress_before_verifying():
     assert lines["set_download_progress"] < lines["verify_installer"]
 
 
-@pytest.mark.parametrize("install_state", list(InstallState))
+DRAWN_STATES = [s for s in InstallState if s is not InstallState.DOWNLOADING]
+
+
+@pytest.mark.parametrize("install_state", DRAWN_STATES)
 def test_badge_invokes_restart_only_when_installer_is_ready(install_state):
     state = get_update_state()
     state.set_available(_info())
@@ -207,3 +248,74 @@ def test_badge_does_not_draw_without_update_info():
     layout = MagicMock()
     draw_update_badge(layout)
     layout.row.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# The badge appears without user input when staging ends
+#
+# Nothing redraws the topbar every second during a background download any
+# more, so the hand-off back to the main thread at the end of _worker must
+# tag it — or "Restart to Update" would wait for the mouse to move.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("toast_on_screen", [True, False])
+@pytest.mark.parametrize("outcome,label", [
+    ("ready", "Restart to Update"),
+    ("failed", "Update Available"),
+    ("cancelled", "Update Available"),
+])
+def test_end_of_staging_redraws_the_topbar(monkeypatch, tmp_path, outcome, label,
+                                           toast_on_screen):
+    from types import SimpleNamespace
+
+    from mixar.modules.common.notifications.store import get_notification_store
+    from mixar.modules.common.updates.core import install_flow, update_checker
+
+    state = get_update_state()
+    info = _info()
+    state.set_available(info)
+    state.set_downloading()
+    get_notification_store().clear_all()
+    if toast_on_screen:
+        toasts.push_update_available_toast(info)
+
+    timers = []
+    monkeypatch.setattr(
+        install_flow.bpy.app.timers, "register", lambda fn, **_kw: timers.append(fn))
+    redraws = []
+    monkeypatch.setattr(toasts, "tag_topbar_redraw", lambda: redraws.append(1))
+    # Already announced: the READY toast must not be what redraws the badge.
+    monkeypatch.setattr(update_checker, "get_announced_stage", lambda _v: "ready")
+    monkeypatch.setattr(install_flow, "capture_download_outcome", lambda *_a: None)
+
+    path = tmp_path / "Mixar-4.1.3.dmg"
+    monkeypatch.setattr(install_flow, "_prepare_staging", lambda *_a: str(path))
+
+    def fake_download(_url, dest, _sha, on_progress, should_cancel):
+        if outcome == "cancelled":
+            raise install_flow.download.UpdateDownloadCancelled()
+        if outcome == "failed":
+            raise install_flow.download.UpdateDownloadError("boom")
+        Path(dest).write_bytes(b"x")
+        on_progress(1, 1)
+
+    monkeypatch.setattr(install_flow.download, "download_installer", fake_download)
+    monkeypatch.setattr(
+        install_flow.verify, "verify_installer",
+        lambda *_a, **_kw: (install_flow.verify.VERIFIED, "", ""))
+
+    install_flow._worker(info, SimpleNamespace(extension=".dmg", location=None), "")
+
+    # The worker thread never touches bpy: the state has moved, but the
+    # topbar only learns of it from the follow-up queued for the main thread.
+    assert redraws == []
+    assert timers, "no main-thread follow-up scheduled"
+
+    for fn in timers:
+        fn()
+
+    assert redraws, "staging ended without tagging the topbar"
+    layout = MagicMock()
+    draw_update_badge(layout)
+    assert _drawn_label(layout) == label

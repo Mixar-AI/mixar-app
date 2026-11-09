@@ -96,6 +96,10 @@ def test_report_log_lines_lose_their_content(line, expected):
     ("/Users/jdoe/.venv/lib/python3.13/site-packages/requests/api.py", "requests/api.py"),
     ("/Users/jdoe/scratch/variants2.py", "variants2.py"),
     ("<frozen importlib._bootstrap>", "<frozen importlib._bootstrap>"),
+    # A user extension under the Linux config directory is the user's, not Mixar's.
+    ("/home/jdoe/.config/mixar/5.2/extensions/user_default/allset/ui/shelf.py", "shelf.py"),
+    ("/home/jdoe/.config/mixar/5.2/extensions/blender_org/blender_max/chrome.py", "chrome.py"),
+    ("/opt/mixar/5.2/scripts/mixar/modules/a/b.py", "mixar/modules/a/b.py"),
 ])
 def test_python_file_keeps_only_the_in_app_part(path, expected):
     assert python_file(path) == expected

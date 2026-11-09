@@ -16,6 +16,10 @@ snapshot's copy of the user's scene as the context scene:
 
 The result is a JSON file in the job folder; the protocol line only names it.
 Errors leave as fixed codes or the exporter's own message, as in-process.
+
+After every job the document is dropped (:func:`release_document`), so a warm
+idle worker (``keep_warm``) holds its engines and shader caches, not a second
+copy of the user's file.
 """
 
 import json
@@ -158,6 +162,18 @@ def _run_export(job, scene, view_layer):
         except Exception as exc:  # the backend's own wrapper shape
             result = {"success": False, "error": type(exc).__name__ + ": " + str(exc)}
     return result
+
+
+def release_document() -> float:
+    """Drop the job's document: an idle worker then holds only its engines.
+    Runs after the result was reported, so it never delays a reply. Seconds."""
+    started = time.perf_counter()
+    try:
+        bpy.ops.wm.read_homefile(use_empty=True)
+    except Exception:
+        import traceback
+        traceback.print_exc()  # to the worker log only
+    return round(time.perf_counter() - started, 3)
 
 
 def run(job: dict) -> dict:

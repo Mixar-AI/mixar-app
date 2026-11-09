@@ -80,13 +80,23 @@ def _short(path: str) -> str:
 def execute_codex(op, wm, on_done):
     """Read the sign-in file, PUT access token + account id, keep the path.
     Returns the operator result set; validation problems land in ERROR."""
-    model = wm.byok_form_model
+    from .byok_provider_settings_ui import codex_pick, key_only
+
+    # The model the chips light (`codex_pick`), never the enum getter: for a
+    # pick the account's model list hides, the getter reads the first chip.
+    model = codex_pick(wm)
+    if key_only(wm):
+        # Key needed: the saved model is re-sent as it is (its chips are
+        # locked), even one the catalog dropped; Codex's own check decides.
+        known = bool(model) and model != 'NONE'
+    else:
+        known = model_suggestions.is_valid_model('codex', model)
     path = (wm.byok_form_codex_path or "").strip()
     # The prefilled default is stored as empty, so the reference keeps
     # following $CODEX_HOME the way the CLI does.
     if path and _is_default(path):
         path = ""
-    if not model_suggestions.is_valid_model('codex', model):
+    if not known:
         wm.byok_dialog_state = 'ERROR'
         wm.byok_last_error = n_("Choose a Codex model.")
         return {'CANCELLED'}

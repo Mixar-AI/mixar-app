@@ -446,7 +446,8 @@ def run(qa: QA):
         qa.step("wait_login", qa.cmd, "wait_login", timeout=10)
     except ScenarioFail:
         pass
-    qa.dismiss_splash()
+    if hasattr(qa, "dismiss_splash"):
+        qa.dismiss_splash()
     qa.wait("not bpy.app.is_job_running('RENDER')", timeout=120)
     pid = qa.eval(INSTALL)["pid"]
     evidence = {"app_pid": pid}

@@ -19,6 +19,7 @@ from typing import Any, Callable, Optional
 from mixar.config.logging_config import get_logger
 
 from .request import ExecutionRequest
+from .script_time_limit import limit_for
 from .diagnostics import record_phase
 
 logger = get_logger(__name__)
@@ -184,7 +185,8 @@ def execute_request(
         clear_agent_ref()
         set_agent_execution_context(context_session_id, context_turn_id)
         result = executor.execute(
-            req.script, session_id=context_session_id, tool_name=req.tool_name
+            req.script, session_id=context_session_id, tool_name=req.tool_name,
+            time_limit_s=limit_for(req.tool_name, req.envelope),
         )
         result_dict = result.to_dict()
         _attach_scene_cost(result_dict)

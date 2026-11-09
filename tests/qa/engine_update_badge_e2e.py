@@ -52,9 +52,14 @@ result=True''')
 from mixar.modules.common.updates.ui.topbar_badge import tag_topbar_redraw
 s=get_update_state()
 s.set_available(UpdateInfo(latest_version='99.0.0', current_version='4.2.2'))
-s.set_downloading()
 tag_topbar_redraw()
 result=True''')
+    # Every label the badge can still show and click through to the toast
+    # (READY's click opens the restart dialog; covered by
+    # scripts/dev/qa/scenarios/header_restart_update.py). DOWNLOADING draws none.
+    labels = (('set_install_idle()', 'Update Available'),
+              ('set_install_failed("Download failed")', 'Update Available'),
+              ('set_installing()', 'Updating…'))
     results = []
     try:
         for scale in (1.0, 1.25):
@@ -63,13 +68,11 @@ result=True''')
                              ('Zen', 'MIXAR_OT_set_ui_mode_ai')):
                 qa.click(area_type='TOPBAR', op=op)
                 qa.wait(f"(drv.main_window().workspace.name == 'Zen Mode') == {mode == 'Zen'}")
-                for progress, label in ((0, 'Downloading…'), (45, 'Downloading 45%'),
-                                        (99, 'Downloading 99%'), (100, 'Verifying…')):
-                    ev(f'get_update_state().set_download_progress({progress},100); '
-                            'tag_topbar_redraw(); result=True')
+                for step, (setter, label) in enumerate(labels):
+                    ev(f'get_update_state().{setter}; tag_topbar_redraw(); result=True')
                     qa.wait(f'bool(drv.find(**{BADGE!r}, text={label!r}))', timeout=5)
                     time.sleep(.2)
-                    name = f'{mode.lower()}-{scale}-{progress}'
+                    name = f'{mode.lower()}-{scale}-{step}'
                     path = OUT / f'{name}.png'
                     qa.cmd('snap', path=str(path), target=BADGE, margin=0)
                     ink = visible_label(path)

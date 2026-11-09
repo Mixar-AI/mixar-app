@@ -431,6 +431,12 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
 
+    # After the reply: an agent at work keeps the warm preview worker alive
+    # past its idle stop, so the turn's next render is not a cold process.
+    if execution_started:
+        from mixar.modules.common.render_worker import keep_warm
+        keep_warm.note_agent_activity()
+
     # Crash safety: the agent changed the scene, so a save point is due once
     # its scripts pause (coalesced; never written while scripts are queued).
     _request_save_point("agent_script")

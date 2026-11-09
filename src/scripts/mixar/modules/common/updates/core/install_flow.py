@@ -79,27 +79,21 @@ def _refresh_ui():
     refresh_update_toast()
 
 
-def _redraw_badge():
-    from .toasts import tag_topbar_redraw
-
-    tag_topbar_redraw()
-
-
 def _progress_tick():
     """Repeating timer that keeps the visible percentage moving.
 
     Only the post-"Restart & Update" toast carries a percentage, so a
-    background download re-renders the badge alone. Re-pushing the
-    availability toast every second would replace a notification whose
-    text has not changed, under a user who may be reaching for it.
+    background download draws nothing (the badge is hidden while staging)
+    and the tick only waits for the user to press Restart & Update.
+    Re-pushing the availability toast every second would replace a
+    notification whose text has not changed, under a user who may be
+    reaching for it.
     """
     state = get_update_state()
     if state.install_state is not InstallState.DOWNLOADING:
         return None
     if state.install_requested:
         _refresh_ui()
-    else:
-        _redraw_badge()
     return _PROGRESS_TICK_S
 
 
@@ -131,8 +125,9 @@ def _worker(info, eligibility, running_binary):
 
         if os.path.isfile(path) and _already_staged(path, info.download_sha256):
             logger.info("Installer for %s already staged — skipping download", version)
-            # Report it as fully downloaded so the badge reads "Verifying…"
-            # during the signature check rather than "Downloading…".
+            # Report it as fully downloaded so a user waiting on the
+            # downloading toast reads "Verifying download…" during the
+            # signature check rather than "Starting download…".
             size = os.path.getsize(path)
             state.set_download_progress(size, size)
         else:
