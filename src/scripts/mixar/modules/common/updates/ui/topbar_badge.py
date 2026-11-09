@@ -14,6 +14,11 @@ on the latest release. Once ready, clicking opens the same restart
 confirmation as the toast button. Otherwise it re-shows the sticky update
 toast, which makes suppressing repeat announcements safe: the update is
 demoted to ambient status, never withheld.
+
+Hidden while the installer stages in the background (DOWNLOADING,
+signature check included): like Chrome, VS Code or Slack, the download is
+silent and the badge appears once there is something to do — "Restart to
+Update".
 """
 
 import bpy
@@ -24,29 +29,16 @@ from ..constants import InstallState
 from ..core.state import get_update_state
 from ..core.update_checker import is_forced
 
-# Install states in which the badge reports progress, not a problem. A
+# Install states in which the update is under way, not a problem. A
 # forced update is still red while nothing is happening (the user must
 # act), but once staging/installing is under way red would read as an
-# error — the Slack "Downloading 100%" on red report.
+# error. DOWNLOADING never draws (see draw_update_badge); it stays here so
+# the colour rule covers every state.
 _IN_PROGRESS_STATES = (
     InstallState.DOWNLOADING,
     InstallState.READY,
     InstallState.INSTALLING,
 )
-
-
-def download_complete(state) -> bool:
-    """Every byte is on disk and the worker is checksumming/verifying.
-
-    ``download_progress`` reaches 1.0 before the thread runs the
-    signature check (``verify.verify_installer``, up to 90s of
-    ``codesign``/Authenticode), and the state only leaves DOWNLOADING
-    once that returns.
-    """
-    return (
-        state.install_state is InstallState.DOWNLOADING
-        and state.download_progress >= 1.0
-    )
 
 
 def badge_alert(state, info) -> bool:
@@ -63,34 +55,31 @@ def badge_alert(state, info) -> bool:
 
 
 def badge_label(state) -> str:
-    """Label for the topbar badge — the always-visible install status.
+    """Label for the topbar badge in the states that draw one.
 
-    A user who dismissed the toast can still see that a download is
-    running or that a restart will finish the job. Pure so it is
-    unit-testable; the 1s progress tick keeps the topbar redrawing while
-    a download runs.
+    A user who dismissed the toast can still see that a restart will
+    finish the job. Pure so it is unit-testable.
     """
     install_state = state.install_state
     if install_state is InstallState.READY:
         return iface_("Restart to Update")
     if install_state is InstallState.INSTALLING:
         return iface_("Updating…")
-    if download_complete(state):
-        return iface_("Verifying…")
-    if install_state is InstallState.DOWNLOADING:
-        progress = state.download_progress
-        if progress > 0:
-            # Floor, so "100%" never shows while bytes are still missing.
-            return iface_("Downloading {percent}%").format(percent=int(progress * 100))
-        return iface_("Downloading…")
     return iface_("Update Available")
 
 
 def draw_update_badge(layout) -> None:
-    """Draw the update badge into *layout*; no-op while no update is known."""
+    """Draw the update badge into *layout*.
+
+    Draws nothing while no update is known or while the installer stages
+    in the background. The download thread's main-thread follow-up
+    (``install_flow._after_download`` → ``refresh_update_toast``) tags the
+    topbar when staging ends, so "Restart to Update" (or "Update
+    Available" after a failure) appears without user input.
+    """
     state = get_update_state()
     info = state.update_info
-    if info is None:
+    if info is None or state.install_state is InstallState.DOWNLOADING:
         return
 
     row = layout.row(align=True)

@@ -1934,7 +1934,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1983,6 +1983,9 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -3241,12 +3244,6 @@ msgstr "Reštartovať a aktualizovať"
 
 msgid "Updating…"
 msgstr "Aktualizuje sa…"
-
-msgid "Verifying…"
-msgstr ""
-
-msgid "Downloading {percent}%"
-msgstr "Sťahuje sa {percent}%"
 
 msgid "{count} credit"
 msgstr ""

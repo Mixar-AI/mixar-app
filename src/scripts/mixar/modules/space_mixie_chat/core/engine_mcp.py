@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Unreal's editor toolsets, passed through to the agent as Claude sees them.
+"""The engine's editor toolsets, passed through to the agent as Claude sees them.
 
 Unreal 5.8's editor MCP server exposes three tools — ``list_toolsets``,
 ``describe_toolset`` and ``call_tool`` — and every Epic toolset (assets,
@@ -13,14 +13,20 @@ the call on a worker thread and the script takes the stored answer.
 
 The pass-through has no allow- or denylist (every toolset and tool is
 callable, as for Claude), never saves on its own (the agent saves explicitly)
-and is not bound by Mixar Link's plugin mode, which guards only Mixar's own
-wrappers. Arguments go to Unreal verbatim; every string coming back is
+and, in Unreal, is not bound by Mixar Link's plugin mode, which guards only
+Mixar's own wrappers. Arguments go to the engine verbatim; every string coming back is
 scrubbed of absolute local paths (``engine_link.scrub``), errors included.
 Images (MCP image items, or ``{mimeType: "image/…", data}`` objects inside a
 toolset's JSON answer, as Epic's capture tools send) come back as ``images``
 — at most three — and never as base64 inside the text result.
 
-Godot has no editor toolsets: the three calls refuse there.
+Godot's Mixar Link add-on (0.5.0+, ``status`` says ``toolsets: true``)
+serves the same three top-level tools on its own MCP server, built on Godot's
+reflection (``godot.classes``, ``godot.scene``, ``godot.resources``,
+``godot.files``, ``godot.editor``); an older add-on is refused with
+``GODOT_UPDATE``. The add-on, not this module, keeps its writes under
+``res://mixar/``, keeps plugin mode's editable scenes and runs ``godot.editor.run_script`` only with the
+``approved_by_user`` flag the backend sets after the user approves.
 
 Every function answers ``{"success", "data", "error"?, "images"?}`` and never
 raises.
@@ -33,7 +39,8 @@ import json
 from . import engine_link
 
 ENGINE_MCP_CAPABILITY = "engine_mcp_v1"
-GODOT_REFUSAL = "Godot has no editor toolsets; use the engine_* tools."
+GODOT_UPDATE = ("This Godot project's Mixar Link add-on has no editor toolsets; ask the user to "
+                "update the Mixar Link add-on (Connect engine in Mixar), or use the engine_* tools.")
 LIST_TIMEOUT_S = 30.0
 # describe_toolset's JSON above this many characters comes back compact
 # (Sequencer's is ~125,000): names + first description lines, and the agent
@@ -47,21 +54,33 @@ MAX_IMAGES = 3
 MAX_IMAGE_SIDE = 1568
 MAX_IMAGE_BYTES = 1_500_000
 ERROR_LIMIT = 20_000
-CALL_TIMED_OUT = ("Unreal did not answer in time; the call may still have completed. "
+CALL_TIMED_OUT = ("The engine did not answer in time; the call may still have completed. "
                   "Check the editor's state before repeating it.")
 
 
 def _client(engine):
-    """The Unreal client, or LinkError (no engine, or Godot)."""
+    """The engine's client, or LinkError (no engine, or a Godot add-on
+    without toolsets). Godot's ``status`` is asked once per client (a new
+    editor session or add-on gets a new client)."""
     info, client = engine_link._connect(engine)
-    if info.get("transport") != engine_link.UNREAL_TRANSPORT:
-        raise engine_link.LinkError(GODOT_REFUSAL)
+    if info.get("transport") == engine_link.UNREAL_TRANSPORT:
+        return client
+    toolsets = getattr(client, "mixar_toolsets", None)
+    if toolsets is None:
+        status = engine_link._result(engine_link.McpClient.call(client, "status", {}, 10.0))
+        if not status.get("success"):
+            raise engine_link.LinkError(str(status.get("error") or "The engine did not report its status."))
+        toolsets = (status.get("data") or {}).get("toolsets") is True
+        client.mixar_toolsets = toolsets
+    if not toolsets:
+        raise engine_link.LinkError(GODOT_UPDATE)
     return client
 
 
 def _top(client, name: str, arguments: dict, timeout: float) -> dict:
     # The server's own top-level tool: through the BASE client, never
-    # UnrealMcpClient.call, which wraps every call into Mixar Link's toolset.
+    # UnrealMcpClient.call, which wraps every call into Mixar Link's toolset
+    # (for Godot the base client is the client).
     return engine_link.McpClient.call(client, name, arguments, timeout)
 
 
@@ -109,7 +128,7 @@ def _content_images(raw: dict, images: list) -> None:
 
 
 def _error(raw: dict) -> str:
-    text = "\n".join(t for t in _texts(raw) if t).strip() or "Unreal reported an error."
+    text = "\n".join(t for t in _texts(raw) if t).strip() or "The engine reported an error."
     return engine_link.scrub(text[:ERROR_LIMIT])
 
 
@@ -191,7 +210,8 @@ def _compact(described: dict) -> dict:
 
 
 def split_tool_name(tool_name, toolset_name="") -> tuple[str, str]:
-    """``(toolset_name, tool_name)`` as Unreal's ``call_tool`` takes them: the
+    """``(toolset_name, tool_name)`` as ``call_tool`` takes them (Unreal and
+    Godot alike): the
     toolset apart and the tool WITHOUT its toolset prefix ("Tool '….SceneTools.
     add_to_scene_from_asset' not found" otherwise, live 5.8.3). describe_toolset
     names tools in full, so a full name splits at its last dot; a name repeating
@@ -207,10 +227,13 @@ def split_tool_name(tool_name, toolset_name="") -> tuple[str, str]:
     return toolset_name, tool_name
 
 
-def _matches(name, wanted: set) -> bool:
+def _forms(name) -> set:
+    """A tool name as given, without its toolset prefix, and lowercased:
+    Unreal names its tools in full, Godot's add-on by their short names, and
+    the agent may ask either way."""
     name = str(name or "")
     short = name.rsplit(".", 1)[-1]
-    return bool({name, short, name.lower(), short.lower()} & wanted)
+    return {name, short, name.lower(), short.lower()}
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +242,7 @@ def _matches(name, wanted: set) -> bool:
 
 @engine_link._prefetchable
 def link_mcp_list_toolsets(engine: str | None = None) -> dict:
-    """Every toolset Unreal's editor offers, as the server's own text."""
+    """Every toolset the engine's editor offers, as the server's own text."""
     try:
         client = _client(engine)
         raw = _top(client, "list_toolsets", {}, LIST_TIMEOUT_S)
@@ -254,12 +277,11 @@ def link_mcp_describe(toolset_name: str, tools: list | None = None, engine: str 
     if not isinstance(described, dict):
         return {"success": True, "data": {"text": engine_link.scrub(text)}}
     if tools:
-        wanted = {str(t) for t in tools} | {str(t).lower() for t in tools}
-        kept = [t for t in described.get("tools") or [] if isinstance(t, dict) and _matches(t.get("name"), wanted)]
-        found = {n for t in kept for n in (str(t.get("name")), str(t.get("name")).rsplit(".", 1)[-1])}
-        found |= {n.lower() for n in found}
+        wanted = set().union(*(_forms(t) for t in tools))
+        kept = [t for t in described.get("tools") or [] if isinstance(t, dict) and _forms(t.get("name")) & wanted]
+        found = set().union(*(_forms(t.get("name")) for t in kept))
         described = {**described, "tools": kept}
-        missing = [str(t) for t in tools if str(t) not in found and str(t).lower() not in found]
+        missing = [str(t) for t in tools if not _forms(t) & found]
         if missing:
             described["missing"] = missing
         described, totals = cap(described)
@@ -273,8 +295,10 @@ def link_mcp_describe(toolset_name: str, tools: list | None = None, engine: str 
 @engine_link._prefetchable
 def link_mcp_call(tool_name: str, toolset_name: str = "", arguments: dict | None = None,
                   engine: str | None = None, timeout: float = 60.0) -> dict:
-    """One Epic tool through the server's ``call_tool``; ``result`` is its
-    ``returnValue`` (or the JSON / text it answered)."""
+    """One editor tool (Epic's or Mixar Link's Godot toolsets) through the
+    server's ``call_tool``; ``result`` is its ``returnValue`` (or the JSON /
+    text it answered). ``godot.scene.set_properties`` splits into toolset
+    ``godot.scene`` and tool ``set_properties``."""
     try:
         timeout = min(max(float(timeout or 60.0), 1.0), 600.0)
     except (TypeError, ValueError):

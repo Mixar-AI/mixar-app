@@ -2385,7 +2385,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
 msgstr ""
 
 # derived
@@ -2436,6 +2436,9 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 # derived
@@ -3984,13 +3987,6 @@ msgstr "Ponovo pokreni radi ažuriranja"
 # derived
 msgid "Updating…"
 msgstr "Ažuriranje…"
-
-msgid "Verifying…"
-msgstr ""
-
-# derived
-msgid "Downloading {percent}%"
-msgstr "Preuzimanje {percent}%"
 
 msgid "{count} credit"
 msgstr ""

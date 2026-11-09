@@ -59,8 +59,10 @@ def chip_model_label(provider_id: str, model_id: str) -> str:
 
 
 def lookup_model_label(provider_id: str, model_id: str) -> str:
-    """Catalog label for a model id under a provider, or the id itself."""
-    for mid, mlabel, _desc in model_suggestions.get_model_items(provider_id):
+    """Catalog label for a model id under a provider, or the id itself (the
+    whole group: a saved Codex model the account's list hides keeps its name)."""
+    for mid, mlabel, _desc in (model_suggestions.catalog_models(provider_id)
+                               or model_suggestions.get_model_items(provider_id)):
         if mid == model_id:
             return mlabel
     return model_id
