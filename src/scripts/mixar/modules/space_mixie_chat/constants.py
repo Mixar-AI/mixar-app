@@ -527,6 +527,15 @@ AGENT_UNDO_NEUTRAL_TOOLS = frozenset({
     "get_paint_layer_stack", "get_paint_channels", "inspect_moodboard_image",
 })
 
+# The agent's verification render (``render_viewport``: the final render and
+# the inspection preview). It renders a snapshot in a background worker, or a
+# private scene copy whose temporary settings and rig are undone on every exit,
+# so the user's document is unchanged: no undo checkpoint, no turn mark, and no
+# before/after scene diff (two full walks of every object and its animation on
+# the main thread, which reported the in-process rig's ``_rv_*`` objects as
+# created). NOT render_gate.READ_ONLY_TOOLS: the native fallback adds a scene.
+AGENT_RENDER_TOOLS = frozenset({"render_viewport"})
+
 # Per-script checkpoints are capped per turn. Blender keeps U.undosteps
 # (32 by default) memfile steps, so an uncapped long turn would evict the
 # pre-turn checkpoint — the one that must survive so Ctrl-Z can return to the
