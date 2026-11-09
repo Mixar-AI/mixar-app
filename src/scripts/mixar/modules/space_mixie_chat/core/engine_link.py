@@ -430,8 +430,9 @@ def link_status(engine: str | None = None) -> dict:
     out["connected"] = public(info)
     if out.get("success") and isinstance(out.get("data"), dict):  # the project's assets (engine_assets)
         engine_assets.add_assets_tool(out["data"])
-        if info.get("transport") == UNREAL_TRANSPORT:  # Epic's toolsets too (engine_mcp)
-            out["data"]["editor_toolsets"] = True
+        # Epic's toolsets, or Mixar Link's Godot ones from add-on 0.5.0 (engine_mcp)
+        out["data"]["editor_toolsets"] = (info.get("transport") == UNREAL_TRANSPORT
+                                          or out["data"].get("toolsets") is True)
     return out
 
 
