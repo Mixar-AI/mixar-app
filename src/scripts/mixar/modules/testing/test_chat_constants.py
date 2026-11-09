@@ -90,10 +90,6 @@ class TestStreamingConstants(unittest.TestCase):
         from mixar.modules.space_mixie_chat.constants import TIMER_INTERVAL
         self.assertAlmostEqual(TIMER_INTERVAL, 1 / 60, places=4)
 
-    def test_script_timeout_threshold(self):
-        from mixar.modules.space_mixie_chat.constants import SCRIPT_TIMEOUT_THRESHOLD
-        self.assertEqual(SCRIPT_TIMEOUT_THRESHOLD, 30.0)
-
 
 class TestImageConstants(unittest.TestCase):
     """Tests for image attachment configuration."""

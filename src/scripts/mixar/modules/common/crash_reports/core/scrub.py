@@ -104,8 +104,11 @@ def python_file(path: str) -> str:
     """A script path reduced to its in-app part (``mixar/modules/...``) or basename."""
     normalized = (path or "").replace("\\", "/")
     # (marker, characters of the marker to drop): keep "mixar/...", "startup/...",
-    # "addons_core/..." and a package path below site-packages.
-    for marker, drop in (("/mixar/", 1), ("/scripts/startup/", 9), ("/scripts/addons_core/", 9),
+    # "addons_core/..." and a package path below site-packages. Mixar's package is
+    # always "scripts/mixar/"; a bare "/mixar/" also matches the Linux user config
+    # directory (~/.config/mixar/5.2/extensions/<repo>/...), which made a user
+    # extension look like Mixar's own code.
+    for marker, drop in (("/scripts/mixar/", 9), ("/scripts/startup/", 9), ("/scripts/addons_core/", 9),
                          ("/site-packages/", 15)):
         index = normalized.rfind(marker)
         if index >= 0:

@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""``engine_mcp``: Unreal's three editor MCP tools passed through to the agent
-(list_toolsets, describe_toolset, call_tool), against a fake Unreal MCP
-server client shaped like Unreal 5.8.3's answers (no engine, no Blender)."""
+"""``engine_mcp``: the engine's three editor MCP tools passed through to the
+agent (list_toolsets, describe_toolset, call_tool), against fake Unreal MCP
+(shaped like Unreal 5.8.3's answers) and Godot Mixar Link servers (no engine,
+no Blender)."""
 
 import json
 import os
@@ -211,11 +212,97 @@ def test_a_timed_out_call_may_have_completed(unreal):
     assert em.link_mcp_call("x") == {"success": False, "error": em.CALL_TIMED_OUT}
 
 
-def test_godot_refuses_all_three(unreal):
+class FakeGodot(el.McpClient):
+    """Mixar Link's Godot MCP server: ``status`` plus the three toolset tools."""
+
+    def __init__(self, replies=None, toolsets=True):
+        super().__init__(9890, "token")
+        status = {"tools": ["status"], **({"toolsets": True} if toolsets else {})}
+        self.replies = {"status": _text(status), **(replies or {})}
+        self.calls = []
+
+    def initialize(self, timeout=10.0):
+        self.session = "s"
+        self.instructions = ""
+        return {}
+
+    def _rpc(self, method, params, timeout):
+        assert method == "tools/call"
+        self.calls.append((params["name"], params["arguments"], timeout))
+        reply = self.replies.get(params["name"])
+        if isinstance(reply, Exception):
+            raise reply
+        return 200, {}, {"result": reply if reply is not None else _text("")}
+
+
+GODOT_LISTING = {"toolsets": [{"name": "godot.scene", "description": "Edit the open scene", "tools": 11},
+                              {"name": "godot.editor", "description": "Editor actions", "tools": 7}]}
+
+
+def _godot(unreal, replies=None, toolsets=True):
     unreal["info"] = GODOT
-    for out in (em.link_mcp_list_toolsets(), em.link_mcp_describe("SceneTools"), em.link_mcp_call("x")):
-        assert out == {"success": False, "error": em.GODOT_REFUSAL}
-    assert unreal["client"].calls == []
+    unreal["client"] = FakeGodot(replies, toolsets)
+    return unreal["client"]
+
+
+def test_an_old_godot_addon_is_asked_to_update(unreal):
+    client = _godot(unreal, toolsets=False)
+    for out in (em.link_mcp_list_toolsets(), em.link_mcp_describe("godot.scene"), em.link_mcp_call("x")):
+        assert out == {"success": False, "error": em.GODOT_UPDATE}
+        assert "update the Mixar Link add-on" in out["error"]
+    assert [c[0] for c in client.calls] == ["status"]  # asked once, nothing else sent
+
+
+def test_godot_list_and_describe_go_to_the_addons_top_level_tools(unreal):
+    described = {"name": "godot.scene", "version": "0.5.0", "description": "Edit the open scene",
+                 "tools": [{"name": "set_properties", "description": "Batch set", "inputSchema": {"type": "object"}},
+                           {"name": "add_nodes", "description": "Batch add", "inputSchema": {"type": "object"}}]}
+    client = _godot(unreal, {"list_toolsets": _text(GODOT_LISTING), "describe_toolset": _text(described)})
+    out = em.link_mcp_list_toolsets()
+    assert out["success"] and json.loads(out["data"]["toolsets"]) == GODOT_LISTING
+    out = em.link_mcp_describe("godot.scene", tools=["set_properties", "godot.scene.add_nodes"])
+    assert [t["name"] for t in out["data"]["tools"]] == ["set_properties", "add_nodes"]
+    assert [c[:2] for c in client.calls] == [("status", {}), ("list_toolsets", {}),
+                                             ("describe_toolset", {"toolset_name": "godot.scene"})]
+
+
+def test_godot_call_splits_a_dotted_name_and_passes_arguments_verbatim(unreal):
+    edits = {"edits": [{"node": "Player", "property": "position", "value": [0, 1, 0]}]}
+    client = _godot(unreal, {"call_tool": _text({"changed": 1})})
+    out = em.link_mcp_call("godot.scene.set_properties", arguments=edits, timeout=9)
+    assert out == {"success": True, "data": {"result": {"changed": 1}}}
+    name, sent, timeout = client.calls[-1]
+    assert name == "call_tool" and timeout == 9.0
+    assert sent == {"tool_name": "set_properties", "toolset_name": "godot.scene", "arguments": edits}
+    em.link_mcp_call("godot.scene.set_properties", "godot.scene", edits)
+    assert client.calls[-1][1]["tool_name"] == "set_properties"
+    assert [c[0] for c in client.calls].count("status") == 1  # the add-on's answer is kept
+
+
+def test_godot_capture_images_are_lifted_and_paths_scrubbed(unreal):
+    content = [{"type": "text", "text": json.dumps({"saved": "C:\\Users\\me\\Game\\shot.png",
+                                                    "scene": "res://mixar/levels/main.tscn"})},
+               {"type": "image", "mimeType": "image/png", "data": PNG}]
+    _godot(unreal, {"call_tool": {"content": content}})
+    out = em.link_mcp_call("capture_editor", "godot.editor", {"max_width": 800})
+    assert out["images"] == [{"data": PNG, "mime": "image/png"}]
+    assert out["data"]["result"] == {"saved": "<local path>", "scene": "res://mixar/levels/main.tscn"}
+    assert PNG not in json.dumps(out["data"])
+    # A capture answered inside the JSON is lifted too.
+    _godot(unreal, {"call_tool": _text({"image": {"mimeType": "image/png", "data": PNG}})})
+    out = em.link_mcp_call("godot.editor.capture_editor")
+    assert out["images"] == [{"data": PNG, "mime": "image/png"}]
+    assert out["data"]["result"] == {"image": {"mimeType": "image/png", "attached": True}}
+
+
+def test_godot_errors_are_scrubbed_and_timeouts_engine_neutral(unreal):
+    msg = "Unknown toolset 'nope'. Valid: godot.scene, godot.editor\nat /home/me/game/addons/x.gd"
+    _godot(unreal, {"describe_toolset": {"isError": True, "content": [{"type": "text", "text": msg}]},
+                    "call_tool": el._unanswered(TimeoutError("timed out"))})
+    out = em.link_mcp_describe("nope")
+    assert out["success"] is False and "godot.scene" in out["error"] and "/home/me" not in out["error"]
+    assert em.link_mcp_call("x", "godot.scene") == {"success": False, "error": em.CALL_TIMED_OUT}
+    assert "Unreal" not in em.CALL_TIMED_OUT
 
 
 def test_no_engine_never_raises(monkeypatch):
@@ -223,15 +310,17 @@ def test_no_engine_never_raises(monkeypatch):
     assert em.link_mcp_call("x") == {"success": False, "error": el.NO_ENGINE}
 
 
-def test_status_flags_editor_toolsets_for_unreal_only(monkeypatch):
-    status = {"content": [{"type": "text", "text": json.dumps({"tools": ["status"]})}]}
-    for info, flagged in ((UNREAL, True), (GODOT, False)):
+def test_status_flags_editor_toolsets_for_unreal_and_a_godot_addon_with_toolsets(monkeypatch):
+    def status(**extra):
+        return {"content": [{"type": "text", "text": json.dumps({"tools": ["status"], **extra})}]}
+    for info, reply, flagged in ((UNREAL, status(), True), (GODOT, status(), False),
+                                 (GODOT, status(toolsets=False), False), (GODOT, status(toolsets=True), True)):
         client = MagicMock()
-        client.call.return_value = status
+        client.call.return_value = reply
         monkeypatch.setattr(el, "adapters", lambda engine=None, i=info: [i])
         monkeypatch.setattr(el, "_connect", lambda engine, i=info, c=client: (i, c))
         data = el.link_status.__wrapped__()["data"]
-        assert data.get("editor_toolsets", False) is flagged
+        assert data["editor_toolsets"] is flagged
         assert "assets" in data["tools"]
 
 
@@ -334,3 +423,7 @@ def test_a_full_tool_name_is_split_the_way_call_tool_takes_it():
     assert split_tool_name("CaptureViewport", "EditorToolset.EditorAppToolset") == \
         ("EditorToolset.EditorAppToolset", "CaptureViewport")
     assert split_tool_name("list_toolsets") == ("", "list_toolsets")  # a top-level tool
+    # Godot's toolsets are dotted too: the toolset is everything before the last dot.
+    assert split_tool_name("godot.scene.set_properties") == ("godot.scene", "set_properties")
+    assert split_tool_name("godot.editor.run_script", "godot.editor") == ("godot.editor", "run_script")
+    assert split_tool_name("set_properties", "godot.scene") == ("godot.scene", "set_properties")

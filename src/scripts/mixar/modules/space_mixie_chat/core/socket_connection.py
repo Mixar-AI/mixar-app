@@ -321,6 +321,7 @@ class SocketConnection:
         from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
         from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
         from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
+        from ...common.agent_execution.script_time_limit import CAPABILITY as SCRIPT_TIME_LIMIT_CAPABILITY
         from .engine_connect import ENGINE_LINK_CAPABILITY
         from .engine_mcp import ENGINE_MCP_CAPABILITY
         from .machine_info import machine_block
@@ -383,6 +384,8 @@ class SocketConnection:
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.
                 "exec_envelope_v3",
+                # A raw script is stopped 10 s after its envelope deadline.
+                SCRIPT_TIME_LIMIT_CAPABILITY,
                 # Harness v3 execution protocol bundle (agent.execution.*):
                 # task bindings, operation receipts (SQLite journal), native
                 # artifact append, document epoch, runtime question routing.

@@ -16,6 +16,7 @@ import requests
 
 from mixar.config.logging_config import get_logger
 
+from ..api.client_version import client_version_headers
 from .constants import NOTIFICATIONS_REST_PATH
 
 logger = get_logger(__name__)
@@ -29,6 +30,7 @@ def _url(host: str, path: str) -> str:
 
 def _headers(token: str) -> Dict[str, str]:
     return {
+        **client_version_headers(),
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }

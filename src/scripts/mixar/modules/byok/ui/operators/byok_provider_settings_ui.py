@@ -54,7 +54,7 @@ LOCAL_FIELDS_HEIGHT = (S.CHIP_H + S.GAP + 4 * (S.NOTE_H + S.FIELD_H)
                        + S.GAP + 2 * S.NOTE_H)
 STORED_NOTE = n_("Stored only on this computer, used only for Mixar agent requests - "
                  "Mixar never keeps a copy.")
-CODEX_STORED_NOTE = n_("Read from this file on this computer, used only for Mixar agent "
+CODEX_STORED_NOTE = n_("Read on this computer to list your ChatGPT models and for agent "
                        "requests - Mixar never keeps a copy.")
 
 
@@ -92,6 +92,15 @@ def missing_target(wm):
     provider = key_prompt.provider() or wm.byok_current_provider or ""
     saved_model = wm.byok_current_model if provider == wm.byok_current_provider else ""
     return provider, key_prompt.model() or saved_model or ""
+
+
+def codex_pick(wm) -> str:
+    """The Codex model Save sends and the chips light. Key needed: the saved
+    model as it is (its chips are locked). Otherwise the stored pick, never the
+    enum getter, which reads the first chip for a pick the account's list hides."""
+    if key_only(wm):
+        return missing_target(wm)[1] or wm.byok_form_model_id
+    return wm.byok_form_model_id
 
 
 def key_paused(wm) -> bool:
@@ -226,7 +235,9 @@ class FormPlan:
             items = [(mid, label) for mid, label, _desc in
                      model_suggestions.get_model_items(self.provider) if mid != 'NONE']
             self.chips = S.chip_rows(layout, items, CHIP_ROW_WIDTH)
-            notes = S.NOTE_H + S.GAP if self.kind == 'codex' else 0.0
+            # Codex: the subscription note, plus a line when the plan hides models.
+            notes = (S.GAP + S.NOTE_H * (1 + model_suggestions.codex_models_hidden())
+                     if self.kind == 'codex' else 0.0)
             self.need = S.chips_height(len(self.chips)) + S.GAP + notes + strips_h
             # Codex: the sign-in status line sits between the note and the field.
             self.bottom = S.key_block_height(S.NOTE_H if self.kind == 'codex' else 0.0)
@@ -303,7 +314,9 @@ class FormPlan:
             S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET),
                     n_("No models available for this provider yet."), S.NOTE)
             return
-        current = self.wm.byok_form_model
+        # Codex lights what Save sends: a pick the account's list hides lights
+        # no chip (Save refuses it, or re-sends it when only the key is asked).
+        current = codex_pick(self.wm) if self.kind == 'codex' else self.wm.byok_form_model
         for index, chips in enumerate(self.chips):
             if index:
                 S.sep(area, S.CHIP_GAP_Y)
@@ -318,6 +331,10 @@ class FormPlan:
         S.sep(area, S.GAP)
         S.label(S.row(area, S.NOTE_H, left=S.PROMPT_INSET),
                 n_("Uses your ChatGPT subscription - Mixar credits are not charged."), S.NOTE)
+        if model_suggestions.codex_models_hidden():
+            # Only what this ChatGPT plan can run is listed (core/codex_models).
+            S.label(S.row(area, S.NOTE_H, left=S.PROMPT_INSET),
+                    n_("Models your ChatGPT plan can't run are not listed."), S.NOTE)
 
     def _openrouter_area(self, area):
         slug = S.row(area, S.FIELD_H, left=S.RIGHT_INSET, right=S.RIGHT_MARGIN)

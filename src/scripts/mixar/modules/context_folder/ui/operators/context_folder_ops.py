@@ -34,6 +34,30 @@ def _redraw() -> None:
         pass
 
 
+_ATTACH_MENU = "MIXIE_CHAT_MT_attach"
+
+
+def _ensure_attach_menu() -> bool:
+    """Make sure the paperclip's chooser menu is registered.
+
+    UI modules load in deferred batches after startup, operators before menus,
+    so on a slow machine the paperclip can be clicked while its menu is still
+    queued: ``wm.call_menu`` then raised ``Menu "MIXIE_CHAT_MT_attach" not
+    found``. Register it now; the loader later reuses the imported module and
+    skips classes that are already registered.
+    """
+    if getattr(bpy.types, _ATTACH_MENU, None) is not None:
+        return True
+    try:
+        from ..menus.attach_menu import MIXIE_CHAT_MT_attach
+
+        if not MIXIE_CHAT_MT_attach.is_registered:
+            bpy.utils.register_class(MIXIE_CHAT_MT_attach)
+    except Exception:  # noqa: BLE001 — the click reports "still loading" instead
+        return False
+    return getattr(bpy.types, _ATTACH_MENU, None) is not None
+
+
 class MIXIE_CHAT_OT_attach(Operator):
     """Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"""
     bl_idname = "mixie_chat.attach"
@@ -45,7 +69,10 @@ class MIXIE_CHAT_OT_attach(Operator):
         return context.scene is not None
 
     def invoke(self, context, event):
-        bpy.ops.wm.call_menu('INVOKE_DEFAULT', name="MIXIE_CHAT_MT_attach")
+        if not _ensure_attach_menu():
+            self.report({'INFO'}, rpt_("Mixar is still loading. Try again in a moment."))
+            return {'CANCELLED'}
+        bpy.ops.wm.call_menu('INVOKE_DEFAULT', name=_ATTACH_MENU)
         return {'FINISHED'}
 
     def execute(self, context):

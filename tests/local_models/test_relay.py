@@ -222,6 +222,33 @@ def test_transport_failure_returns_error_marker(monkeypatch):
     assert result["error"]["code"] == "relay_transport"
 
 
+def test_relay_timeout_allows_a_ten_minute_local_call(monkeypatch):
+    """mixar-backend#1872: one local call may take up to 10 minutes. The
+    backend waits RELAY_TIMEOUT_S + 10 s (DEFAULT_RELAY_TIMEOUT, 610 s), so
+    this timeout fires first and the backend reads a clean error."""
+    assert relay.RELAY_TIMEOUT_S == 600.0
+
+    seen = {}
+
+    def opener(req, timeout):
+        seen["timeout"] = timeout
+        return FakeResponse(b'{"choices": []}')
+
+    run(post(), monkeypatch, opener)
+    assert seen["timeout"] == 600.0
+
+
+def test_local_server_timeout_returns_relay_timeout(monkeypatch):
+    """A model still generating at RELAY_TIMEOUT_S reports ``relay_timeout``,
+    which the backend fails once instead of replaying the call."""
+    def opener(req, timeout):
+        raise socket.timeout("timed out")
+
+    result = run(post(), monkeypatch, opener)
+    assert result["error"]["code"] == "relay_timeout"
+    assert "600 s" in result["error"]["message"]
+
+
 def test_ipv6_ula_allowed_loopback_and_scheme_rules():
     relay.set_approved_bases(["http://[fd12:3456::1]:11500"])
     assert relay._addr_allowed("::1")

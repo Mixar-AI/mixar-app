@@ -25,6 +25,7 @@ from ...constants import (
     OPENROUTER_DEFAULT_MODEL,
 )
 from ...core.model_suggestions import (
+    codex_pick_storable,
     get_model_items,
     get_provider_items,
     is_local,
@@ -114,7 +115,12 @@ def _provider_changed(self, context):
         # item callback.  Select the first real model for the new provider, or
         # the NONE sentinel only when that is what the callback exposes.
         remembered = _remembered_model(wm, provider)
-        if remembered and any(item[0] == remembered for item in items):
+        if remembered and codex_pick_storable(provider, remembered):
+            # Codex keeps the saved model even when the account's list hides
+            # it: through the enum it would become the first chip, lit and
+            # sent though nobody picked it (Save refuses a hidden pick).
+            wm.byok_form_model_id = remembered
+        elif remembered and any(item[0] == remembered for item in items):
             wm.byok_form_model = remembered
         else:
             wm.byok_form_model = items[0][0] if items else 'NONE'
@@ -125,6 +131,15 @@ def _provider_changed(self, context):
             from ...core import local_provider
             local_provider.refresh_model_items()
             local_provider.refresh_detected_async()
+    except Exception:
+        pass
+
+
+def _codex_path_changed(self, context):
+    """Another sign-in file can be another ChatGPT plan: re-list its models."""
+    try:
+        from ...core import codex_models
+        codex_models.refresh_for_form(context.window_manager if context is not None else self)
     except Exception:
         pass
 
@@ -262,6 +277,7 @@ def register():
         default='',
         subtype='FILE_PATH',
         options={'SKIP_SAVE'},
+        update=_codex_path_changed,
     )
 
     # --- Local (this computer) form fields (shown when provider == 'local') ---

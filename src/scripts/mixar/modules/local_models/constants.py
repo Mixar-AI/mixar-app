@@ -230,8 +230,11 @@ PORT_RANGE = (11500, 11599)
 # (weights are read from disk into RAM).
 HEALTH_TIMEOUT_S = 240
 
-# One relayed llm.request round trip (local generation can be slow).
-RELAY_TIMEOUT_S = 270.0
+# One relayed llm.request: a slow local model may take up to 10 minutes per
+# call (mixar-backend#1872). The backend's DEFAULT_RELAY_TIMEOUT
+# (modules/agent/core/local_relay_transport.py, 610 s) must stay this + 10 s,
+# so this timeout fires first and the backend gets a clean relay error.
+RELAY_TIMEOUT_S = 600.0
 
 # Must mirror the backend's caps, and both sit well under the backend's
 # 16 MiB WebSocket frame limit (uvicorn ws_max_size) — an oversized

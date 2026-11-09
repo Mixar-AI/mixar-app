@@ -118,6 +118,7 @@ def test_no_engine_is_a_plain_answer(tmp_path, monkeypatch):
 def test_status_reuses_the_session_and_reinitialises_once_on_404(link):
     out = engine_link.link_status()
     assert out["success"] and out["connected"]["project_name"] == "Ruins"
+    assert "tools" not in out["data"]  # Godot lists no tools: it has every call, place included
     assert engine_link.link_call("scene_tree")["data"]["tool"] == "scene_tree"
     assert _Fake.sessions == {"s1"}
     _Fake.expire_next = True
@@ -309,7 +310,7 @@ class _FakeUnreal(_Fake):
                       "isError": True}
         elif args["tool_name"] == "status":
             reply = {"ok": True, "data": {"engine": "unreal", "project_name": "Arena3D",
-                                          "edited_scene": "/Game/Maps/Arena"}}
+                                          "edited_scene": "/Game/Maps/Arena", "tools": ["status", "place"]}}
             result = {"content": [{"type": "text", "text": json.dumps({"returnValue": json.dumps(reply)})}]}
         elif args["tool_name"] == "scene_tree":
             reply = {"ok": False, "error": "No level is open.", "data": {"hint": "open one"}}
@@ -358,6 +359,7 @@ def test_a_dead_editors_file_is_skipped_even_when_its_port_answers(unreal, monke
 def test_unreal_tools_go_through_call_tool_and_come_back_in_godots_shape(unreal):
     out = engine_link.link_status()
     assert out["success"] and out["data"]["project_name"] == "Arena3D"
+    assert out["data"]["tools"] == ["status", "place", "assets"]
     assert out["connected"]["id"] == f"unreal-{os.getpid()}"
     assert _FakeUnreal.calls[0] == ("call_tool", {"toolset_name": TOOLSET, "tool_name": "status", "arguments": {}})
     tree = engine_link.link_call("scene_tree", {"max_nodes": 5})
