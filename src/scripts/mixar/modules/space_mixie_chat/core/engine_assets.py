@@ -120,10 +120,12 @@ def adapter_args(tool: str, arguments) -> dict:
     return args
 
 
-def tools_with_assets(tools) -> list:
-    """``status``'s tool list with the calls answered here."""
-    out = list(tools or [])
-    return out + [t for t in ("assets",) if t not in out]
+def add_assets_tool(status: dict) -> None:
+    """The calls answered here, added to ``status``'s tool list when it has
+    one (Unreal). An editor that lists none (Godot) has every call."""
+    tools = status.get("tools")
+    if isinstance(tools, list) and "assets" not in tools:
+        status["tools"] = [*tools, "assets"]
 
 
 # ---------------------------------------------------------------------------
@@ -261,15 +263,16 @@ def search_godot(client, args: dict, timeout: float) -> dict:
 
     query = str(args.get("query") or "").strip().lower()
     words = _words(query)
-    folder = str(args.get("folder") or "res://").strip()
-    folder = folder if folder.startswith("res://") else "res://" + folder.lstrip("/")
-    folder = folder.rstrip("/") if folder != "res://" else folder
+    folder = str(args.get("folder") or "").strip()
+    folder = "res://" + (folder[6:] if folder.startswith("res://") else folder).strip("/")
     prefix = folder if folder.endswith("/") else folder + "/"
     kind = str(args.get("kind") or "placeable").strip().lower()
     kinds = GODOT_PLACEABLE if kind == "placeable" else tuple(GODOT_KINDS) if kind == "any" else (kind,)
     if any(k not in GODOT_KINDS for k in kinds):
         raise AssetError(f"Godot kinds: placeable, any, {', '.join(GODOT_KINDS)}.")
-    listed = engine_link._result(client.call("list_files", {"dir": folder, "max_files": 2000},
+    # Mixar Link (0.4.0) trims one trailing "/" before its res:// check: the root goes as res:///
+    root = "res:///" if folder == "res://" else folder
+    listed = engine_link._result(client.call("list_files", {"dir": root, "max_files": 2000},
                                              float(timeout or CALL_S)))
     if not listed.get("success"):
         raise AssetError(listed.get("error") or "the engine could not list the project")

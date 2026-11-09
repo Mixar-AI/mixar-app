@@ -19,9 +19,9 @@ import bpy
 from ..constants import (
     AGENT_UNDO_GROUP_PER_TURN,
     AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN,
+    AGENT_RENDER_TOOLS,
     AGENT_UNDO_NEUTRAL_TOOLS,
     is_lane_scene,
-    SCRIPT_TIMEOUT_THRESHOLD,
 )
 
 logger = get_logger(__name__)
@@ -53,6 +53,8 @@ from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
 from .sandbox_editmesh import may_edit_bmesh, refresh_edit_meshes
 from .sandbox_topology import NOTE as TOPOLOGY_NOTE, repair_changed_meshes, snapshot_mesh_sizes
 from .executor_scene_state import SceneStateMixin
+from .sandbox_checkpoints import add_stop_checkpoints
+from mixar.modules.common.agent_execution.script_time_limit import exec_with_time_limit
 
 
 class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
@@ -264,13 +266,17 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
 
     def execute(
         self, script: str, push_undo: bool = True, session_id: str = "",
-        tool_name: str = "",
+        tool_name: str = "", time_limit_s: Optional[float] = None,
     ) -> ExecutionResult:
         """Execute under one lock, including preparation, snapshots and cleanup.
 
         ``tool_name`` is the backend tool that sent the script. Read-only tools
-        (AGENT_UNDO_NEUTRAL_TOOLS) push no checkpoint and do not mark the turn
-        as having run, so a chat-only turn leaves no no-op undo steps behind.
+        (AGENT_UNDO_NEUTRAL_TOOLS) and the verification render
+        (AGENT_RENDER_TOOLS) push no checkpoint, do not mark the turn as having
+        run and take no before/after scene diff, so a chat-only turn leaves no
+        no-op undo steps behind.
+        ``time_limit_s`` stops the script's own code after that many seconds
+        (``common/agent_execution/script_time_limit.py``); None never stops it.
         """
         from mixar.modules.common.ui_control.core.ownership import active as ui_active
         if ui_active():
@@ -283,14 +289,17 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 error="Previous script still executing",
             )
         try:
-            return self._execute_locked(script, push_undo, session_id, tool_name)
+            return self._execute_locked(script, push_undo, session_id, tool_name, time_limit_s)
         finally:
             self._execution_lock.release()
 
-    def _execute_locked(self, script, push_undo, session_id, tool_name=""):
+    def _execute_locked(self, script, push_undo, session_id, tool_name="", time_limit_s=None):
         self._current_session = session_id or ""
-        # Capture scene state before execution
-        before_state = self._capture_scene_state()
+        # Read-only tools and the verification render change nothing a scene
+        # diff could report; skip both full walks of every object's state and
+        # animation (often 0.5 s each on an animated scene).
+        undo_neutral = tool_name in AGENT_UNDO_NEUTRAL_TOOLS or tool_name in AGENT_RENDER_TOOLS
+        before_state = None if undo_neutral else self._capture_scene_state()
         mode_before = self._interaction_mode()
 
         # Push undo step BEFORE the script runs, so the first push of a turn
@@ -299,7 +308,6 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         # _should_push_undo; a failed push never aborts the script — it is
         # logged once per turn and retried by the next script, where it used
         # to be silently swallowed (turns got NO checkpoint at all).
-        undo_neutral = tool_name in AGENT_UNDO_NEUTRAL_TOOLS
         turn_record = self._turn()
         if turn_record is not None and push_undo and not undo_neutral:
             turn_record[2] = True
@@ -457,6 +465,8 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             tree = snapshot_collection_iterations(tree)
             tree = guard_mesh_conversions(tree)
             exec_namespace["_mixar_guard_from_mesh"] = guard_from_mesh
+            if time_limit_s:
+                add_stop_checkpoints(tree, script)
 
             # Execute the script in the sandboxed namespace
             compiled = compile(tree, "<agent_script>", "exec")  # noqa: S102
@@ -464,15 +474,9 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 mesh_sizes = snapshot_mesh_sizes()
             except Exception:  # noqa: BLE001 - the guard never blocks the script
                 logger.exception("Snapshotting mesh sizes before a script failed")
-            exec_start = time.time()
-            exec(compiled, exec_namespace)  # noqa: S102
-            elapsed = time.time() - exec_start
-
-            if elapsed > SCRIPT_TIMEOUT_THRESHOLD:
-                logger.warning(
-                    "Script execution took %.1fs (threshold: %.0fs)",
-                    elapsed, SCRIPT_TIMEOUT_THRESHOLD,
-                )
+            # A raw agent script is stopped once the backend has stopped
+            # waiting for it; until then it holds the whole window.
+            exec_with_time_limit(compiled, exec_namespace, time_limit_s)
 
             # Check for return value using __RESULT__ convention
             if "__RESULT__" in exec_namespace:
@@ -547,12 +551,11 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                     names=", ".join(repr(n) for n in topology_repaired))
 
         # Capture scene state after execution and detect changes
-        after_state = self._capture_scene_state()
-        changes = self._detect_changes(before_state, after_state)
-
-        result.created_objects = changes["created"]
-        result.modified_objects = changes["modified"]
-        result.deleted_objects = changes["deleted"]
+        if before_state is not None:
+            changes = self._detect_changes(before_state, self._capture_scene_state())
+            result.created_objects = changes["created"]
+            result.modified_objects = changes["modified"]
+            result.deleted_objects = changes["deleted"]
 
         return result
 

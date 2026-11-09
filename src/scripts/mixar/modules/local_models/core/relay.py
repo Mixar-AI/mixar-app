@@ -33,7 +33,9 @@ Results: ``respond()`` is called exactly once with either
 - success (any HTTP status, non-2xx passes through for the backend SDK):
   ``{"status_code": int, "headers": {allowlisted}, "body": str}``
 - an error marker the caller translates to a JSON-RPC error:
-  ``{"error": {"code": str, "message": str}}``
+  ``{"error": {"code": str, "message": str}}``; code ``relay_timeout``
+  means the local server gave no answer within ``RELAY_TIMEOUT_S`` (the
+  backend fails that call without replaying it)
 
 Pure stdlib + fully synchronous — callers run it on a worker thread. No
 bpy imports. ``_urlopen`` / ``_getaddrinfo`` are test seams.
@@ -355,6 +357,12 @@ def handle_llm_request(params: dict, respond: Callable[[dict], None]) -> None:
         # Non-2xx passes through as a normal result — the backend SDK
         # understands provider error statuses (429, 400, ...).
         response = http_error
+    except TimeoutError:
+        logger.warning("%s local server did not answer within %.0f s",
+                       LOG_PREFIX, RELAY_TIMEOUT_S)
+        respond(_error("relay_timeout",
+                       f"local server did not answer within {RELAY_TIMEOUT_S:.0f} s"))
+        return
     except Exception as exc:
         logger.warning("%s relay transport failure: %s", LOG_PREFIX, exc)
         respond(_error("relay_transport", f"local server unreachable: {exc}"))

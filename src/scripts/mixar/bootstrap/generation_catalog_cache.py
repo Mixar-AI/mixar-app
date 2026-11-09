@@ -19,6 +19,7 @@ from mixar.bootstrap.generation_catalog import storage as generation_catalog_sto
 from mixar.bootstrap.generation_catalog import consumers as generation_catalog_consumers
 from mixar.bootstrap.generation_catalog.queries import GenerationCatalogQueries
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.threads import start_daemon_thread
 from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
 
 logger = get_logger(__name__)
@@ -280,11 +281,7 @@ def refresh_generation_catalog_cache() -> None:
             _refresh_pending = True  # re-run when the in-flight fetch lands
             return
 
-    threading.Thread(
-        target=_fetch_data_sync,
-        daemon=True,
-        name="MixarGenerationCatalogRefresh",
-    ).start()
+    start_daemon_thread(_fetch_data_sync, name="MixarGenerationCatalogRefresh")
 
 
 def _on_catalog_swapped() -> None:
@@ -409,10 +406,8 @@ def _fetch_data_sync() -> None:
 
 def _start_background_fetch() -> None:
     """Timer callback: kick off the background fetch thread (main thread)."""
-    threading.Thread(
-        target=_fetch_data_sync, daemon=True, name="MixarGenerationCatalogCache"
-    ).start()
-    return None  # Don't repeat
+    start_daemon_thread(_fetch_data_sync, name="MixarGenerationCatalogCache")
+    return None  # Don\'t repeat
 
 
 # Periodic revalidation cadence. The check sends If-None-Match, so an
@@ -429,11 +424,9 @@ def _periodic_revalidate() -> float:
             return _REVALIDATE_INTERVAL_S  # unregistered on shutdown anyway
         busy = _is_loading
     if not busy:
-        threading.Thread(
-            target=_fetch_data_sync,
-            daemon=True,
-            name="MixarGenerationCatalogRevalidate",
-        ).start()
+        # A thread that cannot start is retried on the next tick; raising
+        # here would unregister this timer for the rest of the session.
+        start_daemon_thread(_fetch_data_sync, name="MixarGenerationCatalogRevalidate")
     return _REVALIDATE_INTERVAL_S  # repeat
 
 

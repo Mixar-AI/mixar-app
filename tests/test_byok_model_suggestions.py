@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "scripts"
@@ -21,6 +23,12 @@ install_bpy_mock()
 from mixar.modules.byok.core import model_suggestions
 from mixar.modules.byok.ui.operators import byok_ops
 from mixar.modules.byok.ui.properties import byok_props
+
+
+@pytest.fixture(autouse=True)
+def _no_codex_account_list(monkeypatch):
+    """Each test starts with the account's model list unknown and leaves no list behind."""
+    monkeypatch.setattr(model_suggestions, "_codex_account_models", None)
 
 
 def test_client_provider_fallback_does_not_duplicate_catalog_entries():
@@ -208,7 +216,9 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch, tmp_path):
             byok_last_error="",
             byok_form_provider="codex",
             byok_form_model=model,
+            byok_form_model_id=model,
             byok_form_codex_path=str(auth_file),
+            byok_is_active=False,
         )
 
     stale = _wm("NONE")
@@ -227,6 +237,131 @@ def test_codex_save_uses_openai_catalog_models(monkeypatch, tmp_path):
     assert sent[0]["account_id"] == "acct-1"
     assert "refresh_token" not in sent[0]                 # stays in the CLI's file
     assert sent[0]["codex_auth_path"] == str(auth_file)   # the device keeps the reference
+    model_suggestions.clear()
+
+
+def test_codex_lists_only_the_models_the_chatgpt_account_can_run():
+    """mixar-backend#1809: a Codex model the ChatGPT plan lacks fails Save with
+    model_not_found. Once the account's own listing is known, the Codex chips
+    and Save's model check keep to it; OpenAI API keys still see every model."""
+    catalog = [("gpt-6.1-terra", "GPT 6.1 Terra", "GPT 6.1 Terra"),
+               ("gpt-6-astra", "GPT 6 Astra", "GPT 6 Astra"),
+               ("gpt-6-luna", "GPT 6 Luna", "GPT 6 Luna")]
+    model_suggestions.populate(providers=[("openai", "OpenAI", "OpenAI")],
+                               models={"openai": catalog})
+    assert model_suggestions.get_model_items("codex") == catalog   # unknown: everything
+    assert model_suggestions.codex_models_hidden() is False
+
+    model_suggestions.set_codex_account_models({"gpt-6-luna", "gpt-reserve"})
+    assert model_suggestions.get_model_items("codex") == [catalog[2]]
+    assert model_suggestions.is_valid_model("codex", "gpt-6-astra") is False
+    assert model_suggestions.is_valid_model("codex", "gpt-6-luna") is True
+    assert model_suggestions.get_model_items("openai") == catalog   # API keys unaffected
+    assert model_suggestions.is_valid_model("openai", "gpt-6-astra") is True
+    assert model_suggestions.codex_models_hidden() is True
+
+    # A list sharing no id with the catalog says nothing about it: unknown, so
+    # the whole group (never the NONE sentinel, which would block Codex).
+    model_suggestions.set_codex_account_models({"gpt-reserve"})
+    assert model_suggestions.get_model_items("codex") == catalog
+    assert model_suggestions.codex_models_hidden() is False
+
+    model_suggestions.set_codex_account_models(None)   # unknown again: everything
+    assert model_suggestions.get_model_items("codex") == catalog
+    model_suggestions.set_codex_account_models({"gpt-6-luna"})
+    model_suggestions.clear()                           # logout forgets the account
+    model_suggestions.populate(providers=[("openai", "OpenAI", "OpenAI")],
+                               models={"openai": catalog})
+    assert model_suggestions.get_model_items("codex") == catalog
+    model_suggestions.clear()
+
+
+class _CodexForm:
+    """The dialog form as RNA keeps it (see test_byok_enum_identifier_picks):
+    the model pick is the stored identifier behind the enum's get / set, and a
+    read resolves get()'s index through the CURRENT (narrowed) items."""
+
+    def __init__(self, auth_file, **fields):
+        self.byok_form_provider_id = "codex"
+        self.byok_form_model_id = ""
+        self.byok_form_codex_path = str(auth_file)
+        self.byok_dialog_state, self.byok_last_error = "IDLE", ""
+        self.byok_is_active, self.byok_device_key_missing = False, False
+        self.byok_current_provider, self.byok_current_model = "", ""
+        self.__dict__.update(fields)
+
+    @property
+    def byok_form_provider(self):
+        return byok_props._provider_items(self, None)[byok_props._provider_get(self)][0]
+
+    @byok_form_provider.setter
+    def byok_form_provider(self, identifier):   # RNA's set: _provider_changed follows
+        ids = [item[0] for item in byok_props._provider_items(self, None)]
+        if identifier not in ids:
+            raise TypeError(f"enum {identifier!r} not found")
+        byok_props._provider_set(self, ids.index(identifier))
+
+    @property
+    def byok_form_model(self):
+        return byok_props._model_items(self, None)[byok_props._model_get(self)][0]
+
+    @byok_form_model.setter
+    def byok_form_model(self, identifier):
+        ids = [item[0] for item in byok_props._model_items(self, None)]
+        if identifier not in ids:
+            raise TypeError(f"enum {identifier!r} not found")
+        byok_props._model_set(self, ids.index(identifier))
+
+
+def _codex_save(monkeypatch, tmp_path, **fields):
+    auth_file = tmp_path / "auth.json"
+    auth_file.write_text('{"tokens": {"access_token": "at", "refresh_token": "rt", '
+                         '"account_id": "acct-1"}}')
+    model_suggestions.populate(
+        providers=[("openai", "OpenAI", "OpenAI")],
+        models={"openai": [("gpt-6-astra", "GPT 6 Astra", "GPT 6 Astra"),
+                           ("gpt-6-luna", "GPT 6 Luna", "GPT 6 Luna")]},
+    )
+    sent = []
+    monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
+    monkeypatch.setattr(byok_ops.byok_client, "save_credentials",
+                        lambda **kwargs: sent.append(kwargs))
+    return _CodexForm(auth_file, **fields), sent
+
+
+def _press_save(wm):
+    return byok_ops.MIXAR_BYOK_OT_save().execute(SimpleNamespace(window_manager=wm))
+
+
+def test_codex_save_never_sends_a_model_the_user_did_not_pick(monkeypatch, tmp_path):
+    """A pick the account's list hides reads as the FIRST listed model through
+    the enum getter; Save must refuse it, not send that first model."""
+    wm, sent = _codex_save(monkeypatch, tmp_path)
+    wm.byok_form_model = "gpt-6-astra"                      # picked while the list was unknown
+    model_suggestions.set_codex_account_models({"gpt-6-luna"})
+    assert wm.byok_form_model == "gpt-6-luna"               # the getter's fallback
+    assert wm.byok_form_model_id == "gpt-6-astra"           # the stored pick is untouched
+
+    assert _press_save(wm) == {'CANCELLED'}
+    assert (wm.byok_dialog_state, wm.byok_last_error) == ("ERROR", "Choose a Codex model.")
+    assert sent == []
+
+    wm.byok_form_model = "gpt-6-luna"                       # the user picks a listed model
+    assert _press_save(wm) == {'FINISHED'}
+    assert sent[-1]["model"] == "gpt-6-luna"
+    model_suggestions.clear()
+
+
+def test_codex_key_only_save_keeps_the_saved_model(monkeypatch, tmp_path):
+    """Key needed on this computer: the chips are locked to the account's saved
+    model, so Save re-sends THAT model even when the list hides it — never the
+    first listed one, which would switch the account's model on every device."""
+    wm, sent = _codex_save(monkeypatch, tmp_path, byok_is_active=True,
+                           byok_device_key_missing=True, byok_current_provider="codex",
+                           byok_current_model="gpt-6-astra")
+    model_suggestions.set_codex_account_models({"gpt-6-luna"})
+    assert _press_save(wm) == {'FINISHED'}
+    assert sent[-1]["model"] == "gpt-6-astra"
     model_suggestions.clear()
 
 

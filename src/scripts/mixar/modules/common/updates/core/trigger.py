@@ -197,8 +197,9 @@ def _on_check_success(response) -> None:
         )
         state.set_available(info)
 
-        # Staging always starts: it is the invisible half of "seamless",
-        # and the badge reports it either way.
+        # Staging always starts: it is the invisible half of "seamless".
+        # The badge stays hidden while it runs and reads "Restart to
+        # Update" once the installer is ready.
         _start_installer_download(info)
 
         # An already-announced version gets the badge, not a second toast.

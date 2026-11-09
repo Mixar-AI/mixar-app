@@ -53,6 +53,24 @@ def test_native_desktop_token_exchange_sends_the_version():
     assert src.count("X-Client-Version") >= 2
 
 
+def test_the_client_version_report_sends_the_version(monkeypatch):
+    """PUT /notifications/me/client-version builds its own headers."""
+    from mixar.modules.common.api import client_version
+    from mixar.modules.common.notifications import rest_api
+
+    sent = {}
+
+    def put(url, headers, json, timeout):
+        sent.update(url=url, headers=headers)
+        return type("Ok", (), {"raise_for_status": lambda self: None, "json": lambda self: {"status": "success"}})()
+
+    monkeypatch.setattr(client_version, "get_client_version", lambda: "3.1.49")
+    monkeypatch.setattr(rest_api.requests, "put", put)
+    assert rest_api.report_client_version("https://h", "t", "3.1.49")
+    assert sent["url"].endswith("/me/client-version")
+    assert sent["headers"]["X-Client-Version"] == "3.1.49" and sent["headers"]["Authorization"] == "Bearer t"
+
+
 def test_version_header_helper_is_the_single_source():
     src = _src("common/api/client_version.py")
     assert 'CLIENT_VERSION_HEADER = "X-Client-Version"' in src

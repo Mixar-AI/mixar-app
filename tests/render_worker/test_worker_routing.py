@@ -193,14 +193,14 @@ def pkg(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "destination", lambda where, sub=None: str(tmp_path / "out"))
     record = {"folder": str(tmp_path / "snap"), "path": str(tmp_path / "snap" / "s.blend"),
               "images": "", "image_count": 0, "bytes": 10, "save_s": 0.1, "images_s": 0.0}
-    monkeypatch.setattr(snapshot, "write", lambda purpose: dict(record))
+    monkeypatch.setattr(snapshot, "write", lambda purpose, **_kwargs: dict(record))
     monkeypatch.setattr(snapshot, "acquire", lambda rec: None)
     monkeypatch.setattr(snapshot, "release", lambda rec: None)
     jobs = {}
     monkeypatch.setattr(supervisor, "root_dir", lambda: str(tmp_path))
     monkeypatch.setattr(supervisor, "available", lambda: True)
     monkeypatch.setattr(supervisor, "submit",
-                        lambda kind, message, timeout_s: jobs.setdefault("j1", message) and "j1")
+                        lambda kind, message, timeout_s, **_kw: jobs.setdefault("j1", message) and "j1")
     monkeypatch.setattr(supervisor, "forget", lambda job_id: None)
     state = {"value": {"state": "running"}}
     monkeypatch.setattr(supervisor, "poll", lambda job_id: dict(state["value"]))

@@ -91,19 +91,56 @@ def test_update_required_backs_off_to_fifteen_minutes(renewal, monkeypatch, code
     assert len(calls) == 2
 
 
-@pytest.mark.parametrize("change", ["relaunch", "toggle"])
-def test_update_required_renews_at_once_on_identity_change_or_toggle(renewal, monkeypatch, change):
+def test_update_required_renews_at_once_on_identity_change(renewal, monkeypatch):
     _, now = renewal
     calls = _poll(monkeypatch, [426])
     eligibility.refresh(_context())
     now[0] += 5
-    if change == "toggle":  # UI control off (runtime calls invalidate) and on again.
-        eligibility.invalidate()
-        eligibility.refresh(_context())
-    else:  # New instance / sign-in / backend.
-        eligibility.refresh(_context("relaunched"))
+    eligibility.refresh(_context("relaunched"))  # New instance / sign-in / backend.
     assert len(calls) == 2
     assert eligibility.status()["reason"] == "client_update_required"
+
+
+def _runtime_ticks(monkeypatch, config):
+    """runtime._tick with MCP on and a signed-in, connected desktop: what the
+    1 s timer runs, minus the relay server and the tool snapshot."""
+    from mixar.modules.mcp_bridge.core import runtime, tool_snapshot
+    from mixar.modules.common.ui_control.core import service
+
+    wm = SimpleNamespace(mixie_instance_id="fixture", mixie_chat_is_logged_in=True, mixie_chat_session_expired=False)
+    monkeypatch.setattr(runtime, "bpy", SimpleNamespace(context=SimpleNamespace(
+        window_manager=wm, scene=SimpleNamespace(name="Scene", mixie_session_id="s"))))
+    monkeypatch.setattr(runtime, "get_config", lambda: config)
+    monkeypatch.setattr(runtime, "get_server_url", lambda: "http://127.0.0.1:1")
+    monkeypatch.setattr(runtime, "_registered", True)
+    monkeypatch.setattr(runtime, "_provisioned", True)
+    monkeypatch.setattr(runtime, "_server", object())
+    for module, name, value in (
+            ("mixar.modules.space_mixie_chat.core.connection_manager", "get_connection_manager",
+             lambda: SimpleNamespace(is_connected=True)),
+            ("mixar.modules.space_mixie_chat.core.session", "get_session_manager",
+             lambda: SimpleNamespace(instance_id="fixture"))):
+        monkeypatch.setitem(sys.modules, module, SimpleNamespace(**{name: value}))
+    monkeypatch.setattr(service, "register", lambda: True)
+    monkeypatch.setattr(tool_snapshot, "refresh_if_due", lambda *a, **kw: None)
+    return runtime._tick
+
+
+def test_update_required_renews_at_once_when_ui_control_goes_off_and_on(renewal, monkeypatch):
+    _, now = renewal
+    calls = _poll(monkeypatch, [426])
+    config = {"mcp_enabled": True, "mcp_ui_control": True}
+    tick = _runtime_ticks(monkeypatch, config)
+    assert tick() == 1.0 and len(calls) == 1
+    assert eligibility.status()["reason"] == "client_update_required"
+    for allowed in (False, True):  # The user turns UI control off, then on, a tick apart.
+        now[0] += 1
+        config["mcp_ui_control"] = allowed
+        tick()
+    assert len(calls) == 3
+    now[0] += 5
+    tick()  # Then the fifteen-minute backoff again.
+    assert len(calls) == 3
 
 
 def test_transient_failure_still_retries_every_five_seconds(renewal, monkeypatch):
