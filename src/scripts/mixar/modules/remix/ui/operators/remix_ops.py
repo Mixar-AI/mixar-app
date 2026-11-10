@@ -27,6 +27,15 @@ def _fail(message: str) -> None:
         pass
 
 
+def _dismiss_offer(intent_id: str) -> None:
+    """The "Remix …?" toast has done its job once the remix starts."""
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().dismiss(f"remix-{intent_id}")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def start_remix(intent_id: str) -> str:
     from mixar.config.config import get_community_api_url
     inner = intake.claim_work(intake.remix_root(), get_community_api_url(), intent_id)
@@ -74,6 +83,7 @@ class MIXAR_OT_remix_start(Operator):
         if item is None:
             return {'CANCELLED'}
         inbox.get_inbox().take(item["intent_id"])
+        _dismiss_offer(item["intent_id"])
         start_remix(item["intent_id"])
         self.report({'INFO'}, rpt_("Getting the remix…"))
         return {'FINISHED'}
