@@ -19860,6 +19860,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20891,6 +20894,9 @@ msgstr "File del punto di ripristino mancante"
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Impossibile conservare lo stato corrente, quindi non è stato modificato nulla"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "Impossibile leggere il punto di ripristino"

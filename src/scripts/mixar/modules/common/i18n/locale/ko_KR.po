@@ -19860,6 +19860,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20891,6 +20894,9 @@ msgstr "체크포인트 파일이 없습니다"
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "현재 상태를 보존할 수 없어 아무것도 변경하지 않았습니다"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "체크포인트를 읽을 수 없습니다"

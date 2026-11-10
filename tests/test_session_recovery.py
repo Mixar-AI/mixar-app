@@ -525,9 +525,12 @@ def test_popups_never_defer_a_save_point(monkeypatch, open_modals, busy):
 
 @pytest.fixture
 def rt(tmp_path, monkeypatch):
+    from mixar.modules.agent_bubble.core import bubble_windows
     from mixar.modules.session_recovery import runtime
     from mixar.modules.session_recovery.scheduler import SavePointScheduler
 
+    # The real guard is covered by test_session_recovery_context.py.
+    monkeypatch.setattr(bubble_windows, "prepare_file_read_window", lambda: None)
     jr = journal.Journal(str(tmp_path / "recovery"), pid=4242, now=NOW)
     sched = SavePointScheduler()
     sched.reset(0.0)

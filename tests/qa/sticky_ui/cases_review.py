@@ -94,7 +94,7 @@ result = (rec or {}).get('id') if isinstance(rec, dict) else getattr(rec, 'id', 
     assert path, "checkpoint file not found"
     qa.eval("drv._qa_read = None\nresult = True")
     call_from_timer(qa, "from mixar.modules.space_mixie_chat.core import turn_checkpoints as cp\n"
-                        "cp._close_bubble_windows()\n"
+                        "cp._prepare_read_window()[0]\n"
                         f"drv._qa_read = sorted(bpy.ops.wm.recover_auto_save(filepath={path[0]!r}))", delay=0.05)
     qa.wait("drv._qa_read is not None", timeout=60)
     assert qa.eval("result = drv._qa_read") == ["FINISHED"], "the checkpoint did not load"

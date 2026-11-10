@@ -19860,6 +19860,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20891,6 +20894,9 @@ msgstr "Az ellenőrzőpont fájlja hiányzik"
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "A jelenlegi állapot nem tartható meg, ezért semmi sem változott"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "Az ellenőrzőpont nem olvasható"

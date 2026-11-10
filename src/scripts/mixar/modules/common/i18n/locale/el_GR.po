@@ -19860,6 +19860,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20891,6 +20894,9 @@ msgstr "Λείπει το αρχείο του σημείου επαναφορά�
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Δεν ήταν δυνατή η διατήρηση της τρέχουσας κατάστασης, οπότε δεν άλλαξε τίποτα."
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "Δεν ήταν δυνατή η ανάγνωση του σημείου επαναφοράς."

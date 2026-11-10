@@ -25360,6 +25360,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -26641,6 +26644,9 @@ msgstr "Datoteka tačke vraćanja nedostaje"
 # derived
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Tekuće stanje nije moglo da se sačuva, pa ništa nije promenjeno"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 # derived
 msgid "Could not read the checkpoint"

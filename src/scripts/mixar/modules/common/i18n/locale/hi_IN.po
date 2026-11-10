@@ -19860,6 +19860,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20891,6 +20894,9 @@ msgstr "चेकपॉइंट संचिका गायब है"
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "वर्तमान स्थिति रखी नहीं जा सकी, इसलिए कुछ भी नहीं बदला गया"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "चेकपॉइंट पढ़ा नहीं जा सका"
