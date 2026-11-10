@@ -29,7 +29,19 @@ def _atomic(path, data, mode=0o600):
         temporary.unlink(missing_ok=True)
 
 
+def _bytecode_args():
+    """The launcher's Python never writes into the install directory.
+
+    A ``__pycache__`` written there breaks the signed macOS bundle, so it
+    shares the app's bytecode cache (``sys.pycache_prefix``, set before the
+    app's Python starts) or, without one, writes no bytecode at all.
+    """
+    prefix = sys.pycache_prefix
+    return ["-X", "pycache_prefix="+prefix] if prefix else ["-B"]
+
+
 def provision(python, script, executable, enabled=True):
+    """(Re)write the launcher; the app does so on every start (runtime._tick)."""
     root = directory()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     if root.is_symlink():
@@ -41,13 +53,13 @@ def provision(python, script, executable, enabled=True):
     manifest = {"version": 1, "python": str(python), "script": str(script),
                 "executable": str(executable), "enabled": bool(enabled)}
     _atomic(root / "installation.json", json.dumps(manifest))
+    command = [str(python), *_bytecode_args(), str(script)]
     if os.name == "nt":
         path = root / "mixar-mcp.cmd"
-        command = subprocess.list2cmdline([str(python), str(script)]).replace('%', '%%')
-        _atomic(path, "@echo off\n"+command+" %*\n")
+        _atomic(path, "@echo off\n"+subprocess.list2cmdline(command).replace('%', '%%')+" %*\n")
     else:
         path = root / "mixar-mcp"
-        _atomic(path, "#!/bin/sh\nexec "+shlex.join([str(python), str(script)])+' "$@"\n', 0o700)
+        _atomic(path, "#!/bin/sh\nexec "+shlex.join(command)+' "$@"\n', 0o700)
     return path
 
 
