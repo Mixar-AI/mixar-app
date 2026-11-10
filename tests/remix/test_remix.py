@@ -106,6 +106,40 @@ def test_scrub_removes_the_creators_conversation_and_identity_only():
     assert lineage.origin_of(scene)["id"] == ORIGIN["id"]
 
 
+class Stored(dict):
+    """Blender's system-property storage for one ID."""
+
+
+def background_scene():
+    """A scene as a BACKGROUND Mixar sees it: no chat property is registered,
+    but the saved values are still in the file's system properties."""
+    scene = dict()
+    stored = Stored({"mixie_chat_messages": [{"text": "secret client brief"}], "mixie_session_id": "s-1",
+                     "mixie_chat_password": "", "mixie_moodboard_images": [1], "mixar_web_publish": {"slug": "x"},
+                     "mixar_op_history_id": "log-7", "cycles": {"samples": 64}, "mixar_zen_sky": {"on": True}})
+    holder = type("BackgroundScene", (dict,), {"bl_system_properties_get": lambda self: stored})(scene)
+    holder.stored = stored
+    return holder
+
+
+def test_scrub_reaches_stored_values_when_no_property_is_registered():
+    scene = background_scene()
+    scene["mixar_game_store"] = "{}"
+    lineage.stamp(scene, ORIGIN)
+    assert lineage.private_keys(scene) == ["mixar_op_history_id", "mixar_web_publish", "mixie_chat_messages",
+                                           "mixie_chat_password", "mixie_moodboard_images", "mixie_session_id"]
+    cleared = lineage.scrub(scene)
+    assert lineage.private_keys(scene) == [] and "mixie_chat_messages" in cleared
+    # Render and look settings are not private and stay.
+    assert set(scene.stored) == {"cycles", "mixar_zen_sky"}
+    assert "mixar_game_store" not in scene and lineage.origin_of(scene)["id"] == ORIGIN["id"]
+
+
+def test_ids_without_system_storage_are_left_alone():
+    assert lineage.scrub_stored(NS(name="old-blender-object")) == []
+    assert lineage.private_keys(NS()) == []
+
+
 # --- inbox ----------------------------------------------------------------------
 
 def test_inbox_polls_fast_after_start_then_slow():

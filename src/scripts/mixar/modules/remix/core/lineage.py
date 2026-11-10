@@ -20,6 +20,9 @@ IDENTITY_PROPS = ("mixar_game_store",)
 # Registered Scene properties that belong to the creator's session: the
 # agent conversation, its ids and the creator's user id.
 PRIVATE_PREFIXES = ("mixie_",)
+# Stored values outside that prefix that also tie a file to its creator: the
+# web-publish identity and the id of their local operation log.
+PRIVATE_SYSTEM_KEYS = ("mixar_web_publish", "mixar_op_history_id")
 WEB_PUBLISH_ATTR = "mixar_web_publish"
 
 
@@ -101,12 +104,57 @@ def _private_names(scene) -> list[str]:
             if any(p.identifier.startswith(prefix) for prefix in PRIVATE_PREFIXES)]
 
 
+def _is_private(key: str) -> bool:
+    return key.startswith(PRIVATE_PREFIXES) or key in PRIVATE_SYSTEM_KEYS
+
+
+def system_props(idblock):
+    """Where Blender keeps the values of registered properties (5.0+), or None.
+
+    The values stay in the file whether or not the property is registered in
+    the process that opens it. A background Mixar registers none of the chat
+    properties, so the conversation is only reachable (and removable) here.
+    """
+    getter = getattr(idblock, "bl_system_properties_get", None)
+    if getter is None:
+        return None
+    try:
+        return getter()
+    except (AttributeError, RuntimeError, TypeError):
+        return None
+
+
+def private_keys(idblock) -> list[str]:
+    """Private data still stored on ``idblock`` (empty once it is clean)."""
+    stored = system_props(idblock)
+    return sorted(key for key in (stored.keys() if stored is not None else ()) if _is_private(key))
+
+
+def scrub_stored(idblock) -> list[str]:
+    """Delete stored private values from ``idblock``; returns their names."""
+    stored = system_props(idblock)
+    if stored is None:
+        return []
+    cleared = []
+    for key in [k for k in stored.keys() if _is_private(k)]:
+        try:
+            del stored[key]
+        except (KeyError, RuntimeError, TypeError):
+            continue
+        cleared.append(key)
+    return cleared
+
+
 def scrub(scene) -> list[str]:
     """Remove the creator's identity and conversation from ``scene``.
 
     Run on the copy that is uploaded as a remix source, and again on a
     downloaded source before it is used (a .mixar attached on the web never
     went through the first pass). Returns the names it cleared.
+
+    Two passes, because the same data is reachable two ways: through the
+    registered properties (the app), and as stored values (a background
+    process, where those properties are not registered).
     """
     cleared = []
     for name in IDENTITY_PROPS:
@@ -132,4 +180,5 @@ def scrub(scene) -> list[str]:
                 except (AttributeError, RuntimeError, TypeError):
                     pass
         cleared.append(WEB_PUBLISH_ATTR)
+    cleared.extend(name for name in scrub_stored(scene) if name not in cleared)
     return cleared

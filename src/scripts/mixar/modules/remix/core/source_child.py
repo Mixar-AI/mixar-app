@@ -28,8 +28,22 @@ def main():
         import bpy
         from mixar.modules.remix.core import lineage
         cleared = {scene.name: lineage.scrub(scene) for scene in bpy.data.scenes}
+        # Objects, materials and the rest can carry the same kind of stored value.
+        others = 0
+        for collection in (bpy.data.objects, bpy.data.materials, bpy.data.meshes, bpy.data.images,
+                           bpy.data.collections, bpy.data.worlds, bpy.data.cameras, bpy.data.lights,
+                           bpy.data.node_groups, bpy.data.actions, bpy.data.armatures):
+            for idblock in collection:
+                others += len(lineage.scrub_stored(idblock))
+        # Never hand back a file that still holds something private: the parent
+        # uploads the copy only when this process reports ok.
+        left = {scene.name: lineage.private_keys(scene) for scene in bpy.data.scenes}
+        left = {name: keys for name, keys in left.items() if keys}
+        if left:
+            raise RuntimeError(f"private data could not be removed: {left}")
         bpy.ops.wm.save_mainfile(compress=True)
-        result.update(ok=True, cleared=cleared, size_bytes=os.path.getsize(bpy.data.filepath))
+        result.update(ok=True, cleared=cleared, cleared_elsewhere=others,
+                      size_bytes=os.path.getsize(bpy.data.filepath))
     except Exception as exc:  # noqa: BLE001 — reported to the parent job
         result.update(error=f"{exc.__class__.__name__}: {exc}", error_code="source_failed",
                       traceback=traceback.format_exc()[-4000:])
