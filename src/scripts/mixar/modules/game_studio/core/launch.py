@@ -34,7 +34,32 @@ def context(scene, package: dict, store_page=None) -> dict:
             "slug": package["spec"]["slug"], "warnings": list(package["warnings"]),
             "godot_config": _godot_config(), "api_base": get_community_api_url(),
             "web_base": get_community_web_url(), "store": _store_identity(scene),
-            "scene_name": scene.name, "store_page": store_page or {}}
+            "scene_name": scene.name, "store_page": store_page or {},
+            # What this project was remixed from (None for an original).
+            "remixed_from": _remixed_from(scene)}
+
+
+def _remixed_from(scene):
+    try:
+        from mixar.modules.remix.core import lineage
+        return lineage.origin_of(scene)
+    except Exception:  # noqa: BLE001 — lineage is never a reason to refuse a build
+        return None
+
+
+def _with_remix_source(ctx: dict, allow_remix: bool) -> dict:
+    """Main thread: capture the project file a remixable game carries. A
+    failed capture publishes the game without a source, with a warning."""
+    ctx = dict(ctx, allow_remix=bool(allow_remix))
+    if not allow_remix:
+        return ctx
+    try:
+        from mixar.modules.remix.core import source_job
+        ctx["remix_source"] = source_job.prepare(ctx["game_dir"], ctx["slug"])
+    except Exception as exc:  # noqa: BLE001
+        ctx["warnings"] = list(ctx.get("warnings") or []) + [
+            f"The project was not included for remixing ({exc.__class__.__name__})."]
+    return ctx
 
 
 def refused(package: dict) -> dict:
@@ -100,5 +125,7 @@ def start_approved_publish(request_id: str, payload: dict) -> dict:
         return {"ok": False, "job_id": request_id, "state": "failed", "error_code": "wrong_scene",
                 "error": f"Switch to the scene '{scene.name}' to publish it."}
     platforms = list(payload.get("platforms") or DEFAULT_PLATFORMS)
-    return _run("publish", scene, lambda ctx: pipeline.publish_work(ctx, platforms),
+    allow_remix = bool(payload.get("allow_remix", True))
+    return _run("publish", scene,
+                lambda ctx: pipeline.publish_work(_with_remix_source(ctx, allow_remix), platforms),
                 payload.get("store_page"), request_id)

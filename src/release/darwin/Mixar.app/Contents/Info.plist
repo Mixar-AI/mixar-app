@@ -34,6 +34,21 @@
 			<true/>
 		</dict>
 	</array>
+	<!-- mixar:// launches or focuses the app. The link's payload is not read: a remix started
+	     on the web waits in the store under the signed-in user and modules/remix picks it up. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.mixar.mixar.link</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mixar</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>Mixar</string>
 	<key>CFBundleGetInfoString</key>

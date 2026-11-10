@@ -228,6 +228,22 @@ def start_game_export(platforms=None) -> dict:
     return _redact(launch.start("export", _scene(), platforms=platforms))
 
 
+def _allow_remix() -> bool:
+    """The publish form's "Let others remix this game" (on by default)."""
+    context = getattr(bpy, "context", None)
+    form = getattr(getattr(context, "window_manager", None), "mixar_game", None)
+    value = getattr(form, "allow_remix", True)
+    return value if isinstance(value, bool) else True
+
+
+def _remixed_from(scene):
+    try:
+        from mixar.modules.remix.core import lineage
+        return lineage.origin_of(scene)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _publish_summary(scene, platforms, page) -> dict:
     report = _spec_report(scene)
     identity = _store_identity(scene)
@@ -236,7 +252,10 @@ def _publish_summary(scene, platforms, page) -> dict:
     return {
         "title": settings.get("title"), "slug": slug, "platforms": platforms,
         "price_cents": page.get("price_cents", 0), "store_page": page,
-        "files": ["scene.glb"] + [f"{slug}-{platform}.zip" for platform in platforms],
+        "files": ["scene.glb"] + [f"{slug}-{platform}.zip" for platform in platforms]
+        + ([f"{slug}.mixar"] if _allow_remix() else []),
+        # The project file goes along (without the Mixie conversation) so others can remix it.
+        "allow_remix": _allow_remix(), "remixed_from": _remixed_from(scene),
         "action": "update" if identity.get("game_id") else "create",
         # Only a URL the store returned earlier; the store owns its URLs.
         "store_url": identity.get("store_url") or None,
@@ -289,7 +308,8 @@ def start_game_publish(store_page=None, platforms=None, confirm=False) -> dict:
                         "error": "; ".join(summary["errors"]), "errors": summary["errors"]})
     from . import approvals
     request_id = approvals.create(summary, {"platforms": platforms, "store_page": page,
-                                            "scene_name": scene.name})
+                                            "scene_name": scene.name,
+                                            "allow_remix": summary["allow_remix"]})
     _ask_user(request_id, summary)
     return _redact({"ok": True, "state": "awaiting_user_approval", "request_id": request_id,
                     "job_id": request_id, "summary": summary,

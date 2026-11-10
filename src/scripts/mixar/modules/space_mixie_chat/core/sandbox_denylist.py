@@ -121,6 +121,8 @@ DENIED_OPS = frozenset({
     "mixar.game_library_launch_approve",
     "mixar.game_library_install",  # the user's install self-tests (runs the game)
     "mixar.game_locate_godot",
+    # Replaces the open file with a downloaded project: the user starts it.
+    "mixar.remix_start",
 })
 
 # Operator name prefixes refused through bpy.ops. Every wm.context_* and

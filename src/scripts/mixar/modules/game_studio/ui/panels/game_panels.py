@@ -221,6 +221,7 @@ class MIXAR_PT_game_publish(_GamePanel, Panel):
                 row.prop(form, f"platform_{platform}", toggle=True)
             layout.operator("mixar.game_export", icon='EXPORT')
             box = layout.box()
+            box.prop(form, "allow_remix")
             box.prop(form, "tagline")
             box.prop(form, "description")
             box.prop(form, "genres")

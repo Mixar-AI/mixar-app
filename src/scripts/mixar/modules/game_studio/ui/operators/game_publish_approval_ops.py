@@ -56,7 +56,9 @@ class MIXAR_OT_game_publish_approve(Operator):
             title=iface_("Publish \"{title}\" to the Mixar Store?").format(title=summary["title"]),
             message=iface_("{platforms} build(s). The store page goes public now; builds are "
                            "playable after moderator review.").format(
-                platforms=platform_list(summary["platforms"])),
+                platforms=platform_list(summary["platforms"]))
+            + (" " + iface_("Your project is included so others can remix it.")
+               if summary.get("allow_remix") else ""),
             confirm_text=iface_("Publish"), translate=False)
 
     def execute(self, context):

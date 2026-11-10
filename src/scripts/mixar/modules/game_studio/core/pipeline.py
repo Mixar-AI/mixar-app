@@ -192,7 +192,49 @@ def store_fields(ctx: dict, platforms) -> dict:
     return {"title": ctx["title"], "slug": ctx["slug"], "tagline": page.get("tagline", ""),
             "description": page.get("description", ""), "genres": page.get("genres", []),
             "tags": page.get("tags", []), "price_cents": page.get("price_cents", 0),
-            "platforms": list(platforms), "content_rating": page.get("content_rating", "everyone")}
+            "platforms": list(platforms), "content_rating": page.get("content_rating", "everyone"),
+            "allow_remix": bool(ctx.get("allow_remix", True)), **_lineage_fields(ctx)}
+
+
+# Sent when the store page is created only: lineage never changes afterwards.
+CREATE_ONLY_FIELDS = ("slug", "remixed_from_id")
+
+
+def _lineage_fields(ctx: dict) -> dict:
+    try:
+        from mixar.modules.remix.core import lineage
+        return lineage.game_fields(ctx.get("remixed_from"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _for_update(fields: dict) -> dict:
+    return {k: v for k, v in fields.items() if k not in CREATE_ONLY_FIELDS}
+
+
+def _upload_source(client, handle, game_id: str, ctx: dict) -> str:
+    """Clean the captured project file and upload it as the game's remix
+    source (contract v1.2, media kind ``source``). Best effort: a failure is
+    a warning, and the game is published without a source."""
+    from mixar.modules.remix.core import source_job
+    from .store_client import StoreError, sha256_file
+    source = ctx.get("remix_source")
+    if not source:
+        return ""
+    try:
+        path = source_job.stage(source, handle.cancel_event)
+        if not path:
+            return "The project was not included for remixing (it could not be prepared)."
+        digest, size = sha256_file(path, handle.cancel_event)
+        slot = client.create_media(game_id, "source", os.path.basename(path), size, digest)
+        client.upload(slot["put_url"], slot.get("headers") or {}, path, None, handle.cancel_event)
+        client.complete_media(game_id, str(slot["upload_id"]))
+    except (StoreError, KeyError, OSError) as exc:
+        return ("The project was not included for remixing "
+                f"({getattr(exc, 'message', exc.__class__.__name__)}).")
+    finally:
+        source_job.discard(source)
+    return ""
 
 
 def _create_or_update(client, ctx: dict, fields: dict) -> dict:
@@ -200,7 +242,7 @@ def _create_or_update(client, ctx: dict, fields: dict) -> dict:
     game_id = (ctx.get("store") or {}).get("game_id")
     if game_id:
         try:
-            return client.update_game(game_id, {k: v for k, v in fields.items() if k != "slug"})
+            return client.update_game(game_id, _for_update(fields))
         except StoreError as exc:
             if exc.status not in (403, 404):
                 raise
@@ -211,7 +253,7 @@ def _create_or_update(client, ctx: dict, fields: dict) -> dict:
             raise
         mine = exc.detail.get("game_id")
         if mine:  # our own draft under this slug (the scene lost its identity)
-            return client.update_game(str(mine), {k: v for k, v in fields.items() if k != "slug"})
+            return client.update_game(str(mine), _for_update(fields))
         # Taken by someone else: let the store choose a free slug.
         return client.create_game({k: v for k, v in fields.items() if k != "slug"})
 
@@ -286,6 +328,11 @@ def publish_work(ctx: dict, platforms, client_factory=None):
             for index, item in enumerate(artifacts):
                 builds.append(_upload_build(client, handle, game_id, item, version,
                                             58.0 + span * index, span))
+            if ctx.get("remix_source"):
+                handle.progress(96.0, "Including the project for remixing", force=True)
+                warning = _upload_source(client, handle, game_id, ctx)
+                if warning:
+                    warnings.append(warning)
             handle.progress(97.0, "Publishing", force=True)
             page = client.publish(game_id) or {}
         except StoreError as exc:
@@ -301,6 +348,9 @@ def publish_work(ctx: dict, platforms, client_factory=None):
                 local["review_status"] = remote["review_status"]
         result = {"game_id": str(page.get("game_id") or game_id), "store_url": store_url,
                   "review_status": str(page.get("review_status") or "pending"), "builds": builds}
+        if ctx.get("remixed_from"):
+            result["remixed_from"] = ctx["remixed_from"]
+        result["remixable"] = bool(page.get("remixable"))
         if warnings:
             result["warnings"] = warnings
         return result

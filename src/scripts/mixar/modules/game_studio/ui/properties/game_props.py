@@ -182,6 +182,12 @@ class MIXAR_GameSettings(PropertyGroup):
     description: StringProperty(name="Description", default="")
     genres: StringProperty(name="Genres", description="Comma-separated", default="")
     tags: StringProperty(name="Tags", description="Comma-separated", default="")
+    allow_remix: BoolProperty(
+        name="Let others remix this game",
+        description="Include this project with the published game so other people can open their "
+                    "own copy and build on it, with credit to you. Your conversation with Mixie "
+                    "is removed from the copy",
+        default=True)
 
     def platforms(self):
         return [p for p in ("web", "macos", "windows", "linux") if getattr(self, f"platform_{p}")]

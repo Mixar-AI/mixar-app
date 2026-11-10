@@ -146,7 +146,8 @@ class MIXAR_OT_game_publish(Operator):
             self.report({'ERROR'}, "; ".join(problems))
             return {'CANCELLED'}
         request_id = approvals.create(summary, {"platforms": platforms, "store_page": page,
-                                                "scene_name": context.scene.name})
+                                                "scene_name": context.scene.name,
+                                                "allow_remix": summary["allow_remix"]})
         return bpy.ops.mixar.game_publish_approve('INVOKE_DEFAULT', request_id=request_id)
 
     def execute(self, context):

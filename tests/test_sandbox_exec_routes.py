@@ -175,6 +175,8 @@ def test_the_denied_set_is_pinned(denylist):
         "mixar.game_publish_approve", "mixar.game_publish", "mixar.game_library_launch",
         "mixar.game_library_launch_approve", "mixar.game_locate_godot",
         "mixar.game_library_install",
+        # Remix: replaces the open file with a downloaded project.
+        "mixar.remix_start",
     })
     assert denylist.DENIED_OPS_PREFIXES == ("wm.context_", "wm.properties_")
     assert denylist.DENIED_OPS_KWARGS == {"node": frozenset({"settings"})}

@@ -88,8 +88,10 @@ def test_publish_without_confirm_only_previews(level):
     assert reply["needs_confirmation"] is True and "job_id" not in reply
     assert reply["summary"]["action"] == "create" and reply["summary"]["platforms"] == ["web", "macos", "windows"]
     assert reply["summary"]["store_url"] is None  # never composed client-side
+    # The project file goes along so others can remix it (on by default).
+    assert reply["summary"]["allow_remix"] is True and reply["summary"]["remixed_from"] is None
     assert reply["summary"]["files"] == ["scene.glb", "untitled-game-web.zip", "untitled-game-macos.zip",
-                                         "untitled-game-windows.zip"]
+                                         "untitled-game-windows.zip", "untitled-game.mixar"]
     assert level.written == [] and jobs.running() is None
     assert agent_api.start_game_publish(platforms=["ps5"], confirm=True)["error_code"] == "bad_request"
 
