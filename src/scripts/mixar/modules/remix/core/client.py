@@ -11,12 +11,16 @@ store's record (size always, sha256 when the store has one).
 from __future__ import annotations
 
 import hashlib
+from urllib.parse import quote, urlsplit
 
 import requests
 
 from mixar.modules.game_studio.constants import UPLOAD_CHUNK, UPLOAD_TIMEOUT_S
 from mixar.modules.game_studio.core.store_client import (StoreClient, StoreError, _network_error,
                                                          _remove)
+
+
+LOOPBACK = ("127.0.0.1", "localhost", "::1")
 
 
 class RemixClient(StoreClient):
@@ -26,13 +30,24 @@ class RemixClient(StoreClient):
         return [item for item in items or () if isinstance(item, dict) and item.get("intent_id")]
 
     def claim(self, intent_id: str) -> dict:
-        return self.request("POST", f"api/v1/remix/intents/{intent_id}/claim") or {}
+        return self.request("POST", f"api/v1/remix/intents/{quote(str(intent_id), safe='')}/claim") or {}
 
     def source(self, kind: str, ref: str) -> dict:
-        return self.request("GET", f"api/v1/remix/{kind}/{ref}/source") or {}
+        if kind not in ("post", "game"):
+            raise StoreError("Unknown kind of remix.", "bad_request")
+        return self.request("GET", f"api/v1/remix/{kind}/{quote(str(ref), safe='')}/source") or {}
 
     def fetch_source(self, url: str, path: str, size_bytes: int = 0, sha256: str = "",
                      on_progress=None, cancel=None) -> str:
+        # The file is opened as a project, so it is held to the store's
+        # record: a size is always required, a sha256 whenever the store has
+        # one, and the link must be https (plain http only to this machine).
+        if not size_bytes or int(size_bytes) <= 0:
+            raise StoreError("The store did not say how big the project is; nothing was downloaded.",
+                             "bad_response")
+        parts = urlsplit(str(url))
+        if parts.scheme != "https" and not (parts.scheme == "http" and parts.hostname in LOOPBACK):
+            raise StoreError("The store sent a download link Mixar won't follow.", "bad_response")
         digest, size = hashlib.sha256(), 0
         try:
             response = requests.get(url, stream=True, timeout=UPLOAD_TIMEOUT_S)

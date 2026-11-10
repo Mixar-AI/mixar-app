@@ -88,10 +88,17 @@ def test_publish_without_confirm_only_previews(level):
     assert reply["needs_confirmation"] is True and "job_id" not in reply
     assert reply["summary"]["action"] == "create" and reply["summary"]["platforms"] == ["web", "macos", "windows"]
     assert reply["summary"]["store_url"] is None  # never composed client-side
-    # The project file goes along so others can remix it (on by default).
-    assert reply["summary"]["allow_remix"] is True and reply["summary"]["remixed_from"] is None
+    # No publish form here, so the switch is unknown: the project file is NOT included.
+    assert reply["summary"]["allow_remix"] is False and reply["summary"]["remixed_from"] is None
     assert reply["summary"]["files"] == ["scene.glb", "untitled-game-web.zip", "untitled-game-macos.zip",
-                                         "untitled-game-windows.zip", "untitled-game.mixar"]
+                                         "untitled-game-windows.zip"]
+    # With the form's switch on (its default in the app) the project file goes along.
+    from types import SimpleNamespace as NS
+    form = NS(context=NS(window_manager=NS(mixar_game=NS(allow_remix=True))))
+    import unittest.mock as mock
+    with mock.patch.object(agent_api, "bpy", form):
+        summary = agent_api._publish_summary(agent_api._scene(), ["web"], {})
+    assert summary["allow_remix"] is True and summary["files"][-1] == "untitled-game.mixar"
     assert level.written == [] and jobs.running() is None
     assert agent_api.start_game_publish(platforms=["ps5"], confirm=True)["error_code"] == "bad_request"
 

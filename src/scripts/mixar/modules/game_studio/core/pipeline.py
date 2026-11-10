@@ -302,64 +302,89 @@ def _store_failure(exc, ctx: dict) -> JobError:
 
 def publish_work(ctx: dict, platforms, client_factory=None):
     def work(handle):
-        from .store_client import StoreClient, StoreError
-        verdict = _godot_verdict(ctx)
-        godot = verdict["path"]
-        build_stage(ctx, handle, godot, 0.0, 22.0)
-        skipped = []
-        artifacts = export_stage(ctx, handle, godot, platforms, 22.0, 48.0, skipped)
-        offered = [item["platform"] for item in artifacts]  # what the store page offers
-        handle.progress(49.0, "Rendering store images", force=True)
-        images, warnings = capture_stage(ctx, handle, verdict)
-        warnings = skipped + warnings
-        client = (client_factory or StoreClient)(ctx["api_base"])
         try:
-            handle.progress(56.0, "Creating the store page", force=True)
-            game = _create_or_update(client, ctx, store_fields(ctx, offered))
-            game_id = str(game.get("game_id") or game.get("id") or "")
-            if not game_id:
-                raise StoreError("The store did not return a game id.", "bad_response")
-            for kind, path in images:
-                warning = _upload_media(client, game_id, kind, path, handle.cancel_event)
-                if warning:
-                    warnings.append(warning)
-            builds, version = [], time.strftime("%Y.%m.%d.%H%M%S", time.gmtime())
-            span = 38.0 / max(1, len(artifacts))
-            for index, item in enumerate(artifacts):
-                builds.append(_upload_build(client, handle, game_id, item, version,
-                                            58.0 + span * index, span))
-            if ctx.get("remix_source"):
-                handle.progress(96.0, "Including the project for remixing", force=True)
-                warning = _upload_source(client, handle, game_id, ctx)
-                if warning:
-                    warnings.append(warning)
-            handle.progress(97.0, "Publishing", force=True)
-            page = client.publish(game_id) or {}
-        except StoreError as exc:
-            raise _store_failure(exc, ctx) from exc
-        # The store owns its URLs: open what it returns, never a composed one.
-        store_url = str(page.get("store_url") or game.get("store_url") or "") or None
-        slug = str(page.get("slug") or game.get("slug") or ctx["slug"])
-        _remember(ctx.get("scene_name", ""), {"game_id": game_id, "slug": slug, "store_url": store_url})
-        by_id = {b["build_id"]: b for b in builds}
-        for remote in page.get("builds") or ():
-            local = by_id.get(str(remote.get("build_id") or remote.get("id") or ""))
-            if local is not None and remote.get("review_status"):
-                local["review_status"] = remote["review_status"]
-        result = {"game_id": str(page.get("game_id") or game_id), "store_url": store_url,
-                  "review_status": str(page.get("review_status") or "pending"), "builds": builds}
-        if ctx.get("remixed_from"):
-            result["remixed_from"] = ctx["remixed_from"]
-        result["remixable"] = bool(page.get("remixable"))
-        if warnings:
-            result["warnings"] = warnings
-        return result
+            return _publish(ctx, platforms, client_factory, handle)
+        finally:
+            # The captured project copy is the creator's UNCLEANED file until
+            # ``_upload_source`` runs. Never leave it behind, whatever failed.
+            _discard_source(ctx)
+    # For a stage that runs BEFORE this work and may fail (the material bake).
+    work.cleanup = lambda: _discard_source(ctx)
     return work
 
 
-def _remember(scene_name: str, identity: dict) -> None:
+def _discard_source(ctx: dict) -> None:
+    if ctx.get("remix_source"):
+        try:
+            from mixar.modules.remix.core import source_job
+            source_job.discard(ctx["remix_source"])
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _publish(ctx: dict, platforms, client_factory, handle):
+    from .store_client import StoreClient, StoreError
+    verdict = _godot_verdict(ctx)
+    godot = verdict["path"]
+    build_stage(ctx, handle, godot, 0.0, 22.0)
+    skipped = []
+    artifacts = export_stage(ctx, handle, godot, platforms, 22.0, 48.0, skipped)
+    offered = [item["platform"] for item in artifacts]  # what the store page offers
+    handle.progress(49.0, "Rendering store images", force=True)
+    images, warnings = capture_stage(ctx, handle, verdict)
+    warnings = skipped + warnings
+    client = (client_factory or StoreClient)(ctx["api_base"])
+    try:
+        handle.progress(56.0, "Creating the store page", force=True)
+        game = _create_or_update(client, ctx, store_fields(ctx, offered))
+        game_id = str(game.get("game_id") or game.get("id") or "")
+        if not game_id:
+            raise StoreError("The store did not return a game id.", "bad_response")
+        for kind, path in images:
+            warning = _upload_media(client, game_id, kind, path, handle.cancel_event)
+            if warning:
+                warnings.append(warning)
+        builds, version = [], time.strftime("%Y.%m.%d.%H%M%S", time.gmtime())
+        span = 38.0 / max(1, len(artifacts))
+        for index, item in enumerate(artifacts):
+            builds.append(_upload_build(client, handle, game_id, item, version,
+                                        58.0 + span * index, span))
+        if ctx.get("remix_source"):
+            handle.progress(96.0, "Including the project for remixing", force=True)
+            warning = _upload_source(client, handle, game_id, ctx)
+            if warning:
+                warnings.append(warning)
+        handle.progress(97.0, "Publishing", force=True)
+        page = client.publish(game_id) or {}
+    except StoreError as exc:
+        raise _store_failure(exc, ctx) from exc
+    # The store owns its URLs: open what it returns, never a composed one.
+    store_url = str(page.get("store_url") or game.get("store_url") or "") or None
+    slug = str(page.get("slug") or game.get("slug") or ctx["slug"])
+    _remember(ctx.get("scene_name", ""), {"game_id": game_id, "slug": slug, "store_url": store_url},
+              ctx.get("file_token"))
+    by_id = {b["build_id"]: b for b in builds}
+    for remote in page.get("builds") or ():
+        local = by_id.get(str(remote.get("build_id") or remote.get("id") or ""))
+        if local is not None and remote.get("review_status"):
+            local["review_status"] = remote["review_status"]
+    result = {"game_id": str(page.get("game_id") or game_id), "store_url": store_url,
+              "review_status": str(page.get("review_status") or "pending"), "builds": builds}
+    if ctx.get("remixed_from"):
+        result["remixed_from"] = ctx["remixed_from"]
+    result["remixable"] = bool(page.get("remixable"))
+    if warnings:
+        result["warnings"] = warnings
+    return result
+
+
+def _remember(scene_name: str, identity: dict, file_token=None) -> None:
     def write():
         import bpy
+        # Another file was opened while the job ran (a remix, a different
+        # project): a scene of the same name there is not the one published.
+        if file_token is not None and bpy.data.filepath != file_token:
+            return
         scene = bpy.data.scenes.get(scene_name)
         if scene is not None:
             scene[STORE_PROP] = json.dumps(identity, sort_keys=True)

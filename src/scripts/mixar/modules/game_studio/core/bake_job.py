@@ -146,7 +146,15 @@ def with_bake(bake: dict, work, share: float = 55.0):
     """Wrap a job ``work(handle)`` so the bake runs first (``share`` % of
     the bar) and the Godot work takes the rest."""
     def wrapped(handle):
-        result = stage(bake, handle, 0.0, share)
+        try:
+            result = stage(bake, handle, 0.0, share)
+        except BaseException:
+            # ``work`` never runs, so anything it captured up front (the remix
+            # source copy) is released here.
+            cleanup = getattr(work, "cleanup", None)
+            if callable(cleanup):
+                cleanup()
+            raise
         outcome = work(ScaledHandle(handle, share, 100.0))
         if isinstance(outcome, dict):
             outcome = dict(outcome, bake=result.get("bake"),

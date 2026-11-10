@@ -16,7 +16,7 @@ from __future__ import annotations
 import threading
 import time
 
-from ..constants import POLL_FAST_S, POLL_FAST_WINDOW_S, POLL_SLOW_S
+from ..constants import POLL_FAST_S, POLL_FAST_WINDOW_S, POLL_SIGNED_OUT_S, POLL_SLOW_S
 
 
 class Inbox:
@@ -27,9 +27,16 @@ class Inbox:
         self._items: list[dict] = []
         self._announced: set[str] = set()
         self._fetching = False
+        self._signed_out = False
 
     def interval(self) -> float:
+        if self._signed_out:
+            return POLL_SIGNED_OUT_S  # nothing can be waiting for nobody
         return POLL_FAST_S if self._clock() - self._started < POLL_FAST_WINDOW_S else POLL_SLOW_S
+
+    def note_signed_out(self, signed_out: bool) -> None:
+        with self._lock:
+            self._signed_out = bool(signed_out)
 
     def begin_fetch(self) -> bool:
         """False while a fetch is still out (never two at once)."""
@@ -89,9 +96,10 @@ def _announce(item: dict) -> None:
         ttl_ms=120_000, id=f"remix-{item['intent_id']}")
 
 
-def fetch_once(inbox: Inbox | None = None, client_factory=None, announce=_announce) -> list[dict]:
+def fetch_once(inbox: Inbox | None = None, client_factory=None, announce=None) -> list[dict]:
     """Worker thread: one round trip to the store. Never raises."""
     inbox = inbox or _inbox
+    announce = announce or _announce_on_main
     if not inbox.begin_fetch():
         return []
     items = None
@@ -103,8 +111,10 @@ def fetch_once(inbox: Inbox | None = None, client_factory=None, announce=_announ
         else:
             client = client_factory()
         items = client.pending()
-    except Exception:  # noqa: BLE001 — signed out, offline, store down: try again later
+        inbox.note_signed_out(False)
+    except Exception as exc:  # noqa: BLE001 — signed out, offline, store down: try again later
         items = None
+        inbox.note_signed_out(getattr(exc, "code", "") == "login_required")
     fresh = inbox.end_fetch(items)
     for item in fresh:
         try:
@@ -112,6 +122,17 @@ def fetch_once(inbox: Inbox | None = None, client_factory=None, announce=_announ
         except Exception:  # noqa: BLE001 — a toast must never break the poll
             pass
     return fresh
+
+
+def _announce_on_main(item: dict) -> None:
+    """Toasts translate their text, which needs the main thread."""
+    import bpy
+
+    def show():
+        _announce(item)
+        return None
+
+    bpy.app.timers.register(show, first_interval=0.0)
 
 
 def tick() -> float:

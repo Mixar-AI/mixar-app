@@ -32,15 +32,22 @@ def prepare(game_dir: str, slug: str) -> dict:
     os.makedirs(folder, exist_ok=True)
     copy = os.path.join(folder, f"{slug or 'game'}.mixar")
     on_disk = bpy.data.filepath
-    if bpy.data.is_dirty or not on_disk or not os.path.isfile(on_disk):
-        on_disk = ""
-        try:
-            from mixar.modules.agent_bubble.core.bubble_lifecycle import keep_windows_for_snapshot
-        except Exception:  # noqa: BLE001 — headless builds have no bubble
-            from contextlib import nullcontext as keep_windows_for_snapshot
-        with keep_windows_for_snapshot():
-            bpy.ops.wm.save_as_mainfile(filepath=copy, copy=True, thumbnail=False)
-    return {"folder": folder, "copy": copy, "source": on_disk, "binary": bpy.app.binary_path,
+    try:
+        if bpy.data.is_dirty or not on_disk or not os.path.isfile(on_disk):
+            try:
+                from mixar.modules.agent_bubble.core.bubble_lifecycle import keep_windows_for_snapshot
+            except Exception:  # noqa: BLE001 — headless builds have no bubble
+                from contextlib import nullcontext as keep_windows_for_snapshot
+            with keep_windows_for_snapshot():
+                bpy.ops.wm.save_as_mainfile(filepath=copy, copy=True, thumbnail=False)
+        else:
+            # Copied now, not later on the worker: a save made during the build
+            # would otherwise change what "this publish" uploads.
+            shutil.copyfile(on_disk, copy)
+    except Exception:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise
+    return {"folder": folder, "copy": copy, "binary": bpy.app.binary_path,
             "result": os.path.join(folder, "result.json")}
 
 
@@ -52,8 +59,6 @@ def stage(source: dict, cancel=None, runner=godot_runner.run) -> str:
     """Worker thread. The cleaned file's path, or "" when it could not be
     made (the caller publishes without a source)."""
     try:
-        if source.get("source"):
-            shutil.copyfile(source["source"], source["copy"])
         # -Y: never auto-run the file's own scripts in the cleaning process.
         result = runner(source["binary"], ["-Y", "-b", source["copy"], "-noaudio", "--python",
                                            CHILD_SCRIPT, "--"],

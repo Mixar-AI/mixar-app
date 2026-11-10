@@ -13,7 +13,7 @@ from bpy.types import Operator
 
 from mixar.config.agent_guard import called_from_agent_script
 from mixar.modules.common.i18n import iface_, rpt_
-from mixar.modules.game_studio.core import jobs
+from mixar.modules.game_studio.core import jobs, launch
 from mixar.modules.game_studio.core.jobs import JobError
 from mixar.modules.remix.constants import POLL_FIRST_S
 from mixar.modules.remix.core import inbox, intake, lineage, opening
@@ -36,6 +36,16 @@ def _dismiss_offer(intent_id: str) -> None:
         pass
 
 
+def _open(plan: dict) -> None:
+    """Main thread. A failure here must reach the user: the job already
+    reads as done once the download finished."""
+    try:
+        opening.open_remix(plan)
+    except Exception as exc:  # noqa: BLE001
+        _fail(rpt_("{reason}. Press Remix in Mixar on the web to try again.").format(
+            reason=str(exc)[:200] or exc.__class__.__name__))
+
+
 def start_remix(intent_id: str) -> str:
     from mixar.config.config import get_community_api_url
     inner = intake.claim_work(intake.remix_root(), get_community_api_url(), intent_id)
@@ -44,9 +54,9 @@ def start_remix(intent_id: str) -> str:
         try:
             plan = inner(handle)
         except JobError as exc:
-            _fail(exc.message)
+            _fail(rpt_("{reason} Press Remix in Mixar on the web to try again.").format(reason=exc.message))
             raise
-        jobs.call_on_main(lambda: opening.open_remix(plan))
+        jobs.call_on_main(lambda: _open(plan))
         return {"project_path": plan["project_path"], "origin": plan["origin"]}
 
     return jobs.start("remix", work)
@@ -81,6 +91,11 @@ class MIXAR_OT_remix_start(Operator):
             return {'CANCELLED'}
         item = self._waiting()
         if item is None:
+            return {'CANCELLED'}
+        if launch.busy():
+            # A publish that finishes after the remix opened would write its
+            # store identity onto the remix.
+            self.report({'ERROR'}, rpt_("Wait for the running build or publish to finish, then start the remix."))
             return {'CANCELLED'}
         inbox.get_inbox().take(item["intent_id"])
         _dismiss_offer(item["intent_id"])

@@ -12,6 +12,8 @@ download is never the file being edited.
 from __future__ import annotations
 
 import json
+import os
+import uuid
 
 from mixar.config.logging_config import get_logger
 
@@ -48,7 +50,8 @@ def retitle(scene) -> None:
         return
     settings = game_spec.load_settings(scene)
     settings["title"] = lineage.remix_title(settings.get("title"), TITLE_MAX)
-    settings["slug"] = game_spec.slugify(settings["title"])
+    # Its own slug, never the parent's: see ``lineage.remix_slug``.
+    settings["slug"] = lineage.remix_slug(game_spec.slugify(settings["title"]), uuid.uuid4().hex)
     game_spec.save_settings(scene, settings)
 
 
@@ -74,23 +77,55 @@ def _import_package(plan: dict) -> None:
         logger.warning("remix: could not restore game roles: %s", exc)
 
 
-def open_remix(plan: dict) -> dict:
-    """Open ``plan`` (from ``intake``) and save it as the user's project."""
+def _keep_unsaved_work(plan: dict) -> str:
+    """The open file changed while the remix was downloading: keep a copy
+    beside the remix rather than lose it. Returns the copy's path, or ""."""
     import bpy
+    if not bpy.data.is_dirty:
+        return ""
+    path = os.path.join(os.path.dirname(plan["project_path"]), "unsaved-before-remix.mixar")
+    try:
+        bpy.ops.wm.save_as_mainfile(filepath=path, copy=True)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError("your open project has unsaved changes that could not be kept") from exc
+    return path
+
+
+def _disarm(bpy) -> None:
+    """A remix is someone else's file. Its scripts never ran on open
+    (``use_scripts=False``); also stop them registering themselves the next
+    time the saved project is opened."""
+    for text in bpy.data.texts:
+        if getattr(text, "use_module", False):
+            text.use_module = False
+
+
+def open_remix(plan: dict) -> dict:
+    """Open ``plan`` (from ``intake``) and save it as the user's project.
+    Raises when the remix could not be opened and saved."""
+    import bpy
+    recovered = _keep_unsaved_work(plan)
     if plan["format"] == FORMAT_MIXAR:
-        bpy.ops.wm.open_mainfile(filepath=plan["path"], use_scripts=False, display_file_selector=False)
+        # load_ui=False: take the project's data, not the creator's window
+        # layout and window-manager state.
+        bpy.ops.wm.open_mainfile(filepath=plan["path"], use_scripts=False, load_ui=False,
+                                 display_file_selector=False)
     else:
         _import_package(plan)
+    lineage.scrub_file(bpy.data)
+    _disarm(bpy)
     for scene in bpy.data.scenes:
-        lineage.scrub(scene)
         lineage.stamp(scene, plan["origin"])
         retitle(scene)
     bpy.ops.wm.save_as_mainfile(filepath=plan["project_path"])
-    _welcome(plan)
-    return {"ok": True, "project_path": plan["project_path"], "origin": plan["origin"]}
+    if not os.path.isfile(plan["project_path"]) or bpy.data.filepath != plan["project_path"]:
+        raise RuntimeError("the remix could not be saved as a new project")
+    _welcome(plan, recovered)
+    return {"ok": True, "project_path": plan["project_path"], "origin": plan["origin"],
+            "recovered": recovered}
 
 
-def _welcome(plan: dict) -> None:
+def _welcome(plan: dict, recovered: str = "") -> None:
     try:
         from mixar.modules.common.i18n import rpt_
         from mixar.modules.common.notifications import get_notification_store
@@ -98,6 +133,9 @@ def _welcome(plan: dict) -> None:
         body = lineage.credit_line(plan["origin"]) + "."
         if prompts:
             body += " " + rpt_("Try asking Mixie: {prompt}").format(prompt=prompts[0])
+        if recovered:
+            body += " " + rpt_("Your unsaved work was kept as {name} beside it.").format(
+                name=os.path.basename(recovered))
         get_notification_store().push("success", rpt_("This copy is yours to change."), body=body,
                                       ttl_ms=20_000)
     except Exception:  # noqa: BLE001

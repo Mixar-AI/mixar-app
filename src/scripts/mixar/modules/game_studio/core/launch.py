@@ -35,6 +35,8 @@ def context(scene, package: dict, store_page=None) -> dict:
             "godot_config": _godot_config(), "api_base": get_community_api_url(),
             "web_base": get_community_web_url(), "store": _store_identity(scene),
             "scene_name": scene.name, "store_page": store_page or {},
+            # The file this publish belongs to (see ``pipeline._remember``).
+            "file_token": getattr(getattr(bpy, "data", None), "filepath", None),
             # What this project was remixed from (None for an original).
             "remixed_from": _remixed_from(scene)}
 

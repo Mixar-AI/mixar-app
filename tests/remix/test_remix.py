@@ -125,14 +125,68 @@ def background_scene():
 def test_scrub_reaches_stored_values_when_no_property_is_registered():
     scene = background_scene()
     scene["mixar_game_store"] = "{}"
+    scene["mixie_ws_resume"] = "cursor-of-the-creators-agent-session"
+    scene["mixar_game_spec"] = "{}"
     lineage.stamp(scene, ORIGIN)
-    assert lineage.private_keys(scene) == ["mixar_op_history_id", "mixar_web_publish", "mixie_chat_messages",
-                                           "mixie_chat_password", "mixie_moodboard_images", "mixie_session_id"]
+    assert lineage.private_keys(scene) == [
+        "mixar_game_store", "mixar_op_history_id", "mixar_web_publish", "mixie_chat_messages",
+        "mixie_chat_password", "mixie_moodboard_images", "mixie_session_id", "mixie_ws_resume"]
     cleared = lineage.scrub(scene)
     assert lineage.private_keys(scene) == [] and "mixie_chat_messages" in cleared
-    # Render and look settings are not private and stay.
+    # Render and look settings are not private and stay; so do the game's own settings.
     assert set(scene.stored) == {"cycles", "mixar_zen_sky"}
-    assert "mixar_game_store" not in scene and lineage.origin_of(scene)["id"] == ORIGIN["id"]
+    assert set(scene) == {"mixar_game_spec", REMIX_PROP} and lineage.origin_of(scene)["id"] == ORIGIN["id"]
+
+
+class Block(dict):
+    """A datablock with ordinary custom properties and (optionally) stored values."""
+
+    def __init__(self, name, custom=(), stored=None):
+        super().__init__(custom)
+        self.name, self.stored = name, stored
+
+    def as_pointer(self):
+        return id(self)
+
+    def bl_system_properties_get(self):
+        return self.stored
+
+
+class Data:
+    """bpy.data, reduced: named collections that iterate and have ``keys``."""
+
+    def __init__(self, **collections):
+        for name, items in collections.items():
+            setattr(self, name, _Coll(items))
+
+
+class _Coll(list):
+    def keys(self):
+        return [item.name for item in self]
+
+
+def test_every_datablock_is_swept_not_just_scenes():
+    hero = Block("Hero", {"mixar_game_role": "player", "mixar_rig_job_id": "job-on-the-creators-account",
+                          "mixar_workspace_token": "a" * 64})
+    lane = Block("Lane", {"mixar_workspace_state": "committed", "mixar_workspace_merge_plan": "{}"})
+    wm = Block("WinMan", stored=Stored({"mixie_chat_history_entries": [{"name": "Secret client chat"}],
+                                        "mixie_instance_id": "i-1", "mixar_addon_projects_dir": "/Users/x"}))
+    scene = Block("Scene", {"mixar_scene_id": "s-1", "mixar_game_spec": "{}"}, Stored({"cycles": {}}))
+    data = Data(scenes=[scene], objects=[hero], collections=[lane], window_managers=[wm], futures=[Block("New")])
+    assert len(lineage.all_ids(data)) == 5  # a data type nobody listed is still found
+    assert set(lineage.leftovers(data)) == {"Block:Hero", "Block:Lane", "Block:WinMan", "Block:Scene"}
+    assert lineage.scrub_file(data) == 7
+    assert lineage.leftovers(data) == {}
+    # What makes it a game stays; so does a path-like setting that is not Mixie's.
+    assert dict(hero) == {"mixar_game_role": "player"} and dict(scene) == {"mixar_game_spec": "{}"}
+    assert set(wm.stored) == {"mixar_addon_projects_dir"}
+
+
+def test_a_remix_never_takes_its_parents_slug():
+    first = lineage.remix_slug("ash-glaive-remix", "a1b2c3d4")
+    assert first == "ash-glaive-remix-a1b2c3" and first != lineage.remix_slug("ash-glaive-remix", "ffff0000")
+    assert len(lineage.remix_slug("x" * 80, "abcdef12")) <= 48
+    assert lineage.remix_slug("", "!!") == "remix-x"
 
 
 def test_ids_without_system_storage_are_left_alone():
@@ -166,6 +220,19 @@ def test_inbox_announces_each_remix_once_and_survives_failures():
     assert [i["intent_id"] for i in inbox_mod.fetch_once(box, client, said.append)] == ["b"]
     assert [i["intent_id"] for i in said] == ["a", "b"] and box.newest()["intent_id"] == "a"
     assert box.take("a")["intent_id"] == "a" and box.take("a") is None and box.count() == 1
+
+
+def test_inbox_backs_off_while_signed_out_and_recovers():
+    from mixar.modules.remix.constants import POLL_SIGNED_OUT_S
+    box = inbox_mod.Inbox()
+
+    def signed_out():
+        raise StoreError("Sign in to Mixar to publish.", "login_required", 401)
+
+    inbox_mod.fetch_once(box, signed_out, lambda item: None)
+    assert box.interval() == POLL_SIGNED_OUT_S
+    inbox_mod.fetch_once(box, lambda: NS(pending=lambda: []), lambda item: None)
+    assert box.interval() == POLL_FAST_S
 
 
 def test_inbox_never_runs_two_fetches_at_once():
@@ -256,6 +323,22 @@ def test_claim_downloads_a_mixar_source_without_the_bearer(store, tmp_path):
     assert os.path.dirname(plan["project_path"]) == os.path.dirname(plan["path"])
     assert plan["origin"]["id"] == ORIGIN["id"] and plan["starter_prompts"] == ["Change the theme"]
     assert ("GET", "/signed/source", None) in store.calls  # signed URL: no Authorization header
+
+
+def test_download_needs_a_size_and_a_link_mixar_will_follow(store, tmp_path):
+    package = serve_source(store, MIXAR_BYTES, "mixar")
+    package["source"]["size_bytes"] = 0
+    with pytest.raises(JobError) as no_size:
+        intake.fetch_package(store.client(), package, str(tmp_path))
+    assert no_size.value.code == "bad_response"
+    for link in ("http://example.com/source.mixar", "ftp://127.0.0.1/x", "file:///etc/passwd"):
+        package = serve_source(store, MIXAR_BYTES, "mixar")
+        package["source"]["url"] = link
+        with pytest.raises(JobError) as refused:
+            intake.fetch_package(store.client(), package, str(tmp_path))
+        assert refused.value.code == "bad_response"
+    with pytest.raises(StoreError):
+        store.client().source("video", "x")
 
 
 def test_download_must_match_the_stores_record(store, tmp_path):
@@ -400,6 +483,44 @@ def test_a_failed_source_is_a_warning_never_a_failed_publish(captured, monkeypat
     assert warning.startswith("The project was not included for remixing")
     assert not os.path.exists(captured["folder"])
     assert pipeline._upload_source(client, None, "g1", {}) == ""  # remixing switched off
+
+
+def test_the_uncleaned_copy_is_removed_when_a_publish_fails_early(captured, monkeypatch):
+    """Before the upload step the captured copy is the creator's raw project."""
+    def boom(ctx):
+        raise JobError("Mixar Godot was not found.", "godot_missing")
+
+    monkeypatch.setattr(pipeline, "_godot_verdict", boom)
+    work = pipeline.publish_work({"remix_source": captured, "game_dir": "/nowhere"}, ["web"])
+    with pytest.raises(JobError):
+        work(NS(cancel_event=threading.Event(), progress=lambda *a, **k: None))
+    assert not os.path.exists(captured["folder"])
+
+
+def test_a_failed_bake_also_removes_the_copy(captured, tmp_path):
+    from mixar.modules.game_studio.core import bake_job
+    work = pipeline.publish_work({"remix_source": captured, "game_dir": str(tmp_path)}, ["web"])
+    bake = {"folder": str(tmp_path / "bake"), "copy": "x", "config": "c", "binary": "/no/such/mixar",
+            "result": str(tmp_path / "r.json"), "source": "", "dirty": []}
+    wrapped = bake_job.with_bake(bake, work)
+    with pytest.raises(JobError):
+        wrapped(NS(job_id="j", cancel_event=threading.Event(), cancelled=False, progress=lambda *a, **k: None))
+    assert not os.path.exists(captured["folder"])
+
+
+def test_store_identity_is_only_written_to_the_file_that_was_published(monkeypatch):
+    from mixar.modules.game_studio.core import jobs
+    scene = {}
+    fake = NS(data=NS(filepath="/projects/remix.mixar", scenes=NS(get=lambda name: scene)))
+    monkeypatch.setitem(__import__("sys").modules, "bpy", fake)
+    queued = []
+    monkeypatch.setattr(jobs, "call_on_main", queued.append)
+    pipeline._remember("Scene", {"game_id": "A"}, "/projects/original.mixar")
+    queued.pop()()
+    assert scene == {}  # another file is open now: nothing is stamped on it
+    pipeline._remember("Scene", {"game_id": "A"}, "/projects/remix.mixar")
+    queued.pop()()
+    assert json.loads(scene["mixar_game_store"]) == {"game_id": "A"}
 
 
 def test_source_cleaning_runs_without_autoexec_and_reports_failure(captured):

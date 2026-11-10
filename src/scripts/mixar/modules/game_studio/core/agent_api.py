@@ -229,11 +229,13 @@ def start_game_export(platforms=None) -> dict:
 
 
 def _allow_remix() -> bool:
-    """The publish form's "Let others remix this game" (on by default)."""
+    """The publish form's "Let others remix this game" (on by default in the form)."""
     context = getattr(bpy, "context", None)
     form = getattr(getattr(context, "window_manager", None), "mixar_game", None)
-    value = getattr(form, "allow_remix", True)
-    return value if isinstance(value, bool) else True
+    # Unknown (no interface, no form) means no: the project file is only
+    # ever uploaded when the switch the user can see says so.
+    value = getattr(form, "allow_remix", False)
+    return value if isinstance(value, bool) else False
 
 
 def _remixed_from(scene):
@@ -276,7 +278,9 @@ def _ask_user(request_id: str, summary: dict) -> None:
         get_notification_store().push(
             "info", rpt_("Publish \"{title}\" to the Mixar Store?").format(title=summary["title"]),
             body=rpt_("Mixie asks to publish it for {platforms}. Builds are playable after review.")
-            .format(platforms=platforms),
+            .format(platforms=platforms)
+            + (" " + rpt_("Your project is included so others can remix it.")
+               if summary.get("allow_remix") else ""),
             actions=[NotificationAction(label=n_("Publish"), operator="mixar.game_publish_approve",
                                         style="primary"),
                      NotificationAction(label=n_("Cancel"), operator="mixar.game_publish_decline")],

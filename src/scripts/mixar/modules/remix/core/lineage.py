@@ -14,15 +14,19 @@ import json
 from ..constants import REMIX_PROP, TITLE_SUFFIX
 
 ORIGIN_KEYS = ("kind", "id", "slug", "title", "author", "url")
-# ID properties that tie a file to its creator's published things. A remix
-# must not inherit them: publishing it would overwrite the original.
-IDENTITY_PROPS = ("mixar_game_store",)
 # Registered Scene properties that belong to the creator's session: the
-# agent conversation, its ids and the creator's user id.
+# agent conversation, its ids and the creator's user id. Also the prefix of
+# the agent's resume cursor (``mixie_ws_resume``), an ordinary custom property.
 PRIVATE_PREFIXES = ("mixie_",)
-# Stored values outside that prefix that also tie a file to its creator: the
-# web-publish identity and the id of their local operation log.
-PRIVATE_SYSTEM_KEYS = ("mixar_web_publish", "mixar_op_history_id")
+# Other keys that tie a file to its creator, stored either way:
+#   mixar_game_store / mixar_web_publish  what they published (a remix must
+#       never inherit it: publishing would overwrite the original)
+#   mixar_scene_id, mixar_workspace_*     the agent's scene and lane identity
+#   mixar_rig_job_id                      a job on the creator's account
+#   mixar_op_history_id                   their local operation log
+PRIVATE_KEYS = ("mixar_game_store", "mixar_web_publish", "mixar_scene_id", "mixar_workspace_token",
+                "mixar_workspace_state", "mixar_workspace_merge_plan", "mixar_rig_job_id",
+                "mixar_op_history_id")
 WEB_PUBLISH_ATTR = "mixar_web_publish"
 
 
@@ -90,6 +94,15 @@ def credit_line(origin) -> str:
     return f"Remixed from {origin['title']} by {who}"
 
 
+def remix_slug(slug: str, token: str, limit: int = 48) -> str:
+    """A slug for a remix that cannot equal its parent's or another remix's:
+    the parent slug plus a short random ``token``. Without it a remix of your
+    own remix would land on the first one's store page and overwrite it."""
+    token = "".join(ch for ch in str(token).lower() if ch.isalnum())[:6] or "x"
+    base = str(slug or "remix").strip("-")[:limit - len(token) - 1].strip("-") or "remix"
+    return f"{base}-{token}"
+
+
 def remix_title(title: str, limit: int = 80) -> str:
     title = str(title or "").strip() or "Untitled"
     if title.endswith(TITLE_SUFFIX):
@@ -105,7 +118,11 @@ def _private_names(scene) -> list[str]:
 
 
 def _is_private(key: str) -> bool:
-    return key.startswith(PRIVATE_PREFIXES) or key in PRIVATE_SYSTEM_KEYS
+    return key.startswith(PRIVATE_PREFIXES) or key in PRIVATE_KEYS
+
+
+def has_system_props(idblock) -> bool:
+    return callable(getattr(idblock, "bl_system_properties_get", None))
 
 
 def system_props(idblock):
@@ -124,25 +141,83 @@ def system_props(idblock):
         return None
 
 
+def _custom_keys(idblock) -> list[str]:
+    """Names of the ordinary custom properties on ``idblock``."""
+    try:
+        return [str(key) for key in idblock.keys()]
+    except (AttributeError, RuntimeError, TypeError):
+        return []
+
+
 def private_keys(idblock) -> list[str]:
-    """Private data still stored on ``idblock`` (empty once it is clean)."""
+    """Private data still stored on ``idblock`` (empty once it is clean):
+    stored values of registered properties, and ordinary custom properties."""
     stored = system_props(idblock)
-    return sorted(key for key in (stored.keys() if stored is not None else ()) if _is_private(key))
+    found = {key for key in (stored.keys() if stored is not None else ()) if _is_private(key)}
+    found.update(key for key in _custom_keys(idblock) if _is_private(key))
+    return sorted(found)
 
 
 def scrub_stored(idblock) -> list[str]:
-    """Delete stored private values from ``idblock``; returns their names."""
-    stored = system_props(idblock)
-    if stored is None:
-        return []
+    """Delete private values from ``idblock``, in both places they can be
+    kept; returns their names."""
     cleared = []
-    for key in [k for k in stored.keys() if _is_private(k)]:
+    stored = system_props(idblock)
+    if stored is not None:
+        for key in [k for k in stored.keys() if _is_private(k)]:
+            try:
+                del stored[key]
+            except (KeyError, RuntimeError, TypeError):
+                continue
+            cleared.append(key)
+    for key in [k for k in _custom_keys(idblock) if _is_private(k)]:
         try:
-            del stored[key]
+            del idblock[key]
         except (KeyError, RuntimeError, TypeError):
             continue
         cleared.append(key)
     return cleared
+
+
+def all_ids(data) -> list:
+    """Every datablock in ``data`` (``bpy.data``): scenes, objects, window
+    managers, texts and whatever a later version adds. Found by walking the
+    collections rather than naming them, so a new data type is covered."""
+    seen, found = set(), []
+    for name in dir(data):
+        if name.startswith("_"):
+            continue
+        try:
+            collection = getattr(data, name)
+            items = list(collection) if hasattr(collection, "__iter__") and hasattr(collection, "keys") else []
+        except (AttributeError, RuntimeError, TypeError):
+            continue
+        for item in items:
+            marker = id(item) if not hasattr(item, "as_pointer") else item.as_pointer()
+            if hasattr(item, "name") and marker not in seen:
+                seen.add(marker)
+                found.append(item)
+    return found
+
+
+def scrub_file(data) -> int:
+    """Clean every datablock of an open file. Returns how many values went."""
+    cleared = 0
+    for scene in getattr(data, "scenes", ()):
+        cleared += len(scrub(scene))
+    for idblock in all_ids(data):
+        cleared += len(scrub_stored(idblock))
+    return cleared
+
+
+def leftovers(data) -> dict:
+    """``{datablock name: [keys]}`` for anything private still in the file."""
+    found = {}
+    for idblock in all_ids(data):
+        keys = private_keys(idblock)
+        if keys:
+            found[f"{type(idblock).__name__}:{getattr(idblock, 'name', '?')}"] = keys
+    return found
 
 
 def scrub(scene) -> list[str]:
@@ -152,15 +227,12 @@ def scrub(scene) -> list[str]:
     downloaded source before it is used (a .mixar attached on the web never
     went through the first pass). Returns the names it cleared.
 
-    Two passes, because the same data is reachable two ways: through the
-    registered properties (the app), and as stored values (a background
-    process, where those properties are not registered).
+    The same data is reachable three ways, and all three are cleared: through
+    the registered properties (the app), as stored values (a background
+    process, where those properties are not registered), and as ordinary
+    custom properties.
     """
     cleared = []
-    for name in IDENTITY_PROPS:
-        if scene.get(name) is not None:
-            del scene[name]
-            cleared.append(name)
     for name in _private_names(scene):
         value = getattr(scene, name, None)
         try:
