@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 
 import bpy
 import numpy as np
@@ -24,6 +25,7 @@ import numpy as np
 from mixar.config.logging_config import get_logger
 
 from .. import constants as C
+from . import eevee_fit
 from .cpa2_reader import read_cpa2, sha256_file
 from .payload import build_payload, build_svbrdf_atlas, preview_inputs, svbrdf_preview_inputs
 from .svbrdf_reader import SVBRDF, read_svbrdf, representation_class
@@ -63,6 +65,8 @@ def _packed_data_image(name: str, image_rows: np.ndarray, tmpdir: str):
     image.name = name
     image.colorspace_settings.name = "Non-Color"
     image.alpha_mode = 'CHANNEL_PACKED'
+    # EEVEE reads the parameter stream with texel fetches: keep float32 on the GPU too.
+    image.use_half_precision = half
     image.pack()
     return image
 
@@ -100,9 +104,10 @@ def _link(nt, a, out, b, inp):
     nt.links.new(a.outputs[out], b.inputs[inp])
 
 
-def _surface_mapping(nt, x: float, y: float):
+def _surface_mapping(nt, x: float, y: float, *, tangent: bool = True):
     """Object-space coordinates projected on the dominant normal axis (metres), and the
-    world-space direction of increasing u (the tangent).
+    world-space direction of increasing u (the tangent; None when tangent=False, so a
+    material with nothing to feed it carries no unconnected tangent nodes).
 
     One projection per point (no blending), so flake statistics stay exactly the
     measured ones. u is mirrored where needed so (tangent, normal x tangent, normal) is
@@ -156,6 +161,8 @@ def _surface_mapping(nt, x: float, y: float):
              math('MULTIPLY', not_z, sp.outputs[2], loc=(x + 180, y - 120)), loc=(x + 300, y - 90))
     comb = nodes.new("ShaderNodeCombineXYZ"); comb.location = (x + 540, y)
     nt.links.new(u, comb.inputs[0]); nt.links.new(v, comb.inputs[1])
+    if not tangent:
+        return comb.outputs[0], None
 
     # Tangent (object space) = s * (Y if x-dominant else X), then to world space.
     tan = nodes.new("ShaderNodeCombineXYZ"); tan.location = (x + 540, y - 260)
@@ -175,7 +182,7 @@ def _tile_coordinates(nt, uv_m, size_mm, x: float, y: float):
     return scale.outputs[0]
 
 
-def build_material(m: dict, table_img, flakes_img, *, name: str, coat_img=None):
+def build_material(m: dict, table_img, flakes_img, *, name: str, coat_img=None, fit_img=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -192,9 +199,11 @@ def build_material(m: dict, table_img, flakes_img, *, name: str, coat_img=None):
     axf.inputs["Coat IOR"].default_value = prev["coat_ior"]
 
     axf[C.PROP_TABLE] = table_img
+    if fit_img is not None:
+        axf[C.PROP_EEVEE_FIT] = fit_img
     if flakes_img is None and coat_img is None:
         return mat
-    uv_m, tangent = _surface_mapping(nt, -1000, 0)
+    uv_m, tangent = _surface_mapping(nt, -1000, 0, tangent=coat_img is not None)
     if flakes_img is not None:
         axf[C.PROP_FLAKES] = flakes_img
         patch_mm = (m["patch_mm"][0] or 25.6, m["patch_mm"][1] or m["patch_mm"][0] or 25.6)
@@ -279,17 +288,23 @@ def import_axf(path: str, *, archive_source: bool = True) -> bpy.types.Material:
     if representation_class(path) == SVBRDF:
         return import_svbrdf(path, archive_source=archive_source)
     m = read_cpa2(path, load_flakes=True)
-    payload = build_payload(m)
     base = m["name"] or os.path.splitext(os.path.basename(path))[0]
-    with tempfile.TemporaryDirectory(prefix="mixar_axf_") as tmp:
+    # The EEVEE fit (pure numpy, never touches bpy, only reads m) runs on a worker thread
+    # while this thread builds the render data and packs the images.
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="axf_eevee_fit") as pool, \
+            tempfile.TemporaryDirectory(prefix="mixar_axf_") as tmp:
+        fit_future = pool.submit(eevee_fit.fit, m)
+        payload = build_payload(m)
         table_img = _packed_data_image(f"AxF {base} Table", payload["table_image"], tmp)
         flakes_img = coat_img = None
         if payload["flake_atlas"] is not None:
             flakes_img = _packed_data_image(f"AxF {base} Flakes", payload["flake_atlas"], tmp)
         if payload["coat_normal_image"] is not None:
             coat_img = _packed_data_image(f"AxF {base} Coat Normal", payload["coat_normal_image"], tmp)
+        fit_img = _packed_data_image(f"AxF {base} EEVEE Fit", fit_future.result(), tmp)
 
-    mat = build_material(m, table_img, flakes_img, name=f"AxF {base}", coat_img=coat_img)
+    mat = build_material(m, table_img, flakes_img, name=f"AxF {base}", coat_img=coat_img,
+                         fit_img=fit_img)
     mat[C.PROP_SOURCE_NAME] = os.path.basename(path)
     mat[C.PROP_SOURCE_SHA256] = sha256_file(path)
     mat["axf_model"] = json.dumps({

@@ -10,6 +10,8 @@ NODE_IDNAME = "ShaderNodeBsdfAxFCarPaint"
 PROP_TABLE = "axf_table"
 PROP_FLAKES = "axf_flakes"
 PROP_COAT_NORMAL = "axf_coat_normal"
+# EEVEE only: per-view-angle fit of the BRDF (core/eevee_fit.py); Cycles never reads it.
+PROP_EEVEE_FIT = "axf_eevee_fit"
 PARAM_VERSION = 2.0
 PARAM_HEADER_TEXELS = 7
 

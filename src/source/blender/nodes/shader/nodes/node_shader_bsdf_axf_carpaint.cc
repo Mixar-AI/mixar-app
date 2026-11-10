@@ -20,6 +20,10 @@
 
 #include "node_shader_util.hh"
 
+#include "BKE_idprop.hh"
+
+#include "DNA_image_types.h"
+
 namespace blender {
 
 namespace nodes::node_shader_bsdf_axf_carpaint_cc {
@@ -85,6 +89,23 @@ static void node_declare(NodeDeclarationBuilder &b)
   b.add_output<decl::Shader>("BSDF"_ustr);
 }
 
+/* The data image an ID property of the node references (the importer's contract). */
+static Image *node_image_prop(const bNode *node, const char *name)
+{
+  if (node->prop == nullptr) {
+    return nullptr;
+  }
+  const IDProperty *prop = IDP_GetPropertyFromGroup(node->prop, name);
+  if (prop == nullptr || prop->type != IDP_ID) {
+    return nullptr;
+  }
+  ID *id = static_cast<ID *>(prop->data.pointer);
+  if (id == nullptr || GS(id->name) != ID_IM) {
+    return nullptr;
+  }
+  return reinterpret_cast<Image *>(id);
+}
+
 static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
                                              bNode *node,
                                              bNodeExecData * /*execdata*/,
@@ -97,7 +118,44 @@ static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
   GPU_material_flag_set(mat,
                         GPU_MATFLAG_DIFFUSE | GPU_MATFLAG_GLOSSY | GPU_MATFLAG_COAT |
                             GPU_MATFLAG_REFLECTION_MAYBE_COLORED);
-  return GPU_stack_link(mat, node, "node_bsdf_axf_carpaint", in, out);
+
+  /* Imports that carry the per-view fit ("axf_eevee_fit") follow the view angle and show
+   * the measured flakes; older ones use the constant Preview inputs. */
+  Image *fit = node_image_prop(node, "axf_eevee_fit");
+  Image *table = node_image_prop(node, "axf_table");
+  if (fit == nullptr || table == nullptr) {
+    return GPU_stack_link(mat, node, "node_bsdf_axf_carpaint", in, out);
+  }
+  Image *flakes = node_image_prop(node, "axf_flakes");
+  /* Light inside the material shader (EEVEE's forward / deferred hybrid pass), where the
+   * node evaluates the measured BRDF per light. */
+  GPU_material_flag_set(mat, GPU_MATFLAG_SHADER_TO_RGBA);
+
+  GPUSamplerState linear = GPUSamplerState::default_sampler();
+  linear.filtering = GPU_SAMPLER_FILTERING_LINEAR;
+  linear.extend_x = GPU_SAMPLER_EXTEND_MODE_EXTEND;
+  linear.extend_yz = GPU_SAMPLER_EXTEND_MODE_EXTEND;
+  /* Data images are read with exact texel fetches. */
+  GPUSamplerState texels = GPUSamplerState::default_sampler();
+  texels.extend_x = GPU_SAMPLER_EXTEND_MODE_EXTEND;
+  texels.extend_yz = GPU_SAMPLER_EXTEND_MODE_EXTEND;
+
+  GPUNodeLink *fit_link = GPU_image(mat, fit, nullptr, linear);
+  GPUNodeLink *table_link = GPU_image(mat, table, nullptr, texels);
+  /* Without flakes the table stands in for the (unread) flakes sampler. It needs a link of
+   * its own: GPU_stack_link frees every non-output link it consumes, so passing
+   * table_link twice is a double free (crash on any paint without flakes). */
+  GPUNodeLink *flakes_link = GPU_image(mat, flakes ? flakes : table, nullptr, texels);
+  const float has_flakes = flakes ? 1.0f : 0.0f;
+  return GPU_stack_link(mat,
+                        node,
+                        "node_bsdf_axf_carpaint_fit",
+                        in,
+                        out,
+                        fit_link,
+                        table_link,
+                        flakes_link,
+                        GPU_constant(&has_flakes));
 }
 
 }  // namespace nodes::node_shader_bsdf_axf_carpaint_cc

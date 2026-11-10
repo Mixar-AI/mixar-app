@@ -106,7 +106,7 @@ def build_approx_material(path: str, *, name: str | None = None) -> bpy.types.Ma
     if flake_img is not None:
         rows = f["flake_rows"]
         patch_mm = (m["patch_mm"][0] or 25.6, m["patch_mm"][1] or m["patch_mm"][0] or 25.6)
-        uv_m, _tangent = _surface_mapping(nt, -1900, -600)
+        uv_m, _tangent = _surface_mapping(nt, -1900, -600, tangent=False)
         flake_uv = _tile_coordinates(nt, uv_m, patch_mm, -1000, -600)
         sep_uv = node("ShaderNodeSeparateXYZ", -400, -600)
         L(flake_uv, sep_uv.inputs[0])
