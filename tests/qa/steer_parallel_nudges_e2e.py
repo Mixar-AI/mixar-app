@@ -13,9 +13,9 @@ island frames (inspect every PNG):
 
 1. while a turn runs the empty composer reads "Mixie is working. Type here
    to steer it..." with Stop;
-2. a message typed before the run opens is HELD ("Queued until Mixie is
-   ready"), not refused, and goes out as an interjection the moment the run
-   opens ("Added to the running task");
+2. a message typed before the run opens is HELD, not refused, and goes out
+   as an interjection the moment the run opens; neither bubble carries a
+   delivery label;
 3. a message typed while the run is open reads Steer and joins the run;
 4. agent.message_sent carries interjecting / held / tab counts;
 5. a later fresh turn shows the same steer line;
@@ -54,6 +54,11 @@ def capture(qa, out, name):
     qa.eval(f"hit=drv.find_one(**{FIELD!r}); win=hit['_win']\n"
             "with bpy.context.temp_override(window=win):\n"
             f"    result=win.mixar_qa_capture_frame(filepath={str(out / f'{name}.png')!r})")
+
+
+def held(qa):
+    return qa.eval("from mixar.modules.space_mixie_chat.core import held_sends as h\n"
+                   f"result=h.held_count({SCENE})")
 
 
 def users(qa):
@@ -177,11 +182,12 @@ def run(qa):
         qa.wait("bool(drv.find(**%r))" % STOP, timeout=5)
         capture(qa, out, '1-busy-placeholder-and-stop')
 
-        # 2. Before the run opens: held, labelled, nothing on the wire.
+        # 2. Before the run opens: held, unlabelled, nothing on the wire.
         send_draft(qa, 'Make the roof red')
         expect(len(calls(qa)) == 1, 'held message must not be sent yet', calls(qa))
-        expect(users(qa)[-1] == ['Make the roof red', 'Queued until Mixie is ready'],
-               'held bubble label', users(qa))
+        expect(held(qa) == 1, 'message must be held', held(qa))
+        expect(users(qa)[-1] == ['Make the roof red', ''],
+               'held bubble carries no label', users(qa))
         open_pill(qa)
         capture(qa, out, '2-queued-label')
 
@@ -192,8 +198,8 @@ def run(qa):
         expect('Make the roof red' in sent['message'] and sent['interjecting'] is True,
                'held message should join the opened run', sent)
         expect([u for u in users(qa) if u[0] == 'Make the roof red'] ==
-               [['Make the roof red', 'Added to the running task']],
-               'queued bubble replaced by one steered bubble', users(qa))
+               [['Make the roof red', '']],
+               'queued bubble replaced by one unlabelled steered bubble', users(qa))
 
         # 3. While the run is open the action reads Steer and the send joins it.
         open_pill(qa)
@@ -204,8 +210,8 @@ def run(qa):
         qa.click(**SEND)
         qa.wait('len(__import__("chat_send_probe").calls) == 3', timeout=3)
         expect(calls(qa)[-1]['interjecting'] is True, 'steer should interject', calls(qa)[-1])
-        expect(users(qa)[-1] == ['Add a stone chimney', 'Added to the running task'],
-               'steer label', users(qa))
+        expect(users(qa)[-1] == ['Add a stone chimney', ''],
+               'steered bubble carries no label', users(qa))
         open_pill(qa)
         capture(qa, out, '3b-steered-labels')
 
@@ -234,7 +240,8 @@ def run(qa):
 
         # 6. Stop hands a held message back to the composer.
         send_draft(qa, 'Paint the fence white')
-        expect(users(qa)[-1][1] == 'Queued until Mixie is ready', 'held again', users(qa))
+        expect(held(qa) == 1 and users(qa)[-1] == ['Paint the fence white', ''],
+               'held again, unlabelled', (held(qa), users(qa)))
         open_pill(qa)
         qa.wait("bool(drv.find(**%r))" % STOP, timeout=5)
         warp(qa, STOP)
@@ -252,7 +259,8 @@ def run(qa):
 
         # 6b. A turn that ends without a running task hands queued text back.
         send_draft(qa, 'Queue me, then the turn ends')
-        expect(users(qa)[-1][1] == 'Queued until Mixie is ready', 'held', users(qa))
+        expect(held(qa) == 1 and users(qa)[-1] == ['Queue me, then the turn ends', ''],
+               'held, unlabelled', (held(qa), users(qa)))
         qa.eval(f'import chat_send_probe as p; p.settle({SCENE}); result=True')  # no run ever opened
         wait_draft(qa, 'Queue me, then the turn ends')
         expect(all(u[0] != 'Queue me, then the turn ends' for u in users(qa)), 'bubble gone', users(qa))

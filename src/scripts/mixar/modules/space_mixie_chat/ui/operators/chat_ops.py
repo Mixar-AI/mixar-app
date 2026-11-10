@@ -21,7 +21,7 @@ from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 from mixar.modules.common.analytics.essential_events import capture_agent_message, capture_generate_message
 from mixar.modules.common.i18n import iface_, rpt_
 
-from ...constants import DEV_MODE, HINT_STEER, MAX_MESSAGE_LENGTH, SessionState
+from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
 from ...core.performance_metrics import get_metrics
 from ...core import (
     get_session_manager,
@@ -323,8 +323,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
         user_index = len(scene.mixie_chat_messages) - 1
         user_msg.sender = 'USER'
         user_msg.text = message_text
-        if steering:
-            user_msg.delivery_hint = HINT_STEER
 
         if not plain:
             # Copy attachments to message history (not for modify/input responses)
