@@ -1439,6 +1439,9 @@ msgstr "लॉगिन रद्द हो गया या उसका सम
 msgid "Incomplete token pair in response"
 msgstr "प्रतिक्रिया में अधूरी टोकन जोड़ी"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "इनपुट के लिए तैयार"
 

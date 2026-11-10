@@ -1824,6 +1824,9 @@ msgstr "Prijava je otkazana ili je isteklo vreme"
 msgid "Incomplete token pair in response"
 msgstr "Nepotpun par tokena u odgovoru"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 # derived
 msgid "Ready for input"
 msgstr "Spremno za unos"

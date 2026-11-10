@@ -1439,6 +1439,9 @@ msgstr "登录已取消或超时"
 msgid "Incomplete token pair in response"
 msgstr "响应中的令牌对不完整"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "准备就绪，可以输入"
 

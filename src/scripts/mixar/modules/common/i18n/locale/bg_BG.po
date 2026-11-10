@@ -1439,6 +1439,9 @@ msgstr "Входът е отказан или времето му изтече"
 msgid "Incomplete token pair in response"
 msgstr "Непълна двойка токени в отговора"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "Готово за въвеждане"
 

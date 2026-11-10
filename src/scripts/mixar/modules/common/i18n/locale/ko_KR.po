@@ -1439,6 +1439,9 @@ msgstr "로그인이 취소되었거나 시간이 초과되었습니다"
 msgid "Incomplete token pair in response"
 msgstr "응답의 토큰 쌍이 불완전합니다"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "입력 준비 완료"
 

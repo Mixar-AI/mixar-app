@@ -1439,6 +1439,9 @@ msgstr "உள்நுழைவு ரத்துசெய்யப்பட�
 msgid "Incomplete token pair in response"
 msgstr "பதிலில் முழுமையற்ற டோக்கன் இணை"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "உள்ளீட்டுக்குத் தயார்"
 
