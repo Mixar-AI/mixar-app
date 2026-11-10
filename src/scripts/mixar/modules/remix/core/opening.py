@@ -132,7 +132,7 @@ def _welcome(plan: dict, recovered: str = "") -> None:
         prompts = plan.get("starter_prompts") or []
         body = lineage.credit_line(plan["origin"]) + "."
         if prompts:
-            body += " " + rpt_("Try asking Mixie: {prompt}").format(prompt=prompts[0])
+            body += " " + rpt_("Try asking Mixie: {prompt}.").format(prompt=prompts[0])
         if recovered:
             body += " " + rpt_("Your unsaved work was kept as {name} beside it.").format(
                 name=os.path.basename(recovered))

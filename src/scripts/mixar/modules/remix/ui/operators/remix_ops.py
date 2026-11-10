@@ -82,7 +82,8 @@ class MIXAR_OT_remix_start(Operator):
         return context.window_manager.invoke_confirm(
             self, event,
             title=iface_("Remix \"{title}\"?").format(title=origin.get("title") or ""),
-            message=iface_("The project you have open has unsaved changes. They will be lost."),
+            message=iface_("The project you have open has unsaved changes. "
+                           "A copy of it will be kept beside the remix."),
             confirm_text=iface_("Start remix"), translate=False)
 
     def execute(self, context):
