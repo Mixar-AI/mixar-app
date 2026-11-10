@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.i18n import n_, rpt_
+from mixar.modules.common.utils.generation_dispatch import record_reason
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.imagegen_queue import get_imagegen_listener
 from mixar.config.logging_config import get_logger
@@ -346,9 +347,11 @@ class MIXIE_OT_imagegen_generate(Operator):
                 listener=get_imagegen_listener(),
             )
             if not job:
+                record_reason("duplicate_job")
                 self.report({"ERROR"}, "A duplicate image generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
+            record_reason("enqueue_failed")
             self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 

@@ -19,6 +19,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 from mixar.modules.common.analytics.essential_events import capture_agent_message, capture_generate_message
+from mixar.modules.common.analytics.journey_events import note_deferred
 from mixar.modules.common.i18n import iface_, rpt_
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
@@ -168,6 +169,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 scribble.flush_pending_ink()
                 if scribble.defer_until_idle(_send_when_handwriting_lands):
                     self.report({'INFO'}, "Converting handwriting…")
+                    note_deferred(self.bl_idname)
                     metrics.stop_timer('send_message_total')
                     return {'CANCELLED'}
             except Exception as e:  # noqa: BLE001

@@ -113,9 +113,50 @@ def test_operator_exception_is_counted_without_swallowing_or_recording_text():
     capture = importlib.import_module('mixar.modules.common.analytics.capture')
     def execute(self, context):
         raise RuntimeError('/private/customer/file')
-    wrapped = capture._operator_wrapper(execute, 'mixar.generations_add_asset', with_event=False)
+    wrapped = capture._operator_wrapper(execute, 'mixie_chat.send_message', with_event=False)
     with patch.object(journey, 'capture') as emit, patch.object(capture, 'capture'), \
             pytest.raises(RuntimeError, match='/private/customer/file'):
         wrapped(None, context())
-    assert emit.call_args.args[1]['outcome'] == 'error'
+    assert emit.call_count == 1
+    # Operator identity already rides on product.operator and crash reports.
+    assert emit.call_args.args[1] == {'feature': 'agent', 'action': 'send_message',
+                                      'outcome': 'error', 'surface': 'agent_island'}
     assert '/private' not in str(emit.call_args)
+
+
+@pytest.mark.parametrize('result, outcome', [
+    ({'FINISHED'}, 'finished'), ({'CANCELLED'}, 'cancelled'),
+    ({'RUNNING_MODAL'}, 'modal_started'), ({'PASS_THROUGH'}, 'pass_through'),
+    ({'INTERFACE'}, 'other'), (None, 'error'), ({'ERROR'}, 'error'),
+])
+def test_every_operator_result_is_classified_and_emitted(result, outcome):
+    with patch.object(journey, 'capture') as emit:
+        journey.operator_outcome('mixie_chat.send_message', result, context())
+    assert emit.call_args.args[1]['outcome'] == outcome
+
+
+def test_deferred_send_is_not_a_cancel_and_is_consumed_once():
+    with patch.object(journey, 'capture') as emit:
+        journey.note_deferred('mixie_chat.send_message')
+        journey.operator_outcome('mixie_chat.send_message', {'CANCELLED'}, context())
+        journey.operator_outcome('mixie_chat.send_message', {'CANCELLED'}, context())
+    assert [c.args[1]['outcome'] for c in emit.call_args_list] == ['deferred', 'cancelled']
+
+
+def test_deferral_is_marked_only_where_send_runs_again():
+    root = Path(__file__).resolve().parents[1] / 'src/scripts/mixar/modules/space_mixie_chat'
+    chat_ops = (root / 'ui/operators/chat_ops.py').read_text()
+    scribble = chat_ops[chat_ops.index('defer_until_idle(_send_when_handwriting_lands)'):]
+    assert scribble.index('note_deferred(self.bl_idname)') < scribble.index("return {'CANCELLED'}")
+    voice = (root / 'core/voice.py').read_text()
+    defer = voice[voice.index('def defer_send('):voice.index('def cancel(')]
+    # The cancel() branches never re-send, so they stay plain cancels.
+    assert defer.index('pending_send = True') < defer.index('note_deferred(') \
+        < defer.index('return True\n\n')
+    assert defer.count('note_deferred(') == 1
+
+
+def test_unknown_operator_never_emits():
+    with patch.object(journey, 'capture') as emit:
+        journey.operator_outcome('/private/customer/action', {'ERROR'}, context())
+    emit.assert_not_called()
