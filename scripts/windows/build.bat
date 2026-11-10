@@ -474,6 +474,10 @@ if !ERRORLEVEL! neq 0 (
     echo Error: Bundled MCP runtime dependencies failed to import
     exit /b 1
 )
+REM The install ships no bytecode: a reused build tree keeps __pycache__ from
+REM older builds, and ensurepip (only when the embedded Python lacks pip) runs
+REM pip in a child Python without -B. Sweep whatever is left.
+for /d /r "%PY_BASE%\%BLENDER_VERSION%" %%D in (__pycache__) do if exist "%%D" rmdir /s /q "%%D"
 echo Successfully installed and verified Python packages
 
 echo.

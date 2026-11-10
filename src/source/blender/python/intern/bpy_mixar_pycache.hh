@@ -14,7 +14,10 @@
  *
  * - This process: `PyConfig.pycache_prefix`, set before Python starts, because
  *   the standard library is imported before any startup script runs.
- * - Plain child Pythons (`sys.executable`): `PYTHONPYCACHEPREFIX` is exported.
+ * - Plain child Pythons (`sys.executable`): `PYTHONPYCACHEPREFIX` is exported
+ *   (`PYTHONDONTWRITEBYTECODE` when there is no cache). On Windows #BLI_setenv
+ *   does not reach the CRT environment `os.environ` is built from, so the
+ *   startup bootstrap copies the rule into `os.environ` before Mixar code runs.
  * - Isolated child Pythons (`sys.executable` + `bpy.app.python_args`, which
  *   carries `-I` and so hides that variable): `-X pycache_prefix=<dir>`.
  */
@@ -33,14 +36,17 @@ namespace blender {
 
 /** Names the cache root for this process and for child Pythons. */
 inline constexpr const char *BPY_MIXAR_PYCACHE_ENV = "PYTHONPYCACHEPREFIX";
+/** Set when there is no cache: plain child Pythons then write no bytecode either. */
+inline constexpr const char *BPY_MIXAR_NO_BYTECODE_ENV = "PYTHONDONTWRITEBYTECODE";
 
 /**
  * Point `config` at the bytecode cache before #Py_InitializeFromConfig.
  *
  * An inherited `PYTHONPYCACHEPREFIX` wins (a parent Mixar process, or a test,
  * already chose one); otherwise `<user caches>/pycache`, e.g.
- * `~/Library/Caches/Mixar/pycache`. With no usable directory, bytecode is not
- * written at all rather than written into the install directory.
+ * `~/Library/Caches/Mixar/pycache`. With no usable directory, neither this
+ * process nor its child Pythons write bytecode at all, rather than write it
+ * into the install directory.
  */
 inline PyStatus bpy_mixar_pycache_config(PyConfig *config)
 {
@@ -60,6 +66,8 @@ inline PyStatus bpy_mixar_pycache_config(PyConfig *config)
   }
   if (prefix.empty()) {
     config->write_bytecode = 0;
+    /* Plain child Pythons (`sys.executable` without `bpy.app.python_args`) write nothing either. */
+    BLI_setenv(BPY_MIXAR_NO_BYTECODE_ENV, "1");
     return PyStatus_Ok();
   }
   BLI_setenv(BPY_MIXAR_PYCACHE_ENV, prefix.c_str());
