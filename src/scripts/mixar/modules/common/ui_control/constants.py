@@ -8,6 +8,7 @@ MAX_TARGETS = 200
 MAX_IMAGE_BYTES = 4 * 1024 * 1024
 ACTION_TIMEOUT = 10.0
 CONTEXT_TTL = 30.0
+SETTLE_TIMEOUT = 2.0  # longest a widget read waits for a pending redraw
 MAX_CONTEXTS = 32
 MAX_SCENES = 32  # scene tabs in one document, counting the user's own
 
