@@ -186,7 +186,9 @@ MID_INSTALL_QUIT_DELAY_S = 5.0
 # certificate thumbprint verified in-app, and the previous MSI log kept.
 # 4 ends Mixar connectors (an AI app's MCP server python running from the
 # install directory) before the lock wait instead of waiting for them.
-HELPER_VERSION = 4
+# 5 runs the MSI with /passive instead of /qb!, so Restart Manager's
+# files-in-use prompt can never block an unattended update.
+HELPER_VERSION = 5
 
 # ============================================================================
 # STATE MACHINE

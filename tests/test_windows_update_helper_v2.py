@@ -302,7 +302,7 @@ def test_helper_result_carries_the_attempt_fields():
 
     for line in ("version=%VERSION%", "stage=%~1", "exit=%~2",
                  "from_version=%FROM_VERSION%", "attempt_id=%ATTEMPT%",
-                 "helper_version=4", "wait_s=%WAITED%"):
+                 "helper_version=5", "wait_s=%WAITED%"):
         assert f'echo {line}' in record, line
     assert 'set "FROM_VERSION=3.3.6"' in script
     assert 'set "ATTEMPT=0123abcd"' in script
@@ -342,7 +342,7 @@ def test_powershell_snippets_survive_batch_quoting(name):
     percent sign would be expanded by cmd."""
     snippet = getattr(win_installer, name)
     assert '"' not in snippet and "%" not in snippet
-    # "/qb!" is only safe while delayed expansion stays off — explicitly,
+    # A "!" is only safe while delayed expansion stays off — explicitly,
     # since a registry DelayedExpansion=1 turns it on for cmd /c.
     assert "setlocal enableextensions disabledelayedexpansion" in _script()
     assert "\r" not in snippet and "\n" not in snippet

@@ -148,7 +148,7 @@ def _run_helper(module, root, msi, env, python, *, lock_wait_s=None, exit_wait_s
 def _installed_arguments(args_path, msi, root):
     arguments = json.loads(args_path.read_text())
     assert arguments == [
-        '/i', str(msi), '/qb!', '/norestart', 'REBOOT=ReallySuppress',
+        '/i', str(msi), '/passive', '/norestart', 'REBOOT=ReallySuppress',
         'LAUNCHAPP=0', '/l*v', str(root / 'msi-install.log'),
     ], arguments
     return arguments

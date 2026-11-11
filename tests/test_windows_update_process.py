@@ -66,7 +66,7 @@ def test_paths_are_single_arguments_and_installer_status_is_preserved(tmp_path, 
     process, result, installer, log = run_snippet(tmp_path, LAUNCH, exit_code=exit_code)
     assert process.returncode == exit_code, process.stderr
     assert json.loads(result.read_text()) == [
-        '/i', installer, '/qb!', '/norestart', 'REBOOT=ReallySuppress',
+        '/i', installer, '/passive', '/norestart', 'REBOOT=ReallySuppress',
         'LAUNCHAPP=0', '/l*v', log,
     ]
 

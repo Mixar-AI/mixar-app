@@ -206,16 +206,21 @@ def _same_version(left, right) -> bool:
         return str(left).strip() == str(right).strip()
 
 
-def classify_result(result, running_version, running_binary=""):
+def classify_result(result, running_version, running_binary="",
+                    files_pending_reboot=False):
     """What the helper's *result* means, judged from the relaunched app.
+
+    *files_pending_reboot* is the caller's reading of Windows' queued
+    reboot renames (:mod:`pending_renames`); this function stays pure.
 
     Returns ``{"outcome", "failure_reason", "relaunch_matched"}``:
 
-    - ``success`` — the installer finished AND this process runs the
-      target version. An unknown running version is not proof.
-    - ``pending_reboot`` — 3010: Windows replaces some files only at the
-      next restart (``files_pending_reboot`` when the old build is what
-      came back).
+    - ``success`` — the installer finished (0 or 3010) AND this process
+      runs the target version. An unknown running version is not proof.
+    - ``pending_reboot`` — 3010 and either the target version is not
+      running or Windows still has a rename queued under the install
+      directory (``files_pending_reboot``): a held file is replaced only
+      at the next restart, so the new exe may be running an old DLL.
     - ``no_effect`` — the installer said 0 but another version runs:
       ``msi_not_upgraded`` (the registry still lists another version),
       ``old_copy_relaunched`` (this binary is outside the registered
@@ -249,8 +254,8 @@ def classify_result(result, running_version, running_binary=""):
         return verdict("failed", _EXIT_REASONS.get(code, "msi_error"))
 
     took_effect = _same_version(running_version, target)
-    if code == "3010":
-        return verdict("pending_reboot", "" if took_effect else "files_pending_reboot")
+    if code == "3010" and (files_pending_reboot or not took_effect):
+        return verdict("pending_reboot", "files_pending_reboot")
     if took_effect:
         return verdict("success")
     if installed and not _same_version(installed, target):

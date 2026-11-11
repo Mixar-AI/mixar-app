@@ -11,6 +11,8 @@ shown as one toast with advice for its cause, and reported as
 ``update.install_result``.
 """
 
+import ntpath
+
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
 
@@ -26,6 +28,25 @@ def _running_binary() -> str:
         return _binary_path()
     except Exception:  # noqa: BLE001 - diagnostics only
         return ""
+
+
+def _files_pending_reboot(result, binary) -> bool:
+    """After a 3010: does Windows still have to replace files in the install?
+
+    Judged on the location the helper recorded, else the running binary's
+    directory. One registry read, only for a 3010 and only on Windows.
+    """
+    if result.get("exit") != "3010" or result.get("stage") != "install":
+        return False
+    from .pending_renames import files_pending_reboot
+
+    location = result.get("install_location") or (
+        ntpath.dirname(binary) if binary else "")
+    try:
+        return files_pending_reboot(location)
+    except Exception:  # noqa: BLE001 - keep the verdict from the version
+        logger.warning("Could not check pending file renames", exc_info=True)
+        return False
 
 
 def report_previous_update_result() -> None:
@@ -50,7 +71,11 @@ def report_previous_update_result() -> None:
 
     target = result.get("version", "")
     running = get_runtime_version() or ""
-    verdict = classify_result(result, running, _running_binary())
+    binary = _running_binary()
+    verdict = classify_result(
+        result, running, binary,
+        files_pending_reboot=_files_pending_reboot(result, binary),
+    )
     outcome, reason = verdict["outcome"], verdict["failure_reason"]
 
     _capture_result(result, verdict, running)
@@ -65,14 +90,10 @@ def report_previous_update_result() -> None:
         return
 
     if outcome == "pending_reboot":
-        if reason:
-            body = rpt_("Windows will finish installing Mixar {version} when you "
-                        "restart your computer.").format(version=target)
-        else:
-            body = rpt_("Mixar {version} is installed. Windows replaces some of its "
-                        "files only after a restart.").format(version=target)
         _push_update_outcome_toast(
-            "warning", n_("Restart Windows to finish updating"), body,
+            "warning", n_("Restart Windows to finish updating"),
+            rpt_("Windows will finish installing Mixar {version} when you "
+                 "restart your computer.").format(version=target),
         )
         return
 

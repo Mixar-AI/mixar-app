@@ -31,6 +31,10 @@ Design notes, each one a failure this replaces:
   prompt and reports whether the user accepted, instead of letting
   ``msiexec`` fail with 1925 in the cases where it will not self-elevate.
   Plain ``msiexec`` remains the fallback when PowerShell is unavailable.
+- **It never shows a modal installer prompt.**  Under ``/qb!`` a file held
+  from outside the install dir (antivirus, a service) stopped the update
+  on Restart Manager's files-in-use dialog, twice (#2060). ``/passive``
+  keeps the progress bar and closes holders, else replaces at reboot (3010).
 - **The app always comes back — from where the MSI installed it.**
   Relaunch runs whatever the installer returned (a declined UAC prompt
   must leave the user with the version they already had), and prefers the
@@ -49,7 +53,7 @@ Design notes, each one a failure this replaces:
   account — before ``PATH``, so every tool runs by its System32 path, and
   ``cmd.exe`` itself is started by absolute path with AutoRun off (``/d``).
   Delayed expansion is forced off: a registry ``DelayedExpansion=1``
-  would strip the ``!`` from ``/qb!`` and give the MSI a Cancel button.
+  would strip any ``!`` from a path.
 - **It clears the update-in-progress marker** (``install_marker``) on
   every exit path, right before the relaunch: while it names this helper,
   a Mixar opened by hand quits instead of purging this very script.
@@ -104,7 +108,7 @@ _UNSAFE_BATCH_CHARS = ('"', "%", "^", "&", "|", "<", ">", "\r", "\n")
 
 _PS_INSTALL = (
     "$q=[char]34;"
-    "$a=@('/i',($q+$env:MSI+$q),'/qb!','/norestart','REBOOT=ReallySuppress',"
+    "$a=@('/i',($q+$env:MSI+$q),'/passive','/norestart','REBOOT=ReallySuppress',"
     "'LAUNCHAPP=0','/l*v',($q+$env:MSILOG+$q));"
     "try{"
     "$p=Start-Process -FilePath ($env:SYS32+'\\msiexec.exe') -ArgumentList $a "
@@ -321,7 +325,7 @@ if not "%INSTALL_EXIT%"=="9009" goto installed
 
 :nopowershell
 echo [%DATE% %TIME%] PowerShell unavailable - falling back to msiexec >>"%LOG%" 2>&1
-"%SYS32%\\msiexec.exe" /i "%MSI%" /qb! /norestart REBOOT=ReallySuppress LAUNCHAPP=0 /l*v "%MSILOG%" >>"%LOG%" 2>&1
+"%SYS32%\\msiexec.exe" /i "%MSI%" /passive /norestart REBOOT=ReallySuppress LAUNCHAPP=0 /l*v "%MSILOG%" >>"%LOG%" 2>&1
 set "INSTALL_EXIT=%ERRORLEVEL%"
 
 :installed
