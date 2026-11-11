@@ -471,7 +471,7 @@ if !ERRORLEVEL! neq 0 (
 )
 "!PYTHON_BIN!" -B "%ROOT_DIR%\scripts\check_python_runtime.py"
 if !ERRORLEVEL! neq 0 (
-    echo Error: Bundled MCP runtime dependencies failed to import
+    echo Error: Bundled MCP or PDF runtime dependencies failed to import
     exit /b 1
 )
 REM The install ships no bytecode: a reused build tree keeps __pycache__ from

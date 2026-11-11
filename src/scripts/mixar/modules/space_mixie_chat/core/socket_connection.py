@@ -319,6 +319,8 @@ class SocketConnection:
         from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
         from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
+        from ...context_folder.constants import PDF_CAPABILITY as CONTEXT_FOLDER_PDF_CAPABILITY
+        from ...context_folder.core import pdf as context_folder_pdf
         from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
         from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
         from ...common.agent_execution.script_time_limit import CAPABILITY as SCRIPT_TIME_LIMIT_CAPABILITY
@@ -375,6 +377,9 @@ class SocketConnection:
                 CONTEXT_FOLDER_CAPABILITY,
                 # context_folder.view_video: this build decodes folder videos.
                 CONTEXT_FOLDER_VIDEO_CAPABILITY,
+                # PDF text through context_folder.read/search, pages through
+                # context_folder.view_pdf_pages: only when pypdfium2 imports.
+                *([CONTEXT_FOLDER_PDF_CAPABILITY] if context_folder_pdf.available() else []),
                 # moodboard.view_video: the agent reviews board videos as frames.
                 MOODBOARD_VIDEO_CAPABILITY,
                 # mixar.scene_render_start accepts agent_ref_json and reports
