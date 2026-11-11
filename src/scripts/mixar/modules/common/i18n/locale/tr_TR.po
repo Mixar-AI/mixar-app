@@ -7718,6 +7718,12 @@ msgstr "Moodboard"
 msgid "Right-click context menu for moodboard"
 msgstr "Moodboard için sağ tık bağlam menüsü"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Bağlantıyı Sil"
 

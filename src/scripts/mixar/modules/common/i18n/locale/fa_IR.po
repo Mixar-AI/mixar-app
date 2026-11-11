@@ -7718,6 +7718,12 @@ msgstr "ﺩﺭﻮﺑﺩﻮﻣ"
 msgid "Right-click context menu for moodboard"
 msgstr "ﺩﺭﻮﺑﺩﻮﻣ ﯼﺍﺮﺑ ﺖﺳﺍﺭ ﮏﯿﻠﮐ ﻪﻨﯿﻣﺯ ﯼﻮﻨﻣ"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "ﻝﺎﺼﺗﺍ ﻑﺬﺣ"
 

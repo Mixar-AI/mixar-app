@@ -7718,6 +7718,12 @@ msgstr "மூட்போர்டு"
 msgid "Right-click context menu for moodboard"
 msgstr "மூட்போர்டுக்கான வலது-சொடுக்கு சூழல் பட்டி"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "இணைப்பை அழி"
 

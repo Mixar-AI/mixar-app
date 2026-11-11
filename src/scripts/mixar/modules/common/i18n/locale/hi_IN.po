@@ -7718,6 +7718,12 @@ msgstr "मूडबोर्ड"
 msgid "Right-click context menu for moodboard"
 msgstr "मूडबोर्ड के लिए राइट-क्लिक संदर्भ मेनू"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "कनेक्शन मिटाएँ"
 

@@ -7718,6 +7718,12 @@ msgstr "情緒板"
 msgid "Right-click context menu for moodboard"
 msgstr "情緒板的右鍵情境選單"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "刪除連接"
 

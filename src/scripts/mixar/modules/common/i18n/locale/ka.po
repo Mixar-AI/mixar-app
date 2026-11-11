@@ -7718,6 +7718,12 @@ msgstr "მუდბორდი"
 msgid "Right-click context menu for moodboard"
 msgstr "მარჯვენა დაწკაპუნების კონტექსტური მენიუ მუდბორდისთვის"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "კავშირის წაშლა"
 

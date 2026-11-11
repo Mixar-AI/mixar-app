@@ -7718,6 +7718,12 @@ msgstr "Tunnelmataulu"
 msgid "Right-click context menu for moodboard"
 msgstr "Tunnelmataulun oikean painikkeen kontekstivalikko"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Poista yhteys"
 

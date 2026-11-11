@@ -9639,6 +9639,12 @@ msgstr "Mudbord"
 msgid "Right-click context menu for moodboard"
 msgstr "Kontekstni meni desnim klikom za mudbord"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 # derived
 msgid "Delete Connection"
 msgstr "Obriši vezu"

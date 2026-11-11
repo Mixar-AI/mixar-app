@@ -7718,6 +7718,12 @@ msgstr "มู้ดบอร์ด"
 msgid "Right-click context menu for moodboard"
 msgstr "เมนูบริบทคลิกขวาสำหรับมู้ดบอร์ด"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "ลบการเชื่อมต่อ"
 

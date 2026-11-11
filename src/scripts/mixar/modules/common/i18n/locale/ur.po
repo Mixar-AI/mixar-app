@@ -7718,6 +7718,12 @@ msgstr "ﮈﺭﻮﺑ ﮈﻮﻣ"
 msgid "Right-click context menu for moodboard"
 msgstr "ﻮﻨﯿﻣ ﻕﺎﯿﺳ ﮏﻠﮐ ﮞﺎﯾﺍﺩ ﮯﯿﻟ ﮯﮐ ﮈﺭﻮﺑ ﮈﻮﻣ"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "ﮟﯾﺮﮐ ﻑﺬﺣ ﻦﺸﮑﻨﮐ"
 

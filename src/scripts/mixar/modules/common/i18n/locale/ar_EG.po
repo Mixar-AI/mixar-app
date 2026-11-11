@@ -7718,6 +7718,12 @@ msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ"
 msgid "Right-click context menu for moodboard"
 msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻠﻟ ﻦﻤﻳﻷ﻿ﺍ ﺮﻘﻨﻟﺎﺑ ﻕﺎﻴﺴﻟﺍ ﺔﻤﺋﺎﻗ"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "ﻝﺎﺼﺗﻻ﻿ﺍ ﻑﺬﺣﺍ"
 

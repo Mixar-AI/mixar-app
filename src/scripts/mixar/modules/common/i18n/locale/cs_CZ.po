@@ -7718,6 +7718,12 @@ msgstr ""
 msgid "Right-click context menu for moodboard"
 msgstr "Kontextová nabídka moodboardu po kliknutí pravým tlačítkem"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Smazat spojení"
 

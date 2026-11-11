@@ -7718,6 +7718,12 @@ msgstr "무드보드"
 msgid "Right-click context menu for moodboard"
 msgstr "무드보드용 오른쪽 클릭 컨텍스트 메뉴입니다"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "연결 삭제"
 
