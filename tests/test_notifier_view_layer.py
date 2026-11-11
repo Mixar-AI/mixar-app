@@ -14,13 +14,22 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_notifier_statistics_use_the_iterated_window(tmp_path):
+@pytest.mark.parametrize('original_lookup', [False, True], ids=['fixed', 'unfixed-control'])
+def test_notifier_statistics_use_the_iterated_window(tmp_path, original_lookup):
     compiler = shutil.which('c++') or shutil.which('clang++') or shutil.which('g++')
     if compiler is None:
         pytest.skip('C++ compiler required')
     events = (ROOT / 'src/source/blender/windowmanager/intern/wm_event_system.cc').read_text()
     start = events.index('    if (clear_info_stats) {')
     block = events[start:events.index('\n    if (do_anim)', start)]
+    if original_lookup:
+        block = '''
+    if (clear_info_stats) {
+      ViewLayer *view_layer = CTX_data_view_layer(C);
+      ED_info_stats_clear(wm, view_layer);
+      wm_event_add_notifier_intern(wm, CTX_wm_window(C), NC_SPACE | ND_SPACE_INFO, nullptr);
+    }
+'''
     windows = (ROOT / 'src/source/blender/windowmanager/intern/wm_window.cc').read_text()
     start = windows.index('ViewLayer *WM_window_get_active_view_layer(')
     getter = windows[start:windows.index('\n}', start) + 2]
@@ -41,8 +50,8 @@ ViewLayer *BKE_view_layer_default_view(Scene *scene) {
   assert(scene); return scene->fallback;
 }
 void WM_window_set_active_view_layer(wmWindow *, ViewLayer *) {}
-ViewLayer *CTX_data_view_layer(bContext *) { std::abort(); }
-wmWindow *CTX_wm_window(bContext *) { std::abort(); }
+ViewLayer *CTX_data_view_layer(bContext *) { std::exit(86); }
+wmWindow *CTX_wm_window(bContext *) { std::exit(86); }
 void ED_info_stats_clear(wmWindowManager *, ViewLayer *layer) {
   assert(layer); layer->cleared++;
 }
@@ -74,6 +83,12 @@ int main() {
   scene.named = nullptr;
   clear(&wm, win, true); // Deleted/renamed active layer uses the live fallback.
   assert(fallback.cleared == 1 && wm.notices == 2 && wm.target == &win);
+  ViewLayer other_layer;
+  Scene other_scene{&other_layer, nullptr};
+  wmWindow other_window{&other_scene};
+  clear(&wm, other_window, true);
+  assert(other_layer.cleared == 1 && named.cleared == 1 && fallback.cleared == 1);
+  assert(wm.notices == 3 && wm.target == &other_window);
 }
 '''.replace('GETTER', getter).replace('BLOCK', block)
     source = tmp_path / 'notifier.cc'
@@ -83,4 +98,6 @@ int main() {
                            capture_output=True, text=True)
     assert build.returncode == 0, build.stdout + build.stderr
     result = subprocess.run([str(binary)], capture_output=True, text=True)
-    assert result.returncode == 0, result.stdout + result.stderr
+    # The original block must consult the forbidden callback context. Use a
+    # distinct exit code instead of aborting and opening an OS crash dialog.
+    assert result.returncode == (86 if original_lookup else 0), result.stdout + result.stderr
