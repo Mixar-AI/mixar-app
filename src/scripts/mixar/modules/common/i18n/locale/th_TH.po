@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
+
 msgid "Capture Viewport"
 msgstr "จับภาพวิวพอร์ต"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "ใช้โมเดลนี้สำหรับเอเจนต์"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "การสมัครใช้งาน ChatGPT"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "การตั้งค่าผู้ให้บริการ AI"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "ใช้คีย์ API ของคุณเองสำหรับเอเจนต์ Mixar ขณะเปิดใช้งาน จะไม่มีการหักเครดิต Mixar สำหรับคำขอของเอเจนต์"
 
-msgid "Validate with the provider and save your API key"
-msgstr "ตรวจสอบกับผู้ให้บริการและบันทึกคีย์ API ของคุณ"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "โมเดลในเครื่อง"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "อัปเดตเป็น Mixar {version} แล้ว"
 msgid "The update was installed successfully."
 msgstr "ติดตั้งการอัปเดตเรียบร้อยแล้ว"
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "Mixar จะรีสตาร์ทเพื่อนำการอั
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ใช้ “ดาวน์โหลด” เพื่ออัปเดตผ่านเบราว์เซอร์ของคุณ"
+
+msgid "Retry"
+msgstr "ลองใหม่"
 
 msgid "Restart & Update"
 msgstr "รีสตาร์ทและอัปเดต"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "กำลังรีเฟรชรายการโมเดล..."
 msgid "Generation catalog module not available"
 msgstr "โมดูลแค็ตตาล็อกการสร้างไม่พร้อมใช้งาน"
 
+msgid "A duplicate image generation is already queued"
+msgstr "มีการสร้างภาพที่ซ้ำกันอยู่ในคิวแล้ว"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "สร้างภาพด้วย AI และเพิ่มลงในมู้ดบอร์ด"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "โปรดป้อนพรอมต์ (กด Enter เพื่อยืนยันข้อความ)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "มีการสร้างภาพที่ซ้ำกันอยู่ในคิวแล้ว"
 
 msgid "No model specified and no default available"
 msgstr "ไม่ได้ระบุโมเดลและไม่มีค่าเริ่มต้น"
@@ -20316,12 +20370,6 @@ msgstr "กำลังแก้ไข..."
 msgid "Awaiting Input..."
 msgstr "กำลังรอข้อมูล..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "ออกจากระบบ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ลองใหม่"
-
 msgid "Choose Export Location"
 msgstr "เลือกตำแหน่งส่งออก"
 
@@ -21549,6 +21594,15 @@ msgstr "ไฟล์แนบสูงสุด {count} รายการ"
 msgid "Paste failed: {error}"
 msgstr "วางไม่สำเร็จ: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "ไม่สามารถเพิ่ม {name}: {error}"
+
+msgid "These references are already attached"
+msgstr "แนบภาพอ้างอิงเหล่านี้ไว้แล้ว"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "ไม่สามารถเพิ่ม {name}: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "ถึงขีดจำกัดไฟล์แนบ ({count}) แล้ว"
 
 msgid "Skipped {name}: {error}"
 msgstr "ข้าม {name}: {error}"
 
-msgid "These references are already attached"
-msgstr "แนบภาพอ้างอิงเหล่านี้ไว้แล้ว"
-
 msgid "Added {count} image(s)"
 msgstr "เพิ่มรูปภาพ {count} รูปแล้ว"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "เพิ่มจาก Blend"
@@ -26547,9 +26592,6 @@ msgstr "โหมดอัตโนมัติ: เอเจนต์ตัด�
 msgid "Agent Bubble"
 msgstr "บับเบิลเอเจนต์"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
-
 msgid "Agent Bubble Status"
 msgstr "สถานะบับเบิลเอเจนต์"
 
@@ -26999,6 +27041,9 @@ msgstr "ทำให้ไฟล์แนบมู้ดบอร์ดเคล
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "แสดงอ้างอิงที่เพิ่งแนบปลิวเข้าสู่แชต Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "หน่วงเวลา"

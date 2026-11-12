@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
+
 msgid "Capture Viewport"
 msgstr "Ansichtsfenster erfassen"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Verwendet dieses Modell für den Agenten"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT-Abonnement"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "KI-Anbieter-Einstellungen"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Verwendet Ihren eigenen API-Schlüssel für den Mixar-Agenten. Solange dies aktiv ist, werden für Agentenanfragen keine Mixar-Credits berechnet."
 
-msgid "Validate with the provider and save your API key"
-msgstr "Überprüft Ihren API-Schlüssel beim Anbieter und speichert ihn"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "Lokales Modell"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Auf Mixar {version} aktualisiert"
 msgid "The update was installed successfully."
 msgstr "Das Update wurde erfolgreich installiert."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "Mixar wird neu gestartet, um es anzuwenden."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – verwenden Sie „Herunterladen“, um über Ihren Browser zu aktualisieren."
+
+msgid "Retry"
+msgstr "Erneut versuchen"
 
 msgid "Restart & Update"
 msgstr "Neu starten & aktualisieren"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "Modellliste wird aktualisiert..."
 msgid "Generation catalog module not available"
 msgstr "Generierungskatalog-Modul nicht verfügbar"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Eine identische Bildgenerierung befindet sich bereits in der Warteschlange"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generiert KI-Bilder und fügt sie dem Moodboard hinzu"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Bitte geben Sie einen Prompt ein (drücken Sie Enter, um Ihren Text zu bestätigen)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Eine identische Bildgenerierung befindet sich bereits in der Warteschlange"
 
 msgid "No model specified and no default available"
 msgstr "Kein Modell angegeben und kein Standardmodell verfügbar"
@@ -20316,12 +20370,6 @@ msgstr "Wird geändert..."
 msgid "Awaiting Input..."
 msgstr "Warte auf Eingabe..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "Abmelden"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Erneut versuchen"
-
 msgid "Choose Export Location"
 msgstr "Exportziel wählen"
 
@@ -21549,6 +21594,15 @@ msgstr "Max. {count} Anhänge"
 msgid "Paste failed: {error}"
 msgstr "Einfügen fehlgeschlagen: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} kann nicht hinzugefügt werden: {error}"
+
+msgid "These references are already attached"
+msgstr "Diese Referenzen sind bereits angehängt"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} kann nicht hinzugefügt werden: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Anhangslimit ({count}) erreicht"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} übersprungen: {error}"
 
-msgid "These references are already attached"
-msgstr "Diese Referenzen sind bereits angehängt"
-
 msgid "Added {count} image(s)"
 msgstr "{count} Bild(er) hinzugefügt"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Aus .blend hinzufügen"
@@ -26547,9 +26592,6 @@ msgstr "Automatikmodus: Der Agent entscheidet offene Fragen selbst, statt Sie zu
 msgid "Agent Bubble"
 msgstr "Agentenblase"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
-
 msgid "Agent Bubble Status"
 msgstr "Status der Agentenblase"
 
@@ -26999,6 +27041,9 @@ msgstr "Moodboard-Anhang animieren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zeigt, wie eine neu angehängte Referenz in den Mixie-Chat fliegt"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Verzögerung"

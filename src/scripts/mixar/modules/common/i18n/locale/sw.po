@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Imeshindwa kufungua dirisha la Kiputo cha wakala"
+
 msgid "Capture Viewport"
 msgstr "Nasa mtazamo wa kutazama"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Tumia modeli hii kwa wakala"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Usajili wa ChatGPT"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "Mipangilio ya mtoa huduma wa AI"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Tumia ufunguo wako wa API kwa wakala wa Mixar. Ikiwa inatumika, krediti za Mixar hazitozwi kwa maombi ya wakala."
 
-msgid "Validate with the provider and save your API key"
-msgstr "Thibitisha na mtoa huduma na uhifadhi ufunguo wako wa API"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "Modeli ya ndani"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Imesasishwa hadi Mixar {version}"
 msgid "The update was installed successfully."
 msgstr "Sasisho limesakinishwa kwa ufanisi."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "Mixar itawashwa upya ili kulituma."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tumia Pakua kusasisha kupitia kivinjari chako."
+
+msgid "Retry"
+msgstr "Jaribu tena"
 
 msgid "Restart & Update"
 msgstr "Washa upya na usasishe"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "Inaonyesha upya orodha ya modeli..."
 msgid "Generation catalog module not available"
 msgstr "Moduli ya katalogi ya utengenezaji haipatikani"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Utengenezaji rudufu wa picha tayari uko kwenye foleni"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Tengeneza picha za AI na uziongeze kwenye ubao wa hisia"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Tafadhali ingiza maagizo (bonyeza Enter kuthibitisha maandishi)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Utengenezaji rudufu wa picha tayari uko kwenye foleni"
 
 msgid "No model specified and no default available"
 msgstr "Hakuna modeli iliyotajwa na hakuna chaguomsingi inayopatikana"
@@ -20316,12 +20370,6 @@ msgstr "Inabadilisha..."
 msgid "Awaiting Input..."
 msgstr "Inasubiri ingizo..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "Toka"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Jaribu tena"
-
 msgid "Choose Export Location"
 msgstr "Chagua mahali pa kuhamisha"
 
@@ -21549,6 +21594,15 @@ msgstr "Viambatisho {count} kwa juu"
 msgid "Paste failed: {error}"
 msgstr "Kubandika kumeshindwa: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "Haiwezi kuongeza {name}: {error}"
+
+msgid "These references are already attached"
+msgstr "Rejeleo hizi tayari zimeambatishwa"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "Haiwezi kuongeza {name}: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Kikomo cha viambatisho ({count}) kimefikiwa"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} imerukwa: {error}"
 
-msgid "These references are already attached"
-msgstr "Rejeleo hizi tayari zimeambatishwa"
-
 msgid "Added {count} image(s)"
 msgstr "Taswira {count} zimeongezwa"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Ongeza kutoka Blend"
@@ -26547,9 +26592,6 @@ msgstr "Modi otomatiki: wakala huamua chaguzi wazi mwenyewe badala ya kuuliza, n
 msgid "Agent Bubble"
 msgstr "Kiputo cha wakala"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Imeshindwa kufungua dirisha la Kiputo cha wakala"
-
 msgid "Agent Bubble Status"
 msgstr "Hali ya Kiputo cha wakala"
 
@@ -26999,6 +27041,9 @@ msgstr "Huisha kiambatisho cha ubao wa hisia"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Onyesha rejeleo jipya lililoambatishwa likiruka kuingia kwenye gumzo la Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Kuchelewa"

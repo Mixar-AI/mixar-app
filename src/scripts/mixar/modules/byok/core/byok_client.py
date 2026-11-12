@@ -324,6 +324,12 @@ def save_credentials(
     def _work():
         from . import key_store
 
+        if provider == "claude_code":
+            from .claude_code import check_ready, ClaudeCodeError
+            try:
+                check_ready()
+            except ClaudeCodeError as exc:
+                return False, None, exc.message
         user_id = key_store.current_user_id()  # before the call: never the next account's
         success, data, err = _put_sealed(provider, model, api_key, base_url,
                                          supports_vision, account_id)
@@ -377,7 +383,7 @@ def resave_stored_key(
             # revoked. Say so in the log; the turn path has the same gap.
             logger.warning("BYOK Codex renewal could not be written back to the sign-in file")
         api_key = resolution.fields.get(BYOK_TURN_KEY_FIELD)
-        if not api_key:
+        if not api_key and provider != "claude_code":
             return False, None, _NO_STORED_KEY_MSG
         account_id = resolution.fields.get(BYOK_TURN_ACCOUNT_FIELD)
         if epoch != _account_epoch():
@@ -459,6 +465,12 @@ def delete_credentials(
 
         if epoch != _account_epoch():
             return False, 0, _SIGNED_OUT_MSG
+        if provider == "claude_code":
+            from .claude_code import check_ready, ClaudeCodeError
+            try:
+                check_ready()
+            except ClaudeCodeError as exc:
+                return False, None, exc.message
         user_id = key_store.current_user_id()  # before the call: never the next account's
         response = get_agent_service().delete_credentials_all()
         success, data, err = _translate(response)

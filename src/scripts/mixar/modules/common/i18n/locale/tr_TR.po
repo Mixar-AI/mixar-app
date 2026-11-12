@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ajan Balonu penceresi açılamadı"
+
 msgid "Capture Viewport"
 msgstr "Görüş Alanını Yakala"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Ajan için bu modeli kullanır"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT aboneliği"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "YZ Sağlayıcı Ayarları"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar ajanı için kendi API anahtarınızı kullanır. Etkinken ajan istekleri için Mixar kredisi harcanmaz."
 
-msgid "Validate with the provider and save your API key"
-msgstr "Sağlayıcıyla doğrular ve API anahtarınızı kaydeder"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "Yerel model"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Mixar {version} sürümüne güncellendi"
 msgid "The update was installed successfully."
 msgstr "Güncelleme başarıyla yüklendi."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "Uygulamak için Mixar yeniden başlatılacak."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tarayıcınız üzerinden güncellemek için İndir'i kullanın."
+
+msgid "Retry"
+msgstr "Yeniden Dene"
 
 msgid "Restart & Update"
 msgstr "Yeniden Başlat ve Güncelle"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "Model listesi yenileniyor..."
 msgid "Generation catalog module not available"
 msgstr "Oluşturma kataloğu modülü kullanılamıyor"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Aynı görsel oluşturma zaten kuyrukta"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "YZ görselleri oluşturur ve moodboard'a ekler"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Lütfen bir istem girin (metninizi onaylamak için Enter'a basın)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Aynı görsel oluşturma zaten kuyrukta"
 
 msgid "No model specified and no default available"
 msgstr "Model belirtilmedi ve varsayılan yok"
@@ -20316,12 +20370,6 @@ msgstr "Değiştiriliyor..."
 msgid "Awaiting Input..."
 msgstr "Giriş Bekleniyor..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "Oturumu Kapat"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yeniden Dene"
-
 msgid "Choose Export Location"
 msgstr "Dışa Aktarma Konumunu Seç"
 
@@ -21549,6 +21594,15 @@ msgstr "En fazla {count} ek"
 msgid "Paste failed: {error}"
 msgstr "Yapıştırma başarısız oldu: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} eklenemiyor: {error}"
+
+msgid "These references are already attached"
+msgstr "Bu referanslar zaten ekli"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} eklenemiyor: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Ek sınırına ({count}) ulaşıldı"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} atlandı: {error}"
 
-msgid "These references are already attached"
-msgstr "Bu referanslar zaten ekli"
-
 msgid "Added {count} image(s)"
 msgstr "{count} görsel eklendi"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend'den Ekle"
@@ -26547,9 +26592,6 @@ msgstr "Otomatik kip: ajan açık seçimlere size sormak yerine kendisi karar ve
 msgid "Agent Bubble"
 msgstr "Ajan Balonu"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Ajan Balonu penceresi açılamadı"
-
 msgid "Agent Bubble Status"
 msgstr "Ajan Balonu Durumu"
 
@@ -26999,6 +27041,9 @@ msgstr "Moodboard Ekini Canlandır"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Yeni eklenen bir referansın Mixie sohbetine uçarak girişini gösterir"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Gecikme"

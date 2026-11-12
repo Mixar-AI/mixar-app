@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
+
 msgid "Capture Viewport"
 msgstr "வியூபோர்ட்டைப் பிடி"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "முகவருக்கு இந்த மாதிரியைப் பயன்படுத்துகிறது"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT சந்தா"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "AI வழங்குநர் அமைப்புகள்"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar முகவருக்கு உங்கள் சொந்த API விசையைப் பயன்படுத்துங்கள். இயக்கத்தில் இருக்கும்போது முகவர் கோரிக்கைகளுக்கு Mixar கிரெடிட்கள் வசூலிக்கப்படாது."
 
-msgid "Validate with the provider and save your API key"
-msgstr "வழங்குநரிடம் சரிபார்த்து உங்கள் API விசையைச் சேமிக்கிறது"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "உள்ளக மாதிரி"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Mixar {version}-க்குப் புதுப்பிக்கப�
 msgid "The update was installed successfully."
 msgstr "புதுப்பிப்பு வெற்றிகரமாக நிறுவப்பட்டது."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "அதைப் பயன்படுத்த Mixar மீண்டு�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — உலாவி வழியாகப் புதுப்பிக்க பதிவிறக்கு என்பதைப் பயன்படுத்துங்கள்."
+
+msgid "Retry"
+msgstr "மீண்டும் முயல்"
 
 msgid "Restart & Update"
 msgstr "மீண்டும் தொடங்கி புதுப்பி"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "மாதிரிப் பட்டியல் புதுப்ப�
 msgid "Generation catalog module not available"
 msgstr "உருவாக்க அட்டவணை தொகுதி கிடைக்கவில்லை"
 
+msgid "A duplicate image generation is already queued"
+msgstr "நகல் பட உருவாக்கம் ஏற்கெனவே வரிசையில் உள்ளது"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI படங்களை உருவாக்கி மூட்போர்டில் சேர்க்கும்"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "ப்ராம்ப்டை உள்ளிடவும் (உரையை உறுதிப்படுத்த Enter அழுத்தவும்)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "நகல் பட உருவாக்கம் ஏற்கெனவே வரிசையில் உள்ளது"
 
 msgid "No model specified and no default available"
 msgstr "மாதிரி குறிப்பிடப்படவில்லை, இயல்புநிலையும் கிடைக்கவில்லை"
@@ -20316,12 +20370,6 @@ msgstr "மாற்றுகிறது..."
 msgid "Awaiting Input..."
 msgstr "உள்ளீட்டிற்காகக் காத்திருக்கிறது..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "வெளியேறு"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "மீண்டும் முயல்"
-
 msgid "Choose Export Location"
 msgstr "ஏற்றுமதி இடத்தைத் தேர்ந்தெடு"
 
@@ -21549,6 +21594,15 @@ msgstr "அதிகபட்சம் {count} இணைப்புக் க�
 msgid "Paste failed: {error}"
 msgstr "ஒட்டுதல் தோல்வி: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
+
+msgid "These references are already attached"
+msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}-ஐச் சேர்க்க முடியாது: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} தவிர்க்கப்பட்டது: {error}"
 
-msgid "These references are already attached"
-msgstr "இந்தக் குறிப்புகள் ஏற்கெனவே இணைக்கப்பட்டுள்ளன"
-
 msgid "Added {count} image(s)"
 msgstr "{count} படம்(கள்) சேர்க்கப்பட்டன"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-இலிருந்து சேர்"
@@ -26547,9 +26592,6 @@ msgstr "தானி பயன்முறை: திறந்த தேர்�
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
-
 msgid "Agent Bubble Status"
 msgstr "முகவர் குமிழி நிலைமை"
 
@@ -26999,6 +27041,9 @@ msgstr "மூட்போர்டு இணைப்புக் கோப்�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "புதிதாக இணைத்த குறிப்பு Mixie அரட்டைக்குள் பறந்து வருவதைக் காட்டுகிறது"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "நேரந்தவறுகை"

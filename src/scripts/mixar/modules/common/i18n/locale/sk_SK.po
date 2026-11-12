@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
+
 msgid "Capture Viewport"
 msgstr "Zachytiť záber"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Použije tento model pre agenta"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Predplatné ChatGPT"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "Nastavenia poskytovateľa AI"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Použije váš vlastný kľúč API pre agenta Mixar. Kým je aktívny, za požiadavky agenta sa neúčtujú kredity Mixar."
 
-msgid "Validate with the provider and save your API key"
-msgstr "Overí kľúč API u poskytovateľa a uloží ho"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "Lokálny model"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Aktualizované na Mixar {version}"
 msgid "The update was installed successfully."
 msgstr "Aktualizácia bola úspešne nainštalovaná."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "Mixar sa reštartuje, aby ju použil."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — na aktualizáciu cez prehliadač použite Stiahnuť."
+
+msgid "Retry"
+msgstr "Skúsiť znova"
 
 msgid "Restart & Update"
 msgstr "Reštartovať a aktualizovať"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "Obnovuje sa zoznam modelov..."
 msgid "Generation catalog module not available"
 msgstr "Modul katalógu generovania nie je dostupný"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Duplicitné generovanie obrázka už je vo fronte"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Vygeneruje obrázky AI a pridá ich do moodboardu"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Zadajte výzvu (text potvrďte stlačením Enter)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Duplicitné generovanie obrázka už je vo fronte"
 
 msgid "No model specified and no default available"
 msgstr "Nie je zadaný žiadny model a nie je dostupný predvolený"
@@ -20316,12 +20370,6 @@ msgstr "Upravuje sa..."
 msgid "Awaiting Input..."
 msgstr "Čaká sa na vstup..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "Odhlásiť sa"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Skúsiť znova"
-
 msgid "Choose Export Location"
 msgstr "Vybrať umiestnenie exportu"
 
@@ -21549,6 +21594,15 @@ msgstr "Najviac {count} príloh"
 msgid "Paste failed: {error}"
 msgstr "Vloženie zlyhalo: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "Nemožno pridať {name}: {error}"
+
+msgid "These references are already attached"
+msgstr "Tieto referencie sú už priložené"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "Nemožno pridať {name}: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Dosiahnutý limit príloh ({count})"
 
 msgid "Skipped {name}: {error}"
 msgstr "Preskočené {name}: {error}"
 
-msgid "These references are already attached"
-msgstr "Tieto referencie sú už priložené"
-
 msgid "Added {count} image(s)"
 msgstr "Pridané obrázky: {count}"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Pridať z Blend súboru"
@@ -26547,9 +26592,6 @@ msgstr "Automatický režim: agent sa o otvorených voľbách rozhoduje sám nam
 msgid "Agent Bubble"
 msgstr "Bublina agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
-
 msgid "Agent Bubble Status"
 msgstr "Stav bubliny agenta"
 
@@ -26999,6 +27041,9 @@ msgstr "Animovať prílohu z moodboardu"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zobrazí novo priloženú referenciu letiacu do chatu Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Oneskorenie"

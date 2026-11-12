@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "에이전트 버블 창을 열지 못했습니다"
+
 msgid "Capture Viewport"
 msgstr "뷰포트 캡처"
 
@@ -1526,6 +1529,48 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
+msgstr ""
+
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "에이전트에 이 모델을 사용합니다"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT 구독"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "AI 제공업체 설정"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar 에이전트에 내 API 키를 사용합니다. 활성화된 동안에는 에이전트 요청에 Mixar 크레딧이 차감되지 않습니다."
 
-msgid "Validate with the provider and save your API key"
-msgstr "제공업체에서 검증한 후 API 키를 저장합니다"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "로컬 모델"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3008,13 +3059,10 @@ msgstr "Mixar {version}(으)로 업데이트되었습니다"
 msgid "The update was installed successfully."
 msgstr "업데이트가 성공적으로 설치되었습니다."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3106,6 +3154,9 @@ msgstr "업데이트를 적용하기 위해 Mixar가 다시 시작됩니다."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 다운로드를 사용하여 브라우저에서 업데이트하세요."
+
+msgid "Retry"
+msgstr "재시도"
 
 msgid "Restart & Update"
 msgstr "다시 시작 및 업데이트"
@@ -3486,6 +3537,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9994,14 +10048,14 @@ msgstr "모델 목록을 새로고침하는 중..."
 msgid "Generation catalog module not available"
 msgstr "생성 카탈로그 모듈을 사용할 수 없습니다"
 
+msgid "A duplicate image generation is already queued"
+msgstr "동일한 이미지 생성이 이미 대기열에 있습니다"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI 이미지를 생성하여 무드보드에 추가합니다"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "프롬프트를 입력하세요 (Enter 키를 눌러 텍스트를 확정하세요)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "동일한 이미지 생성이 이미 대기열에 있습니다"
 
 msgid "No model specified and no default available"
 msgstr "지정된 모델이 없으며 사용 가능한 기본값도 없습니다"
@@ -20316,12 +20370,6 @@ msgstr "수정 중..."
 msgid "Awaiting Input..."
 msgstr "입력 대기 중..."
 
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
-
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
 
@@ -21076,9 +21124,6 @@ msgstr "로그아웃"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "재시도"
-
 msgid "Choose Export Location"
 msgstr "내보내기 위치 선택"
 
@@ -21549,6 +21594,15 @@ msgstr "첨부 파일은 최대 {count}개"
 msgid "Paste failed: {error}"
 msgstr "붙여 넣기 실패: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}을(를) 추가할 수 없음: {error}"
+
+msgid "These references are already attached"
+msgstr "이 참조는 이미 첨부되어 있습니다"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21834,23 +21888,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}을(를) 추가할 수 없음: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "첨부 파일 한도({count}개)에 도달했습니다"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} 건너뜀: {error}"
 
-msgid "These references are already attached"
-msgstr "이 참조는 이미 첨부되어 있습니다"
-
 msgid "Added {count} image(s)"
 msgstr "이미지 {count}개를 추가했습니다"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend에서 추가"
@@ -26547,9 +26592,6 @@ msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "에이전트 버블 창을 열지 못했습니다"
-
 msgid "Agent Bubble Status"
 msgstr "에이전트 버블 상태"
 
@@ -26999,6 +27041,9 @@ msgstr "무드보드 첨부 애니메이션"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "새로 첨부한 참조가 Mixie 채팅으로 날아가는 모습을 표시합니다"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "지연"
