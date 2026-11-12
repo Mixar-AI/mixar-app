@@ -38,7 +38,7 @@ def register():
     if bpy.app.background:
         return
     _deadline = time.monotonic() + 90
-    bpy.app.timers.register(_sign_in, first_interval=1.0)
+    bpy.app.timers.register(_sign_in, first_interval=1.0, persistent=True)
 
 
 def unregister():
