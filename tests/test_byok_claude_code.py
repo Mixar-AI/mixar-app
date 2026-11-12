@@ -94,3 +94,18 @@ def test_save_probes_selected_model_through_same_inference_path(monkeypatch):
     params = infer.call_args.args[0]
     assert params['model'] == 'claude-test'
     assert params['tools'] == [] and params['tool_choice'] == 'none'
+
+
+@pytest.mark.parametrize("block", [
+    {"type": "image", "source_type": "base64", "data": "YQ==", "mime_type": "image/png"},
+    {"type": "image", "base64": "YQ==", "mime_type": "image/png"},
+])
+def test_langchain_viewed_image_is_native_cli_image_and_not_json_text(block):
+    params = request()
+    params['messages'][0]['content'] = [{'type': 'text', 'text': 'Compare this reference'}, block]
+    content = json.loads(C._prompt(params))['message']['content']
+    assert content[1] == {'type': 'image', 'source': {
+        'type': 'base64', 'media_type': 'image/png', 'data': 'YQ=='}}
+    assert 'YQ==' not in content[0]['text']
+    assert '[Attached image 1]' in content[0]['text']
+    assert block.get('data', block.get('base64')) == 'YQ=='  # history is untouched

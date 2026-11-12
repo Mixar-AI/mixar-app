@@ -123,6 +123,9 @@ def _prompt(params):
             for block in content:
                 if isinstance(block, dict) and block.get("type") in ("image", "image_url"):
                     source = block.get("source")
+                    if not source and (block.get("source_type") == "base64" or "base64" in block):
+                        source = {"type": "base64", "media_type": block.get("mime_type"),
+                                  "data": block.get("base64", block.get("data"))}
                     if not source:
                         url = block.get("image_url", {})
                         url = url.get("url") if isinstance(url, dict) else url
