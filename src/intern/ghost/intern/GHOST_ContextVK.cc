@@ -1490,7 +1490,7 @@ bool GHOST_ContextVK::mixar_supports_non_opaque_composite_alpha() const
     return false;
   }
   VkSurfaceCapabilitiesKHR capabilities = {};
-  if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+  if (volk::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
           vulkan_instance->device->vk_physical_device, surface_, &capabilities) != VK_SUCCESS)
   {
     return false;

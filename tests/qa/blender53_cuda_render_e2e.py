@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Free native CUDA render replay in an isolated Blender 5.3 QA app.
 
-Requires an NVIDIA GPU, Pillow, QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT.
+Requires Pillow, QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT. Defaults to
+CUDA on an NVIDIA GPU; set QA_CYCLES_DEVICE=CPU for hosts without CUDA.
 Builds a disposable fixture, presses F12, verifies rendered pixels and saves
 the result for visual review. No backend generation or provider calls.
 """
@@ -19,21 +20,24 @@ from lib import run_scenario
 
 
 def run(qa):
+    device_kind = os.environ.get('QA_CYCLES_DEVICE', 'CUDA').upper()
+    assert device_kind in {'CPU', 'CUDA'}, device_kind
     out = Path(os.environ['QA_SCENARIO_OUT'])
     out.mkdir(parents=True, exist_ok=True)
     qa.cmd('reset_state')
     qa.cmd('dismiss_splash')
     qa.cmd('dismiss_chat')
-    devices = qa.eval('''
+    devices = qa.eval(f'qa_cycles_device = {device_kind!r}\n' + '''
 import os
 assert os.environ.get('MIXAR_QA') == '1'
 assert bpy.app.version[:2] == (5, 3)
 prefs = bpy.context.preferences.addons['cycles'].preferences
-prefs.compute_device_type = 'CUDA'
+prefs.compute_device_type = 'CUDA' if qa_cycles_device == 'CUDA' else 'NONE'
 prefs.refresh_devices()
 for device in prefs.devices:
-    device.use = device.type == 'CUDA'
-assert any(d.type == 'CUDA' and d.use for d in prefs.devices)
+    device.use = device.type == qa_cycles_device
+if qa_cycles_device == 'CUDA':
+    assert any(d.type == 'CUDA' and d.use for d in prefs.devices)
 w = drv.main_window()
 s = w.scene
 for obj in list(s.objects):
@@ -63,7 +67,7 @@ s.world = bpy.data.worlds.new('QA dark world')
 s.world.use_nodes = True
 s.world.node_tree.nodes['Background'].inputs['Color'].default_value = (.01, .01, .01, 1)
 s.render.engine = 'CYCLES'
-s.cycles.device = 'GPU'
+s.cycles.device = 'GPU' if qa_cycles_device == 'CUDA' else 'CPU'
 s.cycles.samples = 8
 s.cycles.use_denoising = False
 s.render.resolution_x = s.render.resolution_y = 128
@@ -85,7 +89,7 @@ result = [{'name': d.name, 'type': d.type, 'use': d.use} for d in prefs.devices]
     try:
         qa.step('native_render_key', qa.press, 'F12')
         qa.step('render_completed', qa.wait, 'drv._qa53_render_done', timeout=180)
-        path = str(out / 'cuda-render.png')
+        path = str(out / f'{device_kind.lower()}-render.png')
         qa.eval(f"bpy.data.images['Render Result'].save_render({path!r}, scene=drv.main_window().scene)\nresult=True")
         image = Image.open(path).convert('RGB')
         center = image.getpixel((64, 64))
@@ -100,7 +104,8 @@ if callback in bpy.app.handlers.render_complete:
     bpy.app.handlers.render_complete.remove(callback)
 result = True
 ''')
-    result = {'devices': devices, 'engine': 'CYCLES', 'device': 'GPU',
+    result = {'devices': devices, 'engine': 'CYCLES',
+              'device': 'GPU' if device_kind == 'CUDA' else 'CPU',
               'center': center, 'corner': corner, 'backend_turns': 0}
     (out / 'render.json').write_text(json.dumps(result, indent=2))
     return result
