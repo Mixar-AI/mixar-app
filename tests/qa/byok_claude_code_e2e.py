@@ -23,7 +23,7 @@ import bpy, os
 from types import SimpleNamespace
 from mixar.modules.byok.core import byok_client as B, claude_code as C, credential_state as S, key_store as K, preference_state as P
 assert os.environ.get('MIXAR_QA') == '1'
-f = SimpleNamespace(saved=(B._put_sealed, C.check_ready, P.refresh, S.snapshot(), K.load()), puts=[], replies=[])
+f = SimpleNamespace(saved=(B._put_sealed, C.validate_model, P.refresh, S.snapshot(), K.load()), puts=[], replies=[])
 C._qa_fixture = f
 P.refresh = lambda *a, **kw: None
 def put(provider, model, api_key, *args, **kw):
@@ -31,9 +31,9 @@ def put(provider, model, api_key, *args, **kw):
     f.puts.append({'provider': provider, 'model': model, 'api_key': api_key})
     return True, {'byok_active': True, 'items': [{'provider': provider, 'model': model, 'key_preview': 'Claude Code on this computer', 'supports_vision': True}]}, None
 B._put_sealed = put
-def signed_out():
+def signed_out(model):
     raise C.ClaudeCodeError('claude_login_required', 'Run claude auth login in your terminal, then Save & Activate.')
-C.check_ready = signed_out
+C.validate_model = signed_out
 S.apply_from_payload({'byok_active': False, 'items': []})
 wm = bpy.context.window_manager
 wm.byok_dialog_state = 'IDLE'
@@ -63,7 +63,7 @@ def run(qa):
         qa.wait("bpy.context.window_manager.byok_dialog_state=='ERROR'", timeout=10)
         qa.eval("assert 'claude auth login' in bpy.context.window_manager.byok_last_error\nassert not __import__('mixar.modules.byok.core.claude_code',fromlist=['x'])._qa_fixture.puts\nresult=True")
         qa.snap(str(OUT / 'login-required.png'))
-        qa.eval("from mixar.modules.byok.core import claude_code as C\nC.check_ready=lambda: None\nresult=True")
+        qa.eval("from mixar.modules.byok.core import claude_code as C\nC.validate_model=lambda model: None\nresult=True")
         qa.step('save_signed_in', qa.click, op='MIXAR_BYOK_OT_save', popup=True)
         qa.wait("bpy.context.window_manager.byok_dialog_state=='SAVED'", timeout=10)
         record = qa.eval("from mixar.modules.byok.core import key_store as K\nr=K.load()\nassert r['provider']=='claude_code' and r['key'] is None\nresult=r")
@@ -78,7 +78,7 @@ def run(qa):
         return {'record': record, 'puts': puts, 'snaps': [str(OUT / n) for n in ('setup.png','login-required.png','saved.png')]}
     finally:
         close(qa)
-        qa.eval("from mixar.modules.byok.core import byok_client as B, claude_code as C, credential_state as S, key_store as K, preference_state as P\nf=C._qa_fixture\nB._put_sealed,C.check_ready,P.refresh=f.saved[:3]\nS._state = dict(f.saved[3])\nS.apply_to_wm()\nK.save(f.saved[4]) if f.saved[4] else K.delete()\ndel C._qa_fixture\nresult=True")
+        qa.eval("from mixar.modules.byok.core import byok_client as B, claude_code as C, credential_state as S, key_store as K, preference_state as P\nf=C._qa_fixture\nB._put_sealed,C.validate_model,P.refresh=f.saved[:3]\nS._state = dict(f.saved[3])\nS.apply_to_wm()\nK.save(f.saved[4]) if f.saved[4] else K.delete()\ndel C._qa_fixture\nresult=True")
 
 
 if __name__ == '__main__':

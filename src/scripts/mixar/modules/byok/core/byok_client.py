@@ -325,9 +325,9 @@ def save_credentials(
         from . import key_store
 
         if provider == "claude_code":
-            from .claude_code import check_ready, ClaudeCodeError
+            from .claude_code import validate_model, ClaudeCodeError
             try:
-                check_ready()
+                validate_model(model)
             except ClaudeCodeError as exc:
                 return False, None, exc.message
         user_id = key_store.current_user_id()  # before the call: never the next account's
@@ -466,9 +466,9 @@ def delete_credentials(
         if epoch != _account_epoch():
             return False, 0, _SIGNED_OUT_MSG
         if provider == "claude_code":
-            from .claude_code import check_ready, ClaudeCodeError
+            from .claude_code import validate_model, ClaudeCodeError
             try:
-                check_ready()
+                validate_model(model)
             except ClaudeCodeError as exc:
                 return False, None, exc.message
         user_id = key_store.current_user_id()  # before the call: never the next account's

@@ -183,6 +183,12 @@ def infer(params):
     return {"output": result["structured_output"], "usage": result.get("usage") or {}}
 
 
+def validate_model(model):
+    """Save-time probe using the exact CLI/model path a turn will use."""
+    infer({"model": model, "messages": [{"role": "human", "content": "Reply with Connected."}],
+           "tools": [], "tool_choice": "none", "effort": "low"})
+
+
 def handle_request(params, respond):
     """Called on the relay worker, gated by this user's saved device grant."""
     if not _slots.acquire(blocking=False):
