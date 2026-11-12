@@ -11,7 +11,7 @@
  * functions into (called via blenders generic BLI_cb API)
  */
 
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 #include <Python.h>
 
 #include "../generic/python_compat.hh" /* IWYU pragma: keep. */
@@ -106,7 +106,7 @@ static PyStructSequence_Field app_cb_info_fields[] = {
      "to another mesh) for the new frame. Note that this handler is **not** to be used as 'before "
      "the frame changes' event. The dependency graph is not available in this handler, as data "
      "and relations may have been altered and the dependency graph has not yet been updated for "
-     "that. " DEPSGRAPH_UPDATE_ARG PYDOC_DEPSGRAPH_UPDATE_TYPE},
+     "that. " SCENE_ARG PYDOC_SCENE_TYPE},
     {"frame_change_post",
      "Called after frame change for playback and rendering, after the data has been evaluated "
      "for the new frame. " DEPSGRAPH_UPDATE_ARG PYDOC_DEPSGRAPH_UPDATE_TYPE},
@@ -195,7 +195,7 @@ static PyStructSequence_Field app_cb_info_fields[] = {
 
 static PyStructSequence_Desc app_cb_info_desc = {
     /*name*/ "bpy.app.handlers",
-    /*doc*/ "This module contains callback lists",
+    /*doc*/ ".. include:: include__bpy_app_handlers.rst\n",
     /*fields*/ app_cb_info_fields,
     /*n_in_sequence*/ ARRAY_SIZE(app_cb_info_fields) - 1,
 };
@@ -218,7 +218,11 @@ static PyObject *bpy_app_handlers_persistent_new(PyTypeObject * /*type*/,
 {
   PyObject *value;
 
-  if (!PyArg_ParseTuple(args, "O:bpy.app.handlers.persistent", &value)) {
+  if (!PyArg_ParseTuple(args,
+                        "O" /* `func` */
+                        ":bpy.app.handlers.persistent",
+                        &value))
+  {
     return nullptr;
   }
 
@@ -328,7 +332,7 @@ static PyObject *make_app_cb_info()
   }
 
   /* custom function */
-  PyStructSequence_SET_ITEM(app_cb_info, pos++, (PyObject *)&BPyPersistent_Type);
+  PyStructSequence_SET_ITEM(app_cb_info, pos++, Py_NewRef((PyObject *)&BPyPersistent_Type));
 
   return app_cb_info;
 }
@@ -441,16 +445,16 @@ void bpy_app_generic_callback(Main * /*main*/,
                               const int pointers_num,
                               void *arg)
 {
-  PyObject *cb_list = py_cb_array[POINTER_AS_INT(arg)];
-  if (PyList_GET_SIZE(cb_list) > 0) {
+  const int cb_index = POINTER_AS_INT(arg);
+  PyObject *cb_list = py_cb_array[cb_index];
+  /* NOTE: check without the GIL as an early exit since there are usually no handlers,
+   * acquiring it every time adds overhead. The size is read again once the GIL is held. */
+  if (PyList_GET_SIZE(cb_list) != 0) {
     const PyGILState_STATE gilstate = PyGILState_Ensure();
 
     const int num_arguments = 2;
     PyObject *args_all = PyTuple_New(num_arguments); /* save python creating each call */
     PyObject *args_single = PyTuple_New(1);
-    PyObject *func;
-    PyObject *ret;
-    Py_ssize_t pos;
 
     /* setup arguments */
     for (int i = 0; i < pointers_num; ++i) {
@@ -470,9 +474,10 @@ void bpy_app_generic_callback(Main * /*main*/,
     }
 
     /* Iterate the list and run the callbacks
-     * NOTE: don't store the list size since the scripts may remove themselves. */
-    for (pos = 0; pos < PyList_GET_SIZE(cb_list); pos++) {
-      func = PyList_GET_ITEM(cb_list, pos);
+     * NOTE: the list size is checked after each call since the scripts may remove themselves. */
+    Py_ssize_t cb_list_num = PyList_GET_SIZE(cb_list);
+    for (Py_ssize_t pos = 0; pos < cb_list_num; pos++) {
+      PyObject *func = PyList_GET_ITEM(cb_list, pos);
       PyObject *args = choose_arguments(func, args_all, args_single);
       /* Mixar: stall-monitor breadcrumb "<handler list>:<function>" (main thread only). */
       char stall_name[96];
@@ -486,7 +491,7 @@ void bpy_app_generic_callback(Main * /*main*/,
                      func_name);
       }
       const int stall_index = Mixar_stall_scope_push("handler", stall_name);
-      ret = PyObject_Call(func, args, nullptr);
+      PyObject *ret = PyObject_Call(func, args, nullptr);
       Mixar_stall_scope_pop(stall_index);
       if (ret == nullptr) {
         /* Don't set last system variables because they might cause some
@@ -496,13 +501,39 @@ void bpy_app_generic_callback(Main * /*main*/,
          * is finished. */
 
         /* Note the handler called, the exception itself typically has the function name. */
-        PySys_WriteStderr("Error in bpy.app.handlers.%s[%d]:\n",
-                          app_cb_info_fields[POINTER_AS_INT(arg)].name,
-                          int(pos));
+        PySys_WriteStderr(
+            "Error in bpy.app.handlers.%s[%d]:\n", app_cb_info_fields[cb_index].name, int(pos));
         PyErr_PrintEx(0);
       }
       else {
         Py_DECREF(ret);
+      }
+
+      /* Only support removing itself, anything else is impractical to support.
+       * Furthermore it's bad practice and should not be needed.
+       *
+       * Script authors removing other handlers get undefined behavior (although it won't crash).
+       *
+       * NOTE: changes that keep the list size aren't detected, so a handler that removes itself
+       * and appends a handler skips the next handler, accept this limitation. */
+      const Py_ssize_t cb_list_num_next = PyList_GET_SIZE(cb_list);
+      if (cb_list_num != cb_list_num_next) [[unlikely]] {
+        if (cb_list_num_next + 1 == cb_list_num) {
+          /* When a later handler was removed, the handler is still at `pos`. */
+          if (!((pos < cb_list_num_next) && (PyList_GET_ITEM(cb_list, pos) == func))) {
+            pos--;
+          }
+        }
+        else if (cb_list_num_next < cb_list_num) {
+          /* Removed more than one. */
+          PySys_WriteStderr(
+              "Warning in bpy.app.handlers.%s[%d]:\n"
+              "Handlers must only ever remove themselves!\n",
+              app_cb_info_fields[cb_index].name,
+              int(pos));
+        }
+        /* Appending is supported. */
+        cb_list_num = cb_list_num_next;
       }
     }
 

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Agenttikuplan ikkunaa ei voitu avata"
+
 msgid "Capture Viewport"
 msgstr "Kaappaa näkymä"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar käynnistyy uudelleen sen ottamiseksi käyttöön."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — käyttäkää komentoa Lataa päivittääksenne selaimella."
 
+msgid "Retry"
+msgstr "Yritä uudelleen"
+
 msgid "Restart & Update"
 msgstr "Käynnistä uudelleen ja päivitä"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Kirjaudu ulos"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yritä uudelleen"
-
 msgid "Choose Export Location"
 msgstr "Valitse vientisijainti"
 
@@ -26532,9 +26538,6 @@ msgstr "Automaattitila: agentti päättää avoimet valinnat itse sen sijaan, et
 msgid "Agent Bubble"
 msgstr "Agenttikupla"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Agenttikuplan ikkunaa ei voitu avata"
-
 msgid "Agent Bubble Status"
 msgstr "Agenttikuplan tila"
 
@@ -26984,6 +26987,9 @@ msgstr "Animoi tunnelmataulun liite"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Näytä juuri liitetty referenssi lentämässä Mixie-chatiin"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Viive"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortin piirto vaatii aktiivisen alueen piirtokutsun"
 
@@ -29735,18 +29738,6 @@ msgstr "Pudotuspolkujen on oltava ei-tyhjiä merkkijonoja"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Pudotuspolkujen on oltava ei-tyhjä JSON-taulukko"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Yleisalueet"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Ikkunan yleiset alueet (yläpalkki, tilapalkki). Mixar-laajennus — tuotu esiin, jotta aloitus voi kohdistaa yläpalkin uudelleenpiirtoon."
 
 msgid "QA UI Dump"
 msgstr "QA-käyttöliittymän vedos"

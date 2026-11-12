@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
+
 msgid "Capture Viewport"
 msgstr "Kapti vidujon"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar relanĉiĝos por apliki ĝin."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — uzu Elŝuti por ĝisdatigi per via retumilo."
 
+msgid "Retry"
+msgstr "Reprovi"
+
 msgid "Restart & Update"
 msgstr "Relanĉi kaj ĝisdatigi"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Elsaluti"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Reprovi"
-
 msgid "Choose Export Location"
 msgstr "Elekti elportan lokon"
 
@@ -26532,9 +26538,6 @@ msgstr "Aŭtomata modo: la agento mem decidas malfermajn elektojn anstataŭ dema
 msgid "Agent Bubble"
 msgstr "Agenta veziko"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
-
 msgid "Agent Bubble Status"
 msgstr "Stato de la Agenta veziko"
 
@@ -26984,6 +26987,9 @@ msgstr "Animacii kunsendaĵon de la inspirtabulo"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Montras nove kunsenditan referencon flugantan en la babilon de Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Prokrasto"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Desegnado de karto postulas la desegnan revokon de la aktiva regiono"
 
@@ -29735,18 +29738,6 @@ msgstr "Demetaj vojoj devas esti nemalplenaj ĉenoj"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Demetaj vojoj devas esti nemalplena JSON-tabelo"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Ĝeneralaj areoj"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Fenestro-ĝeneralaj areoj (supra breto, stata breto). Etendo de Mixar — elmetita por ke la enkonduko povu alparoli la supran breton por redesegnado."
 
 msgid "QA UI Dump"
 msgstr "QA-UI-elŝuto"

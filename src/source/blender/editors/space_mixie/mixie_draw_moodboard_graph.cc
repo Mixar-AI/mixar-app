@@ -14,7 +14,7 @@
 
 #include "BKE_curve.hh"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "BLT_translation.hh"
 

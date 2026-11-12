@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
+
 msgid "Capture Viewport"
 msgstr "Nézetablak rögzítése"
 
@@ -3104,6 +3107,9 @@ msgstr "A Mixar újraindul, hogy alkalmazza."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — a böngészős frissítéshez használja a Letöltés gombot."
 
+msgid "Retry"
+msgstr "Újra"
+
 msgid "Restart & Update"
 msgstr "Újraindítás és frissítés"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Kijelentkezés"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Újra"
-
 msgid "Choose Export Location"
 msgstr "Exportálás helyének kiválasztása"
 
@@ -26532,9 +26538,6 @@ msgstr "Automata mód: az ügynök maga dönt a nyitott választásokról, ahely
 msgid "Agent Bubble"
 msgstr "Ügynökbuborék"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Az Ügynökbuborék ablaka nem nyitható meg"
-
 msgid "Agent Bubble Status"
 msgstr "Ügynökbuborék állapota"
 
@@ -26984,6 +26987,9 @@ msgstr "Moodboard-melléklet animálása"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Egy frissen csatolt referencia berepülésének megjelenítése a Mixie csevegésébe"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Késleltetés"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "A kártyarajzoláshoz az aktív terület rajzolási visszahívása kell"
 
@@ -29735,18 +29738,6 @@ msgstr "Az ejtési útvonalak nem lehetnek üres karakterláncok"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Az ejtési útvonalaknak nem üres JSON-tömbnek kell lenniük"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globális területek"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Ablakszintű globális területek (felső sáv, állapotsáv). Mixar-kiterjesztés — elérhető, hogy a bevezető a felső sávot újrarajzolhassa."
 
 msgid "QA UI Dump"
 msgstr "QA felületdump"

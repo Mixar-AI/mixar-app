@@ -7,7 +7,7 @@
  * \ingroup spmixie
  */
 
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
+
 msgid "Capture Viewport"
 msgstr "จับภาพวิวพอร์ต"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar จะรีสตาร์ทเพื่อนำการอั
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ใช้ “ดาวน์โหลด” เพื่ออัปเดตผ่านเบราว์เซอร์ของคุณ"
 
+msgid "Retry"
+msgstr "ลองใหม่"
+
 msgid "Restart & Update"
 msgstr "รีสตาร์ทและอัปเดต"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "ออกจากระบบ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ลองใหม่"
-
 msgid "Choose Export Location"
 msgstr "เลือกตำแหน่งส่งออก"
 
@@ -26532,9 +26538,6 @@ msgstr "โหมดอัตโนมัติ: เอเจนต์ตัด�
 msgid "Agent Bubble"
 msgstr "บับเบิลเอเจนต์"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "เปิดหน้าต่างบับเบิลเอเจนต์ไม่สำเร็จ"
-
 msgid "Agent Bubble Status"
 msgstr "สถานะบับเบิลเอเจนต์"
 
@@ -26984,6 +26987,9 @@ msgstr "ทำให้ไฟล์แนบมู้ดบอร์ดเคล
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "แสดงอ้างอิงที่เพิ่งแนบปลิวเข้าสู่แชต Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "หน่วงเวลา"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "การวาดการ์ดต้องใช้คอลแบ็กวาดของบริเวณที่ใช้งาน"
 
@@ -29735,18 +29738,6 @@ msgstr "เส้นทางที่วางต้องเป็นข้อ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "เส้นทางที่วางต้องเป็นอาร์เรย์ JSON ที่ไม่ว่าง"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "พื้นที่ส่วนกลาง"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "พื้นที่ทั่วหน้าต่าง (แถบบน, แถบสถานะ) ส่วนขยายของ Mixar — เปิดให้การเริ่มต้นใช้งานสั่งวาดแถบบนใหม่ได้"
 
 msgid "QA UI Dump"
 msgstr "ดัมป์ UI ของ QA"

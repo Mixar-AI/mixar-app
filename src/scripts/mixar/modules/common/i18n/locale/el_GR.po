@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
+
 msgid "Capture Viewport"
 msgstr "Καταγραφή προβολής 3D"
 
@@ -3104,6 +3107,9 @@ msgstr "Το Mixar θα επανεκκινηθεί για να την εφαρμ
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — χρησιμοποιήστε τη Λήψη για ενημέρωση μέσω του προγράμματος περιήγησης."
 
+msgid "Retry"
+msgstr "Επανάληψη"
+
 msgid "Restart & Update"
 msgstr "Επανεκκίνηση και ενημέρωση"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Αποσύνδεση"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Επανάληψη"
-
 msgid "Choose Export Location"
 msgstr "Επιλογή θέσης εξαγωγής"
 
@@ -26532,9 +26538,6 @@ msgstr "Αυτόματη κατάσταση: ο πράκτορας αποφασ�
 msgid "Agent Bubble"
 msgstr "Φούσκα πράκτορα"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Αποτυχία ανοίγματος παραθύρου φούσκας πράκτορα"
-
 msgid "Agent Bubble Status"
 msgstr "Κατάσταση φούσκας πράκτορα"
 
@@ -26984,6 +26987,9 @@ msgstr "Κίνηση συνημμένου Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Εμφανίζει μια νέα συνημμένη αναφορά να πετάει στη συνομιλία Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Καθυστέρηση"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Η σχεδίαση κάρτας απαιτεί την επιστροφή σχεδίασης της ενεργής περιοχής"
 
@@ -29735,18 +29738,6 @@ msgstr "Οι διαδρομές απόθεσης πρέπει να είναι μ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Οι διαδρομές απόθεσης πρέπει να είναι μη κενός πίνακας JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Καθολικές περιοχές"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Καθολικές περιοχές παραθύρου (επάνω γραμμή, γραμμή κατάστασης). Επέκταση Mixar — εκτίθεται ώστε η εισαγωγή να μπορεί να απευθυνθεί στην επάνω γραμμή για επανασχεδίαση."
 
 msgid "QA UI Dump"
 msgstr "Αποτύπωση περιβάλλοντος QA"

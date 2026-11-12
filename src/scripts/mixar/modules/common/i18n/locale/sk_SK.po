@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
+
 msgid "Capture Viewport"
 msgstr "Zachytiť záber"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar sa reštartuje, aby ju použil."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — na aktualizáciu cez prehliadač použite Stiahnuť."
 
+msgid "Retry"
+msgstr "Skúsiť znova"
+
 msgid "Restart & Update"
 msgstr "Reštartovať a aktualizovať"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Odhlásiť sa"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Skúsiť znova"
-
 msgid "Choose Export Location"
 msgstr "Vybrať umiestnenie exportu"
 
@@ -26532,9 +26538,6 @@ msgstr "Automatický režim: agent sa o otvorených voľbách rozhoduje sám nam
 msgid "Agent Bubble"
 msgstr "Bublina agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Okno bubliny agenta sa nepodarilo otvoriť"
-
 msgid "Agent Bubble Status"
 msgstr "Stav bubliny agenta"
 
@@ -26984,6 +26987,9 @@ msgstr "Animovať prílohu z moodboardu"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zobrazí novo priloženú referenciu letiacu do chatu Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Oneskorenie"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kreslenie karty vyžaduje funkciu spätného volania kreslenia aktívnej oblasti"
 
@@ -29735,18 +29738,6 @@ msgstr "Cesty pustenia musia byť neprázdne reťazce"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Cesty pustenia musia byť neprázdnym poľom JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globálne oblasti"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Oblasti globálne pre okno (horný panel, stavový panel). Rozšírenie Mixar — sprístupnené, aby úvodné predstavenie mohlo odkázať na horný panel kvôli prekresleniu."
 
 msgid "QA UI Dump"
 msgstr "Výpis rozhrania QA"

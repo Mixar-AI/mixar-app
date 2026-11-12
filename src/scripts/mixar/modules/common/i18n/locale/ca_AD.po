@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
+
 msgid "Capture Viewport"
 msgstr "Capturar mirador"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar es reiniciarà per aplicar-la."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — utilitzi Baixar per actualitzar amb el navegador."
 
+msgid "Retry"
+msgstr "Tornar-ho a provar"
+
 msgid "Restart & Update"
 msgstr "Reiniciar i actualitzar"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Tancar la sessió"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Tornar-ho a provar"
-
 msgid "Choose Export Location"
 msgstr "Triar la ubicació d'exportació"
 
@@ -26532,9 +26538,6 @@ msgstr "Mode automàtic: l'agent decideix ell mateix les opcions obertes en lloc
 msgid "Agent Bubble"
 msgstr "Bombolla de l'agent"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "No s'ha pogut obrir la finestra de la bombolla de l'agent"
-
 msgid "Agent Bubble Status"
 msgstr "Estat de la bombolla de l'agent"
 
@@ -26984,6 +26987,9 @@ msgstr "Animar l'adjunt del Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mostrar una referència acabada d'adjuntar que vola cap al xat de Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Retard"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "El dibuix de la targeta requereix el callback de dibuix de la regió activa"
 
@@ -29735,18 +29738,6 @@ msgstr "Els camins deixats anar han de ser cadenes no buides"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Els camins deixats anar han de ser una matriu JSON no buida"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Àrees globals"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Àrees globals de la finestra (barra superior, barra d'estat). Extensió de Mixar — exposada perquè l'acollida pugui adreçar la barra superior per redibuixar."
 
 msgid "QA UI Dump"
 msgstr "Bolcat de la interfície de QA"

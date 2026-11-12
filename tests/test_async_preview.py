@@ -344,7 +344,7 @@ def test_script_executor_inherits_the_handler_cleanup():
 def test_native_render_stop_sets_the_pipeline_cancellation_flag():
     source = (ROOT / "src/source/blender/editors/interface/templates/"
               "interface_template_running_jobs.cc").read_text()
-    block = source.split("if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_RENDER)) {", 1)[1]
+    block = source.split("if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_RENDER)) {", 1)[1]
     block = block.split("icon = ICON_SCENE;", 1)[0]
     assert "G.is_break = true;" in block
     assert "WM_jobs_stop_all_from_owner(CTX_wm_manager(&C), &scene);" in block

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunne ikke åpne agentboblevinduet"
+
 msgid "Capture Viewport"
 msgstr "Ta visningsportbilde"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar starter på nytt for å ta den i bruk."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — bruk Last ned for å oppdatere via nettleseren."
 
+msgid "Retry"
+msgstr "Prøv igjen"
+
 msgid "Restart & Update"
 msgstr "Start på nytt og oppdater"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Logg ut"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Prøv igjen"
-
 msgid "Choose Export Location"
 msgstr "Velg eksportplassering"
 
@@ -26532,9 +26538,6 @@ msgstr "Automodus: agenten avgjør åpne valg selv i stedet for å spørre deg, 
 msgid "Agent Bubble"
 msgstr "Agentboble"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunne ikke åpne agentboblevinduet"
-
 msgid "Agent Bubble Status"
 msgstr "Agentboblestatus"
 
@@ -26984,6 +26987,9 @@ msgstr "Animer moodboard-vedlegg"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Viser en nylig vedlagt referanse som flyr inn i Mixie-chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Forsinkelse"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Korttegning krever det aktive områdets tegnetilbakekall"
 
@@ -29735,18 +29738,6 @@ msgstr "Slippbaner må være ikke-tomme strenger"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Slippbaner må være en ikke-tom JSON-matrise"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globale områder"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Vindusglobale områder (topplinje, statuslinje). Mixar-utvidelse — eksponert slik at introduksjonen kan nå topplinjen for omtegning."
 
 msgid "QA UI Dump"
 msgstr "QA-grensesnittutskrift"

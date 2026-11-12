@@ -23,7 +23,7 @@
 
 #include "mixie_moodboard_ops_common.hh"
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 #include "BLT_translation.hh"
 
@@ -197,7 +197,7 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
   }
 
   ScrArea *area = CTX_wm_area(C);
-  SpaceImage *sima = area ? static_cast<SpaceImage *>(area->spacedata.first) : nullptr;
+  SpaceImage *sima = area ? area->spacedata.first_as<SpaceImage>() : nullptr;
   if (!sima) {
     /* The window exists but is not the Image Editor we asked for. Leaving it
      * open and empty would be worse than saying so. */

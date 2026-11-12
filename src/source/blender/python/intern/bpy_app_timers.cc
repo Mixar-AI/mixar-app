@@ -7,7 +7,7 @@
  * \ingroup pythonintern
  */
 
-#include "BLI_timer.h"
+#include "BLI_timer.hh"
 
 #include <Python.h>
 
@@ -25,11 +25,6 @@ namespace blender {
 
 static double handle_returned_value(PyObject *function, PyObject *ret)
 {
-  if (ret == nullptr) {
-    PyErr_PrintEx(0);
-    return -1;
-  }
-
   if (ret == Py_None) {
     return -1;
   }
@@ -59,8 +54,15 @@ static double py_timer_execute(uintptr_t /*uuid*/, void *user_data)
   bpy_mixar_stall_callable_name(function, stall_name, sizeof(stall_name));
   const int stall_index = Mixar_stall_scope_push("timer", stall_name);
 
-  PyObject *py_ret = PyObject_CallObject(function, nullptr);
-  const double ret = handle_returned_value(function, py_ret);
+  double ret;
+  if (PyObject *py_ret = PyObject_CallObject(function, nullptr)) {
+    ret = handle_returned_value(function, py_ret);
+    Py_DECREF(py_ret);
+  }
+  else {
+    PyErr_PrintEx(0);
+    ret = -1;
+  }
   Mixar_stall_scope_pop(stall_index);
 
   PyGILState_Release(gilstate);
@@ -104,7 +106,7 @@ static PyObject *bpy_app_timers_register(PyObject * /*self*/, PyObject *args, Py
   static const char *_keywords[] = {"function", "first_interval", "persistent", nullptr};
   static _PyArg_Parser _parser = {
       "O"  /* `function` */
-      "|$" /* Optional keyword only arguments. */
+      "|$" /* Optional, keyword only arguments. */
       "d"  /* `first_interval` */
       "p"  /* `persistent` */
       ":register",

@@ -7,21 +7,15 @@
 Interactive tour — movie frames as GPU textures.
 
 ``bpy.data.images.load`` opens the recording as a ``'MOVIE'`` image.
-Blender's image GPU cache holds ONE texture per image and does not follow
-a changed movie frame (``gpu.texture.from_image`` just returns whatever is
-cached), so decoding frame N from Python is ``gl_free()`` +
-``gl_load(frame=N)`` + ``from_image``. That destroys and recreates the
-texture, which is the Metal command-buffer churn the moodboard renderer
-warns about; when the C++ helper ``Image.mixar_movie_frame_update(frame)``
-is present it updates the cached texture in place and we prefer it.
+Blender 5.3 caches GPU textures per decoded frame. The native helper
+``Image.mixar_movie_frame_update(frame)`` moves one reusable texture to the
+current frame's cache and uploads its pixels in place. The Python GPU overlay
+makes ``gpu.texture.from_image`` use that selected frame. Older binaries use
+``gl_free()`` + ``gl_load(frame=N)`` + ``from_image`` as a compatibility path.
 
-Either way a frame is decoded only when the *frame index* changes, so a
-30 Hz tick against a 24 fps movie costs 24 decodes a second, not 30.
-
-The ``GPUTexture`` handed out is re-fetched with ``from_image`` on EVERY
-call: it is a cheap non-owning wrapper, and both decode paths (the helper's
-fallback branch included) may replace the cached texture, so a wrapper held
-across frames could dangle.
+A frame is decoded only when the *frame index* changes, so a 30 Hz tick
+against a 24 fps movie costs 24 decodes a second, not 30. Re-fetch the texture
+on every call because a format or size change may replace the allocation.
 
 Frame rate: Blender's Image RNA exposes the frame count but not the fps,
 so it is estimated from the audio track length (``aud``) and snapped to a
@@ -202,7 +196,7 @@ class MovieTexture:
         return True
 
     def _current_texture(self):
-        """A fresh non-owning wrapper of the image's cached texture."""
+        """The selected frame's current cached texture."""
         try:
             import gpu
             return gpu.texture.from_image(self._img)

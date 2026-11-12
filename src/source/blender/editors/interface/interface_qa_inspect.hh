@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {

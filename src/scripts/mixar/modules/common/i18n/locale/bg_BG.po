@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Прозорецът на балона на агента не можа да се отвори"
+
 msgid "Capture Viewport"
 msgstr "Заснеми 3D изгледа"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar ще се рестартира, за да я приложи."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — използвайте Изтегли, за да актуализирате през браузъра."
 
+msgid "Retry"
+msgstr "Опитай отново"
+
 msgid "Restart & Update"
 msgstr "Рестартиране и актуализация"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Изход"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Опитай отново"
-
 msgid "Choose Export Location"
 msgstr "Избери място за изнасяне"
 
@@ -26532,9 +26538,6 @@ msgstr "Автоматичен режим: агентът сам решава о
 msgid "Agent Bubble"
 msgstr "Балон на агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Прозорецът на балона на агента не можа да се отвори"
-
 msgid "Agent Bubble Status"
 msgstr "Състояние на балона на агента"
 
@@ -26984,6 +26987,9 @@ msgstr "Анимирай прикачения файл на мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Показва новоприкачена референция, която влита в чата на Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Забавяне"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Изчертаването на картата изисква обратната връзка за изчертаване на активната област"
 
@@ -29735,18 +29738,6 @@ msgstr "Пътищата при пускане трябва да са непра
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Пътищата при пускане трябва да са непразен JSON масив"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобални области"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Области, глобални за прозореца (горна лента, лента за състояние). Разширение на Mixar — открито, за да може въвеждането да адресира горната лента за прерисуване."
 
 msgid "QA UI Dump"
 msgstr "Дъмп на интерфейса за QA"

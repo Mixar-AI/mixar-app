@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Impossible d’ouvrir la fenêtre de la bulle de l’agent"
+
 msgid "Capture Viewport"
 msgstr "Capturer la vue 3D"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar va redémarrer pour l’appliquer."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — utilisez Télécharger pour mettre à jour via votre navigateur."
 
+msgid "Retry"
+msgstr "Réessayer"
+
 msgid "Restart & Update"
 msgstr "Redémarrer et mettre à jour"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Déconnexion"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Réessayer"
-
 msgid "Choose Export Location"
 msgstr "Choisir l’emplacement d’export"
 
@@ -26532,9 +26538,6 @@ msgstr "Mode auto : l’agent tranche lui-même les choix en suspens au lieu de
 msgid "Agent Bubble"
 msgstr "Bulle de l’agent"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Impossible d’ouvrir la fenêtre de la bulle de l’agent"
-
 msgid "Agent Bubble Status"
 msgstr "Statut de la bulle de l’agent"
 
@@ -26984,6 +26987,9 @@ msgstr "Animer la pièce jointe du moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Montrer une référence nouvellement jointe s’envolant vers Mixie Chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Délai"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Le dessin des cartes nécessite le callback de dessin de la région active"
 
@@ -29735,18 +29738,6 @@ msgstr "Les chemins déposés doivent être des chaînes non vides"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Les chemins déposés doivent former un tableau JSON non vide"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Zones globales"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Zones globales de la fenêtre (barre supérieure, barre d’état). Extension Mixar — exposée pour que la prise en main puisse cibler la barre supérieure lors du rafraîchissement."
 
 msgid "QA UI Dump"
 msgstr "Export QA de l’interface"

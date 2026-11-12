@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
+
 msgid "Capture Viewport"
 msgstr "വ്യൂപോർട്ട് പകർത്തുക"
 
@@ -3104,6 +3107,9 @@ msgstr "അത് പ്രയോഗിക്കാൻ Mixar പുനരാര�
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ബ്രൗസർ വഴി അപ്ഡേറ്റ് ചെയ്യാൻ ഡൗൺലോഡ് ഉപയോഗിക്കുക."
 
+msgid "Retry"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
+
 msgid "Restart & Update"
 msgstr "പുനരാരംഭിച്ച് അപ്ഡേറ്റ് ചെയ്യുക"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
-
 msgid "Choose Export Location"
 msgstr "എക്സ്പോർട്ട് സ്ഥലം തിരഞ്ഞെടുക്കുക"
 
@@ -26532,9 +26538,6 @@ msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദി�
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
-
 msgid "Agent Bubble Status"
 msgstr "ഏജന്റ് ബബിൾ നില"
 
@@ -26984,6 +26987,9 @@ msgstr "മൂഡ്ബോർഡ് അറ്റാച്ച്മെന്റ�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "പുതുതായി അറ്റാച്ച് ചെയ്ത റഫറൻസ് Mixie ചാറ്റിലേക്ക് പറന്നുവരുന്നത് കാണിക്കുക"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "കാലതാമസം"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "കാർഡ് വരയ്ക്കാൻ സജീവ മേഖലയുടെ ഡ്രോ കോൾബാക്ക് വേണം"
 
@@ -29735,18 +29738,6 @@ msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാ�
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാത്ത JSON അറേ ആയിരിക്കണം"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "ആഗോള ഏരിയകൾ"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "വിൻഡോ-ആഗോള ഏരിയകൾ (ടോപ്പ്ബാർ, സ്റ്റാറ്റസ്ബാർ). Mixar വിപുലീകരണം — ഓൺബോർഡിങിന് റീഡ്രോയ്ക്കായി ടോപ്പ്ബാർ അഭിസംബോധന ചെയ്യാൻ തുറന്നുവച്ചത്."
 
 msgid "QA UI Dump"
 msgstr "QA UI ഡമ്പ്"

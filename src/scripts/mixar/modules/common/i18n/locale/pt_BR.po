@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Falha ao abrir a janela da Bolha do agente"
+
 msgid "Capture Viewport"
 msgstr "Capturar Janela de Exibição"
 
@@ -3104,6 +3107,9 @@ msgstr "O Mixar será reiniciado para aplicá-la."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — use Baixar para atualizar pelo navegador."
 
+msgid "Retry"
+msgstr "Tentar novamente"
+
 msgid "Restart & Update"
 msgstr "Reiniciar e atualizar"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Sair"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Tentar novamente"
-
 msgid "Choose Export Location"
 msgstr "Escolher local de exportação"
 
@@ -26532,9 +26538,6 @@ msgstr "Modo automático: o agente toma sozinho as decisões em aberto em vez de
 msgid "Agent Bubble"
 msgstr "Bolha do agente"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Falha ao abrir a janela da Bolha do agente"
-
 msgid "Agent Bubble Status"
 msgstr "Status da Bolha do agente"
 
@@ -26984,6 +26987,9 @@ msgstr "Animar anexo do Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mostra uma referência recém-anexada voando para o Mixie Chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Atraso"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "O desenho de cartões requer o callback de desenho da região ativa"
 
@@ -29735,18 +29738,6 @@ msgstr "Os caminhos soltos devem ser strings não vazias"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Os caminhos soltos devem ser um array JSON não vazio"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Áreas globais"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Áreas globais da janela (barra superior, barra de status). Extensão do Mixar — exposta para que a introdução possa acessar a barra superior para redesenho."
 
 msgid "QA UI Dump"
 msgstr "Despejo da interface para QA"

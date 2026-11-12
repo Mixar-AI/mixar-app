@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ezin izan da agentearen burbuilaren leihoa ireki"
+
 msgid "Capture Viewport"
 msgstr "Kapturatu 3D bista"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar berrabiaraziko da aplikatzeko."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — erabili Deskargatu arakatzailetik eguneratzeko."
 
+msgid "Retry"
+msgstr "Saiatu berriro"
+
 msgid "Restart & Update"
 msgstr "Berrabiarazi eta eguneratu"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Amaitu saioa"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Saiatu berriro"
-
 msgid "Choose Export Location"
 msgstr "Aukeratu esportazio-kokapena"
 
@@ -26532,9 +26538,6 @@ msgstr "Modu automatikoa: agenteak berak erabakitzen ditu aukera irekiak zuri ga
 msgid "Agent Bubble"
 msgstr "Agentearen burbuila"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Ezin izan da agentearen burbuilaren leihoa ireki"
-
 msgid "Agent Bubble Status"
 msgstr "Agentearen burbuilaren egoera"
 
@@ -26984,6 +26987,9 @@ msgstr "Animatu moodboard eranskina"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Erakutsi erantsi berri den erreferentzia bat Mixie txatera hegan"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Atzerapena"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Txartelaren marrazketak eskualde aktiboaren marrazketa-callbacka behar du"
 
@@ -29735,18 +29738,6 @@ msgstr "Jaregite-bideek kate ez-hutsak izan behar dute"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Jaregite-bideek JSON matrize ez-hutsa izan behar dute"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Eremu globalak"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Leiho-mailako eremu globalak (goiko barra, egoera-barra). Mixar hedapena — agerian, sarrera-gidariak goiko barra birmarra dezan."
 
 msgid "QA UI Dump"
 msgstr "QA interfazearen iraulketa"

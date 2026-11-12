@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ﯽﮑﺳ ﻞﮭﮐ ﮟﯿﮩﻧ ﯽﮐﮍﮭﮐ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
+
 msgid "Capture Viewport"
 msgstr "ﮟﯾﺮﮐ ﺮﭽﭙﯿﮐ ﭦﺭﻮﭘ ﻮﯾﻭ"
 
@@ -3104,6 +3107,9 @@ msgstr "۔ﺎﮔﻮﮨ ﻉﻭﺮﺷ ﮦﺭﺎﺑﻭﺩ Mixar ﮯﯿﻟ ﮯﮐ �
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ۔ﮟﯾﺮﮐ ﻝﺎﻤﻌﺘﺳﺍ ﮈﻮﻟ ﻥﺅﺍﮈ ﮯﯿﻟ ﮯﮐ ﭧﯾﮉﭘﺍ ﮯﺳ ﺭﺯﺅﺍﺮﺑ"
 
+msgid "Retry"
+msgstr "ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ"
+
 msgid "Restart & Update"
 msgstr "ﭧﯾﮉﭘﺍ ﺭﻭﺍ ﻉﻭﺮﺷ ﮦﺭﺎﺑﻭﺩ"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "ﭦﺅﺁ ﻦﺋﺎﺳ"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "ﺶﺷﻮﮐ ﮦﺭﺎﺑﻭﺩ"
-
 msgid "Choose Export Location"
 msgstr "ﮟﯿﻨﭼ ﮧﮕﺟ ﯽﮐ ﺪﻣﺁﺮﺑ"
 
@@ -26532,9 +26538,6 @@ msgstr "ﮯﮨ ﺎﺘﮭﮑﻟ ﮟﯿﻣ ﮯﺻﻼ﻿ﺧ ﮯﻠﺼﯿﻓ ﮯﻨ�
 msgid "Agent Bubble"
 msgstr "ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "ﯽﮑﺳ ﻞﮭﮐ ﮟﯿﮩﻧ ﯽﮐﮍﮭﮐ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
-
 msgid "Agent Bubble Status"
 msgstr "ﺖﯿﺜﯿﺣ ﻼ﻿ﺒﻠﺑ ﭧﻨﺠﯾﺍ"
 
@@ -26984,6 +26987,9 @@ msgstr "ﮟﯾﺩ ﺖﮐﺮﺣ ﮧﮑﻠﺴﻨﻣ ﮈﺭﻮﺑ ﮈﻮﻣ"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "ﮟﯿﺋﺎﮭﮐﺩ ﺎﺗﮌﺍ ﮟﯿﻣ ﭧﯿﭼ Mixie ﮧﻟﺍﻮﺣ ﮏﻠﺴﻨﻣ ﺎﯿﻧ"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "ﺮﯿﺧﺎﺗ"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ﮯﮨ ﺭﺎﮐﺭﺩ ﮏﯿﺑ ﻝﺎﮐ ﺍﺭﮈ ﺎﮐ ﮯﻗﻼ﻿ﻋ ﻝﺎﻌﻓ ﮯﯿﻟ ﮯﮐ ﮓﻨﺋﺍﺭﮈ ﮈﺭﺎﮐ"
 
@@ -29735,18 +29738,6 @@ msgstr "ﮟﯿﺌﮨﺎﭼ ﮯﻧﻮﮨ ﮓﻧﺮﭩﺳ ﯽﻟﺎﺧ ﺮﯿﻏ �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ﮟﯿﺌﮨﺎﭼ ﮯﻧﻮﮨ ﻒﺻ JSON ﯽﻟﺎﺧ ﺮﯿﻏ ﮯﺘﺳﺍﺭ ﭖﺍﺭﮈ"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "ﮯﻗﻼ﻿ﻋ ﯽﻤﻟﺎﻋ"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "۔ﮯﮑﺳ ﭻﻨﮩﭘ ﮏﺗ ﺭﺎﺑ ﭖﺎﭨ ﮯﯿﻟ ﮯﮐ ﺍﺭﮈ ﮦﺭﺎﺑﻭﺩ ﮓﻧﮈﺭﻮﺑ ﻥﺁ ﮧﮐﺎﺗ ﯽﺌﮔ ﯽﮐ ﺮﮨﺎﻇ — ﻊﯿﺳﻮﺗ Mixar ۔(ﺭﺎﺑ ﺲﭩﯿﭩﺳﺍ ،ﺭﺎﺑ ﭖﺎﭨ) ﮯﻗﻼ﻿ﻋ ﯽﻤﻟﺎﻋ ﮯﮐ ﻭﮉﻧﻭ"
 
 msgid "QA UI Dump"
 msgstr "QA UI ﭗﻣﮈ"

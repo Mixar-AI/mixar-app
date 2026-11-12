@@ -13,7 +13,7 @@ like. Three build breaks on this branch were exactly that, the last being
 called that way by `view3d_agent_panel_draw.cc` two files away.
 
 The allow-list below is the escape hatch, and the point of it: adding a name
-to it is a deliberate "I checked this exists in Blender 5.2", which is the
+to it is a deliberate "I checked this exists in Blender 5.3", which is the
 exact moment each of those breaks skipped.
 """
 
@@ -89,7 +89,7 @@ def test_no_director_file_invents_an_api():
     )
     assert not unknown, (
         "Director calls an API nothing else in the overlay calls — check it "
-        "against Blender 5.2 and add it to ALLOWED with a reason:\n  "
+        "against Blender 5.3 and add it to ALLOWED with a reason:\n  "
         + "\n  ".join(unknown)
     )
 

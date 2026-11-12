@@ -8,7 +8,7 @@
 #include "mixie_moodboard_ops_common.hh"
 #include "../interface/interface_intern.hh"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "RNA_define.hh"
 
 namespace blender::ed::mixie {

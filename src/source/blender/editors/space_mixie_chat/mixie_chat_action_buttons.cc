@@ -10,8 +10,8 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_string.h"
-#include "BLI_time.h"
+#include "BLI_string.hh"
+#include "BLI_time.hh"
 
 #include "BKE_context.hh"
 
@@ -33,7 +33,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   ScrArea *area = CTX_wm_area(C);
   if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
-    return static_cast<SpaceMixieChat *>(area->spacedata.first);
+    return area->spacedata.first_as<SpaceMixieChat>();
   }
   return nullptr;
 }

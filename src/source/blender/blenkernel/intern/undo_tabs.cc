@@ -14,13 +14,13 @@
 
 #include "CLG_log.h"
 
-#include "BLI_listbase.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_utildefines.hh"
 #include "BLI_map.hh"
 #include "BLI_set.hh"
-#include "BLI_string.h"
-#include "BLI_time.h"
-#include "BLI_assert.h"
+#include "BLI_string.hh"
+#include "BLI_time.hh"
+#include "BLI_assert.hh"
 #include "BLI_vector.hh"
 
 #include "DNA_ID.h"
@@ -77,7 +77,7 @@ void BKE_undo_tabs_set_enabled(const bool enabled)
   g_enabled = enabled;
   CLOG_INFO(&LOG, "per-tab undo %s at runtime", enabled ? "on" : "off");
   if (!enabled && G_MAIN != nullptr) {
-    wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+    wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
     if (wm != nullptr && wm->runtime != nullptr && wm->runtime->undo_stack != nullptr) {
       BKE_undosys_tab_cursors_clear(wm->runtime->undo_stack);
     }
@@ -205,14 +205,14 @@ uint32_t BKE_undo_tab_uid_for_scene(Main *bmain, Scene *scene)
  * before a mode step belongs with that step). */
 static Scene *shown_scene(Main *bmain)
 {
-  wmWindowManager *wm = (bmain != nullptr) ? static_cast<wmWindowManager *>(bmain->wm.first) :
+  wmWindowManager *wm = (bmain != nullptr) ? bmain->wm.first_as<wmWindowManager>() :
                                              nullptr;
   if (wm == nullptr) {
     return nullptr;
   }
   wmWindow *win = (wm->runtime != nullptr && wm->runtime->winactive != nullptr) ?
                       wm->runtime->winactive :
-                      static_cast<wmWindow *>(wm->windows.first);
+                      wm->windows.first_as<wmWindow>();
   return (win != nullptr) ? win->scene : nullptr;
 }
 
@@ -444,7 +444,7 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
   {
     /* Only memfile steps carry the map: the type with no ID references of
      * its own is the global (memfile) type. */
-    if (STREQ(us->type->name, "Global Undo")) {
+    if (STREQ(us->type->identifier, "GLOBAL_UNDO")) {
       BKE_undo_tabs_walk_restored_take(us, bmain);
       us->mixar_owners = BKE_undo_owner_map_build(bmain, nullptr);
       if (g_live_owners != nullptr) {

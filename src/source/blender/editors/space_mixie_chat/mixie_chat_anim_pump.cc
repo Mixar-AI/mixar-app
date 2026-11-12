@@ -4,7 +4,7 @@
 #include "mixie_chat_anim_pump.hh"
 
 #include "BKE_context.hh"
-#include "BLI_time.h"
+#include "BLI_time.hh"
 #include "ED_agent_bubble_motion.hh"
 #include "WM_api.hh"
 #include "WM_types.hh"

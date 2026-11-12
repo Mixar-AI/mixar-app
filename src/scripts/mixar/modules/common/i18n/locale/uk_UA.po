@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Не вдалося відкрити вікно бульбашки агента"
+
 msgid "Capture Viewport"
 msgstr "Захопити вікно огляду"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar перезапуститься, щоб застосувати йо
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — скористайтеся «Завантажити», щоб оновитися через браузер."
 
+msgid "Retry"
+msgstr "Повторити"
+
 msgid "Restart & Update"
 msgstr "Перезапустити й оновити"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Вийти"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Повторити"
-
 msgid "Choose Export Location"
 msgstr "Вибрати місце експорту"
 
@@ -26532,9 +26538,6 @@ msgstr "Автоматичний режим: агент сам ухвалює в
 msgid "Agent Bubble"
 msgstr "Бульбашка агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Не вдалося відкрити вікно бульбашки агента"
-
 msgid "Agent Bubble Status"
 msgstr "Стан бульбашки агента"
 
@@ -26984,6 +26987,9 @@ msgstr "Анімувати вкладення з мудборду"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Показує, як щойно вкладений референс летить у чат Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Затримка"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Малювання картки потребує зворотного виклику малювання активного регіону"
 
@@ -29735,18 +29738,6 @@ msgstr "Шляхи перетягування мають бути непорож
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Шляхи перетягування мають бути непорожнім масивом JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобальні області"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Глобальні області вікна (верхня панель, рядок стану). Розширення Mixar — відкрите, щоб ознайомлювальний тур міг звертатися до верхньої панелі для перемальовування."
 
 msgid "QA UI Dump"
 msgstr "Дамп інтерфейсу QA"

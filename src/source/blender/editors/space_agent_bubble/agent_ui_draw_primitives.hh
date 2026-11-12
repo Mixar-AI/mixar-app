@@ -12,7 +12,7 @@
 #include <cstring>
 
 #include "BLF_api.hh"
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 #include "UI_interface_c.hh"

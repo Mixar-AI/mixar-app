@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Агент Аԥенџьыр аԥенџьыр аартра алымшаӡеит"
+
 msgid "Capture Viewport"
 msgstr "3Д Аԥшра аҭыхра"
 
@@ -3104,6 +3107,9 @@ msgstr "Аларҵаразы Mixar еиҭа илагалоит."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — абраузер ала аиҭарҿыцразы Аҭыгара шәхы иашәырхәа."
 
+msgid "Retry"
+msgstr "Еиҭа"
+
 msgid "Restart & Update"
 msgstr "Еиҭа алагара & аиҭарҿыцра"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Аҭыҵра"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Еиҭа"
-
 msgid "Choose Export Location"
 msgstr "Аҭыгара аҭыԥ алхра"
 
@@ -26532,9 +26538,6 @@ msgstr "Автоматла аиҿкаашьа: агент иаартны иҟо�
 msgid "Agent Bubble"
 msgstr "Агент Аԥенџьыр"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Агент Аԥенџьыр аԥенџьыр аартра алымшаӡеит"
-
 msgid "Agent Bubble Status"
 msgstr "Агент Аԥенџьыр Астатус"
 
@@ -26984,6 +26987,9 @@ msgstr "Амудборд Ацҵамҭа Анимациа"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Аҿыц ицҵоу ахьырԥш Mixie ачат ахь иԥырны ицо аарԥшра"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Азадержка"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Акарточка асахьа активтә арегион асахьа аколбек аҭахуп"
 
@@ -29735,18 +29738,6 @@ msgstr "Акаҳара амҩақәа аҭацәым ацәаҳәақәа заҵ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Акаҳара амҩақәа аҭацәым JSON амассив заҵәык ыҟазароуп"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Зеиԥшла Аҭыԥқәа"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Аԥенџьыр-зеиԥшла аҭыԥқәа (ахахьтәи апанель, астатус апанель). Mixar арасширение — иаартуп, алагаратә тур ахахьтәи апанель аиҭасахьа азы иазхьарԥшхарц"
 
 msgid "QA UI Dump"
 msgstr "QA UI Адамп"

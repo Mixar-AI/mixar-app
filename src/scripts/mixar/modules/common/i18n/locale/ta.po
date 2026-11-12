@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
+
 msgid "Capture Viewport"
 msgstr "வியூபோர்ட்டைப் பிடி"
 
@@ -3104,6 +3107,9 @@ msgstr "அதைப் பயன்படுத்த Mixar மீண்டு�
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — உலாவி வழியாகப் புதுப்பிக்க பதிவிறக்கு என்பதைப் பயன்படுத்துங்கள்."
 
+msgid "Retry"
+msgstr "மீண்டும் முயல்"
+
 msgid "Restart & Update"
 msgstr "மீண்டும் தொடங்கி புதுப்பி"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "வெளியேறு"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "மீண்டும் முயல்"
-
 msgid "Choose Export Location"
 msgstr "ஏற்றுமதி இடத்தைத் தேர்ந்தெடு"
 
@@ -26532,9 +26538,6 @@ msgstr "தானி பயன்முறை: திறந்த தேர்�
 msgid "Agent Bubble"
 msgstr "முகவர் குமிழி"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "முகவர் குமிழிச் சாளரத்தைத் திறக்கத் தவறியது"
-
 msgid "Agent Bubble Status"
 msgstr "முகவர் குமிழி நிலைமை"
 
@@ -26984,6 +26987,9 @@ msgstr "மூட்போர்டு இணைப்புக் கோப்�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "புதிதாக இணைத்த குறிப்பு Mixie அரட்டைக்குள் பறந்து வருவதைக் காட்டுகிறது"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "நேரந்தவறுகை"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "அட்டை வரைவுக்குச் செயலில் உள்ள பகுதியின் வரைவு அழைப்பு தேவை"
 
@@ -29735,18 +29738,6 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "உலகளாவிய பகுதிகள்"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "சாளர-உலகளாவிய பகுதிகள் (மேல்பட்டை, நிலைப்பட்டை). Mixar நீட்டிப்பு — தொடக்க வழிகாட்டல் மேல்பட்டையை மீண்டும் வரைவதற்கு அணுக இது வெளிப்படுத்தப்பட்டுள்ளது."
 
 msgid "QA UI Dump"
 msgstr "QA இடைமுக வெளியீடு"

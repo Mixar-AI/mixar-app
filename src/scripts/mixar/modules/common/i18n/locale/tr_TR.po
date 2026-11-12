@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Ajan Balonu penceresi açılamadı"
+
 msgid "Capture Viewport"
 msgstr "Görüş Alanını Yakala"
 
@@ -3104,6 +3107,9 @@ msgstr "Uygulamak için Mixar yeniden başlatılacak."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tarayıcınız üzerinden güncellemek için İndir'i kullanın."
 
+msgid "Retry"
+msgstr "Yeniden Dene"
+
 msgid "Restart & Update"
 msgstr "Yeniden Başlat ve Güncelle"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Oturumu Kapat"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Yeniden Dene"
-
 msgid "Choose Export Location"
 msgstr "Dışa Aktarma Konumunu Seç"
 
@@ -26532,9 +26538,6 @@ msgstr "Otomatik kip: ajan açık seçimlere size sormak yerine kendisi karar ve
 msgid "Agent Bubble"
 msgstr "Ajan Balonu"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Ajan Balonu penceresi açılamadı"
-
 msgid "Agent Bubble Status"
 msgstr "Ajan Balonu Durumu"
 
@@ -26984,6 +26987,9 @@ msgstr "Moodboard Ekini Canlandır"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Yeni eklenen bir referansın Mixie sohbetine uçarak girişini gösterir"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Gecikme"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kart çizimi, etkin bölgenin çizim geri çağrısını gerektirir"
 
@@ -29735,18 +29738,6 @@ msgstr "Bırakma yolları boş olmayan dizeler olmalıdır"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Bırakma yolları boş olmayan bir JSON dizisi olmalıdır"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Genel Alanlar"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Pencere genelindeki alanlar (üst çubuk, durum çubuğu). Mixar uzantısı — başlangıç turunun üst çubuğu yeniden çizim için hedefleyebilmesi amacıyla sunulur."
 
 msgid "QA UI Dump"
 msgstr "QA Arayüz Dökümü"

@@ -27,8 +27,8 @@
 #include <string>
 
 #include "BLI_listbase_iterator.hh"
-#include "BLI_rect.h"
-#include "BLI_string.h"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"

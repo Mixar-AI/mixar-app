@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
+
 msgid "Capture Viewport"
 msgstr "הגוצתה ןולח תדיכל"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar ותוא ליחהל ידכ שדחמ לעפוי."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ןפדפדה ךרד ןכדעל ידכ הדרוהב שמתשהל שי."
 
+msgid "Retry"
+msgstr "רזוח ןויסינ"
+
 msgid "Restart & Update"
 msgstr "ןוכדעו שדחמ הלעפה"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "תוקתנתה"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "רזוח ןויסינ"
-
 msgid "Choose Export Location"
 msgstr "אוציי םוקימ תריחב"
 
@@ -26532,9 +26538,6 @@ msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תו�
 msgid "Agent Bubble"
 msgstr "ןכוסה תעוב"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
-
 msgid "Agent Bubble Status"
 msgstr "ןכוסה תעוב בצמ"
 
@@ -26984,6 +26987,9 @@ msgstr "הארשה חולב ףרוצמ ץבוק תשפנה"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mixie לש טא'צה לא ףע ףרוצ התע הזש סנרפר גיצמ"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "היהשה"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ליעפה רוזאה לש רויצה תאירק תא שרוד סיטרכ רויצ"
 
@@ -29735,18 +29738,6 @@ msgstr "תוקיר אל תוזורחמ תויהל םיבייח רורחשה יב
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "קיר אל JSON ךרעמ תויהל םיבייח רורחשה יביתנ"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "םיילבולג םירוזא"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr ".שדחמ רויצל ןוילעה לגרסל תונפל לכות תינושארה הכרדההש ידכ הפושח — Mixar לש הבחרה .(בצמ תרוש ,ןוילע לגרס) ןולחה לש םיילבולג םירוזא"
 
 msgid "QA UI Dump"
 msgstr "QA קשממ תכלשה"

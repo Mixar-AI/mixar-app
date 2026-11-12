@@ -10,9 +10,11 @@
 /* Allow using deprecated functionality for .blend file I/O. */
 #define DNA_DEPRECATED_ALLOW
 
+#include <array>
 #include <cstring>
 
 #include "DNA_collection_types.h"
+#include "DNA_curve_types.h"
 #include "DNA_gpencil_legacy_types.h"
 #include "DNA_lightprobe_types.h"
 #include "DNA_object_types.h"
@@ -21,16 +23,18 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
-#include "BLI_math_matrix.h"
-#include "BLI_math_vector.h"
-#include "BLI_string_utf8.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_math_matrix.hh"
+#include "BLI_math_matrix_c.hh"
+#include "BLI_math_vector_c.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_utildefines.hh"
 
+#include "BKE_annotations.h"
 #include "BKE_asset.hh"
+#include "BKE_compositor.hh"
 #include "BKE_context.hh"
 #include "BKE_global.hh"
-#include "BKE_gpencil_legacy.h"
 #include "BKE_idprop.hh"
 #include "BKE_layer.hh"
 #include "BKE_lib_id.hh"
@@ -41,6 +45,7 @@
 #include "BKE_object.hh"
 #include "BKE_scene.hh"
 #include "BKE_screen.hh"
+#include "BKE_vfont.hh"
 #include "BKE_viewer_path.hh"
 
 #include "ED_asset_shelf.hh"
@@ -94,8 +99,8 @@ bool ED_view3d_area_user_region(const ScrArea *area, const View3D *v3d, ARegion 
   RegionView3D *rv3d = nullptr;
   ARegion *region_unlock_user = nullptr;
   ARegion *region_unlock = nullptr;
-  const ListBaseT<ARegion> *region_list = (v3d == area->spacedata.first) ? &area->regionbase :
-                                                                           &v3d->regionbase;
+  const ListBaseT<ARegion> *region_list = (v3d == area->spacedata.first_) ? &area->regionbase :
+                                                                            &v3d->regionbase;
 
   BLI_assert(v3d->spacetype == SPACE_VIEW3D);
 
@@ -185,7 +190,7 @@ void ED_view3d_stop_render_preview(wmWindowManager *wm, ARegion *region)
 
 void ED_view3d_shade_update(Main *bmain, View3D *v3d, ScrArea *area)
 {
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
 
   if (v3d->shading.type != OB_RENDER) {
     for (ARegion &region : area->regionbase) {
@@ -341,7 +346,7 @@ static void view3d_init(wmWindowManager *wm, ScrArea *area)
 static void view3d_exit(wmWindowManager * /*wm*/, ScrArea *area)
 {
   BLI_assert(area->spacetype == SPACE_VIEW3D);
-  View3D *v3d = static_cast<View3D *>(area->spacedata.first);
+  View3D *v3d = area->spacedata.first_as<View3D>();
   ED_view3d_local_stats_free(v3d);
 }
 
@@ -630,6 +635,59 @@ static void *view3d_main_region_duplicate(void *poin)
   return nullptr;
 }
 
+#ifdef WITH_INPUT_IME
+static std::optional<ARegionIMECursorState> view3d_main_region_cursor_ime(
+    wmWindow *win, const ScrArea * /*area*/, const ARegion *region, ARegionIMECursor *r_cursor)
+{
+  /* The position is pending during viewport navigation (orbit, pan, zoom, fly, walk). */
+  const RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
+  if (rv3d->rflag & RV3D_NAVIGATING) {
+    return ARegionIMECursorState::PositionPending;
+  }
+
+  ViewLayer *view_layer = WM_window_get_active_view_layer(win);
+  if (!view_layer) {
+    return std::nullopt;
+  }
+  Object *ob = BKE_view_layer_active_object_get(view_layer);
+  if (!(ob && ob->type == OB_FONT && ob->mode == OB_MODE_EDIT)) {
+    return std::nullopt;
+  }
+
+  const Curve *cu = id_cast<Curve *>(ob->data);
+  const EditFont *ef = cu->editfont;
+  /* `cu->editfont` can be nullptr on Blender startup. */
+  if (!ef) {
+    return std::nullopt;
+  }
+
+  /* Use the lower-left corner of the cursor with a zero width, since the object transform may
+   * rotate it, where an axis-aligned width wouldn't represent it. */
+  const float3 cursor_local = {ef->textcurs[0].x, ef->textcurs[0].y, 0.0f};
+  /* Transform to world space, then project to region coordinates. */
+  const float3 cursor_world = math::transform_point(ob->object_to_world(), cursor_local);
+  float2 cursor_screen;
+  if (ED_view3d_project_float_global(
+          region, cursor_world, cursor_screen, V3D_PROJ_TEST_CLIP_NEAR) != V3D_PROJ_RET_OK)
+  {
+    /* Behind the view, so pending since editing is still active and the view may move back. */
+    return ARegionIMECursorState::PositionPending;
+  }
+
+  const int x = int(cursor_screen[0]);
+  const int y = int(cursor_screen[1]);
+  r_cursor->rect = {
+      .xmin = x,
+      .xmax = x,
+      .ymin = y,
+      .ymax = y + int(UI_UNIT_Y),
+  };
+  r_cursor->font_size = UI_UNIT_Y;
+  return ARegionIMECursorState::PositionSet;
+}
+
+#endif
+
 static void view3d_main_region_listener(const wmRegionListenerParams *params)
 {
   wmWindow *window = params->window;
@@ -637,7 +695,7 @@ static void view3d_main_region_listener(const wmRegionListenerParams *params)
   ARegion *region = params->region;
   const wmNotifier *wmn = params->notifier;
   const Scene *scene = params->scene;
-  View3D *v3d = static_cast<View3D *>(area->spacedata.first);
+  View3D *v3d = area->spacedata.first_as<View3D>();
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
   wmGizmoMap *gzmap = region->runtime->gizmo_map;
 
@@ -714,6 +772,11 @@ static void view3d_main_region_listener(const wmRegionListenerParams *params)
           }
           break;
         }
+        case ND_COMPO_RESULT:
+          if (bke::compositor::is_viewport_compositor_enabled(*v3d, *rv3d)) {
+            ED_region_tag_redraw(region);
+          }
+          break;
       }
       if (wmn->action == NA_EDITED) {
         ED_region_tag_redraw(region);
@@ -870,8 +933,7 @@ static void view3d_main_region_listener(const wmRegionListenerParams *params)
         }
         else if (wmn->subtype == NS_VIEW3D_SHADING) {
 #ifdef WITH_XR_OPENXR
-          ED_view3d_xr_shading_update(
-              static_cast<wmWindowManager *>(G_MAIN->wm.first), v3d, scene);
+          ED_view3d_xr_shading_update(G_MAIN->wm.first(), v3d, scene);
 #endif
 
           ViewLayer *view_layer = WM_window_get_active_view_layer(window);
@@ -1268,13 +1330,11 @@ static void view3d_buttons_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
 }
 
-void ED_view3d_buttons_region_layout_ex(const bContext *C,
-                                        ARegion *region,
-                                        const char *category_override)
+std::array<const char *, 4> ED_view3d_buttons_contexts(const bContext *C)
 {
   const enum eContextObjectMode mode = CTX_data_mode_enum(C);
 
-  const char *contexts_base[4] = {nullptr};
+  std::array<const char *, 4> contexts_base = {nullptr};
   contexts_base[0] = CTX_data_mode_string(C);
 
   const char **contexts = &contexts_base[1];
@@ -1311,7 +1371,7 @@ void ED_view3d_buttons_region_layout_ex(const bContext *C,
       ARRAY_SET_ITEMS(contexts, ".grease_pencil_paint");
       break;
     case CTX_MODE_SCULPT_GREASE_PENCIL:
-      ARRAY_SET_ITEMS(contexts, ".paint_common", ".grease_pencil_sculpt");
+      ARRAY_SET_ITEMS(contexts, ".grease_pencil_sculpt");
       break;
     case CTX_MODE_WEIGHT_GREASE_PENCIL:
       ARRAY_SET_ITEMS(contexts, ".greasepencil_weight");
@@ -1382,6 +1442,15 @@ void ED_view3d_buttons_region_layout_ex(const bContext *C,
       break;
   }
 
+  return contexts_base;
+}
+
+void ED_view3d_buttons_region_layout_ex(const bContext *C,
+                                        ARegion *region,
+                                        const char *category_override)
+{
+  std::array<const char *, 4> contexts = ED_view3d_buttons_contexts(C);
+
   ListBaseT<PanelType> *paneltypes = &region->runtime->type->paneltypes;
 
   /* Allow drawing 3D view toolbar from non 3D view space type. */
@@ -1391,8 +1460,12 @@ void ED_view3d_buttons_region_layout_ex(const bContext *C,
     paneltypes = &art->paneltypes;
   }
 
-  ED_region_panels_layout_ex(
-      C, region, paneltypes, wm::OpCallContext::InvokeRegionWin, contexts_base, category_override);
+  ED_region_panels_layout_ex(C,
+                             region,
+                             paneltypes,
+                             wm::OpCallContext::InvokeRegionWin,
+                             contexts.data(),
+                             category_override);
 }
 
 static void view3d_buttons_region_layout(const bContext *C, ARegion *region)
@@ -1554,7 +1627,7 @@ static void space_view3d_listener(const wmSpaceTypeListenerParams *params)
 {
   ScrArea *area = params->area;
   const wmNotifier *wmn = params->notifier;
-  View3D *v3d = static_cast<View3D *>(area->spacedata.first);
+  View3D *v3d = area->spacedata.first_as<View3D>();
 
   /* context changes */
   switch (wmn->category) {
@@ -1598,7 +1671,7 @@ static void space_view3d_listener(const wmSpaceTypeListenerParams *params)
 
 static void space_view3d_refresh(const bContext *C, ScrArea *area)
 {
-  View3D *v3d = static_cast<View3D *>(area->spacedata.first);
+  View3D *v3d = area->spacedata.first_as<View3D>();
   ED_view3d_local_stats_free(v3d);
 
   if (v3d->localvd && v3d->localvd->runtime.flag & V3D_RUNTIME_LOCAL_MAYBE_EMPTY) {
@@ -1636,8 +1709,8 @@ static void view3d_id_remap_v3d(ScrArea *area,
       ID_REMAP_RESULT_SOURCE_UNASSIGNED)
   {
     /* 3D view might be inactive, in that case needs to use slink->regionbase */
-    ListBaseT<ARegion> *regionbase = (slink == area->spacedata.first) ? &area->regionbase :
-                                                                        &slink->regionbase;
+    ListBaseT<ARegion> *regionbase = (slink == area->spacedata.first_) ? &area->regionbase :
+                                                                         &slink->regionbase;
     for (ARegion &region : *regionbase) {
       if (region.regiontype == RGN_TYPE_WINDOW) {
         RegionView3D *rv3d = is_local ? (static_cast<RegionView3D *>(region.regiondata))->localvd :
@@ -1697,7 +1770,7 @@ static void view3d_space_blend_read_data(BlendDataReader *reader, SpaceLink *sl)
   v3d->runtime = View3D_Runtime{};
 
   if (BLO_read_struct_nonnull(reader, bGPdata, &v3d->gpd)) {
-    BKE_gpencil_blend_read_data(reader, v3d->gpd);
+    BKE_annotations_blend_read_data(reader, v3d->gpd);
   }
   BLO_read_struct(reader, RegionView3D, &v3d->localvd);
 
@@ -1717,10 +1790,15 @@ static void view3d_space_blend_read_data(BlendDataReader *reader, SpaceLink *sl)
 static void view3d_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
   View3D *v3d = reinterpret_cast<View3D *>(sl);
-  writer->write_struct(v3d);
+  writer->write_struct(v3d, [](BlendStructWriter<View3D> &struct_writer) {
+    struct_writer.shallow_data.runtime = {};
+  });
 
   if (v3d->localvd) {
-    writer->write_struct(v3d->localvd);
+    writer->write_struct(v3d->localvd, [](BlendStructWriter<View3D> &struct_writer) {
+      View3D &shallow_v3d = struct_writer.shallow_data;
+      memset((void *)&shallow_v3d.runtime, 0, sizeof(shallow_v3d.runtime));
+    });
   }
 
   BKE_screen_view3d_shading_blend_write(writer, &v3d->shading);
@@ -1746,6 +1824,7 @@ void ED_spacetype_view3d()
 
   st->spaceid = SPACE_VIEW3D;
   STRNCPY_UTF8(st->name, "View3D");
+  st->struct_size = sizeof(View3D);
 
   st->create = view3d_create;
   st->free = view3d_free;
@@ -1786,6 +1865,9 @@ void ED_spacetype_view3d()
   art->exit = view3d_main_region_exit;
   art->free = view3d_main_region_free;
   art->duplicate = view3d_main_region_duplicate;
+#ifdef WITH_INPUT_IME
+  art->cursor_ime = view3d_main_region_cursor_ime;
+#endif
   art->listener = view3d_main_region_listener;
   art->message_subscribe = view3d_main_region_message_subscribe;
   art->cursor = view3d_main_region_cursor;
@@ -1796,6 +1878,7 @@ void ED_spacetype_view3d()
   /* regions: list-view/buttons */
   art = MEM_new_zeroed<ARegionType>("spacetype view3d buttons region");
   art->regionid = RGN_TYPE_UI;
+  art->flag = ARegionTypeFlag::UsePanelCategoriesSearch;
   art->prefsizex = UI_SIDEBAR_PANEL_WIDTH;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
   art->listener = view3d_buttons_region_listener;

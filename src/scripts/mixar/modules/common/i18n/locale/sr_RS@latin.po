@@ -663,6 +663,10 @@ msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
 # derived
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora mehurića agenta nije uspelo"
+
+# derived
 msgid "Capture Viewport"
 msgstr "Snimi prikaz"
 
@@ -3813,6 +3817,10 @@ msgid "{error} — use Download to update via your browser."
 msgstr "{error} — koristite Preuzmi da ažurirate preko pregledača."
 
 # derived
+msgid "Retry"
+msgstr "Pokušaj ponovo"
+
+# derived
 msgid "Restart & Update"
 msgstr "Ponovo pokreni i ažuriraj"
 
@@ -4275,6 +4283,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -26854,10 +26865,6 @@ msgid "Sound on"
 msgstr ""
 
 # derived
-msgid "Retry"
-msgstr "Pokušaj ponovo"
-
-# derived
 msgid "Choose Export Location"
 msgstr "Izaberi mesto izvoza"
 
@@ -33579,10 +33586,6 @@ msgid "Agent Bubble"
 msgstr "Mehurić agenta"
 
 # derived
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora mehurića agenta nije uspelo"
-
-# derived
 msgid "Agent Bubble Status"
 msgstr "Status mehurića agenta"
 
@@ -34169,6 +34172,9 @@ msgstr "Animiraj prilog mudborda"
 # derived
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Prikazuje novopriloženu referencu kako uleće u ćaskanje Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Kašnjenje"
@@ -36000,9 +36006,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 # derived
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Crtanje kartice zahteva povratni poziv crtanja aktivnog regiona"
@@ -37653,20 +37656,6 @@ msgstr "Putanje otpuštanja moraju biti neprazni nizovi"
 # derived
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje otpuštanja moraju biti neprazan JSON niz"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-# derived
-msgid "Global Areas"
-msgstr "Globalne oblasti"
-
-# derived
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Oblasti globalne za prozor (gornja traka, statusna traka). Proširenje Mixar — izloženo da uvođenje može da adresira gornju traku za ponovno crtanje."
 
 # derived
 msgid "QA UI Dump"

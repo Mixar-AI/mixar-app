@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kan het venster van de Agentbubbel niet openen"
+
 msgid "Capture Viewport"
 msgstr "Viewport vastleggen"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar wordt opnieuw gestart om deze toe te passen."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gebruik Downloaden om via uw browser bij te werken."
 
+msgid "Retry"
+msgstr "Opnieuw proberen"
+
 msgid "Restart & Update"
 msgstr "Herstarten en bijwerken"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Uitloggen"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Opnieuw proberen"
-
 msgid "Choose Export Location"
 msgstr "Exportlocatie kiezen"
 
@@ -26532,9 +26538,6 @@ msgstr "Automatische modus: de agent neemt open keuzes zelf in plaats van het u 
 msgid "Agent Bubble"
 msgstr "Agentbubbel"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kan het venster van de Agentbubbel niet openen"
-
 msgid "Agent Bubble Status"
 msgstr "Status Agentbubbel"
 
@@ -26984,6 +26987,9 @@ msgstr "Moodboardbijlage animeren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Toont een nieuw bijgevoegde referentie die Mixie Chat in vliegt"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Vertraging"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Het tekenen van kaarten vereist de tekencallback van het actieve gebied"
 
@@ -29735,18 +29738,6 @@ msgstr "Neerzetpaden moeten niet-lege strings zijn"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Neerzetpaden moeten een niet-lege JSON-array zijn"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globale gebieden"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Vensterglobale gebieden (bovenbalk, statusbalk). Mixar-uitbreiding — beschikbaar gemaakt zodat de onboarding de bovenbalk kan aanspreken om opnieuw te tekenen."
 
 msgid "QA UI Dump"
 msgstr "QA-UI-dump"

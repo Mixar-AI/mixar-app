@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "에이전트 버블 창을 열지 못했습니다"
+
 msgid "Capture Viewport"
 msgstr "뷰포트 캡처"
 
@@ -3104,6 +3107,9 @@ msgstr "업데이트를 적용하기 위해 Mixar가 다시 시작됩니다."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 다운로드를 사용하여 브라우저에서 업데이트하세요."
 
+msgid "Retry"
+msgstr "재시도"
+
 msgid "Restart & Update"
 msgstr "다시 시작 및 업데이트"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "로그아웃"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "재시도"
-
 msgid "Choose Export Location"
 msgstr "내보내기 위치 선택"
 
@@ -26532,9 +26538,6 @@ msgstr "자동 모드: 에이전트가 미정인 선택 사항을 묻지 않고 
 msgid "Agent Bubble"
 msgstr "에이전트 버블"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "에이전트 버블 창을 열지 못했습니다"
-
 msgid "Agent Bubble Status"
 msgstr "에이전트 버블 상태"
 
@@ -26984,6 +26987,9 @@ msgstr "무드보드 첨부 애니메이션"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "새로 첨부한 참조가 Mixie 채팅으로 날아가는 모습을 표시합니다"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "지연"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "카드 그리기에는 활성 영역의 그리기 콜백이 필요합니다"
 
@@ -29735,18 +29738,6 @@ msgstr "드롭 경로는 비어 있지 않은 문자열이어야 합니다"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "드롭 경로는 비어 있지 않은 JSON 배열이어야 합니다"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "전역 영역"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "창 전역 영역(상단 바, 상태 표시줄)입니다. Mixar 확장 기능으로, 온보딩에서 다시 그리기를 위해 상단 바에 접근할 수 있도록 노출됩니다."
 
 msgid "QA UI Dump"
 msgstr "QA UI 덤프"

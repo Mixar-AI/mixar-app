@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Imeshindwa kufungua dirisha la Kiputo cha wakala"
+
 msgid "Capture Viewport"
 msgstr "Nasa mtazamo wa kutazama"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar itawashwa upya ili kulituma."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — tumia Pakua kusasisha kupitia kivinjari chako."
 
+msgid "Retry"
+msgstr "Jaribu tena"
+
 msgid "Restart & Update"
 msgstr "Washa upya na usasishe"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Toka"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Jaribu tena"
-
 msgid "Choose Export Location"
 msgstr "Chagua mahali pa kuhamisha"
 
@@ -26532,9 +26538,6 @@ msgstr "Modi otomatiki: wakala huamua chaguzi wazi mwenyewe badala ya kuuliza, n
 msgid "Agent Bubble"
 msgstr "Kiputo cha wakala"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Imeshindwa kufungua dirisha la Kiputo cha wakala"
-
 msgid "Agent Bubble Status"
 msgstr "Hali ya Kiputo cha wakala"
 
@@ -26984,6 +26987,9 @@ msgstr "Huisha kiambatisho cha ubao wa hisia"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Onyesha rejeleo jipya lililoambatishwa likiruka kuingia kwenye gumzo la Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Kuchelewa"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Uchoro wa kadi unahitaji mwitikio wa kuchora wa eneo amilifu"
 
@@ -29735,18 +29738,6 @@ msgstr "Njia za udondoshaji lazima ziwe maandishi yasiyo tupu"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Njia za udondoshaji lazima ziwe safu ya JSON isiyo tupu"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Maeneo ya kimataifa"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Maeneo ya kimataifa ya dirisha (upau wa juu, upau wa hali). Kiendelezi cha Mixar — kimewekwa wazi ili utangulizi uweze kushughulikia upau wa juu kwa uchoraji upya."
 
 msgid "QA UI Dump"
 msgstr "Dondoo la UI ya QA"

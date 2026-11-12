@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
+
 msgid "Capture Viewport"
 msgstr "Chụp Cổng Nhìn"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar sẽ khởi động lại để áp dụng."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — hãy dùng Tải Xuống để cập nhật qua trình duyệt."
 
+msgid "Retry"
+msgstr "Thử Lại"
+
 msgid "Restart & Update"
 msgstr "Khởi Động Lại & Cập Nhật"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Đăng Xuất"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Thử Lại"
-
 msgid "Choose Export Location"
 msgstr "Chọn Vị Trí Xuất Khẩu"
 
@@ -26532,9 +26538,6 @@ msgstr "Chế độ tự động: tác nhân tự quyết định các lựa ch�
 msgid "Agent Bubble"
 msgstr "Bong Bóng Tác Nhân"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Không mở được cửa sổ Bong Bóng Tác Nhân"
-
 msgid "Agent Bubble Status"
 msgstr "Trạng Thái Bong Bóng Tác Nhân"
 
@@ -26984,6 +26987,9 @@ msgstr "Hoạt Họa Tệp Đính Kèm từ Bảng Cảm Hứng"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Hiển thị tham chiếu vừa đính kèm bay vào khung trò chuyện Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Trì Hoãn"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Vẽ thẻ đòi hỏi hàm gọi lại vẽ của vùng đang hoạt động"
 
@@ -29735,18 +29738,6 @@ msgstr "Các đường dẫn thả phải là chuỗi không rỗng"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Các đường dẫn thả phải là một mảng JSON không rỗng"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Vùng Toàn Cục"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Các vùng toàn cục của cửa sổ (thanh đỉnh, thanh trạng thái). Phần mở rộng của Mixar — được phơi bày để phần hướng dẫn làm quen có thể truy cập thanh đỉnh nhằm vẽ lại."
 
 msgid "QA UI Dump"
 msgstr "Kết Xuất Dữ Liệu Giao Diện QA"

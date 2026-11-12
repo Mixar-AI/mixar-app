@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunde inte öppna fönstret Agentbubbla"
+
 msgid "Capture Viewport"
 msgstr "Fånga visningsvy"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar startas om för att tillämpa den."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – använd Ladda ned för att uppdatera via webbläsaren."
 
+msgid "Retry"
+msgstr "Försök igen"
+
 msgid "Restart & Update"
 msgstr "Starta om och uppdatera"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Logga ut"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Försök igen"
-
 msgid "Choose Export Location"
 msgstr "Välj exportplats"
 
@@ -26532,9 +26538,6 @@ msgstr "Autoläge: agenten avgör öppna val själv i stället för att fråga d
 msgid "Agent Bubble"
 msgstr "Agentbubbla"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunde inte öppna fönstret Agentbubbla"
-
 msgid "Agent Bubble Status"
 msgstr "Agentbubblans status"
 
@@ -26984,6 +26987,9 @@ msgstr "Animera moodboard-bilaga"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Visar en nyss bifogad referens som flyger in i Mixie-chatten"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Fördröjning"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortritning kräver den aktiva regionens ritåteranrop"
 
@@ -29735,18 +29738,6 @@ msgstr "Släppsökvägar måste vara icke-tomma strängar"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Släppsökvägar måste vara en icke-tom JSON-array"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globala områden"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Fönsterglobala områden (toppfält, statusfält). Mixar-tillägg – exponeras så att introduktionen kan adressera toppfältet för omritning."
 
 msgid "QA UI Dump"
 msgstr "QA-gränssnittsdump"

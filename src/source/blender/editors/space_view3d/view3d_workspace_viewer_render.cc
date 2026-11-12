@@ -5,10 +5,10 @@
 #include <cmath>
 #include "BLI_bounds.hh"
 #include "BLI_math_matrix.hh"
-#include "BLI_math_geom.h"
-#include "BLI_time.h"
-#include "BLI_math_matrix.h"
-#include "BLI_math_rotation.h"
+#include "BLI_math_geom_c.hh"
+#include "BLI_time.hh"
+#include "BLI_math_matrix_c.hh"
+#include "BLI_math_rotation_c.hh"
 #include "BKE_context.hh"
 #include "BKE_object.hh"
 #include "BKE_scene.hh"
@@ -74,10 +74,10 @@ void view3d_workspace_viewer_render(const bContext * /*C*/, WorkspaceViewer &v, 
 {
   const int w = BLI_rcti_size_x(&v.image) + 1, h = BLI_rcti_size_y(&v.image) + 1;
   if (!scene || w < 8 || h < 8 || ED_view3d_draw_offscreen_check_nested()) { return; }
-  ViewLayer *layer = static_cast<ViewLayer *>(scene->view_layers.first);
+  ViewLayer *layer = scene->view_layers.first_as<ViewLayer>();
   Depsgraph *deps = layer ? BKE_scene_get_depsgraph(scene, layer) : nullptr;
   if (!deps || DEG_get_update_count(deps) == 0) { return; }
-  const View3D *host = static_cast<View3D *>(v.area->spacedata.first);
+  const View3D *host = v.area->spacedata.first_as<View3D>();
   const eDrawType type = host->shading.type >= OB_MATERIAL ? OB_MATERIAL : OB_SOLID;
   if (v.offscreen && (GPU_offscreen_width(v.offscreen) != w || GPU_offscreen_height(v.offscreen) != h)) {
     view3d_workspace_viewer_gpu_free(v);

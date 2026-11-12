@@ -3,7 +3,7 @@
 
 # Mixar (Blender client)
 
-**Mixar is a custom fork of Blender 5.2 that turns Blender into an AI-powered 3D content creation tool** — layered texture painting, AI 3D generation, and a real-time chat agent that drives the scene. This repo is the **desktop client**; the AI backend is the separate `mixar-backend` repo (FastAPI), and the admin dashboard is `mixar-admin-dashboard`.
+**Mixar is a custom fork of Blender 5.3 that turns Blender into an AI-powered 3D content creation tool** — layered texture painting, AI 3D generation, and a real-time chat agent that drives the scene. This repo is the **desktop client**; the AI backend is the separate `mixar-backend` repo (FastAPI), and the admin dashboard is `mixar-admin-dashboard`.
 
 This file holds the build model, the rules, and the module map. It is published with the source, so it references only published paths.
 
@@ -12,7 +12,7 @@ This file holds the build model, the rules, and the module map. It is published 
 All Mixar source lives in `/src` and is rsync'd **on top of** upstream Blender at build time:
 
 ```text
-upstream/    Blender 5.2 source (git submodule)
+upstream/    Blender 5.3 source (git submodule)
 src/         Mixar overlay — ALL Mixar code goes here
 source/      GENERATED: upstream/ copied here, then src/ overlaid. NEVER edit directly.
 build/<env>/ CMake build output (e.g. build/Prod/bin, build/Dev/bin)
@@ -25,7 +25,7 @@ build/<env>/ CMake build output (e.g. build/Prod/bin, build/Dev/bin)
 - The overlay copy (`overlay.sh` rsync / `overlay.bat` robocopy) skips git-ignored local junk inside `src/` — `.venv/`, `venv/`, `__pycache__/`, `.pytest_cache/`, `.DS_Store`. CMake's `scripts/` install rule filters only `__pycache__`, so a stray dev venv would otherwise ship in the app bundle.
 - **`upstream/` is re-pinned for you**: branches pin different Blender releases, and neither `git checkout` nor `git merge` moves a submodule working tree. `.githooks/{post-checkout,post-merge}` (shared body in `.githooks/lib/sync_upstream_pin.sh`, wired by `make init`) re-pin `upstream/` and its initialized `lib/*` after a switch *or* a `git pull`, and warn to `make clean_build` when `BLENDER_VERSION` changes. `build/` and `source/` are shared across branches, so `build.sh` also purges CMake cache entries that a previous Blender release resolved (SDK paths, `PYTHON_*` when the cached interpreter version no longer matches, and CMake's bare default `CMAKE_INSTALL_PREFIX` left by a configure that aborted before Blender set its own).
 - **Git worktrees build out of the box**: `settings.sh` falls back to the main checkout's `upstream/` (the multi-GB submodule doesn't carry into linked worktrees; used read-only as the rsync source, warns if not at the pinned commit). Override with `MIXAR_UPSTREAM_DIR`; each worktree still assembles its own `source/` and `build/` — never share those.
-- **Windows build prerequisites**: Blender 5.2 needs Visual Studio 2022 17.14.14 or newer and the pinned Windows libraries with Python 3.13. The CMake preload clears stale Python-version and dependency-path cache entries after a branch switch, preserving compiled objects and unrelated settings. Ninja activates the selected Visual Studio installation's default toolset explicitly. On a compiler change, `prepare_toolchain.ps1` backs up only the CMake cache and versioned compiler metadata before the full configure; target objects remain, while manual cache-only options must be reapplied.
+- **Windows build prerequisites**: Blender 5.3 needs Visual Studio 2022 17.14.14 or newer and the pinned Windows libraries with Python 3.13. The CMake preload clears stale Python-version and dependency-path cache entries after a branch switch, preserving compiled objects and unrelated settings. Ninja activates the selected Visual Studio installation's default toolset explicitly. On a compiler change, `prepare_toolchain.ps1` backs up only the CMake cache and versioned compiler metadata before the full configure; target objects remain, while manual cache-only options must be reapplied.
 - **macOS SDK selection**: `settings.sh` link-probes the SDK `xcrun` reports and, only when that fails, falls back to the newest SDK the installed linker accepts (a leftover beta SDK newer than the Command Line Tools fails CMake's first compiler check with `tapi error: malformed file ... unknown architecture`). In that case it exports `MIXAR_OSX_SDK_VERSION`, which `build.sh` passes as `-DOSX_SYSTEM` on every configure (cache purges included), because upstream's `platform_apple_xcode.cmake` otherwise re-detects the SDK via `xcrun --show-sdk-version`, which ignores `SDKROOT`. A healthy machine configures exactly as before; a preset `SDKROOT` is always respected.
 - **macOS dev codesign (optional)**: `MIXAR_DEV_SIGN_ID` in `.env` makes `build.sh` AND `install.sh` (via `scripts/unix/dev_codesign.sh`) re-sign the built `Mixar` executable with a stable self-signed identity (one-time setup: `scripts/unix/setup_dev_codesign.sh`), so the Keychain "Always Allow" sticks across rebuilds; the CMake install target re-copies the executable ad-hoc signed, so `make install` must re-sign or the next launch prompts again. Signs with `get-task-allow` so lldb attach keeps working. Local dev only — release signing is a separate pipeline.
 
@@ -65,7 +65,7 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 - **Always update the relevant documentation** when features are added/modified/deleted, following the documentation structure below. Update this guide only when a shared rule, build instruction or module summary changes.
 - Branch names follow the table in `CONTRIBUTING.md` — lowercase kebab-case, most specific prefix wins (`bugfix/` over `task/` for a bug fix).
 - **The keyconfig-reload rule**: custom C region keymaps and any C-registered default-keyconfig binding must ALSO be registered in the addon keyconfig (Python side), never only via C `WM_keymap_add_item` — a GUI keyconfig preset reload wipes C-registered items. Applies to agent_panel, chat select/copy/paste, Director `I` capture, and anything new.
-- Upstream is pinned at Blender `v5.2.0`; Mixar C++ is wrapped in `namespace blender` (interface files in `blender::ui`), DNA lists are `ListBaseT<T>`, allocation is `MEM_new*`, runtime operator pointer props use `RNA_def_pointer_runtime`, and animation access goes through the ID's own channelbag via `common/utils/animation.py` (never `Action.fcurves`). Merging `develop` brings 5.0-shaped code that must be re-ported to these conventions.
+- Upstream is pinned at Blender `v5.3.0`; Mixar C++ is wrapped in `namespace blender` (interface files in `blender::ui`), DNA lists are `ListBaseT<T>` (`first()`/`last()`, `first_as<T>()` for space casts), allocation is `MEM_new*`, runtime operator pointer props use `RNA_def_pointer_runtime`, and animation access goes through the ID's own channelbag via `common/utils/animation.py` (never `Action.fcurves`). Native additions must follow the pinned upstream APIs.
 
 ## Performance (the app must never feel sticky)
 

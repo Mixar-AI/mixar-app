@@ -6,7 +6,7 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"

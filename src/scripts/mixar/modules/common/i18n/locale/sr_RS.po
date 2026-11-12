@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Отварање прозора мехурића агента није успело"
+
 msgid "Capture Viewport"
 msgstr "Сними приказ"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar ће се поново покренути да га примени
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — користите Преузми да ажурирате преко прегледача."
 
+msgid "Retry"
+msgstr "Покушај поново"
+
 msgid "Restart & Update"
 msgstr "Поново покрени и ажурирај"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Одјава"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Покушај поново"
-
 msgid "Choose Export Location"
 msgstr "Изабери место извоза"
 
@@ -26532,9 +26538,6 @@ msgstr "Аутоматски режим: агент сам одлучује от
 msgid "Agent Bubble"
 msgstr "Мехурић агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Отварање прозора мехурића агента није успело"
-
 msgid "Agent Bubble Status"
 msgstr "Статус мехурића агента"
 
@@ -26984,6 +26987,9 @@ msgstr "Анимирај прилог мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Приказује новоприложену референцу како улеће у ћаскање Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Кашњење"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Цртање картице захтева повратни позив цртања активног региона"
 
@@ -29735,18 +29738,6 @@ msgstr "Путање отпуштања морају бити непразни �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Путање отпуштања морају бити непразан JSON низ"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобалне области"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Области глобалне за прозор (горња трака, статусна трака). Проширење Mixar — изложено да увођење може да адресира горњу траку за поновно цртање."
 
 msgid "QA UI Dump"
 msgstr "QA испис интерфејса"

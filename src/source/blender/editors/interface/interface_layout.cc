@@ -19,14 +19,14 @@
 #include "DNA_userdef_types.h"
 
 #include "BLI_array.hh"
-#include "BLI_dynstr.h"
+#include "BLI_dynstr.hh"
 #include "BLI_enum_flags.hh"
-#include "BLI_listbase.h"
-#include "BLI_math_base.h"
+#include "BLI_listbase.hh"
+#include "BLI_math_base_c.hh"
 #include "BLI_path_utils.hh"
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "BLI_string_ref.hh"
-#include "BLI_string_utf8.h"
+#include "BLI_string_utf8.hh"
 
 #include "BLT_translation.hh"
 
@@ -36,6 +36,8 @@
 #include "BKE_lib_id.hh"
 #include "BKE_path_templates.hh"
 #include "BKE_screen.hh"
+
+#include "IMB_imbuf_types.hh"
 
 #include "RNA_access.hh"
 #include "RNA_prototypes.hh"
@@ -47,6 +49,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "buttons/interface_label.hh"
+#include "buttons/interface_label_markdown.hh"
 #include "buttons/interface_textbox.hh"
 #include "interface_intern.hh"
 
@@ -82,8 +86,6 @@ struct ButtonItem;
   } \
   (void)0
 
-#define UI_ITEM_PROP_SEP_DIVIDE 0.4f
-
 /* uiLayoutRoot */
 
 struct LayoutRoot {
@@ -98,6 +100,10 @@ struct LayoutRoot {
   const uiStyle *style;
   Block *block;
   Layout *layout;
+  /** Direction of #ItemType::LayoutRoot layouts, used for resolving the height of multi-line
+   * labels. */
+  LayoutDirection direction;
+  bool use_dynamic_height;
 };
 
 /* Item */
@@ -186,6 +192,7 @@ struct LayoutInternal {
   static Layout *item_prop_split_layout_hack(Layout *layout_parent, Layout *layout_split);
   static void layout_offset_size_set(Layout *layout, int x, int y, int w, int h);
   static void layout_move(Layout *layout, int delta_xmin, int delta_xmax);
+  static void layout_translate_y(Layout *layout, int delta);
   static void layout_space_set(Layout *layout, int space);
   static int layout_space_get(Layout *layout);
 };
@@ -283,20 +290,25 @@ struct LayoutItemBx : public LayoutColumn {
 
   void estimate_impl() override;
   void resolve_impl() override;
+  void resolve_dynamic_height() override;
 };
 
 struct LayoutItemPanelHeader : public Layout {
   PointerRNA open_prop_owner;
   std::string open_prop_name;
+  int index = 0;
   LayoutItemPanelHeader() : Layout(ItemType::LayoutPanelHeader, nullptr) {}
 
   void estimate_impl() override;
   void resolve_impl() override;
+  void resolve_dynamic_height() override;
 };
 
 struct LayoutItemPanelBody : public LayoutColumn {
+  int index = 0;
   LayoutItemPanelBody() : LayoutColumn(ItemType::LayoutPanelBody, nullptr) {}
   void resolve_impl() override;
+  void resolve_dynamic_height() override;
 };
 
 struct LayoutItemSplit : public LayoutRow {
@@ -308,6 +320,8 @@ struct LayoutItemSplit : public LayoutRow {
 };
 
 /** \} */
+
+static void item_disabled(Layout *layout, const char *name);
 
 /* -------------------------------------------------------------------- */
 /** \name Item
@@ -524,6 +538,31 @@ void LayoutInternal::layout_offset_size_set(Layout *layout, int x, int y, int w,
   layout->h_ = h;
 }
 
+void LayoutInternal::layout_translate_y(Layout *layout, int delta)
+{
+  layout->y_ += delta;
+}
+
+static void item_translate_y(Item *item, const int delta)
+{
+  if (delta == 0) {
+    /* Early return for recursive calls. */
+    return;
+  }
+  if (item->type() == ItemType::Button) {
+    const auto *bitem = static_cast<const ButtonItem *>(item);
+    bitem->but->rect.ymin += delta;
+    bitem->but->rect.ymax += delta;
+  }
+  else {
+    auto *layout = static_cast<Layout *>(item);
+    LayoutInternal::layout_translate_y(layout, delta);
+    for (Item *sub : layout->items()) {
+      item_translate_y(sub, delta);
+    }
+  }
+}
+
 static void item_move(Item *item, const int delta_xmin, const int delta_xmax)
 {
   if (item->type() == ItemType::Button) {
@@ -568,8 +607,8 @@ int LayoutInternal::layout_space_get(Layout *layout)
 LayoutDirection Layout::local_direction() const
 {
   switch (this->type()) {
-    case ItemType::LayoutRow:
     case ItemType::LayoutRoot:
+    case ItemType::LayoutRow:
     case ItemType::LayoutOverlap:
     case ItemType::LayoutPanelHeader:
     case ItemType::LayoutGridFlow:
@@ -966,6 +1005,10 @@ static void item_enum_expand_exec(Layout *layout,
     block_layout_set_current(block, item_local_sublayout(layout, layout, true));
   }
 
+  if (!item_array->identifier) {
+    item_disabled(layout, IFACE_("Empty list"));
+  }
+
   for (const EnumPropertyItem *item = item_array; item->identifier; item++) {
     const bool is_first = item == item_array;
 
@@ -1189,18 +1232,20 @@ static Button *item_with_label(Layout *layout,
       }
     }
 
-    /* #BUTTONS_OT_file_browse calls #context_active_but_prop_get_filebrowser. */
-    uiDefIconButO(block,
-                  ButtonType::But,
-                  subtype == PROP_DIRPATH ? "BUTTONS_OT_directory_browse" :
-                                            "BUTTONS_OT_file_browse",
-                  wm::OpCallContext::InvokeDefault,
-                  RNA_property_editable(ptr, prop) ? ICON_FILEBROWSER : ICON_FOLDER_REDIRECT,
-                  x,
-                  y,
-                  UI_UNIT_X,
-                  h,
-                  std::nullopt);
+    if ((flag & ITEM_R_PATH_NO_OPEN_BUTTON) == 0) {
+      /* #BUTTONS_OT_file_browse calls #context_active_but_prop_get_filebrowser. */
+      uiDefIconButO(block,
+                    ButtonType::But,
+                    subtype == PROP_DIRPATH ? "BUTTONS_OT_directory_browse" :
+                                              "BUTTONS_OT_file_browse",
+                    wm::OpCallContext::InvokeDefault,
+                    RNA_property_editable(ptr, prop) ? ICON_FILEBROWSER : ICON_FOLDER_REDIRECT,
+                    x,
+                    y,
+                    UI_UNIT_X,
+                    h,
+                    std::nullopt);
+    }
   }
   else if (flag & ITEM_R_EVENT) {
     but = uiDefButR_prop(block,
@@ -1305,7 +1350,7 @@ void context_active_but_prop_get_filebrowser(const bContext *C,
 
   for (Block &block : region->runtime->uiblocks) {
     for (Button &but : block.buttons()) {
-      if (but.rnapoin.data) {
+      if (but.rnapoin) {
         if (RNA_property_type(but.rnaprop) == PROP_STRING) {
           prevbut = &but;
         }
@@ -2139,7 +2184,7 @@ void Layout::prop(PointerRNA *ptr,
     }
     else {
       Layout *layout_split =
-          &(layout_row ? layout_row : layout)->split(UI_ITEM_PROP_SEP_DIVIDE, true);
+          &(layout_row ? layout_row : layout)->split(Layout::PROPERTY_SPLIT_FACTOR, true);
       bool label_added = false;
       Layout *layout_sub = &layout_split->column(true);
       layout_sub->space_ = 0;
@@ -2366,7 +2411,10 @@ void Layout::prop(PointerRNA *ptr,
       button_placeholder_set(but, *placeholder);
     }
     if (ELEM(but->type, ButtonType::Text) && (flag & ITEM_R_TEXT_BUT_FORCE_SEMI_MODAL_ACTIVE)) {
-      button_flag2_enable(but, BUT2_FORCE_SEMI_MODAL_ACTIVE);
+      button_flag_enable(but, BUT_FORCE_SEMI_MODAL_ACTIVE);
+    }
+    if (ELEM(but->type, ButtonType::Text) && (flag & ITEM_R_TEXT_BUT_LABEL_STYLE)) {
+      static_cast<ButtonText *>(but)->use_label_style = true;
     }
   }
 
@@ -2540,7 +2588,7 @@ void Layout::prop_enum(PointerRNA *ptr,
                        const std::optional<StringRefNull> name,
                        int icon)
 {
-  if (UNLIKELY(RNA_property_type(prop) != PROP_ENUM)) {
+  if (RNA_property_type(prop) != PROP_ENUM) [[unlikely]] {
     const StringRefNull propname = RNA_property_identifier(prop);
     item_disabled(this, propname.c_str());
     RNA_warning_bare("UILayout.prop_enum(): not an enum property: %s.%s",
@@ -2592,7 +2640,7 @@ void Layout::prop_enum(PointerRNA *ptr,
                        int icon)
 {
   PropertyRNA *prop = RNA_struct_find_property(ptr, propname.c_str());
-  if (UNLIKELY(prop == nullptr)) {
+  if (prop == nullptr) [[unlikely]] {
     item_disabled(this, propname.c_str());
     RNA_warning_bare("UILayout.prop_enum(): enum property not found: %s.%s",
                      RNA_struct_identifier(ptr->type),
@@ -2742,7 +2790,7 @@ void button_configure_search(Button *but,
     }
     else {
       /* Rely on `has_search_fn`. */
-      coll_search->search_ptr = PointerRNA_NULL;
+      coll_search->search_ptr = {};
       coll_search->search_prop = nullptr;
       coll_search->item_search_prop = nullptr;
     }
@@ -2783,6 +2831,7 @@ void button_configure_search(Button *but,
 void Layout::textbox(const bContext *C,
                      PointerRNA *ptr,
                      StringRefNull propname,
+                     std::optional<StringRefNull> name_opt,
                      std::optional<StringRefNull> placeholder,
                      const int initial_visible_lines)
 {
@@ -2790,15 +2839,15 @@ void Layout::textbox(const bContext *C,
       CTX_wm_region(C),
       fmt::format("{}.{}", RNA_struct_identifier(ptr->type), propname),
       initial_visible_lines);
-  this->textbox_with_state(ptr, propname, textbox_state, placeholder);
+  this->textbox_with_state(ptr, propname, textbox_state, name_opt, placeholder);
 }
 
 void Layout::textbox_with_state(PointerRNA *ptr,
                                 StringRefNull propname,
                                 TextboxState *textbox_state,
+                                std::optional<StringRefNull> name_opt,
                                 std::optional<StringRefNull> placeholder)
 {
-
   Block *block = this->block();
   PropertyRNA *prop = RNA_struct_find_property_check(*ptr, propname.c_str(), PROP_STRING);
 
@@ -2811,40 +2860,20 @@ void Layout::textbox_with_state(PointerRNA *ptr,
     return;
   }
 
-  this->row(true).alignment_set(LayoutAlign::Expand);
+  StringRefNull name = name_opt.value_or(RNA_property_ui_name(prop));
 
-  const float line_heigth = fontstyle_height_max(UI_FSTYLE_WIDGET);
-
-  /** Ensure minimum value is set. */
-  textbox_state->visible_lines = std::max(textbox_state->visible_lines,
-                                          textbox_minimum_visible_lines);
+  if (!name.is_empty()) {
+    uiItemL_respect_property_split(this, name, ICON_NONE);
+  }
+  else {
+    this->row(true).alignment_set(LayoutAlign::Expand);
+  }
 
   int w, h;
   item_rna_size(block->curlayout, "", ICON_NONE, ptr, prop, -1, false, false, &w, &h);
-  Button *but = uiDefButR_prop(
-      block,
-      ButtonType::TextBox,
-      RNA_property_ui_name(prop),
-      0,
-      0,
-      w,
-      std::max<int>(UI_UNIT_Y,
-                    std::round(line_heigth * textbox_state->visible_lines) +
-                        (textbox_vertical_padding() * 2.0f)),
-      ptr,
-      prop,
-      0,
-      0,
-      0,
-      std::nullopt);
-  ButtonTextBox *textbox = static_cast<ButtonTextBox *>(but);
-  textbox->state = textbox_state;
+  Button *but = uiDefButTextBoxR(block, ptr, propname, textbox_state, 0, 0, w);
   if (placeholder) {
     button_placeholder_set(but, *placeholder);
-  }
-
-  if (RNA_property_flag(prop) & PROP_TEXTEDIT_UPDATE) {
-    button_flag_enable(but, BUT_TEXTEDIT_UPDATE);
   }
   block_layout_set_current(block, this);
 }
@@ -3273,7 +3302,15 @@ static Button *uiItem_simple(Layout *layout,
     icon = ICON_BLANK1;
   }
 
-  const int w = text_icon_width_ex(layout, name, icon, text_pad_none, UI_FSTYLE_WIDGET);
+  /* When drawing text over an emboss background (like for a normal push button), the widget needs
+   * to be slightly wider than just the text, since the text will get some horizontal padding
+   * inside the background box when drawing. Otherwise drawing would truncate the text to fit.
+   * This is not the most thorough check, but should work well enough and can be expanded as
+   * needed. */
+  const bool has_emboss = but_type != ButtonType::Label &&
+                          layout->emboss() == ui::EmbossType::Emboss;
+  const int w = text_icon_width_ex(
+      layout, name, icon, has_emboss ? text_pad_default : text_pad_none, UI_FSTYLE_WIDGET);
   Button *but;
   if (icon && !name.is_empty()) {
     but = uiDefIconTextBut(block, but_type, icon, name, 0, 0, w, UI_UNIT_Y, nullptr, tooltip);
@@ -3325,6 +3362,110 @@ Button *uiItemL_ex(
 void Layout::label(const StringRef name, int icon)
 {
   uiItem_simple(this, name, icon);
+}
+
+void Layout::label_multiline(StringRefNull text, int icon, FontStyleAlign align, int max_lines)
+{
+  block_layout_set_current(this->block(), this);
+  Button *button = nullptr;
+  /* Use a dummy string, let the layout system to be resolved and then do text wrap. */
+  const int width = text_icon_width_ex(
+      this, "non-empty text", icon, text_pad_none, UI_FSTYLE_WIDGET);
+  if (icon) {
+    button = uiDefIconTextBut(this->block(),
+                              ButtonType::Label,
+                              icon,
+                              text,
+                              0,
+                              0,
+                              width,
+                              UI_UNIT_Y,
+                              nullptr,
+                              std::nullopt);
+  }
+  else {
+    button = uiDefBut(this->block(),
+                      ButtonType::Label,
+                      text,
+                      0,
+                      0,
+                      width,
+                      UI_UNIT_Y,
+                      nullptr,
+                      0,
+                      0,
+                      std::nullopt);
+  }
+  this->root_->use_dynamic_height = true;
+  ButtonLabel *label = static_cast<ButtonLabel *>(button);
+  label->text_align = align;
+  label->label_type = ButtonLabelType::Multiline;
+  label->max_lines = max_lines;
+  if (this->red_alert()) {
+    button_flag_enable(button, BUT_REDALERT);
+  }
+}
+
+void Layout::label_markdown(const StringRef text)
+{
+  if (G.debug_value == 4002) {
+    label_markdown_dev_config(*this);
+  }
+
+  block_layout_set_current(this->block(), this);
+  /* Must be >0 for it to work on horizontal layouts. */
+  const int dummy_width = 1;
+  ButtonLabel *button = static_cast<ButtonLabel *>(uiDefBut(
+      this->block(), ButtonType::Label, text, 0, 0, dummy_width, 0, nullptr, 0, 0, std::nullopt));
+  this->root_->use_dynamic_height = true;
+  button->label_type = ButtonLabelType::Markdown;
+  button->emboss = EmbossType::None;
+  button->drawflag |= BUT_NO_TEXT_PADDING;
+  if (this->red_alert()) {
+    button_flag_enable(button, BUT_REDALERT);
+  }
+}
+
+static ButtonImage *image_find_in_old_block(Block *block, const StringRef key)
+{
+  /* Take over the image with the given key from the previous redraw. */
+  if (block->oldblock == nullptr) {
+    return nullptr;
+  }
+  for (const std::unique_ptr<Button> &old_but : block->oldblock->buttons_ptrs) {
+    if (old_but->type != ButtonType::Image) {
+      continue;
+    }
+    ButtonImage *old_image_but = static_cast<ButtonImage *>(old_but.get());
+    if (old_image_but->key != key) {
+      continue;
+    }
+    return old_image_but;
+  }
+  return nullptr;
+}
+
+bool Layout::image(const StringRef key, const FunctionRef<ImBuf *()> create_fn)
+{
+  BLI_assert(!key.is_empty());
+  Block *block = this->block();
+
+  ImBuf *ibuf = nullptr;
+  if (ButtonImage *old_but = image_find_in_old_block(block, key)) {
+    ibuf = reinterpret_cast<ImBuf *>(std::exchange(old_but->poin, nullptr));
+    old_but->key.clear();
+  }
+  else {
+    ibuf = create_fn();
+  }
+
+  block_layout_set_current(block, this);
+  /* Placeholder size, the height is resolved from the final width. */
+  ButtonImage *but = static_cast<ButtonImage *>(
+      uiDefButImage(block, ibuf, 0, 0, UI_UNIT_X, ibuf ? UI_UNIT_Y : 0, nullptr));
+  but->key = key;
+  this->root_->use_dynamic_height = true;
+  return ibuf != nullptr;
 }
 
 void Layout::link(const StringRef url, const StringRef name, int icon)
@@ -3410,7 +3551,7 @@ PropertySplitWrapper uiItemPropertySplitWrapperCreate(Layout *parent_layout)
   PropertySplitWrapper split_wrapper = {nullptr};
 
   Layout *layout_row = &parent_layout->row(true);
-  Layout *layout_split = &layout_row->split(UI_ITEM_PROP_SEP_DIVIDE, true);
+  Layout *layout_split = &layout_row->split(Layout::PROPERTY_SPLIT_FACTOR, true);
 
   split_wrapper.label_column = &layout_split->column(true);
   split_wrapper.label_column->alignment_set(LayoutAlign::Right);
@@ -3447,7 +3588,7 @@ void uiItemLDrag(Layout *layout, PointerRNA *ptr, StringRef name, int icon)
 {
   Button *but = uiItem_simple(layout, name, icon);
 
-  if (ptr && ptr->type) {
+  if (ptr && ptr->has_type()) {
     if (RNA_struct_is_ID(ptr->type)) {
       button_drag_set_id(but, ptr->owner_id);
     }
@@ -3684,7 +3825,7 @@ PointerRNA Layout::op_menu_enum(const bContext *C,
   /* Use the menu button as owner for the operator properties, which will then be passed to the
    * individual menu items. */
   but->opptr = MEM_new<PointerRNA>("uiButOpPtr", WM_operator_properties_create_ptr(ot));
-  BLI_assert(but->opptr->data == nullptr);
+  BLI_assert(!*but->opptr);
   WM_operator_properties_alloc(
       &but->opptr, reinterpret_cast<IDProperty **>(&but->opptr->data), ot->idname);
 
@@ -3712,7 +3853,7 @@ PointerRNA Layout::op_menu_enum(const bContext *C,
   if (!ot->srna) {
     item_disabled(this, opname.c_str());
     RNA_warning_bare("UILayout.operator_menu_enum(): operator missing srna '%s'", opname.c_str());
-    return PointerRNA_NULL;
+    return {};
   }
 
   return this->op_menu_enum(C, ot, propname, name, icon);
@@ -3790,6 +3931,9 @@ void LayoutInternal::layout_estimate(Layout *layout)
 void LayoutInternal::layout_resolve(Layout *layout)
 {
   layout->resolve();
+  if (layout->root_->use_dynamic_height) {
+    layout->resolve_dynamic_height();
+  }
 }
 
 /* single-row layout */
@@ -4248,8 +4392,18 @@ void LayoutItemPanelHeader::resolve_impl()
   const int2 size = item->size();
   y_ -= size.y;
   item_position(item, x_, y_, w_, size.y);
+  this->index = panel->runtime->layout_panels.headers.size();
   panel->runtime->layout_panels.headers.append(
       {float(y_), float(y_ + h_), open_prop_owner, open_prop_name});
+}
+
+void LayoutItemPanelHeader::resolve_dynamic_height()
+{
+  Layout::resolve_dynamic_height();
+  const Panel *panel = this->root_panel();
+  LayoutPanelHeader &header = panel->runtime->layout_panels.headers[this->index];
+  header.start_y = float(y_);
+  header.end_y = float(y_ + h_);
 }
 
 /* panel body layout */
@@ -4258,10 +4412,21 @@ void LayoutItemPanelBody::resolve_impl()
   Panel *panel = this->root_panel();
   LayoutColumn::resolve_impl();
   const int space = LayoutInternal::layout_space_get(this->parent_);
+  this->index = panel->runtime->layout_panels.bodies.size();
   panel->runtime->layout_panels.bodies.append({
       float(y_ - space),
       float(y_ + h_ + space),
   });
+}
+
+void LayoutItemPanelBody::resolve_dynamic_height()
+{
+  Layout::resolve_dynamic_height();
+  const Panel *panel = this->root_panel();
+  LayoutPanelBody &body = panel->runtime->layout_panels.bodies[this->index];
+  const int space = LayoutInternal::layout_space_get(this->parent_);
+  body.start_y = float(y_ - space);
+  body.end_y = float(y_ + h_ + space);
 }
 
 /* box layout */
@@ -4318,6 +4483,15 @@ void LayoutItemBx::resolve_impl()
   but->rect.xmin = x_;
   but->rect.ymin = y_;
   but->rect.xmax = x_ + w_;
+  but->rect.ymax = y_ + h_;
+}
+
+void LayoutItemBx::resolve_dynamic_height()
+{
+  Layout::resolve_dynamic_height();
+  /* roundbox around the sublayout */
+  Button *but = this->roundbox;
+  but->rect.ymin = y_;
   but->rect.ymax = y_ + h_;
 }
 
@@ -4998,10 +5172,27 @@ PanelLayout Layout::panel_prop(const bContext *C,
                                PointerRNA *open_prop_owner,
                                const StringRefNull open_prop_name)
 {
+  PropertyRNA *prop = RNA_struct_find_property(open_prop_owner, open_prop_name.c_str());
+
+  if (!prop) {
+    item_disabled(this, open_prop_name.c_str());
+    RNA_warning_bare("UILayout.panel_prop(): property not found: %s.%s",
+                     RNA_struct_identifier(open_prop_owner->type),
+                     open_prop_name.c_str());
+    return PanelLayout{};
+  }
+  if (RNA_property_type(prop) != PROP_BOOLEAN) {
+    item_disabled(this, open_prop_name.c_str());
+    RNA_warning_bare("UILayout.panel_prop(): %s.%s is not an boolean property",
+                     RNA_struct_identifier(open_prop_owner->type),
+                     open_prop_name.c_str());
+    return PanelLayout{};
+  }
+
   const ARegion *region = CTX_wm_region(C);
 
-  const bool is_real_open = RNA_boolean_get(open_prop_owner, open_prop_name.c_str());
-  const bool search_filter_active = region->flag & RGN_FLAG_SEARCH_FILTER_ACTIVE;
+  const bool is_real_open = RNA_property_boolean_get(open_prop_owner, prop);
+  const bool search_filter_active = region && (region->flag & RGN_FLAG_SEARCH_FILTER_ACTIVE);
   const bool is_open = is_real_open || search_filter_active;
 
   PanelLayout panel_layout{};
@@ -5070,6 +5261,9 @@ PanelLayout Layout::panel_prop_with_bool_header(const bContext *C,
                                                 const std::optional<StringRef> label)
 {
   PanelLayout panel_layout = this->panel_prop(C, open_prop_owner, open_prop_name);
+  if (!panel_layout.header) {
+    return panel_layout;
+  }
 
   Layout *panel_header = panel_layout.header;
   panel_header->flag_ &= ~(ItemInternalFlag::PropSep | ItemInternalFlag::PropDecorate |
@@ -5085,6 +5279,9 @@ Layout *Layout::panel_prop(const bContext *C,
                            const StringRef label)
 {
   PanelLayout panel_layout = this->panel_prop(C, open_prop_owner, open_prop_name);
+  if (!panel_layout.header) {
+    return nullptr;
+  }
   panel_layout.header->label(label, ICON_NONE);
 
   return panel_layout.body;
@@ -5307,9 +5504,9 @@ bool Layout::use_property_decorate() const
   return flag_is_set(flag_, ItemInternalFlag::PropDecorate);
 }
 
-void Layout::use_property_decorate_set(bool is_sep)
+void Layout::use_property_decorate_set(bool is_decorate)
 {
-  SET_FLAG_FROM_TEST(flag_, is_sep, ItemInternalFlag::PropDecorate);
+  SET_FLAG_FROM_TEST(flag_, is_decorate, ItemInternalFlag::PropDecorate);
 }
 
 Panel *Layout::root_panel() const
@@ -5585,7 +5782,7 @@ static void item_align(Layout *litem, short nr)
   }
 }
 
-static void item_flag(Layout *litem, int flag)
+static void item_flag(Layout *litem, int64_t flag)
 {
   for (Item *item : litem->items()) {
     if (item->type() == ItemType::Button) {
@@ -5629,6 +5826,117 @@ void Layout::resolve()
     }
     static_cast<Layout *>(subitem)->resolve();
   }
+}
+
+static void resolve_label_multiline(ButtonLabel *button)
+{
+  int icon_pad = 0;
+  if (button->flag & UI_HAS_ICON) {
+    icon_pad = UI_UNIT_X * (text_pad_none.icon + text_pad_none.text);
+  }
+  label_multiline_wrap_lines(button, icon_pad);
+  const float line_height = ui::fontstyle_height_max(UI_FSTYLE_WIDGET);
+  /* Top and bottom text padding. */
+  const float padding = std::max(UI_UNIT_Y - line_height, 0.0f);
+  int lines = button->wrap_cache->wrapped_lines.size();
+  if (button->max_lines > 0) {
+    lines = std::min(button->max_lines, lines);
+  }
+  const float height = padding + line_height * lines;
+  button->rect.ymin = button->rect.ymax - std::max<float>(UI_UNIT_Y, height);
+}
+
+/** Keep the image aspect ratio for the resolved button width. */
+static void resolve_image_height(Button *button)
+{
+  const ImBuf *ibuf = reinterpret_cast<const ImBuf *>(button->poin);
+  if (ibuf == nullptr || ibuf->x <= 0 || ibuf->y <= 0) {
+    return;
+  }
+  const float height = BLI_rctf_size_x(&button->rect) * ibuf->y / ibuf->x;
+  button->rect.ymin = button->rect.ymax - std::max(height, 1.0f);
+}
+
+void Layout::resolve_dynamic_height()
+{
+  if (this->items().is_empty()) {
+    return;
+  }
+  /* Extra vertical offset. */
+  int y_offs = 0;
+
+  /* For simplicity a column is a grid of n rows and 1 columns, and a row is a grid of 1 rows and n
+   * columns. */
+  const LayoutDirection direction = this->type() == ItemType::LayoutRoot ?
+                                        this->root_->direction :
+                                    this->type() == ItemType::LayoutSplit ?
+                                        LayoutDirection::Horizontal :
+                                        this->local_direction();
+  int rows = direction == LayoutDirection::Vertical ? this->items().size() : 1;
+  int cols = direction == LayoutDirection::Horizontal ? this->items().size() : 1;
+  bool row_major = direction == LayoutDirection::Vertical;
+
+  if (const LayoutItemGridFlow *flow = this->type() == ItemType::LayoutGridFlow ?
+                                           static_cast<const LayoutItemGridFlow *>(this) :
+                                           nullptr)
+  {
+    row_major = flow->row_major;
+    rows = flow->tot_rows;
+    cols = flow->tot_columns;
+  }
+  if (const LayoutItemFlow *flow = this->type() == ItemType::LayoutColumnFlow ?
+                                       static_cast<const LayoutItemFlow *>(this) :
+                                       nullptr)
+  {
+    row_major = false;
+    cols = flow->totcol;
+    rows = std::ceil(float(flow->items().size() / float(std::max(cols, 1))));
+  }
+  /* Dynamic height is resolved row by row, and each row pushes down following rows. */
+  for (const int row : IndexRange(rows)) {
+    /* Maximum sub-item height in the row before resolving its dynamic height. */
+    int max_row_subitem_height = 0;
+    /* Maximum sub-item height in the row after resolving its dynamic height. */
+    int max_row_subitem_height_new = 0;
+
+    for (const int col : IndexRange(cols)) {
+      const int i = (row_major ? (row * cols + col) : (col * rows + row));
+      if (i >= this->items_.size()) {
+        continue;
+      }
+      Item *subitem = this->items_[i];
+      const int2 size = subitem->size();
+      max_row_subitem_height = std::max(max_row_subitem_height, size.y);
+
+      /* Apply accumulated offset from previous rows. */
+      item_translate_y(subitem, -y_offs);
+
+      /* Resolve sub-item dynamic height. */
+      if (subitem->type() == ItemType::Button) {
+        const auto *sub_bitem = static_cast<const ButtonItem *>(subitem);
+        if (button_label_is_multiline(sub_bitem->but)) {
+          resolve_label_multiline(static_cast<ButtonLabel *>(sub_bitem->but));
+        }
+        else if (button_label_is_markdown(sub_bitem->but)) {
+          label_markdown_resolve(static_cast<ButtonLabel *>(sub_bitem->but));
+        }
+        else if (sub_bitem->but->type == ButtonType::Image) {
+          resolve_image_height(sub_bitem->but);
+        }
+      }
+      else {
+        static_cast<Layout *>(subitem)->resolve_dynamic_height();
+      }
+      const int2 new_size = subitem->size();
+      max_row_subitem_height_new = std::max(max_row_subitem_height_new, new_size.y);
+    }
+    /* Apply this row's extra height as offset to following rows. */
+    y_offs += std::max(max_row_subitem_height_new - max_row_subitem_height, 0);
+  }
+
+  /* Apply change in height to this layout. */
+  this->y_ -= y_offs;
+  this->h_ += y_offs;
 }
 
 static int2 layout_end(Layout *layout)
@@ -5686,6 +5994,7 @@ Layout &block_layout(Block *block,
   root->block = block;
   root->padding = padding;
   root->opcontext = wm::OpCallContext::InvokeRegionWin;
+  root->direction = dir;
   const char *func = __func__;
   Layout *layout = [&]() -> Layout * {
     switch (type) {
@@ -5886,6 +6195,10 @@ int2 block_layout_resolve(Block *block)
   }
 
   block->layouts.clear_no_delete();
+
+  /* Link hit-targets need final button positions from layout resolve. */
+  label_markdown_create_link_buttons(block);
+
   return block_size;
 }
 bool block_layout_needs_resolving(const Block *block)
@@ -6012,7 +6325,7 @@ void Layout::context_set_from_but(const Button *but)
     this->context_ptr_set("button_operator", but->opptr);
   }
 
-  if (but->rnapoin.data && but->rnaprop) {
+  if (but->rnapoin && but->rnaprop) {
     /* TODO: index could be supported as well */
     PointerRNA ptr_prop = RNA_pointer_create_discrete(nullptr, RNA_Property, but->rnaprop);
     this->context_ptr_set("button_prop", &ptr_prop);

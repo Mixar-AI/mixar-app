@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "एजेंट बबल खिड़की खोलने में विफल"
+
 msgid "Capture Viewport"
 msgstr "व्यूपोर्ट कैप्चर करें"
 
@@ -3104,6 +3107,9 @@ msgstr "इसे लागू करने के लिए Mixar पुनः 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — अपने ब्राउज़र से अपडेट करने के लिए “डाउनलोड करें” का उपयोग करें।"
 
+msgid "Retry"
+msgstr "पुनः प्रयास करें"
+
 msgid "Restart & Update"
 msgstr "पुनः आरंभ और अपडेट"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "लॉगआउट"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "पुनः प्रयास करें"
-
 msgid "Choose Export Location"
 msgstr "निर्यात स्थान चुनें"
 
@@ -26532,9 +26538,6 @@ msgstr "स्वचालित रूप: एजेंट आपसे पू�
 msgid "Agent Bubble"
 msgstr "एजेंट बबल"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "एजेंट बबल खिड़की खोलने में विफल"
-
 msgid "Agent Bubble Status"
 msgstr "एजेंट बबल स्थिति"
 
@@ -26984,6 +26987,9 @@ msgstr "मूडबोर्ड अनुलग्नक अनुप्रा�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "नए संलग्न संदर्भ को Mixie चैट में उड़ते हुए दिखाता है"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "देरी"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "कार्ड बनाने के लिए सक्रिय क्षेत्र का ड्रॉ कॉलबैक आवश्यक है"
 
@@ -29735,18 +29738,6 @@ msgstr "ड्रॉप पथ गैर-खाली स्ट्रिंग �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ड्रॉप पथ एक गैर-खाली JSON सरणी होने चाहिए"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "वैश्विक क्षेत्र"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "खिड़की-वैश्विक क्षेत्र (शीर्ष पट्टी, स्थिति पट्टी)। Mixar विस्तार — इसलिए उपलब्ध कि ऑनबोर्डिंग फिर से बनाने के लिए शीर्ष पट्टी तक पहुँच सके।"
 
 msgid "QA UI Dump"
 msgstr "QA UI डंप"

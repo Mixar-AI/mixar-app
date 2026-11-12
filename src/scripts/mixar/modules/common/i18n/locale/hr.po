@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora oblačića agenta nije uspjelo"
+
 msgid "Capture Viewport"
 msgstr "Snimi prozor pogleda"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar će se ponovno pokrenuti da ga primijeni."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — upotrijebite Preuzmi za ažuriranje putem preglednika."
 
+msgid "Retry"
+msgstr "Pokušaj ponovno"
+
 msgid "Restart & Update"
 msgstr "Ponovno pokreni i ažuriraj"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Odjava"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Pokušaj ponovno"
-
 msgid "Choose Export Location"
 msgstr "Odaberite mjesto izvoza"
 
@@ -26532,9 +26538,6 @@ msgstr "Automatski način: agent sam odlučuje o otvorenim izborima umjesto da V
 msgid "Agent Bubble"
 msgstr "Oblačić agenta"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora oblačića agenta nije uspjelo"
-
 msgid "Agent Bubble Status"
 msgstr "Status oblačića agenta"
 
@@ -26984,6 +26987,9 @@ msgstr "Animiraj privitak Moodboarda"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Prikazuje novopriključenu referencu kako ulijeće u Mixiejev razgovor"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Odgoda"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Crtanje kartice zahtijeva povratni poziv crtanja aktivnog područja"
 
@@ -29735,18 +29738,6 @@ msgstr "Putanje ispuštanja moraju biti neprazni nizovi"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje ispuštanja moraju biti neprazno JSON polje"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globalna područja"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Područja globalna za prozor (gornja traka, traka stanja). Mixarovo proširenje — izloženo da uvod može adresirati gornju traku za ponovno crtanje."
 
 msgid "QA UI Dump"
 msgstr "QA ispis sučelja"

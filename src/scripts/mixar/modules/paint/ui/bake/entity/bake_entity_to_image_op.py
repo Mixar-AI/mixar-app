@@ -8,6 +8,7 @@
 import time
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -82,7 +83,7 @@ class MBakeEntityToImage(bpy.types.Operator, BaseBakeOperator):
     name: StringProperty(default="")
 
     uv_map: StringProperty(default="", update=update_bake_to_layer_uv_map)
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     hdr: BoolProperty(name="32 bit Float", default=False)
 

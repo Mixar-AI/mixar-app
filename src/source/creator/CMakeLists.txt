@@ -4,6 +4,11 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 set(INC
+  ../blender/compositor
+  ../blender/compositor/algorithms
+  ../blender/compositor/cached_resources
+  ../blender/compositor/derived_resources
+  ../blender/compositor/utilities
   ../blender/editors/include
   ../blender/io/usd
   ../blender/makesrna
@@ -14,6 +19,7 @@ set(LIB
   PRIVATE bf::blenlib
   PRIVATE bf::blenloader
   PRIVATE bf::bmesh
+  bf_compositor
   PRIVATE bf::depsgraph
   PRIVATE bf::dna
   PRIVATE bf::functions
@@ -604,19 +610,69 @@ if(WITH_PYTHON)
   unset(FREESTYLE_EXCLUDE_CONDITIONAL)
   unset(MIXAR_TOUR_PLACEHOLDER_EXCLUDE)
 
+  # The glTF add-on's draco & meshopt bridge libraries, loaded at run-time by `io_scene_gltf2`.
+  # Install beside their bundled dependencies, found via each target's RPATH (UNIX)
+  # or the `blender.shared` side-by-side assembly (WIN32).
+  # Non-portable installs (UNIX system installs) place them beside the add-on.
+  # A Python module has no system libraries path, so it bundles them like a portable install,
+  # matching the lookup in the add-on's `library.py`.
+  if(WITH_INSTALL_PORTABLE OR WITH_PYTHON_MODULE)
+    set(GLTF_BRIDGE_INSTALL_DIR "${TARGETDIR_LIB}")
+  else()
+    set(GLTF_BRIDGE_INSTALL_DIR "${TARGETDIR_VER_LIBS}/scripts/addons_core/io_scene_gltf2")
+  endif()
+
+  # Unlike `install(TARGETS)`, `install(PROGRAMS)` copies the file without rewriting its RPATH,
+  # so these must be linked with the install RPATH, see `BUILD_WITH_INSTALL_RPATH` below.
+  if(PLATFORM_BUNDLED_LIBRARIES)
+    if(APPLE)
+      set(GLTF_BRIDGE_RPATH "@loader_path")
+    elseif(UNIX)
+      set(GLTF_BRIDGE_RPATH "$ORIGIN")
+    endif()
+  endif()
+
   if(WITH_DRACO)
+    if(GLTF_BRIDGE_RPATH)
+      set_target_properties(bf_intern_draco_bridge PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "${GLTF_BRIDGE_RPATH}"
+      )
+    endif()
     install(
       PROGRAMS $<TARGET_FILE:bf_intern_draco_bridge>
-      DESTINATION ${TARGETDIR_VER_LIBS}/scripts/addons_core/io_scene_gltf2
+      DESTINATION ${GLTF_BRIDGE_INSTALL_DIR}
     )
   endif()
 
   if(WITH_MESHOPTIMIZER)
+    if(GLTF_BRIDGE_RPATH)
+      set_target_properties(bf_intern_meshopt_bridge PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "${GLTF_BRIDGE_RPATH}"
+      )
+    endif()
     install(
       PROGRAMS $<TARGET_FILE:bf_intern_meshopt_bridge>
-      DESTINATION ${TARGETDIR_VER_LIBS}/scripts/addons_core/io_scene_gltf2
+      DESTINATION ${GLTF_BRIDGE_INSTALL_DIR}
     )
   endif()
+
+  if(WITH_KTX)
+    if(GLTF_BRIDGE_RPATH)
+      set_target_properties(bf_intern_ktx_bridge PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "${GLTF_BRIDGE_RPATH}"
+      )
+    endif()
+    install(
+      PROGRAMS $<TARGET_FILE:bf_intern_ktx_bridge>
+      DESTINATION ${GLTF_BRIDGE_INSTALL_DIR}
+    )
+  endif()
+
+  unset(GLTF_BRIDGE_INSTALL_DIR)
+  unset(GLTF_BRIDGE_RPATH)
 
 endif()
 
@@ -653,7 +709,7 @@ if(WITH_INTERNATIONAL)
   )
 
   foreach(_mo_file ${_all_mo_files})
-    get_filename_component(_locale_name ${_mo_file} NAME_WE)
+    cmake_path(GET _mo_file STEM _locale_name)
     install(
       FILES ${_mo_file}
       DESTINATION ${_locale_target_dir}/${_locale_name}/LC_MESSAGES
@@ -687,6 +743,34 @@ if(WIN32)
       DIRECTORY ${LIBDIR}/osl/lib/python${PYTHON_VERSION}_debug/site-packages/oslquery
       DESTINATION ${TARGETDIR_SITE_PACKAGES}
       CONFIGURATIONS Debug
+    )
+  endif()
+  if(EXISTS ${LIBDIR}/jolt/bin/jolt.dll) # 5.3+
+    windows_install_shared_manifest(
+      FILES
+        ${LIBDIR}/jolt/bin/jolt.dll
+      RELEASE
+    )
+    windows_install_shared_manifest(
+      FILES
+        ${LIBDIR}/jolt/bin/jolt_d.dll
+      DEBUG
+    )
+  endif()
+  if(EXISTS ${LIBDIR}/opentimelineio/lib/opentime.dll) # 5.3+
+    windows_install_shared_manifest(
+      FILES
+        ${LIBDIR}/opentimelineio/lib/opentime.dll
+        ${LIBDIR}/opentimelineio/lib/opentimelineio.dll
+      RELEASE
+    )
+  endif()
+  if(EXISTS ${LIBDIR}/opentimelineio/lib/opentime_d.dll) # 5.3+
+    windows_install_shared_manifest(
+      FILES
+        ${LIBDIR}/opentimelineio/lib/opentime_d.dll
+        ${LIBDIR}/opentimelineio/lib/opentimelineio_d.dll
+      DEBUG
     )
   endif()
   if(EXISTS ${LIBDIR}/ceres/bin/ceres.dll) # 5.1+
@@ -804,7 +888,7 @@ elseif("${CMAKE_GENERATOR}" MATCHES "Ninja")
 endif()
 if(NOT ("${_install_cmd}" STREQUAL ""))
   # Message to display after building.
-  get_filename_component(_install_dst ${TARGETDIR_VER} ABSOLUTE BASE_DIR ${CMAKE_INSTALL_PREFIX})
+  cmake_path(ABSOLUTE_PATH TARGETDIR_VER BASE_DIRECTORY ${CMAKE_INSTALL_PREFIX} NORMALIZE OUTPUT_VARIABLE _install_dst)
   add_custom_command(
     TARGET mixar POST_BUILD
     COMMAND
@@ -973,7 +1057,7 @@ if(UNIX AND NOT APPLE)
       # determine this from Python's libraries path.
       # Ugh, its possible `lib64` is just a symbolic-link to `lib`
       # which causes incorrect use of `lib64`.
-      get_filename_component(_pypath_real ${PYTHON_LIBPATH} REALPATH)
+      file(REAL_PATH ${PYTHON_LIBPATH} _pypath_real)
       if(${_pypath_real} MATCHES "lib64$")
         set(_target_LIB "lib64")
       else()
@@ -1002,7 +1086,7 @@ if(UNIX AND NOT APPLE)
 
       # Needed for `distutils/pip`.
       # Get the last part of the include dir, will be `python{version}{abiflag}`.
-      get_filename_component(_py_inc_suffix ${PYTHON_INCLUDE_DIR} NAME)
+      cmake_path(GET PYTHON_INCLUDE_DIR FILENAME _py_inc_suffix)
       install(
         FILES ${PYTHON_INCLUDE_DIR}/pyconfig.h
         DESTINATION ${TARGETDIR_VER}/python/include/${_py_inc_suffix}
@@ -1019,16 +1103,16 @@ if(UNIX AND NOT APPLE)
         install(
           DIRECTORY ${PYTHON_NUMPY_PATH}/numpy
           DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}/python${PYTHON_VERSION}/${_suffix}
-          PATTERN "__pycache__" EXCLUDE           # * any cache *
-          PATTERN "*.pyc" EXCLUDE                 # * any cache *
-          PATTERN "*.pyo" EXCLUDE                 # * any cache *
-          PATTERN "oldnumeric" EXCLUDE            # ./oldnumeric
-          PATTERN "doc" EXCLUDE                   # ./doc
-          PATTERN "tests" EXCLUDE                 # ./tests
-          PATTERN "f2py" EXCLUDE                  # ./f2py - fortran/python interface code, not for blender.
-          PATTERN "include" EXCLUDE               # include dirs all over, we won't use NumPy/CAPI
-          PATTERN "*.h" EXCLUDE                   # some includes are not in include dirs
-          PATTERN "*.a" EXCLUDE                   # ./core/lib/libnpymath.a - for linking, we don't need.
+          PATTERN "__pycache__" EXCLUDE   # * any cache *
+          PATTERN "*.pyc" EXCLUDE         # * any cache *
+          PATTERN "*.pyo" EXCLUDE         # * any cache *
+          PATTERN "oldnumeric" EXCLUDE    # ./oldnumeric
+          PATTERN "doc" EXCLUDE           # ./doc
+          PATTERN "tests" EXCLUDE         # ./tests
+          PATTERN "f2py" EXCLUDE          # ./f2py - fortran/python interface code, not for blender.
+          PATTERN "include" EXCLUDE       # include dirs all over, we won't use NumPy/CAPI
+          PATTERN "*.h" EXCLUDE           # some includes are not in include dirs
+          PATTERN "*.a" EXCLUDE           # ./core/lib/libnpymath.a - for linking, we don't need.
         )
         install(
           DIRECTORY ${PYTHON_NUMPY_PATH}/Cython
@@ -1126,7 +1210,7 @@ if(UNIX AND NOT APPLE)
       # The script uses the version of Python installed with Blender,
       # so it must only be inside installed if `WITH_PYTHON AND WITH_PYTHON_INSTALL`
       # are active.
-      get_filename_component(PYTHON_EXECUTABLE_NAME_ONLY ${PYTHON_EXECUTABLE} NAME)
+      cmake_path(GET PYTHON_EXECUTABLE FILENAME PYTHON_EXECUTABLE_NAME_ONLY)
       configure_file(
         ${CMAKE_SOURCE_DIR}/release/freedesktop/scripts/blender-system-info.sh.in
         ${CMAKE_BINARY_DIR}/release/freedesktop/scripts/blender-system-info.sh
@@ -1279,8 +1363,12 @@ elseif(WIN32)
       if(PDBCOPY_EXECUTABLE)
         add_custom_command(
           TARGET blender POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/blender_public.pdb
-          COMMAND ${PDBCOPY_EXECUTABLE} $<TARGET_PDB_FILE:blender> ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/blender_public.pdb -p
+          COMMAND
+            ${CMAKE_COMMAND} -E
+            rm -f ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/blender_public.pdb
+          COMMAND
+            ${PDBCOPY_EXECUTABLE} $<TARGET_PDB_FILE:blender>
+            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/blender_public.pdb -p
           COMMENT "Stripping PDB file..."
         )
       else()
@@ -1478,29 +1566,59 @@ elseif(WIN32)
           PATTERN "*.pyo" EXCLUDE                 # * any cache *
         )
       endif()
+      if(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+        set(_openexr_arch arm64)
+      else()
+        set(_openexr_arch amd64)
+      endif()
+      install(
+        FILES
+          ${LIBDIR}/openexr/python/openEXR/OpenEXR.cp${_PYTHON_VERSION_NO_DOTS}-win_${_openexr_arch}.pyd
+          ${LIBDIR}/openexr/python/openEXR/Imath.py
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}
+        CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+      )
+      install(
+        FILES
+          ${LIBDIR}/openexr/python/openEXR/OpenEXR_d.cp${_PYTHON_VERSION_NO_DOTS}-win_${_openexr_arch}.pyd
+          ${LIBDIR}/openexr/python/openEXR/Imath.py
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}
+        CONFIGURATIONS Debug
+      )
+      install(
+        DIRECTORY ${LIBDIR}/opentimelineio/python/opentimelineio/
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}/opentimelineio/
+        CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+        PATTERN "__pycache__" EXCLUDE           # * any cache *
+        PATTERN "*.pyc" EXCLUDE                 # * any cache *
+        PATTERN "*.pyo" EXCLUDE                 # * any cache *
+        PATTERN "*_d.cp*" EXCLUDE                # * do not install debug libs *
+      )
+      install(
+        DIRECTORY ${LIBDIR}/opentimelineio/python/opentimelineio/
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}/opentimelineio/
+        CONFIGURATIONS Debug
+        PATTERN "__pycache__" EXCLUDE           # * any cache *
+        PATTERN "*.pyc" EXCLUDE                 # * any cache *
+        PATTERN "*.pyo" EXCLUDE                 # * any cache *
+      )
+      install(
+        DIRECTORY ${LIBDIR}/usd/lib/site-packages/
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}/
+        CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+        PATTERN "__pycache__" EXCLUDE           # * any cache *
+        PATTERN "*.pyc" EXCLUDE                 # * any cache *
+        PATTERN "*.pyo" EXCLUDE                 # * any cache *
+      )
 
-      # This will not exist for 3.4 and earlier `./lib` directory
-      # to ease the transition, support both 3.4 and 3.5 `./lib` directories.
-      if(EXISTS ${USD_LIBRARY_DIR}/python/)
-        install(
-          DIRECTORY ${USD_LIBRARY_DIR}/python/
-          DESTINATION ${TARGETDIR_SITE_PACKAGES}
-          CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
-          PATTERN "__pycache__" EXCLUDE           # * any cache *
-          PATTERN "*.pyc" EXCLUDE                 # * any cache *
-          PATTERN "*.pyo" EXCLUDE                 # * any cache *
-        )
-      endif()
-      if(EXISTS ${USD_LIBRARY_DIR}/debug/python/)
-        install(
-          DIRECTORY ${USD_LIBRARY_DIR}/debug/python/
-          DESTINATION ${TARGETDIR_SITE_PACKAGES}
-          CONFIGURATIONS Debug
-          PATTERN "__pycache__" EXCLUDE           # * any cache *
-          PATTERN "*.pyc" EXCLUDE                 # * any cache *
-          PATTERN "*.pyo" EXCLUDE                 # * any cache *
-        )
-      endif()
+      install(
+        DIRECTORY ${LIBDIR}/usd/lib/debug/site-packages/
+        DESTINATION ${TARGETDIR_SITE_PACKAGES}/
+        CONFIGURATIONS Debug
+        PATTERN "__pycache__" EXCLUDE           # * any cache *
+        PATTERN "*.pyc" EXCLUDE                 # * any cache *
+        PATTERN "*.pyo" EXCLUDE                 # * any cache *
+      )
 
       # This will not exist for 3.4 and earlier `./lib` directories
       # to ease the transition, support both 3.4 and 3.5 `./lib` directories.
@@ -1565,6 +1683,28 @@ elseif(WIN32)
       if(EXISTS ${LIBDIR}/materialx/python/Debug/MaterialX)
         install(
           DIRECTORY ${LIBDIR}/materialx/python/Debug/MaterialX
+          DESTINATION ${TARGETDIR_SITE_PACKAGES}/
+          CONFIGURATIONS Debug
+          PATTERN "__pycache__" EXCLUDE           # * any cache *
+          PATTERN "*.pyc" EXCLUDE                 # * any cache *
+          PATTERN "*.pyo" EXCLUDE                 # * any cache *
+        )
+      endif()
+      # OpenEXR python bindings.
+      # Check they exist so building against non `LIBDIR` Python works as expected.
+      if(EXISTS ${LIBDIR}/openexr/python/Release/OpenEXR)
+        install(
+          DIRECTORY ${LIBDIR}/openexr/python/Release/OpenEXR
+          DESTINATION ${TARGETDIR_SITE_PACKAGES}/
+          CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+          PATTERN "__pycache__" EXCLUDE           # * any cache *
+          PATTERN "*.pyc" EXCLUDE                 # * any cache *
+          PATTERN "*.pyo" EXCLUDE                 # * any cache *
+        )
+      endif()
+      if(EXISTS ${LIBDIR}/openexr/python/Debug/OpenEXR)
+        install(
+          DIRECTORY ${LIBDIR}/openexr/python/Debug/OpenEXR
           DESTINATION ${TARGETDIR_SITE_PACKAGES}/
           CONFIGURATIONS Debug
           PATTERN "__pycache__" EXCLUDE           # * any cache *
@@ -1724,6 +1864,11 @@ elseif(WIN32)
   )
 
   windows_install_shared_manifest(
+    FILES ${LIBDIR}/ktx/bin/ktx.dll
+    ALL
+  )
+
+  windows_install_shared_manifest(
     FILES
       ${LIBDIR}/openal/lib/OpenAL32.dll
     ALL
@@ -1746,7 +1891,7 @@ elseif(WIN32)
 
 
   if(NOT WITH_PYTHON_MODULE)
-    get_filename_component(PYTHON_EXECUTABLE_NAME_ONLY ${PYTHON_EXECUTABLE} NAME)
+    cmake_path(GET PYTHON_EXECUTABLE FILENAME PYTHON_EXECUTABLE_NAME_ONLY)
     # Configure then generate file. Note that this copies the literal generator
     # for the Python executable name. So the file needs to be generated afterwards
     # to get the correct name.
@@ -1780,6 +1925,7 @@ elseif(WIN32)
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_debug_gpu_glitchworkaround.cmd
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_debug_log.cmd
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_factory_startup.cmd
+        ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_factory_startup_opengl.cmd
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_factory_startup_vulkan.cmd
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_startup_opengl.cmd
         ${CMAKE_SOURCE_DIR}/release/windows/batch/blender_startup_vulkan.cmd
@@ -1941,7 +2087,7 @@ elseif(APPLE)
 
     # Needed for `distutils/pip`.
     # Get the last part of the include dir, will be `python{version}{abiflag}`.
-    get_filename_component(_py_inc_suffix ${PYTHON_INCLUDE_DIR} NAME)
+    cmake_path(GET PYTHON_INCLUDE_DIR FILENAME _py_inc_suffix)
     install(
       FILES ${PYTHON_INCLUDE_DIR}/pyconfig.h
       DESTINATION ${TARGETDIR_VER}/python/include/${_py_inc_suffix}
@@ -1957,7 +2103,7 @@ elseif(APPLE)
   endif()
 
   if(NOT WITH_PYTHON_MODULE AND WITH_PYTHON AND WITH_PYTHON_INSTALL)
-    get_filename_component(PYTHON_EXECUTABLE_NAME_ONLY ${PYTHON_EXECUTABLE} NAME)
+    cmake_path(GET PYTHON_EXECUTABLE FILENAME PYTHON_EXECUTABLE_NAME_ONLY)
     configure_file(
       ${CMAKE_SOURCE_DIR}/release/darwin/scripts/blender-system-info.sh.in
       ${CMAKE_BINARY_DIR}/release/darwin/scripts/blender-system-info.sh
@@ -2004,9 +2150,13 @@ if(WITH_PYTHON_MODULE AND LIBDIR AND NOT WIN32)
       DESTINATION ${TARGETDIR_SITE_PACKAGES}
     )
     if(APPLE)
-      set(_openvdb_filename openvdb.cpython-${PYTHON_VERSION_NO_DOTS}-darwin.so)
+      set(_openvdb_filename
+        openvdb.cpython-${PYTHON_VERSION_NO_DOTS}-darwin.so
+      )
     else()
-      set(_openvdb_filename openvdb.cpython-${PYTHON_VERSION_NO_DOTS}-${CMAKE_SYSTEM_PROCESSOR}-linux-gnu.so)
+      set(_openvdb_filename
+        openvdb.cpython-${PYTHON_VERSION_NO_DOTS}-${CMAKE_SYSTEM_PROCESSOR}-linux-gnu.so
+      )
     endif()
     install(
       FILES ${LIBDIR}/python/lib/python${PYTHON_VERSION}/site-packages/${_openvdb_filename}
@@ -2060,12 +2210,9 @@ unset(TARGETDIR_TEXT)
 
 # Geometry icons.
 get_property(_icon_names GLOBAL PROPERTY ICON_GEOM_NAMES)
-set(_icon_files "")
-foreach(_f ${_icon_names})
-  list(APPEND _icon_files
-    "${CMAKE_SOURCE_DIR}/release/datafiles/icons/${_f}.dat"
-  )
-endforeach()
+set(_icon_files ${_icon_names})
+list(TRANSFORM _icon_files PREPEND "${CMAKE_SOURCE_DIR}/release/datafiles/icons/")
+list(TRANSFORM _icon_files APPEND ".dat")
 install(
   FILES ${_icon_files}
   DESTINATION ${TARGETDIR_VER}/datafiles/icons
@@ -2073,7 +2220,6 @@ install(
 
 unset(_icon_names)
 unset(_icon_files)
-unset(_f)
 
 
 # -----------------------------------------------------------------------------

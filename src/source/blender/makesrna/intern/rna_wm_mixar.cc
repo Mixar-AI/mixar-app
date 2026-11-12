@@ -8,13 +8,8 @@
  *
  * Mixar-specific extensions to the WindowManager RNA.
  *
- * Adds the ``Window.global_areas`` collection so Python can
- * iterate global areas (topbar, statusbar). Upstream Blender
- * intentionally hides these because they're "system" areas not
- * meant to be addressed by addons, but Mixar's onboarding tour
- * needs to tag the topbar's regions for redraw from a Python
- * timer so the highlight border appears on step entry instead of
- * on cursor hover.
+ * Blender 5.3 supplies Window.global_areas for onboarding redraws. This
+ * extension owns only the Mixar QA and local UI-control interfaces.
  *
  * Structure mirrors upstream rna_*.cc files: helper functions
  * inside ``#ifdef RNA_RUNTIME`` (compiled into Blender runtime via
@@ -48,7 +43,7 @@
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
 
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 
 #include "WM_mixar.hh"
 
@@ -99,12 +94,6 @@ static bool rna_Window_mixar_qa_double_click(wmWindow *win, ReportList *reports,
   wmEvent *event = WM_event_add_simulate(win, &press);
   event->val = KM_DBL_CLICK;
   return true;
-}
-
-static void rna_Window_global_areas_begin(CollectionPropertyIterator *iter, PointerRNA *ptr)
-{
-  wmWindow *win = (wmWindow *)ptr->data;
-  rna_iterator_listbase_begin(iter, ptr, &win->global_areas.areabase, nullptr);
 }
 
 /* QA widget-tree dump (see interface_qa_inspect.cc). RNA string reads call
@@ -285,7 +274,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
   if (brna == nullptr) {
     return;
   }
-  StructRNA *srna = brna->structs_map.lookup_default("Window", nullptr);
+  StructRNA *srna = brna->structs_map.lookup_default("Window"_ustr, nullptr);
   if (srna == nullptr) {
     /* Window struct must already be registered; runs after RNA_def_wm. */
     return;
@@ -294,22 +283,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
   RNA_def_mixar_ui_control(brna, srna);
   RNA_def_mixar_popup_query(brna, srna);
 
-  PropertyRNA *prop = RNA_def_property(srna, "global_areas", PROP_COLLECTION, PROP_NONE);
-  RNA_def_property_collection_funcs(prop,
-                                    "rna_Window_global_areas_begin",
-                                    "rna_iterator_listbase_next",
-                                    "rna_iterator_listbase_end",
-                                    "rna_iterator_listbase_get",
-                                    nullptr,
-                                    nullptr,
-                                    nullptr,
-                                    nullptr);
-  RNA_def_property_struct_type(prop, "Area");
-  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
-  RNA_def_property_ui_text(prop,
-                           "Global Areas",
-                           "Window-global areas (topbar, statusbar). Mixar extension — "
-                           "exposed so onboarding can address the topbar for redraw.");
+  PropertyRNA *prop;
 
   {
     FunctionRNA *func = RNA_def_function(
@@ -355,7 +329,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
    * window pixels, ready for ``Window.event_simulate``). WindowManager was
    * also registered in rna_wm.cc, so its generated wrappers land in
    * rna_wm_gen.cc where the helpers above are visible via the same include
-   * injection that serves ``Window.global_areas``. */
+   * injection used for the Mixar window helpers. */
   {
     FunctionRNA *func = RNA_def_function(
         srna, "mixar_qa_capture_frame", "rna_Window_mixar_qa_capture_frame");
@@ -447,7 +421,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                              "x, y, width, height", INT_MIN, INT_MAX);
     RNA_def_function_output(func, parm);
   }
-  StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
+  StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager"_ustr, nullptr);
   if (srna_wm != nullptr) {
     prop = RNA_def_property(srna_wm, "mixar_qa_ui_dump", PROP_STRING, PROP_NONE);
     RNA_def_property_string_funcs(prop,

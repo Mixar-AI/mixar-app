@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Gagal membuka jendela Gelembung Agen"
+
 msgid "Capture Viewport"
 msgstr "Tangkap Jendela Tampilan"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar akan dimulai ulang untuk menerapkannya."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — gunakan Unduh untuk memperbarui melalui peramban Anda."
 
+msgid "Retry"
+msgstr "Coba Lagi"
+
 msgid "Restart & Update"
 msgstr "Mulai Ulang & Perbarui"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Keluar"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Coba Lagi"
-
 msgid "Choose Export Location"
 msgstr "Pilih Lokasi Ekspor"
 
@@ -26532,9 +26538,6 @@ msgstr "Mode otomatis: agen memutuskan sendiri pilihan terbuka alih-alih bertany
 msgid "Agent Bubble"
 msgstr "Gelembung Agen"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Gagal membuka jendela Gelembung Agen"
-
 msgid "Agent Bubble Status"
 msgstr "Status Gelembung Agen"
 
@@ -26984,6 +26987,9 @@ msgstr "Animasikan Lampiran Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Menampilkan referensi yang baru dilampirkan terbang masuk ke Mixie Chat"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Tunda"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Penggambaran kartu memerlukan callback penggambaran wilayah aktif"
 
@@ -29735,18 +29738,6 @@ msgstr "Jalur yang diletakkan harus berupa string yang tidak kosong"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Jalur yang diletakkan harus berupa array JSON yang tidak kosong"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Area Global"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Area global jendela (bilah atas, bilah status). Ekstensi Mixar — diekspos agar orientasi dapat menjangkau bilah atas untuk penggambaran ulang."
 
 msgid "QA UI Dump"
 msgstr "Dump UI QA"

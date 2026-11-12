@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "BLT_translation.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"

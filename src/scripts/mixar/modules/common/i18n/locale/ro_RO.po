@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Nu s-a putut deschide fereastra Bulei agentului"
+
 msgid "Capture Viewport"
 msgstr "Captură Fereastra de Vizualizare"
 
@@ -3104,6 +3107,9 @@ msgstr "Mixar va reporni ca să o aplice."
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — folosiți Descărcare ca să actualizați prin browser."
 
+msgid "Retry"
+msgstr "Reîncercare"
+
 msgid "Restart & Update"
 msgstr "Repornire și actualizare"
 
@@ -3483,6 +3489,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -21061,9 +21070,6 @@ msgstr "Deconectare"
 msgid "Sound on"
 msgstr ""
 
-msgid "Retry"
-msgstr "Reîncercare"
-
 msgid "Choose Export Location"
 msgstr "Alegere loc de export"
 
@@ -26532,9 +26538,6 @@ msgstr "Mod automat: agentul decide singur alegerile deschise în loc să vă î
 msgid "Agent Bubble"
 msgstr "Bula agentului"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Nu s-a putut deschide fereastra Bulei agentului"
-
 msgid "Agent Bubble Status"
 msgstr "Stare bula agentului"
 
@@ -26984,6 +26987,9 @@ msgstr "Animare atașament Moodboard"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Arată o referință nou atașată zburând în chatul Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Întârziere"
@@ -28452,9 +28458,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Desenarea cardului necesită callback-ul de desen al regiunii active"
 
@@ -29735,18 +29738,6 @@ msgstr "Căile de lăsare trebuie să fie șiruri nevide"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Căile de lăsare trebuie să fie un tablou JSON nevid"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Zone globale"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Zone globale ale ferestrei (bară de sus, bară de stare). Extensie Mixar — expusă pentru ca introducerea să poată adresa bara de sus pentru redesenare."
 
 msgid "QA UI Dump"
 msgstr "Descărcare interfață QA"
