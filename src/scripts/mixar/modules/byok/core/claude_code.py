@@ -16,7 +16,6 @@ import shutil
 import signal
 import subprocess
 import tempfile
-import threading
 
 from mixar.modules.common.i18n import n_
 
@@ -24,7 +23,6 @@ PROVIDER = "claude_code"
 MODE = "claude_code_v1"
 MAX_BYTES = 8 * 1024 * 1024
 TIMEOUT = 600
-_slots = threading.BoundedSemaphore(4)
 
 
 class ClaudeCodeError(Exception):
@@ -203,9 +201,6 @@ def model_problem(model):
 
 def handle_request(params, respond):
     """Called on the relay worker, gated by this user's saved device grant."""
-    if not _slots.acquire(blocking=False):
-        respond({"error": {"code": "claude_busy"}})
-        return
     try:
         from . import credential_state, key_store
         state = credential_state.snapshot()
@@ -219,5 +214,3 @@ def handle_request(params, respond):
         respond({"error": {"code": exc.code}})
     except Exception:
         respond({"error": {"code": "claude_failed"}})
-    finally:
-        _slots.release()

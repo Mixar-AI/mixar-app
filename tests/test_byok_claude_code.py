@@ -109,3 +109,22 @@ def test_langchain_viewed_image_is_native_cli_image_and_not_json_text(block):
     assert 'YQ==' not in content[0]['text']
     assert '[Attached image 1]' in content[0]['text']
     assert block.get('data', block.get('base64')) == 'YQ=='  # history is untouched
+
+
+def test_eight_concurrent_requests_all_start_without_a_local_process_cap(monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from mixar.modules.byok.core import credential_state
+    monkeypatch.setattr(credential_state, 'snapshot', lambda: {
+        'byok_is_active': True, 'byok_current_provider': 'claude_code'})
+    monkeypatch.setattr(key_store, 'load', lambda: {'provider': 'claude_code'})
+    started = threading.Barrier(8, timeout=5)
+    def infer(params):
+        started.wait()  # Every request must enter inference before any finishes.
+        return {'output': {'content': 'Done', 'tool_calls': []}}
+    monkeypatch.setattr(C, 'infer', infer)
+    replies = []
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda _: C.handle_request(request(), replies.append), range(8)))
+    assert len(replies) == 8
+    assert all(reply.get('output', {}).get('content') == 'Done' for reply in replies)
