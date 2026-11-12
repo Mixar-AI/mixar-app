@@ -325,11 +325,10 @@ def save_credentials(
         from . import key_store
 
         if provider == "claude_code":
-            from .claude_code import validate_model, ClaudeCodeError
-            try:
-                validate_model(model)
-            except ClaudeCodeError as exc:
-                return False, None, exc.message
+            from .claude_code import model_problem
+            problem = model_problem(model)
+            if problem:
+                return False, None, problem
         user_id = key_store.current_user_id()  # before the call: never the next account's
         success, data, err = _put_sealed(provider, model, api_key, base_url,
                                          supports_vision, account_id)
@@ -370,6 +369,11 @@ def resave_stored_key(
         target = (model or record.get("model") or "").strip()
         if not target:
             return False, None, _NO_STORED_KEY_MSG
+        if provider == "claude_code":
+            from .claude_code import model_problem
+            problem = model_problem(target)
+            if problem:
+                return False, None, problem
         live, problem = key_store.materialize(record)
         if problem is not None:
             return False, None, problem
@@ -466,11 +470,10 @@ def delete_credentials(
         if epoch != _account_epoch():
             return False, 0, _SIGNED_OUT_MSG
         if provider == "claude_code":
-            from .claude_code import validate_model, ClaudeCodeError
-            try:
-                validate_model(model)
-            except ClaudeCodeError as exc:
-                return False, None, exc.message
+            from .claude_code import model_problem
+            problem = model_problem(model)
+            if problem:
+                return False, None, problem
         user_id = key_store.current_user_id()  # before the call: never the next account's
         response = get_agent_service().delete_credentials_all()
         success, data, err = _translate(response)

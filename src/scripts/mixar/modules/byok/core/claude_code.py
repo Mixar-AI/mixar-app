@@ -189,6 +189,15 @@ def validate_model(model):
            "tools": [], "tool_choice": "none", "effort": "low"})
 
 
+def model_problem(model):
+    """User-safe result for a save/switch/resume probe, on its worker."""
+    try:
+        validate_model(model)
+    except ClaudeCodeError as exc:
+        return exc.message
+    return None
+
+
 def handle_request(params, respond):
     """Called on the relay worker, gated by this user's saved device grant."""
     if not _slots.acquire(blocking=False):

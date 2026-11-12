@@ -85,3 +85,12 @@ def test_model_cannot_inject_command_line_options(monkeypatch):
     with pytest.raises(C.ClaudeCodeError):
         C.infer(params)
     run.assert_not_called()
+
+
+def test_save_probes_selected_model_through_same_inference_path(monkeypatch):
+    infer = Mock(return_value={'output': {'content': 'Connected.', 'tool_calls': []}})
+    monkeypatch.setattr(C, 'infer', infer)
+    C.validate_model('claude-test')
+    params = infer.call_args.args[0]
+    assert params['model'] == 'claude-test'
+    assert params['tools'] == [] and params['tool_choice'] == 'none'
