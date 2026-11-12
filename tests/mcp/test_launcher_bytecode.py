@@ -71,7 +71,9 @@ def test_both_launcher_forms_carry_the_bytecode_arguments():
 
 def test_every_app_start_rewrites_an_older_launcher(tmp_path, monkeypatch):
     """runtime._tick provisions on its first tick whether MCP is on or off, so a
-    launcher written by an older Mixar (no bytecode flag) is replaced at once."""
+    launcher written by an older Mixar (no bytecode flag) is replaced at once,
+    and its record gains the features the Claude plugin checks, with no
+    Connect MCP press."""
     from mixar.modules.mcp_bridge.core import runtime, tool_snapshot
     from mixar.modules.common.ui_control.core import service
 
@@ -80,6 +82,9 @@ def test_every_app_start_rewrites_an_older_launcher(tmp_path, monkeypatch):
     old = installation.directory() / "mixar-mcp"
     old.parent.mkdir(parents=True)
     old.write_text("#!/bin/sh\nexec /old/python3.13 /old/mcp.py \"$@\"\n")
+    record = installation.directory() / "installation.json"
+    record.write_text('{"version": 1, "python": "/old/python3.13", "script": "/old/mcp.py", '
+                      '"executable": "/old/Mixar", "enabled": false}')
 
     wm = SimpleNamespace(mixie_instance_id="fixture", mixie_chat_is_logged_in=False,
                          mixie_chat_session_expired=False)
@@ -109,6 +114,7 @@ def test_every_app_start_rewrites_an_older_launcher(tmp_path, monkeypatch):
     assert (installation._cmd_argument(option) if os.name == "nt" else option) in text
     assert "/old/" not in text
     assert runtime._provisioned is False
+    assert '"features": ["hide_media_generation"]' in record.read_text()
 
 
 # --- The Windows .cmd launcher ---------------------------------------------------

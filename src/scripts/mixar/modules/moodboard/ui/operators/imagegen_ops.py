@@ -61,6 +61,14 @@ def _catalog_params(raw: str) -> dict:
             if isinstance(value, (str, int, float, bool)) and not str(key).startswith("_")}
 
 
+def _not_queued_reason():
+    """Why the queue took no job: a connection without media generation refused
+    it (job_queue blocked_features), else the same job is already queued."""
+    from mixar.modules.common.i18n import rpt_
+    from mixar.modules.common.job_queue.core.blocked_features import refusal
+    return refusal() or rpt_("A duplicate image generation is already queued")
+
+
 class MIXIE_OT_imagegen_generate(Operator):
     """Generate images using AI and add them to the moodboard"""
 
@@ -348,7 +356,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             )
             if not job:
                 record_reason("duplicate_job")
-                self.report({"ERROR"}, "A duplicate image generation is already queued")
+                self.report({"ERROR"}, _not_queued_reason())
                 return {"CANCELLED"}
         except Exception as e:
             record_reason("enqueue_failed")
@@ -439,7 +447,7 @@ class MIXIE_OT_imagegen_generate(Operator):
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate image generation is already queued")
-            self.report({"WARNING"}, "A duplicate image generation is already queued")
+            self.report({"WARNING"}, _not_queued_reason())
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued

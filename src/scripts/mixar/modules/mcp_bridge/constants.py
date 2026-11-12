@@ -10,8 +10,20 @@ DEFAULT_TIMEOUT_SECONDS = 120
 MAX_TIMEOUT_SECONDS = 600
 MAX_ACTIVE_OPERATIONS = 32
 RETIRED_OPERATION_SECONDS = 3600
+#: ``mcp.begin_operation``'s ``blocked_job_features`` holds job-queue feature keys.
+MAX_FEATURE_KEY_LENGTH = 64
 #: Per-app setup lives on the website; the dialog copies the standard JSON.
 SETUP_GUIDE_URL = "https://www.mixar.app/docs#connect-ai-apps"
+#: Set to exactly "1" by the Claude plugin only (Anthropic's directory policy
+#: allows no AI image, video or audio generation). Its launcher then marks every
+#: backend request with HIDE_MEDIA_META in ``params._meta``, and the backend
+#: leaves media generation out; without it the requests are unchanged.
+HIDE_MEDIA_ENV = "MIXAR_MCP_HIDE_MEDIA_GENERATION"
+HIDE_MEDIA_META = "mixar/hide_media_generation"
+#: What this Mixar's launcher honours, in the installation record
+#: (``installation.json`` ``features``): the Claude plugin refuses to start a
+#: launcher whose record does not list "hide_media_generation".
+LAUNCHER_FEATURES = ("hide_media_generation",)
 
 #: Connect MCP sheet states (`ui/properties/connect_props.py`). Each
 #: state has exactly one default button:

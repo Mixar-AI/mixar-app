@@ -12,6 +12,7 @@ import sys
 import time
 import uuid
 
+from ..constants import LAUNCHER_FEATURES
 from .discovery import discovery_directory
 
 
@@ -121,7 +122,12 @@ def _cmd_text(command):
 
 
 def provision(python, script, executable, enabled=True):
-    """(Re)write the launcher; the app does so on every start (runtime._tick)."""
+    """(Re)write the launcher; the app does so on every start (runtime._tick).
+
+    ``features`` names what this Mixar's launcher honours (a reader that knows
+    only ``version`` 1 ignores it): the Claude plugin starts only a launcher
+    whose record lists "hide_media_generation", so an older Mixar fails closed.
+    """
     root = directory()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     if root.is_symlink():
@@ -131,7 +137,7 @@ def provision(python, script, executable, enabled=True):
             raise OSError("Connector directory belongs to another user")
         root.chmod(0o700)
     manifest = {"version": 1, "python": str(python), "script": str(script),
-                "executable": str(executable), "enabled": bool(enabled)}
+                "executable": str(executable), "enabled": bool(enabled), "features": list(LAUNCHER_FEATURES)}
     _atomic(root / "installation.json", json.dumps(manifest))
     windows = os.name == "nt"
     command = [str(python), *_bytecode_args(windows), str(script)]

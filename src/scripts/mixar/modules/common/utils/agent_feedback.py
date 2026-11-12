@@ -22,7 +22,14 @@ _REASON_KEY = "mixar_agent_gen_reason"
 
 
 def set_agent_gen_reason(context, message: str) -> None:
-    """Record why an agent-dispatched generation operator failed."""
+    """Record why an agent-dispatched generation operator failed. A job the
+    queue just refused for this connection keeps that reason over the
+    operator's own follow-up text ("already queued")."""
+    try:
+        from mixar.modules.common.job_queue.core.blocked_features import refusal
+        message = refusal() or message
+    except Exception:
+        pass
     try:
         context.window_manager[_REASON_KEY] = str(message)
     except Exception:
@@ -31,6 +38,11 @@ def set_agent_gen_reason(context, message: str) -> None:
 
 def clear_agent_gen_reason(context) -> None:
     """Clear any prior reason (call at the start of an agent-path execute)."""
+    try:
+        from mixar.modules.common.job_queue.core.blocked_features import forget_refusal
+        forget_refusal()
+    except Exception:
+        pass
     try:
         context.window_manager[_REASON_KEY] = ""
     except Exception:

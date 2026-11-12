@@ -4,9 +4,11 @@
 
 import http.client
 import json
+import os
 import threading
 import uuid
 
+from ..constants import HIDE_MEDIA_ENV, HIDE_MEDIA_META
 from . import discovery
 
 MAX_BODY = 8 * 1024 * 1024
@@ -105,6 +107,15 @@ class Connector:
         self.health = {}
         # The AI app's clientInfo; travels as _meta so Mixar can attribute usage.
         self.client = {}
+        # Read once per launcher: the Claude plugin hides AI image and video generation.
+        self.hide_media = os.environ.get(HIDE_MEDIA_ENV) == "1"
+
+    def upstream(self, params):
+        """JSON-RPC ``params`` for the backend: exactly ``params`` unless this
+        launcher hides media generation, which then rides in ``_meta``."""
+        if not self.hide_media:
+            return params
+        return {**params, "_meta": {**params.get("_meta", {}), HIDE_MEDIA_META: True}}
 
     def attach(self, start=False):
         """The bound app (or the one usable app). Only a tool call (``start``)
@@ -236,8 +247,8 @@ class Connector:
             if (released.get("result") or {}).get("isError") and refusal.get("error_type") == "modal_active":
                 raise RuntimeError(refusal.get("error") or "Finish or cancel the UI operation before using scene tools")
         meta = {"mixar/request-id": call_id, **({"mixar/client": self.client} if self.client else {})}
-        message = {"jsonrpc": "2.0", "id": call_id, "method": "tools/call", "params": {
-            "name": name, "arguments": arguments, "_meta": meta}}
+        message = {"jsonrpc": "2.0", "id": call_id, "method": "tools/call", "params": self.upstream({
+            "name": name, "arguments": arguments, "_meta": meta})}
         # Only transport discovery retries. This request is deliberately attempted ONCE.
         try:
             response = request(record, "POST", "/ui" if local else "/mcp", message, headers,
@@ -280,14 +291,14 @@ class Connector:
         with self.lock:
             if self.upstream_version is None:
                 response = request(record, "POST", "/mcp", {
-                    "jsonrpc": "2.0", "id": "init", "method": "initialize", "params": {
+                    "jsonrpc": "2.0", "id": "init", "method": "initialize", "params": self.upstream({
                         "protocolVersion": "2025-11-25", "capabilities": {},
-                        "clientInfo": {"name": "mixar-local-connector", "version": "1"}}})
+                        "clientInfo": {"name": "mixar-local-connector", "version": "1"}})})
                 self.upstream_version = response["result"]["protocolVersion"]
         result, cursor = [], None
         for _ in range(20):
             response = request(record, "POST", "/mcp", {"jsonrpc": "2.0", "id": "catalog",
-                "method": "tools/list", "params": {"cursor": cursor} if cursor else {}},
+                "method": "tools/list", "params": self.upstream({"cursor": cursor} if cursor else {})},
                 {"MCP-Protocol-Version": self.upstream_version}, timeout=5)
             page = response["result"]
             result.extend(page["tools"])
