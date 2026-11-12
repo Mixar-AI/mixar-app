@@ -34,6 +34,11 @@ result = {'blender_version': list(bpy.app.version),
 ''')
     cases = {}
     for ident in ('UI-01', 'CHAT-03', 'CHAT-04', 'TAB-08'):
+        # Login can finish before the websocket handshake. Match App.ready()
+        # in the release harness before attempting its guarded reset.
+        qa.cmd('wait_login', timeout=90)
+        qa.wait("drv.main_window().scene.mixie_chat_state == 'IDLE' and "
+                "not drv.main_window().scene.mixie_chat_is_busy", timeout=90)
         qa.cmd('reset_state')
         qa.cmd('wait_login', timeout=90)
         folder = out / ident
