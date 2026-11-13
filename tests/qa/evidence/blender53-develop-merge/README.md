@@ -3,6 +3,12 @@
 
 # Develop integration on Blender 5.3
 
+**Later sync:** develop `a57ff48a8` removes the Claude subscription provider
+and bumps Mixar to 4.4.6. Its removal is preserved, including deletion of the
+provider replay; general BYOK pause/remove coverage remains. The evidence below
+records the earlier 4.4.5 run and does not certify the 4.4.6 GUI. The later sync
+passed 208 affected BYOK/catalog/relay tests plus translation consistency checks.
+
 PR #2084 merges develop through `c8be570c131d1fb246bb2c3a3673b2c891ec63cd`.
 The final product build is `f4147da5786c5c00d4fbee01d51e6cfddb892edc`:
 Mixar **4.4.5**, Blender **5.3.0**, upstream

@@ -320,11 +320,6 @@ def handle_llm_request(params: dict, respond: Callable[[dict], None]) -> None:
     "body": str|bytes}``. Calls ``respond`` exactly once (see module
     docstring for both result shapes). Blocking — run on a worker thread.
     """
-    if params.get("mode") == "claude_code_v1":
-        from ...byok.core.claude_code import handle_request
-        handle_request(params, respond)
-        return
-
     denial, pinned_url, host_header = _validate(params)
     if denial is not None:
         logger.warning("%s relay refused: %s", LOG_PREFIX,

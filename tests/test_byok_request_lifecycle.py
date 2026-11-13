@@ -85,8 +85,8 @@ def test_a_removal_answers_in_its_own_shape_when_it_fails(client, monkeypatch):
 
 
 @pytest.mark.parametrize("forget_local", [False, True], ids=["pause", "remove"])
-def test_pause_and_remove_need_no_provider_model_validation(client, monkeypatch, forget_local):
-    from mixar.modules.byok.core import claude_code, key_store
+def test_pause_and_remove_do_not_materialize_provider_credentials(client, monkeypatch, forget_local):
+    from mixar.modules.byok.core import key_store
 
     requests, forgotten, answers = [], [], []
 
@@ -94,13 +94,13 @@ def test_pause_and_remove_need_no_provider_model_validation(client, monkeypatch,
         requests.append("delete")
         return SimpleNamespace(success=True, status_code=200, data={"data": {"removed": 1}})
 
-    def never_probe(model):
+    def never_materialize(*args, **kwargs):
         pytest.fail("Pausing/removing must not require working provider credentials or inference")
 
     monkeypatch.setattr(byok_client, "get_agent_service", _service(delete_credentials_all=delete))
     monkeypatch.setattr(key_store, "current_user_id", lambda: "qa-user")
     monkeypatch.setattr(byok_client, "_forget_local_key", forgotten.append)
-    monkeypatch.setattr(claude_code, "model_problem", never_probe)
+    monkeypatch.setattr(key_store, "materialize", never_materialize)
     byok_client.delete_credentials(lambda *a: answers.append(a), forget_local=forget_local)
 
     assert requests == ["delete"]

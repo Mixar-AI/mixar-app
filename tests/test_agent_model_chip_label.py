@@ -241,11 +241,10 @@ def test_the_key_chip_names_providers_from_the_catalog(monkeypatch):
     assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
     assert catalog_labels.chip_provider_label('newco') == 'Newco API'  # no client release needed
     assert catalog_labels.chip_provider_label('codex') == 'Codex'
-    assert catalog_labels.chip_provider_label('claude_code') == 'Claude'
     assert catalog_labels.chip_provider_label('openrouter') == 'OpenRouter'
     assert catalog_labels.chip_provider_label('local') == 'Local'
     assert catalog_labels.chip_provider_label('') == ''
-    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex', 'claude_code'}
+    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex'}
     # A catalog provider without a short name (an older backend) reads its label.
     monkeypatch.setattr(catalog_labels, 'lookup_provider_label', lambda pid: 'Moonshot Kimi')
     assert catalog_labels.chip_provider_label('kimi') == 'Moonshot Kimi'

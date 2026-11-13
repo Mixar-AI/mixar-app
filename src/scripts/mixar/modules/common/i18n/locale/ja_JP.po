@@ -1529,48 +1529,6 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
-msgid "Install Claude Code, then run `claude auth login` in your terminal."
-msgstr ""
-
-msgid "Claude Code did not respond in time."
-msgstr ""
-
-msgid "Claude Code's reply exceeded the size limit."
-msgstr ""
-
-msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
-msgstr ""
-
-msgid "Run `claude auth login` in your terminal, then Save & Activate."
-msgstr ""
-
-msgid "Update Claude Code, then try again."
-msgstr ""
-
-msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
-msgstr ""
-
-msgid "Claude Code requires an inline image attachment."
-msgstr ""
-
-msgid "Choose a Claude model in AI Provider Settings."
-msgstr ""
-
-msgid "Invalid Claude Code request."
-msgstr ""
-
-msgid "Claude Code request exceeds the size limit."
-msgstr ""
-
-msgid "This thinking level is not supported by Claude Code."
-msgstr ""
-
-msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
-msgstr ""
-
-msgid "Activate Claude Code on this computer."
-msgstr ""
-
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -1757,9 +1715,6 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "このモデルをエージェントに使用します"
 
-msgid "Pick a model."
-msgstr ""
-
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1795,9 +1750,6 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPTサブスクリプション"
-
-msgid "Claude Code on this computer"
-msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1934,10 +1886,13 @@ msgstr "AIプロバイダー設定"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixarエージェントに自分のAPIキーを使用します。有効な間、エージェントリクエストにMixarクレジットは消費されません。"
 
-msgid "Validate and activate your own AI provider"
-msgstr ""
+msgid "Validate with the provider and save your API key"
+msgstr "プロバイダーで検証してAPIキーを保存します"
 
 msgid "Pick a provider."
+msgstr ""
+
+msgid "Pick a model."
 msgstr ""
 
 msgid "Enter your API key."
@@ -2007,9 +1962,6 @@ msgid "Local model"
 msgstr "ローカルモデル"
 
 msgid "Pick a provider on the left to see its models."
-msgstr ""
-
-msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
