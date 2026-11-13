@@ -359,7 +359,6 @@ class SocketConnection:
                 "inspection_preview_v1",
                 "notifications",
                 "local_llm",
-                "claude_code_v1",
                 # Client answers blender.liveness on the WS thread; the
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
