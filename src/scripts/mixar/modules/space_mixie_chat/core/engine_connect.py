@@ -51,8 +51,8 @@ from . import engine_link, unreal_setup
 
 # Mixar Link for Godot: one exact release, checked before it is installed.
 # A new release is these two lines (sha256 of the release's mixar_link.zip).
-ADDON_VERSION = "0.4.0"
-ADDON_SHA256 = "d4fef97bb6b846fc19e4d4b55e6d02441fc1496c99b79b11feff1c9f07bf7409"
+ADDON_VERSION = "0.5.0"
+ADDON_SHA256 = "34a307b9522ef5c8615b1d701188698be7aa33f1d5f239d7d14ea04f42d10be1"
 ADDON_REPO = "Mixar-AI/mixar-engine-godot"
 ADDON_URL = f"https://github.com/{ADDON_REPO}/releases/download/v{ADDON_VERSION}/mixar_link.zip"
 # The Godot editor Mixar downloads when none is installed, and the sha256 of
