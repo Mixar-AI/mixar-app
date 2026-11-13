@@ -9,7 +9,7 @@ The native macOS comparison reproduced an island that showed its glass bed but l
 | --- | --- |
 | [Mac before](mac-native-before.png) | Glass-only island: controls missing. |
 | [Mac after](mac-native-after.png) | Tabs, transcript, focused charcoal composer and footer controls visible. |
-| [Linux OpenGL after](linux-opengl-after.png) | Translucent backdrop and focused charcoal composer intact. |
+| [Linux OpenGL after](linux-opengl-after.png) | Dark backdrop and focused charcoal composer intact; backdrop transparency was not measured. |
 
 UI-only review covered empty and populated focused/idle composers, expanded steps, 3D/Image/Video/Splats/Library/Queue tabs, Zen/Moodboard/Engine/Texturing chrome, and File/Edit menus. Seventeen fixed-build buffer captures on Mac and seventeen native desktop captures on Linux were visually reviewed; Mac additionally used native OS captures for the island and pill. No paid provider requests were made. A matched 5.2 Engine view has the same dense grid pattern, so that is not introduced by this upgrade.
 
