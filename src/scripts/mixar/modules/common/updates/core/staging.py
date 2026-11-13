@@ -20,13 +20,23 @@ installation package could not be opened" before it starts.  The same
 happens under some endpoint-protection policies that block execution out
 of ``%TEMP%``.
 
-So the installer is staged under ``%ProgramData%`` instead: readable by
-every account on the machine, writable by us (the directory we create is
-owned by the creating user), and outside both the app directory the MSI
-replaces and the temp directories AV products police.  The per-user
+So an install the MSI elevates stages under ``%ProgramData%`` instead:
+readable by every account on the machine, writable by us (the directory we
+create is owned by the creating user), and outside both the app directory
+the MSI replaces and the temp directories AV products police.  The per-user
 directory remains as a fallback, but the caller is told when the shared
 location was unavailable so it can warn instead of failing at the UAC
 prompt.
+
+A per-user install (#2079: in the user's own profile, updated by msiexec
+running as the user, never by another account) stages in
+``%LocalAppData%`` first: nothing else needs to read it, and a
+``%ProgramData%`` folder another account created may not be writable.
+Results are read from every existing directory (:func:`result_dirs`): the
+update that moved a Program Files install was run by the old app's helper,
+which wrote its result under ``%ProgramData%``. Another account's results
+land there too, so one outside this copy's own directory is read only when
+``result_owner`` says it is this user's.
 """
 
 import ntpath
@@ -88,14 +98,33 @@ class StagingDir:
 # ============================================================================
 
 
+def _in_profile(path: str) -> bool:
+    from .app_paths import is_within
+
+    roots = [os.environ.get("LOCALAPPDATA"), os.environ.get("USERPROFILE")]
+    return any(is_within(path, root) for root in roots if root)
+
+
+def _per_user_install() -> bool:
+    """Does this copy run from the user's own profile (a per-user install)?
+
+    Judged on the interpreter path, which lies inside the install and is
+    safe to read off the main thread.
+    """
+    return _in_profile(sys.executable)
+
+
 def _windows_candidates() -> list:
     """(root, shared) pairs for Windows, best first."""
     candidates = []
     program_data = os.environ.get("ProgramData") or os.environ.get("ALLUSERSPROFILE")
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata and _per_user_install():
+        # Nobody but this user installs it: per-user is the right home.
+        candidates.append((local_appdata, True))
     if program_data:
         candidates.append((program_data, True))
-    local_appdata = os.environ.get("LOCALAPPDATA")
-    if local_appdata:
+    if local_appdata and not _per_user_install():
         candidates.append((local_appdata, False))
     candidates.append((tempfile.gettempdir(), False))
     return candidates
@@ -207,8 +236,9 @@ def resolve_staging_dir() -> StagingDir:
         if not _is_usable(path):
             continue
         # Only on creation: re-running icacls on every launch would put a
-        # subprocess on the startup path for no gain.
-        if shared and windows and first_run:
+        # subprocess on the startup path for no gain. Never in the user's
+        # profile: a per-user install's folder stays private to its user.
+        if shared and windows and first_run and not _in_profile(root):
             _grant_machine_read(vendor)
         if not shared:
             logger.warning(
@@ -236,6 +266,20 @@ def existing_staging_dirs() -> list:
         if path not in paths and os.path.isdir(path):
             paths.append(path)
     return paths
+
+
+def result_dirs(resolved: str) -> list:
+    """Where a helper's result may be, *resolved* first.
+
+    Windows: also every other existing candidate. The helper that moved a
+    Program Files install into the profile was the old app's, and it wrote
+    to the shared directory the new app no longer stages in. The caller
+    reads the others through ``result_owner.foreign_filter``.
+    """
+    dirs = [resolved]
+    if _is_windows():
+        dirs.extend(path for path in existing_staging_dirs() if path != resolved)
+    return dirs
 
 
 def installer_path(staging: StagingDir, version: str, extension: str) -> str:

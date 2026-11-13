@@ -14,10 +14,11 @@ import pytest
 from PIL import Image
 
 from mixar.modules.context_folder import constants
-from mixar.modules.context_folder.core import attach, files, grants, indexer, manifest, paths, rpc, video
+from mixar.modules.context_folder.core import attach, files, grants, indexer, manifest, paths, pdf, rpc, video
 from mixar.modules.context_folder.core.errors import ContextFolderError
 from mixar.modules.context_folder.core.file_set import FileSet, local_roots
 from mixar.modules.context_folder.core.registry import FolderRegistry, set_registry_for_tests
+from pdf_fixtures import mixed_pdf
 from test_context_folder import _Folders, _scene
 from test_context_folder_video import _fake_decoder
 
@@ -44,7 +45,7 @@ def workdir(tmp_path):
     (work / "notes.txt").write_text("line one\nshield is round\nline three\n")
     (work / "clip.mp4").write_bytes(b"not really mp4 bytes")
     (work / "sub" / "clip.mp4").write_bytes(b"another clip")
-    (work / "document.pdf").write_bytes(b"%PDF-1.4")
+    (work / "document.pdf").write_bytes(mixed_pdf())
     buffer = io.BytesIO()
     Image.new("RGB", (64, 48), (10, 200, 30)).save(buffer, format="PNG")
     (work / "still.png").write_bytes(buffer.getvalue())
@@ -224,7 +225,14 @@ def test_rpcs_read_view_and_sample_attached_files(attached, workdir):
     for name in ("anim.gif", "still.png"):
         viewed = _call(constants.RPC_VIEW_IMAGE, set_id, path=name)
         assert viewed["success"] and viewed["mime"] == "image/jpeg", viewed
-    assert _call(constants.RPC_READ, set_id, path="document.pdf")["error"]["code"] == "not_text"
+    pdf_read = _call(constants.RPC_READ, set_id, path="document.pdf")
+    if pdf.available():  # page-marked text and page images (test_context_folder_pdf.py)
+        assert pdf_read["success"] and pdf_read["page_count"] == 3, pdf_read
+        assert pdf_read["text"].splitlines()[:2] == ["    1  --- page 1 of 3 ---", "    2  Hello PDF world"]
+        pages = _call(constants.RPC_VIEW_PDF_PAGES, set_id, path="document.pdf", pages=[2], max_dim=256)
+        assert [(p["page"], p["width"], p["height"]) for p in pages["pages"]] == [(2, 256, 198)], pages
+    else:  # a build without PDFium reads a PDF as before
+        assert pdf_read["error"]["code"] == "not_text"
     assert _call(constants.RPC_READ, set_id, path="sub/clip.mp4")["error"]["code"] == "not_found"
     assert str(workdir) not in json.dumps(_call(constants.RPC_READ, set_id, path="../notes.txt"))
     other = rpc.dispatch(constants.RPC_LIST, {"session_id": "session-2", "folder_id": set_id})

@@ -18,7 +18,10 @@ degrades to "checksum only" instead of refusing to update at all.
 
 Both checks shell out to the platform tools (``Get-AuthenticodeSignature``
 / ``codesign``); a tool that cannot be run is reported as
-:data:`UNVERIFIED`, never as a failure.
+:data:`UNVERIFIED`, never as a failure. ``UNVERIFIED`` keeps Restart &
+Update working on a dev build; an install nobody asked for (on quit, at
+launch) needs ``VERIFIED`` with a pinned signer
+(:func:`silent_install.silent_refusal`).
 """
 
 import ntpath
@@ -147,9 +150,23 @@ def team_id(path):
 
 
 def _verify_macos(installer_path, bundle_path):
+    """``(verdict, detail, running_team)``.
+
+    ``VERIFIED`` only for a validly signed disk image whose Team ID is the
+    running app's, which must have one: ``running_team`` is then that
+    non-empty Team ID, the pin installs nobody asked for require. It is
+    read here on the download thread so starting the helper (on quit, in
+    particular) never waits for ``codesign``.
+
+    A running app without a readable Team ID (an unsigned dev build, or
+    ``codesign -dv`` failing on it) has nothing to pin an update to:
+    ``UNVERIFIED``. Restart & Update may still install it — the helper then
+    re-reads the installed app's own Team ID and requires it when there is
+    one — but nothing installs it silently.
+    """
     result = _run(["codesign", "--verify", "--strict", str(installer_path)])
     if result is None:
-        return UNVERIFIED, "codesign unavailable"
+        return UNVERIFIED, "codesign unavailable", ""
 
     code, output = result
     running_team = team_id(bundle_path) if bundle_path else None
@@ -158,14 +175,19 @@ def _verify_macos(installer_path, bundle_path):
         if not running_team:
             # Unsigned local build — the checksum is all we have and all
             # that is warranted.
-            return UNVERIFIED, "Disk image is unsigned"
-        return REJECTED, f"Disk image failed signature verification: {output[:200]}"
+            return UNVERIFIED, "Disk image is unsigned", ""
+        return REJECTED, f"Disk image failed signature verification: {output[:200]}", ""
 
     staged_team = team_id(installer_path)
-    if running_team and staged_team and running_team != staged_team:
-        return REJECTED, "Disk image was signed by a different Apple team"
+    if staged_team is None:
+        return UNVERIFIED, "Disk image Team ID unreadable", ""
+    if running_team and staged_team != running_team:
+        # Another team, or a signature with no team at all (ad hoc).
+        return REJECTED, "Disk image was not signed by this app's Apple team", ""
+    if not running_team:
+        return UNVERIFIED, "This app has no readable Team ID to pin the update to", ""
 
-    return VERIFIED, staged_team or ""
+    return VERIFIED, staged_team, running_team
 
 
 # ============================================================================
@@ -185,17 +207,19 @@ def verify_installer(installer_path, bundle_path="", running_binary=""):
             this module stays free of ``bpy``.
 
     Returns:
-        ``(VERIFIED | UNVERIFIED | REJECTED, detail, signer_thumbprint)``.
-        Only ``REJECTED`` must block the install; ``UNVERIFIED`` means no
-        verdict was available and the checksum stands alone.
-        ``signer_thumbprint`` is the verified Authenticode certificate's
-        (Windows ``VERIFIED`` only, else ``""``).
+        ``(VERIFIED | UNVERIFIED | REJECTED, detail, signer)``.
+        Only ``REJECTED`` must block Restart & Update; ``UNVERIFIED`` means
+        no verdict was available and the checksum stands alone (never
+        enough for a silent install). ``signer`` is the identity the
+        helper's re-check pins (``VERIFIED`` only, else ``""``): the
+        verified Authenticode certificate's thumbprint on Windows, the
+        running app's Team ID on macOS (never empty when ``VERIFIED``).
     """
     try:
         if os.name == "nt":
             return _verify_windows(installer_path, running_binary)
         if sys.platform == "darwin":
-            return (*_verify_macos(installer_path, bundle_path), "")
+            return _verify_macos(installer_path, bundle_path)
     except Exception as e:  # noqa: BLE001 - verification must never crash
         logger.error("Installer verification error: %s", e, exc_info=True)
         return UNVERIFIED, "Verification error", ""

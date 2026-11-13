@@ -144,7 +144,9 @@ static std::optional<std::string> user_special_dir_query(GHOST_TUserSpecialDirTy
       break;
     case GHOST_kUserSpecialDirCaches: {
       const char *cache_dir = getenv("XDG_CACHE_HOME");
-      if (cache_dir) {
+      /* MIXAR: XDG spec: an empty or relative value is invalid and must be ignored (empty made
+       * the caches root the per-session temp directory, relative left Python no cache). */
+      if (cache_dir && cache_dir[0] == '/') {
         return cache_dir;
       }
 

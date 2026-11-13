@@ -8,11 +8,12 @@ import json
 from pathlib import Path
 import secrets
 import tempfile
+import threading
 import time
 
 import bpy
 
-from ..constants import CONTEXT_TTL, MAX_CONTEXTS, MAX_IMAGE_BYTES, UIError
+from ..constants import CONTEXT_TTL, MAX_CONTEXTS, MAX_IMAGE_BYTES, SETTLE_TIMEOUT, UIError
 
 _contexts = {}
 
@@ -36,9 +37,37 @@ def signature():
                    w.scene.as_pointer()) for w in bpy.context.window_manager.windows))
 
 
+class Pending(UIError):
+    """The inventory is incomplete until Blender redraws; the next timer tick can retry."""
+
+    def __init__(self):
+        super().__init__("not_ready", "Wait for the UI redraw before observing")
+
+
+def settled(fn, *args, timeout=SETTLE_TIMEOUT):
+    """Generator: return fn(*args) once no region it reads is awaiting a redraw.
+
+    A redraw is pending for a tick or two after most UI changes, so every caller
+    that reads widgets from a timer goes through this instead of failing its request.
+    """
+    end = time.monotonic() + timeout
+    while True:
+        try:
+            return fn(*args)
+        except Pending:
+            if time.monotonic() >= end:
+                raise
+        yield 0.025
+
+
 def widgets():
+    if threading.current_thread() is not threading.main_thread():
+        raise UIError("not_ready", "UI observation requires the main thread")
     wm = bpy.context.window_manager
     raw = json.loads(wm.mixar_qa_ui_dump)
+    if raw.get("pending"):
+        # Never capture an image with an incomplete password-mask inventory.
+        raise Pending()
     wins = {w.as_pointer(): w for w in wm.windows}
     areas, regions = {}, {}
     for win in wins.values():

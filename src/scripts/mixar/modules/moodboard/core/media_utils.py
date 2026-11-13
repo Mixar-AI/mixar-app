@@ -14,6 +14,7 @@ potentially large movie in Blender memory.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import mimetypes
 import os
 import stat
@@ -370,3 +371,15 @@ def get_selected_moodboard_media_inputs(
             video["source_available"] for video in videos
         ),
     }
+
+
+def moodboard_added_time(item) -> str:
+    """Display the stored board insertion time in UTC; never invent legacy dates."""
+    value = getattr(item, "mixar_created_at_iso", "")
+    try:
+        stamp = datetime.fromisoformat(value)
+        if stamp.tzinfo is None:
+            return ""
+        return stamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    except (ValueError, TypeError, OverflowError):
+        return ""

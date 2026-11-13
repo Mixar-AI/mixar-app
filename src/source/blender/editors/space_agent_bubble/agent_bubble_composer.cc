@@ -2,7 +2,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-/** One-shot keyboard focus for the island's native chat composer. */
+/** Keyboard focus and active-editor lifetime for the island's native composer. */
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -10,6 +10,7 @@
 #include "DNA_scene_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_screen.hh"
 #include "ED_space_api.hh"
 #include "RNA_access.hh"
 #include "UI_interface_c.hh"
@@ -21,6 +22,44 @@
 namespace blender {
 
 static void *pending_focus_window = nullptr;
+
+void agent_bubble_composer_deactivate(bContext *C, void *ghost_window)
+{
+  if (pending_focus_window == ghost_window) {
+    pending_focus_window = nullptr;
+  }
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm || !ghost_window) {
+    return;
+  }
+  for (wmWindow &win : wm->windows) {
+    if (win.runtime->ghostwin != ghost_window) {
+      continue;
+    }
+    bContext *bubble_context = CTX_copy(C);
+    CTX_wm_window_set(bubble_context, &win);
+    if (bScreen *screen = CTX_wm_screen(bubble_context)) {
+      for (ScrArea &area : screen->areabase) {
+        if (area.spacetype != SPACE_AGENT_BUBBLE) {
+          continue;
+        }
+        CTX_wm_area_set(bubble_context, &area);
+        for (ARegion &region : area.regionbase) {
+          CTX_wm_region_set(bubble_context, &region);
+          /* Native hiding does not tear down Blender's RNA-backed UI. Free
+           * both active editors and inactive buttons while their owner lives;
+           * a hidden block must not retain a scene that can later be deleted.
+           * BUT_TEXTEDIT_UPDATE already saved the draft, and onfree teardown
+           * does not apply or undo it. Region handlers remain for restore. */
+          ui::blocklist_free(bubble_context, &region);
+          ED_region_tag_redraw(&region);
+        }
+      }
+    }
+    CTX_free(bubble_context);
+    return;
+  }
+}
 
 static bool focus_composer(bContext *C, void *ghost_window)
 {

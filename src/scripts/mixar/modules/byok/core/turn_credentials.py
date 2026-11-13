@@ -200,7 +200,9 @@ def prepare(on_ready: Callable[[Dict[str, Any], Optional[Dict[str, str]]], None]
             if problem is not None:
                 # The Codex sign-in file cannot serve the turn (codex logout,
                 # never logged in): refuse like an expired sign-in.
-                resolution = Resolution(error=problem, code=BYOK_CODEX_EXPIRED_CODE)
+                resolution = Resolution(error=problem, code=("byok_claude_unavailable"
+                                        if (record or {}).get("provider") == "claude_code"
+                                        else BYOK_CODEX_EXPIRED_CODE))
             else:
                 resolution = resolve(live, refresher=codex_auth.refresh_access_token,
                                      active_provider=active_provider)

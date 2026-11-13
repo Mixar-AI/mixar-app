@@ -29,12 +29,14 @@ def run(root, scene):
         return r
     check('13 corrupt model leaves scene intact',corrupt_model)
     extra=root/'11-Extra';extra.mkdir(exist_ok=True)
-    (extra/'document.pdf').write_bytes(b'%PDF-1.4\n% QA unsupported-format fixture\n%%EOF')
+    (extra/'document.docx').write_bytes(b'PK\x03\x04 QA unsupported-format fixture')
+    (extra/'broken.pdf').write_bytes(b'%PDF-1.4\n% QA damaged-PDF fixture\n%%EOF')
     (extra/'tiny.hdr').write_bytes(b'#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n'+bytes([128,64,32,129]))
     fid=mount(extra)
     def formats():
         replies=[]
-        for method,path,code in [('context_folder.read','document.pdf','not_text'),
+        for method,path,code in [('context_folder.read','document.docx','not_text'),
+                                 ('context_folder.read','broken.pdf','pdf_unreadable'),
                                  ('context_folder.view_image','tiny.hdr','preview_unsupported')]:
             r=rpc.dispatch(method,{'session_id':scene.mixie_session_id,'folder_id':fid,'path':path})
             assert r.get('error',{}).get('code')==code,r

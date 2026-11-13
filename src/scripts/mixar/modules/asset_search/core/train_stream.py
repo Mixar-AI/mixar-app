@@ -178,6 +178,16 @@ def post_stream(stream, mode, removed_assets, operator):
     ``BatchBuilder.close``). A failed batch stops the run — everything already
     uploaded is durable server-side and the next train's diff resumes from it.
     """
+    try:
+        _post_stream(stream, mode, removed_assets, operator)
+    except ReferenceError:
+        # Blender can free the modal operator while an upload is in flight.
+        # Do not try to report the failure through that same invalid RNA.
+        stream.abort()
+        logger.debug("[Asset Training] Upload owner was removed; stopping stream")
+
+
+def _post_stream(stream, mode, removed_assets, operator):
     operator._upload_done = 0
     operator._upload_embedded = 0
     pacer = _Pacer()
@@ -283,6 +293,8 @@ def post_stream(stream, mode, removed_assets, operator):
             "message": rpt_("{count} assets embedded").format(count=total_embedded),
             "embedded": total_embedded,
         }
+    except ReferenceError:
+        raise  # The owner-lifetime guard must not write to the operator again.
     except Exception as exc:  # noqa: BLE001 — the modal must always finish
         logger.error("[Asset Training] Streamed upload error: %s", exc)
         stream.abort()

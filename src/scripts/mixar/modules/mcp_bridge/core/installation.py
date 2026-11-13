@@ -3,6 +3,7 @@
 """Stable local entrypoint refreshed by the installed app, with no system Python."""
 
 import json
+import ntpath
 import os
 from pathlib import Path
 import shlex
@@ -11,6 +12,7 @@ import sys
 import time
 import uuid
 
+from ..constants import LAUNCHER_FEATURES
 from .discovery import discovery_directory
 
 
@@ -29,7 +31,103 @@ def _atomic(path, data, mode=0o600):
         temporary.unlink(missing_ok=True)
 
 
+_PREFIX_OPTION = "pycache_prefix="
+
+
+def _bytecode_args(windows=False):
+    """The launcher's Python never writes into the install directory.
+
+    A ``__pycache__`` written there breaks the signed macOS bundle, so it
+    shares the app's bytecode cache (``sys.pycache_prefix``, set before the
+    app's Python starts) or, without one, writes no bytecode at all. A
+    Windows ``.cmd`` carries non-ASCII text only inside ``%LOCALAPPDATA%``
+    (see ``_cmd_argument``); a cache it would mangle is not used.
+    """
+    prefix = sys.pycache_prefix
+    if prefix and windows:
+        rest = _localappdata_rest(prefix)
+        if not (prefix if rest is None else rest).isascii():
+            prefix = None
+    return ["-X", _PREFIX_OPTION+prefix] if prefix else ["-B"]
+
+
+def _localappdata_rest(path):
+    """``path`` below ``%LOCALAPPDATA%`` as the part after it (``\\Mixar\\...``), else None.
+    Windows rules: case-insensitive, either slash."""
+    base = os.environ.get("LOCALAPPDATA", "").rstrip("\\/")
+    if not base or len(path) <= len(base)+1 or path[len(base)] not in "\\/":
+        return None
+    if ntpath.normcase(path[:len(base)]) != ntpath.normcase(base):
+        return None
+    return path[len(base):]
+
+
+def _cmd_argument(arg):
+    """One argument of the ``.cmd`` launcher's command line.
+
+    Every argument is double-quoted: ``subprocess.list2cmdline`` quotes only
+    arguments with spaces, and cmd.exe splits an unquoted ``&`` or ``^`` (a
+    user name such as ``R&D``) into another command. ``%`` is doubled for the
+    batch parser; a trailing backslash is doubled so it does not escape the
+    closing quote for the program's argv parser. Windows paths cannot hold ``"``.
+
+    The bytecode cache below ``%LOCALAPPDATA%`` (the default) is written as
+    that reference, its ``%`` left single: cmd.exe decodes a batch file in the
+    console code page, so a non-ASCII user name (``Jöhn``) written literally
+    reaches Python mangled, while an expanded variable keeps its exact value.
+    (``chcp 65001`` would too, but it changes the code page of the console the
+    MCP client shares, for the rest of that session.)
+    """
+    text = arg.replace("%", "%%")
+    if arg.startswith(_PREFIX_OPTION):
+        rest = _localappdata_rest(arg[len(_PREFIX_OPTION):])
+        if rest is not None:
+            text = _PREFIX_OPTION+"%LOCALAPPDATA%"+rest.replace("%", "%%")
+    return '"'+text+"\\"*(len(text)-len(text.rstrip("\\")))+'"'
+
+
+def _cmd_line(command):
+    return " ".join(_cmd_argument(arg) for arg in command)+" %*"
+
+
+def _localappdata_option(command):
+    """Index of a ``-X pycache_prefix=`` value below ``%LOCALAPPDATA%``, else None."""
+    for index in range(1, len(command)):
+        arg = command[index]
+        if command[index-1] == "-X" and arg.startswith(_PREFIX_OPTION) \
+                and _localappdata_rest(arg[len(_PREFIX_OPTION):]) is not None:
+            return index
+    return None
+
+
+def _cmd_text(command):
+    """The Windows launcher: ``command`` as a cmd.exe line, then the caller's arguments.
+    The same text works from ``cmd /d /c``, ``cmd /d /s /c ""…""`` and a direct start.
+
+    A cache written as ``%LOCALAPPDATA%`` is guarded: a client that starts the
+    launcher without that variable would expand it to nothing, and the cache
+    would become ``\\Mixar\\...`` at the root of the current drive. Such a start
+    writes no bytecode (``-B``). ``goto``, not a parenthesised block, so a ``)``
+    in a path or an argument cannot end it; CRLF, because cmd.exe's label search
+    can miss a label in a batch file with bare LF line ends.
+    """
+    lines = ["@echo off"]
+    index = _localappdata_option(command)
+    if index is None:
+        lines.append(_cmd_line(command))
+    else:
+        lines += ["if not defined LOCALAPPDATA goto nocache", _cmd_line(command), "exit /b",
+                  ":nocache", _cmd_line([*command[:index-1], "-B", *command[index+1:]])]
+    return "".join(line+"\r\n" for line in lines)
+
+
 def provision(python, script, executable, enabled=True):
+    """(Re)write the launcher; the app does so on every start (runtime._tick).
+
+    ``features`` names what this Mixar's launcher honours (a reader that knows
+    only ``version`` 1 ignores it): the Claude plugin starts only a launcher
+    whose record lists "hide_media_generation", so an older Mixar fails closed.
+    """
     root = directory()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     if root.is_symlink():
@@ -39,15 +137,16 @@ def provision(python, script, executable, enabled=True):
             raise OSError("Connector directory belongs to another user")
         root.chmod(0o700)
     manifest = {"version": 1, "python": str(python), "script": str(script),
-                "executable": str(executable), "enabled": bool(enabled)}
+                "executable": str(executable), "enabled": bool(enabled), "features": list(LAUNCHER_FEATURES)}
     _atomic(root / "installation.json", json.dumps(manifest))
-    if os.name == "nt":
+    windows = os.name == "nt"
+    command = [str(python), *_bytecode_args(windows), str(script)]
+    if windows:
         path = root / "mixar-mcp.cmd"
-        command = subprocess.list2cmdline([str(python), str(script)]).replace('%', '%%')
-        _atomic(path, "@echo off\n"+command+" %*\n")
+        _atomic(path, _cmd_text(command))
     else:
         path = root / "mixar-mcp"
-        _atomic(path, "#!/bin/sh\nexec "+shlex.join([str(python), str(script)])+' "$@"\n', 0o700)
+        _atomic(path, "#!/bin/sh\nexec "+shlex.join(command)+' "$@"\n', 0o700)
     return path
 
 

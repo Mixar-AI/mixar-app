@@ -87,6 +87,9 @@ _DENIED_SUBMODULES = frozenset({
     # imports, real builtins). The agent reaches it only through the
     # addon_project RPC, whose commits the user approves -- never from a script.
     "mixar.modules.addon_project",
+    # The job features a restricted MCP connection's script may not submit
+    # are held here while it runs; the script must not be able to lift them.
+    "mixar.modules.common.job_queue.core.blocked_features",
 })
 
 

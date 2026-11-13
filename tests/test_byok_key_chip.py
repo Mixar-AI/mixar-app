@@ -382,7 +382,7 @@ def test_chip_labels_are_brand_names_and_only_local_is_translated(state):
     assert 'LOCAL_CHIP_LABEL = n_("Local")' in source
     assert catalog_labels.chip_provider_label('anthropic') == 'Claude API'
     # Only the providers the desktop defines itself are named in the client.
-    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex'}
+    assert set(catalog_labels._CLIENT_PROVIDER_CHIP_LABELS) == {'openrouter', 'codex', 'claude_code'}
     assert catalog_labels.chip_provider_label('codex') == 'Codex'
 
 

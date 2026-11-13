@@ -49,14 +49,26 @@ Patch dialog sequence:
 
             <Publish Dialog="MixarExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
 
-            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">NOT Installed</Publish>
+            <!-- #2079: this account's Mixar is in Program Files and the wizard
+                 runs without administrator rights: MixarElevateDlg asks for
+                 approval and hands over to an elevated copy, which moves it. -->
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="MixarElevateDlg"><![CDATA[NOT Installed AND MIXAR_SCOPE_ACTION = "relaunch"]]></Publish>
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"><![CDATA[NOT Installed AND MIXAR_SCOPE_ACTION <> "relaunch"]]></Publish>
             <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">Installed AND PATCH</Publish>
 
             <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
             <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1">1</Publish>
             <Publish Dialog="InstallDirDlg" Control="Next" Event="DoAction" Value="WixUIValidatePath" Order="2">NOT WIXUI_DONTVALIDATEPATH</Publish>
             <Publish Dialog="InstallDirDlg" Control="Next" Event="SpawnDialog" Value="InvalidDirDlg" Order="3"><![CDATA[NOT WIXUI_DONTVALIDATEPATH AND WIXUI_INSTALLDIR_VALID<>"1"]]></Publish>
-            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="4">WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID="1"</Publish>
+            <!-- #2079: without administrator rights a per-user install cannot
+                 write to Program Files, Program Files (x86) or Windows; it would
+                 fail at the end. An
+                 administrator's unelevated wizard has Privileged set too
+                 (MixarInspect sets MIXAR_LIMITED_TOKEN for it). -->
+            <Publish Dialog="InstallDirDlg" Control="Next" Property="MIXAR_DIR_NEEDS_ADMIN" Value="{}" Order="4">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Property="MIXAR_DIR_NEEDS_ADMIN" Value="1" Order="5"><![CDATA[NOT ALLUSERS AND (NOT Privileged OR MIXAR_LIMITED_TOKEN) AND ((MIXAR_PROGRAM_FILES AND INSTALL_ROOT ~<< MIXAR_PROGRAM_FILES) OR (MIXAR_PROGRAM_FILES_X86 AND INSTALL_ROOT ~<< MIXAR_PROGRAM_FILES_X86) OR (WindowsFolder AND INSTALL_ROOT ~<< WindowsFolder))]]></Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="SpawnDialog" Value="MixarAdminDirDlg" Order="6">MIXAR_DIR_NEEDS_ADMIN</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="7">(WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID="1") AND NOT MIXAR_DIR_NEEDS_ADMIN</Publish>
             <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Property="_BrowseProperty" Value="[WIXUI_INSTALLDIR]" Order="1">1</Publish>
             <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2">1</Publish>
 
@@ -90,13 +102,29 @@ Patch dialog sequence:
                 <Control Id="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" TabSkip="no" Text="!(loc.ExitDialogBitmap)" />
                 <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
                 <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
-                <Control Id="Description" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogDescription)" />
-                <Control Id="Title" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogTitle)" />
+                <Control Id="Description" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogDescription)">
+                    <Condition Action="hide">MIXAR_RELAUNCHED</Condition>
+                </Control>
+                <Control Id="Title" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogTitle)">
+                    <Condition Action="hide">MIXAR_RELAUNCHED</Condition>
+                </Control>
+                <!-- #2079: MixarElevateDlg handed the install to an elevated copy. -->
+                <Control Id="RelaunchedTitle" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="{\WixUI_Font_Bigger}Setup continues in another window">
+                    <Condition Action="show">MIXAR_RELAUNCHED</Condition>
+                </Control>
+                <Control Id="RelaunchedText" Type="Text" X="135" Y="70" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="Mixar is being installed in the Setup window that Windows opened with administrator approval. Click Finish to close this one.">
+                    <Condition Action="show">MIXAR_RELAUNCHED</Condition>
+                </Control>
+                <!-- #2079: the elevated copy starts nothing (WIX.template,
+                     LaunchMixar), so it offers nothing and says where to start Mixar. -->
+                <Control Id="ElevatedText" Type="Text" X="135" Y="115" Width="220" Height="50" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="Start Mixar from the Start menu or the desktop shortcut. Setup ran with administrator approval, so it does not start Mixar itself.">
+                    <Condition Action="show">MIXAR_ELEVATED_CHILD</Condition>
+                </Control>
                 <Control Id="LaunchCheckBox" Type="CheckBox" X="135" Y="190" Width="220" Height="17" Hidden="yes" Property="LAUNCHAPP" CheckBoxValue="1" Text="Launch Mixar">
-                    <Condition Action="show">NOT Installed</Condition>
+                    <Condition Action="show">NOT Installed AND NOT MIXAR_RELAUNCHED AND NOT MIXAR_ELEVATED_CHILD</Condition>
                 </Control>
                 <Control Id="DiscordCheckBox" Type="CheckBox" X="135" Y="209" Width="220" Height="17" Hidden="yes" Property="JOINDISCORD" CheckBoxValue="1" Text="Join the Mixar Discord community">
-                    <Condition Action="show">NOT Installed</Condition>
+                    <Condition Action="show">NOT Installed AND NOT MIXAR_RELAUNCHED AND NOT MIXAR_ELEVATED_CHILD</Condition>
                 </Control>
             </Dialog>
 
@@ -107,6 +135,44 @@ Patch dialog sequence:
             <AdminUISequence>
                 <Show Dialog="MixarExitDialog" OnExit="success" Overridable="yes" />
             </AdminUISequence>
+        </UI>
+    </Fragment>
+
+    <!-- #2079: moving this account's Mixar out of Program Files needs an
+         administrator once, and a wizard started without one asks here.
+         Next runs this package again with the Windows prompt
+         (MixarRelaunchElevated, MIXAR_ELEVATED_CHILD=1); once Windows starts
+         it, this wizard ends without installing (its ExecuteAction is
+         skipped) and says where setup continues. Declined, nothing changes
+         and the user can try again or cancel. -->
+    <Fragment>
+        <UI>
+            <Dialog Id="MixarElevateDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+                <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" ElevationShield="yes" Text="!(loc.WixUINext)">
+                    <Publish Event="DoAction" Value="MixarRelaunchElevated" Order="1">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="2">MIXAR_RELAUNCHED</Publish>
+                </Control>
+                <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+                    <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
+                </Control>
+                <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+                <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Administrator approval needed" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Mixar is in a folder only an administrator can change." />
+                <Control Id="Text" Type="Text" X="20" Y="60" Width="330" Height="120" NoPrefix="yes" Text="Setup moves Mixar to your user folder when it can; after that, updates no longer need an administrator. When it cannot (for example, another account uses this copy, or a policy requires an administrator), it updates Mixar where it is, as before. Your projects and settings stay where they are.&#13;&#10;&#13;&#10;Click Next and choose Yes when Windows asks: setup then continues in a new window. If you choose No, nothing changes." />
+            </Dialog>
+
+            <Dialog Id="MixarAdminDirDlg" Width="260" Height="105" Title="!(loc.InvalidDirDlg_Title)">
+                <Control Id="OK" Type="PushButton" X="102" Y="77" Width="56" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIOK)">
+                    <Publish Event="EndDialog" Value="Return">1</Publish>
+                </Control>
+                <Control Id="Text" Type="Text" X="48" Y="15" Width="194" Height="55" Text="Installing for your account only, Mixar cannot be placed in Program Files or Windows without an administrator. Choose a folder in your user profile, such as the one suggested." />
+                <Control Id="Icon" Type="Icon" X="15" Y="15" Width="24" Height="24" ToolTip="!(loc.InvalidDirDlgIconTooltip)" FixedSize="yes" IconSize="32" Text="!(loc.InvalidDirDlgIcon)" />
+            </Dialog>
         </UI>
     </Fragment>
 </Wix>

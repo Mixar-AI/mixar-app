@@ -1442,6 +1442,9 @@ msgstr "登录已取消或超时"
 msgid "Incomplete token pair in response"
 msgstr "响应中的令牌对不完整"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "准备就绪，可以输入"
 
@@ -1524,6 +1527,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1712,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "为智能体使用此模型"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1747,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT 订阅"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1883,13 +1934,10 @@ msgstr "AI 提供商设置"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "为 Mixar 智能体使用您自己的 API 密钥。启用期间，智能体请求不扣除 Mixar 积分。"
 
-msgid "Validate with the provider and save your API key"
-msgstr "向提供商验证并保存您的 API 密钥"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1959,6 +2007,9 @@ msgid "Local model"
 msgstr "本地模型"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3002,19 +3053,34 @@ msgstr "{platform} 不支持的安装程序类型：{installer_type}"
 msgid "This install can't be updated in place"
 msgstr "此安装无法原位更新"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "已更新到 Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "更新已成功安装。"
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3250,6 +3316,24 @@ msgstr "重启以更新"
 
 msgid "Updating…"
 msgstr "正在更新…"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -7724,6 +7808,12 @@ msgstr "情绪板"
 msgid "Right-click context menu for moodboard"
 msgstr "情绪板的右键上下文菜单"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "删除连接"
 
@@ -9994,14 +10084,14 @@ msgstr "正在刷新模型列表..."
 msgid "Generation catalog module not available"
 msgstr "生成目录模块不可用"
 
+msgid "A duplicate image generation is already queued"
+msgstr "相同的图像生成已在队列中"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "生成 AI 图像并将其添加到情绪板"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "请输入提示词（按 Enter 确认文本）"
-
-msgid "A duplicate image generation is already queued"
-msgstr "相同的图像生成已在队列中"
 
 msgid "No model specified and no default available"
 msgstr "未指定模型，且没有可用的默认模型"
@@ -19869,6 +19959,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20312,12 +20405,6 @@ msgstr "修改中..."
 
 msgid "Awaiting Input..."
 msgstr "等待输入..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20900,6 +20987,9 @@ msgstr "检查点文件缺失"
 
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "无法保留当前状态，因此未做任何更改"
+
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
 
 msgid "Could not read the checkpoint"
 msgstr "无法读取检查点"
@@ -21540,6 +21630,15 @@ msgstr "最多 {count} 个附件"
 msgid "Paste failed: {error}"
 msgstr "粘贴失败：{error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "无法添加 {name}：{error}"
+
+msgid "These references are already attached"
+msgstr "这些参考图已附加"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21825,23 +21924,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "无法添加 {name}：{error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "已达到附件数量上限（{count}）"
 
 msgid "Skipped {name}: {error}"
 msgstr "已跳过 {name}：{error}"
 
-msgid "These references are already attached"
-msgstr "这些参考图已附加"
-
 msgid "Added {count} image(s)"
 msgstr "已添加 {count} 张图像"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "从 Blend 添加"
