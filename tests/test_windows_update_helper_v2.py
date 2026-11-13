@@ -67,6 +67,17 @@ def _script(**overrides):
     return win_installer.build_script(**kwargs)
 
 
+def _env(**overrides):
+    kwargs = dict(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[INSTALL_DIR + r"\mixar-launcher.exe"],
+        install_dir=INSTALL_DIR, from_version="3.3.6", attempt_id="0123abcd",
+    )
+    kwargs.update(overrides)
+    return win_installer.helper_environment(**kwargs)
+
+
 # ---------------------------------------------------------------------------
 # Eligibility: only the copy Windows Installer registered self-installs
 # ---------------------------------------------------------------------------
@@ -276,7 +287,7 @@ def test_helper_waits_for_processes_in_the_install_dir_without_closing_them():
     script = _script()
     lock = script[script.index(":lockloop"):script.index(":unlocked")]
 
-    assert f'set "INSTALLDIR={INSTALL_DIR}"' in script
+    assert _env()["INSTALLDIR"] == INSTALL_DIR
     assert "Win32_Process" in lock and "ExecutablePath" in lock
     assert 'if not "%ERRORLEVEL%"=="3" goto unlocked' in lock
     assert "if %LOCKWAIT% GEQ 60 goto locked" in lock
@@ -302,10 +313,9 @@ def test_helper_result_carries_the_attempt_fields():
 
     for line in ("version=%VERSION%", "stage=%~1", "exit=%~2",
                  "from_version=%FROM_VERSION%", "attempt_id=%ATTEMPT%",
-                 "helper_version=4", "wait_s=%WAITED%"):
+                 "helper_version=8", "trigger=%TRIGGER%", "wait_s=%WAITED%"):
         assert f'echo {line}' in record, line
-    assert 'set "FROM_VERSION=3.3.6"' in script
-    assert 'set "ATTEMPT=0123abcd"' in script
+    assert (_env()["FROM_VERSION"], _env()["ATTEMPT"]) == ("3.3.6", "0123abcd")
 
 
 def test_helper_records_the_registry_and_relaunches_from_it_first():
@@ -322,27 +332,30 @@ def test_helper_records_the_registry_and_relaunches_from_it_first():
     finish_block = script[script.index(":finish"):script.index(":relaunched")]
     assert 'if "%ERRORLEVEL%"=="0" goto relaunched' in finish_block
     # PowerShell unavailable -> the batch candidates still bring Mixar back.
-    assert 'start "" "C:\\Program Files\\Mixar\\mixar-launcher.exe"' in finish_block
+    assert 'start "" "%RELAUNCH1%"' in finish_block
+    assert _env()["RELAUNCH1"] == INSTALL_DIR + r"\mixar-launcher.exe"
     assert "relaunch_kind=fallback" in finish_block
 
 
 def test_helper_exit_status_is_the_installers():
     script = _script()
 
-    assert script.count("exit /b %INSTALL_EXIT%") == 2
+    # :relaunched, the no-candidate fallback and :stayclosed (install on quit).
+    assert script.count("exit /b %INSTALL_EXIT%") == 3
     assert 'set "INSTALL_EXIT=1"' in script.split(":waitloop")[0]
     # A failed launch is never exit 0.
     assert "if($null -eq $p -or $null -eq $p.ExitCode){exit 1}" in win_installer._PS_INSTALL
     assert "exit 1602" in win_installer._PS_INSTALL
 
 
-@pytest.mark.parametrize("name", ["_PS_INSTALL", "_PS_VERIFY", "_PS_END_CONNECTORS", "_PS_LOCKS", "_PS_FINISH"])
+@pytest.mark.parametrize("name", ["_PS_INSTALL", "_PS_VERIFY", "_PS_END_CONNECTORS", "_PS_LOCKS",
+                                  "_PS_FINISH", "_PS_HOLD", "_PS_HELD_VERIFY"])
 def test_powershell_snippets_survive_batch_quoting(name):
     """Embedded in -Command "...": a quote would end the argument and a
     percent sign would be expanded by cmd."""
     snippet = getattr(win_installer, name)
     assert '"' not in snippet and "%" not in snippet
-    # "/qb!" is only safe while delayed expansion stays off — explicitly,
+    # A "!" is only safe while delayed expansion stays off — explicitly,
     # since a registry DelayedExpansion=1 turns it on for cmd /c.
     assert "setlocal enableextensions disabledelayedexpansion" in _script()
     assert "\r" not in snippet and "\n" not in snippet
@@ -395,10 +408,13 @@ def test_purge_keeps_the_result_until_read_and_the_logs_always(tmp_path):
     assert sorted(os.listdir(tmp_path)) == logs
 
 
-def test_msi_install_location_is_left_to_cpack():
-    # CPack's generated properties.wxi already sets ARPINSTALLLOCATION from
-    # INSTALL_ROOT; a second SetProperty in the template fails light.exe
-    # with LGHT0091 (duplicate SetARPINSTALLLOCATION).
+def test_msi_install_location_is_set_once():
+    # packaging.cmake sets CPACK_WIX_PROPERTY_ARPINSTALLLOCATION, which stops
+    # CPack's properties.wxi from emitting its own SetProperty (and the
+    # search that kept upgrades in the old folder, #2079); the template sets
+    # it instead. Two would fail light.exe with LGHT0091.
     template = (ROOT / "src" / "release" / "windows" / "installer_wix"
                 / "WIX.template").read_text(encoding="utf-8")
-    assert '<SetProperty Id="ARPINSTALLLOCATION"' not in template
+    cmake = (ROOT / "src" / "build_files" / "cmake" / "packaging.cmake").read_text(encoding="utf-8")
+    assert template.count('<SetProperty Id="ARPINSTALLLOCATION"') == 1
+    assert "set(CPACK_WIX_PROPERTY_ARPINSTALLLOCATION" in cmake

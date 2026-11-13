@@ -457,16 +457,29 @@ def _unrecoverable(scene, sid, tid):
     return Turn(sid, saved.get('turn_id', ''), saved.get('run_id', ''), cursor=int(saved.get('cursor', -1)))
 
 
-def _request_replay(turn):
+def _request_replay(turn, resent=False):
     from mixar.modules.common.agent_rpc.client import call
     turn.recovering = True
+    sent_at = turn.cursor
     def reply(result):
         data = result.get('data') if isinstance(result, dict) else None
-        if isinstance(data, dict) and data.get('disconnected') and turn.attach_failures < _MAX_ATTACH_FAILURES:
-            # The socket closed before the answer; the next connection
-            # re-attaches from the cursor. Only a verdict ends a live turn.
+        lost = isinstance(data, dict) and (data.get('uncertain') or data.get('disconnected'))
+        if lost and turn.cursor > sent_at:
+            # Its events arrived, so the server heard it: the answer alone was lost.
+            turn.attach_failures = 0
+            turn.recovering = False
+            return
+        if lost and resent and data.get('disconnected'):
+            # This socket's timeout already counted its loss; the next one re-attaches.
+            turn.recovering = False
+            return
+        if lost and turn.attach_failures < _MAX_ATTACH_FAILURES:
+            # No answer: the socket closed, or the deadline passed first (#2061).
+            # Both -32020s are the client's own; only a server verdict ends a live turn.
             turn.attach_failures += 1
             turn.recovering = False
+            if not data.get('disconnected') and not turn.complete:
+                _request_replay(turn, resent=True)  # The socket is up: no reconnect will ask again.
             return
         if not isinstance(result, dict) or result.get('status') == 'unavailable' or result.get('code'):
             handle_turn_notification('agent.turn.event', {'session_id': turn.session_id,

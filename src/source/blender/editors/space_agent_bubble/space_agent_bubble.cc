@@ -851,6 +851,18 @@ bool ED_agent_bubble_is_resting_pill(const bContext *C)
          win->runtime->ghostwin == g_pill_ghostwin;
 }
 
+bool ED_agent_bubble_is_minimised_window(const wmWindow *window)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  return g_bubble_minimised && window && window->runtime->ghostwin &&
+         window->runtime->ghostwin == g_bubble_ghostwin &&
+         window->runtime->ghostwin != g_pill_ghostwin;
+#else
+  (void)window;
+  return false;
+#endif
+}
+
 void agent_bubble_return_key_to_host()
 {
 #if defined(__APPLE__) || defined(_WIN32)
@@ -4323,6 +4335,9 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
     g_pill_user_placed = false;
   }
   g_bubble_minimised = true;
+  /* Stop island drawing before releasing RNA blocks: native resize callbacks
+   * and the macOS fade can redraw before the window is actually hidden. */
+  agent_bubble_composer_deactivate(C, g_bubble_ghostwin);
   g_bubble_minimise_pending = true;
   const uintptr_t generation = ++g_bubble_motion_generation;
   /* A padded island that minimises leaves the pad: the restore path sizes

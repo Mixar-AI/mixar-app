@@ -388,7 +388,13 @@ def test_a_claimed_guests_archives_are_refiled_under_the_account(client_store):
     other = packet(seq=1)
     other['session_id'] = 'theirs'
     client_store.write_batch('someone_else', other, 'scene')
+    # Not re-filed (a 4.3.x sign-in): the account's batch fails closed, the toast.
+    with pytest.raises(ValueError, match='owner'):
+        client_store.write_batch('account', packet(seq=2, text='after sign-in'), 'scene')
     assert client_store.reassign_owner('guest', 'account') == 1
+    assert client_store.reassign_owner('guest', 'account') == 0  # the sync reply re-runs it
+    with pytest.raises(ValueError, match='owner'):
+        client_store.write_batch('account', {**other, 'records': []}, 'scene')
     read = client_store.read('account', 'session', message_id='message1')
     assert read['status'] == 'available'
     with pytest.raises(ValueError, match='owner'):

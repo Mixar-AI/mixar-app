@@ -173,16 +173,21 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
             # would set.
             label = bake_type.title().replace("_", " ").removesuffix(" Mask")
             try:
-                bpy.ops.wm.m_bake_to_layer(
+                from .mask_uv import mask_bake_uv
+                bake_uv = mask_bake_uv(bpy.context.view_layer.objects.active, uv_name)
+                result = bpy.ops.wm.m_bake_to_layer(
                     'EXEC_DEFAULT',
                     name=f"{name} {label} Mask",
                     target_type='MASK',
                     type=bake_type,
-                    uv_map=uv_name,
+                    uv_map=bake_uv,
+                    use_udim=False,
                     width=_MASK_BAKE_RES,
                     height=_MASK_BAKE_RES,
                     **_BAKE_CONFIG[bake_type],
                 )
+                if "FINISHED" not in result:
+                    raise RuntimeError("Material mask baking was cancelled.")
             except Exception as e:
                 print(f"[layered_build] bake mask {bake_type} for '{name}' failed: {e}")
 

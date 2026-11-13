@@ -663,6 +663,10 @@ msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
 # derived
+msgid "Failed to open Agent Bubble window"
+msgstr "Otvaranje prozora mehurića agenta nije uspelo"
+
+# derived
 msgid "Capture Viewport"
 msgstr "Snimi prikaz"
 
@@ -1824,6 +1828,9 @@ msgstr "Prijava je otkazana ili je isteklo vreme"
 msgid "Incomplete token pair in response"
 msgstr "Nepotpun par tokena u odgovoru"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 # derived
 msgid "Ready for input"
 msgstr "Spremno za unos"
@@ -1928,6 +1935,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -2137,6 +2186,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Koristi ovaj model za agenta"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -2173,6 +2225,9 @@ msgstr ""
 # derived
 msgid "ChatGPT subscription"
 msgstr "ChatGPT pretplata"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -2328,14 +2383,10 @@ msgstr "Podešavanja AI dobavljača"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Koristite sopstveni API ključ za Mixar agenta. Dok je aktivno, Mixar krediti se ne naplaćuju za zahteve agenta."
 
-# derived
-msgid "Validate with the provider and save your API key"
-msgstr "Proverava kod dobavljača i čuva vaš API ključ"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -2409,6 +2460,9 @@ msgid "Local model"
 msgstr "Lokalni model"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3682,6 +3736,24 @@ msgstr "Nepodržana vrsta instalatora za {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Ova instalacija ne može da se ažurira na mestu"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 # derived
 msgid "Updated to Mixar {version}"
 msgstr "Ažurirano na Mixar {version}"
@@ -3690,13 +3762,10 @@ msgstr "Ažurirano na Mixar {version}"
 msgid "The update was installed successfully."
 msgstr "Ažuriranje je uspešno instalirano."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 # derived
@@ -3811,6 +3880,10 @@ msgstr "Mixar će se ponovo pokrenuti da ga primeni."
 # derived
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — koristite Preuzmi da ažurirate preko pregledača."
+
+# derived
+msgid "Retry"
+msgstr "Pokušaj ponovo"
 
 # derived
 msgid "Restart & Update"
@@ -3987,6 +4060,24 @@ msgstr "Ponovo pokreni radi ažuriranja"
 # derived
 msgid "Updating…"
 msgstr "Ažuriranje…"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -4275,6 +4366,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -9636,6 +9730,12 @@ msgstr "Mudbord"
 msgid "Right-click context menu for moodboard"
 msgstr "Kontekstni meni desnim klikom za mudbord"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 # derived
 msgid "Delete Connection"
 msgstr "Obriši vezu"
@@ -12588,16 +12688,16 @@ msgid "Generation catalog module not available"
 msgstr "Modul kataloga generisanja nije dostupan"
 
 # derived
+msgid "A duplicate image generation is already queued"
+msgstr "Duplikat generisanja slike je već u redu"
+
+# derived
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generiši VI slike i dodaj ih na mudbord"
 
 # derived
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Molimo unesite prompt (pritisnite Enter da potvrdite tekst)"
-
-# derived
-msgid "A duplicate image generation is already queued"
-msgstr "Duplikat generisanja slike je već u redu"
 
 # derived
 msgid "No model specified and no default available"
@@ -25360,6 +25460,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -25940,12 +26043,6 @@ msgstr "Izmena..."
 # derived
 msgid "Awaiting Input..."
 msgstr "Čeka se unos..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -26642,6 +26739,9 @@ msgstr "Datoteka tačke vraćanja nedostaje"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Tekuće stanje nije moglo da se sačuva, pa ništa nije promenjeno"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 # derived
 msgid "Could not read the checkpoint"
 msgstr "Nije bilo moguće pročitati tačku vraćanja"
@@ -26852,10 +26952,6 @@ msgstr "Odjava"
 
 msgid "Sound on"
 msgstr ""
-
-# derived
-msgid "Retry"
-msgstr "Pokušaj ponovo"
 
 # derived
 msgid "Choose Export Location"
@@ -27465,6 +27561,17 @@ msgstr "Najviše priloga: {count}"
 msgid "Paste failed: {error}"
 msgstr "Nalepljivanje nije uspelo: {error}"
 
+# derived
+msgid "Cannot add {name}: {error}"
+msgstr "Nije moguće dodati {name}: {error}"
+
+# derived
+msgid "These references are already attached"
+msgstr "Ove reference su već priložene"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -27801,10 +27908,6 @@ msgid "Attach files: images become references, 3D models are imported, any other
 msgstr ""
 
 # derived
-msgid "Cannot add {name}: {error}"
-msgstr "Nije moguće dodati {name}: {error}"
-
-# derived
 msgid "Attachment limit ({count}) reached"
 msgstr "Dostignuta je granica priloga ({count})"
 
@@ -27813,15 +27916,8 @@ msgid "Skipped {name}: {error}"
 msgstr "Preskočeno {name}: {error}"
 
 # derived
-msgid "These references are already attached"
-msgstr "Ove reference su već priložene"
-
-# derived
 msgid "Added {count} image(s)"
 msgstr "Dodatih slika: {count}"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 # derived
 msgid "Add from Blend"
@@ -33579,10 +33675,6 @@ msgid "Agent Bubble"
 msgstr "Mehurić agenta"
 
 # derived
-msgid "Failed to open Agent Bubble window"
-msgstr "Otvaranje prozora mehurića agenta nije uspelo"
-
-# derived
 msgid "Agent Bubble Status"
 msgstr "Status mehurića agenta"
 
@@ -34169,6 +34261,9 @@ msgstr "Animiraj prilog mudborda"
 # derived
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Prikazuje novopriloženu referencu kako uleće u ćaskanje Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Kašnjenje"

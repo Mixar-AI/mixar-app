@@ -14,15 +14,17 @@ search over a large folder.
 import threading
 
 from ..constants import (
+    DEFAULT_PDF_PAGE_DIM,
     DEFAULT_VIDEO_FRAME_DIM,
     DEFAULT_VIDEO_FRAMES,
     RPC_LIST,
     RPC_READ,
     RPC_SEARCH,
     RPC_VIEW_IMAGE,
+    RPC_VIEW_PDF_PAGES,
     RPC_VIEW_VIDEO,
 )
-from . import grants, reader, video
+from . import grants, pdf, reader, video
 from .errors import ContextFolderError, public_error
 from .registry import get_registry
 
@@ -60,6 +62,9 @@ def dispatch(method: str, params: dict) -> dict:
                                       params.get("start_s"), params.get("end_s"),
                                       params.get("count") or DEFAULT_VIDEO_FRAMES,
                                       params.get("max_dim") or DEFAULT_VIDEO_FRAME_DIM)
+        if method == RPC_VIEW_PDF_PAGES:
+            return pdf.view_pages(_root_for(params), params.get("path"), params.get("pages"),
+                                  params.get("max_dim") or DEFAULT_PDF_PAGE_DIM)
         raise ContextFolderError("unknown_method", "This Mixar build does not support that folder operation")
     except Exception as exc:  # noqa: BLE001 — every failure becomes a path-free reply
         return public_error(exc)

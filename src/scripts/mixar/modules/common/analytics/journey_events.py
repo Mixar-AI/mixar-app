@@ -46,6 +46,7 @@ ACTIONS = {
 }
 _previous_tab = None
 _tab_started = None
+_deferred = set()  # operator ids that deferred themselves this call
 TAB_CAPABILITIES = {'THREE_D': 'model_gen', 'IMAGE': 'image_gen',
                     'VIDEO': 'video_gen', 'SPLAT': 'world_labs'}
 
@@ -93,15 +94,40 @@ def tab_changed(context, tab):
         pass
 
 
+def note_deferred(operator_id):
+    """The running operator handed its work to a timer that will call it again.
+
+    Its CANCELLED return is then reported as ``deferred``, not as a user
+    cancel; the re-entry reports the real outcome (from a timer, so its
+    surface is ``other``).
+    """
+    _deferred.add(operator_id)
+
+
+def _outcome(result):
+    """Map an operator result to its outcome. A result that is not a set
+    (an operator bug Blender rejects after we return) counts as ``error``."""
+    if not isinstance(result, (set, frozenset)):
+        return 'error'
+    for flag, outcome in (('ERROR', 'error'), ('RUNNING_MODAL', 'modal_started'),
+                          ('FINISHED', 'finished'), ('CANCELLED', 'cancelled'),
+                          ('PASS_THROUGH', 'pass_through')):
+        if flag in result:
+            return outcome
+    return 'other'
+
+
 def operator_outcome(operator_id, result, context):
     """Semantic actions share the registration wrapper's one-shot boundary."""
+    deferred = operator_id in _deferred
+    _deferred.discard(operator_id)
     try:
         action = ACTIONS.get(operator_id)
         if not action:
             return
-        outcome = ('error' if 'ERROR' in result else
-                   'modal_started' if 'RUNNING_MODAL' in result else
-                   'finished' if 'FINISHED' in result else 'cancelled')
+        outcome = _outcome(result)
+        if deferred and outcome == 'cancelled':
+            outcome = 'deferred'
         capture(EVENT_UI_ACTION, {
             'feature': action[0], 'action': action[1],
             'outcome': outcome, 'surface': surface(context),
@@ -131,7 +157,7 @@ def generation_attempt(context, owner):
 
 def generation_dispatch(context, attempt, outcome, *, reason=None):
     try:
-        if outcome not in {'unknown_owner', 'unavailable', 'poll_failed',
+        if outcome not in {'unknown_owner', 'unavailable', 'poll_failed', 'rejected',
                            'error', 'cancelled', 'modal_started', 'dispatched'}:
             return
         from mixar.modules.common.utils.generation_dispatch import REASONS

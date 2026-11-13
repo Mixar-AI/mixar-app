@@ -24,10 +24,13 @@ says who holds it; this module acts on the answer, on the main thread:
   update then stops anyway or on every poll of a background wait. One
   that cannot be ended is named.
 
-Other platforms pass straight through.
+Other platforms pass straight through. :func:`silent_blocker` asks the
+same question for an install on quit or at launch, on every platform,
+without acting on the answer.
 """
 
 import os
+import sys
 import time
 
 import bpy
@@ -59,6 +62,14 @@ def _holders(install_dir):
     from . import win_processes
 
     return win_processes.blocking_apps(install_dir, os.getpid())
+
+
+def _silent_holders(install_dir):
+    """Holders an install nobody watches waits on: not this process's own
+    descendants, which end as it quits; raises when the table is unknown."""
+    from . import win_processes
+
+    return win_processes.blocking_apps(install_dir, os.getpid(), descendants=False, strict=True)
 
 
 def _end_connectors(holders):
@@ -150,6 +161,40 @@ def check(eligibility) -> str:
         push_close_apps_toast(survivors)
         return BLOCKED_BY_OTHER_APPS
     return ""
+
+
+def silent_blocker(eligibility) -> str:
+    """What keeps an install nobody is watching (on quit, at launch) from
+    going ahead: comma-joined names, or ``""`` when nothing does.
+
+    The same question :func:`check` answers, asked without anyone to ask:
+    no toast, no wait, nothing ended. On both platforms this process's own
+    children are left out: they end as it quits, and the helper still
+    waits for anything left running from the install. Windows: every other
+    holder but a Mixar connector (the helper ends those), so another Mixar
+    and its background work (a windowless ``mixar.exe -b``) refuse.
+    macOS: another Mixar or anything else running from the bundle
+    (:mod:`mac_processes`). A process table that cannot be read refuses.
+    """
+    location = eligibility.location
+    if location is None or not location.target:
+        return "unknown install location"
+    try:
+        if _is_windows():
+            from . import win_processes
+
+            holders = [holder for holder in _silent_holders(location.target)
+                       if holder.kind not in win_processes.ENDED_BY_UPDATE]
+        elif sys.platform == "darwin":
+            from . import mac_processes
+
+            holders = mac_processes.blocking_apps(location.target, os.getpid())
+        else:
+            return "unsupported platform"
+    except Exception:  # noqa: BLE001 - unknown is a refusal
+        logger.warning("Could not read the process table", exc_info=True)
+        return "process table unavailable"
+    return ", ".join(sorted({holder.name for holder in holders}))
 
 
 def reset() -> None:

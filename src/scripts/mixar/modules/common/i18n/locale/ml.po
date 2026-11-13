@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
+
 msgid "Capture Viewport"
 msgstr "വ്യൂപോർട്ട് പകർത്തുക"
 
@@ -1439,6 +1442,9 @@ msgstr "ലോഗിൻ റദ്ദാക്കി അല്ലെങ്കി�
 msgid "Incomplete token pair in response"
 msgstr "പ്രതികരണത്തിൽ അപൂർണ ടോക്കൺ ജോഡി"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "ഇൻപുട്ടിന് തയ്യാർ"
 
@@ -1521,6 +1527,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1709,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "ഏജന്റിന് ഈ മോഡൽ ഉപയോഗിക്കുക"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1744,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT സബ്സ്ക്രിപ്ഷൻ"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1880,13 +1934,10 @@ msgstr "AI ദാതാവ് ക്രമീകരണങ്ങൾ"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixar ഏജന്റിന് നിങ്ങളുടെ സ്വന്തം API കീ ഉപയോഗിക്കുക. സജീവമായിരിക്കുമ്പോൾ ഏജന്റ് അഭ്യർത്ഥനകൾക്ക് Mixar ക്രെഡിറ്റുകൾ ഈടാക്കില്ല."
 
-msgid "Validate with the provider and save your API key"
-msgstr "ദാതാവിനൊപ്പം സാധൂകരിച്ച് നിങ്ങളുടെ API കീ സംരക്ഷിക്കുക"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1956,6 +2007,9 @@ msgid "Local model"
 msgstr "ലോക്കൽ മോഡൽ"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -2999,19 +3053,34 @@ msgstr "{platform}-ന് പിന്തുണയില്ലാത്ത ഇ�
 msgid "This install can't be updated in place"
 msgstr "ഈ ഇൻസ്റ്റാൾ സ്ഥലത്ത് അപ്ഡേറ്റ് ചെയ്യാനാകില്ല"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version} ആയി അപ്ഡേറ്റ് ചെയ്തു"
 
 msgid "The update was installed successfully."
 msgstr "അപ്ഡേറ്റ് വിജയകരമായി ഇൻസ്റ്റാൾ ചെയ്തു."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3103,6 +3172,9 @@ msgstr "അത് പ്രയോഗിക്കാൻ Mixar പുനരാര�
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ബ്രൗസർ വഴി അപ്ഡേറ്റ് ചെയ്യാൻ ഡൗൺലോഡ് ഉപയോഗിക്കുക."
+
+msgid "Retry"
+msgstr "വീണ്ടും ശ്രമിക്കുക"
 
 msgid "Restart & Update"
 msgstr "പുനരാരംഭിച്ച് അപ്ഡേറ്റ് ചെയ്യുക"
@@ -3244,6 +3316,24 @@ msgstr "അപ്ഡേറ്റ് ചെയ്യാൻ പുനരാരം�
 
 msgid "Updating…"
 msgstr "അപ്ഡേറ്റ് ചെയ്യുന്നു…"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3483,6 +3573,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7715,6 +7808,12 @@ msgstr "മൂഡ്ബോർഡ്"
 msgid "Right-click context menu for moodboard"
 msgstr "മൂഡ്ബോർഡിനുള്ള വലത്-ക്ലിക്ക് സന്ദർഭ മെനു"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "ബന്ധം ഇല്ലാതാക്കുക"
 
@@ -9985,14 +10084,14 @@ msgstr "മോഡൽ പട്ടിക പുതുക്കുന്നു..."
 msgid "Generation catalog module not available"
 msgstr "ജനറേഷൻ കാറ്റലോഗ് മൊഡ്യൂൾ ലഭ്യമല്ല"
 
+msgid "A duplicate image generation is already queued"
+msgstr "ഒരു തനിപ്പകർപ്പ് ചിത്ര ജനറേഷൻ ഇതിനകം ക്യൂവിലുണ്ട്"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI ചിത്രങ്ങൾ ജനറേറ്റ് ചെയ്ത് മൂഡ്ബോർഡിലേക്ക് ചേർക്കുക"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "ദയവായി ഒരു പ്രോംപ്റ്റ് നൽകുക (നിങ്ങളുടെ ടെക്സ്റ്റ് സ്ഥിരീകരിക്കാൻ Enter അമർത്തുക)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "ഒരു തനിപ്പകർപ്പ് ചിത്ര ജനറേഷൻ ഇതിനകം ക്യൂവിലുണ്ട്"
 
 msgid "No model specified and no default available"
 msgstr "മോഡലൊന്നും വ്യക്തമാക്കിയിട്ടില്ല, സ്ഥിരവും ലഭ്യമല്ല"
@@ -19860,6 +19959,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20303,12 +20405,6 @@ msgstr "മാറ്റം വരുത്തുന്നു..."
 
 msgid "Awaiting Input..."
 msgstr "ഇൻപുട്ടിനായി കാത്തിരിക്കുന്നു..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20892,6 +20988,9 @@ msgstr "ചെക്ക്പോയിന്റ് ഫയൽ കാണുന്�
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "നിലവിലെ നില സൂക്ഷിക്കാനായില്ല, അതിനാൽ ഒന്നും മാറ്റിയില്ല"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "ചെക്ക്പോയിന്റ് വായിക്കാനായില്ല"
 
@@ -21060,9 +21159,6 @@ msgstr "സൈൻ ഔട്ട് ചെയ്യുക"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "വീണ്ടും ശ്രമിക്കുക"
 
 msgid "Choose Export Location"
 msgstr "എക്സ്പോർട്ട് സ്ഥലം തിരഞ്ഞെടുക്കുക"
@@ -21534,6 +21630,15 @@ msgstr "പരമാവധി {count} അറ്റാച്ച്മെന്റ
 msgid "Paste failed: {error}"
 msgstr "ഒട്ടിക്കൽ പരാജയപ്പെട്ടു: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} ചേർക്കാനാവില്ല: {error}"
+
+msgid "These references are already attached"
+msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21819,23 +21924,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} ചേർക്കാനാവില്ല: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) എത്തി"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} ഒഴിവാക്കി: {error}"
 
-msgid "These references are already attached"
-msgstr "ഈ റഫറൻസുകൾ ഇതിനകം അറ്റാച്ച് ചെയ്തിട്ടുണ്ട്"
-
 msgid "Added {count} image(s)"
 msgstr "{count} ചിത്രം ചേർത്തു"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "ബ്ലെൻഡിൽ നിന്ന് ചേർക്കുക"
@@ -26532,9 +26628,6 @@ msgstr "ഓട്ടോ മോഡ്: നിങ്ങളോട് ചോദി�
 msgid "Agent Bubble"
 msgstr "ഏജന്റ് ബബിൾ"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "ഏജന്റ് ബബിൾ വിൻഡോ തുറക്കാനായില്ല"
-
 msgid "Agent Bubble Status"
 msgstr "ഏജന്റ് ബബിൾ നില"
 
@@ -26984,6 +27077,9 @@ msgstr "മൂഡ്ബോർഡ് അറ്റാച്ച്മെന്റ�
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "പുതുതായി അറ്റാച്ച് ചെയ്ത റഫറൻസ് Mixie ചാറ്റിലേക്ക് പറന്നുവരുന്നത് കാണിക്കുക"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "കാലതാമസം"

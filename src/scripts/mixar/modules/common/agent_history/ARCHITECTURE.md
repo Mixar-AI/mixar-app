@@ -32,6 +32,11 @@ list `task_id`: generic filters the backend uses to list the user's own messages
 the first one on. The store knows nothing of prompt formats.
 Disk/sequence/owner failures never acknowledge or execute saved content. A changed
 epoch records a gap. A missing manifest beside an existing journal fails closed.
+A claimed guest's archives are re-filed under the account (`store.reassign_owner`)
+by the sign-in, and again on this thread before writing when a sync reply lists the
+guest in `claimed_owner_ids` (once per guest id per connection). The second path
+recovers archives a 4.3.x sign-in left under the guest id, whose every later batch
+failed the owner check. Owners the reply does not list still fail closed.
 
 Idle sync keeps the two-second transport poll but discovers historical sessions
 from disk at most once per 30 seconds; current scene sessions are included on

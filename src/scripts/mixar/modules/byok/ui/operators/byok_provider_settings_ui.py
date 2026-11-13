@@ -122,7 +122,7 @@ def sidebar_rows():
 
 def signs_in(provider):
     """A provider used through a sign-in or a local server, not an API key."""
-    return model_suggestions.is_codex(provider) or model_suggestions.is_local(provider)
+    return provider == "claude_code" or model_suggestions.is_codex(provider) or model_suggestions.is_local(provider)
 
 
 def remove_text(provider):
@@ -231,16 +231,18 @@ class FormPlan:
             self.need = S.NOTE_H + strips_h
             self.bottom = S.key_block_height()
         else:
-            self.kind = 'codex' if model_suggestions.is_codex(self.provider) else 'cloud'
+            self.kind = ('claude_code' if self.provider == 'claude_code' else
+                         'codex' if model_suggestions.is_codex(self.provider) else 'cloud')
             items = [(mid, label) for mid, label, _desc in
                      model_suggestions.get_model_items(self.provider) if mid != 'NONE']
             self.chips = S.chip_rows(layout, items, CHIP_ROW_WIDTH)
             # Codex: the subscription note, plus a line when the plan hides models.
             notes = (S.GAP + S.NOTE_H * (1 + model_suggestions.codex_models_hidden())
-                     if self.kind == 'codex' else 0.0)
+                     if self.kind in ('codex', 'claude_code') else 0.0)
             self.need = S.chips_height(len(self.chips)) + S.GAP + notes + strips_h
             # Codex: the sign-in status line sits between the note and the field.
-            self.bottom = S.key_block_height(S.NOTE_H if self.kind == 'codex' else 0.0)
+            self.bottom = (S.action_block_height() if self.kind == 'claude_code' else
+                           S.key_block_height(S.NOTE_H if self.kind == 'codex' else 0.0))
 
     def _plan_strips(self):
         wm, state = self.wm, self.state
@@ -279,9 +281,13 @@ class FormPlan:
             self._chips(area)
             if self.kind == 'codex':
                 self._codex_notes(area)
+            elif self.kind == 'claude_code':
+                S.sep(area, S.GAP)
+                S.label(S.row(area, S.NOTE_H, left=S.RIGHT_INSET),
+                        n_('Run claude auth login in your terminal, then Save & Activate.'), S.NOTE)
         self._strips(col)
 
-        if self.kind == 'local':
+        if self.kind in ('local', 'claude_code'):
             self._action_row(col, OP_SAVE, self._save_text())
         elif self.kind == 'openrouter':
             self._key_block(col, iface_("Enter your OpenRouter API key here."),

@@ -5,8 +5,8 @@
 ``can_send`` refuses while the scene is BUSY and the run is not open: the
 first moments of every turn (before ``run_status in_progress``) and a
 chat-only turn that never opens one. The composer never refuses for that:
-the message is held here as a user bubble labelled "Queued until Mixie is
-ready", and a short main-thread timer decides what happens to it:
+the message is held here as a plain user bubble (no delivery label), and a
+short main-thread timer decides what happens to it:
 
 - the run opens (a task is really running): the text is sent into it as a
   steer, one message per tick;
@@ -28,7 +28,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import HINT_QUEUED, SessionState
+from ..constants import SessionState
 
 logger = get_logger(__name__)
 
@@ -64,7 +64,6 @@ def hold(scene, text: str) -> None:
     msg.text = text
     bubble_id = f"{HELD_PREFIX}{uuid.uuid4().hex[:12]}"
     msg.bubble_id = bubble_id
-    msg.delivery_hint = HINT_QUEUED
     _held.setdefault(_key(scene), []).append((bubble_id, text))
     if not bpy.app.timers.is_registered(_tick):
         bpy.app.timers.register(_tick, first_interval=_INTERVAL)

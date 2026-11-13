@@ -54,18 +54,25 @@ create_layered_material); everything else is free. After an uncertain outcome, i
 mixar_call_status or mixar_ui_call_status with the same call UUID; never
 blindly repeat an edit.
 """
+#: For a launcher that hides AI image and video generation (the Claude plugin's,
+#: constants.HIDE_MEDIA_ENV). Native renders (render_scene_video) stay.
+GUIDE_NO_MEDIA = GUIDE.replace("Splat worlds (world_labs) and videos only", "Splat worlds (world_labs) only")
+#: Such a launcher neither lists nor runs the interface tools that act
+#: (schema.UI_ACTIONS): a click on Generate would make an image or a video.
+NO_MEDIA_UI = ("{name} is not available in this connection: acting on Mixar's interface could start "
+               "AI image or video generation. Use Mixar's scene tools; mixar_ui_observe still shows the interface.")
 #: Domains of the tools this launcher serves locally (the backend never sees them).
 LOCAL_DOMAINS = tuple(dict.fromkeys(schema.DOMAINS.values()))
 
 
-def ui_index(query="", domain=None):
-    """Compact catalog entries for the local tools."""
+def ui_index(query="", domain=None, hidden=frozenset()):
+    """Compact catalog entries for the local tools (less ``hidden``)."""
     query = query.casefold()
     entries = [{"name": tool["name"], "domain": tool["_meta"]["mixar/domain"],
                 "summary": tool["description"].split(". ", 1)[0].rstrip(".") + ".",
                 "read_only": tool["annotations"]["readOnlyHint"], "credits": "free."}
                for tool in schema.tools()
-               if domain in (None, tool["_meta"]["mixar/domain"])
+               if tool["name"] not in hidden and domain in (None, tool["_meta"]["mixar/domain"])
                and (query in tool["name"].casefold() or query in tool["description"].casefold())]
     return entries
 
@@ -112,12 +119,15 @@ def failure(exc, call_id):
 
 def create_server(connector):
     status = {"listed": False, "readiness": "starting"}
+    hide_media = getattr(connector, "hide_media", False)
+    guide = GUIDE_NO_MEDIA if hide_media else GUIDE
+    hidden = frozenset(schema.UI_ACTIONS) if hide_media else frozenset()
 
     def visible(tools):
         if getattr(connector, "health", {}).get("ui_control") is False:
             # Interface control is opt-in; scene and project tools stay.
             return [tool for tool in tools if tool["name"] not in schema.UI_INPUT]
-        return tools
+        return [tool for tool in tools if tool["name"] not in hidden] if hidden else tools
 
     async def list_tools(ctx, params):
         # Every tool at once (live, or the copy saved while signed in); never wait.
@@ -138,6 +148,8 @@ def create_server(connector):
         try:
             call_id = str(uuid.UUID((ctx.meta or {}).get("mixar/request-id", call_id)))
             args = params.arguments or {}
+            if params.name in hidden:
+                raise ValueError(NO_MEDIA_UI.format(name=params.name))
             if params.name in schema.SCHEMAS:
                 schema.validate(params.name, args)
             if params.name == "mixar_tool_quote" and args.get("tool") in schema.SCHEMAS:
@@ -172,7 +184,7 @@ def create_server(connector):
                     connector.bound_session = args["session"]
                     args = {k: v for k, v in args.items() if k != "session"}
             if params.name == "mixar_tool_catalog" and args.get("domain") in LOCAL_DOMAINS:
-                entries = ui_index(args.get("query", ""), args["domain"])
+                entries = ui_index(args.get("query", ""), args["domain"], hidden)
                 return local_result({"domains": {args["domain"]: len(entries)}, "tools": entries}, call_id)
             connector.client = presentation.client_info(ctx)
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
@@ -186,14 +198,14 @@ def create_server(connector):
             if params.name == "mixar_tool_catalog" and not result.get("isError"):
                 payload = result["structuredContent"]["result"]
                 if "domains" in payload:
-                    entries = ui_index(args.get("query", ""), args.get("domain"))
+                    entries = ui_index(args.get("query", ""), args.get("domain"), hidden)
                     payload["tools"].extend(entries)
                     for entry in entries:
                         payload["domains"][entry["domain"]] = payload["domains"].get(entry["domain"], 0) + 1
                 else:  # An older backend returns full tool definitions.
                     query = args.get("query", "").casefold()
-                    payload["tools"].extend(t for t in schema.tools() if query in t["name"].casefold()
-                                           or query in t["description"].casefold())
+                    payload["tools"].extend(t for t in schema.tools() if t["name"] not in hidden and (
+                        query in t["name"].casefold() or query in t["description"].casefold()))
                 result["content"][0] = {"type": "text", "text": json.dumps(payload)}
             return types.CallToolResult.model_validate(result)
         except asyncio.CancelledError:
@@ -210,7 +222,7 @@ def create_server(connector):
         if str(params.uri) != "mixar://guide":
             raise ValueError("Unknown Mixar resource")
         return types.ReadResourceResult(contents=[types.TextResourceContents(
-            uri=params.uri, mime_type="text/markdown", text=GUIDE)])
+            uri=params.uri, mime_type="text/markdown", text=guide)])
 
     async def list_prompts(ctx, params):
         return types.ListPromptsResult(prompts=[types.Prompt(name="build-and-verify",
@@ -225,10 +237,10 @@ def create_server(connector):
             raise ValueError("Specify build-and-verify with a nonempty goal of at most 8000 characters")
         return types.GetPromptResult(messages=[types.PromptMessage(role="user",
             content=types.TextContent(type="text", text="Complete this task in Mixar: " + goal +
-                "\n\n" + GUIDE + "Inspect the scene with Mixar's tools (render_viewport, mixar_ui_observe) before and after editing. "
+                "\n\n" + guide + "Inspect the scene with Mixar's tools (render_viewport, mixar_ui_observe) before and after editing. "
                 "Check tool costs and report credits and any unverified outcomes."))])
 
-    return Server("Mixar", version="1", instructions=GUIDE,
+    return Server("Mixar", version="1", instructions=guide,
                   on_list_tools=list_tools, on_call_tool=call_tool,
                   on_list_resources=list_resources, on_read_resource=read_resource,
                   on_list_prompts=list_prompts, on_get_prompt=get_prompt)

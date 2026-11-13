@@ -13,7 +13,7 @@ import time
 import uuid
 
 from ..constants import (
-    DEFAULT_TIMEOUT_SECONDS, MAX_ACTIVE_OPERATIONS, MAX_TIMEOUT_SECONDS,
+    DEFAULT_TIMEOUT_SECONDS, MAX_ACTIVE_OPERATIONS, MAX_FEATURE_KEY_LENGTH, MAX_TIMEOUT_SECONDS,
     OPERATION_CONTEXT_KEY, RETIRED_OPERATION_SECONDS,
 )
 
@@ -26,6 +26,9 @@ class Operation:
     scene_name: str
     state_generation: int
     deadline: float
+    #: Job-queue features its scripts may not submit (``blocked_job_features``,
+    #: sent only for a connection without media generation).
+    blocked_features: frozenset = frozenset()
 
 
 _lock = threading.RLock()
@@ -71,6 +74,15 @@ def _uuid(value):
     return str(parsed)
 
 
+def _blocked_features(value):
+    """``blocked_job_features``: short feature keys; anything else blocks nothing.
+    A malformed entry is dropped, never the whole list (fail closed)."""
+    if not isinstance(value, list):
+        return frozenset()
+    return frozenset(item for item in value
+                     if isinstance(item, str) and 0 < len(item) <= MAX_FEATURE_KEY_LENGTH)
+
+
 def held(session_id) -> bool:
     """True while an AI app connection holds this scene tab's lease."""
     with _lock:
@@ -103,6 +115,7 @@ def begin_operation(params):
         timeout = params.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
         if type(timeout) is not int or not 1 <= timeout <= MAX_TIMEOUT_SECONDS:
             raise ValueError("timeout_seconds must be an integer between 1 and 600")
+        blocked = _blocked_features(params.get("blocked_job_features"))
     except (ValueError, TypeError, AttributeError) as exc:
         return _failure("invalid_params", str(exc))
     tick()
@@ -161,7 +174,7 @@ def begin_operation(params):
         if hasattr(scene, "mixie_chat_active_turn_mode"):
             scene.mixie_chat_active_turn_mode = "AGENT"
         operation = Operation(operation_id, session_id, scene_pointer, scene.name,
-                              _state_generations.get(scene_pointer, 0), time.monotonic() + timeout)
+                              _state_generations.get(scene_pointer, 0), time.monotonic() + timeout, blocked)
         _operations[session_id] = operation
     return _receipt(operation)
 
@@ -200,6 +213,20 @@ def authorize_script(session_id, agent_ctx):
                 or context_session != operation.session_id):
             return _failure("mcp_operation_expired", "MCP operation is missing, expired or belongs to another scene")
     return None
+
+
+def script_scope(session_id, agent_ctx):
+    """Context manager for the script ``authorize_script`` just admitted: its
+    operation's blocked job features are refused while it runs
+    (``common/job_queue/core/blocked_features``). Read now, so a lease ending
+    before the script starts cannot lift the block; nothing for any other script."""
+    from mixar.modules.common.job_queue.core.blocked_features import blocking
+    context = agent_ctx if isinstance(agent_ctx, dict) else {}
+    operation_id = context.get(OPERATION_CONTEXT_KEY)
+    with _lock:
+        operation = _operations.get(session_id) if operation_id else None
+        matched = operation is not None and operation.operation_id == operation_id
+        return blocking(operation.blocked_features if matched else ())
 
 
 def any_active_operation():

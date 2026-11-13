@@ -15,11 +15,16 @@ RPC_READ = "context_folder.read"
 RPC_SEARCH = "context_folder.search"
 RPC_VIEW_IMAGE = "context_folder.view_image"
 RPC_VIEW_VIDEO = "context_folder.view_video"
-RPC_METHODS = frozenset({RPC_LIST, RPC_READ, RPC_SEARCH, RPC_VIEW_IMAGE, RPC_VIEW_VIDEO})
+RPC_VIEW_PDF_PAGES = "context_folder.view_pdf_pages"
+RPC_METHODS = frozenset({RPC_LIST, RPC_READ, RPC_SEARCH, RPC_VIEW_IMAGE, RPC_VIEW_VIDEO,
+                         RPC_VIEW_PDF_PAGES})
 # Advertised separately from CAPABILITY so an older client (which decodes no
 # video) gets a precise "update Mixar" error from the backend tool instead of
 # an unknown-method failure.
 VIDEO_CAPABILITY = "context_folder_video_v1"
+# context_folder.read extracts PDF text and context_folder.view_pdf_pages
+# renders PDF pages. Advertised only when this build imports pypdfium2.
+PDF_CAPABILITY = "context_folder_pdf_v1"
 
 # Folders one chat may carry at once.
 MAX_FOLDERS = 5
@@ -59,6 +64,35 @@ MAX_VIDEO_FRAME_DIM = 1024
 DEFAULT_VIDEO_FRAME_DIM = 768
 # Decoding streams from disk; this only stops absurd inputs.
 MAX_VIDEO_SOURCE_BYTES = 4 * 1024**3
+
+PDF_SUFFIX = ".pdf"
+# PDFs are big because of their images; PDFium reads the file in place.
+MAX_PDF_BYTES = 256 * 1024**2
+# Pages whose text one read extracts (cached per file); later pages are only
+# viewable. Keeps the first read of a huge PDF inside the RPC timeout.
+MAX_PDF_TEXT_PAGES = 1000
+# Extracted PDFs kept in memory, keyed by (path, size, mtime).
+PDF_TEXT_CACHE_ENTRIES = 8
+# A longer extracted line is wrapped, so every part stays readable by line.
+MAX_PDF_LINE_CHARS = 1000
+# A search extracts uncached PDFs only until this budget is spent; later
+# uncached PDFs are skipped and the result is ``truncated``.
+PDF_SEARCH_EXTRACT_S = 10.0
+# view_pdf_pages: pages per call and the rendered longest edge.
+MAX_PDF_VIEW_PAGES = 4
+DEFAULT_PDF_PAGE_DIM = 1568
+MAX_PDF_PAGE_DIM = 2048
+# Wire text the model reads: the line before each page's extracted text, and
+# the stand-ins for a page without text or past MAX_PDF_TEXT_PAGES.
+PDF_PAGE_MARKER = "--- page {page} of {pages} ---"
+PDF_NO_TEXT_PAGE = "[no text on this page; look at it with view_folder_pdf_pages]"
+PDF_UNREAD_PAGE = "[this page could not be read as text]"
+PDF_PAGES_NOT_EXTRACTED = ("--- pages {first}-{last} of {pages} are not read as text "
+                           "(only the first {limit} are); look at them with view_folder_pdf_pages ---")
+# Copied files (Finder / Explorer / a Linux file manager) that a chat paste
+# attaches as context files. The OS also offers such a file's ICON as image
+# data, which must never become the attachment.
+PASTE_FILE_SUFFIXES = frozenset({PDF_SUFFIX})
 MAX_IMPORT_NAMES = 20
 
 # Directory names never indexed: VCS metadata, dependency trees, caches.

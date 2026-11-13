@@ -25,6 +25,7 @@ Callback server contract
 import base64
 import hashlib
 import json
+import platform
 import secrets
 import threading
 import time
@@ -252,6 +253,12 @@ def sso_login(timeout=None, cancel=None):
     except Exception as e:
         logger.debug("Dev bypass failed: %s", e)
 
+    if platform.system() == "Linux":
+        from .storage_health import check_login_storage, storage_error_result
+
+        if not check_login_storage():
+            return storage_error_result()
+
     verifier, challenge = _pkce_pair()
     expected_state = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b'=').decode('ascii')
     state = CallbackState(expected_state)
@@ -303,6 +310,8 @@ def sso_login(timeout=None, cancel=None):
     stored, storage_error = store_login_token_pair(access_token, refresh_token_val)
     if not stored:
         logger.error("Failed to store SSO token pair in safe storage")
+        if platform.system() == "Linux":
+            return storage_error_result()
         return {'success': False, 'message': storage_error}
     logger.info("SSO login successful — tokens stored")
     return {'success': True, 'message': rpt_('Login successful'), 'token': access_token}

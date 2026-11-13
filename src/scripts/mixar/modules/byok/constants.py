@@ -70,6 +70,12 @@ OPENROUTER_DEFAULT_MODEL = "anthropic/claude-opus-4.8"
 # ~/.codex/auth.json bundle; the user routes the agent through their ChatGPT
 # subscription instead of an API key. The model dropdown reuses the backend
 # catalog's "openai" group (see model_suggestions._MODEL_SOURCE_PROVIDER).
+CLAUDE_CODE_PROVIDER_ID = 'claude_code'
+CLAUDE_CODE_PROVIDER_ITEM = (
+    CLAUDE_CODE_PROVIDER_ID, 'Claude subscription',
+    'Use Claude Code signed in with your Claude subscription on this computer',
+)
+
 CODEX_PROVIDER_ID = 'codex'
 CODEX_PROVIDER_ITEM = (
     CODEX_PROVIDER_ID,

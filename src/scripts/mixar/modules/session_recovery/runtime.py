@@ -555,16 +555,23 @@ def _restore_now():
             journal.update_manifest(offer["dir"], failed_points=list(offer["failed_points"]))
         except Exception:  # noqa: BLE001
             pass
-    try:
-        from mixar.modules.space_mixie_chat.core.turn_checkpoints import _close_bubble_windows
-        _close_bubble_windows()
-    except Exception:  # noqa: BLE001
-        pass
     _state["restoring"] = True
     _state["restore_problem"] = ""
-    ok, failure = False, "read_cancelled"
+    ok, failure, refused = False, "read_cancelled", ""
     try:
-        window = _main_window()
+        from mixar.modules.agent_bubble.core.bubble_windows import (
+            FileReadContextError, prepare_file_read_window,
+        )
+        try:
+            # Purges the bubble windows, verifies none survived, then picks
+            # the document window; never falls back to another context.
+            window = prepare_file_read_window()
+        except FileReadContextError as e:
+            refused = e.reason
+            raise
+        except Exception:
+            refused = "purge_failed"
+            raise
         with bpy.context.temp_override(window=window):
             if target["kind"] == "project":
                 result = bpy.ops.wm.open_mainfile(filepath=target["path"])
@@ -572,8 +579,12 @@ def _restore_now():
                 result = bpy.ops.wm.recover_auto_save(filepath=target["path"])
         ok = 'FINISHED' in result
     except Exception as e:  # noqa: BLE001
-        failure = "read_error"
-        logger.error(f"[RECOVERY] restore read failed: {e}", exc_info=True)
+        if refused:
+            failure = "context_unavailable"
+            logger.warning(f"[RECOVERY] restore refused before the read ({refused}): {e}")
+        else:
+            failure = "read_error"
+            logger.error(f"[RECOVERY] restore read failed: {e}", exc_info=True)
     finally:
         _state["restoring"] = False
     telemetry.track("scene_restored" if ok else "failed", offer, surface=_state["surface"],
@@ -581,7 +592,11 @@ def _restore_now():
     if not ok:
         if jr is not None:
             jr.set_fields(restore_attempt=None)
-        _report(rpt_("Mixar could not open the saved work. It is kept for the next launch."))
+        if refused == "bubble_open":
+            _report(rpt_("Close the Agent island, then restore the saved work again. "
+                         "It is kept for the next launch."))
+        else:
+            _report(rpt_("Mixar could not open the saved work. It is kept for the next launch."))
         _state["decided"] = False
         return None
     if target["kind"] != "project":

@@ -14,8 +14,10 @@ operators are only for keyboard/menu-driven copy and paste.
 
 Three paste entry points, deliberately kept distinct:
 
-* ``mixie_chat.paste_image`` — image only. It returns ``CANCELLED`` when the
-  clipboard holds no image, and ``interface_handlers.cc`` depends on that:
+* ``mixie_chat.paste_image`` — image only (plus a copied PDF FILE, which it
+  attaches as a context-file chip instead of the icon the OS offers as image
+  data). It returns ``CANCELLED`` when the clipboard holds neither, and
+  ``interface_handlers.cc`` depends on that:
   while the composer is in text-edit mode the C++ hook calls this operator
   first and, on ``CANCELLED``, runs its own ``ui_textedit_copypaste`` so text
   lands at the cursor. Do not give this operator a text fallback.
@@ -41,9 +43,10 @@ from ...constants import (
     MAX_ATTACHMENTS_PER_MESSAGE,
 )
 from mixar.modules.common.i18n import rpt_
+from mixar.modules.context_folder.core.files import attach_file
 from ...core import composer_limit, validate_image_file
 from ...core.attachment_board_sync import mirror_attachment_to_moodboard
-from ...core.clipboard_image import read_clipboard_image
+from ...core.clipboard_image import PASTE_FILE, read_clipboard_paste
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
 logger = get_logger(__name__)
@@ -198,13 +201,17 @@ class MIXIE_CHAT_OT_paste_image(Operator):
 
     def execute(self, context):
         try:
-            img_path = read_clipboard_image()
+            pasted = read_clipboard_paste()
 
-            if not img_path:
+            if not pasted:
                 # No image on clipboard — return CANCELLED so the C++
                 # caller (interface_handlers.cc) falls back to its own
                 # ui_textedit_copypaste for normal text paste.
                 return {'CANCELLED'}
+
+            kind, img_path = pasted
+            if kind == PASTE_FILE:  # a copied PDF file, not image data
+                return self._attach_copied_file(context, img_path)
 
             # Validate pasted image
             is_valid, error = validate_image_file(img_path)
@@ -257,6 +264,31 @@ class MIXIE_CHAT_OT_paste_image(Operator):
             logger.error(f"Failed to paste image: {e}")
             self.report({'ERROR'}, rpt_("Paste failed: {error}").format(error=e))
             return {'CANCELLED'}
+
+    def _attach_copied_file(self, context, filepath):
+        """A copied PDF becomes a context-file chip through the Files
+        picker's ``attach_file`` (the original file, never a copy). On every
+        tab: a PDF is no pane reference, so it always joins the Agent chat.
+        FINISHED even when refused, so the C++ hook does not paste the
+        file's NAME into the composer instead."""
+        name = os.path.basename(filepath)
+        result = attach_file(context.scene, filepath)
+        if not result["success"]:
+            self.report({'WARNING'}, rpt_("Cannot add {name}: {error}").format(
+                name=name, error=rpt_(result["error"]).format(**result["error_args"])))
+            return {'FINISHED'}
+        if result["already"]:
+            self.report({'INFO'}, "These references are already attached")
+            return {'FINISHED'}
+        redraw_chat_areas()
+        sync_bubble_attachment_size_deferred(force_attachment_height=True)
+        for area in context.screen.areas:
+            if area.type == 'AGENT_BUBBLE':
+                for region in area.regions:
+                    if region.type == 'TOOLS':
+                        region.tag_redraw()
+        self.report({'INFO'}, rpt_("Attached {count} file(s) as context").format(count=1))
+        return {'FINISHED'}
 
     def _attach_to_pane(self, context, pane, img_path):
         from mixar.modules.agent_bubble.core.pane_references import (

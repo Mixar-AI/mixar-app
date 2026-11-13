@@ -77,11 +77,11 @@ def click(owner, item, xy, mods=None):
 
 
 def run(owner, args):
-    item = observe.resolve(owner, args["context"], args["target"])
+    item = yield from observe.settled(observe.resolve, owner, args["context"], args["target"])
     action, mods = args["action"], args.get("modifiers", {})
     if action == "gesture" and item.get("_kind") != "region":
         raise UIError("invalid_target", "Gestures require an observed editor region")
-    xy = point(item)
+    xy = yield from observe.settled(point, item)
     ownership.begin(owner)
     if action == "click":
         yield from click(owner, item, xy, mods)
@@ -119,11 +119,14 @@ def run(owner, args):
         yield from click(owner, item, xy)
         deadline = time.monotonic()+2
         while True:
-            hits = [w for w in observe.widgets() if w.get("popup") and
-                    w["w"] == item["_win"].as_pointer() and
-                    w.get("enabled", True) and w.get("text", "").casefold() == args["item"].casefold()]
+            try:
+                hits = [w for w in observe.widgets() if w.get("popup") and
+                        w["w"] == item["_win"].as_pointer() and
+                        w.get("enabled", True) and w.get("text", "").casefold() == args["item"].casefold()]
+            except observe.Pending:
+                hits = []  # The popup is still drawing; look again next tick.
             if len(hits) == 1:
-                yield from click(owner, hits[0], point(hits[0]))
+                yield from click(owner, hits[0], (yield from observe.settled(point, hits[0])))
                 break
             if len(hits) > 1 or time.monotonic() >= deadline:
                 raise UIError("choice_unavailable", "Choose an unambiguous visible popup item")
@@ -136,7 +139,7 @@ def run(owner, args):
     elif action == "gesture":
         x0, y0, x1, y1 = item["rect"]
         points = [(int(x0+p[0]*(x1-x0-1)), int(y0+p[1]*(y1-y0-1))) for p in args["points"]]
-        obstacles = occlusion_rects(item)
+        obstacles = yield from observe.settled(occlusion_rects, item)
         if any(segment_intersects(a, b, rect) for a, b in zip(points, points[1:]) for rect in obstacles):
             raise UIError("target_occluded", "The gesture crosses an overlapping control or panel")
         button = args.get("button", "LEFTMOUSE")

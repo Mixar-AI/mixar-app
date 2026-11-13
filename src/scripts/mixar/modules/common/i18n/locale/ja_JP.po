@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "エージェントバブルのウィンドウを開けませんでした"
+
 msgid "Capture Viewport"
 msgstr "ビューポートをキャプチャ"
 
@@ -1439,6 +1442,9 @@ msgstr "ログインがキャンセルされたか、タイムアウトしまし
 msgid "Incomplete token pair in response"
 msgstr "応答のトークンペアが不完全です"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "入力可能です"
 
@@ -1521,6 +1527,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1709,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "このモデルをエージェントに使用します"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1744,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPTサブスクリプション"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1880,13 +1934,10 @@ msgstr "AIプロバイダー設定"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Mixarエージェントに自分のAPIキーを使用します。有効な間、エージェントリクエストにMixarクレジットは消費されません。"
 
-msgid "Validate with the provider and save your API key"
-msgstr "プロバイダーで検証してAPIキーを保存します"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1956,6 +2007,9 @@ msgid "Local model"
 msgstr "ローカルモデル"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -2999,19 +3053,34 @@ msgstr "{platform} ではサポートされていないインストーラーの�
 msgid "This install can't be updated in place"
 msgstr "このインストールはその場で更新できません"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version} に更新しました"
 
 msgid "The update was installed successfully."
 msgstr "アップデートは正常にインストールされました。"
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3103,6 +3172,9 @@ msgstr "適用するためにMixarが再起動します。"
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — 「ダウンロード」を使ってブラウザー経由で更新してください。"
+
+msgid "Retry"
+msgstr "再試行"
 
 msgid "Restart & Update"
 msgstr "再起動して更新"
@@ -3244,6 +3316,24 @@ msgstr "再起動して更新"
 
 msgid "Updating…"
 msgstr "更新中…"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3483,6 +3573,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7715,6 +7808,12 @@ msgstr "ムードボード"
 msgid "Right-click context menu for moodboard"
 msgstr "ムードボードの右クリックコンテクストメニュー"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "接続を削除"
 
@@ -9985,14 +10084,14 @@ msgstr "モデルリストを更新中..."
 msgid "Generation catalog module not available"
 msgstr "生成カタログモジュールを利用できません"
 
+msgid "A duplicate image generation is already queued"
+msgstr "同じ画像生成が既にキューに入っています"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "AI画像を生成してムードボードに追加します"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "プロンプトを入力してください (Enterでテキストを確定)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "同じ画像生成が既にキューに入っています"
 
 msgid "No model specified and no default available"
 msgstr "モデルが指定されておらず、デフォルトもありません"
@@ -19864,6 +19963,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20307,12 +20409,6 @@ msgstr "修正中..."
 
 msgid "Awaiting Input..."
 msgstr "入力待ち..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20896,6 +20992,9 @@ msgstr "チェックポイントファイルが見つかりません"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "現在の状態を保持できなかったため、何も変更されませんでした"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "チェックポイントを読み込めませんでした"
 
@@ -21064,9 +21163,6 @@ msgstr "ログアウト"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "再試行"
 
 msgid "Choose Export Location"
 msgstr "エクスポート先を選択"
@@ -21538,6 +21634,15 @@ msgstr "添付ファイルは最大 {count} 件です"
 msgid "Paste failed: {error}"
 msgstr "貼り付けに失敗しました: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} を追加できません: {error}"
+
+msgid "These references are already attached"
+msgstr "これらの参照はすでに添付されています"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21823,23 +21928,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} を追加できません: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "添付ファイルの上限（{count}）に達しました"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} をスキップしました: {error}"
 
-msgid "These references are already attached"
-msgstr "これらの参照はすでに添付されています"
-
 msgid "Added {count} image(s)"
 msgstr "{count} 枚の画像を追加しました"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend から追加"
@@ -26536,9 +26632,6 @@ msgstr "自動モード：エージェントはあなたに質問する代わり
 msgid "Agent Bubble"
 msgstr "エージェントバブル"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "エージェントバブルのウィンドウを開けませんでした"
-
 msgid "Agent Bubble Status"
 msgstr "エージェントバブルの状態"
 
@@ -26988,6 +27081,9 @@ msgstr "ムードボード添付をアニメーション"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "新たに添付した参照がMixieチャットへ飛んでいく様子を表示します"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "ディレイ"

@@ -121,6 +121,8 @@ def make_record(
     re-sends when it resumes a paused key (`byok_client.resave_stored_key`),
     since the server keeps nothing once the key is paused. A record without
     it (an earlier build) can only be resumed through the settings dialog."""
+    if provider == "claude_code":
+        return {"v": _RECORD_VERSION, "provider": provider, "key": None, "model": (model or "").strip()}
     if provider == CODEX_PROVIDER_ID:
         return {
             "v": _RECORD_VERSION,
@@ -147,6 +149,13 @@ def materialize(record: Optional[Dict[str, Any]]) -> tuple:
     written back to the store.
     ``problem`` is the user-safe message when the file cannot serve the turn
     (missing, unreadable, incomplete). Other records pass through."""
+    if record and record.get("provider") == "claude_code":
+        from .claude_code import check_ready, ClaudeCodeError
+        try:
+            check_ready()
+        except ClaudeCodeError as exc:
+            return None, exc.message
+        return record, None
     if not record or record.get("provider") != CODEX_PROVIDER_ID:
         return record, None
     try:
@@ -267,7 +276,7 @@ def resumable_summary(record: Optional[Dict[str, Any]]) -> Optional[Dict[str, st
     model = (record.get("model") or "").strip()
     if not provider or not model or provider == LOCAL_PROVIDER_ID:
         return None
-    if provider == CODEX_PROVIDER_ID:
+    if provider in (CODEX_PROVIDER_ID, "claude_code"):
         live, problem = materialize(record)
         if problem is not None or (live or {}).get("expired"):
             return None
