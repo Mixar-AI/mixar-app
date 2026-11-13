@@ -94,11 +94,15 @@ def run(qa):
         record = qa.eval("from mixar.modules.byok.core import key_store as K\nr=K.load()\nassert r['provider']=='claude_code' and r['key'] is None\nresult=r")
         qa.snap(str(OUT / 'saved.png'))
         close(qa)
-        qa.wait("bpy.context.window_manager.byok_key_resumable", timeout=10)
+        # A live key is pausable; byok_key_resumable is deliberately false
+        # until the pause lands. Wait for the actual record readiness check.
+        qa.wait("__import__('mixar.modules.byok.core.credential_state',fromlist=['x']).pausable()",
+                timeout=10)
         qa.eval("from mixar.modules.byok.ui.operators import byok_toggle_ops as T\n"
                 "assert T.pause(bpy.context.window_manager)\nresult=True")
         qa.step('pause_keeps_device_record', qa.wait,
                 "not bpy.context.window_manager.byok_is_active and "
+                "bpy.context.window_manager.byok_key_resumable and "
                 "not __import__('mixar.modules.byok.core.byok_client',fromlist=['x']).mutation_in_flight() and "
                 "__import__('mixar.modules.byok.core.claude_code',fromlist=['x'])._qa_fixture.deletes==1", timeout=10)
         qa.eval("from mixar.modules.byok.core import key_store as K\n"

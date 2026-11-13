@@ -63,17 +63,52 @@ with bpy.context.temp_override(window=win, area=None, region=None):
     assert any('RegionView3D.pause_render' in str(w.message) for w in notices)
 assert hasattr(scene.cycles, 'preview_denoising_upscale_quality')
 assert hasattr(scene.view_layers[0].cycles, 'denoising_store_motion_passes')
-view = area.spaces.active.region_3d
-old_pause = view.pause_render
-try:
-    view.pause_render = True
-    assert view.pause_render
-    view.pause_render = False
-    assert not view.pause_render
-finally:
-    view.pause_render = old_pause
 result = {'blender': bpy.app.version_string, 'area_free_pause': True,
-          'region_pause': True, 'cycles_53_settings': True}
+          'cycles_53_settings': True}
+'''
+
+
+RENDER_BEGIN = r'''
+win = drv.main_window()
+scene = win.scene
+area = next(a for a in win.screen.areas if a.type == 'VIEW_3D')
+view = area.spaces.active.region_3d
+result = {'engine': scene.render.engine, 'device': scene.cycles.device,
+          'shading': area.spaces.active.shading.type,
+          'samples': scene.cycles.preview_samples,
+          'denoise': scene.cycles.use_preview_denoising,
+          'pause': view.pause_render}
+scene.render.engine = 'CYCLES'
+scene.cycles.device = 'CPU'
+scene.cycles.preview_samples = 4
+scene.cycles.use_preview_denoising = False
+area.spaces.active.shading.type = 'RENDERED'
+area.tag_redraw()
+'''
+
+RENDER_PAUSE = r'''
+area = next(a for a in drv.main_window().screen.areas if a.type == 'VIEW_3D')
+view = area.spaces.active.region_3d
+assert view.support_pause_render, 'Rendered viewport has no pausable engine'
+view.pause_render = True
+assert view.pause_render, 'Pause did not reach the active viewport render engine'
+view.pause_render = False
+assert not view.pause_render, 'Resume did not reach the active viewport render engine'
+result = {'region_pause': True, 'render_engine': 'CYCLES', 'device': 'CPU'}
+'''
+
+RENDER_RESTORE = r'''
+win = drv.main_window()
+scene = win.scene
+area = next(a for a in win.screen.areas if a.type == 'VIEW_3D')
+area.spaces.active.region_3d.pause_render = BEFORE['pause']
+area.spaces.active.shading.type = BEFORE['shading']
+scene.cycles.preview_samples = BEFORE['samples']
+scene.cycles.use_preview_denoising = BEFORE['denoise']
+scene.cycles.device = BEFORE['device']
+scene.render.engine = BEFORE['engine']
+area.tag_redraw()
+result = True
 '''
 
 
@@ -202,6 +237,16 @@ def run(qa):
     def evaluate(code):
         return qa.cmd('eval', code=code, _sock_timeout=90)
     result = {'cycles': qa.step('cycles_53_pause', evaluate, SETUP)}
+    before = evaluate(RENDER_BEGIN)
+    try:
+        # pause_render is backed by a live view RenderEngine, not a stored RNA
+        # bool. Assignments in Solid mode are intentionally ignored by Blender.
+        qa.step('cycles_rendered_view_ready', qa.wait,
+                "next(a for a in drv.main_window().screen.areas if a.type=='VIEW_3D')"
+                ".spaces.active.region_3d.support_pause_render", timeout=45)
+        result['cycles'].update(qa.step('cycles_rendered_view_pause', evaluate, RENDER_PAUSE))
+    finally:
+        evaluate('BEFORE = ' + repr(before) + '\n' + RENDER_RESTORE)
     prefix = 'FIXTURE = ' + repr(fixture()) + '\n'
     result['imports'] = qa.step('optional_resources', evaluate, prefix + IMPORTS)
     result['material_and_export'] = qa.step('legacy_material_and_export', evaluate,

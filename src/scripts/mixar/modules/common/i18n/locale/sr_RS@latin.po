@@ -3739,21 +3739,6 @@ msgstr "Ova instalacija ne može da se ažurira na mestu"
 msgid "This update can't be installed from Mixar. Download it to see what to do"
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
-
 # derived
 msgid "Updated to Mixar {version}"
 msgstr "Ažurirano na Mixar {version}"
@@ -3822,12 +3807,24 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 # derived
 msgid "The installer did not finish."
 msgstr "Instalator nije završio."
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
 
 # derived
 msgid "{percent}% — {transferred} of {total}"
@@ -3949,6 +3946,9 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 # derived

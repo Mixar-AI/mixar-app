@@ -114,6 +114,13 @@ def test_the_panes_use_it_where_their_labels_are_dynamic():
     assert "chip.label +" in media
 
 
+def test_moodboard_tooltips_share_owned_text_with_qa_inspection():
+    source = (ROOT / "space_mixie/mixie_draw_moodboard_node_tooltips.cc").read_text()
+    assert "mixar_button_tooltip_owned(but, text)" in source
+    inspector = (ROOT / "interface/interface_qa_inspect.cc").read_text()
+    assert "mixar_button_tooltip_owned_text(*but)" in inspector
+
+
 def test_the_qa_dump_is_not_filtered_on_block_active():
     """`block->active` means "rebuilt during the current free-inactive pass",
     NOT "on screen": every region that is not mid-redraw carries live blocks
