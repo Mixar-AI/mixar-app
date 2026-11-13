@@ -641,17 +641,10 @@ def take_replaced_refresh_token():
         return token
 
 
-def store_login_token_pair(access_token, refresh_token, cancel=None):
-    """Atomically fence an explicit login pair against refresh operations.
-
-    ``cancel``: the attempt's Event. Once set (Cancel, or a newer sign-in)
-    the pair is refused as ``(False, None)``, checked under the lock the
-    newer sign-in stores under, so it can never land after that login.
-    """
+def store_login_token_pair(access_token, refresh_token):
+    """Atomically fence an explicit login pair against refresh operations."""
     global _replaced_refresh_token
     with _refresh_lock:
-        if cancel is not None and cancel.is_set():
-            return False, None
         _, previous_refresh_token = _credentials_snapshot()
         stored, error = _replace_token_pair_locked(access_token, refresh_token)
         if stored:

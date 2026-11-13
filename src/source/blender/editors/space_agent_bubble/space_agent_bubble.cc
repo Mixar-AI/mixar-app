@@ -844,15 +844,11 @@ bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
          window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
 }
 
-bool agent_bubble_is_resting_pill_window(const wmWindow *win)
-{
-  return g_bubble_minimised && win && g_pill_ghostwin &&
-         win->runtime->ghostwin == g_pill_ghostwin;
-}
-
 bool ED_agent_bubble_is_resting_pill(const bContext *C)
 {
-  return agent_bubble_is_resting_pill_window(CTX_wm_window(C));
+  const wmWindow *win = CTX_wm_window(C);
+  return g_bubble_minimised && win && g_pill_ghostwin &&
+         win->runtime->ghostwin == g_pill_ghostwin;
 }
 
 bool ED_agent_bubble_is_minimised_window(const wmWindow *window)
@@ -4157,12 +4153,11 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
 /**
  * Nothing to maintain until the island has a window of its own.
  *
- * The Python pump (hover_ops.py) dispatches through
- * `WindowManager.mixar_bubble_hover_tick()`, whose `WM_operator_name_call`
- * runs this poll before exec; without it every tick would execute, ten times
- * a second for the whole session, bubble or no bubble. On a platform
+ * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
+ * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
+ * times a second for the whole session, bubble or no bubble. On a platform
  * outside the `Mixar_Window*` allowlist (see agent_bubble/constants.py) the
- * exec body above is a bare OPERATOR_CANCELLED, so the poll is simply false.
+ * exec body below is a bare OPERATOR_CANCELLED, so the poll is simply false.
  */
 static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
 {

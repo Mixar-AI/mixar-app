@@ -42,16 +42,6 @@ class TexelDensityCheck(bpy.types.Operator):
 	bl_label = "Calculate TD"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	@classmethod
-	def poll(cls, context):
-		# execute() leaves and re-enters the active object's mode; Blender can't enter a mode on an object hidden in viewports.
-		if not bpy.ops.object.mode_set.poll():
-			return False
-		if context.active_object.hide_viewport:
-			cls.poll_message_set("Active object is hidden in viewports")
-			return False
-		return True
-
 	def execute(self, context):
 		start_time = datetime.now()
 		td = context.scene.td
@@ -84,12 +74,7 @@ class TexelDensityCheck(bpy.types.Operator):
 		version = bpy.app.version
 
 		for obj in start_selected_obj:
-			# The loop switches each object's mode, and mode_set refuses library-linked
-			# objects and non-editable (system) library overrides.
-			override = obj.override_library
-			if (obj.type != 'MESH' or len(obj.data.uv_layers) == 0 or len(obj.data.polygons) == 0
-					or not obj.is_editable
-					or (override is not None and override.is_system_override)):
+			if obj.type != 'MESH' or len(obj.data.uv_layers) == 0 or len(obj.data.polygons) == 0:
 				continue
 
 			bpy.ops.object.select_all(action='DESELECT')

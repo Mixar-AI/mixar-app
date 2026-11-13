@@ -59,16 +59,13 @@ def test_empty_image_encoding_never_enqueues_or_clears_draft():
 
 @pytest.mark.parametrize('feedback, outcome', [
     ({}, 'rejected'),
+    ({'reason': 'missing_image'}, 'rejected'),
     ({'reason': 'duplicate_job'}, 'rejected'),
-    ({'reason': 'catalog_unavailable'}, 'rejected'),
-    ({'reason': 'missing_image'}, 'needs_input'),
-    ({'reason': 'missing_input'}, 'needs_input'),
-    ({'reason': 'missing_prompt'}, 'needs_input'),
     ({'reason': 'enqueue_failed'}, 'error'),
     ({'reason': 'image_processing_failed'}, 'error'),
     ({'reason': 'missing_input', 'exception': True}, 'error'),
 ])
-def test_missing_input_is_not_a_rejection_and_only_failures_are_errors(feedback, outcome):
+def test_refusals_are_rejected_and_only_failures_are_errors(feedback, outcome):
     assert failure_outcome(feedback) == outcome
 
 
@@ -86,79 +83,10 @@ def test_an_inner_operator_exception_marks_the_dispatch_as_failed():
     record_exception()  # outside a dispatch it is inert
 
 
-@pytest.mark.parametrize('outcome, reason', [
-    ('rejected', 'duplicate_job'), ('needs_input', 'missing_prompt'),
-])
-def test_refusal_outcomes_are_accepted_dispatch_outcomes(outcome, reason):
+def test_rejected_is_an_accepted_dispatch_outcome():
     with patch.object(journey_events, 'capture') as capture:
-        journey_events.generation_dispatch(None, {}, outcome, reason=reason)
-    assert capture.call_args.args[1] == {'outcome': outcome, 'reason': reason}
-
-
-@pytest.mark.parametrize('name, message', [
-    ('imagegen_ops', '"Please enter a prompt'),
-    ('video_gen_ops', '"Enter a video prompt"'),
-    ('world_labs_ops', '"Please enter a text prompt"'),
-    ('lookdev_ops', '"Please enter a prompt'),
-])
-def test_empty_prompt_refusals_record_missing_prompt(name, message):
-    # Without the reason an empty-prompt Generate reads as a 'rejected' refusal.
-    source = Path(f'src/scripts/mixar/modules/moodboard/ui/operators/{name}.py').read_text()
-    head = source[:source.index(message)]
-    assert head.rstrip().rsplit('\n', 2)[-2].strip() == 'record_reason("missing_prompt")'
-
-
-@pytest.mark.parametrize('name, message', [
-    ('segment_gen_ops', '"No input image selected"'),
-    ('image_to_3d_ops', '"Please select an image in the moodboard"'),
-    ('image_to_3d_ops', '"Please add an input image"'),
-    ('image_to_3d_ops', '"No image selected in moodboard"'),
-    ('image_to_3d_ops', '"No input image selected"'),
-])
-def test_missing_image_refusals_record_missing_image(name, message):
-    # Without the reason a Generate with no input image reads as 'rejected'.
-    source = Path(f'src/scripts/mixar/modules/moodboard/ui/operators/{name}.py').read_text()
-    head = source[:source.index(message)]
-    assert head.rstrip().rsplit('\n', 2)[-2].strip() == 'record_reason("missing_image")'
-
-
-def _video_count_refusal(image_mode, images, videos):
-    """Run the real Video Generate execute up to its reference-count refusal."""
-    path = Path('src/scripts/mixar/modules/moodboard/ui/operators/video_gen_ops.py')
-    tree = ast.parse(path.read_text())
-    method = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == 'execute')
-    namespace = {'record_reason': record_reason}
-    exec(compile(ast.Module(body=[method], type_ignores=[]), str(path), 'exec'), namespace)
-    reports = []
-    operator = NS(report=lambda level, text: reports.append(text))
-    context = NS(scene=NS(mixie_moodboard_sidebar=NS(tab_video_gen=NS(prompt='a cat', mode='', model=''))))
-    refs = {'images': ['img'] * images, 'videos': ['vid'] * videos, 'all_video_sources_available': True}
-    limits = {'max_images': 2, 'max_videos': 1, 'max_materials': 3}
-    from mixar.modules.common import generation_params
-    from mixar.modules.moodboard.core import media_utils, video_generation_catalog
-    with patch.object(generation_params, 'resolve_service_key', return_value='video_gen'), \
-         patch.object(generation_params, 'resolve_model_slug', return_value='model'), \
-         patch.object(generation_params, 'collect_params', return_value={'image_mode': image_mode}), \
-         patch.object(media_utils, 'get_selected_moodboard_media_inputs', return_value=refs), \
-         patch.object(video_generation_catalog, 'get_video_generation_limits', return_value=limits), \
-         dispatch_scope() as feedback:
-        assert namespace['execute'](operator, context) == {'CANCELLED'}
-    assert len(reports) == 1
-    return feedback
-
-
-@pytest.mark.parametrize('image_mode, images, videos, reason', [
-    ('first_frame', 0, 0, 'missing_image'),
-    ('first_last_frame', 0, 0, 'missing_image'),
-    ('first_last_frame', 1, 0, 'missing_image'),
-    ('first_frame', 2, 0, None),          # too many frames is not missing input
-    ('first_last_frame', 3, 0, None),
-    ('first_frame', 1, 1, None),          # videos unsupported in frame modes
-    ('', 3, 0, None),                     # over the reference ceiling
-])
-def test_video_frame_mode_shortfall_records_missing_image(image_mode, images, videos, reason):
-    feedback = _video_count_refusal(image_mode, images, videos)
-    assert feedback.get('reason') == reason
+        journey_events.generation_dispatch(None, {}, 'rejected', reason='missing_image')
+    assert capture.call_args.args[1] == {'outcome': 'rejected', 'reason': 'missing_image'}
 
 
 def test_dispatcher_classifies_escaped_errors():

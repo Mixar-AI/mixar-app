@@ -4,9 +4,8 @@
 # Vendored: 3DGS Render by KIRI Engine (v4.1.5)
 
 Upstream: https://github.com/Kiri-Innovation/3dgs-render-blender-addon
-Tag: `v4.1.5` (commit `453301d`), which targets Blender 4.3–5.0; Mixar runs it
-on Blender 5.2 with the IO patch below. Upstream v5.x requires Blender 5.1+
-and was not evaluated for 5.2's modifier IO; bumping is a separate decision.
+Tag: `v4.1.5` (commit `453301d`), Blender 4.3–5.0. Do NOT bump to v5.x —
+that line targets Blender 5.1+.
 
 Renders Gaussian splats (3DGS PLY) in real time via a geometry-nodes +
 shader setup. Mixar uses it for splat environments (World Labs worlds and
@@ -17,39 +16,19 @@ Serpens-generated operators (`sna.dgs_render_import_ply_e0a3a` to import,
 
 ## What was changed vs upstream
 
-**Two code patches**, both marked `MIXAR PATCH` in `__init__.py`.
-
-**Visibility patch**: per-object visibility. `assets/vert.glsl` culls a
-gaussian whose object visibility flag (slot 2 of the 15-float-per-object
-metadata texture) is `< 0.5`, but every upstream writer of that slot hardcodes
-`1.0`, so splats kept drawing through the addon's `SpaceView3D` handler no
-matter what the user did in the outliner — there was no way to hide a splat at
-all. The patch adds `mixar_object_visibility(obj)` /
-`mixar_visibility_signature()` near the top of the file, feeds the former into
-all four metadata writers, and — because a hide changes no transform, and the
-texture is only refreshed when one does — adds a visibility check next to
-`check_any_transforms_changed()` in `sna_viewport_render_A3941`'s draw loop,
-plus `mixar_last_visibility` in `cleanup_multi_object_cache`'s teardown list.
-Pinned by `tests/test_splat_lifecycle.py`; re-apply it on any vendor bump.
-
-**Blender 5.2 IO patch**: 5.2 removed ID-property access on modifiers, so
-`mod['Socket_N']` (read or write) raises `TypeError`; geometry-nodes inputs
-live at `mod.properties.inputs.<Socket_N>.value`. The helper
-`mixar_gn_input(modifier, socket_id)` (next to the visibility helpers) returns
-that input and raises on a missing socket. Ported call sites: the
-`update_mode` and `cam_update` callbacks, which also act on the property owner
-(`self.id_data`) instead of the active object (Mixar sets them on objects that
-are not active, often from scripts with no area) and only enter camera view from a
-3D view; the PLY import operator's two writes (`Socket_50` Update Mode, a menu
-whose items are the `update_mode` enum identifiers, and `Socket_61` material);
-and `update_gaussian_splat_camera` inside
-`sna_update_camera_single_time_9EF18` (the cam_update timer's target); the
-same-named copy in the Align-To-View operator is still unported. The add-on's
-other `['Socket_N']` sites and the panels' `'["Socket_N"]'` property rows are
-still unported. Mixar's `enable_render_updates` keeps the Render GN
-viewport-off after setting `update_mode` (KIRI's GPU proxy is built from the
-evaluated mesh). Pinned by `tests/test_kiri_blender52_io.py`; re-apply it on
-any vendor bump.
+**One code patch** (marked `MIXAR PATCH` in `__init__.py`): per-object
+visibility. `assets/vert.glsl` culls a gaussian whose object visibility flag
+(slot 2 of the 15-float-per-object metadata texture) is `< 0.5`, but every
+upstream writer of that slot hardcodes `1.0`, so splats kept drawing through
+the addon's `SpaceView3D` handler no matter what the user did in the outliner
+— there was no way to hide a splat at all. The patch adds
+`mixar_object_visibility(obj)` / `mixar_visibility_signature()` near the top of
+the file, feeds the former into all four metadata writers, and — because a
+hide changes no transform, and the texture is only refreshed when one does —
+adds a visibility check next to `check_any_transforms_changed()` in
+`sna_viewport_render_A3941`'s draw loop, plus `mixar_last_visibility` in
+`cleanup_multi_object_cache`'s teardown list. Pinned by
+`tests/test_splat_lifecycle.py`; re-apply it on any vendor bump.
 
 Deletion is handled Mixar-side instead (nothing to patch here):
 `moodboard/core/splat_lifecycle.py` reconciles KIRI's process-global cache and
@@ -103,5 +82,4 @@ Shallow-clone the desired tag and re-copy `__init__.py`, `assets/`,
 `LICENSE`, `README.md`, `Important`; re-extract the APPEND blend from the
 release zip (recompress as above). Re-verify the two operator ids above
 still exist — `world_labs_importer.py` pins them — and re-apply the
-visibility and Blender 5.2 IO patches (`tests/test_splat_lifecycle.py` and
-`tests/test_kiri_blender52_io.py` fail until you do).
+visibility patch (`tests/test_splat_lifecycle.py` fails until you do).

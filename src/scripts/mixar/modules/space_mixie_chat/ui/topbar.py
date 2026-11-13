@@ -38,7 +38,7 @@ from ..core.completion_sound import OFF, get_completion_sound, get_notifications
 from ...common.utils import topbar_layout
 from ...common.i18n import iface_
 from ...workflow.constants import BASIC_WORKSPACE_NAME
-from .login_panel import draw_profile_reauth, draw_profile_sign_in
+from .login_panel import draw_profile_sign_in
 
 
 class MIXAR_PT_profile(Panel):
@@ -62,13 +62,8 @@ class MIXAR_PT_profile(Panel):
 
     def draw(self, context):
         layout = self.layout
-        wm = context.window_manager
-        if not topbar_layout.account_signed_in(wm):
-            draw_profile_sign_in(layout, wm)
-        elif getattr(wm, 'mixie_chat_session_expired', False):
-            # The account's session ended and a browser sign-in is (or was)
-            # asked for: say so above the card, with its Cancel / retry.
-            draw_profile_reauth(layout, wm)
+        if not topbar_layout.account_signed_in(context.window_manager):
+            draw_profile_sign_in(layout, context.window_manager)
 
         try:
             layout.mixar_profile_card()

@@ -167,7 +167,6 @@ class MIXIE_OT_imagegen_generate(Operator):
                     prompt = global_prompt
 
         if not prompt or not prompt.strip():
-            record_reason("missing_prompt")
             self.report({"ERROR"}, "Please enter a prompt (press Enter to confirm your text)")
             return {"CANCELLED"}
 

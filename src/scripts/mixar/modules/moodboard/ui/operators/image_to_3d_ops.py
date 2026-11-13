@@ -132,13 +132,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image, extra_images = selected[0], selected[1:]
                 else:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
             else:
                 image = getattr(sidebar_tab, 'reference_image', None)
                 if not image:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please add an input image")
                     return {"CANCELLED"}
         else:
@@ -147,13 +145,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image, extra_images = selected[0], selected[1:]
                 else:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
             elif hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "No input image selected")
                     return {"CANCELLED"}
             else:

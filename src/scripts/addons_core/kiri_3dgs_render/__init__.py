@@ -94,13 +94,6 @@ def mixar_visibility_signature():
         )
     except Exception:
         return ()
-
-
-# Blender 5.2 removed ID-property access on modifiers: mod['Socket_N'] raises
-# TypeError. Geometry-nodes inputs live at mod.properties.inputs.<Socket_N>.
-def mixar_gn_input(modifier, socket_id):
-    """Return a GN modifier input (5.2 removed modifier ID-property access)."""
-    return getattr(modifier.properties.inputs, socket_id)
 # --- END MIXAR PATCH --------------------------------------------------------
 dgs_render__active_3dgs_object = {'sna_apply_modifier_list': [], 'sna_in_camera_view': False, }
 dgs_render__collection_snippets = {'sna_collections_temp_list': [], }
@@ -110,39 +103,27 @@ dgs_renderdb_filter = {'sna_db_filter_input_object': None, 'sna_db_filter_force_
 
 
 def sna_update_update_mode_868D4(self, context):
-    # MIXAR PATCH: act on the property owner (Mixar sets this on objects that
-    # are not active) and write the GN input via mixar_gn_input (Blender 5.2).
-    obj = self.id_data
-    modifier = obj.modifiers.get('KIRI_3DGS_Render_GN')
-    if modifier is None:
-        return
     sna_updated_prop = self.update_mode
-    obj['update_rot_to_cam'] = (sna_updated_prop == 'Enable Camera Updates')
-    # The Update Mode menu items are the update_mode enum identifiers.
-    mixar_gn_input(modifier, 'Socket_50').value = sna_updated_prop
-    modifier.show_viewport = (True if (sna_updated_prop != 'Disable Camera Updates') else False)
-    obj.update_tag(refresh={'OBJECT'}, )
+    bpy.context.view_layer.objects.active['update_rot_to_cam'] = (sna_updated_prop == 'Enable Camera Updates')
+    bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN']['Socket_50'] = (2 if (sna_updated_prop == 'Show As Point Cloud') else (1 if (sna_updated_prop != 'Enable Camera Updates') else 0))
+    bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN'].show_viewport = (True if (sna_updated_prop != 'Disable Camera Updates') else False)
+    bpy.context.view_layer.objects.active.update_tag(refresh={'OBJECT'}, )
     if bpy.context and bpy.context.screen:
         for a in bpy.context.screen.areas:
             a.tag_redraw()
 
 
 def sna_update_cam_update_DE26E(self, context):
-    # MIXAR PATCH: act on the property owner, write the GN input via
-    # mixar_gn_input (Blender 5.2), and only enter camera view from a 3D view
-    # (scripts and timers run with no area).
-    obj = self.id_data
-    modifier = obj.modifiers.get('KIRI_3DGS_Render_GN')
-    if modifier is None:
-        return
     sna_updated_prop = self.cam_update
-    mixar_gn_input(modifier, 'Socket_54').value = sna_updated_prop
-    if sna_updated_prop and context.area is not None and context.area.type == 'VIEW_3D':
-        context.area.spaces.active.region_3d.view_perspective = 'CAMERA'
+    if sna_updated_prop:
+        bpy.context.area.spaces.active.region_3d.view_perspective = 'CAMERA'
+        bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN']['Socket_54'] = sna_updated_prop
 
         def delayed_214CF():
             sna_update_camera_single_time_9EF18()
         bpy.app.timers.register(delayed_214CF, first_interval=0.10000000149011612)
+    else:
+        bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN']['Socket_54'] = sna_updated_prop
 
 
 def sna_update_hq_overlap_DDF15(self, context):
@@ -3243,45 +3224,43 @@ def sna_update_camera_single_time_9EF18():
         if not geometryNodes_modifier:
             print(f"Error: GeometryNodes modifier not found on object '{obj.name}'.")
             return False
-        # MIXAR PATCH: Blender 5.2 removed modifier ID-property access.
-        inputs = geometryNodes_modifier.properties.inputs
         # Update view matrix
-        inputs.Socket_2.value = view_matrix[0][0]
-        inputs.Socket_3.value = view_matrix[1][0]
-        inputs.Socket_4.value = view_matrix[2][0]
-        inputs.Socket_5.value = view_matrix[3][0]
-        inputs.Socket_6.value = view_matrix[0][1]
-        inputs.Socket_7.value = view_matrix[1][1]
-        inputs.Socket_8.value = view_matrix[2][1]
-        inputs.Socket_9.value = view_matrix[3][1]
-        inputs.Socket_10.value = view_matrix[0][2]
-        inputs.Socket_11.value = view_matrix[1][2]
-        inputs.Socket_12.value = view_matrix[2][2]
-        inputs.Socket_13.value = view_matrix[3][2]
-        inputs.Socket_14.value = view_matrix[0][3]
-        inputs.Socket_15.value = view_matrix[1][3]
-        inputs.Socket_16.value = view_matrix[2][3]
-        inputs.Socket_17.value = view_matrix[3][3]
+        geometryNodes_modifier['Socket_2'] = view_matrix[0][0]
+        geometryNodes_modifier['Socket_3'] = view_matrix[1][0]
+        geometryNodes_modifier['Socket_4'] = view_matrix[2][0]
+        geometryNodes_modifier['Socket_5'] = view_matrix[3][0]
+        geometryNodes_modifier['Socket_6'] = view_matrix[0][1]
+        geometryNodes_modifier['Socket_7'] = view_matrix[1][1]
+        geometryNodes_modifier['Socket_8'] = view_matrix[2][1]
+        geometryNodes_modifier['Socket_9'] = view_matrix[3][1]
+        geometryNodes_modifier['Socket_10'] = view_matrix[0][2]
+        geometryNodes_modifier['Socket_11'] = view_matrix[1][2]
+        geometryNodes_modifier['Socket_12'] = view_matrix[2][2]
+        geometryNodes_modifier['Socket_13'] = view_matrix[3][2]
+        geometryNodes_modifier['Socket_14'] = view_matrix[0][3]
+        geometryNodes_modifier['Socket_15'] = view_matrix[1][3]
+        geometryNodes_modifier['Socket_16'] = view_matrix[2][3]
+        geometryNodes_modifier['Socket_17'] = view_matrix[3][3]
         # Update projection matrix
-        inputs.Socket_18.value = proj_matrix[0][0]
-        inputs.Socket_19.value = proj_matrix[1][0]
-        inputs.Socket_20.value = proj_matrix[2][0]
-        inputs.Socket_21.value = proj_matrix[3][0]
-        inputs.Socket_22.value = proj_matrix[0][1]
-        inputs.Socket_23.value = proj_matrix[1][1]
-        inputs.Socket_24.value = proj_matrix[2][1]
-        inputs.Socket_25.value = proj_matrix[3][1]
-        inputs.Socket_26.value = proj_matrix[0][2]
-        inputs.Socket_27.value = proj_matrix[1][2]
-        inputs.Socket_28.value = proj_matrix[2][2]
-        inputs.Socket_29.value = proj_matrix[3][2]
-        inputs.Socket_30.value = proj_matrix[0][3]
-        inputs.Socket_31.value = proj_matrix[1][3]
-        inputs.Socket_32.value = proj_matrix[2][3]
-        inputs.Socket_33.value = proj_matrix[3][3]
+        geometryNodes_modifier['Socket_18'] = proj_matrix[0][0]
+        geometryNodes_modifier['Socket_19'] = proj_matrix[1][0]
+        geometryNodes_modifier['Socket_20'] = proj_matrix[2][0]
+        geometryNodes_modifier['Socket_21'] = proj_matrix[3][0]
+        geometryNodes_modifier['Socket_22'] = proj_matrix[0][1]
+        geometryNodes_modifier['Socket_23'] = proj_matrix[1][1]
+        geometryNodes_modifier['Socket_24'] = proj_matrix[2][1]
+        geometryNodes_modifier['Socket_25'] = proj_matrix[3][1]
+        geometryNodes_modifier['Socket_26'] = proj_matrix[0][2]
+        geometryNodes_modifier['Socket_27'] = proj_matrix[1][2]
+        geometryNodes_modifier['Socket_28'] = proj_matrix[2][2]
+        geometryNodes_modifier['Socket_29'] = proj_matrix[3][2]
+        geometryNodes_modifier['Socket_30'] = proj_matrix[0][3]
+        geometryNodes_modifier['Socket_31'] = proj_matrix[1][3]
+        geometryNodes_modifier['Socket_32'] = proj_matrix[2][3]
+        geometryNodes_modifier['Socket_33'] = proj_matrix[3][3]
         # Update window dimensions
-        inputs.Socket_34.value = window_width
-        inputs.Socket_35.value = window_height
+        geometryNodes_modifier['Socket_34'] = window_width
+        geometryNodes_modifier['Socket_35'] = window_height
         return True
     # Main code for updating all relevant objects
     updated_objects = []
@@ -9001,8 +8980,7 @@ class SNA_OT_Dgs_Render_Import_Ply_E0A3A(bpy.types.Operator, ImportHelper):
         bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Adjust_Colour_And_Material'].show_render = True
         bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Write F_DC_And_Merge'].show_render = False
         bpy.context.scene.sna_dgs_scene_properties.update_mode = 'Disable Camera Updates'
-        # MIXAR PATCH: Blender 5.2 GN input IO (see mixar_gn_input).
-        mixar_gn_input(bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN'], 'Socket_50').value = 'Disable Camera Updates'
+        bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN']['Socket_50'] = 1
         bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN'].show_on_cage = (bpy.context.scene.sna_dgs_scene_properties.import_face_vert == 'Faces')
         bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN'].show_in_editmode = (bpy.context.scene.sna_dgs_scene_properties.import_face_vert == 'Faces')
         bpy.context.view_layer.objects.active.sna_dgs_object_properties.cam_update = False
@@ -9044,8 +9022,7 @@ class SNA_OT_Dgs_Render_Import_Ply_E0A3A(bpy.types.Operator, ImportHelper):
                 print(f"Assigned material '{material_name}' to {obj.name} and removed existing material slots.")
             except Exception as e:
                 print(f"Error assigning material to {obj.name}: {e}")
-        # MIXAR PATCH: Blender 5.2 GN input IO (see mixar_gn_input).
-        mixar_gn_input(bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN'], 'Socket_61').value = bpy.data.materials['KIRI_3DGS_Render_Material']
+        bpy.context.view_layer.objects.active.modifiers['KIRI_3DGS_Render_GN']['Socket_61'] = bpy.data.materials['KIRI_3DGS_Render_Material']
         bpy.context.view_layer.objects.active.update_tag(refresh={'DATA'}, )
         if bpy.context and bpy.context.screen:
             for a in bpy.context.screen.areas:

@@ -175,7 +175,6 @@ class MIXIE_OT_world_labs_generate(Operator):
             image_b64 = _b64.b64encode(image_bytes).decode()
             label = image.name
         elif not prompt:
-            record_reason("missing_prompt")
             self.report({"ERROR"}, "Please enter a text prompt")
             return {"CANCELLED"}
 
@@ -281,14 +280,12 @@ class MIXIE_OT_world_labs_generate(Operator):
             image = first_selected_reference_still(context.scene)
             if not image:
                 if not quiet:
-                    record_reason("missing_image")
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                 return None
             return image
         image = getattr(tab, "reference_image", None)
         if not image:
             if not quiet:
-                record_reason("missing_image")
                 self.report({"ERROR"}, "Please add an input image")
             return None
         return image

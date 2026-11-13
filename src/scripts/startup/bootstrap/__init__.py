@@ -356,15 +356,7 @@ def _register_single_ui_module(ui_file, modules_path):
             # Add to sys.modules BEFORE executing so relative imports work
             sys.modules[full_module_name] = module
 
-            try:
-                spec.loader.exec_module(module)
-            except BaseException:
-                # Drop the half-executed module, as importlib does: left in
-                # sys.modules, the retry pass would reuse a shell with no
-                # register()/classes (its properties never registered), and
-                # every later `from <it> import name` would raise ImportError.
-                sys.modules.pop(full_module_name, None)
-                raise
+            spec.loader.exec_module(module)
 
         # Product analytics wraps Mixar-owned operator classes before Blender
         # registers them. It records only operator identity/success, never RNA
@@ -401,16 +393,15 @@ def _register_single_ui_module(ui_file, modules_path):
         else:
             logger.debug("⚠ UI module %s has no register() function or classes list", module_name)
 
-    except (ImportError, AttributeError, OSError) as e:
-        # OSError: a transient failure reading the file or its bytecode.
+    except (ImportError, AttributeError) as e:
         _ui_failed_modules.append((ui_file, e))
-        logger.warning("UI module %s deferred: %s: %s", module_name, type(e).__name__, e)
+        logger.warning("UI module %s deferred: %s", module_name, e)
     except Exception as e:
         logger.error("✗ Failed to load UI module %s: %s", module_name, e, exc_info=True)
 
 
 def _retry_failed_ui_modules():
-    """Retry loading UI modules deferred by a load-order or transient read error.
+    """Retry loading UI modules that failed due to missing dependencies.
 
     Two-pass design (intentional):
       Pass 1 — snapshot _ui_failed_modules into retry_list, then clear it so
@@ -430,13 +421,10 @@ def _retry_failed_ui_modules():
     for ui_file, _ in retry_list:  # Pass 2: attempt each deferred module once more
         _register_single_ui_module(ui_file, _ui_modules_path)
 
-    # Log any modules that still failed after retry, with the retry's traceback
-    # and the first failure (so far only a WARNING, which Prod does not log).
-    first_errors = dict(retry_list)
+    # Log any modules that still failed after retry
     for ui_file, error in _ui_failed_modules:
-        dotted_name = ".".join(ui_file.relative_to(_ui_modules_path).with_suffix("").parts)
-        logger.error("✗ Failed to load UI module %s after retry: %s (first failure: %r)",
-                     dotted_name, error, first_errors.get(ui_file), exc_info=error)
+        rel = ui_file.relative_to(_ui_modules_path)
+        logger.error("UI module %s failed on retry: %s", rel, error)
     _ui_failed_modules.clear()
 
 

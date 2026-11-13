@@ -256,12 +256,16 @@ def enable_render_updates(objects) -> None:
         try:
             props.update_mode = _ENABLE_MODE
             props.cam_update = True
-            # KIRI's callbacks (patched) now update this object's GN inputs,
-            # and update_mode also turns the Render GN on in the viewport.
-            # Mixar shows splats through KIRI's GPU proxy, which is built
-            # from the evaluated mesh, so a live GN would quadruple its
-            # gaussians (one quad per point); renders use show_render.
-            obj.modifiers[SPLAT_GN_MODIFIER].show_viewport = False
+            # KIRI's enum/bool update callbacks act on the ACTIVE object (and
+            # the current 3D view), which ours may not be — mirror their two
+            # object-side effects explicitly: the update flag, and the GN
+            # display mode (Socket_50: 0 = camera updates, 1 = disabled,
+            # 2 = point cloud).
+            obj["update_rot_to_cam"] = True
+            if not _set_socket_value(obj.modifiers[SPLAT_GN_MODIFIER], "Socket_50", 0):
+                logger.warning(
+                    "[SplatRender] Socket_50 missing on %s — KIRI socket layout drift?", obj.name
+                )
             # KIRI "HQ Mode (Blended Alpha)": ordered alpha via the Sorter GN.
             # Under the default DITHERED/hashed transparency 500k overlapping
             # soft quads render as milky noise; BLENDED + back-to-front

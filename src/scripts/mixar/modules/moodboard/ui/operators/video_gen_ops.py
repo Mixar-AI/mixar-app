@@ -39,7 +39,6 @@ class MIXIE_OT_video_gen_generate(Operator):
 
         prompt = str(getattr(tab, "prompt", "") or "").strip()
         if not prompt:
-            record_reason("missing_prompt")
             self.report({'ERROR'}, "Enter a video prompt")
             return {'CANCELLED'}
 
@@ -77,13 +76,6 @@ class MIXIE_OT_video_gen_generate(Operator):
             image_mode=(params or {}).get("image_mode"),
         )
         if count_error:
-            # Only a frame image mode short of its images is missing input;
-            # too many references stay an unreasoned refusal.
-            wanted = {"first_frame": 1, "first_last_frame": 2}.get(
-                str((params or {}).get("image_mode") or ""), 0
-            )
-            if len(refs["images"]) < wanted:
-                record_reason("missing_image")
             self.report({'ERROR'}, count_error)
             return {'CANCELLED'}
         if not refs["all_video_sources_available"]:

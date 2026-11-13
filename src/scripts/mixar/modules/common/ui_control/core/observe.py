@@ -60,29 +60,7 @@ def settled(fn, *args, timeout=SETTLE_TIMEOUT):
         yield 0.025
 
 
-HIDDEN = "The window is hidden or minimised; show it and observe again"
-
-
 def widgets():
-    return inventory()[0]
-
-
-def _hidden(raw):
-    return {w["ptr"] for w in raw.get("windows", ()) if w.get("skipped")}
-
-
-def hidden_windows():
-    """Pointers of windows Mixar does not draw. Valid in a pending dump: a
-    region act needs no widget inventory, only that its window is shown."""
-    if threading.current_thread() is not threading.main_thread():
-        raise UIError("not_ready", "UI observation requires the main thread")
-    return _hidden(json.loads(bpy.context.window_manager.mixar_qa_ui_dump))
-
-
-def inventory():
-    """(widgets, pointers of windows Mixar does not draw). A hidden window
-    exports no widgets, so it also has no password masks: never capture or
-    act on it."""
     if threading.current_thread() is not threading.main_thread():
         raise UIError("not_ready", "UI observation requires the main thread")
     wm = bpy.context.window_manager
@@ -90,7 +68,6 @@ def inventory():
     if raw.get("pending"):
         # Never capture an image with an incomplete password-mask inventory.
         raise Pending()
-    hidden = _hidden(raw)
     wins = {w.as_pointer(): w for w in wm.windows}
     areas, regions = {}, {}
     for win in wins.values():
@@ -107,7 +84,7 @@ def inventory():
         result.append({**item, "area_type": "POPUP" if item.get("popup") else getattr(area, "type", ""),
                        "region_type": getattr(region, "type", ""),
                        "_win": win, "_area": area, "_region": region})
-    return result, hidden
+    return result
 
 
 def matches(item, query):
@@ -139,9 +116,7 @@ def window_extent(win):
             "height": max((a.y+a.height for a in areas), default=0)}
 
 
-def image(win, items, hidden):
-    if win.as_pointer() in hidden:
-        raise UIError("capture_unavailable", HIDDEN)
+def image(win, items):
     from mixar.modules.common.render_coordinator.core import busy
     if (bpy.context.window_manager.mixar_window_resizing or bpy.app.is_job_running('RENDER')
             or busy()):
@@ -182,7 +157,7 @@ def observe(owner, args):
     if len(_contexts) >= MAX_CONTEXTS:
         del _contexts[next(iter(_contexts))]
     win = main_window()
-    items, hidden = inventory()
+    items = widgets()
     token = secrets.token_urlsafe(24)
     entry = {"owner": owner, "signature": signature(), "expires": now + CONTEXT_TTL, "targets": {}}
     all_windows = list(bpy.context.window_manager.windows)
@@ -200,8 +175,6 @@ def observe(owner, args):
         targets.append({**public(item), "target": handle, "window": window_ids[item["w"]]})
     regions = []
     for window in all_windows:
-        if window.as_pointer() in hidden:
-            continue
         for area in window.screen.areas:
             for region in area.regions:
                 if region.width < 2 or region.height < 2:
@@ -219,7 +192,7 @@ def observe(owner, args):
                            "scene_name": w.scene.name} for w in all_windows]}
     blocks = []
     if args.get("image"):
-        block, result["frame"] = image(win, items, hidden)
+        block, result["frame"] = image(win, items)
         blocks.append(block)
     return result, blocks
 
@@ -238,13 +211,10 @@ def resolve(owner, context, target):
         if len(found) != 1 or not found[0].get("enabled", True):
             raise UIError("target_changed", "Control moved, became ambiguous, or is disabled; observe again")
         return found[0]
-    hidden = hidden_windows()
     for win in bpy.context.window_manager.windows:
         for area in win.screen.areas:
             for region in area.regions:
                 if region_identity(win, area, region) == identity:
-                    if win.as_pointer() in hidden:
-                        raise UIError("window_unavailable", HIDDEN)
                     return {"_win": win, "_area": area, "_region": region, "_kind": "region",
                             "rect": [region.x, region.y, region.x+region.width, region.y+region.height],
                             "region_type": region.type, "area_type": area.type}
