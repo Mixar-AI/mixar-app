@@ -4,7 +4,8 @@
 
 Attaches a rendered clip, a text note and a PDF as context FILES (no folder),
 then proves the chips, the synthetic ``Attached files`` manifest folder, the
-RPCs through its set id (read / view_video / list / errors) and detachment.
+RPCs through its set id (read / view_video / list / search, PDF text and
+pages with the bundled PDFium / errors) and detachment.
 Leaves ``clip.mp4`` and ``brief.pdf`` attached for the driver's UI checks.
 """
 import importlib.util
@@ -18,6 +19,14 @@ ATTACHED = 'Attached files'
 def _video_checks():
     spec = importlib.util.spec_from_file_location(
         'folder_video_checks', str(Path(__file__).with_name('context_folder_video_checks.py')))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _pdf_fixtures():
+    spec = importlib.util.spec_from_file_location(
+        'qa_pdf_fixtures', str(Path(__file__).parents[1] / 'pdf_fixtures.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -51,7 +60,7 @@ def run(out_dir, scene):
     def fixture():
         clip = _video_checks().render_fixture(scene, fixtures)
         (fixtures / 'notes.txt').write_text('Hero: a knight in green armour.\nHeight 1.8 m.\n')
-        (fixtures / 'brief.pdf').write_bytes(b'%PDF-1.4\n% QA fixture\n%%EOF')
+        (fixtures / 'brief.pdf').write_bytes(_pdf_fixtures().mixed_pdf())
         (fixtures / '.secret').write_text('never shared')
         state['clip'] = clip
         return {'clip_bytes': clip.stat().st_size}
@@ -97,14 +106,24 @@ def run(out_dir, scene):
         assert listing.get('success') and listing['total'] == 3, listing
         search = rpc.dispatch('context_folder.search', params(query='knight'))
         assert search.get('success') and search['matches'], search
+        # The bundled PDFium: page-marked text, PDF search and page images.
+        brief = rpc.dispatch('context_folder.read', params(path='brief.pdf'))
+        assert brief.get('success') and brief['page_count'] == 3, brief
+        assert brief['text'].splitlines()[:2] == ['    1  --- page 1 of 3 ---', '    2  Hello PDF world'], brief
+        shield = rpc.dispatch('context_folder.search', params(query='shield is round'))
+        assert {'path': 'brief.pdf', 'line': 3, 'text': 'Shield is round'} in shield['matches'], shield
+        pages = rpc.dispatch('context_folder.view_pdf_pages', params(path='brief.pdf', pages=[1, 2], max_dim=1568))
+        assert pages.get('success') and [(p['page'], p['width'], p['height']) for p in pages['pages']] == [
+            (1, 1212, 1568), (2, 1568, 1212)], pages.get('error')
         return {'read_lines': read['total_lines'], 'frames': [f['frame_index'] for f in video['frames']],
-                'listed': listing['total']}
-    check('04 read / view_video / list / search work through the set id', rpcs)
+                'listed': listing['total'], 'pdf_lines': brief['total_lines']}
+    check('04 read / view_video / list / search / PDF text and pages work through the set id', rpcs)
 
     def errors():
         got = {}
         for label, p, method, code in [
-            ('pdf as text', params(path='brief.pdf'), 'read', 'not_text'),
+            ('pdf page out of range', params(path='brief.pdf', pages=[9]), 'view_pdf_pages', 'pdf_page_range'),
+            ('note as pdf', params(path='notes.txt', pages=[1]), 'view_pdf_pages', 'not_pdf'),
             ('note as video', params(path='notes.txt'), 'view_video', 'not_video'),
             ('missing member', params(path='nope.mp4'), 'view_video', 'not_found'),
             ('traversal', params(path='../notes.txt'), 'read', 'invalid_path'),

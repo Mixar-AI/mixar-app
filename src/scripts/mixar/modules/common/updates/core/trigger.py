@@ -98,17 +98,7 @@ def _do_update_check() -> None:
     the timer does not repeat.
     """
     try:
-        from mixar.config.config import get_config
-        from mixar.modules.common.api.services.update_service import (
-            get_update_service,
-        )
-
         from .state import get_update_state
-        from .update_checker import (
-            get_current_version,
-            get_or_create_install_id,
-            get_platform_key,
-        )
 
         state = get_update_state()
 
@@ -117,29 +107,7 @@ def _do_update_check() -> None:
             return None
 
         state.set_checking()
-
-        platform = get_platform_key()
-        version = get_current_version()
-        config = get_config()
-        channel = config.get("updates", {}).get("channel", "stable")
-        install_id = get_or_create_install_id()
-
-        logger.info(
-            "Checking for updates: platform=%s, version=%s, channel=%s",
-            platform,
-            version,
-            channel,
-        )
-
-        service = get_update_service()
-        service.check_async(
-            platform=platform,
-            current_version=version,
-            channel=channel,
-            install_id=install_id,
-            on_success=_on_check_success,
-            on_error=_on_check_error,
-        )
+        request_update_check(_on_check_success, _on_check_error)
 
     except Exception as e:
         logger.error("Update check init failed: %s", e, exc_info=True)
@@ -149,6 +117,47 @@ def _do_update_check() -> None:
         _interactive_check["active"] = False
 
     return None
+
+
+def request_update_check(on_success, on_error) -> None:
+    """Ask the backend once which update it offers this copy.
+
+    Main thread. The answer reaches *on_success* (the response) or
+    *on_error* (the exception) on the main thread. Touches no update state:
+    the launch install (``launch_install``) asks with this too, to learn
+    whether its staged version is still offered.
+    """
+    from mixar.config.config import get_config
+    from mixar.modules.common.api.services.update_service import (
+        get_update_service,
+    )
+
+    from .update_checker import (
+        get_current_version,
+        get_or_create_install_id,
+        get_platform_key,
+    )
+
+    platform = get_platform_key()
+    version = get_current_version()
+    channel = get_config().get("updates", {}).get("channel", "stable")
+    install_id = get_or_create_install_id()
+
+    logger.info(
+        "Checking for updates: platform=%s, version=%s, channel=%s",
+        platform,
+        version,
+        channel,
+    )
+
+    get_update_service().check_async(
+        platform=platform,
+        current_version=version,
+        channel=channel,
+        install_id=install_id,
+        on_success=on_success,
+        on_error=on_error,
+    )
 
 
 # ============================================================================
@@ -179,6 +188,10 @@ def _on_check_success(response) -> None:
     try:
         data = response.data if hasattr(response, "data") else {}
         info = parse_update_response(data)
+        # A download the backend no longer offers (pulled, superseded,
+        # re-published, or nothing newer at all) must never install at a
+        # later launch.
+        _forget_unoffered(info)
 
         if info is None:
             logger.info("No update available")
@@ -236,6 +249,15 @@ def _on_check_error(error: Exception) -> None:
     get_update_state().set_idle()
     if interactive:
         push_check_failed_toast()
+
+
+def _forget_unoffered(info) -> None:
+    try:
+        from .launch_install import forget_unoffered
+
+        forget_unoffered(info)
+    except Exception:  # noqa: BLE001 - never break the update check
+        logger.warning("Could not tidy the staged update", exc_info=True)
 
 
 # ============================================================================

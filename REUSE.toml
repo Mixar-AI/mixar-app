@@ -11,6 +11,15 @@ SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"
 
 [[annotations]]
+path = [
+  "docs/development/claude-subscription-evidence/*",
+  "docs/development/layered-mask-freeze-evidence/*",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
 path = "docs/development/scenes-drawer-transparency/*"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"

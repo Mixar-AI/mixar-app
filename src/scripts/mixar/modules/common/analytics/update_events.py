@@ -35,15 +35,22 @@ def capture_update_download(version: str, outcome: str, *, details=None, context
 
 
 def capture_update_started(
-    version: str, verified: bool, *, attempt_id: str = "", context=None,
+    version: str, verified: bool, *, attempt_id: str = "", trigger: str = "click",
+    context=None,
 ) -> None:
-    """The helper was spawned and Mixar is quitting to install."""
+    """The helper was spawned and Mixar is quitting to install.
+
+    ``trigger`` says what started it: ``click`` (Restart & Update),
+    ``quit`` (the user quit Mixar) or ``launch`` (the launch after a
+    session that never quit normally).
+    """
     capture(
         EVENT_UPDATE_STARTED,
         {
             "target_version": version,
             "signature_verified": bool(verified),
             "attempt_id": attempt_id or None,
+            "trigger": trigger or "click",
         },
         context=context,
     )
@@ -61,7 +68,9 @@ RESULT_DETAIL_KEYS = (
     "from_version", "running_version", "exit_code", "msi_error",
     "failure_reason", "attempt_id", "helper_version", "install_kind",
     "installed_version", "relaunch_matched", "relaunch_kind",
-    "locking_processes", "wait_s",
+    "locking_processes", "wait_s", "trigger",
+    "install_scope", "moved_from_program_files", "msi_refusal", "elevation",
+    "install_decision", "install_decision_reason",
 )
 
 

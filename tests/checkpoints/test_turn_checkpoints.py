@@ -20,7 +20,7 @@ _CHAT_ROOT = (Path(__file__).parents[2] / "src" / "scripts" / "mixar"
               / "modules" / "space_mixie_chat")
 
 
-from helpers import _scene, _send, _turns  # noqa: F401,E402
+from helpers import _prepare_restore, _scene, _send, _turns  # noqa: F401,E402
 
 
 # --------------------------------------------------------------------------- #
@@ -154,27 +154,6 @@ def test_can_restore_requires_an_idle_session_with_no_open_run(tc):
     tc.session._run_open = False
     tc.session.state = SimpleNamespace(value="busy")
     assert tc.m.can_restore(scene)[0] is False
-
-
-def _prepare_restore(tc, monkeypatch, scene):
-    """One captured-and-sent turn; the document has moved on since."""
-    tc.document["bytes"] = b"scene-turn-2"
-    target = tc.m.capture(scene, "turn two")
-    tc.m.bind_request(target, "cmd-turn-2")
-    _send(scene, "turn two")
-    tc.document["bytes"] = b"scene-now"
-    sent = []
-    monkeypatch.setattr(tc.m, "_send_backend", lambda sid, calls: sent.append((sid, calls)))
-    seen = {}
-
-    def recover(filepath=""):
-        seen["restoring"] = tc.m.is_restoring()
-        seen["bytes"] = open(filepath, "rb").read()
-        return {'FINISHED'}
-
-    tc.bpy.ops.wm.recover_auto_save.side_effect = recover
-    tc.bpy.data.scenes = [scene]
-    return target, sent, seen
 
 
 def test_revert_keeps_the_tip_recovers_the_snapshot_and_never_writes_the_project(tc, monkeypatch):
@@ -465,7 +444,7 @@ def test_restore_operator_runs_in_exec_only_and_the_native_retitle_never_writes(
     assert "save_as_mainfile" not in restore
     assert "_retitle(original_path)" in restore and "timers.register" in restore
     # Every read is preceded by the bubble purge, keep-capture or not.
-    assert restore.index("_close_bubble_windows()") < restore.index("recover_auto_save")
+    assert restore.index("_prepare_read_window()") < restore.index("recover_auto_save")
 
 
 def test_native_card_checkpoint_mode_arms_before_restoring():

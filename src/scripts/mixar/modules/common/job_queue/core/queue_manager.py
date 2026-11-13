@@ -389,6 +389,9 @@ class FeatureQueue(DownloadMixin):
         scoped = current_batch_origin()
         taken = scoped if scoped is not None else take_job_origin(bpy.context)
         origin = taken or ("mixar_agent" if ref else "user")
+        from .blocked_features import refuse  # A restricted connection's script.
+        if refuse(self.feature_key, bpy.context):
+            return False
         # Dedup: reject if same label is already active
         if job.label and any(
             j.label == job.label and j.state not in TERMINAL_STATES
@@ -775,8 +778,9 @@ class FeatureQueue(DownloadMixin):
             self._on_submit_error(job, error)
 
         from mixar.modules.common.api.services.job_queue_service import submitting_as
+        from .blocked_features import admitted
         try:
-            with submitting_as(getattr(job, "origin", "")):
+            with submitting_as(getattr(job, "origin", "")), admitted():
                 job.submit(on_submit_success, on_submit_error)
         except Exception as e:
             self._on_submit_error(job, e)

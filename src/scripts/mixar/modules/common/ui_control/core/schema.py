@@ -59,9 +59,26 @@ SCHEMAS = {
 READ_ONLY = {"mixar_ui_observe", "mixar_ui_wait", "mixar_ui_call_status", "mixar_scenes", "mixar_projects"}
 #: Native interface input: offered only while the user has opted in.
 UI_INPUT = {"mixar_ui_observe", "mixar_ui_act", "mixar_ui_wait"}
+#: The input that acts on the app (clicks, typing, keys); the rest only read it.
+UI_ACTIONS = UI_INPUT - READ_ONLY
 #: Replaces the open document / deletes a tab (its work only with explicit consent).
 DESTRUCTIVE = {"mixar_project_open", "mixar_scene_close"}
 DOMAINS = {name: ("scenes" if name.startswith(("mixar_scene", "mixar_project")) else "ui") for name in SCHEMAS}
+#: What an AI app shows for each tool (MCP ``title``, also ``annotations.title``):
+#: sentence case, at most 40 characters. The backend titles its own tools.
+TITLES = {
+    "mixar_ui_context": "Manage the connection to Mixar",
+    "mixar_ui_observe": "Observe Mixar's interface",
+    "mixar_ui_act": "Operate Mixar's interface",
+    "mixar_ui_wait": "Wait for Mixar's interface to change",
+    "mixar_ui_call_status": "Check an interface action's outcome",
+    "mixar_scenes": "List scene tabs",
+    "mixar_scene_new": "Open a new scene tab",
+    "mixar_scene_switch": "Switch to a scene tab",
+    "mixar_scene_close": "Close a scene tab",
+    "mixar_projects": "List recent projects",
+    "mixar_project_open": "Open a recent project",
+}
 DESCRIPTIONS = {
     "mixar_ui_context": "Read UI readiness and current/bound scene. Explicitly select an instance or bind its current session after changing documents. Can release your input ownership.",
     "mixar_ui_observe": "Inspect visible Mixar controls and regions. Returns fresh opaque context/target handles; optionally a screenshot. Inspect before each action.",
@@ -91,8 +108,8 @@ def validate(name, args):
 
 
 def tools():
-    return [{"name": name, "description": DESCRIPTIONS[name], "inputSchema": schema,
-             "annotations": {"readOnlyHint": name in READ_ONLY,
+    return [{"name": name, "title": TITLES[name], "description": DESCRIPTIONS[name], "inputSchema": schema,
+             "annotations": {"title": TITLES[name], "readOnlyHint": name in READ_ONLY,
                              "destructiveHint": name in DESTRUCTIVE,
                              "openWorldHint": name == "mixar_ui_act"},
              "_meta": {"mixar/billing": {"invocation_credits": 0, "surface": "local_ui"},

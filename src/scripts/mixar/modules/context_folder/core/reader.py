@@ -5,11 +5,13 @@
 """Read-only folder operations behind the RPC: list, read, search, preview.
 
 Pure file I/O — no ``bpy`` — so they run on an RPC worker thread. Every
-path is folder-relative on the way in and on the way out.
+path is folder-relative on the way in and on the way out. A PDF reads and
+searches as its extracted text (``pdf.py``) when this build has PDFium.
 """
 
 import base64
 import io
+import time
 
 from ..constants import (
     KIND_IMAGE,
@@ -24,8 +26,10 @@ from ..constants import (
     MAX_SEARCH_LINE_CHARS,
     MAX_SEARCH_RESULTS,
     MAX_TEXT_FILE_BYTES,
+    PDF_SEARCH_EXTRACT_S,
     PREVIEWABLE_IMAGE_SUFFIXES,
 )
+from . import pdf
 from .errors import ContextFolderError
 from .indexer import index_folder
 from .paths import existing_file, file_kind, normalize_relative_path
@@ -67,18 +71,8 @@ def _decode(data: bytes) -> str:
         return data.decode("latin-1")
 
 
-def read_text(root, path, start_line=None, end_line=None) -> dict:
-    relative = normalize_relative_path(path)
-    target = existing_file(root, relative)
-    if file_kind(relative) != KIND_TEXT:
-        raise ContextFolderError(
-            "not_text",
-            "Only text files can be read; view images and videos, import models, "
-            "and ask the user about documents",
-        )
-    if target.stat().st_size > MAX_TEXT_FILE_BYTES:
-        raise ContextFolderError("file_too_large", "That file is too large to read")
-    lines = _decode(target.read_bytes()).splitlines()
+def _numbered(relative: str, lines, start_line, end_line) -> dict:
+    """One page of numbered lines within the per-read character budget."""
     total = len(lines)
     if not total:
         return {"success": True, "path": relative, "text": "", "start_line": 0,
@@ -105,8 +99,29 @@ def read_text(root, path, start_line=None, end_line=None) -> dict:
     }
 
 
+def read_text(root, path, start_line=None, end_line=None) -> dict:
+    relative = normalize_relative_path(path)
+    target = existing_file(root, relative)
+    if pdf.is_pdf(relative) and pdf.available():
+        text = pdf.read_pdf_text(target)
+        return {**_numbered(relative, text.lines, start_line, end_line), "page_count": text.page_count}
+    if file_kind(relative) != KIND_TEXT:
+        raise ContextFolderError(
+            "not_text",
+            ("Only text files and PDFs can be read; view images and videos, import models, "
+             "and ask the user about other documents") if pdf.available() else
+            ("Only text files can be read; view images and videos, import models, "
+             "and ask the user about documents"),
+        )
+    if target.stat().st_size > MAX_TEXT_FILE_BYTES:
+        raise ContextFolderError("file_too_large", "That file is too large to read")
+    return _numbered(relative, _decode(target.read_bytes()).splitlines(), start_line, end_line)
+
+
 def search(root, query, max_results=MAX_SEARCH_RESULTS) -> dict:
-    """Case-insensitive substring search over file NAMES and text CONTENT."""
+    """Case-insensitive substring search over file NAMES and text CONTENT
+    (PDF text included, numbered as ``read`` numbers it; page markers never
+    match)."""
     needle = str(query or "").strip()
     if not needle or len(needle) > MAX_QUERY_CHARS:
         raise ContextFolderError("invalid_query", f"Give a search text of 1-{MAX_QUERY_CHARS} characters")
@@ -115,15 +130,28 @@ def search(root, query, max_results=MAX_SEARCH_RESULTS) -> dict:
     index = index_folder(root)
     names = [{"path": e["path"], "kind": e["kind"]} for e in index.files if needle in e["path"].lower()]
     matches, truncated = [], index.truncated or len(names) > limit
+    searches_pdfs = pdf.available()
+    pdf_deadline = time.monotonic() + PDF_SEARCH_EXTRACT_S
     for entry in index.files:
-        if entry["kind"] != KIND_TEXT or entry["size"] > MAX_SEARCH_FILE_BYTES:
+        synthetic = frozenset()
+        if searches_pdfs and pdf.is_pdf(entry["path"]):
+            try:
+                text = pdf.pdf_text(existing_file(root, entry["path"]), deadline=pdf_deadline)
+            except (OSError, ContextFolderError):
+                continue
+            if text is None:  # extraction budget spent: this PDF was not searched
+                truncated = True
+                continue
+            lines, synthetic = text.lines, text.synthetic
+        elif entry["kind"] != KIND_TEXT or entry["size"] > MAX_SEARCH_FILE_BYTES:
             continue
-        try:
-            text = _decode(existing_file(root, entry["path"]).read_bytes())
-        except (OSError, ContextFolderError):
-            continue
-        for number, line in enumerate(text.splitlines(), start=1):
-            if needle in line.lower():
+        else:
+            try:
+                lines = _decode(existing_file(root, entry["path"]).read_bytes()).splitlines()
+            except (OSError, ContextFolderError):
+                continue
+        for number, line in enumerate(lines, start=1):
+            if number - 1 not in synthetic and needle in line.lower():
                 if len(matches) >= limit:
                     truncated = True
                     break

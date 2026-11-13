@@ -6,8 +6,9 @@
 
 The absolute path never leaves this machine. A chat turn carries a path-free
 manifest (``core/manifest.py``); the agent then lists, reads, searches, views
-and samples video frames of the files through the versioned
-``context_folder.*`` RPCs (``core/rpc.py``, ``core/video.py``) and imports
+and samples video frames of the files, and reads PDFs as text and page images,
+through the versioned ``context_folder.*`` RPCs (``core/rpc.py``,
+``core/video.py``, ``core/pdf.py``) and imports
 models or images through a script (``core/importer.py``) — every call
 addressed by an opaque folder id and a folder-relative path, and honoured only
 for a folder the user attached to that chat session (``core/grants.py``).

@@ -3,10 +3,12 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Read an image off the system clipboard into a temp PNG (per platform).
+"""Read an image off the system clipboard into a temp PNG (per platform),
+or the path of a copied file that pastes as a context file (a PDF).
 
 Used by ``mixie_chat.paste_image``; kept free of ``bpy`` so the operator
-decides where the file goes (Agent attachment or an island pane reference).
+decides where the file goes (Agent attachment, an island pane reference, or
+a context-file chip).
 """
 
 import os
@@ -16,8 +18,10 @@ import struct
 import subprocess
 import uuid
 from io import BytesIO
+from urllib.parse import unquote, urlparse
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.context_folder.constants import PASTE_FILE_SUFFIXES
 
 from ..constants import SUPPORTED_IMAGE_FORMATS
 from .image_utils import get_mixar_screenshots_dir
@@ -41,36 +45,55 @@ def _safe_remove(path):
         pass
 
 
-def read_clipboard_image():
-    """Get image from system clipboard (platform-specific).
+PASTE_FILE = "file"
+PASTE_IMAGE = "image"
 
-    Returns path to temp PNG, or None if no image on clipboard.
+
+def read_clipboard_paste():
+    """What a paste attaches (platform-specific), or None.
+
+    ``(PASTE_FILE, path)`` when the clipboard holds a copied file whose
+    suffix is in ``PASTE_FILE_SUFFIXES`` (a PDF from Finder, Explorer or a
+    Linux file manager): the caller attaches the ORIGINAL file as a context
+    file. The OS also offers such a file's icon as image data, which must
+    never become the attachment. Otherwise ``(PASTE_IMAGE, temp_png)`` for
+    image data on the clipboard.
     """
     system = platform.system()
+    if system == 'Darwin':
+        copied = _macos_get_file_url()
+    elif system == 'Windows':
+        copied = _win_copied_file()
+    else:
+        copied = _linux_copied_file()
+    if (copied and os.path.splitext(copied)[1].lower() in PASTE_FILE_SUFFIXES
+            and os.path.isfile(copied)):
+        return PASTE_FILE, copied
+
     screenshots_dir = get_mixar_screenshots_dir()
     temp_path = os.path.join(
         screenshots_dir, f"mixie_paste_{uuid.uuid4().hex}.png"
     )
-
     if system == 'Darwin':
-        return _paste_macos(temp_path)
+        image = _paste_macos(temp_path, copied)
     elif system == 'Windows':
-        return _paste_windows(temp_path)
+        image = _paste_windows(temp_path)
     else:
-        return _paste_linux(temp_path)
+        image = _paste_linux(temp_path)
+    return (PASTE_IMAGE, image) if image else None
 
 
-def _paste_macos(temp_path):
+def _paste_macos(temp_path, file_path):
     """macOS: Check clipboard for image data.
 
     Strategy:
-    1. Check «class furl» (file URL) first — when user copies a file from
-       Finder, «class PNGf» returns the file's Finder icon, not the actual
-       image. If the file URL points to a supported image format, use it.
+    1. Check «class furl» (file URL, ``file_path``: the caller reads it) —
+       when user copies a file from Finder, «class PNGf» returns the file's
+       Finder icon, not the actual image. If the file URL points to a
+       supported image format, use it.
     2. Fall back to «class PNGf» for actual image data (screenshots, etc).
     """
     # Step 1: Check if clipboard has a file URL pointing to a real image
-    file_path = _macos_get_file_url()
     if file_path:
         ext = os.path.splitext(file_path)[1].lower()
         if ext in SUPPORTED_IMAGE_FORMATS and os.path.isfile(file_path):
@@ -201,6 +224,28 @@ def _paste_windows(temp_path):
         return None
 
 
+def _win_copied_file():
+    """Windows: the first path of a file copied in Explorer (CF_HDROP), or None."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32
+        user32.GetClipboardData.argtypes = [wintypes.UINT]
+        user32.GetClipboardData.restype = ctypes.c_void_p
+        if not user32.IsClipboardFormatAvailable(15):  # CF_HDROP
+            return None
+        if not user32.OpenClipboard(0):
+            return None
+        try:
+            return _win_get_hdrop_path(user32)
+        finally:
+            user32.CloseClipboard()
+    except Exception as e:  # noqa: BLE001 — a paste never raises on a clipboard quirk
+        logger.debug(f"Windows clipboard file read failed: {e}")
+        return None
+
+
 def _win_read_global(user32, kernel32, fmt):
     """Read raw bytes from a clipboard format's global memory handle."""
     import ctypes
@@ -278,4 +323,33 @@ def _paste_linux(temp_path):
             with open(temp_path, 'wb') as f:
                 f.write(result.stdout)
             return temp_path
+    return None
+
+
+def _linux_copied_file():
+    """Linux: the first local file a file manager copied (``text/uri-list``,
+    offered by Nautilus, Dolphin, Thunar…), or None."""
+    xclip_cmd = ['xclip', '-selection', 'clipboard', '-target', 'text/uri-list', '-o']
+    if os.environ.get('WAYLAND_DISPLAY'):
+        commands = (['wl-paste', '--type', 'text/uri-list'], xclip_cmd)
+    else:
+        commands = (xclip_cmd,)
+    for cmd in commands:
+        try:
+            result = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            logger.debug(f"{cmd[0]} failed: {e}")
+            continue
+        if result.returncode == 0 and result.stdout:
+            return _first_local_file(result.stdout)
+    return None
+
+
+def _first_local_file(uri_list):
+    """The first ``file://`` URI of a ``text/uri-list`` as a local path."""
+    for line in uri_list.decode('utf-8', 'replace').splitlines():
+        parsed = urlparse(line.strip())
+        if parsed.scheme == 'file' and parsed.netloc in ('', 'localhost'):
+            return unquote(parsed.path) or None
     return None

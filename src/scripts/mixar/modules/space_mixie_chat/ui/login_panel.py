@@ -52,8 +52,9 @@ classes = (
 
 def draw_login_feedback(col, wm):
     """Existing session/error feedback shared by every sign-in surface."""
-    # Session expired message
-    if getattr(wm, 'mixie_chat_session_expired', False):
+    # A concrete failure (for example a locked keyring) takes precedence
+    # over the generic expiry prompt so retry instructions stay visible.
+    if getattr(wm, 'mixie_chat_session_expired', False) and not wm.mixie_chat_login_error:
         box = col.box()
         box.alert = True
         box.label(text="Session expired", icon='ERROR')

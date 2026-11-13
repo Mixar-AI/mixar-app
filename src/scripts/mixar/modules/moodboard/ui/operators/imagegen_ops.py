@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.i18n import n_, rpt_
+from mixar.modules.common.utils.generation_dispatch import record_reason
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.imagegen_queue import get_imagegen_listener
 from mixar.config.logging_config import get_logger
@@ -58,6 +59,14 @@ def _catalog_params(raw: str) -> dict:
         return {}
     return {str(key): value for key, value in parsed.items()
             if isinstance(value, (str, int, float, bool)) and not str(key).startswith("_")}
+
+
+def _not_queued_reason():
+    """Why the queue took no job: a connection without media generation refused
+    it (job_queue blocked_features), else the same job is already queued."""
+    from mixar.modules.common.i18n import rpt_
+    from mixar.modules.common.job_queue.core.blocked_features import refusal
+    return refusal() or rpt_("A duplicate image generation is already queued")
 
 
 class MIXIE_OT_imagegen_generate(Operator):
@@ -346,9 +355,11 @@ class MIXIE_OT_imagegen_generate(Operator):
                 listener=get_imagegen_listener(),
             )
             if not job:
-                self.report({"ERROR"}, "A duplicate image generation is already queued")
+                record_reason("duplicate_job")
+                self.report({"ERROR"}, _not_queued_reason())
                 return {"CANCELLED"}
         except Exception as e:
+            record_reason("enqueue_failed")
             self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
@@ -436,7 +447,7 @@ class MIXIE_OT_imagegen_generate(Operator):
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate image generation is already queued")
-            self.report({"WARNING"}, "A duplicate image generation is already queued")
+            self.report({"WARNING"}, _not_queued_reason())
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued

@@ -237,14 +237,14 @@ def _run(req):
                     for area in window.screen.areas:
                         area.tag_redraw()
                 yield 0.05
-        return observe.observe(req.owner, req.args)
+        return (yield from observe.settled(observe.observe, req.owner, req.args))
     if req.name == "mixar_ui_act":
         _eligible()
         digest = _receipts.digest(req.session, req.name, req.args)
         prior = _receipts.prior(req.call_id, digest)
         if prior:
             return replay(prior), []
-        observe.resolve(req.owner, req.args["context"], req.args["target"])
+        yield from observe.settled(observe.resolve, req.owner, req.args["context"], req.args["target"])
         ownership.prepare(req.owner)
         _receipts.claim(req.call_id, digest)
         req.claimed = True
@@ -252,8 +252,11 @@ def _run(req):
     if req.name == "mixar_ui_wait":
         end = time.monotonic()+req.args.get("timeout", 10)
         while True:
-            found = any(observe.matches(w, req.args["query"]) for w in observe.widgets())
-            if found == req.args.get("present", True):
+            try:
+                found = any(observe.matches(w, req.args["query"]) for w in observe.widgets())
+            except observe.Pending:
+                found = None  # Mid-redraw: neither present nor absent yet.
+            if found is not None and found == req.args.get("present", True):
                 return {"condition_met": True}, []
             if time.monotonic() >= end:
                 return {"condition_met": False}, []

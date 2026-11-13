@@ -51,6 +51,7 @@
 
 #include "ED_node.hh"
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 #include "ED_scenes_drawer.hh"
 #include "ED_view3d.hh"
 
@@ -1817,7 +1818,11 @@ void wm_draw_update(bContext *C)
      * The bubble restore paths force a refresh + redraw tag after re-showing
      * the window, so skipping updates while hidden never leaves stale
      * content on screen. */
-    if (win.runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win.runtime->ghostwin)) {
+    /* The island releases its RNA UI before its native fade/hide. Keep the
+     * last framebuffer for that animation instead of rebuilding freed blocks. */
+    if (ED_agent_bubble_is_minimised_window(&win) ||
+        (win.runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win.runtime->ghostwin)))
+    {
       continue;
     }
 #endif

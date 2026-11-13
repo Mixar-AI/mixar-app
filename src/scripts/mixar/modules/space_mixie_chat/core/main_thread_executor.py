@@ -351,11 +351,12 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
         _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""), req)
         return _stop_timer_if_idle()
 
-    from mixar.modules.mcp_bridge.core.lease import authorize_script
+    from mixar.modules.mcp_bridge.core.lease import authorize_script, script_scope
     refusal = authorize_script(req.session_id, req.agent_ctx)
     if refusal is not None:
         _send_error_response(req.request_id, refusal["error"], refusal["error_type"])
         return _stop_timer_if_idle()
+    scope = script_scope(req.session_id, req.agent_ctx)  # Its blocked job features.
 
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window).
@@ -396,7 +397,8 @@ def _execute_dequeued_request(req, status, lane) -> Optional[float]:
                 _deferrable_depth += 1
                 _deferrable_tool, _deferred_claimed = req.tool_name, False
                 try:
-                    result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+                    with scope:
+                        result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
                 finally:
                     _deferrable_depth -= 1
                     _deferrable_tool, _deferred_claimed = "", False

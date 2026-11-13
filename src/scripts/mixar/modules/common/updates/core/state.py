@@ -155,8 +155,9 @@ class UpdateStateManager:
 
     @property
     def signer_thumbprint(self) -> str:
-        """Certificate thumbprint of the staged installer's verified signer
-        (Windows; empty when unverified). The helper pins it."""
+        """The verified signer the helper pins: the certificate thumbprint
+        on Windows, the running app's Team ID on macOS (empty when
+        unverified)."""
         with self._lock:
             return self._signer_thumbprint
 
