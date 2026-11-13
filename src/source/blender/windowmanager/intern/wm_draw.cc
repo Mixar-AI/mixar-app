@@ -847,7 +847,7 @@ static void wm_draw_region_unbind(ARegion *region)
   }
 }
 
-static void wm_draw_region_blit(ARegion *region, int view)
+static void wm_draw_region_blit(ARegion *region, int view, const bool preserve_alpha)
 {
   if (!region->runtime->draw_buffer) {
     return;
@@ -871,7 +871,11 @@ static void wm_draw_region_blit(ARegion *region, int view)
    * Everything else drawn into the window blends with #GPU_BLEND_ALPHA which leaves an opaque
    * destination opaque, so masking here is enough to keep the window opaque for the whole frame,
    * see #WM_window_csd_draw_corner_mask. */
-  GPU_color_mask(true, true, true, false);
+  /* Mixar's island and pill need the region alpha on every present: native
+   * frost uses it on macOS/Wayland, and the Windows/X11 host backdrop is
+   * composited UNDER these pixels. Masking alpha leaves the transparent clear
+   * on Metal (hiding the controls) or stale opaque coverage on other paths. */
+  GPU_color_mask(true, true, true, preserve_alpha);
 
   if (region->runtime->draw_buffer->viewport) {
     GPU_viewport_draw_to_screen(region->runtime->draw_buffer->viewport, view, &region->winrct);
@@ -1293,7 +1297,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 
       if (region.overlap == false) {
         /* Blit from off-screen buffer. */
-        wm_draw_region_blit(&region, view);
+        wm_draw_region_blit(&region, view, area->spacetype == SPACE_AGENT_BUBBLE);
       }
     }
   }
