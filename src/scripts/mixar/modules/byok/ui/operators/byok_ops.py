@@ -224,7 +224,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
 # ---------------------------------------------------------------------------
 
 class MIXAR_BYOK_OT_save(Operator):
-    """Validate and activate your own AI provider"""
+    """Validate with the provider and save your API key"""
     bl_idname = "mixar_byok.save"
     bl_label = "Save"
     bl_options = {'INTERNAL'}
@@ -250,9 +250,6 @@ class MIXAR_BYOK_OT_save(Operator):
 
         if model_suggestions.is_openrouter(provider):
             return self._execute_openrouter(wm)
-        if provider == 'claude_code':
-            from .byok_claude_ops import execute_claude
-            return execute_claude(wm, _save_callback())
         if model_suggestions.is_codex(provider):
             return self._execute_codex(wm)
         if model_suggestions.is_local(provider):

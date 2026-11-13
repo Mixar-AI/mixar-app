@@ -24,7 +24,6 @@ from ..constants import CODEX_PROVIDER_ID, LOCAL_PROVIDER_ID, OPENROUTER_PROVIDE
 _CLIENT_PROVIDER_CHIP_LABELS = {
     OPENROUTER_PROVIDER_ID: "OpenRouter",
     CODEX_PROVIDER_ID: "Codex",
-    "claude_code": "Claude",
 }
 # The one chip name that is a word, not a brand: translated at display time.
 LOCAL_CHIP_LABEL = n_("Local")

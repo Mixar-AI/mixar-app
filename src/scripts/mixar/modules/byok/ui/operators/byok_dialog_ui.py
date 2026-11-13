@@ -130,8 +130,6 @@ def _config_lines(wm):
     if model_suggestions.is_codex(provider):
         lines.append(iface_("Account: {account}").format(
             account=wm.byok_key_preview or iface_("ChatGPT subscription")))
-    elif provider == "claude_code":
-        lines.append(iface_("Account: {account}").format(account=iface_("Claude Code on this computer")))
     else:
         lines.append(iface_("API key: {key}").format(
             key=wm.byok_key_preview or iface_("stored securely")))
