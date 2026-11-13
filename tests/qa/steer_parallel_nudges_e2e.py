@@ -50,8 +50,18 @@ STOP = {'area_type': 'AGENT_BUBBLE', 'op': 'MIXIE_CHAT_OT_abort_session'}
 
 
 def capture(qa, out, name):
+    # Opening from the pill leaves the OS pointer at the pill's old position.
+    # An empty busy composer need not retain text-edit focus, so hover collapse
+    # can hide it during the entrance-frame wait. Keep the pointer over the
+    # actual composer without clicking or changing the draft under test.
+    qa.step(f'{name}: composer visible', qa.wait,
+            "bool(drv.find(**%r))" % FIELD, timeout=5)
+    menu_item = {'popup': True, 'text': 'Start in a new scene tab'}
+    anchor = menu_item if qa.find(**menu_item)['total'] else FIELD
+    qa.step(f'{name}: keep island under pointer', warp, qa, anchor)
     time.sleep(.35)  # the island's entrance animation presents its first full frame
-    qa.eval(f"hit=drv.find_one(**{FIELD!r}); win=hit['_win']\n"
+    qa.step(f'{name}: capture', qa.eval,
+            f"hit=drv.find_one(**{FIELD!r}); win=hit['_win']\n"
             "with bpy.context.temp_override(window=win):\n"
             f"    result=win.mixar_qa_capture_frame(filepath={str(out / f'{name}.png')!r})")
 

@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
-from lib import QA  # noqa: E402
+from lib import QA, ensure_scenes_drawer  # noqa: E402
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/notifier-qa')).resolve()
 
@@ -49,8 +49,10 @@ with bpy.context.temp_override(window=w):
     bpy.context.object.name = 'QA1878_Cube_A'
 result = w.scene.name
 """)
-    if not qa.find(surface='scenes_drawer_new')['total']:
-        qa.click(op='VIEW3D_OT_scenes_drawer_toggle')
+    # The drawer may already be opening after a reset. A missing target in
+    # that intermediate frame must not toggle it closed again.
+    ensure_scenes_drawer(qa)
+    qa.wait("bpy.context.window_manager.mixar_scenes_drawer_amount >= 0.98", timeout=10)
     qa.wait("bool(drv.find(surface='scenes_drawer_new'))", timeout=10)
     qa.click(surface='scenes_drawer_new')
     qa.wait("drv.main_window().scene.name != 'QA1878_A'", timeout=10)
