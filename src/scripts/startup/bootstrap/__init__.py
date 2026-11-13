@@ -482,6 +482,25 @@ def _initialize_theme_defaults():
         logger.debug("Could not initialize theme defaults: %s", e)
 
 
+def _share_bytecode_rule_with_children():
+    """Put the app's bytecode rule in ``os.environ`` for child Pythons.
+
+    ``bpy_mixar_pycache.hh`` exports ``PYTHONPYCACHEPREFIX`` (with no cache,
+    ``PYTHONDONTWRITEBYTECODE``) before Python starts. On Windows that is
+    ``SetEnvironmentVariableW``, which the CRT environment ``os.environ`` is
+    built from never sees, so a child started with ``env=dict(os.environ)``
+    wrote ``__pycache__`` into the install directory. Elsewhere the same value
+    is already there. Runs first in ``register``, before any Mixar code.
+    """
+    try:
+        if sys.pycache_prefix:
+            os.environ["PYTHONPYCACHEPREFIX"] = sys.pycache_prefix
+        elif sys.dont_write_bytecode:
+            os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+    except Exception as e:
+        logger.warning("Could not share the bytecode cache with child Pythons: %s", e)
+
+
 def register():
     """Register all Mixar modules automatically.
 
@@ -492,6 +511,7 @@ def register():
     """
     global _ui_modules_path, _ui_queue_index, _ui_loading_complete, _UI_BATCH_BUDGET_MS
     logger.debug("Registering Mixar modular system")
+    _share_bytecode_rule_with_children()
 
     try:
         import bpy

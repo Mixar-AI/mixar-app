@@ -1,0 +1,6 @@
+LIBRARY mixar_msi_ca
+EXPORTS
+  MixarInspect
+  MixarMarker
+  MixarRelaunchElevated
+  MixarCleanMachineAssociations

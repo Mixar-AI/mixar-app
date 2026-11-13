@@ -458,10 +458,10 @@ def test_attach_lost_with_its_socket_retries_on_the_next_connection(attach):
 
 
 @pytest.mark.parametrize('result', [
-    {'code': -32020, 'message': 'Request timed out', 'data': {'uncertain': True}},
     {'status': 'unavailable'}, None,
+    {'code': -32602, 'message': 'Invalid replay cursor'},
 ])
-def test_attach_timeout_or_refusal_is_a_verdict(attach, result):
+def test_attach_refusal_is_a_verdict(attach, result):
     turn, replies = attach
     _real_request_replay(turn)
     replies[-1](result)

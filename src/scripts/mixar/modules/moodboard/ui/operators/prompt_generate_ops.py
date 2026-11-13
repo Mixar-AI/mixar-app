@@ -26,7 +26,7 @@ from bpy.types import Operator
 from mixar.modules.common.analytics.journey_events import generation_attempt, generation_dispatch
 
 from mixar.modules.common.i18n import rpt_
-from mixar.modules.common.utils.generation_dispatch import dispatch_scope
+from mixar.modules.common.utils.generation_dispatch import dispatch_scope, failure_outcome
 
 
 def _pane_message(text, level_name):
@@ -96,7 +96,10 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             with dispatch_scope() as feedback:
                 result = op_callable('INVOKE_DEFAULT', **(props or {}))
         except RuntimeError as exc:
-            generation_dispatch(context, attempt, 'error', reason=feedback.get('reason'))
+            # A refusal (missing input, busy catalog) is 'rejected'; only a
+            # raised or caught exception is 'error' (see generation_dispatch).
+            generation_dispatch(context, attempt, failure_outcome(feedback),
+                                reason=feedback.get('reason'))
             # bpy_operator.cc gives a nested call its OWN ReportList, so only
             # {'ERROR'} escapes — as a RuntimeError carrying Blender's own
             # "Error: " prefix. Re-report it at ERROR (the generation stopped;

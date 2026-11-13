@@ -45,6 +45,7 @@ SURFACES = frozenset({"splash", "dialog", "file_menu", "chat"})
 OUTCOMES = frozenset({"completed", "in_progress", "cancelled", "unavailable", "failed"})
 FAILURE_CATEGORIES = frozenset({
     "read_cancelled", "read_error", "unavailable",            # a restore
+    "context_unavailable",                                    # refused before the read
     "jobs_not_reattached", "adoption_failed", "retitle_failed",  # a partial one
     "write_failed", "not_filed",                              # a save point
 })

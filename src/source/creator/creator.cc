@@ -391,12 +391,24 @@ int main(int argc,
 #  endif /* USE_WIN32_UNICODE_ARGS */
 #endif   /* WIN32 */
 
-  /* Skip startup auth dialog in background/headless mode (no display).
+  /* Skip startup auth dialog in background/headless mode (no display). That includes the
+   * file-association modes (`creator_args.cc`), which set background mode themselves, register
+   * and exit before any window opens. The Windows installer runs `--register-allusers` and
+   * `--unregister-allusers`, often as SYSTEM with no visible desktop, where a login window
+   * would hang that process forever with install files open.
    * NOTE: Must be after Win32 unicode argv creation above. */
   {
     bool is_background = false;
     for (int i = 1; i < argc; i++) {
-      if (strcmp(argv[i], "--background") == 0 || strcmp(argv[i], "-b") == 0) {
+      if (STR_ELEM(argv[i],
+                   "--background",
+                   "-b",
+                   "-r",
+                   "--register",
+                   "--register-allusers",
+                   "--unregister",
+                   "--unregister-allusers"))
+      {
         is_background = true;
         break;
       }

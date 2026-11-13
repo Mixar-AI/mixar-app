@@ -206,6 +206,9 @@ def defer_send(context):
         cancel()
         return True
     s.draft.pending_send = True
+    # Send re-runs once dictation lands; analytics counts this click as deferred.
+    from mixar.modules.common.analytics.journey_events import note_deferred
+    note_deferred('mixie_chat.send_message')
     s.draft.base = s.scene.mixie_chat_input
     s.attachments = _attachments(s.scene)
     try:

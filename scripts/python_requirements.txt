@@ -12,5 +12,9 @@ httpx>=0.27.0
 mcp==2.2.0
 mistune>=3.0.0
 Pillow>=10.0.0
+# PDF text and page images for the agent (context_folder/core/pdf.py).
+# Apache-2.0 / BSD-3-Clause; ships its own PDFium library per platform.
+# Never PyMuPDF (AGPL).
+pypdfium2==5.15.2
 cryptography>=42.0.0
 pywin32==311; sys_platform == "win32"

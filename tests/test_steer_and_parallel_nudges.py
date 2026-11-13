@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mixar.modules.common.analytics import essential_events as essential
-from mixar.modules.space_mixie_chat import constants
 from mixar.modules.space_mixie_chat.constants import SessionState
 from mixar.modules.space_mixie_chat.core import held_sends, tab_activity
 
@@ -59,14 +58,6 @@ def clean_state():
     held_sends._held.clear()
 
 
-# ---- delivery labels ----------------------------------------------------
-
-def test_delivery_labels_fit_the_bubble_property():
-    # ChatMessage.delivery_hint is maxlen=32; the native label buffer is 40.
-    for hint in (constants.HINT_STEER, constants.HINT_QUEUED):
-        assert 0 < len(hint) < 32
-
-
 # ---- held sends ---------------------------------------------------------
 
 def test_hold_only_while_busy_without_an_open_run():
@@ -76,11 +67,12 @@ def test_hold_only_while_busy_without_an_open_run():
     assert not held_sends.should_hold(scene(state=SessionState.AWAITING_INPUT))
 
 
-def test_held_message_is_a_labelled_bubble_and_restores_to_the_composer():
+def test_held_message_is_an_unlabelled_bubble_and_restores_to_the_composer():
     s = scene()
     held_sends.hold(s, "make it red")
     held_sends.hold(s, "and taller")
-    assert [m.delivery_hint for m in s.mixie_chat_messages] == [constants.HINT_QUEUED] * 2
+    assert [m.delivery_hint for m in s.mixie_chat_messages] == ['', '']
+    assert held_sends.held_count(s) == 2
     assert all(m.bubble_id.startswith(held_sends.HELD_PREFIX) for m in s.mixie_chat_messages)
     s.mixie_chat_input = "draft"
     held_sends.restore(s)
@@ -217,7 +209,7 @@ def test_send_operator_polls_can_compose_and_holds_before_encoding():
     assert "can_compose(context.scene)" in poll
     hold = src.index("held_sends.hold(scene, message_text)")
     assert src.index("ws_client.connection_id") < hold < src.index("encode_outgoing_attachments(")
-    assert "user_msg.delivery_hint = HINT_STEER" in src
+    assert "delivery_hint" not in src  # a steer's bubble carries no label
     assert "interjecting=steering, held=held" in src
 
 

@@ -148,7 +148,7 @@ make run                 # launch build/Dev
 make run Prod            # launch build/Prod
 
 # Standalone tests run outside Blender; conftest.py supplies bpy stubs.
-python -m pip install pytest Pillow numpy
+python -m pip install pytest Pillow numpy pypdfium2
 python -m pytest -q
 ```
 

@@ -234,6 +234,7 @@ void qa_emit_custom_targets(std::string &out,
 }
 
 void qa_dump_region(std::string &out,
+                    bool &pending,
                     bool &first_widget,
                     const wmWindow *win,
                     const ScrArea *area, /* may be null for screen-level popups */
@@ -246,11 +247,17 @@ void qa_dump_region(std::string &out,
   if (BLI_rcti_size_x(&region->winrct) <= 0 || BLI_rcti_size_y(&region->winrct) <= 0) {
     return;
   }
+  /* Timers can inspect between an edit and the redraw which replaces buttons.
+   * Their RNA targets may already be freed. Do not inspect a pending rebuild
+   * (or a re-entrant draw), including custom providers and panel tab blocks. */
+  if (region->runtime == nullptr ||
+      (region->runtime->do_draw & (RGN_DRAW | RGN_DRAW_PARTIAL | RGN_DRAWING | RGN_REFRESH_UI)))
+  {
+    pending = true;
+    return;
+  }
   if (area != nullptr) {
     qa_emit_custom_targets(out, first_widget, win, area, region);
-  }
-  if (region->runtime == nullptr) {
-    return;
   }
 
   for (const blender::ui::Block &block : region->runtime->uiblocks) {
@@ -258,8 +265,12 @@ void qa_dump_region(std::string &out,
      * "rebuilt during the current free-inactive pass", not "on screen": every
      * region that is not mid-redraw carries live blocks with it clear, and
      * filtering on it dropped ~95% of the UI (measured: 11 widgets instead of
-     * several hundred, the whole topbar and island missing). The stale-block
-     * problem it was meant to solve needs a real liveness stamp instead. */
+     * several hundred, the whole topbar and island missing). */
+    /* block_region_set retains the replaced block until free-inactive runs.
+     * The name map identifies the current block without relying on active. */
+    if (region->runtime->block_name_map.lookup_default(block.name, nullptr) != &block) {
+      continue;
+    }
     for (const std::unique_ptr<blender::ui::Button> &but_ptr : block.buttons_ptrs) {
       const blender::ui::Button *but = but_ptr.get();
       if (but->flag & blender::ui::UI_HIDDEN) {
@@ -420,6 +431,7 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
   out += "],\n\"widgets\":[";
 
   bool first_widget = true;
+  bool pending = false;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;
     const bScreen *screen = WM_window_get_active_screen(win);
@@ -428,21 +440,21 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
     }
     for (const ScrArea &area : screen->areabase) {
       for (const ARegion &region : area.regionbase) {
-        qa_dump_region(out, first_widget, win, &area, &region, false);
+        qa_dump_region(out, pending, first_widget, win, &area, &region, false);
       }
     }
     /* Global areas: topbar / statusbar. */
     for (const ScrArea &area : win->global_areas.areabase) {
       for (const ARegion &region : area.regionbase) {
-        qa_dump_region(out, first_widget, win, &area, &region, false);
+        qa_dump_region(out, pending, first_widget, win, &area, &region, false);
       }
     }
     /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
     for (const ARegion &region : screen->regionbase) {
-      qa_dump_region(out, first_widget, win, nullptr, &region, true);
+      qa_dump_region(out, pending, first_widget, win, nullptr, &region, true);
     }
   }
-  out += "\n]}";
+  out += pending ? "\n],\"pending\":true}" : "\n],\"pending\":false}";
   return out;
 }
 

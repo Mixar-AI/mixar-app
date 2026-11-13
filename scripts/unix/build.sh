@@ -259,17 +259,19 @@ if [[ -n "$PYTHON_BIN" ]]; then
         # Use --no-user to prevent installation to user site-packages
         # Use --target to specify the exact location
         # --target alone leaves old package files beside newly resolved metadata.
-        if "$PYTHON_BIN" -m pip install --upgrade --no-user --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
+        # -B / --no-compile: the bundle ships no bytecode. The app caches it per
+        # user (PyConfig.pycache_prefix), so shipped .pyc files are never read.
+        if "$PYTHON_BIN" -B -m pip install --upgrade --no-user --no-compile --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
             echo "Successfully installed Python packages to embedded Python site-packages"
             # truststore is what lets the app trust corporate root CAs; a
             # silent fallback to certifi would only surface at a customer.
-            if ! "$PYTHON_BIN" -c "import truststore" 2>/dev/null; then
+            if ! "$PYTHON_BIN" -B -c "import truststore" 2>/dev/null; then
                 echo "Error: truststore installed but not importable from the embedded Python"
                 exit 1
             fi
         elif command -v pip3 >/dev/null 2>&1; then
             echo "Embedded pip failed, trying system pip with --target..."
-            if pip3 install --upgrade --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
+            if pip3 install --upgrade --no-compile --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
                 echo "Successfully installed Python packages using system pip"
             else
                 echo "Warning: Failed to install Python packages from requirements file"
@@ -281,7 +283,7 @@ if [[ -n "$PYTHON_BIN" ]]; then
         echo "Warning: Requirements file not found at: $REQUIREMENTS_FILE"
         exit 1
     fi
-    "$PYTHON_BIN" "$ROOT_DIR/scripts/check_python_runtime.py"
+    "$PYTHON_BIN" -B "$ROOT_DIR/scripts/check_python_runtime.py"
 else
     echo "Error: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin" >&2
     exit 1

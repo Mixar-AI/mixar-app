@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
+
 msgid "Capture Viewport"
 msgstr "הגוצתה ןולח תדיכל"
 
@@ -1439,6 +1442,9 @@ msgstr "ןמזה םתש וא הלטוב תורבחתהה"
 msgid "Incomplete token pair in response"
 msgstr "הבושתב יקלח םינומיסא גוז"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "טלקל ןכומ"
 
@@ -1521,6 +1527,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1709,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "ןכוסל הז לדומב שומיש"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1744,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "ChatGPT יונמ"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1880,13 +1934,10 @@ msgstr "AI קפס תורדגה"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr ".ןכוס תושקב רובע םיביוחמ םניא Mixar לש םיטידרק ,ליעפ הז דוע לכ .Mixar ןכוס רובע ךלשמ API חתפמב שומיש"
 
-msgid "Validate with the provider and save your API key"
-msgstr "API-ה חתפמ תרימשו קפסה לומ תומיא"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1956,6 +2007,9 @@ msgid "Local model"
 msgstr "ימוקמ לדומ"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -2999,19 +3053,34 @@ msgstr "{platform}: {installer_type} רובע ךמתנ אל ןיקתמ גוס"
 msgid "This install can't be updated in place"
 msgstr "םוקמב וז הנקתה ןכדעל ןתינ אל"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Mixar {version}-ל ןכדוע"
 
 msgid "The update was installed successfully."
 msgstr ".החלצהב ןקתוה ןוכדעה"
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3103,6 +3172,9 @@ msgstr "Mixar ותוא ליחהל ידכ שדחמ לעפוי."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — ןפדפדה ךרד ןכדעל ידכ הדרוהב שמתשהל שי."
+
+msgid "Retry"
+msgstr "רזוח ןויסינ"
 
 msgid "Restart & Update"
 msgstr "ןוכדעו שדחמ הלעפה"
@@ -3244,6 +3316,24 @@ msgstr "ןוכדעל שדחמ הלעפה"
 
 msgid "Updating…"
 msgstr "…ןכדעמ"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3483,6 +3573,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7715,6 +7808,12 @@ msgstr "הארשה חול"
 msgid "Right-click context menu for moodboard"
 msgstr "הארשהה חולל תינמי הציחלב רשקה טירפת"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "רוביח תקיחמ"
 
@@ -9985,14 +10084,14 @@ msgstr "...םילדומה תמישר תא ןנערמ"
 msgid "Generation catalog module not available"
 msgstr "ןימז וניא הריציה גולטק לודומ"
 
+msgid "A duplicate image generation is already queued"
+msgstr "רותב רבכ הלופכ הנומת תריצי"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "הארשהה חולל ןתוא ףיסומו AI תונומת רצוי"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "(טסקטה רושיאל Enter לע ץוחלל שי) היחנה ןיזהל אנ"
-
-msgid "A duplicate image generation is already queued"
-msgstr "רותב רבכ הלופכ הנומת תריצי"
 
 msgid "No model specified and no default available"
 msgstr "הנימז לדחמ תרירב ןיאו לדומ ןיוצ אל"
@@ -19860,6 +19959,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20303,12 +20405,6 @@ msgstr "...הנשמ"
 
 msgid "Awaiting Input..."
 msgstr "...טלקל ןיתממ"
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20892,6 +20988,9 @@ msgstr "רסח רוזחשה תדוקנ ץבוק"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "רבד הנוש אל ןכלו ,יחכונה בצמה תא רומשל היה ןתינ אל"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "רוזחשה תדוקנ תא אורקל היה ןתינ אל"
 
@@ -21060,9 +21159,6 @@ msgstr "תוקתנתה"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "רזוח ןויסינ"
 
 msgid "Choose Export Location"
 msgstr "אוציי םוקימ תריחב"
@@ -21534,6 +21630,15 @@ msgstr "םיפרוצמ םיצבק {count} רתויה לכל"
 msgid "Paste failed: {error}"
 msgstr "{error} :הלשכנ הקבדהה"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
+
+msgid "These references are already attached"
+msgstr "םיפרוצמ רבכ הלאה םיסנרפרה"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21819,23 +21924,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name}: {error} תא ףיסוהל ןתינ אל"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name}: {error} לע גוליד"
 
-msgid "These references are already attached"
-msgstr "םיפרוצמ רבכ הלאה םיסנרפרה"
-
 msgid "Added {count} image(s)"
 msgstr "תונומת {count} ופסונ"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Blend-מ הפסוה"
@@ -26532,9 +26628,6 @@ msgstr "םוכיסב תוטלחהה תא טרפמו ,לואשל םוקמב תו�
 msgid "Agent Bubble"
 msgstr "ןכוסה תעוב"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "הלשכנ ןכוסה תעוב ןולח תחיתפ"
-
 msgid "Agent Bubble Status"
 msgstr "ןכוסה תעוב בצמ"
 
@@ -26984,6 +27077,9 @@ msgstr "הארשה חולב ףרוצמ ץבוק תשפנה"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Mixie לש טא'צה לא ףע ףרוצ התע הזש סנרפר גיצמ"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "היהשה"

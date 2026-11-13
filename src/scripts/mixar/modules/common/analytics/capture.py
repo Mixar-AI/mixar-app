@@ -279,6 +279,16 @@ def _capture_operator_result(op_id, result, context):
         pass
 
 
+def _note_dispatch_exception() -> None:
+    """Mark the enclosing generation dispatch as failed, not refused (see
+    ``common/utils/generation_dispatch.failure_outcome``)."""
+    try:
+        from mixar.modules.common.utils.generation_dispatch import record_exception
+        record_exception()
+    except Exception:
+        pass
+
+
 def _report_operator_exception() -> None:
     """Blender prints an operator's exception through PyErr_Display, which
     skips sys.excepthook, so Mixar's own operators report it here (the crash
@@ -309,6 +319,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context, event)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _note_dispatch_exception()
                 _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)
@@ -322,6 +333,7 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
                 result = original(self, context)
             except Exception:
                 _capture_operator_result(op_id, {'ERROR'}, context)
+                _note_dispatch_exception()
                 _report_operator_exception()
                 raise
             _capture_operator_result(op_id, result, context)

@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
+
 msgid "Capture Viewport"
 msgstr "Kapti vidujon"
 
@@ -1439,6 +1442,9 @@ msgstr "Ensaluto estis nuligita aŭ eltempiĝis"
 msgid "Incomplete token pair in response"
 msgstr "Nekompleta ĵetonparo en la respondo"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "Preta por enigo"
 
@@ -1521,6 +1527,48 @@ msgid "Signed out before the request finished."
 msgstr ""
 
 msgid "Local"
+msgstr ""
+
+msgid "Install Claude Code, then run `claude auth login` in your terminal."
+msgstr ""
+
+msgid "Claude Code did not respond in time."
+msgstr ""
+
+msgid "Claude Code's reply exceeded the size limit."
+msgstr ""
+
+msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Run `claude auth login` in your terminal, then Save & Activate."
+msgstr ""
+
+msgid "Update Claude Code, then try again."
+msgstr ""
+
+msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
+msgstr ""
+
+msgid "Claude Code requires an inline image attachment."
+msgstr ""
+
+msgid "Choose a Claude model in AI Provider Settings."
+msgstr ""
+
+msgid "Invalid Claude Code request."
+msgstr ""
+
+msgid "Claude Code request exceeds the size limit."
+msgstr ""
+
+msgid "This thinking level is not supported by Claude Code."
+msgstr ""
+
+msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
+msgstr ""
+
+msgid "Activate Claude Code on this computer."
 msgstr ""
 
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
@@ -1709,6 +1757,9 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Uzi ĉi tiun modelon por la agento"
 
+msgid "Pick a model."
+msgstr ""
+
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -1744,6 +1795,9 @@ msgstr ""
 
 msgid "ChatGPT subscription"
 msgstr "Abono de ChatGPT"
+
+msgid "Claude Code on this computer"
+msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -1880,13 +1934,10 @@ msgstr "Agordoj de AI-provizanto"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Uzu vian propran API-ŝlosilon por la agento de Mixar. Dum ĝi estas aktiva, kreditoj de Mixar ne estas alkalkulataj por agentaj petoj."
 
-msgid "Validate with the provider and save your API key"
-msgstr "Validigi ĉe la provizanto kaj konservi vian API-ŝlosilon"
-
-msgid "Pick a provider."
+msgid "Validate and activate your own AI provider"
 msgstr ""
 
-msgid "Pick a model."
+msgid "Pick a provider."
 msgstr ""
 
 msgid "Enter your API key."
@@ -1956,6 +2007,9 @@ msgid "Local model"
 msgstr "Loka modelo"
 
 msgid "Pick a provider on the left to see its models."
+msgstr ""
+
+msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -2999,19 +3053,34 @@ msgstr "Nesubtenata tipo de instalilo por {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Ĉi tiu instalaĵo ne povas ĝisdatiĝi surloke"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Ĝisdatigita al Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "La ĝisdatigo estis instalita sukcese."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3103,6 +3172,9 @@ msgstr "Mixar relanĉiĝos por apliki ĝin."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — uzu Elŝuti por ĝisdatigi per via retumilo."
+
+msgid "Retry"
+msgstr "Reprovi"
 
 msgid "Restart & Update"
 msgstr "Relanĉi kaj ĝisdatigi"
@@ -3244,6 +3316,24 @@ msgstr "Relanĉi por ĝisdatigi"
 
 msgid "Updating…"
 msgstr "Ĝisdatigante…"
+
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3483,6 +3573,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7715,6 +7808,12 @@ msgstr "Inspirtabulo"
 msgid "Right-click context menu for moodboard"
 msgstr "Kunteksta menuo de dekstra alklako por inspirtabulo"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Forigi konekton"
 
@@ -9985,14 +10084,14 @@ msgstr "Refreŝigante la liston de modeloj..."
 msgid "Generation catalog module not available"
 msgstr "La modulo de la generada katalogo ne disponeblas"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Duobla bildgenerado jam estas en la vico"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generi AI-bildojn kaj aldoni ilin al la inspirtabulo"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Bonvolu enigi inviton (premu Enter por konfirmi la tekston)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Duobla bildgenerado jam estas en la vico"
 
 msgid "No model specified and no default available"
 msgstr "Neniu modelo indikita kaj neniu defaŭlto disponebla"
@@ -19860,6 +19959,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20303,12 +20405,6 @@ msgstr "Modifado..."
 
 msgid "Awaiting Input..."
 msgstr "Atendado de enigo..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20892,6 +20988,9 @@ msgstr "La dosiero de restarigpunkto mankas"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Ne eblis konservi la nunan staton, do nenio estis ŝanĝita"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "Ne eblis legi la restarigpunkton"
 
@@ -21060,9 +21159,6 @@ msgstr "Elsaluti"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "Reprovi"
 
 msgid "Choose Export Location"
 msgstr "Elekti elportan lokon"
@@ -21534,6 +21630,15 @@ msgstr "Maks. {count} kunsendaĵoj"
 msgid "Paste failed: {error}"
 msgstr "Algluo malsukcesis: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "Ne eblas aldoni {name}: {error}"
+
+msgid "These references are already attached"
+msgstr "Ĉi tiuj referencoj jam estas kunsenditaj"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21819,23 +21924,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "Ne eblas aldoni {name}: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Limo de kunsendaĵoj ({count}) atingita"
 
 msgid "Skipped {name}: {error}"
 msgstr "Preterlasis {name}: {error}"
 
-msgid "These references are already attached"
-msgstr "Ĉi tiuj referencoj jam estas kunsenditaj"
-
 msgid "Added {count} image(s)"
 msgstr "Aldonis {count} bildo(j)n"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Aldoni el Blend"
@@ -26532,9 +26628,6 @@ msgstr "Aŭtomata modo: la agento mem decidas malfermajn elektojn anstataŭ dema
 msgid "Agent Bubble"
 msgstr "Agenta veziko"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Malsukcesis malfermi la fenestron de la Agenta veziko"
-
 msgid "Agent Bubble Status"
 msgstr "Stato de la Agenta veziko"
 
@@ -26984,6 +27077,9 @@ msgstr "Animacii kunsendaĵon de la inspirtabulo"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Montras nove kunsenditan referencon flugantan en la babilon de Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Prokrasto"
