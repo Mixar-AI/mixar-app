@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ * SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 static PyGetSetDef pygpu_texture__tp_getseters[] = {
     {"width",
