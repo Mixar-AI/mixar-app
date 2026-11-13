@@ -84,6 +84,31 @@ def test_a_removal_answers_in_its_own_shape_when_it_fails(client, monkeypatch):
     assert not byok_client.mutation_in_flight()
 
 
+@pytest.mark.parametrize("forget_local", [False, True], ids=["pause", "remove"])
+def test_pause_and_remove_need_no_provider_model_validation(client, monkeypatch, forget_local):
+    from mixar.modules.byok.core import claude_code, key_store
+
+    requests, forgotten, answers = [], [], []
+
+    def delete():
+        requests.append("delete")
+        return SimpleNamespace(success=True, status_code=200, data={"data": {"removed": 1}})
+
+    def never_probe(model):
+        pytest.fail("Pausing/removing must not require working provider credentials or inference")
+
+    monkeypatch.setattr(byok_client, "get_agent_service", _service(delete_credentials_all=delete))
+    monkeypatch.setattr(key_store, "current_user_id", lambda: "qa-user")
+    monkeypatch.setattr(byok_client, "_forget_local_key", forgotten.append)
+    monkeypatch.setattr(claude_code, "model_problem", never_probe)
+    byok_client.delete_credentials(lambda *a: answers.append(a), forget_local=forget_local)
+
+    assert requests == ["delete"]
+    assert answers == [(True, 1, None)]
+    assert forgotten == (["qa-user"] if forget_local else [])
+    assert not byok_client.mutation_in_flight()
+
+
 def test_no_timer_releases_without_touching_bpy_off_thread(client, monkeypatch):
     def no_timer(cb, *args):
         raise RuntimeError("interpreter shutting down")

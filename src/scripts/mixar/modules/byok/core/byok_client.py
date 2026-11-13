@@ -469,11 +469,6 @@ def delete_credentials(
 
         if epoch != _account_epoch():
             return False, 0, _SIGNED_OUT_MSG
-        if provider == "claude_code":
-            from .claude_code import model_problem
-            problem = model_problem(model)
-            if problem:
-                return False, None, problem
         user_id = key_store.current_user_id()  # before the call: never the next account's
         response = get_agent_service().delete_credentials_all()
         success, data, err = _translate(response)
