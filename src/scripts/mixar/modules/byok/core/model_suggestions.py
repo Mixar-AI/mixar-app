@@ -39,7 +39,6 @@ combination of "no real selection yet".
 """
 
 from ..constants import (
-    CLAUDE_CODE_PROVIDER_ITEM,
     CODEX_PROVIDER_ID,
     CODEX_PROVIDER_ITEM,
     LOCAL_PROVIDER_ID,
@@ -54,7 +53,7 @@ from ..constants import (
 # Providers whose model dropdown is served from another provider's catalog
 # group. Codex runs OpenAI's gpt-5.x lineup through the user's ChatGPT
 # subscription, so it reuses the "openai" models — no separate catalog rows.
-_MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai', 'claude_code': 'anthropic'}
+_MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai'}
 
 # Module-level caches. Stored as Python-stable references so the
 # EnumProperty callbacks can return them directly without GC issues.
@@ -95,7 +94,7 @@ _provider_order: list[str] = []
 # `provider_order` always replaces it, so a reorder still ships as a backend
 # deploy.
 DEFAULT_PROVIDER_ORDER = (
-    "openai", "codex", "claude_code", "anthropic", "gemini", "openrouter",
+    "openai", "codex", "anthropic", "gemini", "openrouter",
     "vertex", "bedrock", "kimi", "fugu", "local",
 )
 
@@ -162,7 +161,7 @@ def get_provider_items() -> list[tuple[str, str, str]]:
     items = list(cloud)
     identifiers = {item[0] for item in items}
     for client_item in (
-        OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM, CLAUDE_CODE_PROVIDER_ITEM, LOCAL_PROVIDER_ITEM,
+        OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM, LOCAL_PROVIDER_ITEM,
     ):
         if client_item[0] not in identifiers:
             items.append(client_item)

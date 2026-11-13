@@ -1937,48 +1937,6 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
-msgid "Install Claude Code, then run `claude auth login` in your terminal."
-msgstr ""
-
-msgid "Claude Code did not respond in time."
-msgstr ""
-
-msgid "Claude Code's reply exceeded the size limit."
-msgstr ""
-
-msgid "Claude Code could not complete this request. Check its sign-in and usage limits in your terminal."
-msgstr ""
-
-msgid "Run `claude auth login` in your terminal, then Save & Activate."
-msgstr ""
-
-msgid "Update Claude Code, then try again."
-msgstr ""
-
-msgid "Run `claude auth login` with your Claude subscription, then Save & Activate."
-msgstr ""
-
-msgid "Claude Code requires an inline image attachment."
-msgstr ""
-
-msgid "Choose a Claude model in AI Provider Settings."
-msgstr ""
-
-msgid "Invalid Claude Code request."
-msgstr ""
-
-msgid "Claude Code request exceeds the size limit."
-msgstr ""
-
-msgid "This thinking level is not supported by Claude Code."
-msgstr ""
-
-msgid "Claude Code returned no valid completion. Check its sign-in and usage limits in your terminal."
-msgstr ""
-
-msgid "Activate Claude Code on this computer."
-msgstr ""
-
 msgid "That is not a valid auth.json — run `codex login` and load the file again."
 msgstr ""
 
@@ -2186,9 +2144,6 @@ msgstr ""
 msgid "Use this model for the agent"
 msgstr "Koristi ovaj model za agenta"
 
-msgid "Pick a model."
-msgstr ""
-
 msgid "Codex sign-in found - just click Save & Activate"
 msgstr ""
 
@@ -2225,9 +2180,6 @@ msgstr ""
 # derived
 msgid "ChatGPT subscription"
 msgstr "ChatGPT pretplata"
-
-msgid "Claude Code on this computer"
-msgstr ""
 
 msgid "API key: {key}"
 msgstr ""
@@ -2383,10 +2335,14 @@ msgstr "Podešavanja AI dobavljača"
 msgid "Use your own API key for the Mixar agent. While active, Mixar credits are not charged for agent requests."
 msgstr "Koristite sopstveni API ključ za Mixar agenta. Dok je aktivno, Mixar krediti se ne naplaćuju za zahteve agenta."
 
-msgid "Validate and activate your own AI provider"
-msgstr ""
+# derived
+msgid "Validate with the provider and save your API key"
+msgstr "Proverava kod dobavljača i čuva vaš API ključ"
 
 msgid "Pick a provider."
+msgstr ""
+
+msgid "Pick a model."
 msgstr ""
 
 msgid "Enter your API key."
@@ -2460,9 +2416,6 @@ msgid "Local model"
 msgstr "Lokalni model"
 
 msgid "Pick a provider on the left to see its models."
-msgstr ""
-
-msgid "Run claude auth login in your terminal, then Save & Activate."
 msgstr ""
 
 msgid "Enter your OpenRouter API key here."
@@ -3739,21 +3692,6 @@ msgstr "Ova instalacija ne može da se ažurira na mestu"
 msgid "This update can't be installed from Mixar. Download it to see what to do"
 msgstr ""
 
-msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
-msgstr ""
-
-msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
-msgstr ""
-
-msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
-msgstr ""
-
-msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
-msgstr ""
-
-msgid "The installer could not update this copy of Mixar. Nothing was changed."
-msgstr ""
-
 # derived
 msgid "Updated to Mixar {version}"
 msgstr "Ažurirano na Mixar {version}"
@@ -3822,12 +3760,24 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 # derived
 msgid "The installer did not finish."
 msgstr "Instalator nije završio."
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
 
 # derived
 msgid "{percent}% — {transferred} of {total}"
@@ -3949,6 +3899,9 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 # derived
