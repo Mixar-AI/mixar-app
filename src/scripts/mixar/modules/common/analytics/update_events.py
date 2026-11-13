@@ -69,6 +69,8 @@ RESULT_DETAIL_KEYS = (
     "failure_reason", "attempt_id", "helper_version", "install_kind",
     "installed_version", "relaunch_matched", "relaunch_kind",
     "locking_processes", "wait_s", "trigger",
+    "install_scope", "moved_from_program_files", "msi_refusal", "elevation",
+    "install_decision", "install_decision_reason",
 )
 
 

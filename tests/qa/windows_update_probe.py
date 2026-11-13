@@ -112,10 +112,11 @@ def _run_helper(module, root, msi, env, python, *, lock_wait_s=None, exit_wait_s
         parent.wait(timeout=15)
         pid = parent.pid
     build.setdefault('require_signature', False)
-    script = module.build_script(
-        installer_path=str(msi), staging_dir=str(root), version='9.9.9', pid=pid,
-        relaunch_candidates=[], **build,
-    )
+    build.update(installer_path=str(msi), staging_dir=str(root), version='9.9.9',
+                 relaunch_candidates=[])
+    script = module.build_script(pid=pid, **build)
+    # Helper v8: every path reaches the script through its environment.
+    env = dict(env, **{k: v for k, v in module.helper_environment(**build).items() if v})
     if exit_wait_s is not None:
         # Test-only: the production 300 s wait for Mixar, shortened in this copy.
         line = f'if %WAITED% GEQ {module.HELPER_WAIT_FOR_EXIT_S} goto timeout'
@@ -133,7 +134,7 @@ def _run_helper(module, root, msi, env, python, *, lock_wait_s=None, exit_wait_s
         assert script.count(line) == 1
         script = script.replace(line, f'if %LOCKWAIT% GEQ {int(lock_wait_s)} goto locked')
     script_path = root / 'helper.cmd'
-    script_path.write_text(script, encoding='cp1252', newline='\r\n')
+    script_path.write_text(script, encoding='ascii', newline='\r\n')
     # The app's update-in-progress marker: every exit path must delete it.
     marker = root / module.HELPER_MARKER_NAME
     marker.write_text('{"helper_pid": 0}', encoding='utf-8')
@@ -284,10 +285,13 @@ def finish_env(module, root, *, install_exit='0', relaunch_mode='1', reopen=True
     False leaves REOPEN unset (the step must cope). The grace before reading
     the reopen list is 0 here, the wait for turned-away launches 20 s.
     """
+    # UPGRADECODE names no product, so Windows Installer finds none and the
+    # step reads the (shimmed) Uninstall key, whatever this machine has installed.
     env = dict(os.environ, VERSION='9.9.9', STAGE='install', INSTALL_EXIT=install_exit,
                MSILOG=str(root / 'msi-install.log'), RELAUNCH='',
                RESULT=str(root / 'update-result.txt'), RELAUNCHMODE=relaunch_mode,
-               REOPEN=str(root / module.HELPER_REOPEN_NAME), REOPENGRACE='0', REOPENWAIT='20')
+               REOPEN=str(root / module.HELPER_REOPEN_NAME), REOPENGRACE='0', REOPENWAIT='20',
+               UPGRADECODE='{00000000-0000-0000-0000-000000000000}')
     if not reopen:
         env.pop('REOPEN')
     return env

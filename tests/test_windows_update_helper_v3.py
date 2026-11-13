@@ -138,7 +138,7 @@ def test_connectors_are_ended_after_mixar_exits_and_before_the_lock_wait():
     assert "$q.CreationDate -gt $c.CreationDate" in win_installer._PS_END_CONNECTORS
     # Log lines carry basename and pid, never a path.
     assert "$p.ExecutablePath+" not in win_installer._PS_END_CONNECTORS
-    assert "helper_version=6" in script
+    assert "helper_version=8" in script
 
 
 def test_delayed_expansion_is_forced_off():
@@ -184,7 +184,11 @@ def test_the_previous_msi_log_is_kept_before_the_installer_runs():
     rotate = 'if exist "%MSILOG%" move /y "%MSILOG%" "%MSIPREVLOG%" >nul 2>&1'
 
     assert rotate in script
-    assert 'set "MSIPREVLOG=C:\\ProgramData\\Mixar\\Updates' in script
+    prev = win_installer.helper_environment(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[])["MSIPREVLOG"]
+    assert prev == r"C:\ProgramData\Mixar\Updates\msi-install.prev.log"
     assert script.index(":signature_ok") < script.index(rotate)
     assert script.index(rotate) < script.index("-Verb RunAs")
     assert script.index(rotate) < script.index(":nopowershell")
@@ -209,7 +213,7 @@ def test_the_helper_is_started_by_absolute_cmd_without_autorun(monkeypatch, tmp_
     argv = started[0]
     assert argv[:3] == [r"D:\Win\System32\cmd.exe", "/d", "/c"]
     assert ntpath.isabs(argv[0])
-    script = Path(argv[3]).read_text(encoding="cp1252")
+    script = Path(argv[3]).read_text(encoding="ascii")
     assert 'set "SYS32=D:\\Win\\System32"' in script
     assert f'set "SIGNER={THUMBPRINT.upper()}"' in script
 

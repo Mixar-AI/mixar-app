@@ -55,9 +55,9 @@ from ..constants import (
     TRIGGER_LAUNCH,
     UPDATE_NOTIFICATION_ID,
 )
-from . import install_start, installer, staged_record, staging, verify
+from . import install_start, installer, staged_record, staging, verify, win_signer
 from .preferences import install_on_quit_enabled
-from .silent_install import silent_refusal
+from .silent_install import install_refusal, silent_refusal
 
 logger = get_logger(__name__)
 
@@ -159,10 +159,12 @@ def _request():
         if location is not None and record.get("target") != location.target:
             logger.info("Update %s not installed at launch: staged for another copy", version)
             return None
-        # The record's verdict only ever refuses here: the signature is
-        # checked again (begin_launch_install) before anything installs.
-        refusal = silent_refusal(eligibility, record, verified=bool(record.get("verified")),
-                                 signer=str(record.get("signer") or ""))
+        # The record's verdict only ever refuses here. The signature (and,
+        # on Windows, this app's own signer, which nothing has read yet) is
+        # judged by the launch's own check before silent_refusal runs.
+        refusal = ("" if record.get("verified") and record.get("signer")
+                   else "its signature was not verified when it was downloaded")
+        refusal = refusal or install_refusal(eligibility, record)
         if refusal:
             logger.info("Update %s not installed at launch: %s", version, refusal)
             return None
@@ -297,10 +299,15 @@ def _in_background(function, *args) -> None:
 
 def _verify_worker(check, installer_path, bundle_path, running_binary) -> None:
     """Worker thread: ``codesign`` / Authenticode on the staged installer
-    against the running app. Touches no ``bpy``; the main thread polls."""
+    against the running app — on Windows also this app's own signer
+    (:mod:`win_signer`), read before the verdict is published so the gate
+    that follows it has the answer. Touches no ``bpy``; the main thread polls."""
     try:
-        check["verdict"] = verify.verify_installer(
+        verdict = verify.verify_installer(
             installer_path, bundle_path=bundle_path, running_binary=running_binary)
+        if os.name == "nt" and verdict[0] == verify.VERIFIED:
+            win_signer.read(running_binary)
+        check["verdict"] = verdict
     except Exception as e:  # noqa: BLE001 - unknown is not verified
         check["verdict"] = (verify.UNVERIFIED, f"verification error: {type(e).__name__}", "")
 

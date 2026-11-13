@@ -42,6 +42,7 @@ from mixar.modules.common.updates.constants import (
     HELPER_LOG_NAME,
     HELPER_MARKER_NAME,
     HELPER_REOPEN_NAME,
+    HELPER_VERSION,
 )
 from mixar.modules.common.updates.core import installer, mac_installer, win_installer
 from update_helper_fixtures import POSIX
@@ -62,7 +63,8 @@ def test_install_on_quit_swaps_and_leaves_mixar_closed(env):
     assert (target / "Contents" / "MacOS" / "Mixar").read_text() == "new"
     assert _result(staging) == {"version": "3.4.0", "stage": "install", "exit": "0",
                                 "trigger": "quit", "from_version": "3.3.6",
-                                "attempt_id": "abc", "helper_version": "6"}
+                                "attempt_id": "abc",
+                                "helper_version": str(HELPER_VERSION)}
     log = (staging / HELPER_LOG_NAME).read_text()
     assert "installed on quit - Mixar stays closed" in log and "relaunching" not in log
     assert not (staging / HELPER_MARKER_NAME).exists()
@@ -218,19 +220,38 @@ def test_windows_install_on_quit_stays_closed_unless_reopen_was_asked():
     script = _windows(relaunch=False, trigger="quit")
 
     assert 'set "RELAUNCHMODE=0"' in script and 'set "TRIGGER=quit"' in script
-    reopen = os.path.join(r"C:\ProgramData\Mixar\Updates", HELPER_REOPEN_NAME)
-    assert f'set "REOPEN={reopen}"' in script
+    reopen = "C:\\ProgramData\\Mixar\\Updates\\" + HELPER_REOPEN_NAME
+    assert win_installer.helper_environment(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[])["REOPEN"] == reopen
     finish = script[script.index("\n:finish\n"):script.index("\n:relaunched\n")]
     assert 'if "%ERRORLEVEL%"=="4" goto stayclosed' in finish
     # Without PowerShell: the fallback relaunch only when asked to.
     assert finish.index('if not "%RELAUNCHMODE%"=="1" if not exist "%REOPEN%" goto stayclosed') < (
-        finish.index('start "" "C:\\Program Files\\Mixar\\mixar-launcher.exe"'))
+        finish.index('start "" "%RELAUNCH1%"'))
     assert "\n:stayclosed\n" in finish
 
     ps = win_installer._PS_FINISH
     assert ps.index("$go=$env:RELAUNCHMODE -eq '1'") < ps.index("Start-Process")
     assert "relaunch_kind=skipped" in ps and "exit 4" in ps
     assert ps.index("Wait-Process") < ps.index("Start-Process")
+
+
+def test_the_docs_show_the_windows_quit_install_as_it_looks():
+    """Helper v5+ runs msiexec with ``/passive``: Windows Installer's progress
+    window shows while a quit (or launch) install runs, with no buttons and no
+    prompt. The docs may not promise nothing on screen on Windows."""
+    script = _windows(relaunch=False, trigger="quit")
+    assert '"%SYS32%\\msiexec.exe" /i "%MSI%" /passive /norestart' in script
+    docs = " ".join((ROOT / "docs" / "seamless-updates.md").read_text(encoding="utf-8").split())
+    assert "quitting installs it with nothing on screen" not in docs
+    row = docs[docs.index("| User quits Mixar with an update ready"):]
+    row = row[:row.index(" |\n") if " |\n" in row else row.index("| Mixar opened while")]
+    assert "progress window" in row and "no buttons" in row
+    windows = docs[docs.index("**Windows, the next update after the move.**"):]
+    windows = windows[:windows.index("- **Windows,", 10)]
+    assert "progress window" in windows
 
 
 def test_windows_restart_and_update_still_relaunches():
@@ -264,9 +285,21 @@ def _finish_variables():
     return set(re.findall(r"\$env:([A-Z_]+)", win_installer._PS_FINISH))
 
 
-def test_the_windows_batch_sets_every_variable_its_finish_step_reads():
-    script = _windows(relaunch=False, trigger="quit")
-    missing = [name for name in sorted(_finish_variables()) if f'set "{name}=' not in script]
+@pytest.mark.parametrize("trigger, relaunch", [("click", True), ("quit", False), ("launch", True)])
+def test_the_windows_batch_sets_every_variable_its_finish_step_reads(trigger, relaunch):
+    # Helper v8: paths and free text reach the batch through its environment.
+    kwargs = dict(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0", pid=4242,
+        relaunch_candidates=[r"C:\Program Files\Mixar\mixar-launcher.exe"],
+        require_signature=True, signer_thumbprint="AB" * 20,
+        install_dir=r"C:\Program Files\Mixar", system_dir=r"C:\Windows\System32",
+        relaunch=relaunch, trigger=trigger,
+    )
+    script = win_installer.build_script(**kwargs)
+    env = win_installer.helper_environment(**kwargs)
+    missing = [name for name in sorted(_finish_variables())
+               if f'set "{name}=' not in script and not env.get(name)]
     assert not missing
 
 

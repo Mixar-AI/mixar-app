@@ -3053,6 +3053,24 @@ msgstr "Installationstypen stöds inte för {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Den här installationen kan inte uppdateras på plats"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Uppdaterad till Mixar {version}"
 

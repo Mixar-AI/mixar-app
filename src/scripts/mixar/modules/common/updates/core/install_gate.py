@@ -64,6 +64,14 @@ def _holders(install_dir):
     return win_processes.blocking_apps(install_dir, os.getpid())
 
 
+def _silent_holders(install_dir):
+    """Holders an install nobody watches waits on: not this process's own
+    descendants, which end as it quits; raises when the table is unknown."""
+    from . import win_processes
+
+    return win_processes.blocking_apps(install_dir, os.getpid(), descendants=False, strict=True)
+
+
 def _end_connectors(holders):
     """End every Mixar connector, live or abandoned; one still running is named instead.
 
@@ -160,11 +168,13 @@ def silent_blocker(eligibility) -> str:
     going ahead: comma-joined names, or ``""`` when nothing does.
 
     The same question :func:`check` answers, asked without anyone to ask:
-    no toast, no wait, nothing ended. Windows: every holder but a Mixar
-    connector (the helper ends those) — including Mixar's own background
-    work, which nobody would wait for. macOS: another Mixar or anything
-    else running from the bundle (:mod:`mac_processes`; this process's own
-    children end as it quits). A process table that cannot be read refuses.
+    no toast, no wait, nothing ended. On both platforms this process's own
+    children are left out: they end as it quits, and the helper still
+    waits for anything left running from the install. Windows: every other
+    holder but a Mixar connector (the helper ends those), so another Mixar
+    and its background work (a windowless ``mixar.exe -b``) refuse.
+    macOS: another Mixar or anything else running from the bundle
+    (:mod:`mac_processes`). A process table that cannot be read refuses.
     """
     location = eligibility.location
     if location is None or not location.target:
@@ -173,7 +183,7 @@ def silent_blocker(eligibility) -> str:
         if _is_windows():
             from . import win_processes
 
-            holders = [holder for holder in _holders(location.target)
+            holders = [holder for holder in _silent_holders(location.target)
                        if holder.kind not in win_processes.ENDED_BY_UPDATE]
         elif sys.platform == "darwin":
             from . import mac_processes

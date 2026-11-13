@@ -35,7 +35,7 @@ import uuid
 
 from mixar.config.logging_config import get_logger
 
-from . import install_marker, installer
+from . import install_marker, installer, result_owner
 
 logger = get_logger(__name__)
 
@@ -82,6 +82,8 @@ def start_helper(*, installer_path, version, eligibility, verified, signer,
     location = getattr(eligibility, "location", None)
     install_marker.write(staging_dir, proc.pid, version, attempt_id,
                          target=getattr(location, "target", "") or "")
+    # Its result may land in a staging folder other accounts share (#2079).
+    result_owner.remember_attempt(attempt_id)
     if relaunch:
         _connector_updating(True)
     try:

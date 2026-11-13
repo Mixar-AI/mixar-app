@@ -85,10 +85,22 @@ def check_eligibility(update_info) -> Eligibility:
     location = app_paths.get_install_location()
     if not location.writable:
         return Eligibility(False, location.reason or n_("This install can't be updated in place"))
+    if os.name == "nt" and _installer_refused(update_info.latest_version):
+        # The installer for this version refused this copy before changing
+        # anything (#2079): offer the download, whose installer says why.
+        return Eligibility(False, n_("This update can't be installed from Mixar. "
+                                     "Download it to see what to do"))
 
     return Eligibility(
         True, "", location=location, extension=INSTALLER_EXTENSIONS[installer_type],
     )
+
+
+def _installer_refused(version) -> bool:
+    from .win_scope import refused_version
+
+    refused, _refusal = refused_version()
+    return bool(refused) and _same_version(refused, version)
 
 
 def begin_install(
@@ -108,7 +120,10 @@ def begin_install(
         signer_thumbprint: the signer that check accepted (``state``'s
             ``signer_thumbprint``): the certificate thumbprint on Windows,
             the running app's Team ID on macOS. The helper's re-check
-            requires exactly it.
+            requires exactly it, and on Windows also this app's own
+            signer subject (:mod:`win_signer`) when the app has one —
+            always, for an install nobody asked for (``ValueError``
+            otherwise).
         from_version / attempt_id / trigger: echoed into the helper's
             result file so the next launch can report which attempt it was
             and what started it.
@@ -127,8 +142,15 @@ def begin_install(
     location = eligibility.location or app_paths.get_install_location()
 
     if os.name == "nt":
-        from . import win_installer
+        from . import win_installer, win_signer
 
+        # The helper's re-check requires this app's own signer subject as
+        # well as the verified thumbprint (cached on the download thread or
+        # at launch, so nothing is read here). An install nobody asked for
+        # never runs without it; an unsigned dev build updates on a click.
+        signer_subject = win_signer.app_subject() if verified else ""
+        if trigger != TRIGGER_CLICK and not (verified and signer_subject):
+            raise ValueError("An install nobody asked for needs this app's own signer")
         return win_installer.launch(
             installer_path=installer_path,
             staging_dir=staging_dir,
@@ -136,11 +158,17 @@ def begin_install(
             relaunch_candidates=location.relaunch_candidates,
             require_signature=verified,
             signer_thumbprint=signer_thumbprint,
+            signer_subject=signer_subject,
             install_dir=location.target,
             from_version=from_version,
             attempt_id=attempt_id,
             relaunch=relaunch,
             trigger=trigger,
+            elevate=location.elevate,
+            # The prompted retry after a 1625 only follows a click: an
+            # install nobody asked for never raises a prompt.
+            elevate_fallback=location.elevate_fallback and trigger == TRIGGER_CLICK,
+            msi_properties=location.msi_properties,
         )
 
     if sys.platform == "darwin":
@@ -164,12 +192,14 @@ def begin_install(
     raise OSError("No update helper for this platform")
 
 
-def consume_result(staging_dir):
+def consume_result(staging_dir, accept=None):
     """Read and delete the previous run's helper result.
 
     Returns a ``{"version", "stage", "exit"}`` dict, or ``None`` when no
     update was applied since last launch.  Deleting on read is what keeps
     a one-off failure from being reported at every subsequent startup.
+    A result *accept* (``result_owner.foreign_filter``) turns down is left
+    where it is, unread: it belongs to another account.
     """
     path = staging.result_path(staging_dir)
     try:
@@ -187,6 +217,8 @@ def consume_result(staging_dir):
         if key:
             result[key] = value.strip()
 
+    if result and accept is not None and not accept(result):
+        return None
     try:
         os.remove(path)
     except OSError:
@@ -205,7 +237,8 @@ _STAGE_REASONS = {
     "interrupted": "interrupted",
 }
 # Windows Installer exit codes worth telling apart; any other is msi_error.
-_EXIT_REASONS = {"1602": "uac_declined", "1618": "another_install"}
+# 1625: Windows policy refuses the install (non-administrator installs off).
+_EXIT_REASONS = {"1602": "uac_declined", "1618": "another_install", "1625": "policy_blocked"}
 
 
 def _same_version(left, right) -> bool:
@@ -244,8 +277,10 @@ def classify_result(result, running_version, running_binary="",
       ``old_copy_relaunched`` (this binary is outside the registered
       install), ``running_version_unknown`` or ``unknown``.
     - ``failed`` — ``locked``, ``timeout``, ``signature``, ``uac_declined``
-      (1602), ``another_install`` (1618), ``msi_error`` (1603/other), or
-      the macOS stage that failed.
+      (1602), ``another_install`` (1618), ``policy_blocked`` (1625),
+      ``scope_refused`` (the MSI refused this install before any change,
+      ``msi_refusal``; #2079), ``msi_error`` (1603/other), or the macOS
+      stage that failed.
 
     ``relaunch_matched`` is None unless the helper recorded the registered
     install location (Windows helper v2+).
@@ -269,6 +304,8 @@ def classify_result(result, running_version, running_binary="",
     if stage != "install":
         return verdict("failed", _STAGE_REASONS.get(stage, stage or "unknown"))
     if code not in ("0", "3010"):
+        if result.get("msi_refusal"):
+            return verdict("failed", "scope_refused")
         return verdict("failed", _EXIT_REASONS.get(code, "msi_error"))
 
     took_effect = _same_version(running_version, target)

@@ -32,6 +32,7 @@ import pytest
 from mixar.modules.common.updates.constants import (
     HELPER_LOG_NAME,
     HELPER_SWAP_DEADLINE_S,
+    HELPER_VERSION,
     HELPER_WAIT_FOR_LOCKS_S,
 )
 
@@ -99,7 +100,7 @@ def test_one_that_outlives_the_wait_is_recorded_as_locked(tmp_path):
     assert (code, _app(target)) == (1, "old")
     outcome = result(staging)
     assert (outcome["stage"], outcome["locks"], outcome["helper_version"]) == (
-        "locked", "Mixar Worker", "6")
+        "locked", "Mixar Worker", str(HELPER_VERSION))
     assert not list(target.parent.glob(".mixar-update-*"))
 
 

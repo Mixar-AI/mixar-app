@@ -42,7 +42,24 @@ function Start-Process {
 """
 
 
-def run_snippet(tmp_path, prefix, *, exit_code=0):
+# Helper v7 (#2079): any Start-Process shape; records each call's Verb and
+# answers QA_EXIT_PLAIN without the prompt, QA_EXIT_RUNAS with it.
+LAUNCH_SCOPED = """
+function Start-Process {
+    [CmdletBinding()]
+    param($FilePath, $ArgumentList, $Verb, [switch]$Wait, [switch]$PassThru)
+    if($FilePath -ne ($env:SYS32 + '\\msiexec.exe') -or !$Wait -or !$PassThru)
+        {throw 'Unexpected installer invocation'}
+    Add-Content -LiteralPath $env:QA_VERBS -Value ('verb=' + $Verb)
+    if($Verb -eq 'RunAs'){$env:QA_INSTALL_EXIT=$env:QA_EXIT_RUNAS}else{$env:QA_INSTALL_EXIT=$env:QA_EXIT_PLAIN}
+    Microsoft.PowerShell.Management\\Start-Process -FilePath $env:QA_PYTHON `
+        -ArgumentList (@(([char]34 + $env:QA_RECORDER + [char]34)) + $ArgumentList) `
+        -Wait -PassThru -WindowStyle Hidden
+}
+"""
+
+
+def run_snippet(tmp_path, prefix, *, exit_code=0, **extra_env):
     recorder = tmp_path / 'record arguments.py'
     recorder.write_text(RECORDER, encoding='utf-8')
     result = tmp_path / 'arguments.json'
@@ -51,7 +68,7 @@ def run_snippet(tmp_path, prefix, *, exit_code=0):
     system32 = os.path.join(os.environ['SystemRoot'], 'System32')
     env = dict(os.environ, QA_PYTHON=sys.executable, QA_RECORDER=str(recorder),
                QA_INSTALL_ARGS=str(result), QA_INSTALL_EXIT=str(exit_code),
-               MSI=installer, MSILOG=log, SYS32=system32)
+               MSI=installer, MSILOG=log, SYS32=system32, **extra_env)
     encoded = base64.b64encode((prefix + win_installer._PS_INSTALL).encode('utf-16le')).decode()
     process = subprocess.run(
         [os.path.join(system32, 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
@@ -95,6 +112,48 @@ function Start-Process {
     process, result, _, _ = run_snippet(tmp_path, prefix)
     assert process.returncode == 1
     assert not result.exists()
+
+
+def _run_scoped(tmp_path, *, elevate, fallback, plain, runas, props=''):
+    verbs, note = tmp_path / 'verbs.txt', tmp_path / 'elevation.txt'
+    process, result, installer, log = run_snippet(
+        tmp_path, LAUNCH_SCOPED, ELEVATE=elevate, ELEVATEFALLBACK=fallback,
+        MSIPROPS=props, ELEVNOTE=str(note), QA_VERBS=str(verbs),
+        QA_EXIT_PLAIN=str(plain), QA_EXIT_RUNAS=str(runas))
+    calls = verbs.read_text().split() if verbs.exists() else []
+    noted = note.read_text().strip() if note.exists() else ''
+    return process, json.loads(result.read_text()), calls, noted, installer, log
+
+
+def test_per_user_install_runs_msiexec_without_the_prompt(tmp_path):
+    process, args, calls, noted, installer, log = _run_scoped(
+        tmp_path, elevate='0', fallback='0', plain=0, runas=99)
+    assert process.returncode == 0, process.stderr
+    assert calls == ['verb='] and noted == 'elevation=none'
+    assert args == ['/i', installer, '/passive', '/norestart', 'REBOOT=ReallySuppress',
+                    'LAUNCHAPP=0', '/l*v', log]
+
+
+def test_policy_refusal_is_retried_once_with_the_prompt(tmp_path):
+    process, _, calls, noted, _, _ = _run_scoped(
+        tmp_path, elevate='0', fallback='1', plain=1625, runas=0)
+    assert process.returncode == 0, process.stderr
+    assert calls == ['verb=', 'verb=RunAs'] and noted == 'elevation=fallback'
+
+
+def test_policy_refusal_without_fallback_is_reported(tmp_path):
+    process, _, calls, noted, _, _ = _run_scoped(
+        tmp_path, elevate='0', fallback='0', plain=1625, runas=0)
+    assert process.returncode == 1625
+    assert calls == ['verb='] and noted == 'elevation=none'
+
+
+def test_machine_install_elevates_with_allusers(tmp_path):
+    process, args, calls, noted, _, _ = _run_scoped(
+        tmp_path, elevate='1', fallback='0', plain=99, runas=3010, props='ALLUSERS=1')
+    assert process.returncode == 3010, process.stderr
+    assert calls == ['verb=RunAs'] and noted == 'elevation=runas'
+    assert args[-1] == 'ALLUSERS=1'
 
 
 @pytest.mark.parametrize('cancelled', [False, True])

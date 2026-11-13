@@ -208,11 +208,18 @@ MID_INSTALL_QUIT_DELAY_S = 5.0
 # files-in-use prompt can never block an unattended update.
 # 6 records the trigger and can leave Mixar closed (install on quit), then
 # reopens it only for a launch turned away meanwhile (relaunch_kind=skipped).
-# The macOS helper writes helper_version too (from 6); installing on quit
-# or at launch it waits up to HELPER_WAIT_FOR_LOCKS_S for every Mixar
-# process still running from the bundle (stage=locked, locks=) and gives
-# up past HELPER_SWAP_DEADLINE_S (stage=expired).
-HELPER_VERSION = 6
+# 7 runs msiexec without elevation for a per-user install (one prompted
+# retry on 1625 after a click), passes ALLUSERS=1 for a machine install,
+# reads the installed version and location from Windows Installer for this
+# account, and records ``elevation`` and the MSI's ``msi_refusal`` (#2079).
+# 8 takes every path, the version and the attempt id from its environment,
+# so the script text is ASCII and a non-ASCII profile name survives.
+# The macOS helper writes helper_version too (from 6; the number is shared,
+# so it reports 8 with the Windows one); installing on quit or at launch it
+# waits up to HELPER_WAIT_FOR_LOCKS_S for every Mixar process still running
+# from the bundle (stage=locked, locks=) and gives up past
+# HELPER_SWAP_DEADLINE_S (stage=expired).
+HELPER_VERSION = 8
 
 # What started an install (``update.install_started`` / ``install_result``
 # ``trigger``, echoed by the helper): the Restart & Update click, a normal
@@ -228,6 +235,49 @@ TRIGGERS = (TRIGGER_CLICK, TRIGGER_QUIT, TRIGGER_LAUNCH)
 # just before it went to leave its request.
 HELPER_REOPEN_WAIT_S = 30
 HELPER_REOPEN_GRACE_S = 2
+
+# ============================================================================
+# WINDOWS INSTALL SCOPE (#2079)
+# ============================================================================
+
+# The MSI's UpgradeCode: uuid5 of "Mixar" in packaging.cmake's namespace
+# (pinned by tests/test_windows_install_scope.py). Windows Installer lists
+# the Mixar installs this account can see under it.
+MSI_UPGRADE_CODE = "{62855CF0-CD33-57A1-B073-9F3C25B723C6}"
+# The installer refuses an install it cannot do from its scope before any
+# change (WIX.template, "SCOPE REFUSALS"); the helper copies the value of
+# this property from the MSI log into update-result.txt as msi_refusal.
+MSI_REFUSAL_PROPERTY = "MIXAR_SCOPE_REFUSAL"
+MSI_REFUSALS = ("machine", "needs_admin", "system")
+# Where the installer put Mixar and why (installer_ca/mixar_msi_scope.c:
+# MIXAR_SCOPE_ACTION / MIXAR_SCOPE_REASON), copied from the MSI log by the
+# helper as scope_action / scope_reason.
+MSI_SCOPE_ACTIONS = ("fresh", "keep", "move", "in_place", "in_place_program_files",
+                     "beside", "relaunch", "refuse")
+MSI_SCOPE_REASONS = ("machine_scope", "system_account", "machine_product", "other_account",
+                     "not_elevated", "command_line", "location_unknown", "own_folder",
+                     "other_session_user", "path_policy", "installer_policy", "shared",
+                     "files_in_use", "own_program_files")
+# HKCU values the installer writes: the folder an install moved Mixar out of
+# (MixarMovedFrom), and that the file type is still to be registered by the
+# app because the install ran elevated (MixarRegisterPending).
+MIXAR_REGISTRY_KEY = "Software\\Mixar\\Mixar"
+MOVED_FROM_VALUE = "moved_from"
+REGISTER_PENDING_VALUE = "register_pending"
+# Per-user memory (``add_config``) of what an earlier attempt learned:
+# the version an installer refused (it is offered as a download from then
+# on) and that Windows policy refuses installs without an administrator.
+INSTALLER_REFUSED_CONFIG_KEY = "update_installer_refused"
+USER_INSTALLS_BLOCKED_CONFIG_KEY = "update_user_installs_blocked"
+# The attempt ids this user's own helpers ran (newest last): a result found
+# in another account's staging folder is read only when it names one.
+UPDATE_ATTEMPTS_CONFIG_KEY = "update_attempt_ids"
+UPDATE_ATTEMPTS_KEPT = 8
+# The install folder whose first start after the move read the result the
+# old app's helper left in the shared staging folder.
+MOVE_RESULT_READ_CONFIG_KEY = "update_move_result_read"
+# The install whose shortcuts and taskbar pins were repointed after the move.
+SHORTCUTS_REPAIRED_CONFIG_KEY = "update_shortcuts_repaired"
 
 # Per-user setting (``add_config``; Edit > Preferences > System > Updates):
 # install a staged update when Mixar quits, or at the next launch when it

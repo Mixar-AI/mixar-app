@@ -226,7 +226,7 @@ def test_windows_helper_relaunches_even_when_the_install_fails():
     script = _windows_script()
 
     install_marker = script.index(":installed")
-    relaunch = script.index('start "" "C:\\Program Files\\Mixar\\mixar-launcher.exe"')
+    relaunch = script.index('start "" "%RELAUNCH1%"')
     assert relaunch > install_marker
     assert "goto relaunched" in script
 
@@ -259,7 +259,10 @@ def test_windows_helper_signature_recheck_fails_closed():
 def test_windows_helper_writes_a_result_for_the_relaunched_app():
     script = _windows_script()
 
-    assert "update-result.txt" in script
+    assert win_installer.helper_environment(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[])["RESULT"].endswith("update-result.txt")
     assert "call :result install %INSTALL_EXIT%" in script
     assert ">>\"%RESULT%\" echo stage=%~1" in script
     assert ">>\"%RESULT%\" echo exit=%~2" in script

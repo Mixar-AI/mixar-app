@@ -28,6 +28,7 @@ from ..constants import (
     RETRYABLE_FAILURE_REASONS, STAGED_RECORD_NAME, TRIGGER_CLICK, InstallState,
 )
 from . import download, install_gate, install_start, installer, staged_record, staging, verify
+from . import win_signer
 from .failure import capture_download_outcome, failure_details
 # apply_and_restart's messages when the Windows pre-quit gate stopped it
 # (the toast saying why is up); re-exported for the operator.
@@ -160,6 +161,9 @@ def _worker(info, eligibility, running_binary):
             logger.warning("Installer signature not verified: %s", detail)
 
         verified = verdict == verify.VERIFIED
+        if os.name == "nt" and verified:
+            # Installs nobody asked for also pin this app's own signer.
+            win_signer.read(running_binary)
         # Before READY: an install on quit reads the record's counters.
         staged_record.write_ready(
             os.path.dirname(path), version=version, installer_path=path,
@@ -459,13 +463,22 @@ def read_previous_result():
     Returns the parsed dict, or ``None``; ``staging_dir`` says where it
     was found (never reported).  Resolving the staging directory creates it
     if missing, which is harmless and means the very first run simply
-    finds nothing.
+    finds nothing. On Windows the other staging directories are read too
+    (``staging.result_dirs``), but only for this user's own attempts or the
+    first start after the move (``result_owner``).
     """
+    from .result_owner import foreign_filter
+
     try:
         directory = staging.resolve_staging_dir()
     except OSError:
         return None
-    result = installer.consume_result(directory.path)
-    if result is not None:
-        result["staging_dir"] = directory.path
-    return result
+    foreign = None
+    for path in staging.result_dirs(directory.path):
+        if path != directory.path and foreign is None:
+            foreign = foreign_filter(os.path.dirname(os.path.abspath(bpy.app.binary_path or "")))
+        result = installer.consume_result(path, accept=None if path == directory.path else foreign)
+        if result is not None:
+            result["staging_dir"] = path
+            return result
+    return None

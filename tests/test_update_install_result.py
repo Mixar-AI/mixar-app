@@ -279,9 +279,27 @@ def test_result_event_carries_the_diagnostics(monkeypatch):
         "locking_processes": "mixar.exe,python.exe,..evil", "wait_s": 63,
         # No trigger recorded: a helper from before install-on-quit.
         "trigger": "click",
+        # Helper v7 / #2079 fields: unknown here (an older helper, a macOS host).
+        "install_scope": None, "moved_from_program_files": None,
+        "msi_refusal": None, "elevation": None,
+        # Helper v8: where the installer put Mixar and why.
+        "install_decision": None, "install_decision_reason": None,
     }
     # Paths recorded by the helper stay on the machine.
     assert not any("\\" in str(value) for value in props.values())
+
+
+def test_result_event_names_the_installer_decision(monkeypatch):
+    """Helper v8 copies MIXAR_SCOPE_ACTION / _REASON from the MSI log (#2079):
+    whether Mixar moved, stayed or was updated in place, and why."""
+    props = _captured(monkeypatch, _result(exit="0", scope_action="in_place",
+                                           scope_reason="path_policy"))
+    assert (props["install_decision"], props["install_decision_reason"]) == (
+        "in_place", "path_policy")
+    # Anything else in the file (a path, a newer installer's name) is dropped.
+    props = _captured(monkeypatch, _result(exit="0", scope_action="teleport",
+                                           scope_reason="C:\\Users\\ana"))
+    assert (props["install_decision"], props["install_decision_reason"]) == (None, None)
 
 
 def test_result_event_from_the_old_helper(monkeypatch):

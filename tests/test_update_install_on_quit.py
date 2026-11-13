@@ -350,9 +350,10 @@ def test_without_handlers_startup_goes_on(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_only_macos_installs_without_asking_on_this_branch(monkeypatch, tmp_path):
-    """needs_elevation is the one gate: False for a writable macOS bundle,
-    True for every Windows install (per-machine MSI) and by default."""
+def test_needs_elevation_is_the_one_gate(monkeypatch, tmp_path):
+    """False for a writable macOS bundle (and a Windows per-user install in
+    the profile: tests/test_windows_install_scope.py), True for a Windows
+    install in Program Files and by default."""
     assert app_paths.InstallLocation("x", True).needs_elevation is True
 
     bundle = tmp_path / "Mixar.app"
@@ -401,7 +402,7 @@ def test_the_silent_blocker_ignores_connectors_on_windows(monkeypatch):
         win_processes.Holder(win_processes.ABANDONED_CONNECTOR, "python.exe", 12, None),
     ]
     monkeypatch.setattr(install_gate, "_is_windows", lambda: True)
-    monkeypatch.setattr(install_gate, "_holders", lambda target: list(holders))
+    monkeypatch.setattr(install_gate, "_silent_holders", lambda target: list(holders))
     assert install_gate.silent_blocker(eligibility) == ""
 
     holders.append(win_processes.Holder(win_processes.BACKGROUND, "mixar.exe", 13, None))

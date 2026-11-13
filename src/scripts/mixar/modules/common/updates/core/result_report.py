@@ -12,10 +12,12 @@ shown as one toast with advice for its cause, and reported as
 """
 
 import ntpath
+import os
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
 
+from ..constants import MSI_REFUSALS, MSI_SCOPE_ACTIONS, MSI_SCOPE_REASONS
 from .toasts import _push_update_outcome_toast
 
 logger = get_logger(__name__)
@@ -81,6 +83,7 @@ def report_previous_update_result() -> None:
     _capture_result(result, verdict, running)
     if outcome in ("failed", "no_effect") and reason != "interrupted":
         _count_failure(result.get("staging_dir", ""), target)
+    _learn(result, reason, target)
 
     if reason == "interrupted":
         # A logout or shutdown stopped the helper and it put the app back
@@ -119,6 +122,35 @@ def report_previous_update_result() -> None:
         body = rpt_("{reason} You can download the update from the downloads page.").format(
             reason=_failure_reason(result, reason))
     _push_update_outcome_toast("error", n_("Update was not installed"), body)
+
+
+def _learn(result, reason, version) -> None:
+    """Remember what a Windows attempt taught, so it is never repeated
+    silently (#2079): an installer that refused this copy turns that version
+    into a download; a 1625, final or retried with the prompt, means
+    installs need the administrator prompt (with the ``DisableMSI`` policy
+    seen then); an install that worked without the prompt unlearns that."""
+    try:
+        from . import win_scope
+
+        if reason == "scope_refused":
+            win_scope.remember_refusal(version, result.get("msi_refusal", ""))
+        elif reason == "policy_blocked" or result.get("elevation") == "fallback":
+            win_scope.remember_user_installs_blocked(_disable_msi())
+        elif (result.get("elevation") == "none" and result.get("stage") == "install"
+              and result.get("exit") in ("0", "3010")):
+            win_scope.forget_user_installs_blocked()
+    except Exception:  # noqa: BLE001 - bookkeeping only
+        logger.warning("Could not record what the update attempt learned", exc_info=True)
+
+
+def _disable_msi():
+    try:
+        from .win_msi import disable_msi_value
+
+        return disable_msi_value()
+    except Exception:  # noqa: BLE001 - unknown
+        return None
 
 
 def _count_failure(directory, version) -> None:
@@ -160,6 +192,29 @@ def _install_kind() -> str:
         return ""
 
 
+def _install_scope() -> str:
+    """Windows Installer context of the running install (#2079)."""
+    if os.name != "nt":
+        return ""
+    try:
+        from .app_paths import get_install_location
+
+        return get_install_location().scope or ""
+    except Exception:  # noqa: BLE001 - diagnostics only
+        return ""
+
+
+def _moved_from_program_files():
+    if os.name != "nt":
+        return None
+    try:
+        from .win_scope import moved_from_program_files
+
+        return moved_from_program_files()
+    except Exception:  # noqa: BLE001 - diagnostics only
+        return None
+
+
 def _capture_result(result, verdict, running) -> None:
     """Close the update funnel: what actually happened on the user's machine.
 
@@ -167,6 +222,7 @@ def _capture_result(result, verdict, running) -> None:
     (``install_location``, ``relaunch``) never leave the machine.
     """
     relaunch_kind = result.get("relaunch_kind", "")
+    scope = _install_scope()
     details = {
         "from_version": result.get("from_version") or None,
         "running_version": running or None,
@@ -177,6 +233,15 @@ def _capture_result(result, verdict, running) -> None:
         # Results without the field come from the v1 helper.
         "helper_version": _as_int(result.get("helper_version")) or 1,
         "install_kind": _install_kind() or None,
+        # Windows Installer context of the running install, and whether the
+        # installed product is the one that moved it out of Program Files.
+        "install_scope": scope if scope in ("per_user", "machine") else None,
+        "moved_from_program_files": _moved_from_program_files(),
+        "msi_refusal": _enum(result.get("msi_refusal"), MSI_REFUSALS),
+        # Where the installer put Mixar and the fact that decided it (helper v8).
+        "install_decision": _enum(result.get("scope_action"), MSI_SCOPE_ACTIONS),
+        "install_decision_reason": _enum(result.get("scope_reason"), MSI_SCOPE_REASONS),
+        "elevation": _enum(result.get("elevation"), ("none", "runas", "fallback")),
         "installed_version": result.get("installed_version") or None,
         "relaunch_matched": verdict["relaunch_matched"],
         "relaunch_kind": relaunch_kind if relaunch_kind in (
@@ -195,6 +260,10 @@ def _capture_result(result, verdict, running) -> None:
         )
     except Exception:  # noqa: BLE001 - telemetry is fail-open
         logger.debug("Update result telemetry failed", exc_info=True)
+
+
+def _enum(value, allowed):
+    return value if value in allowed else None
 
 
 def _trigger(value) -> str:
@@ -243,8 +312,25 @@ def _failure_reason(result, reason="") -> str:
     if reason == "another_install":
         return rpt_("Another installation was in progress. Wait for it to finish or "
                     "restart Windows, then try again.")
+    if reason == "policy_blocked":
+        return rpt_("Windows on this computer allows installing only with an "
+                    "administrator. Click Restart & Update and accept the Windows prompt, "
+                    "or ask your administrator.")
+    if reason == "scope_refused":
+        return _refusal_reason(result.get("msi_refusal", ""))
     if stage == "install":
         code = result.get("msi_error") or result.get("exit", "")
         return rpt_("Windows Installer reported error {code}. Restart Windows, then "
                     "try again.").format(code=code or "?")
     return rpt_("The installer did not finish.")
+
+
+def _refusal_reason(refusal) -> str:
+    """The installer refused this copy before changing anything (#2079)."""
+    if refusal == "machine":
+        return rpt_("Mixar is installed for all users of this computer, so its "
+                    "administrator installs updates (with ALLUSERS=1).")
+    if refusal == "needs_admin":
+        return rpt_("Moving Mixar out of Program Files needs an administrator once. "
+                    "Nothing was changed.")
+    return rpt_("The installer could not update this copy of Mixar. Nothing was changed.")

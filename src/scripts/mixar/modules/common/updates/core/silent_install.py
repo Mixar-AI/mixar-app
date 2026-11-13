@@ -17,18 +17,16 @@ it works is reopened when it is done.
 passes — on quit here, at launch in :mod:`launch_install`. It refuses
 unless the installer's signature was verified in this process against a
 pinned signer (``verify.VERIFIED`` with a signer: on macOS a non-empty
-Team ID that is the running app's — so an unsigned or dev build, or one
-whose Team ID cannot be read, never installs by itself and keeps Restart
+Team ID that is the running app's; on Windows the MSI's certificate, and
+this app must itself be validly signed — :mod:`win_signer`, whose subject
+the helper also requires of the MSI — so an unsigned or dev build, or one
+whose signer cannot be read, never installs by itself and keeps Restart
 to Update), when the install would raise an administrator prompt
-(``InstallLocation.needs_elevation``: every Windows install on this
-branch), when this version already failed ``SILENT_INSTALL_MAX_FAILURES``
-times, and whenever the Restart & Update gate would stop or wait
-(another Mixar, background work, a program running from the install;
-:func:`install_gate.silent_blocker`).
-
-Windows caveat for whoever lifts ``needs_elevation`` there: its
-``VERIFIED`` pins the MSI's own certificate even when the running app is
-unsigned, so it is not yet "the running app's signer".
+(``InstallLocation.needs_elevation``: on Windows anything but a per-user
+install in the user's profile), when this version already failed
+``SILENT_INSTALL_MAX_FAILURES`` times, and whenever the Restart & Update
+gate would stop or wait (another Mixar, background work, a program running
+from the install; :func:`install_gate.silent_blocker`).
 
 ``exit_pre``'s argument tells a normal quit (True) from background mode,
 a failed start or ``sys.exit`` (False). A crash, a force quit or a kill
@@ -40,7 +38,7 @@ import os
 from mixar.config.logging_config import get_logger
 
 from ..constants import SILENT_INSTALL_MAX_FAILURES, TRIGGER_QUIT, InstallState
-from . import install_gate, install_start, installer, staged_record
+from . import install_gate, install_start, installer, staged_record, win_signer
 from .preferences import install_on_quit_enabled
 from .state import get_update_state
 
@@ -65,6 +63,18 @@ def silent_refusal(eligibility, record=None, *, verified=False, signer="") -> st
         return eligibility.reason or "not eligible"
     if not verified or not signer:
         return "its signature was not verified against this app's"
+    if os.name == "nt":
+        refusal = win_signer.silent_refusal()
+        if refusal:
+            return refusal
+    return install_refusal(eligibility, record)
+
+
+def install_refusal(eligibility, record=None) -> str:
+    """:func:`silent_refusal` without the signature: what a launch can tell
+    before its own signature check has run (and read this app's signer)."""
+    if not eligibility:
+        return eligibility.reason or "not eligible"
     location = eligibility.location
     if location is None or location.needs_elevation:
         return "the install needs an administrator prompt"

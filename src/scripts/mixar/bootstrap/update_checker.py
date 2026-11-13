@@ -56,9 +56,34 @@ def _delayed_init() -> None:
         report_previous_update_result()
     except Exception as e:  # noqa: BLE001 - never block the update check
         logger.debug("Could not report the previous update result: %s", e)
+    _repair_shortcuts_after_move()
 
     trigger_update_check()
     return None
+
+
+def _repair_shortcuts_after_move() -> None:
+    """The first start after the move out of Program Files repoints the
+    taskbar pins and "Open with" entries still aiming there, and the first
+    start after an elevated install registers the file type (#2079; worker
+    threads do the work)."""
+    import os
+
+    binary = os.path.abspath(bpy.app.binary_path or "")
+    try:
+        from mixar.modules.common.updates.core.shortcut_repair import maybe_repair_after_move
+
+        maybe_repair_after_move(os.path.dirname(binary))
+    except Exception as e:  # noqa: BLE001 - never block the update check
+        logger.debug("Could not start the shortcut repair: %s", e)
+    try:
+        from mixar.modules.common.updates.core.file_type_registration import (
+            maybe_register_file_type,
+        )
+
+        maybe_register_file_type(binary if bpy.app.binary_path else "")
+    except Exception as e:  # noqa: BLE001 - never block the update check
+        logger.debug("Could not start the file type registration: %s", e)
 
 
 # ============================================================================

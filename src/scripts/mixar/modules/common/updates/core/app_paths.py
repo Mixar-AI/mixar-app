@@ -46,14 +46,21 @@ class InstallLocation:
     when replacing ``target`` raises an administrator prompt. An install
     on quit or at launch runs only while it is False; one that needs the
     prompt keeps waiting for Restart & Update. Unknown counts as True.
+
+    Windows only (``win_scope.ScopePlan``): ``scope`` is the Windows
+    Installer context (``per_user``/``machine``/``""``), ``elevate`` starts
+    msiexec with the prompt, ``elevate_fallback`` retries a 1625 once with
+    it, ``msi_properties`` go on the msiexec line.
     """
 
     __slots__ = (
         "target", "writable", "reason", "relaunch_candidates", "kind", "needs_elevation",
+        "scope", "elevate", "elevate_fallback", "msi_properties",
     )
 
     def __init__(self, target, writable, reason="", relaunch_candidates=(), kind="",
-                 needs_elevation=True):
+                 needs_elevation=True, scope="", elevate=True, elevate_fallback=False,
+                 msi_properties=""):
         self.target = target
         self.writable = writable
         self.reason = reason
@@ -62,11 +69,15 @@ class InstallLocation:
         # (any other copy) or "unknown" (the registry could not be read).
         self.kind = kind
         self.needs_elevation = bool(needs_elevation)
+        self.scope = scope
+        self.elevate = bool(elevate)
+        self.elevate_fallback = bool(elevate_fallback)
+        self.msi_properties = msi_properties
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         return (
             f"InstallLocation(target={self.target!r}, writable={self.writable}, "
-            f"reason={self.reason!r})"
+            f"reason={self.reason!r}, scope={self.scope!r})"
         )
 
 
@@ -136,6 +147,12 @@ def _default_windows_dir() -> str:
     return ntpath.join(program_files, "Mixar")
 
 
+def _default_per_user_dir() -> str:
+    """Where the per-user MSI installs (#2079): ``%LocalAppData%\\Programs\\Mixar``."""
+    local = os.environ.get("LOCALAPPDATA") or ""
+    return ntpath.join(local, "Programs", "Mixar") if local else ""
+
+
 def windows_system_dir() -> str:
     """``%SystemRoot%\\System32``, where every tool the updater runs lives.
 
@@ -156,17 +173,15 @@ def _windows_relaunch_candidates(install_dir: str) -> list:
     """Executables to try after the MSI finishes, best first.
 
     The installed location can legitimately change across an upgrade (an
-    older build installed into a version-stamped directory), so the
-    current directory is tried first and the current default second.
+    older build installed into a version-stamped directory; a Program Files
+    install moves into the user's profile, #2079), so the current directory
+    is tried first, then the per-user default, then Program Files.
     """
-    candidates = []
-    for name in _WINDOWS_LAUNCHERS:
-        candidates.append(os.path.join(install_dir, name))
-
-    default_dir = _default_windows_dir()
-    if os.path.normcase(default_dir) != os.path.normcase(install_dir):
-        for name in _WINDOWS_LAUNCHERS:
-            candidates.append(os.path.join(default_dir, name))
+    candidates, dirs = [], []
+    for directory in (install_dir, _default_per_user_dir(), _default_windows_dir()):
+        if directory and os.path.normcase(directory) not in dirs:
+            dirs.append(os.path.normcase(directory))
+            candidates.extend(os.path.join(directory, name) for name in _WINDOWS_LAUNCHERS)
     return candidates
 
 
@@ -252,18 +267,37 @@ def classify_windows_install(install_dir: str, installs, default_dir: str):
     return "portable", ""
 
 
+def _windows_scope(install_dir: str) -> str:
+    """Windows Installer's scope for this copy, ``""`` when it cannot tell."""
+    from ..constants import MSI_UPGRADE_CODE
+    from . import win_msi, win_scope
+
+    try:
+        return win_scope.scope_of(install_dir, win_msi.mixar_products(MSI_UPGRADE_CODE))
+    except Exception as e:  # noqa: BLE001 - unknown scope elevates, as before
+        logger.warning("Could not ask Windows Installer about Mixar: %s", e)
+        return ""
+
+
 def _windows_location() -> InstallLocation:
+    from . import win_scope
+
     install_dir = os.path.dirname(os.path.abspath(_binary_path()))
     if not install_dir:
         return InstallLocation("", False, n_("Install directory could not be resolved"))
 
-    try:
-        kind, _registered = classify_windows_install(
-            install_dir, windows_msi_installs(), _default_windows_dir(),
-        )
-    except Exception as e:  # noqa: BLE001 - fall back to the pre-registry behaviour
-        logger.warning("Could not read the Mixar MSI registration: %s", e)
-        kind = "unknown"
+    # Windows Installer first: it answers for THIS account (the Uninstall
+    # key holds whoever installed a version last). The key is the fallback.
+    scope = _windows_scope(install_dir)
+    kind = "msi" if scope else ""
+    if not kind:
+        try:
+            kind, _registered = classify_windows_install(
+                install_dir, windows_msi_installs(), _default_windows_dir(),
+            )
+        except Exception as e:  # noqa: BLE001 - fall back to the pre-registry behaviour
+            logger.warning("Could not read the Mixar MSI registration: %s", e)
+            kind = "unknown"
     if kind == "portable":
         return InstallLocation(
             install_dir, False,
@@ -271,17 +305,19 @@ def _windows_location() -> InstallLocation:
             kind=kind,
         )
 
-    # Deliberately no write check: a per-machine MSI is *expected* to live
-    # in a directory the user cannot write, and msiexec supplies the
-    # elevation. Testing os.access here would refuse every normal install.
-    # Every Windows install is per-machine, so every one raises the UAC
-    # prompt (needs_elevation): it updates only from Restart & Update. A
-    # per-user install that msiexec can upgrade without the prompt is what
-    # would set it False here.
+    # Deliberately no write check: an install in Program Files is
+    # *expected* to live in a directory the user cannot write, and msiexec
+    # supplies the elevation. How msiexec runs is win_scope's decision.
+    plan = win_scope.plan_for(scope, install_dir)
+    if plan.blocked_reason:
+        return InstallLocation(install_dir, False, plan.blocked_reason, kind=kind,
+                               scope=plan.scope)
     return InstallLocation(
         install_dir, True, "",
         relaunch_candidates=_windows_relaunch_candidates(install_dir),
-        kind=kind, needs_elevation=True,
+        kind=kind, needs_elevation=plan.needs_elevation, scope=plan.scope,
+        elevate=plan.elevate, elevate_fallback=plan.elevate_fallback,
+        msi_properties=plan.msi_properties,
     )
 
 

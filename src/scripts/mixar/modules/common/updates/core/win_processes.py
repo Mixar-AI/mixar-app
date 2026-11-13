@@ -98,11 +98,13 @@ def _strip_exe(name: str) -> str:
     return name[:-4] if name.lower().endswith(".exe") else name
 
 
-def classify(rows, install_dir: str, own_pid: int) -> list:
+def classify(rows, install_dir: str, own_pid: int, descendants=True) -> list:
     """A :data:`Holder` for each other process running from *install_dir*.
 
     *rows* are :func:`_process_table` dicts. Pure, so it is tested with
-    canned tables.
+    canned tables. *descendants* False leaves out this process's own
+    descendants too: the question an install on quit asks, since they
+    end as this process quits (the helper's lock wait covers stragglers).
     """
     by_pid = {}
     for row in rows:
@@ -145,6 +147,8 @@ def classify(rows, install_dir: str, own_pid: int) -> list:
             continue
         name = ntpath.basename(path)
         lineage = ancestors(pid)
+        if own_pid in lineage and not descendants:
+            continue
         if own_pid in lineage:
             kind = BACKGROUND
         elif name.lower() in _MIXAR_BINARIES:
@@ -310,15 +314,18 @@ def _process_table() -> list:
 # ============================================================================
 
 
-def blocking_apps(install_dir: str, own_pid: int) -> list:
-    """:data:`Holder` list for *install_dir*; ``[]`` when unknown."""
+def blocking_apps(install_dir: str, own_pid: int, descendants=True, strict=False) -> list:
+    """:data:`Holder` list for *install_dir*; ``[]`` when unknown, unless
+    *strict*, which raises instead (an install nobody watches refuses)."""
     if not install_dir:
         return []
     try:
         started = time.perf_counter()
         rows = _process_table()
-        holders = classify(rows, install_dir, own_pid)
+        holders = classify(rows, install_dir, own_pid, descendants=descendants)
     except Exception as e:  # noqa: BLE001 - never block an update on this check
+        if strict:
+            raise
         logger.warning("Could not list processes using the install directory: %s", e)
         return []
     elapsed_ms = (time.perf_counter() - started) * 1000

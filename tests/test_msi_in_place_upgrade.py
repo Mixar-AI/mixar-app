@@ -19,6 +19,7 @@ WIX_TEMPLATE = ROOT / "src" / "release" / "windows" / "installer_wix" / "WIX.tem
 PACKAGE_BAT = ROOT / "scripts" / "windows" / "package.bat"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 FORCE_SCRIPT = ROOT / "scripts" / "ci" / "force-msi-file-overwrite.ps1"
+PACKAGING_CMAKE = ROOT / "src" / "build_files" / "cmake" / "packaging.cmake"
 
 
 def _template() -> str:
@@ -36,11 +37,19 @@ def test_reinstall_mode_is_the_default_and_restart_manager_is_off():
     assert '<Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />' in template
 
 
-def test_install_root_is_left_to_cpack():
-    """CPack's properties.wxi presets INSTALL_ROOT from the old product's
-    InstallLocation, so an upgrade lands in the old folder; a second
-    Property:INSTALL_ROOT here would fail light.exe with LGHT0091."""
-    assert not re.search(r'<Property\s+Id="INSTALL_ROOT"', _template())
+def test_upgrades_do_not_keep_the_old_folder():
+    """CPack's INSTALL_ROOT / FindInstallLocation AppSearch put every upgrade
+    back into the old product's folder, so a Program Files install could never
+    move (#2079). Setting ARPINSTALLLOCATION is the CPack switch that drops it;
+    the template then owns INSTALL_ROOT (declared once: a second
+    Property:INSTALL_ROOT fails light.exe with LGHT0091) and the SetProperty."""
+    template = _template()
+    cmake = PACKAGING_CMAKE.read_text(encoding="utf-8")
+    assert re.search(r'set\(CPACK_WIX_PROPERTY_ARPINSTALLLOCATION\s+"\[INSTALL_ROOT\]"\)', cmake)
+    assert len(re.findall(r'<Property\s+Id="INSTALL_ROOT"', template)) == 1
+    assert '<Property Id="INSTALL_ROOT" Secure="yes"/>' in template
+    assert 'FindInstallLocation' not in template
+    assert '<SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALL_ROOT]" After="CostFinalize"/>' in template
 
 
 def test_earlier_version_shortcuts_are_removed_on_install():
@@ -82,8 +91,14 @@ def test_package_bat_forces_versioned_files_before_signing():
 
 def test_register_runs_only_when_installing():
     # The old product's uninstall runs after the new install (afterInstallExecute), with the
-    # launcher still on disk: an unconditional RegisterMixar would register a second time.
+    # launcher still on disk: an unconditional register action would register a second time.
     template = _template()
-    assert '<Custom Action="RegisterMixar" After="InstallFiles">NOT (REMOVE="ALL")</Custom>' in template
-    assert ('<Custom Action="UnRegisterMixar" Before="RemoveFiles">'
-            '(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL")</Custom>') in template
+    # ... and an elevated per-user install leaves it to the app (#2079 review).
+    assert ('<Custom Action="RegisterMixarUser" After="InstallFiles">'
+            'NOT (REMOVE="ALL") AND NOT ALLUSERS AND NOT Privileged</Custom>') in template
+    assert ('<Custom Action="RegisterMixarMachine" After="RegisterMixarUser">'
+            'NOT (REMOVE="ALL") AND ALLUSERS</Custom>') in template
+    assert ('<Custom Action="UnRegisterMixarUser" Before="RemoveFiles">'
+            '(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL") AND NOT ALLUSERS</Custom>') in template
+    assert ('<Custom Action="UnRegisterMixarMachine" After="UnRegisterMixarUser">'
+            '(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL") AND ALLUSERS</Custom>') in template
